@@ -305,8 +305,8 @@ public sealed class ProgressionPolicyTests
                 ruleset.CreateCombatantProfile(defender),
                 DamageElement.Physical,
                 ElementalAffinity.Normal,
-                Power: 20,
-                Accuracy: 100,
+                power: 20,
+                accuracy: 100,
                 new NeverCriticalDefinition(),
                 new HitCountDefinition(1, 1));
     }

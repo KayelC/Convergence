@@ -29,6 +29,25 @@ application passes.
 
 Arithmetic is checked or saturating at public boundaries so extreme authored/runtime values do not wrap into negative damage or rewards.
 
+## Accuracy And Evasion
+
+`IHitResolutionPolicy` is the hit/evasion extension boundary. The supplied
+`StandardHitResolutionPolicy` starts from the action's authored accuracy, adds
+an attacker Agility contribution, subtracts a target Agility contribution, and
+applies explicit passive and stage-based Accuracy/Evasion modifiers using
+add-then-multiply stacking. Its coefficients and probability bounds are
+ruleset parameters.
+
+The result exposes authored accuracy, both Agility contributions, scores before
+and after modifiers, raw and final chance, the random roll when one was needed,
+and the rigid-state guarantee flag. Skills use their own authored accuracy;
+basic attacks use the equipped or supplied basic-attack profile. Names and
+descriptions never choose the source.
+
+The supplied policy does not read Luck. Its standard range is `0..100`: zero
+cannot hit and one hundred cannot miss. A game that wants Luck or another
+formula supplies another hit policy rather than relying on a hidden modifier.
+
 ## Elemental Defense
 
 The elemental outcomes are Weak, Normal, Resist, Null, Repel, and Absorb. Missing entries resolve to Normal. Almighty always resolves normally and does not consult authored affinity maps.

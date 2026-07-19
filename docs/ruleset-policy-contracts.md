@@ -60,15 +60,15 @@ binding rather than producing a partial service.
 | `weakDamageMultiplier` | decimal | `1.5` | nonnegative |
 | `resistDamageMultiplier` | decimal | `0.5` | nonnegative |
 | `guardDamageMultiplier` | decimal | `0.5` | nonnegative |
-| `defaultHitAccuracy` | integer | `95` | `0..100` |
-| `hitChanceMinimum` | integer | `5` | `0..100`; no greater than maximum |
-| `hitChanceMaximum` | integer | `99` | `0..100`; no less than minimum |
+| `hitAttackerAgilityCoefficient` | decimal | `2` | nonnegative |
+| `hitTargetAgilityCoefficient` | decimal | `2` | nonnegative |
+| `hitChanceMinimum` | integer | `0` | `0..100`; no greater than maximum |
+| `hitChanceMaximum` | integer | `100` | `0..100`; no less than minimum |
 | `criticalChanceMinimum` | integer | `2` | `0..100`; no greater than maximum |
 | `criticalChanceMaximum` | integer | `40` | `0..100`; no less than minimum |
 | `criticalChanceBase` | integer | `5` | `0..100` |
 | `instantDeathChanceMinimum` | integer | `5` | `0..100`; no greater than maximum |
 | `instantDeathChanceMaximum` | integer | `95` | `0..100`; no less than minimum |
-| `defaultInstantDeathChance` | integer | `40` | `0..100` |
 | `enemiesPerLevelForExperience` | decimal | `50` | positive |
 | `expectedStatLevelMultiplier` | decimal | `3` | nonnegative |
 | `expectedStatBase` | decimal | `15` | nonnegative |
@@ -84,6 +84,27 @@ binding rather than producing a partial service.
 Unknown parameters, nonnumeric values, and invalid combined configuration
 produce typed `RulesetBindingDiagnostic` values. The standard factory does not
 silently ignore them.
+
+There is no default action accuracy or default instant-defeat chance. Typed
+effects and equipment basic-attack profiles author those values explicitly.
+The removed parameter names are rejected as unknown rather than being accepted
+and ignored.
+
+The supplied hit policy resolves these inspectable scores:
+
+```text
+accuracy = (authored accuracy + attacker Agility * attacker coefficient
+            + additive Accuracy modifiers) * Accuracy multipliers
+evasion  = (target Agility * target coefficient
+            + additive Evasion modifiers) * Evasion multipliers
+chance   = clamp(accuracy - evasion, minimum, maximum)
+```
+
+Luck is not read by this policy. Zero never hits, one hundred always hits, and
+neither guarantee consumes a random roll. A rigid target is an explicit
+always-hit exception and reports a final chance of one hundred. A game may
+replace `IHitResolutionPolicy` if it wants another formula or a deliberate Luck
+contribution.
 
 Charge is not a hidden parameter of `standard_damage`. A host supplies an
 `IChargePolicyService` to `BattleExecutionServices`; the standard choices are

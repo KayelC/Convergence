@@ -6,13 +6,66 @@ using Convergence.Runtime;
 
 namespace Convergence.Execution;
 
-public sealed record DamagePolicyRequest(
-    RuntimeActorState Actor,
-    RuntimeActorState Target,
-    DamageEffectDefinition Effect,
-    ElementalAffinity Affinity,
-    decimal ChargeMultiplier = 1m,
-    ChargeKind? ChargeKind = null);
+public sealed class DamagePolicyRequest
+{
+    public DamagePolicyRequest(
+        RuntimeActorState actor,
+        RuntimeActorState target,
+        DamageEffectDefinition effect,
+        ElementalAffinity affinity,
+        decimal chargeMultiplier = 1m,
+        ChargeKind? chargeKind = null,
+        IEnumerable<NumericRuleModifierDefinition>? accuracyModifiers = null,
+        IEnumerable<NumericRuleModifierDefinition>? evasionModifiers = null)
+    {
+        Actor = actor ?? throw new ArgumentNullException(nameof(actor));
+        Target = target ?? throw new ArgumentNullException(nameof(target));
+        Effect = effect ?? throw new ArgumentNullException(nameof(effect));
+        if (!Enum.IsDefined(affinity))
+        {
+            throw new ArgumentOutOfRangeException(nameof(affinity), affinity, "Affinity must be defined.");
+        }
+        if (chargeMultiplier <= 0m)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(chargeMultiplier),
+                chargeMultiplier,
+                "Charge multiplier must be positive.");
+        }
+        if (chargeKind is ChargeKind kind && !Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(chargeKind), chargeKind, "Charge kind must be defined.");
+        }
+
+        Affinity = affinity;
+        ChargeMultiplier = chargeMultiplier;
+        ChargeKind = chargeKind;
+        AccuracyModifiers = SnapshotModifiers(accuracyModifiers, nameof(accuracyModifiers));
+        EvasionModifiers = SnapshotModifiers(evasionModifiers, nameof(evasionModifiers));
+    }
+
+    public RuntimeActorState Actor { get; }
+    public RuntimeActorState Target { get; }
+    public DamageEffectDefinition Effect { get; }
+    public ElementalAffinity Affinity { get; }
+    public decimal ChargeMultiplier { get; }
+    public ChargeKind? ChargeKind { get; }
+    public IReadOnlyList<NumericRuleModifierDefinition> AccuracyModifiers { get; }
+    public IReadOnlyList<NumericRuleModifierDefinition> EvasionModifiers { get; }
+
+    private static IReadOnlyList<NumericRuleModifierDefinition> SnapshotModifiers(
+        IEnumerable<NumericRuleModifierDefinition>? modifiers,
+        string parameterName)
+    {
+        NumericRuleModifierDefinition[] snapshot = modifiers?.ToArray() ?? [];
+        if (snapshot.Any(modifier => modifier is null))
+        {
+            throw new ArgumentException("Damage modifier collections cannot contain null entries.", parameterName);
+        }
+
+        return Array.AsReadOnly(snapshot);
+    }
+}
 
 public sealed record DamageHitResolution(bool Hit, decimal Damage, bool Critical = false);
 

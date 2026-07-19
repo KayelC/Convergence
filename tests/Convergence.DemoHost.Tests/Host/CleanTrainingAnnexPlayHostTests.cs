@@ -2390,8 +2390,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 CombatProfile(target),
                 DamageElement.Physical,
                 ElementalAffinity.Normal,
-                Power: 10,
-                Accuracy: 100,
+                power: 10,
+                accuracy: 100,
                 new NeverCriticalDefinition(),
                 new HitCountDefinition(1, 1))).Hits);
         ProductionDamageResolutionHit magical = Assert.Single(ruleset.ResolveDamage(
@@ -2400,8 +2400,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 CombatProfile(target),
                 DamageElement.Ice,
                 ElementalAffinity.Normal,
-                Power: 8,
-                Accuracy: 100,
+                power: 8,
+                accuracy: 100,
                 new NeverCriticalDefinition(),
                 new HitCountDefinition(1, 1))).Hits);
 

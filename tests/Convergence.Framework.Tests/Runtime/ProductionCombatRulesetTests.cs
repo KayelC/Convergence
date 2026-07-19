@@ -31,7 +31,7 @@ public sealed class ProductionCombatRulesetTests
     [MemberData(nameof(ElementCases))]
     public void DamagePolicy_ResolvesEveryCleanDamageElement(DamageElement element)
     {
-        ProductionCombatRuleset ruleset = Rules(0m, 0.5m);
+        ProductionCombatRuleset ruleset = Rules(0.5m);
 
         ProductionDamageResolutionResult result = ruleset.ResolveDamage(new ProductionDamageResolutionRequest(
             Actor(),
@@ -87,8 +87,8 @@ public sealed class ProductionCombatRulesetTests
                 100,
                 new NeverCriticalDefinition(),
                 new HitCountDefinition(3, 3),
-                ChargeMultiplier: 2.5m,
-                ChargeKind: ChargeKind.Physical));
+                chargeMultiplier: 2.5m,
+                chargeKind: ChargeKind.Physical));
 
         Assert.Equal(3, result.Hits.Count);
         Assert.All(result.Hits, hit => Assert.Equal(125m, hit.Damage));
@@ -165,19 +165,19 @@ public sealed class ProductionCombatRulesetTests
             stats: new ProductionCombatStats(20, 20, 20, 40, 40),
             modifiers: new ProductionCombatModifiers(EvasionMultiplier: 0.6m));
 
-        ProductionHitCheckResult result = ruleset.CheckHit(new ProductionHitCheckRequest(
+        HitResolutionResult result = ruleset.CheckHit(new ProductionHitCheckRequest(
             attacker,
             evasiveTarget,
-            BaseAccuracy: 80));
-        ProductionHitCheckResult rigid = ruleset.CheckHit(new ProductionHitCheckRequest(
+            authoredAccuracy: 80));
+        HitResolutionResult rigid = ruleset.CheckHit(new ProductionHitCheckRequest(
             attacker,
             Actor(status: new ProductionCombatStatus(IsRigidBody: true)),
-            BaseAccuracy: 1));
+            authoredAccuracy: 1));
 
         Assert.True(result.Hit);
-        Assert.Equal(52, result.Chance);
+        Assert.Equal(72, result.FinalChance);
         Assert.True(rigid.Hit);
-        Assert.Equal(99, rigid.Chance);
+        Assert.Equal(100, rigid.FinalChance);
     }
 
     [Fact]
@@ -353,12 +353,12 @@ public sealed class ProductionCombatRulesetTests
                 new HitCountDefinition(1, 1),
                 decimal.MaxValue,
                 ChargeKind.Physical));
-        ProductionHitCheckResult lowestHitChance = ruleset.CheckHit(
+        HitResolutionResult lowestHitChance = ruleset.CheckHit(
             new ProductionHitCheckRequest(target, attacker, 0));
 
         Assert.Equal(decimal.MaxValue, Assert.Single(damage.Hits).Damage);
         Assert.Equal(decimal.MaxValue, damage.TotalDamage);
-        Assert.Equal(config.HitChanceMinimum, lowestHitChance.Chance);
+        Assert.Equal(config.HitChanceMinimum, lowestHitChance.FinalChance);
         Assert.Equal(
             config.CriticalChanceMaximum,
             ruleset.CalculateCriticalChance(attacker, target));

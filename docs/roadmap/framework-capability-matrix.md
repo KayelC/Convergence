@@ -34,13 +34,14 @@ restoration, and cross-policy host evidence. The final source-first review found
 no remaining reachable Order 1 defect, and the project owner confirmed the
 public mechanics on 18 July 2026.
 
-The source-first Order 2 review reopened `combat_resolution` as partial. The
-standard arithmetic remains usable and authored charge execution is
-policy-owned, but three passive combat modifier kinds, two inert configuration
-values, and the authored combat-policy replacement boundary require correction.
-Critical, instant-defeat resistance, chance-range, and multi-hit semantics are
-confirmed in the active decision record and still require implementation before
-the capability can return to complete.
+The source-first Order 2 review reopened `combat_resolution` as partial. Charge
+state is now policy-owned, and the supplied hit/evasion authority consumes
+authored Accuracy/Evasion modifiers with explicit Agility coefficients, exact
+probability bounds, deterministic evidence, and no hidden Luck contribution.
+Critical Chance is not yet wired through its approved policy family, and
+instant-defeat resistance, per-hit evidence/outcome aggregation, and the neutral
+authored combat-policy aggregate still require implementation before the
+capability can return to complete.
 
 ## Authority
 

@@ -112,6 +112,8 @@ snapshots, host JSON round-trip, and aggregate restoration.
 
 ## O2-C2: Hit, Evasion, And Probability
 
+**Status:** verified
+
 ### Implementation
 
 - Introduce a neutral hit-policy request/result with authored and resolved
@@ -135,6 +137,18 @@ snapshots, host JSON round-trip, and aggregate restoration.
 - configurable coefficients and bounds;
 - deterministic hit/evasion evidence;
 - ruleset binding rejects unknown, malformed, or removed parameters.
+
+### Completion record
+
+`StandardHitResolutionPolicy` now owns the supplied formula and returns typed
+evidence for authored accuracy, Agility, modifiers, chance, and roll. Passive
+Accuracy/Evasion modifiers reach the policy through `RuleModifierResolver`,
+Luck is absent, exact zero/one-hundred behavior is enforced, and basic attacks
+retain their authored equipment-profile accuracy. Ruleset binding exposes both
+Agility coefficients and `0..100` bounds while rejecting the removed fallback
+parameters. The checkpoint gate passed 1,242 tests (`1,062` Framework, `173`
+DemoHost, and `7` ContentValidator tests) with zero skips and zero build
+warnings.
 
 ## O2-C3: Critical Policy Family And Schema Revision
 

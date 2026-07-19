@@ -298,12 +298,33 @@ public sealed class RuleModifierResolver
         decimal baseValue,
         RuleModifierContext context)
     {
-        NumericRuleModifierDefinition[] modifiers = EnumerateApplicable(owner, context)
-            .OfType<NumericRuleModifierDefinition>()
-            .Where(modifier => modifier.ModifierType == modifierType)
-            .ToArray();
+        IReadOnlyList<NumericRuleModifierDefinition> modifiers = GetApplicableNumericModifiers(
+            owner,
+            modifierType,
+            context);
 
         return _stackingPolicies.GetRequired(modifierType).Resolve(baseValue, modifiers);
+    }
+
+    public IReadOnlyList<NumericRuleModifierDefinition> GetApplicableNumericModifiers(
+        RuntimeActorState owner,
+        NumericRuleModifierType modifierType,
+        RuleModifierContext context)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+        ArgumentNullException.ThrowIfNull(context);
+        if (!Enum.IsDefined(modifierType))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(modifierType),
+                modifierType,
+                "Numeric modifier type must be defined.");
+        }
+
+        return Array.AsReadOnly(EnumerateApplicable(owner, context)
+            .OfType<NumericRuleModifierDefinition>()
+            .Where(modifier => modifier.ModifierType == modifierType)
+            .ToArray());
     }
 
     public IReadOnlyList<ElementalAffinity> ResolveElementalAffinityReplacements(

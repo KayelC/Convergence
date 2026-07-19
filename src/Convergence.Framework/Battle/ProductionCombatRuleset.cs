@@ -14,15 +14,15 @@ public sealed record ProductionCombatRulesetConfig
     public decimal WeakDamageMultiplier { get; init; } = 1.5m;
     public decimal ResistDamageMultiplier { get; init; } = 0.5m;
     public decimal GuardDamageMultiplier { get; init; } = 0.5m;
-    public int DefaultHitAccuracy { get; init; } = 95;
-    public int HitChanceMinimum { get; init; } = 5;
-    public int HitChanceMaximum { get; init; } = 99;
+    public decimal HitAttackerAgilityCoefficient { get; init; } = 2m;
+    public decimal HitTargetAgilityCoefficient { get; init; } = 2m;
+    public int HitChanceMinimum { get; init; }
+    public int HitChanceMaximum { get; init; } = 100;
     public int CriticalChanceMinimum { get; init; } = 2;
     public int CriticalChanceMaximum { get; init; } = 40;
     public int CriticalChanceBase { get; init; } = 5;
     public int InstantDeathChanceMinimum { get; init; } = 5;
     public int InstantDeathChanceMaximum { get; init; } = 95;
-    public int DefaultInstantDeathChance { get; init; } = 40;
     public decimal EnemiesPerLevelForExperience { get; init; } = 50m;
     public decimal ExpectedStatLevelMultiplier { get; init; } = 3m;
     public decimal ExpectedStatBase { get; init; } = 15m;
@@ -47,7 +47,8 @@ public sealed record ProductionCombatRulesetConfig
         RequireNonNegative(WeakDamageMultiplier, nameof(WeakDamageMultiplier));
         RequireNonNegative(ResistDamageMultiplier, nameof(ResistDamageMultiplier));
         RequireNonNegative(GuardDamageMultiplier, nameof(GuardDamageMultiplier));
-        RequirePercent(DefaultHitAccuracy, nameof(DefaultHitAccuracy));
+        RequireNonNegative(HitAttackerAgilityCoefficient, nameof(HitAttackerAgilityCoefficient));
+        RequireNonNegative(HitTargetAgilityCoefficient, nameof(HitTargetAgilityCoefficient));
         RequireOrderedPercentRange(
             HitChanceMinimum,
             HitChanceMaximum,
@@ -64,7 +65,6 @@ public sealed record ProductionCombatRulesetConfig
             InstantDeathChanceMaximum,
             nameof(InstantDeathChanceMinimum),
             nameof(InstantDeathChanceMaximum));
-        RequirePercent(DefaultInstantDeathChance, nameof(DefaultInstantDeathChance));
         RequirePositive(EnemiesPerLevelForExperience, nameof(EnemiesPerLevelForExperience));
         RequireNonNegative(ExpectedStatLevelMultiplier, nameof(ExpectedStatLevelMultiplier));
         RequireNonNegative(ExpectedStatBase, nameof(ExpectedStatBase));
@@ -213,12 +213,41 @@ public sealed record ProductionCombatantProfile
     }
 }
 
-public sealed record ProductionHitCheckRequest(
-    ProductionCombatantProfile Attacker,
-    ProductionCombatantProfile Target,
-    int BaseAccuracy);
+public sealed class ProductionHitCheckRequest
+{
+    public ProductionHitCheckRequest(
+        ProductionCombatantProfile attacker,
+        ProductionCombatantProfile target,
+        int authoredAccuracy,
+        IEnumerable<NumericRuleModifierDefinition>? accuracyModifiers = null,
+        IEnumerable<NumericRuleModifierDefinition>? evasionModifiers = null)
+    {
+        Attacker = attacker ?? throw new ArgumentNullException(nameof(attacker));
+        Target = target ?? throw new ArgumentNullException(nameof(target));
+        AuthoredAccuracy = authoredAccuracy;
+        AccuracyModifiers = Snapshot(accuracyModifiers, nameof(accuracyModifiers));
+        EvasionModifiers = Snapshot(evasionModifiers, nameof(evasionModifiers));
+    }
 
-public sealed record ProductionHitCheckResult(bool Hit, int Chance);
+    public ProductionCombatantProfile Attacker { get; }
+    public ProductionCombatantProfile Target { get; }
+    public int AuthoredAccuracy { get; }
+    public IReadOnlyList<NumericRuleModifierDefinition> AccuracyModifiers { get; }
+    public IReadOnlyList<NumericRuleModifierDefinition> EvasionModifiers { get; }
+
+    private static IReadOnlyList<NumericRuleModifierDefinition> Snapshot(
+        IEnumerable<NumericRuleModifierDefinition>? modifiers,
+        string parameterName)
+    {
+        NumericRuleModifierDefinition[] snapshot = modifiers?.ToArray() ?? [];
+        if (snapshot.Any(modifier => modifier is null))
+        {
+            throw new ArgumentException("Hit modifier collections cannot contain null entries.", parameterName);
+        }
+
+        return Array.AsReadOnly(snapshot);
+    }
+}
 
 public sealed record ProductionCriticalCheckRequest(
     ProductionCombatantProfile Attacker,
@@ -228,17 +257,62 @@ public sealed record ProductionCriticalCheckRequest(
 
 public sealed record ProductionCriticalCheckResult(bool Critical, int Chance);
 
-public sealed record ProductionDamageResolutionRequest(
-    ProductionCombatantProfile Attacker,
-    ProductionCombatantProfile Target,
-    DamageElement Element,
-    ElementalAffinity Affinity,
-    int Power,
-    int Accuracy,
-    CriticalDefinition Critical,
-    HitCountDefinition Hits,
-    decimal ChargeMultiplier = 1m,
-    ChargeKind? ChargeKind = null);
+public sealed class ProductionDamageResolutionRequest
+{
+    public ProductionDamageResolutionRequest(
+        ProductionCombatantProfile attacker,
+        ProductionCombatantProfile target,
+        DamageElement element,
+        ElementalAffinity affinity,
+        int power,
+        int accuracy,
+        CriticalDefinition critical,
+        HitCountDefinition hits,
+        decimal chargeMultiplier = 1m,
+        ChargeKind? chargeKind = null,
+        IEnumerable<NumericRuleModifierDefinition>? accuracyModifiers = null,
+        IEnumerable<NumericRuleModifierDefinition>? evasionModifiers = null)
+    {
+        Attacker = attacker ?? throw new ArgumentNullException(nameof(attacker));
+        Target = target ?? throw new ArgumentNullException(nameof(target));
+        Element = element;
+        Affinity = affinity;
+        Power = power;
+        Accuracy = accuracy;
+        Critical = critical ?? throw new ArgumentNullException(nameof(critical));
+        Hits = hits ?? throw new ArgumentNullException(nameof(hits));
+        ChargeMultiplier = chargeMultiplier;
+        ChargeKind = chargeKind;
+        AccuracyModifiers = Snapshot(accuracyModifiers, nameof(accuracyModifiers));
+        EvasionModifiers = Snapshot(evasionModifiers, nameof(evasionModifiers));
+    }
+
+    public ProductionCombatantProfile Attacker { get; }
+    public ProductionCombatantProfile Target { get; }
+    public DamageElement Element { get; }
+    public ElementalAffinity Affinity { get; }
+    public int Power { get; }
+    public int Accuracy { get; }
+    public CriticalDefinition Critical { get; }
+    public HitCountDefinition Hits { get; }
+    public decimal ChargeMultiplier { get; }
+    public ChargeKind? ChargeKind { get; }
+    public IReadOnlyList<NumericRuleModifierDefinition> AccuracyModifiers { get; }
+    public IReadOnlyList<NumericRuleModifierDefinition> EvasionModifiers { get; }
+
+    private static IReadOnlyList<NumericRuleModifierDefinition> Snapshot(
+        IEnumerable<NumericRuleModifierDefinition>? modifiers,
+        string parameterName)
+    {
+        NumericRuleModifierDefinition[] snapshot = modifiers?.ToArray() ?? [];
+        if (snapshot.Any(modifier => modifier is null))
+        {
+            throw new ArgumentException("Damage modifier collections cannot contain null entries.", parameterName);
+        }
+
+        return Array.AsReadOnly(snapshot);
+    }
+}
 
 public sealed record ProductionDamageResolutionHit(
     bool Hit,
@@ -291,20 +365,32 @@ public sealed class ProductionCombatRuleset :
     private readonly IRandomSource _random;
     private readonly ProductionCombatRulesetConfig _config;
     private readonly IStatStageScalingPolicy _stageScaling;
+    private readonly IHitResolutionPolicy _hitPolicy;
 
     public ProductionCombatRuleset(
         IRandomSource random,
         ProductionCombatRulesetConfig? config = null,
-        IStatStageScalingPolicy? stageScaling = null)
+        IStatStageScalingPolicy? stageScaling = null,
+        IHitResolutionPolicy? hitPolicy = null)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _config = config ?? new ProductionCombatRulesetConfig();
         _config.Validate();
         _stageScaling = stageScaling ?? new StandardStatStageScalingPolicy();
+        _hitPolicy = hitPolicy ?? new StandardHitResolutionPolicy(
+            _random,
+            new StandardHitResolutionPolicyConfig
+            {
+                AttackerAgilityCoefficient = _config.HitAttackerAgilityCoefficient,
+                TargetAgilityCoefficient = _config.HitTargetAgilityCoefficient,
+                MinimumChance = _config.HitChanceMinimum,
+                MaximumChance = _config.HitChanceMaximum
+            });
     }
 
     public ProductionCombatRulesetConfig Config => _config;
     public IStatStageScalingPolicy StageScalingPolicy => _stageScaling;
+    public IHitResolutionPolicy HitPolicy => _hitPolicy;
 
     public DamagePolicyResolution Resolve(DamagePolicyRequest request)
     {
@@ -320,7 +406,9 @@ public sealed class ProductionCombatRuleset :
             request.Effect.Critical,
             request.Effect.Hits,
             request.ChargeMultiplier,
-            request.ChargeKind));
+            request.ChargeKind,
+            request.AccuracyModifiers,
+            request.EvasionModifiers));
 
         return new DamagePolicyResolution(
             result.Hits.Select(hit => new DamageHitResolution(hit.Hit, hit.Damage, hit.Critical)),
@@ -381,13 +469,15 @@ public sealed class ProductionCombatRuleset :
             request.Target.Status.IsGuarding);
         for (int i = 0; i < hitCount; i++)
         {
-            ProductionHitCheckResult hit = CheckHit(new ProductionHitCheckRequest(
+            HitResolutionResult hit = CheckHit(new ProductionHitCheckRequest(
                 request.Attacker,
                 request.Target,
-                request.Accuracy));
+                request.Accuracy,
+                request.AccuracyModifiers,
+                request.EvasionModifiers));
             if (!hit.Hit)
             {
-                hits.Add(new ProductionDamageResolutionHit(false, 0m, false, hit.Chance, 0));
+                hits.Add(new ProductionDamageResolutionHit(false, 0m, false, hit.FinalChance, 0));
                 continue;
             }
 
@@ -421,40 +511,26 @@ public sealed class ProductionCombatRuleset :
                     damage,
                     RollVariance(_config.DamageVarianceMinimum, _config.DamageVarianceMaximum))),
                 critical.Critical,
-                hit.Chance,
+                hit.FinalChance,
                 critical.Chance));
         }
 
         return new ProductionDamageResolutionResult(hits, resolvedAffinity);
     }
 
-    public ProductionHitCheckResult CheckHit(ProductionHitCheckRequest request)
+    public HitResolutionResult CheckHit(ProductionHitCheckRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (request.Target.Status.IsRigidBody)
-        {
-            return new ProductionHitCheckResult(true, _config.HitChanceMaximum);
-        }
-
-        decimal attackerAgility = CombatArithmetic.SaturatingMultiply(
+        return _hitPolicy.Resolve(new HitResolutionRequest(
+            request.AuthoredAccuracy,
             request.Attacker.Stats.Agility,
-            request.Attacker.Modifiers.HitMultiplier);
-        decimal targetAgility = CombatArithmetic.SaturatingMultiply(
             request.Target.Stats.Agility,
-            request.Target.Modifiers.EvasionMultiplier);
-        decimal chance = CombatArithmetic.SaturatingAdd(
-            request.BaseAccuracy,
-            CombatArithmetic.SaturatingMultiply(
-                CombatArithmetic.SaturatingSubtract(attackerAgility, targetAgility),
-                2m));
-        chance = CombatArithmetic.SaturatingAdd(
-            chance,
-            CombatArithmetic.SaturatingSubtract(
-                request.Attacker.Stats.Luck,
-                request.Target.Stats.Luck));
-        int clamped = ClampPercent(chance, _config.HitChanceMinimum, _config.HitChanceMaximum);
-        return new ProductionHitCheckResult(RollPercent(clamped), clamped);
+            request.Attacker.Modifiers.HitMultiplier,
+            request.Target.Modifiers.EvasionMultiplier,
+            request.AccuracyModifiers,
+            request.EvasionModifiers,
+            request.Target.Status.IsRigidBody));
     }
 
     public ProductionCriticalCheckResult CheckCritical(ProductionCriticalCheckRequest request)

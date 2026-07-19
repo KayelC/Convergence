@@ -143,6 +143,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Battle/HitResolutionPolicies.cs",
+      "owner": "combat_rules",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Battle/ProductionCombatRuleset.cs",
       "owner": "combat_rules",
       "publicSurface": "exported"

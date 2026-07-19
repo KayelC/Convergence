@@ -4,7 +4,7 @@
 
 **Decision date:** 19 July 2026
 
-**Implementation state:** O2-C1 charge policies verified; remaining Order 2 checkpoints active
+**Implementation state:** O2-C1 charge and O2-C2 hit/evasion policies verified; remaining Order 2 checkpoints active
 
 ## Context
 

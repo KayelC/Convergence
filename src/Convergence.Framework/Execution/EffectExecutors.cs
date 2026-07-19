@@ -111,6 +111,20 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             target,
             definition.Element,
             new RuleModifierContext(defenseConditionContext, context.Request.Skill));
+        var attackConditionContext = new BattleConditionContext(
+            context.Actor,
+            target,
+            context.Request.Participants,
+            context.Request.BattleKindId,
+            context.Request.MoonPhaseId,
+            context.Services,
+            [definition.Element]);
+        var attackModifierContext = new RuleModifierContext(
+            attackConditionContext,
+            context.Request.Skill);
+        var defenseModifierContext = new RuleModifierContext(
+            defenseConditionContext,
+            context.Request.Skill);
         ChargeDamageModifier charge = context.Services.Charges.ResolveDamageModifier(
             context.Actor,
             definition.Element);
@@ -121,7 +135,15 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                 definition,
                 affinity,
                 charge.Multiplier,
-                charge.ChargeKind));
+                charge.ChargeKind,
+                context.Services.RuleModifiers.GetApplicableNumericModifiers(
+                    context.Actor,
+                    NumericRuleModifierType.Accuracy,
+                    attackModifierContext),
+                context.Services.RuleModifiers.GetApplicableNumericModifiers(
+                    target,
+                    NumericRuleModifierType.Evasion,
+                    defenseModifierContext)));
         affinity = resolution.ResolvedAffinity;
         DamageHitResolution[] landed = resolution.Hits.Where(hit => hit.Hit).ToArray();
         if (landed.Length == 0)
@@ -131,24 +153,16 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
 
         decimal total = CombatArithmetic.SaturatingSum(
             landed.Select(hit => Math.Max(0, hit.Damage)));
-        var attackConditionContext = new BattleConditionContext(
-            context.Actor,
-            target,
-            context.Request.Participants,
-            context.Request.BattleKindId,
-            context.Request.MoonPhaseId,
-            context.Services,
-            [definition.Element]);
         total = Math.Max(0, context.Services.RuleModifiers.ResolveNumeric(
             context.Actor,
             NumericRuleModifierType.DamageDealt,
             total,
-            new RuleModifierContext(attackConditionContext, context.Request.Skill)));
+            attackModifierContext));
         total = Math.Max(0, context.Services.RuleModifiers.ResolveNumeric(
             target,
             NumericRuleModifierType.DamageTaken,
             total,
-            new RuleModifierContext(defenseConditionContext, context.Request.Skill)));
+            defenseModifierContext));
         bool critical = landed.Any(hit => hit.Critical);
         switch (affinity)
         {

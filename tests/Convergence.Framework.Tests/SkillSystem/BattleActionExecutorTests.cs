@@ -59,6 +59,24 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task BasicAttack_ForwardsTheAuthoredEquipmentAccuracyToDamageResolution()
+    {
+        var damage = new RecordingDamagePolicy();
+        BattleActionExecutor executor = Executor(damagePolicy: damage);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        var command = new BasicAttackBattleActionCommand(
+            new EquipmentBasicAttackDefinition(DamageElement.Physical, 15, 37, false),
+            SingleEnemy(),
+            [target.InstanceId]);
+
+        BattleActionExecutionResult result = await Execute(executor, command, actor, [actor, target]);
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(37, Assert.Single(damage.Requests).Effect.Accuracy);
+    }
+
+    [Fact]
     public async Task SkillAction_SharesAssessmentWithExecutionAndCommitsCosts()
     {
         BattleActionExecutor executor = Executor();
@@ -1051,13 +1069,15 @@ public sealed class BattleActionExecutorTests
         IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
         IRandomTargetSelectionPolicy? randomTargetPolicy = null,
         IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null,
-        IBattleActionAuthorizationPolicy? authorization = null)
+        IBattleActionAuthorizationPolicy? authorization = null,
+        IDamageExecutionPolicy? damagePolicy = null)
     {
         BattleExecutionServices services = ExecutionServices(
             escapeRules,
             customEffects,
             randomTargetPolicy,
-            runtimeRandomTargetPolicy);
+            runtimeRandomTargetPolicy,
+            damagePolicy);
         return new BattleActionExecutor(
             new SkillExecutor(services),
             new ItemExecutor(services),
@@ -1069,10 +1089,11 @@ public sealed class BattleActionExecutorTests
         IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRules = null,
         IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
         IRandomTargetSelectionPolicy? randomTargetPolicy = null,
-        IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null) =>
+        IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null,
+        IDamageExecutionPolicy? damagePolicy = null) =>
         new(
             EmptyAilments.Instance,
-            new FixedDamagePolicy(),
+            damagePolicy ?? new FixedDamagePolicy(),
             new NeverInstantDeathPolicy(),
             new NeverAilmentPolicy(),
             new AlwaysChancePolicy(),
@@ -1231,6 +1252,19 @@ public sealed class BattleActionExecutorTests
             TargetCountDefinition count,
             SkillExecutionRequest request) =>
             Array.AsReadOnly(candidates.Take(count.Maximum).ToArray());
+    }
+
+    private sealed class RecordingDamagePolicy : IDamageExecutionPolicy
+    {
+        private readonly List<DamagePolicyRequest> _requests = [];
+
+        public IReadOnlyList<DamagePolicyRequest> Requests => _requests.AsReadOnly();
+
+        public DamagePolicyResolution Resolve(DamagePolicyRequest request)
+        {
+            _requests.Add(request);
+            return new DamagePolicyResolution([new DamageHitResolution(true, 10)], request.Affinity);
+        }
     }
 
     private sealed class AlternatingSkillRandomTargetPolicy : IRandomTargetSelectionPolicy

@@ -86,6 +86,52 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void DamageExecution_ForwardsApplicableAccuracyAndEvasionPassivesToTheHitAuthority()
+    {
+        SkillDefinition accuracy = PassiveSkill(
+            "accuracy",
+            modifiers:
+            [
+                new NumericRuleModifierDefinition(
+                    NumericRuleModifierType.Accuracy,
+                    ModifierOperation.Add,
+                    12m)
+            ]);
+        SkillDefinition evasion = PassiveSkill(
+            "evasion",
+            modifiers:
+            [
+                new NumericRuleModifierDefinition(
+                    NumericRuleModifierType.Evasion,
+                    ModifierOperation.Multiply,
+                    1.25m)
+            ]);
+        RuntimeActorState actor = Actor("actor", PlayerTeam, passiveSkills: [accuracy]);
+        RuntimeActorState target = Actor("target", EnemyTeam, passiveSkills: [evasion]);
+        DamagePolicyRequest? captured = null;
+        BattleExecutionServices services = Services(request =>
+        {
+            captured = request;
+            return [new DamageHitResolution(true, 10)];
+        });
+
+        SkillExecutionResult result = new SkillExecutor(services).Execute(Request(
+            ActiveDamageSkill("attack", DamageElement.Physical),
+            actor,
+            [actor, target],
+            target));
+
+        Assert.Equal(SkillExecutionStatus.Executed, result.Status);
+        Assert.NotNull(captured);
+        Assert.Equal(
+            NumericRuleModifierType.Accuracy,
+            Assert.Single(captured.AccuracyModifiers).ModifierType);
+        Assert.Equal(
+            NumericRuleModifierType.Evasion,
+            Assert.Single(captured.EvasionModifiers).ModifierType);
+    }
+
+    [Fact]
     public void NumericModifiers_SaturateExtremeAddAndMultiplyStacks()
     {
         SkillDefinition firstAdd = PassiveSkill(

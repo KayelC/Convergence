@@ -116,13 +116,9 @@ Convergence.Battle.ProductionCombatRuleset.CalculateCriticalChance(Convergence.B
 Convergence.Battle.ProductionCombatRuleset.CalculateCurrencyYield(Convergence.Battle.ProductionCombatantProfile! enemy) -> int
 Convergence.Battle.ProductionCombatRuleset.CalculateExperienceYield(Convergence.Battle.ProductionCombatantProfile! enemy) -> int
 Convergence.Battle.ProductionCombatRuleset.CheckCritical(Convergence.Battle.ProductionCriticalCheckRequest! request) -> Convergence.Battle.ProductionCriticalCheckResult!
-Convergence.Battle.ProductionCombatRuleset.CheckHit(Convergence.Battle.ProductionHitCheckRequest! request) -> Convergence.Battle.ProductionHitCheckResult!
 Convergence.Battle.ProductionCombatRuleset.Config.get -> Convergence.Battle.ProductionCombatRulesetConfig!
-Convergence.Battle.ProductionCombatRuleset.ProductionCombatRuleset(Convergence.Hosting.IRandomSource! random, Convergence.Battle.ProductionCombatRulesetConfig? config = null, Convergence.Runtime.IStatStageScalingPolicy? stageScaling = null) -> void
 Convergence.Battle.ProductionCombatRuleset.Resolve(Convergence.Content.PowerAmountDefinition! amount, Convergence.Execution.AmountResolutionContext! context) -> decimal
-Convergence.Battle.ProductionCombatRuleset.Resolve(Convergence.Execution.DamagePolicyRequest! request) -> Convergence.Execution.DamagePolicyResolution!
 Convergence.Battle.ProductionCombatRuleset.ResolveAilmentApplication(Convergence.Battle.ProductionAilmentApplicationRequest! request) -> Convergence.Battle.ProductionAilmentApplicationResult!
-Convergence.Battle.ProductionCombatRuleset.ResolveDamage(Convergence.Battle.ProductionDamageResolutionRequest! request) -> Convergence.Battle.ProductionDamageResolutionResult!
 Convergence.Battle.ProductionCombatRuleset.ResolveInstantDeath(Convergence.Battle.ProductionInstantDeathRequest! request) -> Convergence.Battle.ProductionInstantDeathResult!
 Convergence.Battle.ProductionCombatRuleset.Roll(Convergence.Execution.ChancePolicyRequest! request) -> bool
 Convergence.Battle.ProductionCombatRuleset.RollInitiative(decimal playerAverageAgility, decimal enemyAverageAgility) -> bool
@@ -153,10 +149,6 @@ Convergence.Battle.ProductionCombatRulesetConfig.DamageVarianceMaximum.get -> de
 Convergence.Battle.ProductionCombatRulesetConfig.DamageVarianceMaximum.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.DamageVarianceMinimum.get -> decimal
 Convergence.Battle.ProductionCombatRulesetConfig.DamageVarianceMinimum.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.DefaultHitAccuracy.get -> int
-Convergence.Battle.ProductionCombatRulesetConfig.DefaultHitAccuracy.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.DefaultInstantDeathChance.get -> int
-Convergence.Battle.ProductionCombatRulesetConfig.DefaultInstantDeathChance.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.EnemiesPerLevelForExperience.get -> decimal
 Convergence.Battle.ProductionCombatRulesetConfig.EnemiesPerLevelForExperience.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.Equals(Convergence.Battle.ProductionCombatRulesetConfig? other) -> bool
@@ -249,25 +241,6 @@ Convergence.Battle.ProductionDamageResolutionHit.Hit.init -> void
 Convergence.Battle.ProductionDamageResolutionHit.HitChance.get -> int
 Convergence.Battle.ProductionDamageResolutionHit.HitChance.init -> void
 Convergence.Battle.ProductionDamageResolutionHit.ProductionDamageResolutionHit(bool Hit, decimal Damage, bool Critical, int HitChance, int CriticalChance) -> void
-Convergence.Battle.ProductionDamageResolutionRequest
-Convergence.Battle.ProductionDamageResolutionRequest.<Clone>$() -> Convergence.Battle.ProductionDamageResolutionRequest!
-Convergence.Battle.ProductionDamageResolutionRequest.Accuracy.get -> int
-Convergence.Battle.ProductionDamageResolutionRequest.Accuracy.init -> void
-Convergence.Battle.ProductionDamageResolutionRequest.Affinity.get -> Convergence.Content.ElementalAffinity
-Convergence.Battle.ProductionDamageResolutionRequest.Affinity.init -> void
-Convergence.Battle.ProductionDamageResolutionRequest.Attacker.get -> Convergence.Battle.ProductionCombatantProfile!
-Convergence.Battle.ProductionDamageResolutionRequest.Attacker.init -> void
-Convergence.Battle.ProductionDamageResolutionRequest.Critical.get -> Convergence.Content.CriticalDefinition!
-Convergence.Battle.ProductionDamageResolutionRequest.Critical.init -> void
-Convergence.Battle.ProductionDamageResolutionRequest.Element.get -> Convergence.Content.DamageElement
-Convergence.Battle.ProductionDamageResolutionRequest.Element.init -> void
-Convergence.Battle.ProductionDamageResolutionRequest.Equals(Convergence.Battle.ProductionDamageResolutionRequest? other) -> bool
-Convergence.Battle.ProductionDamageResolutionRequest.Hits.get -> Convergence.Content.HitCountDefinition!
-Convergence.Battle.ProductionDamageResolutionRequest.Hits.init -> void
-Convergence.Battle.ProductionDamageResolutionRequest.Power.get -> int
-Convergence.Battle.ProductionDamageResolutionRequest.Power.init -> void
-Convergence.Battle.ProductionDamageResolutionRequest.Target.get -> Convergence.Battle.ProductionCombatantProfile!
-Convergence.Battle.ProductionDamageResolutionRequest.Target.init -> void
 Convergence.Battle.ProductionDamageResolutionResult
 Convergence.Battle.ProductionDamageResolutionResult.<Clone>$() -> Convergence.Battle.ProductionDamageResolutionResult!
 Convergence.Battle.ProductionDamageResolutionResult.AnyCritical.get -> bool
@@ -276,26 +249,6 @@ Convergence.Battle.ProductionDamageResolutionResult.Hits.get -> System.Collectio
 Convergence.Battle.ProductionDamageResolutionResult.ProductionDamageResolutionResult(System.Collections.Generic.IEnumerable<Convergence.Battle.ProductionDamageResolutionHit!>! hits, Convergence.Content.ElementalAffinity resolvedAffinity) -> void
 Convergence.Battle.ProductionDamageResolutionResult.ResolvedAffinity.get -> Convergence.Content.ElementalAffinity
 Convergence.Battle.ProductionDamageResolutionResult.TotalDamage.get -> decimal
-Convergence.Battle.ProductionHitCheckRequest
-Convergence.Battle.ProductionHitCheckRequest.<Clone>$() -> Convergence.Battle.ProductionHitCheckRequest!
-Convergence.Battle.ProductionHitCheckRequest.Attacker.get -> Convergence.Battle.ProductionCombatantProfile!
-Convergence.Battle.ProductionHitCheckRequest.Attacker.init -> void
-Convergence.Battle.ProductionHitCheckRequest.BaseAccuracy.get -> int
-Convergence.Battle.ProductionHitCheckRequest.BaseAccuracy.init -> void
-Convergence.Battle.ProductionHitCheckRequest.Deconstruct(out Convergence.Battle.ProductionCombatantProfile! Attacker, out Convergence.Battle.ProductionCombatantProfile! Target, out int BaseAccuracy) -> void
-Convergence.Battle.ProductionHitCheckRequest.Equals(Convergence.Battle.ProductionHitCheckRequest? other) -> bool
-Convergence.Battle.ProductionHitCheckRequest.ProductionHitCheckRequest(Convergence.Battle.ProductionCombatantProfile! Attacker, Convergence.Battle.ProductionCombatantProfile! Target, int BaseAccuracy) -> void
-Convergence.Battle.ProductionHitCheckRequest.Target.get -> Convergence.Battle.ProductionCombatantProfile!
-Convergence.Battle.ProductionHitCheckRequest.Target.init -> void
-Convergence.Battle.ProductionHitCheckResult
-Convergence.Battle.ProductionHitCheckResult.<Clone>$() -> Convergence.Battle.ProductionHitCheckResult!
-Convergence.Battle.ProductionHitCheckResult.Chance.get -> int
-Convergence.Battle.ProductionHitCheckResult.Chance.init -> void
-Convergence.Battle.ProductionHitCheckResult.Deconstruct(out bool Hit, out int Chance) -> void
-Convergence.Battle.ProductionHitCheckResult.Equals(Convergence.Battle.ProductionHitCheckResult? other) -> bool
-Convergence.Battle.ProductionHitCheckResult.Hit.get -> bool
-Convergence.Battle.ProductionHitCheckResult.Hit.init -> void
-Convergence.Battle.ProductionHitCheckResult.ProductionHitCheckResult(bool Hit, int Chance) -> void
 Convergence.Battle.ProductionInstantDeathRequest
 Convergence.Battle.ProductionInstantDeathRequest.<Clone>$() -> Convergence.Battle.ProductionInstantDeathRequest!
 Convergence.Battle.ProductionInstantDeathRequest.Attacker.get -> Convergence.Battle.ProductionCombatantProfile!
@@ -3244,17 +3197,6 @@ Convergence.Execution.DamageHitResolution.Deconstruct(out bool Hit, out decimal 
 Convergence.Execution.DamageHitResolution.Equals(Convergence.Execution.DamageHitResolution? other) -> bool
 Convergence.Execution.DamageHitResolution.Hit.get -> bool
 Convergence.Execution.DamageHitResolution.Hit.init -> void
-Convergence.Execution.DamagePolicyRequest
-Convergence.Execution.DamagePolicyRequest.<Clone>$() -> Convergence.Execution.DamagePolicyRequest!
-Convergence.Execution.DamagePolicyRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
-Convergence.Execution.DamagePolicyRequest.Actor.init -> void
-Convergence.Execution.DamagePolicyRequest.Affinity.get -> Convergence.Content.ElementalAffinity
-Convergence.Execution.DamagePolicyRequest.Affinity.init -> void
-Convergence.Execution.DamagePolicyRequest.Effect.get -> Convergence.Content.DamageEffectDefinition!
-Convergence.Execution.DamagePolicyRequest.Effect.init -> void
-Convergence.Execution.DamagePolicyRequest.Equals(Convergence.Execution.DamagePolicyRequest? other) -> bool
-Convergence.Execution.DamagePolicyRequest.Target.get -> Convergence.Execution.RuntimeActorState!
-Convergence.Execution.DamagePolicyRequest.Target.init -> void
 Convergence.Execution.DamagePolicyResolution
 Convergence.Execution.DamagePolicyResolution.DamagePolicyResolution(System.Collections.Generic.IEnumerable<Convergence.Execution.DamageHitResolution!>! hits, Convergence.Content.ElementalAffinity resolvedAffinity) -> void
 Convergence.Execution.DamagePolicyResolution.Hits.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.DamageHitResolution!>!
@@ -3395,7 +3337,6 @@ Convergence.Execution.ICustomConditionHandler.Evaluate(Convergence.Content.Custo
 Convergence.Execution.ICustomEffectHandler
 Convergence.Execution.ICustomEffectHandler.Execute(Convergence.Content.CustomEffectDefinition! effect, Convergence.Execution.EffectExecutionContext! context) -> Convergence.Execution.EffectExecutionResult!
 Convergence.Execution.IDamageExecutionPolicy
-Convergence.Execution.IDamageExecutionPolicy.Resolve(Convergence.Execution.DamagePolicyRequest! request) -> Convergence.Execution.DamagePolicyResolution!
 Convergence.Execution.IEffectExecutor<TDefinition>
 Convergence.Execution.IEffectExecutor<TDefinition>.Execute(TDefinition! definition, Convergence.Execution.EffectExecutionContext! context) -> Convergence.Execution.EffectExecutionResult!
 Convergence.Execution.IEscapeRuleHandler
@@ -7074,18 +7015,9 @@ override Convergence.Battle.ProductionCriticalCheckResult.ToString() -> string!
 override Convergence.Battle.ProductionDamageResolutionHit.Equals(object? obj) -> bool
 override Convergence.Battle.ProductionDamageResolutionHit.GetHashCode() -> int
 override Convergence.Battle.ProductionDamageResolutionHit.ToString() -> string!
-override Convergence.Battle.ProductionDamageResolutionRequest.Equals(object? obj) -> bool
-override Convergence.Battle.ProductionDamageResolutionRequest.GetHashCode() -> int
-override Convergence.Battle.ProductionDamageResolutionRequest.ToString() -> string!
 override Convergence.Battle.ProductionDamageResolutionResult.Equals(object? obj) -> bool
 override Convergence.Battle.ProductionDamageResolutionResult.GetHashCode() -> int
 override Convergence.Battle.ProductionDamageResolutionResult.ToString() -> string!
-override Convergence.Battle.ProductionHitCheckRequest.Equals(object? obj) -> bool
-override Convergence.Battle.ProductionHitCheckRequest.GetHashCode() -> int
-override Convergence.Battle.ProductionHitCheckRequest.ToString() -> string!
-override Convergence.Battle.ProductionHitCheckResult.Equals(object? obj) -> bool
-override Convergence.Battle.ProductionHitCheckResult.GetHashCode() -> int
-override Convergence.Battle.ProductionHitCheckResult.ToString() -> string!
 override Convergence.Battle.ProductionInstantDeathRequest.Equals(object? obj) -> bool
 override Convergence.Battle.ProductionInstantDeathRequest.GetHashCode() -> int
 override Convergence.Battle.ProductionInstantDeathRequest.ToString() -> string!
@@ -7905,9 +7837,6 @@ override Convergence.Execution.CustomAilmentTurnBehaviorResult.ToString() -> str
 override Convergence.Execution.DamageHitResolution.Equals(object? obj) -> bool
 override Convergence.Execution.DamageHitResolution.GetHashCode() -> int
 override Convergence.Execution.DamageHitResolution.ToString() -> string!
-override Convergence.Execution.DamagePolicyRequest.Equals(object? obj) -> bool
-override Convergence.Execution.DamagePolicyRequest.GetHashCode() -> int
-override Convergence.Execution.DamagePolicyRequest.ToString() -> string!
 override Convergence.Execution.EffectActionExecutionRequest.Equals(object? obj) -> bool
 override Convergence.Execution.EffectActionExecutionRequest.GetHashCode() -> int
 override Convergence.Execution.EffectActionExecutionRequest.ToString() -> string!
@@ -8793,14 +8722,8 @@ static Convergence.Battle.ProductionCriticalCheckResult.operator !=(Convergence.
 static Convergence.Battle.ProductionCriticalCheckResult.operator ==(Convergence.Battle.ProductionCriticalCheckResult? left, Convergence.Battle.ProductionCriticalCheckResult? right) -> bool
 static Convergence.Battle.ProductionDamageResolutionHit.operator !=(Convergence.Battle.ProductionDamageResolutionHit? left, Convergence.Battle.ProductionDamageResolutionHit? right) -> bool
 static Convergence.Battle.ProductionDamageResolutionHit.operator ==(Convergence.Battle.ProductionDamageResolutionHit? left, Convergence.Battle.ProductionDamageResolutionHit? right) -> bool
-static Convergence.Battle.ProductionDamageResolutionRequest.operator !=(Convergence.Battle.ProductionDamageResolutionRequest? left, Convergence.Battle.ProductionDamageResolutionRequest? right) -> bool
-static Convergence.Battle.ProductionDamageResolutionRequest.operator ==(Convergence.Battle.ProductionDamageResolutionRequest? left, Convergence.Battle.ProductionDamageResolutionRequest? right) -> bool
 static Convergence.Battle.ProductionDamageResolutionResult.operator !=(Convergence.Battle.ProductionDamageResolutionResult? left, Convergence.Battle.ProductionDamageResolutionResult? right) -> bool
 static Convergence.Battle.ProductionDamageResolutionResult.operator ==(Convergence.Battle.ProductionDamageResolutionResult? left, Convergence.Battle.ProductionDamageResolutionResult? right) -> bool
-static Convergence.Battle.ProductionHitCheckRequest.operator !=(Convergence.Battle.ProductionHitCheckRequest? left, Convergence.Battle.ProductionHitCheckRequest? right) -> bool
-static Convergence.Battle.ProductionHitCheckRequest.operator ==(Convergence.Battle.ProductionHitCheckRequest? left, Convergence.Battle.ProductionHitCheckRequest? right) -> bool
-static Convergence.Battle.ProductionHitCheckResult.operator !=(Convergence.Battle.ProductionHitCheckResult? left, Convergence.Battle.ProductionHitCheckResult? right) -> bool
-static Convergence.Battle.ProductionHitCheckResult.operator ==(Convergence.Battle.ProductionHitCheckResult? left, Convergence.Battle.ProductionHitCheckResult? right) -> bool
 static Convergence.Battle.ProductionInstantDeathRequest.operator !=(Convergence.Battle.ProductionInstantDeathRequest? left, Convergence.Battle.ProductionInstantDeathRequest? right) -> bool
 static Convergence.Battle.ProductionInstantDeathRequest.operator ==(Convergence.Battle.ProductionInstantDeathRequest? left, Convergence.Battle.ProductionInstantDeathRequest? right) -> bool
 static Convergence.Battle.ProductionInstantDeathResult.operator !=(Convergence.Battle.ProductionInstantDeathResult? left, Convergence.Battle.ProductionInstantDeathResult? right) -> bool
@@ -9324,8 +9247,6 @@ static Convergence.Execution.CustomAilmentTurnBehaviorResult.operator !=(Converg
 static Convergence.Execution.CustomAilmentTurnBehaviorResult.operator ==(Convergence.Execution.CustomAilmentTurnBehaviorResult? left, Convergence.Execution.CustomAilmentTurnBehaviorResult? right) -> bool
 static Convergence.Execution.DamageHitResolution.operator !=(Convergence.Execution.DamageHitResolution? left, Convergence.Execution.DamageHitResolution? right) -> bool
 static Convergence.Execution.DamageHitResolution.operator ==(Convergence.Execution.DamageHitResolution? left, Convergence.Execution.DamageHitResolution? right) -> bool
-static Convergence.Execution.DamagePolicyRequest.operator !=(Convergence.Execution.DamagePolicyRequest? left, Convergence.Execution.DamagePolicyRequest? right) -> bool
-static Convergence.Execution.DamagePolicyRequest.operator ==(Convergence.Execution.DamagePolicyRequest? left, Convergence.Execution.DamagePolicyRequest? right) -> bool
 static Convergence.Execution.EffectActionExecutionRequest.operator !=(Convergence.Execution.EffectActionExecutionRequest? left, Convergence.Execution.EffectActionExecutionRequest? right) -> bool
 static Convergence.Execution.EffectActionExecutionRequest.operator ==(Convergence.Execution.EffectActionExecutionRequest? left, Convergence.Execution.EffectActionExecutionRequest? right) -> bool
 static Convergence.Execution.EffectExecutionContext.operator !=(Convergence.Execution.EffectExecutionContext? left, Convergence.Execution.EffectExecutionContext? right) -> bool
@@ -10140,12 +10061,6 @@ abstract Convergence.Execution.ChargePolicyServiceBase.Normalize(Convergence.Con
 const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 11 -> int
 Convergence.Battle.ProductionCombatStatus.Deconstruct(out bool IsGuarding, out bool IsRigidBody) -> void
 Convergence.Battle.ProductionCombatStatus.ProductionCombatStatus(bool IsGuarding = false, bool IsRigidBody = false) -> void
-Convergence.Battle.ProductionDamageResolutionRequest.ChargeKind.get -> Convergence.Content.ChargeKind?
-Convergence.Battle.ProductionDamageResolutionRequest.ChargeKind.init -> void
-Convergence.Battle.ProductionDamageResolutionRequest.ChargeMultiplier.get -> decimal
-Convergence.Battle.ProductionDamageResolutionRequest.ChargeMultiplier.init -> void
-Convergence.Battle.ProductionDamageResolutionRequest.Deconstruct(out Convergence.Battle.ProductionCombatantProfile! Attacker, out Convergence.Battle.ProductionCombatantProfile! Target, out Convergence.Content.DamageElement Element, out Convergence.Content.ElementalAffinity Affinity, out int Power, out int Accuracy, out Convergence.Content.CriticalDefinition! Critical, out Convergence.Content.HitCountDefinition! Hits, out decimal ChargeMultiplier, out Convergence.Content.ChargeKind? ChargeKind) -> void
-Convergence.Battle.ProductionDamageResolutionRequest.ProductionDamageResolutionRequest(Convergence.Battle.ProductionCombatantProfile! Attacker, Convergence.Battle.ProductionCombatantProfile! Target, Convergence.Content.DamageElement Element, Convergence.Content.ElementalAffinity Affinity, int Power, int Accuracy, Convergence.Content.CriticalDefinition! Critical, Convergence.Content.HitCountDefinition! Hits, decimal ChargeMultiplier = 1, Convergence.Content.ChargeKind? ChargeKind = null) -> void
 Convergence.Content.ChargeKind.General = 2 -> Convergence.Content.ChargeKind
 Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, Convergence.Runtime.IStatModifierPolicyService? statModifierPolicy = null, Convergence.Execution.IChargePolicyService? chargePolicy = null) -> void
 Convergence.Encounters.CatalogBattleActorRestoreRequest.ChargePolicy.get -> Convergence.Execution.IChargePolicyService?
@@ -10216,12 +10131,6 @@ Convergence.Execution.ChargePolicyValidationResult.ChargePolicyValidationResult(
 Convergence.Execution.ChargePolicyValidationResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.ChargePolicyDiagnostic!>!
 Convergence.Execution.ChargePolicyValidationResult.Equals(Convergence.Execution.ChargePolicyValidationResult? other) -> bool
 Convergence.Execution.ChargePolicyValidationResult.IsValid.get -> bool
-Convergence.Execution.DamagePolicyRequest.ChargeKind.get -> Convergence.Content.ChargeKind?
-Convergence.Execution.DamagePolicyRequest.ChargeKind.init -> void
-Convergence.Execution.DamagePolicyRequest.ChargeMultiplier.get -> decimal
-Convergence.Execution.DamagePolicyRequest.ChargeMultiplier.init -> void
-Convergence.Execution.DamagePolicyRequest.DamagePolicyRequest(Convergence.Execution.RuntimeActorState! Actor, Convergence.Execution.RuntimeActorState! Target, Convergence.Content.DamageEffectDefinition! Effect, Convergence.Content.ElementalAffinity Affinity, decimal ChargeMultiplier = 1, Convergence.Content.ChargeKind? ChargeKind = null) -> void
-Convergence.Execution.DamagePolicyRequest.Deconstruct(out Convergence.Execution.RuntimeActorState! Actor, out Convergence.Execution.RuntimeActorState! Target, out Convergence.Content.DamageEffectDefinition! Effect, out Convergence.Content.ElementalAffinity Affinity, out decimal ChargeMultiplier, out Convergence.Content.ChargeKind? ChargeKind) -> void
 Convergence.Execution.IChargePolicyResolver
 Convergence.Execution.IChargePolicyResolver.TryResolve(Convergence.Content.ContentId policyId, out Convergence.Execution.IChargePolicyService? service) -> bool
 Convergence.Execution.IChargePolicyService
@@ -10301,3 +10210,113 @@ static Convergence.Execution.StandardChargePolicyIds.Unified.get -> Convergence.
 static Convergence.Runtime.RuntimeChargeStateSnapshot.operator !=(Convergence.Runtime.RuntimeChargeStateSnapshot? left, Convergence.Runtime.RuntimeChargeStateSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeChargeStateSnapshot.operator ==(Convergence.Runtime.RuntimeChargeStateSnapshot? left, Convergence.Runtime.RuntimeChargeStateSnapshot? right) -> bool
 Convergence.Execution.ChargePolicyDiagnosticCode.InvalidDuration = 4 -> Convergence.Execution.ChargePolicyDiagnosticCode
+Convergence.Battle.HitResolutionRequest
+Convergence.Battle.HitResolutionRequest.AccuracyModifiers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.NumericRuleModifierDefinition!>!
+Convergence.Battle.HitResolutionRequest.AccuracyMultiplier.get -> decimal
+Convergence.Battle.HitResolutionRequest.AttackerAgility.get -> decimal
+Convergence.Battle.HitResolutionRequest.AuthoredAccuracy.get -> int
+Convergence.Battle.HitResolutionRequest.EvasionModifiers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.NumericRuleModifierDefinition!>!
+Convergence.Battle.HitResolutionRequest.EvasionMultiplier.get -> decimal
+Convergence.Battle.HitResolutionRequest.HitResolutionRequest(int authoredAccuracy, decimal attackerAgility, decimal targetAgility, decimal accuracyMultiplier = 1, decimal evasionMultiplier = 1, System.Collections.Generic.IEnumerable<Convergence.Content.NumericRuleModifierDefinition!>? accuracyModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Content.NumericRuleModifierDefinition!>? evasionModifiers = null, bool targetIsRigid = false) -> void
+Convergence.Battle.HitResolutionRequest.TargetAgility.get -> decimal
+Convergence.Battle.HitResolutionRequest.TargetIsRigid.get -> bool
+Convergence.Battle.HitResolutionResult
+Convergence.Battle.HitResolutionResult.<Clone>$() -> Convergence.Battle.HitResolutionResult!
+Convergence.Battle.HitResolutionResult.AccuracyScoreBeforeModifiers.get -> decimal
+Convergence.Battle.HitResolutionResult.AccuracyScoreBeforeModifiers.init -> void
+Convergence.Battle.HitResolutionResult.AttackerAgilityContribution.get -> decimal
+Convergence.Battle.HitResolutionResult.AttackerAgilityContribution.init -> void
+Convergence.Battle.HitResolutionResult.AuthoredAccuracy.get -> int
+Convergence.Battle.HitResolutionResult.AuthoredAccuracy.init -> void
+Convergence.Battle.HitResolutionResult.Deconstruct(out bool Hit, out int AuthoredAccuracy, out decimal AttackerAgilityContribution, out decimal TargetAgilityContribution, out decimal AccuracyScoreBeforeModifiers, out decimal EvasionScoreBeforeModifiers, out decimal ResolvedAccuracyScore, out decimal ResolvedEvasionScore, out decimal RawChance, out int FinalChance, out decimal? Roll, out bool GuaranteedByRigidState) -> void
+Convergence.Battle.HitResolutionResult.Equals(Convergence.Battle.HitResolutionResult? other) -> bool
+Convergence.Battle.HitResolutionResult.EvasionScoreBeforeModifiers.get -> decimal
+Convergence.Battle.HitResolutionResult.EvasionScoreBeforeModifiers.init -> void
+Convergence.Battle.HitResolutionResult.FinalChance.get -> int
+Convergence.Battle.HitResolutionResult.FinalChance.init -> void
+Convergence.Battle.HitResolutionResult.GuaranteedByRigidState.get -> bool
+Convergence.Battle.HitResolutionResult.GuaranteedByRigidState.init -> void
+Convergence.Battle.HitResolutionResult.Hit.get -> bool
+Convergence.Battle.HitResolutionResult.Hit.init -> void
+Convergence.Battle.HitResolutionResult.HitResolutionResult(bool Hit, int AuthoredAccuracy, decimal AttackerAgilityContribution, decimal TargetAgilityContribution, decimal AccuracyScoreBeforeModifiers, decimal EvasionScoreBeforeModifiers, decimal ResolvedAccuracyScore, decimal ResolvedEvasionScore, decimal RawChance, int FinalChance, decimal? Roll, bool GuaranteedByRigidState = false) -> void
+Convergence.Battle.HitResolutionResult.RawChance.get -> decimal
+Convergence.Battle.HitResolutionResult.RawChance.init -> void
+Convergence.Battle.HitResolutionResult.ResolvedAccuracyScore.get -> decimal
+Convergence.Battle.HitResolutionResult.ResolvedAccuracyScore.init -> void
+Convergence.Battle.HitResolutionResult.ResolvedEvasionScore.get -> decimal
+Convergence.Battle.HitResolutionResult.ResolvedEvasionScore.init -> void
+Convergence.Battle.HitResolutionResult.Roll.get -> decimal?
+Convergence.Battle.HitResolutionResult.Roll.init -> void
+Convergence.Battle.HitResolutionResult.TargetAgilityContribution.get -> decimal
+Convergence.Battle.HitResolutionResult.TargetAgilityContribution.init -> void
+Convergence.Battle.IHitResolutionPolicy
+Convergence.Battle.IHitResolutionPolicy.Resolve(Convergence.Battle.HitResolutionRequest! request) -> Convergence.Battle.HitResolutionResult!
+Convergence.Battle.ProductionCombatRuleset.CheckHit(Convergence.Battle.ProductionHitCheckRequest! request) -> Convergence.Battle.HitResolutionResult!
+Convergence.Battle.ProductionCombatRuleset.HitPolicy.get -> Convergence.Battle.IHitResolutionPolicy!
+Convergence.Battle.ProductionCombatRuleset.ProductionCombatRuleset(Convergence.Hosting.IRandomSource! random, Convergence.Battle.ProductionCombatRulesetConfig? config = null, Convergence.Runtime.IStatStageScalingPolicy? stageScaling = null, Convergence.Battle.IHitResolutionPolicy? hitPolicy = null) -> void
+Convergence.Battle.ProductionCombatRuleset.Resolve(Convergence.Execution.DamagePolicyRequest! request) -> Convergence.Execution.DamagePolicyResolution!
+Convergence.Battle.ProductionCombatRuleset.ResolveDamage(Convergence.Battle.ProductionDamageResolutionRequest! request) -> Convergence.Battle.ProductionDamageResolutionResult!
+Convergence.Battle.ProductionCombatRulesetConfig.HitAttackerAgilityCoefficient.get -> decimal
+Convergence.Battle.ProductionCombatRulesetConfig.HitAttackerAgilityCoefficient.init -> void
+Convergence.Battle.ProductionCombatRulesetConfig.HitTargetAgilityCoefficient.get -> decimal
+Convergence.Battle.ProductionCombatRulesetConfig.HitTargetAgilityCoefficient.init -> void
+Convergence.Battle.ProductionDamageResolutionRequest
+Convergence.Battle.ProductionDamageResolutionRequest.Accuracy.get -> int
+Convergence.Battle.ProductionDamageResolutionRequest.AccuracyModifiers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.NumericRuleModifierDefinition!>!
+Convergence.Battle.ProductionDamageResolutionRequest.Affinity.get -> Convergence.Content.ElementalAffinity
+Convergence.Battle.ProductionDamageResolutionRequest.Attacker.get -> Convergence.Battle.ProductionCombatantProfile!
+Convergence.Battle.ProductionDamageResolutionRequest.ChargeKind.get -> Convergence.Content.ChargeKind?
+Convergence.Battle.ProductionDamageResolutionRequest.ChargeMultiplier.get -> decimal
+Convergence.Battle.ProductionDamageResolutionRequest.Critical.get -> Convergence.Content.CriticalDefinition!
+Convergence.Battle.ProductionDamageResolutionRequest.Element.get -> Convergence.Content.DamageElement
+Convergence.Battle.ProductionDamageResolutionRequest.EvasionModifiers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.NumericRuleModifierDefinition!>!
+Convergence.Battle.ProductionDamageResolutionRequest.Hits.get -> Convergence.Content.HitCountDefinition!
+Convergence.Battle.ProductionDamageResolutionRequest.Power.get -> int
+Convergence.Battle.ProductionDamageResolutionRequest.ProductionDamageResolutionRequest(Convergence.Battle.ProductionCombatantProfile! attacker, Convergence.Battle.ProductionCombatantProfile! target, Convergence.Content.DamageElement element, Convergence.Content.ElementalAffinity affinity, int power, int accuracy, Convergence.Content.CriticalDefinition! critical, Convergence.Content.HitCountDefinition! hits, decimal chargeMultiplier = 1, Convergence.Content.ChargeKind? chargeKind = null, System.Collections.Generic.IEnumerable<Convergence.Content.NumericRuleModifierDefinition!>? accuracyModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Content.NumericRuleModifierDefinition!>? evasionModifiers = null) -> void
+Convergence.Battle.ProductionDamageResolutionRequest.Target.get -> Convergence.Battle.ProductionCombatantProfile!
+Convergence.Battle.ProductionHitCheckRequest
+Convergence.Battle.ProductionHitCheckRequest.AccuracyModifiers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.NumericRuleModifierDefinition!>!
+Convergence.Battle.ProductionHitCheckRequest.Attacker.get -> Convergence.Battle.ProductionCombatantProfile!
+Convergence.Battle.ProductionHitCheckRequest.AuthoredAccuracy.get -> int
+Convergence.Battle.ProductionHitCheckRequest.EvasionModifiers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.NumericRuleModifierDefinition!>!
+Convergence.Battle.ProductionHitCheckRequest.ProductionHitCheckRequest(Convergence.Battle.ProductionCombatantProfile! attacker, Convergence.Battle.ProductionCombatantProfile! target, int authoredAccuracy, System.Collections.Generic.IEnumerable<Convergence.Content.NumericRuleModifierDefinition!>? accuracyModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Content.NumericRuleModifierDefinition!>? evasionModifiers = null) -> void
+Convergence.Battle.ProductionHitCheckRequest.Target.get -> Convergence.Battle.ProductionCombatantProfile!
+Convergence.Battle.StandardHitResolutionPolicy
+Convergence.Battle.StandardHitResolutionPolicy.Config.get -> Convergence.Battle.StandardHitResolutionPolicyConfig!
+Convergence.Battle.StandardHitResolutionPolicy.Resolve(Convergence.Battle.HitResolutionRequest! request) -> Convergence.Battle.HitResolutionResult!
+Convergence.Battle.StandardHitResolutionPolicy.StandardHitResolutionPolicy(Convergence.Hosting.IRandomSource! random, Convergence.Battle.StandardHitResolutionPolicyConfig? config = null, Convergence.Execution.INumericModifierStackingPolicy? stacking = null) -> void
+Convergence.Battle.StandardHitResolutionPolicyConfig
+Convergence.Battle.StandardHitResolutionPolicyConfig.<Clone>$() -> Convergence.Battle.StandardHitResolutionPolicyConfig!
+Convergence.Battle.StandardHitResolutionPolicyConfig.AttackerAgilityCoefficient.get -> decimal
+Convergence.Battle.StandardHitResolutionPolicyConfig.AttackerAgilityCoefficient.init -> void
+Convergence.Battle.StandardHitResolutionPolicyConfig.Equals(Convergence.Battle.StandardHitResolutionPolicyConfig? other) -> bool
+Convergence.Battle.StandardHitResolutionPolicyConfig.MaximumChance.get -> int
+Convergence.Battle.StandardHitResolutionPolicyConfig.MaximumChance.init -> void
+Convergence.Battle.StandardHitResolutionPolicyConfig.MinimumChance.get -> int
+Convergence.Battle.StandardHitResolutionPolicyConfig.MinimumChance.init -> void
+Convergence.Battle.StandardHitResolutionPolicyConfig.StandardHitResolutionPolicyConfig() -> void
+Convergence.Battle.StandardHitResolutionPolicyConfig.TargetAgilityCoefficient.get -> decimal
+Convergence.Battle.StandardHitResolutionPolicyConfig.TargetAgilityCoefficient.init -> void
+Convergence.Battle.StandardHitResolutionPolicyConfig.Validate() -> void
+Convergence.Execution.DamagePolicyRequest
+Convergence.Execution.DamagePolicyRequest.AccuracyModifiers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.NumericRuleModifierDefinition!>!
+Convergence.Execution.DamagePolicyRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
+Convergence.Execution.DamagePolicyRequest.Affinity.get -> Convergence.Content.ElementalAffinity
+Convergence.Execution.DamagePolicyRequest.ChargeKind.get -> Convergence.Content.ChargeKind?
+Convergence.Execution.DamagePolicyRequest.ChargeMultiplier.get -> decimal
+Convergence.Execution.DamagePolicyRequest.DamagePolicyRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Execution.RuntimeActorState! target, Convergence.Content.DamageEffectDefinition! effect, Convergence.Content.ElementalAffinity affinity, decimal chargeMultiplier = 1, Convergence.Content.ChargeKind? chargeKind = null, System.Collections.Generic.IEnumerable<Convergence.Content.NumericRuleModifierDefinition!>? accuracyModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Content.NumericRuleModifierDefinition!>? evasionModifiers = null) -> void
+Convergence.Execution.DamagePolicyRequest.Effect.get -> Convergence.Content.DamageEffectDefinition!
+Convergence.Execution.DamagePolicyRequest.EvasionModifiers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.NumericRuleModifierDefinition!>!
+Convergence.Execution.DamagePolicyRequest.Target.get -> Convergence.Execution.RuntimeActorState!
+Convergence.Execution.IDamageExecutionPolicy.Resolve(Convergence.Execution.DamagePolicyRequest! request) -> Convergence.Execution.DamagePolicyResolution!
+Convergence.Execution.RuleModifierResolver.GetApplicableNumericModifiers(Convergence.Execution.RuntimeActorState! owner, Convergence.Content.NumericRuleModifierType modifierType, Convergence.Execution.RuleModifierContext! context) -> System.Collections.Generic.IReadOnlyList<Convergence.Content.NumericRuleModifierDefinition!>!
+override Convergence.Battle.HitResolutionResult.Equals(object? obj) -> bool
+override Convergence.Battle.HitResolutionResult.GetHashCode() -> int
+override Convergence.Battle.HitResolutionResult.ToString() -> string!
+override Convergence.Battle.StandardHitResolutionPolicyConfig.Equals(object? obj) -> bool
+override Convergence.Battle.StandardHitResolutionPolicyConfig.GetHashCode() -> int
+override Convergence.Battle.StandardHitResolutionPolicyConfig.ToString() -> string!
+static Convergence.Battle.HitResolutionResult.operator !=(Convergence.Battle.HitResolutionResult? left, Convergence.Battle.HitResolutionResult? right) -> bool
+static Convergence.Battle.HitResolutionResult.operator ==(Convergence.Battle.HitResolutionResult? left, Convergence.Battle.HitResolutionResult? right) -> bool
+static Convergence.Battle.StandardHitResolutionPolicyConfig.operator !=(Convergence.Battle.StandardHitResolutionPolicyConfig? left, Convergence.Battle.StandardHitResolutionPolicyConfig? right) -> bool
+static Convergence.Battle.StandardHitResolutionPolicyConfig.operator ==(Convergence.Battle.StandardHitResolutionPolicyConfig? left, Convergence.Battle.StandardHitResolutionPolicyConfig? right) -> bool

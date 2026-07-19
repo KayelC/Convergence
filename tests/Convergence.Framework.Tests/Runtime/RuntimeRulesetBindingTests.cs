@@ -384,7 +384,8 @@ public sealed class RuntimeRulesetBindingTests
                 ("weakDamageMultiplier", 1.8m),
                 ("resistDamageMultiplier", 0.4m),
                 ("guardDamageMultiplier", 0.3m),
-                ("defaultHitAccuracy", 88),
+                ("hitAttackerAgilityCoefficient", 1.25m),
+                ("hitTargetAgilityCoefficient", 1.75m),
                 ("hitChanceMinimum", 3),
                 ("hitChanceMaximum", 97),
                 ("criticalChanceMinimum", 1),
@@ -392,7 +393,6 @@ public sealed class RuntimeRulesetBindingTests
                 ("criticalChanceBase", 7),
                 ("instantDeathChanceMinimum", 4),
                 ("instantDeathChanceMaximum", 90),
-                ("defaultInstantDeathChance", 35),
                 ("enemiesPerLevelForExperience", 60m),
                 ("expectedStatLevelMultiplier", 4m),
                 ("expectedStatBase", 20m),
@@ -417,7 +417,8 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(1.8m, config.WeakDamageMultiplier);
         Assert.Equal(0.4m, config.ResistDamageMultiplier);
         Assert.Equal(0.3m, config.GuardDamageMultiplier);
-        Assert.Equal(88, config.DefaultHitAccuracy);
+        Assert.Equal(1.25m, config.HitAttackerAgilityCoefficient);
+        Assert.Equal(1.75m, config.HitTargetAgilityCoefficient);
         Assert.Equal(3, config.HitChanceMinimum);
         Assert.Equal(97, config.HitChanceMaximum);
         Assert.Equal(1, config.CriticalChanceMinimum);
@@ -425,7 +426,6 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(7, config.CriticalChanceBase);
         Assert.Equal(4, config.InstantDeathChanceMinimum);
         Assert.Equal(90, config.InstantDeathChanceMaximum);
-        Assert.Equal(35, config.DefaultInstantDeathChance);
         Assert.Equal(60m, config.EnemiesPerLevelForExperience);
         Assert.Equal(4m, config.ExpectedStatLevelMultiplier);
         Assert.Equal(20m, config.ExpectedStatBase);
@@ -437,6 +437,33 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(1.15m, config.CurrencyVarianceMaximum);
         Assert.Equal(0.8m, config.InitiativeVarianceMinimum);
         Assert.Equal(1.2m, config.InitiativeVarianceMaximum);
+    }
+
+    [Theory]
+    [InlineData("defaultHitAccuracy")]
+    [InlineData("defaultInstantDeathChance")]
+    public void DamageBinding_RejectsRemovedProbabilityDefaults(string parameterName)
+    {
+        ContentId rulesetId = Id("test.pack:removed_probability_default");
+        GameDataCatalog catalog = Catalog(new RulesetDefinition(
+            rulesetId,
+            "Removed Probability Default",
+            "Explicitly authored effects do not use fallback probability values.",
+            RulesetCategory.Damage,
+            StandardRulesetPolicyIds.StandardDamage,
+            Parameters((parameterName, 50))));
+
+        RulesetBindingResult<ProductionCombatRuleset> result = CreateResolver()
+            .BindProductionCombatRuleset(
+                catalog,
+                rulesetId,
+                new SequenceRandomSource(),
+                StagePolicy());
+
+        Assert.False(result.IsSuccess);
+        RulesetBindingDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(RulesetBindingDiagnosticCode.UnknownParameter, diagnostic.Code);
+        Assert.Equal(parameterName, diagnostic.ParameterName);
     }
 
     [Fact]
@@ -736,6 +763,8 @@ public sealed class RuntimeRulesetBindingTests
                 [
                     new KeyValuePair<string, object?>("weakDamageMultiplier", "loud"),
                     new KeyValuePair<string, object?>("resistDamageMultiplier", -1m),
+                    new KeyValuePair<string, object?>("hitAttackerAgilityCoefficient", "fast"),
+                    new KeyValuePair<string, object?>("hitTargetAgilityCoefficient", -1m),
                     new KeyValuePair<string, object?>("criticalMultiplier", 3m)
                 ])),
             badParametersId,
@@ -746,6 +775,9 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Contains(badParameters.Diagnostics, diagnostic =>
             diagnostic.Code == RulesetBindingDiagnosticCode.InvalidParameterType &&
             diagnostic.ParameterName == "weakDamageMultiplier");
+        Assert.Contains(badParameters.Diagnostics, diagnostic =>
+            diagnostic.Code == RulesetBindingDiagnosticCode.InvalidParameterType &&
+            diagnostic.ParameterName == "hitAttackerAgilityCoefficient");
         Assert.Contains(badParameters.Diagnostics, diagnostic =>
             diagnostic.Code == RulesetBindingDiagnosticCode.InvalidParameterValue &&
             diagnostic.ParameterName is null);

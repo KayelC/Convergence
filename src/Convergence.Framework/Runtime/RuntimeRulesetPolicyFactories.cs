@@ -247,8 +247,15 @@ internal sealed class StandardDamageRulesetPolicyFactory : IRuntimeDamageRuleset
                         (current, parsed) => current with { GuardDamageMultiplier = parsed });
                     break;
                 case "defaultHitAccuracy":
-                    config = ReadInt(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { DefaultHitAccuracy = parsed });
+                    RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
+                    break;
+                case "hitAttackerAgilityCoefficient":
+                    config = ReadDecimal(definition, key, value, diagnostics, config,
+                        (current, parsed) => current with { HitAttackerAgilityCoefficient = parsed });
+                    break;
+                case "hitTargetAgilityCoefficient":
+                    config = ReadDecimal(definition, key, value, diagnostics, config,
+                        (current, parsed) => current with { HitTargetAgilityCoefficient = parsed });
                     break;
                 case "hitChanceMinimum":
                     config = ReadInt(definition, key, value, diagnostics, config,
@@ -279,8 +286,7 @@ internal sealed class StandardDamageRulesetPolicyFactory : IRuntimeDamageRuleset
                         (current, parsed) => current with { InstantDeathChanceMaximum = parsed });
                     break;
                 case "defaultInstantDeathChance":
-                    config = ReadInt(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { DefaultInstantDeathChance = parsed });
+                    RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
                     break;
                 case "enemiesPerLevelForExperience":
                     config = ReadDecimal(definition, key, value, diagnostics, config,
