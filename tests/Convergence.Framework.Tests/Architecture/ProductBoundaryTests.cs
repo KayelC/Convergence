@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Xunit;
 
 namespace Convergence.Framework.Tests.Architecture;
@@ -259,6 +260,32 @@ public sealed class ProductBoundaryTests
         Assert.Equal(
             allJson.Length,
             allJson.Select(Path.GetFileName).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    [Fact]
+    public void ActiveContractAssets_AreAlwaysRefreshedInBuildOutputs()
+    {
+        string[] projects =
+        [
+            "samples/Convergence.DemoHost/Convergence.DemoHost.csproj",
+            "tests/Convergence.DemoHost.Tests/Convergence.DemoHost.Tests.csproj",
+            "tests/Convergence.Framework.Tests/Convergence.Framework.Tests.csproj"
+        ];
+
+        foreach (string project in projects)
+        {
+            XDocument document = XDocument.Load(RepositoryPath(project));
+            XElement[] contractAssets = document
+                .Descendants("Content")
+                .Where(element =>
+                    element.Attribute("Include")?.Value.Contains(".json", StringComparison.OrdinalIgnoreCase) == true)
+                .ToArray();
+
+            Assert.NotEmpty(contractAssets);
+            Assert.All(
+                contractAssets,
+                asset => Assert.Equal("Always", asset.Element("CopyToOutputDirectory")?.Value));
+        }
     }
 
     [Fact]
