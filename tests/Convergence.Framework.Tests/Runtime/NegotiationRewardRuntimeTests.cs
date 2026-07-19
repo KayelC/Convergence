@@ -425,8 +425,9 @@ public sealed class NegotiationRewardRuntimeTests
     [Fact]
     public void BattleRewardService_ComputesImmutableTotalsAndApplications()
     {
-        var ruleset = new ProductionCombatRuleset(new SequenceRandomSource(units: [0.5m]));
-        var service = new BattleRewardService(ruleset);
+        var yieldPolicy = new StandardBattleRewardYieldPolicy(
+            new SequenceRandomSource(units: [0.5m]));
+        var service = new BattleRewardService(yieldPolicy);
 
         BattleRewardResult result = service.Calculate(new BattleRewardRequest(
             enemies:
@@ -565,7 +566,7 @@ public sealed class NegotiationRewardRuntimeTests
     [Fact]
     public void BattleRewardService_SaturatesMultiEnemyTotalsAndApplications()
     {
-        var service = new BattleRewardService(new ProductionCombatRuleset(
+        var service = new BattleRewardService(new StandardBattleRewardYieldPolicy(
             new SequenceRandomSource(units: [0.5m, 0.5m])));
         BattleRewardEnemySnapshot maximumEnemy = new(
             ContentId.Parse("maximum_enemy"),

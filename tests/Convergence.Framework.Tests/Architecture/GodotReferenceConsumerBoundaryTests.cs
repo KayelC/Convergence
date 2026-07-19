@@ -81,6 +81,7 @@ public sealed class GodotReferenceConsumerBoundaryTests
             "BattleEncounterRunner",
             "RuntimeSessionRestoreService",
             "RuntimeRulesetPolicyFactoryRegistry.CreateStandard()",
+            "BindCombatPolicies",
             "BindStatModifierPolicy",
             "Qualified(\"standard_stat_modifiers\")",
             "GODOT_MODIFIER_OK",
@@ -88,6 +89,7 @@ public sealed class GodotReferenceConsumerBoundaryTests
             "CONVERGENCE_GODOT_SMOKE_OK"
         ];
         Assert.All(rootTokens, token => Assert.Contains(token, rootSource, StringComparison.Ordinal));
+        Assert.DoesNotContain("ProductionCombatRuleset", rootSource, StringComparison.Ordinal);
         Assert.Contains("Godot.FileAccess", contentSource, StringComparison.Ordinal);
         Assert.Contains("res://", contentSource, StringComparison.Ordinal);
         Assert.Contains("IContentPackTextSource", contentSource, StringComparison.Ordinal);

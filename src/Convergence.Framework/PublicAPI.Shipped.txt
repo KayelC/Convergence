@@ -112,15 +112,12 @@ Convergence.Battle.ProductionCombatModifiers.PhysicalDamageDealtMultiplier.get -
 Convergence.Battle.ProductionCombatModifiers.PhysicalDamageDealtMultiplier.init -> void
 Convergence.Battle.ProductionCombatModifiers.ProductionCombatModifiers(decimal DamageDealtMultiplier = 1, decimal DamageTakenMultiplier = 1, decimal HitMultiplier = 1, decimal EvasionMultiplier = 1, decimal CriticalChanceMultiplier = 1, int CriticalChanceTakenBonus = 0, decimal PhysicalDamageDealtMultiplier = 1, decimal MagicalDamageDealtMultiplier = 1) -> void
 Convergence.Battle.ProductionCombatRuleset
-Convergence.Battle.ProductionCombatRuleset.CalculateCurrencyYield(Convergence.Battle.ProductionCombatantProfile! enemy) -> int
-Convergence.Battle.ProductionCombatRuleset.CalculateExperienceYield(Convergence.Battle.ProductionCombatantProfile! enemy) -> int
 Convergence.Battle.ProductionCombatRuleset.CheckCritical(Convergence.Battle.ProductionCriticalCheckRequest! request) -> Convergence.Battle.ProductionCriticalCheckResult!
 Convergence.Battle.ProductionCombatRuleset.Config.get -> Convergence.Battle.ProductionCombatRulesetConfig!
 Convergence.Battle.ProductionCombatRuleset.Resolve(Convergence.Content.PowerAmountDefinition! amount, Convergence.Execution.AmountResolutionContext! context) -> decimal
 Convergence.Battle.ProductionCombatRuleset.ResolveAilmentApplication(Convergence.Battle.ProductionAilmentApplicationRequest! request) -> Convergence.Battle.ProductionAilmentApplicationResult!
 Convergence.Battle.ProductionCombatRuleset.ResolveInstantDeath(Convergence.Battle.ProductionInstantDeathRequest! request) -> Convergence.Battle.ProductionInstantDeathResult!
 Convergence.Battle.ProductionCombatRuleset.Roll(Convergence.Execution.ChancePolicyRequest! request) -> bool
-Convergence.Battle.ProductionCombatRuleset.RollInitiative(decimal playerAverageAgility, decimal enemyAverageAgility) -> bool
 Convergence.Battle.ProductionCombatRuleset.ShouldApply(Convergence.Execution.AilmentApplicationPolicyRequest! request) -> bool
 Convergence.Battle.ProductionCombatRuleset.ShouldDefeat(Convergence.Execution.InstantDeathPolicyRequest! request) -> bool
 Convergence.Battle.ProductionCombatRuleset.StageScalingPolicy.get -> Convergence.Runtime.IStatStageScalingPolicy!
@@ -128,48 +125,26 @@ Convergence.Battle.ProductionCombatRulesetConfig
 Convergence.Battle.ProductionCombatRulesetConfig.<Clone>$() -> Convergence.Battle.ProductionCombatRulesetConfig!
 Convergence.Battle.ProductionCombatRulesetConfig.CriticalDamageMultiplier.get -> decimal
 Convergence.Battle.ProductionCombatRulesetConfig.CriticalDamageMultiplier.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.CurrencyBaseMultiplier.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.CurrencyBaseMultiplier.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.CurrencyLuckMultiplier.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.CurrencyLuckMultiplier.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.CurrencyVarianceMaximum.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.CurrencyVarianceMaximum.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.CurrencyVarianceMinimum.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.CurrencyVarianceMinimum.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.DamageFormulaScalar.get -> decimal
 Convergence.Battle.ProductionCombatRulesetConfig.DamageFormulaScalar.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.DamageVarianceMaximum.get -> decimal
 Convergence.Battle.ProductionCombatRulesetConfig.DamageVarianceMaximum.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.DamageVarianceMinimum.get -> decimal
 Convergence.Battle.ProductionCombatRulesetConfig.DamageVarianceMinimum.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.EnemiesPerLevelForExperience.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.EnemiesPerLevelForExperience.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.Equals(Convergence.Battle.ProductionCombatRulesetConfig? other) -> bool
-Convergence.Battle.ProductionCombatRulesetConfig.ExpectedStatBase.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.ExpectedStatBase.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.ExpectedStatLevelMultiplier.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.ExpectedStatLevelMultiplier.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.GuardDamageMultiplier.get -> decimal
 Convergence.Battle.ProductionCombatRulesetConfig.GuardDamageMultiplier.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.HitChanceMaximum.get -> int
 Convergence.Battle.ProductionCombatRulesetConfig.HitChanceMaximum.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.HitChanceMinimum.get -> int
 Convergence.Battle.ProductionCombatRulesetConfig.HitChanceMinimum.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.InitiativeVarianceMaximum.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.InitiativeVarianceMaximum.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.InitiativeVarianceMinimum.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.InitiativeVarianceMinimum.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathChanceMaximum.get -> int
 Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathChanceMaximum.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathChanceMinimum.get -> int
 Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathChanceMinimum.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.MaximumStatDensityMultiplier.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.MaximumStatDensityMultiplier.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.ProductionCombatRulesetConfig() -> void
 Convergence.Battle.ProductionCombatRulesetConfig.ResistDamageMultiplier.get -> decimal
 Convergence.Battle.ProductionCombatRulesetConfig.ResistDamageMultiplier.init -> void
-Convergence.Battle.ProductionCombatRulesetConfig.StatDensityDivisor.get -> decimal
-Convergence.Battle.ProductionCombatRulesetConfig.StatDensityDivisor.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.Validate() -> void
 Convergence.Battle.ProductionCombatRulesetConfig.WeakDamageMultiplier.get -> decimal
 Convergence.Battle.ProductionCombatRulesetConfig.WeakDamageMultiplier.init -> void
@@ -2126,7 +2101,6 @@ Convergence.Encounters.BattleRewardResult.Equals(Convergence.Encounters.BattleRe
 Convergence.Encounters.BattleRewardResult.TotalCurrency.get -> int
 Convergence.Encounters.BattleRewardResult.TotalExperience.get -> int
 Convergence.Encounters.BattleRewardService
-Convergence.Encounters.BattleRewardService.BattleRewardService(Convergence.Battle.ProductionCombatRuleset! ruleset) -> void
 Convergence.Encounters.BattleRewardService.Calculate(Convergence.Encounters.BattleRewardRequest! request) -> Convergence.Encounters.BattleRewardResult!
 Convergence.Encounters.BattleRoundStartedEventPayload
 Convergence.Encounters.BattleRoundStartedEventPayload.BattleRoundStartedEventPayload(int roundNumber) -> void
@@ -4959,9 +4933,6 @@ Convergence.Runtime.IRuntimeActorGrowthCompositionService
 Convergence.Runtime.IRuntimeActorGrowthCompositionService.Apply(Convergence.Runtime.RuntimeActorGrowthCompositionRequest! request) -> Convergence.Runtime.RuntimeActorGrowthCompositionResult!
 Convergence.Runtime.IRuntimeActorRestoreProfileResolver
 Convergence.Runtime.IRuntimeActorRestoreProfileResolver.Resolve(Convergence.Runtime.RuntimeActorRestoreProfileRequest! request) -> Convergence.Runtime.RuntimeActorRestoreProfile!
-Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory
-Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition, Convergence.Hosting.IRandomSource! random, Convergence.Runtime.IStatStageScalingPolicy! stageScalingPolicy) -> Convergence.Runtime.RulesetBindingResult<Convergence.Battle.ProductionCombatRuleset!>!
-Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Runtime.IRuntimeDungeonTraversalPolicy
 Convergence.Runtime.IRuntimeDungeonTraversalPolicy.Evaluate(Convergence.Runtime.RuntimeDungeonTraversalPolicyRequest! request) -> Convergence.Runtime.RuntimeDungeonTraversalPolicyDecision!
 Convergence.Runtime.IRuntimeDungeonTraversalService
@@ -4983,15 +4954,12 @@ Convergence.Runtime.IRuntimeNavigationPolicy.Evaluate(Convergence.Runtime.Runtim
 Convergence.Runtime.IRuntimeNavigationService
 Convergence.Runtime.IRuntimeNavigationService.Navigate(Convergence.Runtime.RuntimeNavigationSnapshot! current, Convergence.Runtime.RuntimeNavigationTransition! transition) -> Convergence.Runtime.RuntimeNavigationResult!
 Convergence.Runtime.IRuntimeRewardRulesetPolicyFactory
-Convergence.Runtime.IRuntimeRewardRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition, Convergence.Battle.ProductionCombatRuleset! combatRuleset) -> Convergence.Runtime.RulesetBindingResult<Convergence.Encounters.IBattleRewardService!>!
 Convergence.Runtime.IRuntimeRewardRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Runtime.IRuntimeRosterCapacityRulesetPolicyFactory
 Convergence.Runtime.IRuntimeRosterCapacityRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IRosterCapacityPolicy!>!
 Convergence.Runtime.IRuntimeRosterCapacityRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Runtime.IRuntimeRulesetBindingResolver
-Convergence.Runtime.IRuntimeRulesetBindingResolver.BindBattleRewardService(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Battle.ProductionCombatRuleset! combatRuleset) -> Convergence.Runtime.RulesetBindingResult<Convergence.Encounters.IBattleRewardService!>!
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindGrowthServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.GrowthRulesetServices!>!
-Convergence.Runtime.IRuntimeRulesetBindingResolver.BindProductionCombatRuleset(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Hosting.IRandomSource! random, Convergence.Runtime.IStatStageScalingPolicy! stageScalingPolicy) -> Convergence.Runtime.RulesetBindingResult<Convergence.Battle.ProductionCombatRuleset!>!
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindResourceManagementServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.ResourceManagementRulesetServices!>!
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindRosterCapacityPolicy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IRosterCapacityPolicy!>!
 Convergence.Runtime.IRuntimeRulesetBindingResolver.BindStatServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.StatRulesetServices!>!
@@ -6040,9 +6008,7 @@ Convergence.Runtime.RuntimeRosterKind
 Convergence.Runtime.RuntimeRosterKind.Companion = 1 -> Convergence.Runtime.RuntimeRosterKind
 Convergence.Runtime.RuntimeRosterKind.HostedEntity = 0 -> Convergence.Runtime.RuntimeRosterKind
 Convergence.Runtime.RuntimeRulesetBindingResolver
-Convergence.Runtime.RuntimeRulesetBindingResolver.BindBattleRewardService(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Battle.ProductionCombatRuleset! combatRuleset) -> Convergence.Runtime.RulesetBindingResult<Convergence.Encounters.IBattleRewardService!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindGrowthServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.GrowthRulesetServices!>!
-Convergence.Runtime.RuntimeRulesetBindingResolver.BindProductionCombatRuleset(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Hosting.IRandomSource! random, Convergence.Runtime.IStatStageScalingPolicy! stageScalingPolicy) -> Convergence.Runtime.RulesetBindingResult<Convergence.Battle.ProductionCombatRuleset!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindResourceManagementServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.ResourceManagementRulesetServices!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindRosterCapacityPolicy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.IRosterCapacityPolicy!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindStatServices(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.StatRulesetServices!>!
@@ -6050,12 +6016,10 @@ Convergence.Runtime.RuntimeRulesetBindingResolver.BindStatModifierPolicy(Converg
 Convergence.Runtime.RuntimeRulesetBindingResolver.BindTurnEconomy(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.BattleTurnEconomyRuleset!>!
 Convergence.Runtime.RuntimeRulesetBindingResolver.RuntimeRulesetBindingResolver(Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry! factories) -> void
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry
-Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.DamagePolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.EconomyPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.GrowthPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.RewardPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.RosterCapacityPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
-Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.RuntimeRulesetPolicyFactoryRegistry(System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeDamageRulesetPolicyFactory!>? damage = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeRewardRulesetPolicyFactory!>? reward = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeStatRulesetPolicyFactory!>? stat = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeGrowthRulesetPolicyFactory!>? growth = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeRosterCapacityRulesetPolicyFactory!>? rosterCapacity = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeEconomyRulesetPolicyFactory!>? economy = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory!>? turnEconomy = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeStatModifierRulesetPolicyFactory!>? statModifier = null) -> void
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.StatPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.StatModifierPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.TurnEconomyPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
@@ -10522,3 +10486,88 @@ Convergence.Execution.IActionOutcomeAggregationPolicy.Aggregate(System.Collectio
 Convergence.Execution.StandardActionOutcomeAggregationPolicy
 Convergence.Execution.StandardActionOutcomeAggregationPolicy.Aggregate(System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>! effects) -> Convergence.Execution.TurnEconomyResolution!
 Convergence.Execution.StandardActionOutcomeAggregationPolicy.StandardActionOutcomeAggregationPolicy() -> void
+Convergence.Battle.IBattleInitiativeRollPolicy
+Convergence.Battle.IBattleInitiativeRollPolicy.IsPlayerFirst(decimal playerAverageAgility, decimal enemyAverageAgility) -> bool
+Convergence.Battle.StandardBattleInitiativeRollPolicy
+Convergence.Battle.StandardBattleInitiativeRollPolicy.Config.get -> Convergence.Battle.StandardBattleInitiativeRollPolicyConfig!
+Convergence.Battle.StandardBattleInitiativeRollPolicy.IsPlayerFirst(decimal playerAverageAgility, decimal enemyAverageAgility) -> bool
+Convergence.Battle.StandardBattleInitiativeRollPolicy.StandardBattleInitiativeRollPolicy(Convergence.Hosting.IRandomSource! random, Convergence.Battle.StandardBattleInitiativeRollPolicyConfig? config = null) -> void
+Convergence.Battle.StandardBattleInitiativeRollPolicyConfig
+Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.<Clone>$() -> Convergence.Battle.StandardBattleInitiativeRollPolicyConfig!
+Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.Equals(Convergence.Battle.StandardBattleInitiativeRollPolicyConfig? other) -> bool
+Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.StandardBattleInitiativeRollPolicyConfig() -> void
+Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.Validate() -> void
+Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.VarianceMaximum.get -> decimal
+Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.VarianceMaximum.init -> void
+Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.VarianceMinimum.get -> decimal
+Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.VarianceMinimum.init -> void
+Convergence.Encounters.BattleRewardService.BattleRewardService(Convergence.Encounters.IBattleRewardYieldPolicy! yieldPolicy) -> void
+Convergence.Encounters.BattleRewardService.YieldPolicy.get -> Convergence.Encounters.IBattleRewardYieldPolicy!
+Convergence.Encounters.IBattleRewardYieldPolicy
+Convergence.Encounters.IBattleRewardYieldPolicy.CalculateCurrencyYield(Convergence.Encounters.BattleRewardEnemySnapshot! enemy) -> int
+Convergence.Encounters.IBattleRewardYieldPolicy.CalculateExperienceYield(Convergence.Encounters.BattleRewardEnemySnapshot! enemy) -> int
+Convergence.Encounters.StandardBattleRewardYieldPolicy
+Convergence.Encounters.StandardBattleRewardYieldPolicy.CalculateCurrencyYield(Convergence.Encounters.BattleRewardEnemySnapshot! enemy) -> int
+Convergence.Encounters.StandardBattleRewardYieldPolicy.CalculateExperienceYield(Convergence.Encounters.BattleRewardEnemySnapshot! enemy) -> int
+Convergence.Encounters.StandardBattleRewardYieldPolicy.Config.get -> Convergence.Encounters.StandardBattleRewardYieldPolicyConfig!
+Convergence.Encounters.StandardBattleRewardYieldPolicy.StandardBattleRewardYieldPolicy(Convergence.Hosting.IRandomSource! random, Convergence.Encounters.StandardBattleRewardYieldPolicyConfig? config = null) -> void
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.<Clone>$() -> Convergence.Encounters.StandardBattleRewardYieldPolicyConfig!
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.CurrencyBaseMultiplier.get -> decimal
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.CurrencyBaseMultiplier.init -> void
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.CurrencyLuckMultiplier.get -> decimal
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.CurrencyLuckMultiplier.init -> void
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.CurrencyVarianceMaximum.get -> decimal
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.CurrencyVarianceMaximum.init -> void
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.CurrencyVarianceMinimum.get -> decimal
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.CurrencyVarianceMinimum.init -> void
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.EnemiesPerLevelForExperience.get -> decimal
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.EnemiesPerLevelForExperience.init -> void
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.Equals(Convergence.Encounters.StandardBattleRewardYieldPolicyConfig? other) -> bool
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.ExpectedStatBase.get -> decimal
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.ExpectedStatBase.init -> void
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.ExpectedStatLevelMultiplier.get -> decimal
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.ExpectedStatLevelMultiplier.init -> void
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.MaximumStatDensityMultiplier.get -> decimal
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.MaximumStatDensityMultiplier.init -> void
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.StandardBattleRewardYieldPolicyConfig() -> void
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.StatDensityDivisor.get -> decimal
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.StatDensityDivisor.init -> void
+Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.Validate() -> void
+Convergence.Execution.CombatExecutionPolicySet
+Convergence.Execution.CombatExecutionPolicySet.ActionOutcomes.get -> Convergence.Execution.IActionOutcomeAggregationPolicy!
+Convergence.Execution.CombatExecutionPolicySet.Ailments.get -> Convergence.Execution.IAilmentApplicationPolicy!
+Convergence.Execution.CombatExecutionPolicySet.Amounts.get -> Convergence.Execution.IPowerAmountPolicy!
+Convergence.Execution.CombatExecutionPolicySet.AuthoredParameters.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+Convergence.Execution.CombatExecutionPolicySet.Chance.get -> Convergence.Execution.IChanceExecutionPolicy!
+Convergence.Execution.CombatExecutionPolicySet.Charges.get -> Convergence.Execution.IChargePolicyService!
+Convergence.Execution.CombatExecutionPolicySet.CriticalChance.get -> Convergence.Battle.ICriticalChancePolicy!
+Convergence.Execution.CombatExecutionPolicySet.CriticalEligibility.get -> Convergence.Battle.ICriticalEligibilityPolicy!
+Convergence.Execution.CombatExecutionPolicySet.Damage.get -> Convergence.Execution.IDamageExecutionPolicy!
+Convergence.Execution.CombatExecutionPolicySet.HitResolution.get -> Convergence.Battle.IHitResolutionPolicy!
+Convergence.Execution.CombatExecutionPolicySet.InstantDefeat.get -> Convergence.Execution.IInstantDeathExecutionPolicy!
+Convergence.Execution.CombatExecutionPolicySet.InstantDefeatResolution.get -> Convergence.Battle.IInstantDefeatResolutionPolicy!
+Convergence.Execution.CombatExecutionPolicySet.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Execution.CombatExecutionPolicySet.RulesetId.get -> Convergence.Content.ContentId
+Convergence.Runtime.IRuntimeCombatRulesetPolicyFactory
+Convergence.Runtime.IRuntimeCombatRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition, Convergence.Hosting.IRandomSource! random, Convergence.Runtime.IStatStageScalingPolicy! stageScalingPolicy) -> Convergence.Runtime.RulesetBindingResult<Convergence.Execution.CombatExecutionPolicySet!>!
+Convergence.Runtime.IRuntimeCombatRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.IRuntimeRewardRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition, Convergence.Hosting.IRandomSource! random) -> Convergence.Runtime.RulesetBindingResult<Convergence.Encounters.IBattleRewardService!>!
+Convergence.Runtime.IRuntimeRulesetBindingResolver.BindBattleRewardService(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Hosting.IRandomSource! random) -> Convergence.Runtime.RulesetBindingResult<Convergence.Encounters.IBattleRewardService!>!
+Convergence.Runtime.IRuntimeRulesetBindingResolver.BindCombatPolicies(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Hosting.IRandomSource! random, Convergence.Runtime.IStatStageScalingPolicy! stageScalingPolicy) -> Convergence.Runtime.RulesetBindingResult<Convergence.Execution.CombatExecutionPolicySet!>!
+Convergence.Runtime.RuntimeRulesetBindingResolver.BindBattleRewardService(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Hosting.IRandomSource! random) -> Convergence.Runtime.RulesetBindingResult<Convergence.Encounters.IBattleRewardService!>!
+Convergence.Runtime.RuntimeRulesetBindingResolver.BindCombatPolicies(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Content.ContentId rulesetId, Convergence.Hosting.IRandomSource! random, Convergence.Runtime.IStatStageScalingPolicy! stageScalingPolicy) -> Convergence.Runtime.RulesetBindingResult<Convergence.Execution.CombatExecutionPolicySet!>!
+Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.CombatPolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
+Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.RuntimeRulesetPolicyFactoryRegistry(System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeCombatRulesetPolicyFactory!>? combat = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeRewardRulesetPolicyFactory!>? reward = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeStatRulesetPolicyFactory!>? stat = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeGrowthRulesetPolicyFactory!>? growth = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeRosterCapacityRulesetPolicyFactory!>? rosterCapacity = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeEconomyRulesetPolicyFactory!>? economy = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory!>? turnEconomy = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRuntimeStatModifierRulesetPolicyFactory!>? statModifier = null) -> void
+override Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.Equals(object? obj) -> bool
+override Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.GetHashCode() -> int
+override Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.ToString() -> string!
+override Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.Equals(object? obj) -> bool
+override Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.GetHashCode() -> int
+override Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.ToString() -> string!
+static Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.operator !=(Convergence.Battle.StandardBattleInitiativeRollPolicyConfig? left, Convergence.Battle.StandardBattleInitiativeRollPolicyConfig? right) -> bool
+static Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.operator ==(Convergence.Battle.StandardBattleInitiativeRollPolicyConfig? left, Convergence.Battle.StandardBattleInitiativeRollPolicyConfig? right) -> bool
+static Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.operator !=(Convergence.Encounters.StandardBattleRewardYieldPolicyConfig? left, Convergence.Encounters.StandardBattleRewardYieldPolicyConfig? right) -> bool
+static Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.operator ==(Convergence.Encounters.StandardBattleRewardYieldPolicyConfig? left, Convergence.Encounters.StandardBattleRewardYieldPolicyConfig? right) -> bool
+Convergence.Execution.CombatExecutionPolicySet.CombatExecutionPolicySet(Convergence.Content.ContentId rulesetId, Convergence.Content.ContentId policyId, Convergence.Execution.IDamageExecutionPolicy! damage, Convergence.Battle.IHitResolutionPolicy! hitResolution, Convergence.Battle.ICriticalEligibilityPolicy! criticalEligibility, Convergence.Battle.ICriticalChancePolicy! criticalChance, Convergence.Execution.IChargePolicyService! charges, Convergence.Execution.IInstantDeathExecutionPolicy! instantDefeat, Convergence.Battle.IInstantDefeatResolutionPolicy! instantDefeatResolution, Convergence.Execution.IAilmentApplicationPolicy! ailments, Convergence.Execution.IChanceExecutionPolicy! chance, Convergence.Execution.IPowerAmountPolicy! amounts, Convergence.Execution.IActionOutcomeAggregationPolicy! actionOutcomes, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, object?>>? authoredParameters = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, object?>>? effectiveConfiguration = null) -> void
+Convergence.Execution.CombatExecutionPolicySet.EffectiveConfiguration.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!

@@ -111,7 +111,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         IStatModifierPolicyService statModifiers = resolver
             .BindStatModifierPolicy(catalog, Qualified("standard_stat_modifiers"))
             .RequireService();
-        ProductionCombatRuleset damageRuleset = resolver.BindProductionCombatRuleset(
+        CombatExecutionPolicySet combatPolicies = resolver.BindCombatPolicies(
             catalog,
             Qualified("standard_damage"),
             random,
@@ -119,7 +119,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         IBattleRewardService rewardService = resolver.BindBattleRewardService(
             catalog,
             Qualified("standard_reward"),
-            damageRuleset).RequireService();
+            random).RequireService();
         GrowthRulesetServices growthServices = resolver.BindGrowthServices(
             catalog,
             Qualified("standard_growth")).RequireService();
@@ -209,7 +209,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             .ConfigureAwait(false);
 
         BattleExecutionServices executionServices =
-            TrainingAnnexHostSupport.CreateExecutionServices(catalog, damageRuleset, statModifiers);
+            TrainingAnnexHostSupport.CreateExecutionServices(catalog, combatPolicies, statModifiers);
         var actionExecutor = new BattleActionExecutor(
             new SkillExecutor(executionServices),
             new ItemExecutor(executionServices),

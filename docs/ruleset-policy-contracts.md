@@ -18,7 +18,7 @@ The eight factory interfaces keep service types separate:
 
 | Ruleset category | Factory interface | Result |
 |---|---|---|
-| `damage` | `IRuntimeDamageRulesetPolicyFactory` | `ProductionCombatRuleset` |
+| `damage` | `IRuntimeCombatRulesetPolicyFactory` | `CombatExecutionPolicySet` |
 | `reward` | `IRuntimeRewardRulesetPolicyFactory` | `IBattleRewardService` |
 | `stat` | `IRuntimeStatRulesetPolicyFactory` | `StatRulesetServices` |
 | `stat_modifier` | `IRuntimeStatModifierRulesetPolicyFactory` | `IStatModifierPolicyService` |
@@ -43,6 +43,35 @@ convenience composition. A host may instead construct a registry from its own
 factories. Duplicate or qualified factory policy IDs are rejected. Moon phase
 has no standard runtime factory; a game that wants such a module owns its
 policy and composition outside this supplied registry.
+
+## Neutral Combat Composition
+
+`BindCombatPolicies(...)` returns an immutable `CombatExecutionPolicySet`, not
+the supplied `ProductionCombatRuleset` class. The set exposes the independently
+replaceable authorities used by typed execution:
+
+- damage calculation;
+- hit/evasion resolution;
+- critical eligibility and critical chance;
+- charge state;
+- instant-defeat execution and resolution;
+- ailment application;
+- generic chance and authored power amounts; and
+- action-outcome aggregation.
+
+It also retains the qualified ruleset ID, local factory policy ID, a deep
+snapshot of authored parameters, and the factory's effective configuration for
+diagnostics. The standard composition includes defaults as well as authored
+overrides in that effective view. Charge state continues to carry its own
+policy ID because incompatible retained charge state must be rejected during
+restore.
+
+The supplied `standard_damage` factory composes these interfaces from the
+standard implementations. A host may register a custom
+`IRuntimeCombatRulesetPolicyFactory`, or construct a `CombatExecutionPolicySet`
+directly when combat selection is not content-authored. `BattleExecutionServices`
+still accepts each interface separately, so a host can override one component
+without inheriting the rest of the supplied standard composition.
 
 ## Standard Damage
 
@@ -70,17 +99,6 @@ binding rather than producing a partial service.
 | `instantDeathNormalMultiplier` | decimal | `1` | nonnegative |
 | `instantDeathResistantMultiplier` | decimal | `0.5` | nonnegative |
 | `instantDeathImmuneMultiplier` | decimal | `0` | nonnegative |
-| `enemiesPerLevelForExperience` | decimal | `50` | positive |
-| `expectedStatLevelMultiplier` | decimal | `3` | nonnegative |
-| `expectedStatBase` | decimal | `15` | nonnegative |
-| `statDensityDivisor` | decimal | `100` | positive |
-| `maximumStatDensityMultiplier` | decimal | `2` | positive |
-| `currencyBaseMultiplier` | decimal | `0.25` | nonnegative |
-| `currencyLuckMultiplier` | decimal | `5` | nonnegative |
-| `currencyVarianceMinimum` | decimal | `0.9` | nonnegative; no greater than maximum |
-| `currencyVarianceMaximum` | decimal | `1.1` | nonnegative; no less than minimum |
-| `initiativeVarianceMinimum` | decimal | `0.9` | nonnegative; no greater than maximum |
-| `initiativeVarianceMaximum` | decimal | `1.1` | nonnegative; no less than minimum |
 
 Unknown parameters, nonnumeric values, and invalid combined configuration
 produce typed `RulesetBindingDiagnostic` values. The standard factory does not
@@ -122,13 +140,37 @@ clamp to `0..100`; neither reads Luck or introduces a nonzero minimum. The
 retired `criticalChanceMinimum`, `criticalChanceMaximum`, and
 `criticalChanceBase` ruleset parameters are rejected as unknown.
 
-Charge is not a hidden parameter of `standard_damage`. A host supplies an
-`IChargePolicyService` to `BattleExecutionServices`; the standard choices are
-`SplitChargePolicy` and `UnifiedChargePolicy`. The authored `grant_charge`
-effect supplies the multiplier, while the selected policy owns slot
-compatibility and consumption. The later neutral combat-policy aggregate will
-make that selection available through authored ruleset composition without
-putting a global multiplier back into damage configuration.
+Charge is not a hidden multiplier parameter of `standard_damage`. The supplied
+combat composition selects `SplitChargePolicy`; a custom combat factory may
+select `UnifiedChargePolicy` or another `IChargePolicyService`. The authored
+`grant_charge` effect supplies the multiplier, while the selected policy owns
+slot compatibility and consumption.
+
+## Reward Yield And Initiative
+
+Reward yield no longer depends on `ProductionCombatRuleset`. The `reward`
+factory receives an `IRandomSource` and returns an `IBattleRewardService` whose
+formula is supplied through `IBattleRewardYieldPolicy`. `standard_reward`
+accepts:
+
+| Parameter | Type | Default | Constraint |
+|---|---:|---:|---|
+| `enemiesPerLevelForExperience` | decimal | `50` | positive |
+| `expectedStatLevelMultiplier` | decimal | `3` | nonnegative |
+| `expectedStatBase` | decimal | `15` | nonnegative |
+| `statDensityDivisor` | decimal | `100` | positive |
+| `maximumStatDensityMultiplier` | decimal | `2` | positive |
+| `currencyBaseMultiplier` | decimal | `0.25` | nonnegative |
+| `currencyLuckMultiplier` | decimal | `5` | nonnegative |
+| `currencyVarianceMinimum` | decimal | `0.9` | nonnegative; no greater than maximum |
+| `currencyVarianceMaximum` | decimal | `1.1` | nonnegative; no less than minimum |
+
+Initiative probability is a separate code-composition boundary because the
+current content contract has no initiative ruleset category.
+`IBattleInitiativeRollPolicy` is the neutral contract;
+`StandardBattleInitiativeRollPolicy` supplies the existing Agility comparison
+with configurable variance. Encounter team ordering remains independently
+replaceable through `IBattleEncounterInitiativePolicy`.
 
 ## Standard Stats And Stage Tables
 
@@ -268,9 +310,9 @@ host's command model determines reasonable bounds. The supplied examples use
 
 ## Fixed Supplied Policies
 
-`standard_reward`, `standard_growth`, and `standard_economy` currently accept
-no parameters and reject unknown ones.
-Their formulas remain the supplied fixed implementations for `0.1.0`.
+`standard_growth` and `standard_economy` currently accept no parameters and
+reject unknown ones. Their formulas remain the supplied fixed implementations
+for `0.1.0`.
 They are nevertheless replaceable: author another registered `policyId` and
 provide the matching typed factory. This keeps replacement explicit without
 pretending that unsupported tuning values are implemented.

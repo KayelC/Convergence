@@ -1,6 +1,7 @@
 using Convergence.Content;
 using Convergence.Hosting;
 using Convergence.Battle;
+using Convergence.Encounters;
 using Convergence.Execution;
 using Convergence.Runtime;
 using Xunit;
@@ -276,22 +277,29 @@ public sealed class ProductionCombatRulesetTests
     [Fact]
     public void RewardPoliciesPreserveEstablishedExperienceAndCurrencyVectors()
     {
-        ProductionCombatRuleset ruleset = Rules(0.5m);
-        ProductionCombatantProfile enemy = Actor(
-            level: 10,
-            stats: new ProductionCombatStats(20, 20, 20, 20, 20));
+        IBattleRewardYieldPolicy policy = new StandardBattleRewardYieldPolicy(
+            new SequenceRandomSource([0.5m]));
+        var enemy = new BattleRewardEnemySnapshot(
+            ContentId.Parse("reward_enemy"),
+            10,
+            20,
+            20,
+            20,
+            20,
+            20);
 
-        Assert.Equal(46, ruleset.CalculateExperienceYield(enemy));
-        Assert.Equal(125, ruleset.CalculateCurrencyYield(enemy));
+        Assert.Equal(46, policy.CalculateExperienceYield(enemy));
+        Assert.Equal(125, policy.CalculateCurrencyYield(enemy));
     }
 
     [Fact]
     public void InitiativeUsesConfiguredAgilityVariance()
     {
-        ProductionCombatRuleset ruleset = Rules(0.5m, 0.5m);
+        IBattleInitiativeRollPolicy policy = new StandardBattleInitiativeRollPolicy(
+            new SequenceRandomSource([0.5m, 0.5m, 0.5m, 0.5m]));
 
-        Assert.True(ruleset.RollInitiative(playerAverageAgility: 20, enemyAverageAgility: 20));
-        Assert.False(ruleset.RollInitiative(playerAverageAgility: 1, enemyAverageAgility: 100));
+        Assert.True(policy.IsPlayerFirst(playerAverageAgility: 20, enemyAverageAgility: 20));
+        Assert.False(policy.IsPlayerFirst(playerAverageAgility: 1, enemyAverageAgility: 100));
     }
 
     [Fact]
@@ -299,8 +307,6 @@ public sealed class ProductionCombatRulesetTests
     {
         ProductionCombatRulesetConfig[] invalidConfigurations =
         [
-            new() { EnemiesPerLevelForExperience = 0 },
-            new() { StatDensityDivisor = 0 },
             new() { HitChanceMinimum = 90, HitChanceMaximum = 10 },
             new() { DamageVarianceMinimum = 1.1m, DamageVarianceMaximum = 0.9m },
             new() { GuardDamageMultiplier = -0.1m }
@@ -309,6 +315,19 @@ public sealed class ProductionCombatRulesetTests
         Assert.All(invalidConfigurations, config =>
             Assert.ThrowsAny<ArgumentException>(() =>
                 new ProductionCombatRuleset(new SequenceRandomSource([]), config)));
+        Assert.ThrowsAny<ArgumentException>(() => new StandardBattleRewardYieldPolicy(
+            new SequenceRandomSource([]),
+            new StandardBattleRewardYieldPolicyConfig { EnemiesPerLevelForExperience = 0 }));
+        Assert.ThrowsAny<ArgumentException>(() => new StandardBattleRewardYieldPolicy(
+            new SequenceRandomSource([]),
+            new StandardBattleRewardYieldPolicyConfig { StatDensityDivisor = 0 }));
+        Assert.ThrowsAny<ArgumentException>(() => new StandardBattleInitiativeRollPolicy(
+            new SequenceRandomSource([]),
+            new StandardBattleInitiativeRollPolicyConfig
+            {
+                VarianceMinimum = 1.1m,
+                VarianceMaximum = 0.9m
+            }));
     }
 
     [Fact]
@@ -353,18 +372,19 @@ public sealed class ProductionCombatRulesetTests
     [Fact]
     public void ExtremeRewardInputsSaturateInsteadOfThrowingOrWrapping()
     {
-        ProductionCombatRuleset ruleset = Rules(0.5m);
-        ProductionCombatantProfile enemy = Actor(
-            level: int.MaxValue,
-            stats: new ProductionCombatStats(
-                decimal.MaxValue,
-                decimal.MaxValue,
-                decimal.MaxValue,
-                decimal.MaxValue,
-                decimal.MaxValue));
+        IBattleRewardYieldPolicy policy = new StandardBattleRewardYieldPolicy(
+            new SequenceRandomSource([0.5m]));
+        var enemy = new BattleRewardEnemySnapshot(
+            ContentId.Parse("maximum_reward_enemy"),
+            int.MaxValue,
+            decimal.MaxValue,
+            decimal.MaxValue,
+            decimal.MaxValue,
+            decimal.MaxValue,
+            decimal.MaxValue);
 
-        Assert.Equal(int.MaxValue, ruleset.CalculateExperienceYield(enemy));
-        Assert.Equal(int.MaxValue, ruleset.CalculateCurrencyYield(enemy));
+        Assert.Equal(int.MaxValue, policy.CalculateExperienceYield(enemy));
+        Assert.Equal(int.MaxValue, policy.CalculateCurrencyYield(enemy));
     }
 
     [Fact]
@@ -378,9 +398,7 @@ public sealed class ProductionCombatRulesetTests
             CriticalDamageMultiplier = decimal.MaxValue,
             WeakDamageMultiplier = decimal.MaxValue,
             ResistDamageMultiplier = decimal.MaxValue,
-            GuardDamageMultiplier = decimal.MaxValue,
-            InitiativeVarianceMinimum = decimal.MaxValue,
-            InitiativeVarianceMaximum = decimal.MaxValue
+            GuardDamageMultiplier = decimal.MaxValue
         };
         var ruleset = new ProductionCombatRuleset(new SequenceRandomSource([0m, 0m, 0m]), config);
         ProductionCombatantProfile attacker = Actor(
@@ -435,7 +453,6 @@ public sealed class ProductionCombatRulesetTests
                 new ChanceCriticalDefinition(100),
                 authoredAccuracy: 100,
                 finalHitChance: 100)).Chance);
-        Assert.True(ruleset.RollInitiative(decimal.MaxValue, decimal.MaxValue));
         Assert.Equal(
             decimal.MaxValue,
             new ProductionDamageResolutionResult(

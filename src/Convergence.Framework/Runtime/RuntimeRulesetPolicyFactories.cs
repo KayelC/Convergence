@@ -7,11 +7,11 @@ using Convergence.TurnEconomy;
 
 namespace Convergence.Runtime;
 
-public interface IRuntimeDamageRulesetPolicyFactory
+public interface IRuntimeCombatRulesetPolicyFactory
 {
     ContentId PolicyId { get; }
 
-    RulesetBindingResult<ProductionCombatRuleset> Create(
+    RulesetBindingResult<CombatExecutionPolicySet> Create(
         RulesetDefinition definition,
         IRandomSource random,
         IStatStageScalingPolicy stageScalingPolicy);
@@ -23,7 +23,7 @@ public interface IRuntimeRewardRulesetPolicyFactory
 
     RulesetBindingResult<IBattleRewardService> Create(
         RulesetDefinition definition,
-        ProductionCombatRuleset combatRuleset);
+        IRandomSource random);
 }
 
 public interface IRuntimeStatRulesetPolicyFactory
@@ -75,7 +75,7 @@ public interface IRuntimeTurnEconomyRulesetPolicyFactory
 /// </summary>
 public sealed class RuntimeRulesetPolicyFactoryRegistry
 {
-    private readonly IReadOnlyDictionary<ContentId, IRuntimeDamageRulesetPolicyFactory> _damage;
+    private readonly IReadOnlyDictionary<ContentId, IRuntimeCombatRulesetPolicyFactory> _combat;
     private readonly IReadOnlyDictionary<ContentId, IRuntimeRewardRulesetPolicyFactory> _reward;
     private readonly IReadOnlyDictionary<ContentId, IRuntimeStatRulesetPolicyFactory> _stat;
     private readonly IReadOnlyDictionary<ContentId, IRuntimeStatModifierRulesetPolicyFactory> _statModifier;
@@ -85,7 +85,7 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
     private readonly IReadOnlyDictionary<ContentId, IRuntimeTurnEconomyRulesetPolicyFactory> _turnEconomy;
 
     public RuntimeRulesetPolicyFactoryRegistry(
-        IEnumerable<IRuntimeDamageRulesetPolicyFactory>? damage = null,
+        IEnumerable<IRuntimeCombatRulesetPolicyFactory>? combat = null,
         IEnumerable<IRuntimeRewardRulesetPolicyFactory>? reward = null,
         IEnumerable<IRuntimeStatRulesetPolicyFactory>? stat = null,
         IEnumerable<IRuntimeGrowthRulesetPolicyFactory>? growth = null,
@@ -94,7 +94,7 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
         IEnumerable<IRuntimeTurnEconomyRulesetPolicyFactory>? turnEconomy = null,
         IEnumerable<IRuntimeStatModifierRulesetPolicyFactory>? statModifier = null)
     {
-        _damage = Snapshot(damage, factory => factory.PolicyId, nameof(damage));
+        _combat = Snapshot(combat, factory => factory.PolicyId, nameof(combat));
         _reward = Snapshot(reward, factory => factory.PolicyId, nameof(reward));
         _stat = Snapshot(stat, factory => factory.PolicyId, nameof(stat));
         _statModifier = Snapshot(statModifier, factory => factory.PolicyId, nameof(statModifier));
@@ -104,7 +104,7 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
         _turnEconomy = Snapshot(turnEconomy, factory => factory.PolicyId, nameof(turnEconomy));
     }
 
-    public IReadOnlyCollection<ContentId> DamagePolicyIds => SnapshotIds(_damage);
+    public IReadOnlyCollection<ContentId> CombatPolicyIds => SnapshotIds(_combat);
     public IReadOnlyCollection<ContentId> RewardPolicyIds => SnapshotIds(_reward);
     public IReadOnlyCollection<ContentId> StatPolicyIds => SnapshotIds(_stat);
     public IReadOnlyCollection<ContentId> StatModifierPolicyIds => SnapshotIds(_statModifier);
@@ -115,7 +115,7 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
 
     public static RuntimeRulesetPolicyFactoryRegistry CreateStandard() =>
         new(
-            damage: [new StandardDamageRulesetPolicyFactory()],
+            combat: [new StandardCombatRulesetPolicyFactory()],
             reward: [new StandardRewardRulesetPolicyFactory()],
             stat: [new StandardStatRulesetPolicyFactory()],
             statModifier:
@@ -129,8 +129,8 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
             economy: [new StandardEconomyRulesetPolicyFactory()],
             turnEconomy: [new StandardActionTokenRulesetPolicyFactory()]);
 
-    internal IRuntimeDamageRulesetPolicyFactory? FindDamage(ContentId policyId) =>
-        Find(_damage, policyId);
+    internal IRuntimeCombatRulesetPolicyFactory? FindCombat(ContentId policyId) =>
+        Find(_combat, policyId);
 
     internal IRuntimeRewardRulesetPolicyFactory? FindReward(ContentId policyId) =>
         Find(_reward, policyId);
@@ -193,11 +193,11 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
         factories.TryGetValue(policyId, out TFactory? factory) ? factory : null;
 }
 
-internal sealed class StandardDamageRulesetPolicyFactory : IRuntimeDamageRulesetPolicyFactory
+internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRulesetPolicyFactory
 {
     public ContentId PolicyId => StandardRulesetPolicyIds.StandardDamage;
 
-    public RulesetBindingResult<ProductionCombatRuleset> Create(
+    public RulesetBindingResult<CombatExecutionPolicySet> Create(
         RulesetDefinition definition,
         IRandomSource random,
         IStatStageScalingPolicy stageScalingPolicy)
@@ -292,50 +292,6 @@ internal sealed class StandardDamageRulesetPolicyFactory : IRuntimeDamageRuleset
                 case "defaultInstantDeathChance":
                     RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
                     break;
-                case "enemiesPerLevelForExperience":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { EnemiesPerLevelForExperience = parsed });
-                    break;
-                case "expectedStatLevelMultiplier":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { ExpectedStatLevelMultiplier = parsed });
-                    break;
-                case "expectedStatBase":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { ExpectedStatBase = parsed });
-                    break;
-                case "statDensityDivisor":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { StatDensityDivisor = parsed });
-                    break;
-                case "maximumStatDensityMultiplier":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { MaximumStatDensityMultiplier = parsed });
-                    break;
-                case "currencyBaseMultiplier":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { CurrencyBaseMultiplier = parsed });
-                    break;
-                case "currencyLuckMultiplier":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { CurrencyLuckMultiplier = parsed });
-                    break;
-                case "currencyVarianceMinimum":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { CurrencyVarianceMinimum = parsed });
-                    break;
-                case "currencyVarianceMaximum":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { CurrencyVarianceMaximum = parsed });
-                    break;
-                case "initiativeVarianceMinimum":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { InitiativeVarianceMinimum = parsed });
-                    break;
-                case "initiativeVarianceMaximum":
-                    config = ReadDecimal(definition, key, value, diagnostics, config,
-                        (current, parsed) => current with { InitiativeVarianceMaximum = parsed });
-                    break;
                 default:
                     RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
                     break;
@@ -353,20 +309,74 @@ internal sealed class StandardDamageRulesetPolicyFactory : IRuntimeDamageRuleset
 
         if (diagnostics.Count > 0)
         {
-            return new RulesetBindingResult<ProductionCombatRuleset>(null, diagnostics);
+            return new RulesetBindingResult<CombatExecutionPolicySet>(null, diagnostics);
         }
 
         try
         {
-            return new RulesetBindingResult<ProductionCombatRuleset>(
-                new ProductionCombatRuleset(random, config, stageScalingPolicy));
+            var combat = new ProductionCombatRuleset(random, config, stageScalingPolicy);
+            return new RulesetBindingResult<CombatExecutionPolicySet>(
+                new CombatExecutionPolicySet(
+                    definition.Id,
+                    definition.PolicyId,
+                    combat,
+                    combat.HitPolicy,
+                    combat.CriticalEligibilityPolicy,
+                    combat.CriticalChancePolicy,
+                    new SplitChargePolicy(),
+                    combat,
+                    combat.InstantDefeatPolicy,
+                    combat,
+                    combat,
+                    combat,
+                    new StandardActionOutcomeAggregationPolicy(),
+                    definition.Parameters,
+                    EffectiveConfiguration(config)));
         }
         catch (ArgumentException exception)
         {
             RulesetPolicyFactoryDiagnostics.InvalidConfiguration(definition, exception.Message, diagnostics);
-            return new RulesetBindingResult<ProductionCombatRuleset>(null, diagnostics);
+            return new RulesetBindingResult<CombatExecutionPolicySet>(null, diagnostics);
         }
     }
+
+    private static IEnumerable<KeyValuePair<string, object?>> EffectiveConfiguration(
+        ProductionCombatRulesetConfig config) =>
+    [
+        KeyValuePair.Create<string, object?>("damageFormulaScalar", config.DamageFormulaScalar),
+        KeyValuePair.Create<string, object?>("damageVarianceMinimum", config.DamageVarianceMinimum),
+        KeyValuePair.Create<string, object?>("damageVarianceMaximum", config.DamageVarianceMaximum),
+        KeyValuePair.Create<string, object?>("criticalDamageMultiplier", config.CriticalDamageMultiplier),
+        KeyValuePair.Create<string, object?>("weakDamageMultiplier", config.WeakDamageMultiplier),
+        KeyValuePair.Create<string, object?>("resistDamageMultiplier", config.ResistDamageMultiplier),
+        KeyValuePair.Create<string, object?>("guardDamageMultiplier", config.GuardDamageMultiplier),
+        KeyValuePair.Create<string, object?>(
+            "hitAttackerAgilityCoefficient",
+            config.HitAttackerAgilityCoefficient),
+        KeyValuePair.Create<string, object?>(
+            "hitTargetAgilityCoefficient",
+            config.HitTargetAgilityCoefficient),
+        KeyValuePair.Create<string, object?>("hitChanceMinimum", config.HitChanceMinimum),
+        KeyValuePair.Create<string, object?>("hitChanceMaximum", config.HitChanceMaximum),
+        KeyValuePair.Create<string, object?>(
+            "instantDeathChanceMinimum",
+            config.InstantDeathChanceMinimum),
+        KeyValuePair.Create<string, object?>(
+            "instantDeathChanceMaximum",
+            config.InstantDeathChanceMaximum),
+        KeyValuePair.Create<string, object?>(
+            "instantDeathVulnerableMultiplier",
+            config.InstantDeathVulnerableMultiplier),
+        KeyValuePair.Create<string, object?>(
+            "instantDeathNormalMultiplier",
+            config.InstantDeathNormalMultiplier),
+        KeyValuePair.Create<string, object?>(
+            "instantDeathResistantMultiplier",
+            config.InstantDeathResistantMultiplier),
+        KeyValuePair.Create<string, object?>(
+            "instantDeathImmuneMultiplier",
+            config.InstantDeathImmuneMultiplier)
+    ];
 
     private static ProductionCombatRulesetConfig ReadDecimal(
         RulesetDefinition definition,
@@ -409,14 +419,69 @@ internal sealed class StandardRewardRulesetPolicyFactory : IRuntimeRewardRuleset
 
     public RulesetBindingResult<IBattleRewardService> Create(
         RulesetDefinition definition,
-        ProductionCombatRuleset combatRuleset)
+        IRandomSource random)
     {
-        ArgumentNullException.ThrowIfNull(combatRuleset);
-        List<RulesetBindingDiagnostic> diagnostics = RulesetPolicyFactoryDiagnostics.RequireNoParameters(definition);
-        return diagnostics.Count == 0
-            ? new RulesetBindingResult<IBattleRewardService>(new BattleRewardService(combatRuleset))
-            : new RulesetBindingResult<IBattleRewardService>(null, diagnostics);
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(random);
+
+        var diagnostics = new List<RulesetBindingDiagnostic>();
+        var config = new StandardBattleRewardYieldPolicyConfig();
+        foreach ((string key, object? value) in definition.Parameters)
+        {
+            if (key is not (
+                "enemiesPerLevelForExperience" or
+                "expectedStatLevelMultiplier" or
+                "expectedStatBase" or
+                "statDensityDivisor" or
+                "maximumStatDensityMultiplier" or
+                "currencyBaseMultiplier" or
+                "currencyLuckMultiplier" or
+                "currencyVarianceMinimum" or
+                "currencyVarianceMaximum"))
+            {
+                RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
+                continue;
+            }
+
+            if (!RulesetPolicyFactoryParameters.TryReadDecimal(value, out decimal parsed))
+            {
+                RulesetPolicyFactoryDiagnostics.InvalidType(definition, key, "numeric", diagnostics);
+                continue;
+            }
+
+            config = key switch
+            {
+                "enemiesPerLevelForExperience" => config with { EnemiesPerLevelForExperience = parsed },
+                "expectedStatLevelMultiplier" => config with { ExpectedStatLevelMultiplier = parsed },
+                "expectedStatBase" => config with { ExpectedStatBase = parsed },
+                "statDensityDivisor" => config with { StatDensityDivisor = parsed },
+                "maximumStatDensityMultiplier" => config with { MaximumStatDensityMultiplier = parsed },
+                "currencyBaseMultiplier" => config with { CurrencyBaseMultiplier = parsed },
+                "currencyLuckMultiplier" => config with { CurrencyLuckMultiplier = parsed },
+                "currencyVarianceMinimum" => config with { CurrencyVarianceMinimum = parsed },
+                "currencyVarianceMaximum" => config with { CurrencyVarianceMaximum = parsed },
+                _ => config
+            };
+        }
+
+        try
+        {
+            config.Validate();
+        }
+        catch (ArgumentException exception)
+        {
+            RulesetPolicyFactoryDiagnostics.InvalidConfiguration(definition, exception.Message, diagnostics);
+        }
+
+        if (diagnostics.Count > 0)
+        {
+            return new RulesetBindingResult<IBattleRewardService>(null, diagnostics);
+        }
+
+        return new RulesetBindingResult<IBattleRewardService>(
+            new BattleRewardService(new StandardBattleRewardYieldPolicy(random, config)));
     }
+
 }
 
 internal sealed class StandardStatRulesetPolicyFactory : IRuntimeStatRulesetPolicyFactory

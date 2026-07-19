@@ -71,7 +71,7 @@ public partial class ConvergenceSmokeRoot : Node
         IStatModifierPolicyService statModifiers = rulesets.BindStatModifierPolicy(
             catalog,
             Qualified("standard_stat_modifiers")).RequireService();
-        ProductionCombatRuleset combat = rulesets.BindProductionCombatRuleset(
+        CombatExecutionPolicySet combat = rulesets.BindCombatPolicies(
             catalog,
             Qualified("standard_damage"),
             random,
@@ -156,15 +156,16 @@ public partial class ConvergenceSmokeRoot : Node
 
         BattleExecutionServices executionServices = new(
             catalog,
-            combat,
-            combat,
-            combat,
-            combat,
-            combat,
+            combat.Damage,
+            combat.InstantDefeat,
+            combat.Ailments,
+            combat.Chance,
+            combat.Amounts,
             new FirstSkillTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
             statModifiers,
-            new SplitChargePolicy());
+            combat.Charges,
+            actionOutcomes: combat.ActionOutcomes);
         var actionExecutor = new BattleActionExecutor(
             new SkillExecutor(executionServices),
             new ItemExecutor(executionServices),

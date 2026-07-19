@@ -99,7 +99,7 @@ public sealed record BattleTurnEconomyRuleset
 
 public interface IRuntimeRulesetBindingResolver
 {
-    RulesetBindingResult<ProductionCombatRuleset> BindProductionCombatRuleset(
+    RulesetBindingResult<CombatExecutionPolicySet> BindCombatPolicies(
         GameDataCatalog catalog,
         ContentId rulesetId,
         IRandomSource random,
@@ -108,7 +108,7 @@ public interface IRuntimeRulesetBindingResolver
     RulesetBindingResult<IBattleRewardService> BindBattleRewardService(
         GameDataCatalog catalog,
         ContentId rulesetId,
-        ProductionCombatRuleset combatRuleset);
+        IRandomSource random);
 
     RulesetBindingResult<StatRulesetServices> BindStatServices(
         GameDataCatalog catalog,
@@ -145,7 +145,7 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
         _factories = factories ?? throw new ArgumentNullException(nameof(factories));
     }
 
-    public RulesetBindingResult<ProductionCombatRuleset> BindProductionCombatRuleset(
+    public RulesetBindingResult<CombatExecutionPolicySet> BindCombatPolicies(
         GameDataCatalog catalog,
         ContentId rulesetId,
         IRandomSource random,
@@ -153,26 +153,26 @@ public sealed class RuntimeRulesetBindingResolver : IRuntimeRulesetBindingResolv
     {
         ArgumentNullException.ThrowIfNull(random);
         ArgumentNullException.ThrowIfNull(stageScalingPolicy);
-        return Bind<IRuntimeDamageRulesetPolicyFactory, ProductionCombatRuleset>(
+        return Bind<IRuntimeCombatRulesetPolicyFactory, CombatExecutionPolicySet>(
             catalog,
             rulesetId,
             RulesetCategory.Damage,
-            _factories.FindDamage,
+            _factories.FindCombat,
             (factory, definition) => factory.Create(definition, random, stageScalingPolicy));
     }
 
     public RulesetBindingResult<IBattleRewardService> BindBattleRewardService(
         GameDataCatalog catalog,
         ContentId rulesetId,
-        ProductionCombatRuleset combatRuleset)
+        IRandomSource random)
     {
-        ArgumentNullException.ThrowIfNull(combatRuleset);
+        ArgumentNullException.ThrowIfNull(random);
         return Bind<IRuntimeRewardRulesetPolicyFactory, IBattleRewardService>(
             catalog,
             rulesetId,
             RulesetCategory.Reward,
             _factories.FindReward,
-            (factory, definition) => factory.Create(definition, combatRuleset));
+            (factory, definition) => factory.Create(definition, random));
     }
 
     public RulesetBindingResult<StatRulesetServices> BindStatServices(

@@ -24,17 +24,6 @@ public sealed record ProductionCombatRulesetConfig
     public decimal InstantDeathNormalMultiplier { get; init; } = 1m;
     public decimal InstantDeathResistantMultiplier { get; init; } = 0.5m;
     public decimal InstantDeathImmuneMultiplier { get; init; }
-    public decimal EnemiesPerLevelForExperience { get; init; } = 50m;
-    public decimal ExpectedStatLevelMultiplier { get; init; } = 3m;
-    public decimal ExpectedStatBase { get; init; } = 15m;
-    public decimal StatDensityDivisor { get; init; } = 100m;
-    public decimal MaximumStatDensityMultiplier { get; init; } = 2m;
-    public decimal CurrencyBaseMultiplier { get; init; } = 0.25m;
-    public decimal CurrencyLuckMultiplier { get; init; } = 5m;
-    public decimal CurrencyVarianceMinimum { get; init; } = 0.9m;
-    public decimal CurrencyVarianceMaximum { get; init; } = 1.1m;
-    public decimal InitiativeVarianceMinimum { get; init; } = 0.9m;
-    public decimal InitiativeVarianceMaximum { get; init; } = 1.1m;
 
     public void Validate()
     {
@@ -64,23 +53,6 @@ public sealed record ProductionCombatRulesetConfig
         RequireNonNegative(InstantDeathNormalMultiplier, nameof(InstantDeathNormalMultiplier));
         RequireNonNegative(InstantDeathResistantMultiplier, nameof(InstantDeathResistantMultiplier));
         RequireNonNegative(InstantDeathImmuneMultiplier, nameof(InstantDeathImmuneMultiplier));
-        RequirePositive(EnemiesPerLevelForExperience, nameof(EnemiesPerLevelForExperience));
-        RequireNonNegative(ExpectedStatLevelMultiplier, nameof(ExpectedStatLevelMultiplier));
-        RequireNonNegative(ExpectedStatBase, nameof(ExpectedStatBase));
-        RequirePositive(StatDensityDivisor, nameof(StatDensityDivisor));
-        RequirePositive(MaximumStatDensityMultiplier, nameof(MaximumStatDensityMultiplier));
-        RequireNonNegative(CurrencyBaseMultiplier, nameof(CurrencyBaseMultiplier));
-        RequireNonNegative(CurrencyLuckMultiplier, nameof(CurrencyLuckMultiplier));
-        RequireOrderedNonNegativeRange(
-            CurrencyVarianceMinimum,
-            CurrencyVarianceMaximum,
-            nameof(CurrencyVarianceMinimum),
-            nameof(CurrencyVarianceMaximum));
-        RequireOrderedNonNegativeRange(
-            InitiativeVarianceMinimum,
-            InitiativeVarianceMaximum,
-            nameof(InitiativeVarianceMinimum),
-            nameof(InitiativeVarianceMaximum));
     }
 
     private static void RequirePositive(decimal value, string name)
@@ -138,6 +110,70 @@ public sealed record ProductionCombatRulesetConfig
                 minimumName);
         }
     }
+}
+
+public interface IBattleInitiativeRollPolicy
+{
+    bool IsPlayerFirst(decimal playerAverageAgility, decimal enemyAverageAgility);
+}
+
+public sealed record StandardBattleInitiativeRollPolicyConfig
+{
+    public decimal VarianceMinimum { get; init; } = 0.9m;
+    public decimal VarianceMaximum { get; init; } = 1.1m;
+
+    public void Validate()
+    {
+        if (VarianceMinimum < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(VarianceMinimum),
+                VarianceMinimum,
+                "Initiative variance cannot be negative.");
+        }
+        if (VarianceMaximum < VarianceMinimum)
+        {
+            throw new ArgumentException(
+                "Initiative variance maximum cannot be lower than its minimum.",
+                nameof(VarianceMaximum));
+        }
+    }
+}
+
+public sealed class StandardBattleInitiativeRollPolicy : IBattleInitiativeRollPolicy
+{
+    private readonly IRandomSource _random;
+
+    public StandardBattleInitiativeRollPolicy(
+        IRandomSource random,
+        StandardBattleInitiativeRollPolicyConfig? config = null)
+    {
+        _random = random ?? throw new ArgumentNullException(nameof(random));
+        Config = config ?? new StandardBattleInitiativeRollPolicyConfig();
+        Config.Validate();
+    }
+
+    public StandardBattleInitiativeRollPolicyConfig Config { get; }
+
+    public bool IsPlayerFirst(decimal playerAverageAgility, decimal enemyAverageAgility)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(playerAverageAgility);
+        ArgumentOutOfRangeException.ThrowIfNegative(enemyAverageAgility);
+        decimal playerRoll = CombatArithmetic.SaturatingMultiply(
+            playerAverageAgility,
+            RollVariance());
+        decimal enemyRoll = CombatArithmetic.SaturatingMultiply(
+            enemyAverageAgility,
+            RollVariance());
+        return playerRoll >= enemyRoll;
+    }
+
+    private decimal RollVariance() =>
+        CombatArithmetic.SaturatingAdd(
+            Config.VarianceMinimum,
+            CombatArithmetic.SaturatingMultiply(
+                Config.VarianceMaximum - Config.VarianceMinimum,
+                _random.NextUnitDecimal()));
 }
 
 public sealed record ProductionCombatStats(
@@ -827,68 +863,6 @@ public sealed class ProductionCombatRuleset :
             });
         int clamped = ClampPercent(chance, 0, 100);
         return new ProductionAilmentApplicationResult(RollPercent(clamped), clamped);
-    }
-
-    public int CalculateExperienceYield(ProductionCombatantProfile enemy)
-    {
-        ArgumentNullException.ThrowIfNull(enemy);
-
-        decimal level = enemy.Level;
-        decimal levelCubed = CombatArithmetic.SaturatingMultiply(
-            CombatArithmetic.SaturatingMultiply(level, level),
-            level);
-        decimal baseYield = CombatArithmetic.SaturatingDivide(
-            CombatArithmetic.SaturatingMultiply(1.5m, levelCubed),
-            _config.EnemiesPerLevelForExperience);
-        decimal expectedStats = CombatArithmetic.SaturatingAdd(
-            CombatArithmetic.SaturatingMultiply(level, _config.ExpectedStatLevelMultiplier),
-            _config.ExpectedStatBase);
-        decimal actualStats = CombatArithmetic.SaturatingSum(
-        [
-            enemy.Stats.Strength,
-            enemy.Stats.Magic,
-            enemy.Stats.Vitality,
-            enemy.Stats.Agility,
-            enemy.Stats.Luck
-        ]);
-        decimal statMultiplier = CombatArithmetic.SaturatingAdd(
-            1m,
-            Math.Max(0m, CombatArithmetic.SaturatingDivide(
-                CombatArithmetic.SaturatingSubtract(actualStats, expectedStats),
-                _config.StatDensityDivisor)));
-        statMultiplier = Math.Min(_config.MaximumStatDensityMultiplier, statMultiplier);
-        return Math.Max(1, CombatArithmetic.SaturatingFloorToInt(
-            CombatArithmetic.SaturatingMultiply(baseYield, statMultiplier)));
-    }
-
-    public int CalculateCurrencyYield(ProductionCombatantProfile enemy)
-    {
-        ArgumentNullException.ThrowIfNull(enemy);
-
-        decimal level = enemy.Level;
-        decimal baseCurrency = CombatArithmetic.SaturatingMultiply(
-            _config.CurrencyBaseMultiplier,
-            CombatArithmetic.SaturatingMultiply(level, level));
-        decimal luckBonus = CombatArithmetic.SaturatingMultiply(
-            enemy.Stats.Luck,
-            _config.CurrencyLuckMultiplier);
-        decimal variance = RollVariance(_config.CurrencyVarianceMinimum, _config.CurrencyVarianceMaximum);
-        return CombatArithmetic.SaturatingFloorToInt(CombatArithmetic.SaturatingMultiply(
-            CombatArithmetic.SaturatingAdd(baseCurrency, luckBonus),
-            variance));
-    }
-
-    public bool RollInitiative(decimal playerAverageAgility, decimal enemyAverageAgility)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegative(playerAverageAgility);
-        ArgumentOutOfRangeException.ThrowIfNegative(enemyAverageAgility);
-        decimal playerRoll = CombatArithmetic.SaturatingMultiply(
-            playerAverageAgility,
-            RollVariance(_config.InitiativeVarianceMinimum, _config.InitiativeVarianceMaximum));
-        decimal enemyRoll = CombatArithmetic.SaturatingMultiply(
-            enemyAverageAgility,
-            RollVariance(_config.InitiativeVarianceMinimum, _config.InitiativeVarianceMaximum));
-        return playerRoll >= enemyRoll;
     }
 
     private decimal CalculateBaseDamage(

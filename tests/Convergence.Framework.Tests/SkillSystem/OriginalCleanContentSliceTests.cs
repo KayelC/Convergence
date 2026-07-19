@@ -166,19 +166,20 @@ public sealed class OriginalCleanContentSliceTests
             catalog,
             Qualified("standard_stat")).RequireService();
 
-        ProductionCombatRuleset damage = resolver.BindProductionCombatRuleset(
+        CombatExecutionPolicySet combat = resolver.BindCombatPolicies(
             catalog,
             Qualified("standard_damage"),
             new SequenceRandomSource(),
             stats.StageScalingPolicy)
             .RequireService();
-        Assert.Equal(1.5m, damage.Config.WeakDamageMultiplier);
-        Assert.Equal(0.5m, damage.Config.ResistDamageMultiplier);
+        var standardDamage = Assert.IsType<ProductionCombatRuleset>(combat.Damage);
+        Assert.Equal(1.5m, standardDamage.Config.WeakDamageMultiplier);
+        Assert.Equal(0.5m, standardDamage.Config.ResistDamageMultiplier);
 
         IBattleRewardService rewards = resolver.BindBattleRewardService(
             catalog,
             Qualified("standard_reward"),
-            damage)
+            new SequenceRandomSource())
             .RequireService();
         BattleRewardResult reward = rewards.Calculate(new BattleRewardRequest(
             [

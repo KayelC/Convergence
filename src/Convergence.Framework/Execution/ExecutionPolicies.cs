@@ -366,6 +366,76 @@ public interface ICustomEffectHandler
     EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context);
 }
 
+/// <summary>
+/// Immutable selection of the independently replaceable policies required by
+/// typed combat execution. Authored ruleset binding returns this neutral
+/// composition instead of requiring hosts to depend on a supplied concrete
+/// ruleset implementation.
+/// </summary>
+public sealed class CombatExecutionPolicySet
+{
+    public CombatExecutionPolicySet(
+        ContentId rulesetId,
+        ContentId policyId,
+        IDamageExecutionPolicy damage,
+        IHitResolutionPolicy hitResolution,
+        ICriticalEligibilityPolicy criticalEligibility,
+        ICriticalChancePolicy criticalChance,
+        IChargePolicyService charges,
+        IInstantDeathExecutionPolicy instantDefeat,
+        IInstantDefeatResolutionPolicy instantDefeatResolution,
+        IAilmentApplicationPolicy ailments,
+        IChanceExecutionPolicy chance,
+        IPowerAmountPolicy amounts,
+        IActionOutcomeAggregationPolicy actionOutcomes,
+        IEnumerable<KeyValuePair<string, object?>>? authoredParameters = null,
+        IEnumerable<KeyValuePair<string, object?>>? effectiveConfiguration = null)
+    {
+        if (!rulesetId.IsValid)
+        {
+            throw new ArgumentException("Ruleset ID must be valid.", nameof(rulesetId));
+        }
+        if (!policyId.IsValid || policyId.IsQualified)
+        {
+            throw new ArgumentException("Combat policy ID must be a valid local ID.", nameof(policyId));
+        }
+
+        RulesetId = rulesetId;
+        PolicyId = policyId;
+        Damage = damage ?? throw new ArgumentNullException(nameof(damage));
+        HitResolution = hitResolution ?? throw new ArgumentNullException(nameof(hitResolution));
+        CriticalEligibility = criticalEligibility ?? throw new ArgumentNullException(nameof(criticalEligibility));
+        CriticalChance = criticalChance ?? throw new ArgumentNullException(nameof(criticalChance));
+        Charges = charges ?? throw new ArgumentNullException(nameof(charges));
+        InstantDefeat = instantDefeat ?? throw new ArgumentNullException(nameof(instantDefeat));
+        InstantDefeatResolution = instantDefeatResolution
+            ?? throw new ArgumentNullException(nameof(instantDefeatResolution));
+        Ailments = ailments ?? throw new ArgumentNullException(nameof(ailments));
+        Chance = chance ?? throw new ArgumentNullException(nameof(chance));
+        Amounts = amounts ?? throw new ArgumentNullException(nameof(amounts));
+        ActionOutcomes = actionOutcomes ?? throw new ArgumentNullException(nameof(actionOutcomes));
+        AuthoredParameters = DefinitionCollections.SnapshotParameters(authoredParameters);
+        EffectiveConfiguration = DefinitionCollections.SnapshotParameters(
+            effectiveConfiguration ?? authoredParameters);
+    }
+
+    public ContentId RulesetId { get; }
+    public ContentId PolicyId { get; }
+    public IReadOnlyDictionary<string, object?> AuthoredParameters { get; }
+    public IReadOnlyDictionary<string, object?> EffectiveConfiguration { get; }
+    public IDamageExecutionPolicy Damage { get; }
+    public IHitResolutionPolicy HitResolution { get; }
+    public ICriticalEligibilityPolicy CriticalEligibility { get; }
+    public ICriticalChancePolicy CriticalChance { get; }
+    public IChargePolicyService Charges { get; }
+    public IInstantDeathExecutionPolicy InstantDefeat { get; }
+    public IInstantDefeatResolutionPolicy InstantDefeatResolution { get; }
+    public IAilmentApplicationPolicy Ailments { get; }
+    public IChanceExecutionPolicy Chance { get; }
+    public IPowerAmountPolicy Amounts { get; }
+    public IActionOutcomeAggregationPolicy ActionOutcomes { get; }
+}
+
 public sealed class BattleExecutionServices
 {
     public BattleExecutionServices(

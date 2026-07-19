@@ -60,7 +60,7 @@ review are complete.
 | O2-C3 | `verified` | Add critical chance and eligibility policies, consume passive Critical Chance modifiers, add basic-attack critical metadata, and advance clean schema/packs. | `battle: implement critical policy family` |
 | O2-C4 | `verified` | Add configurable instant-defeat resistance multipliers, explicit bypass behavior, one roll, no hidden Luck, and typed no-effect failures. | `battle: complete instant defeat policy` |
 | O2-C5 | `verified` | Execute landed hits sequentially in staged state, publish immutable per-hit/per-target evidence, and move outcome aggregation behind a policy. | `battle: expose combat resolution evidence` |
-| O2-C6 | `planned` | Replace concrete authored damage binding with a neutral combat-policy aggregate; decouple reward and initiative interfaces from the standard implementation. | `runtime: compose authored combat policies` |
+| O2-C6 | `verified` | Replace concrete authored damage binding with a neutral combat-policy aggregate; decouple reward and initiative interfaces from the standard implementation. | `runtime: compose authored combat policies` |
 | O2-C7 | `planned` | Perform a fresh source-first review, correct substantiated findings in isolated commits, write all three documentation views, and obtain owner confirmation. | `docs: complete combat resolution order 2` |
 
 ## O2-C1: Charge Policy Family
@@ -327,6 +327,28 @@ the active source inventory now accounts for 105 Framework files.
 - DemoHost and Godot sample bind without concrete-type assumptions;
 - Framework public APIs remain serializer, filesystem, console, and engine
   neutral.
+
+### Completion record
+
+O2-C6 is verified. Authored damage-category binding now returns the immutable
+`CombatExecutionPolicySet`, whose interfaces cover damage, hit/evasion,
+critical eligibility and chance, charge, instant defeat, ailment application,
+generic chance, authored amounts, and action-outcome aggregation. The supplied
+factory still composes the established standard behavior, while custom
+factories and direct hosts can replace components without depending on
+`ProductionCombatRuleset` as the binding result.
+
+Reward yield now uses `IBattleRewardYieldPolicy`; its tunable values belong to
+the authored reward category rather than damage configuration. Initiative uses
+the independent `IBattleInitiativeRollPolicy`. DemoHost and the Godot reference
+consumer bind the neutral combat set and pass its interfaces into execution.
+
+The checkpoint gate passed 1,297 tests (`1,117` Framework, `173` DemoHost, and
+`7` ContentValidator tests), with zero failures or skips. Framework and full
+solution nonincremental builds reported zero warnings, all DemoHost modes and
+scripted Training Annex exit completed successfully, and all six active packs
+(`36` documents, `98` definitions) passed schema, semantic, dependency,
+registration, and catalog validation.
 
 ## O2-C7: Review And Documentation
 

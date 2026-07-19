@@ -2336,15 +2336,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
-    public async Task TrainingAnnexExecutionServices_UseOneCatalogBoundProductionCombatRuleset()
+    public async Task TrainingAnnexExecutionServices_UseCatalogBoundNeutralCombatPolicies()
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
         var resolver = new RuntimeRulesetBindingResolver(RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
         StatRulesetServices stats = resolver.BindStatServices(
             catalog,
             Qualified("standard_stat")).RequireService();
-        ProductionCombatRuleset ruleset = resolver
-            .BindProductionCombatRuleset(
+        CombatExecutionPolicySet policies = resolver
+            .BindCombatPolicies(
                 catalog,
                 Qualified("standard_damage"),
                 new SequenceRandomSource(),
@@ -2355,13 +2355,16 @@ public sealed class CleanTrainingAnnexPlayHostTests
             .RequireService();
 
         BattleExecutionServices services =
-            TrainingAnnexHostSupport.CreateExecutionServices(catalog, ruleset, statModifiers);
+            TrainingAnnexHostSupport.CreateExecutionServices(catalog, policies, statModifiers);
 
-        Assert.Same(ruleset, services.DamagePolicy);
-        Assert.Same(ruleset, services.InstantDeathPolicy);
-        Assert.Same(ruleset, services.AilmentPolicy);
-        Assert.Same(ruleset, services.ChancePolicy);
-        Assert.Same(ruleset, services.PowerAmountPolicy);
+        Assert.Same(policies.Damage, services.DamagePolicy);
+        Assert.Same(policies.InstantDefeat, services.InstantDeathPolicy);
+        Assert.Same(policies.Ailments, services.AilmentPolicy);
+        Assert.Same(policies.Chance, services.ChancePolicy);
+        Assert.Same(policies.Amounts, services.PowerAmountPolicy);
+        Assert.Same(policies.Charges, services.Charges);
+        Assert.Same(policies.ActionOutcomes, services.ActionOutcomes);
+        var ruleset = Assert.IsType<ProductionCombatRuleset>(policies.Damage);
         Assert.Equal(1.5m, ruleset.Config.WeakDamageMultiplier);
         Assert.Equal(0.5m, ruleset.Config.ResistDamageMultiplier);
     }
@@ -2374,13 +2377,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         StatRulesetServices stats = resolver.BindStatServices(
             catalog,
             Qualified("standard_stat")).RequireService();
-        ProductionCombatRuleset ruleset = resolver
-            .BindProductionCombatRuleset(
+        CombatExecutionPolicySet policies = resolver
+            .BindCombatPolicies(
                 catalog,
                 Qualified("standard_damage"),
                 new SequenceRandomSource(),
                 stats.StageScalingPolicy)
             .RequireService();
+        var ruleset = Assert.IsType<ProductionCombatRuleset>(policies.Damage);
         EntityDefinition attacker = catalog.GetRequiredEntity(Qualified("echo_adept"));
         EntityDefinition target = catalog.GetRequiredEntity(Qualified("bramble_runner"));
 

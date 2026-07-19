@@ -294,8 +294,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         IStatModifierPolicyService statModifiers = statModifierBinding.RequireService();
-        RulesetBindingResult<ProductionCombatRuleset> combatBinding =
-            rulesetResolver.BindProductionCombatRuleset(
+        RulesetBindingResult<CombatExecutionPolicySet> combatBinding =
+            rulesetResolver.BindCombatPolicies(
                 catalog,
                 TrainingAnnexHostSupport.Qualified("standard_damage"),
                 _randomSource,
@@ -307,12 +307,12 @@ internal sealed class CleanTrainingAnnexPlayHost
             return 4;
         }
 
-        ProductionCombatRuleset combatRuleset = combatBinding.RequireService();
+        CombatExecutionPolicySet combatPolicies = combatBinding.RequireService();
         RulesetBindingResult<IBattleRewardService> rewardBinding =
             rulesetResolver.BindBattleRewardService(
                 catalog,
                 TrainingAnnexHostSupport.Qualified("standard_reward"),
-                combatRuleset);
+                _randomSource);
         if (!rewardBinding.IsSuccess)
         {
             await PublishRulesetDiagnosticsAsync("reward", rewardBinding.Diagnostics, cancellationToken)
@@ -359,7 +359,7 @@ internal sealed class CleanTrainingAnnexPlayHost
 
         ResourceManagementRulesetServices resourceManagement = resourceManagementBinding.RequireService();
         BattleExecutionServices executionServices =
-            TrainingAnnexHostSupport.CreateExecutionServices(catalog, combatRuleset, statModifiers);
+            TrainingAnnexHostSupport.CreateExecutionServices(catalog, combatPolicies, statModifiers);
         TrainingAnnexActorRosterResult rosterResult = TrainingAnnexHostSupport.CreateActorRoster(catalog);
         if (!rosterResult.IsSuccess)
         {

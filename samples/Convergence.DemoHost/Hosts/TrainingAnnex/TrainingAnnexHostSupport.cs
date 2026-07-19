@@ -217,19 +217,20 @@ internal static class TrainingAnnexHostSupport
 
     public static BattleExecutionServices CreateExecutionServices(
         GameDataCatalog catalog,
-        ProductionCombatRuleset combatRuleset,
+        CombatExecutionPolicySet combatPolicies,
         IStatModifierPolicyService statModifiers) =>
         new(
             catalog,
-            combatRuleset,
-            combatRuleset,
-            combatRuleset,
-            combatRuleset,
-            combatRuleset,
+            combatPolicies.Damage,
+            combatPolicies.InstantDefeat,
+            combatPolicies.Ailments,
+            combatPolicies.Chance,
+            combatPolicies.Amounts,
             new TrainingAnnexFirstTargetSelectionPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
             statModifiers,
-            new SplitChargePolicy());
+            combatPolicies.Charges,
+            actionOutcomes: combatPolicies.ActionOutcomes);
 
     public static TrainingAnnexActorRosterResult CreateActorRoster(GameDataCatalog catalog)
     {

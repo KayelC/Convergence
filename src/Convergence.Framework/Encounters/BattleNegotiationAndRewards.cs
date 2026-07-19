@@ -921,6 +921,143 @@ public sealed record BattleRewardResult
     public IReadOnlyList<BattleRewardApplication> Applications { get; }
 }
 
+public interface IBattleRewardYieldPolicy
+{
+    int CalculateExperienceYield(BattleRewardEnemySnapshot enemy);
+
+    int CalculateCurrencyYield(BattleRewardEnemySnapshot enemy);
+}
+
+public sealed record StandardBattleRewardYieldPolicyConfig
+{
+    public decimal EnemiesPerLevelForExperience { get; init; } = 50m;
+    public decimal ExpectedStatLevelMultiplier { get; init; } = 3m;
+    public decimal ExpectedStatBase { get; init; } = 15m;
+    public decimal StatDensityDivisor { get; init; } = 100m;
+    public decimal MaximumStatDensityMultiplier { get; init; } = 2m;
+    public decimal CurrencyBaseMultiplier { get; init; } = 0.25m;
+    public decimal CurrencyLuckMultiplier { get; init; } = 5m;
+    public decimal CurrencyVarianceMinimum { get; init; } = 0.9m;
+    public decimal CurrencyVarianceMaximum { get; init; } = 1.1m;
+
+    public void Validate()
+    {
+        RequirePositive(EnemiesPerLevelForExperience, nameof(EnemiesPerLevelForExperience));
+        RequireNonNegative(ExpectedStatLevelMultiplier, nameof(ExpectedStatLevelMultiplier));
+        RequireNonNegative(ExpectedStatBase, nameof(ExpectedStatBase));
+        RequirePositive(StatDensityDivisor, nameof(StatDensityDivisor));
+        RequirePositive(MaximumStatDensityMultiplier, nameof(MaximumStatDensityMultiplier));
+        RequireNonNegative(CurrencyBaseMultiplier, nameof(CurrencyBaseMultiplier));
+        RequireNonNegative(CurrencyLuckMultiplier, nameof(CurrencyLuckMultiplier));
+        RequireNonNegative(CurrencyVarianceMinimum, nameof(CurrencyVarianceMinimum));
+        RequireNonNegative(CurrencyVarianceMaximum, nameof(CurrencyVarianceMaximum));
+        if (CurrencyVarianceMaximum < CurrencyVarianceMinimum)
+        {
+            throw new ArgumentException(
+                "Currency variance maximum cannot be lower than its minimum.",
+                nameof(CurrencyVarianceMaximum));
+        }
+    }
+
+    private static void RequirePositive(decimal value, string parameterName)
+    {
+        if (value <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                parameterName,
+                value,
+                "Reward configuration value must be positive.");
+        }
+    }
+
+    private static void RequireNonNegative(decimal value, string parameterName)
+    {
+        if (value < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                parameterName,
+                value,
+                "Reward configuration value cannot be negative.");
+        }
+    }
+}
+
+public sealed class StandardBattleRewardYieldPolicy : IBattleRewardYieldPolicy
+{
+    private readonly IRandomSource _random;
+
+    public StandardBattleRewardYieldPolicy(
+        IRandomSource random,
+        StandardBattleRewardYieldPolicyConfig? config = null)
+    {
+        _random = random ?? throw new ArgumentNullException(nameof(random));
+        Config = config ?? new StandardBattleRewardYieldPolicyConfig();
+        Config.Validate();
+    }
+
+    public StandardBattleRewardYieldPolicyConfig Config { get; }
+
+    public int CalculateExperienceYield(BattleRewardEnemySnapshot enemy)
+    {
+        ValidateEnemy(enemy);
+        decimal level = enemy.Level;
+        decimal levelCubed = CombatArithmetic.SaturatingMultiply(
+            CombatArithmetic.SaturatingMultiply(level, level),
+            level);
+        decimal baseYield = CombatArithmetic.SaturatingDivide(
+            CombatArithmetic.SaturatingMultiply(1.5m, levelCubed),
+            Config.EnemiesPerLevelForExperience);
+        decimal expectedStats = CombatArithmetic.SaturatingAdd(
+            CombatArithmetic.SaturatingMultiply(level, Config.ExpectedStatLevelMultiplier),
+            Config.ExpectedStatBase);
+        decimal actualStats = CombatArithmetic.SaturatingSum(
+        [
+            enemy.Strength,
+            enemy.Magic,
+            enemy.Vitality,
+            enemy.Agility,
+            enemy.Luck
+        ]);
+        decimal statMultiplier = CombatArithmetic.SaturatingAdd(
+            1m,
+            Math.Max(0m, CombatArithmetic.SaturatingDivide(
+                CombatArithmetic.SaturatingSubtract(actualStats, expectedStats),
+                Config.StatDensityDivisor)));
+        statMultiplier = Math.Min(Config.MaximumStatDensityMultiplier, statMultiplier);
+        return Math.Max(1, CombatArithmetic.SaturatingFloorToInt(
+            CombatArithmetic.SaturatingMultiply(baseYield, statMultiplier)));
+    }
+
+    public int CalculateCurrencyYield(BattleRewardEnemySnapshot enemy)
+    {
+        ValidateEnemy(enemy);
+        decimal level = enemy.Level;
+        decimal baseCurrency = CombatArithmetic.SaturatingMultiply(
+            Config.CurrencyBaseMultiplier,
+            CombatArithmetic.SaturatingMultiply(level, level));
+        decimal luckBonus = CombatArithmetic.SaturatingMultiply(
+            enemy.Luck,
+            Config.CurrencyLuckMultiplier);
+        decimal variance = CombatArithmetic.SaturatingAdd(
+            Config.CurrencyVarianceMinimum,
+            CombatArithmetic.SaturatingMultiply(
+                Config.CurrencyVarianceMaximum - Config.CurrencyVarianceMinimum,
+                _random.NextUnitDecimal()));
+        return CombatArithmetic.SaturatingFloorToInt(CombatArithmetic.SaturatingMultiply(
+            CombatArithmetic.SaturatingAdd(baseCurrency, luckBonus),
+            variance));
+    }
+
+    private static void ValidateEnemy(BattleRewardEnemySnapshot enemy)
+    {
+        ArgumentNullException.ThrowIfNull(enemy);
+        if (enemy.Level <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(enemy), "Enemy level must be positive.");
+        }
+    }
+}
+
 public interface IBattleRewardService
 {
     BattleRewardResult Calculate(BattleRewardRequest request);
@@ -928,12 +1065,14 @@ public interface IBattleRewardService
 
 public sealed class BattleRewardService : IBattleRewardService
 {
-    private readonly ProductionCombatRuleset _ruleset;
+    private readonly IBattleRewardYieldPolicy _yieldPolicy;
 
-    public BattleRewardService(ProductionCombatRuleset ruleset)
+    public BattleRewardService(IBattleRewardYieldPolicy yieldPolicy)
     {
-        _ruleset = ruleset ?? throw new ArgumentNullException(nameof(ruleset));
+        _yieldPolicy = yieldPolicy ?? throw new ArgumentNullException(nameof(yieldPolicy));
     }
+
+    public IBattleRewardYieldPolicy YieldPolicy => _yieldPolicy;
 
     public BattleRewardResult Calculate(BattleRewardRequest request)
     {
@@ -965,14 +1104,10 @@ public sealed class BattleRewardService : IBattleRewardService
     }
 
     private int CalculateExperienceYield(BattleRewardEnemySnapshot enemy) =>
-        _ruleset.CalculateExperienceYield(new(
-            enemy.Level,
-            Stats(enemy)));
+        _yieldPolicy.CalculateExperienceYield(enemy);
 
     private int CalculateCurrencyYield(BattleRewardEnemySnapshot enemy) =>
-        _ruleset.CalculateCurrencyYield(new(
-            enemy.Level,
-            Stats(enemy)));
+        _yieldPolicy.CalculateCurrencyYield(enemy);
 
     private static int AggregateRewards(
         IEnumerable<BattleRewardEnemySnapshot> enemies,
@@ -986,13 +1121,4 @@ public sealed class BattleRewardService : IBattleRewardService
 
         return total;
     }
-
-    private static ProductionCombatStats Stats(BattleRewardEnemySnapshot enemy) =>
-        new(
-            enemy.Strength,
-            enemy.Magic,
-            enemy.Vitality,
-            enemy.Agility,
-            enemy.Luck,
-            enemy.Defense);
 }
