@@ -132,6 +132,12 @@ public interface IHostCommandSource<TCommand>
 
 public interface IRandomSource
 {
+    /// <summary>
+    /// Returns a value within <paramref name="minimumInclusive" /> (inclusive)
+    /// and <paramref name="maximumExclusive" /> (exclusive).
+    /// </summary>
     int NextInt32(int minimumInclusive, int maximumExclusive);
+
+    /// <summary>Returns a decimal value in the half-open interval [0, 1).</summary>
     decimal NextUnitDecimal();
 }

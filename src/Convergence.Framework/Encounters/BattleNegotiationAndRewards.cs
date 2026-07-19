@@ -1042,7 +1042,7 @@ public sealed class StandardBattleRewardYieldPolicy : IBattleRewardYieldPolicy
             Config.CurrencyVarianceMinimum,
             CombatArithmetic.SaturatingMultiply(
                 Config.CurrencyVarianceMaximum - Config.CurrencyVarianceMinimum,
-                _random.NextUnitDecimal()));
+                CombatArithmetic.RequireUnitInterval(_random.NextUnitDecimal())));
         return CombatArithmetic.SaturatingFloorToInt(CombatArithmetic.SaturatingMultiply(
             CombatArithmetic.SaturatingAdd(baseCurrency, luckBonus),
             variance));

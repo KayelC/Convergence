@@ -302,6 +302,53 @@ public sealed class ProductionCombatRulesetTests
         Assert.False(policy.IsPlayerFirst(playerAverageAgility: 1, enemyAverageAgility: 100));
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(1)]
+    public void SuppliedPoliciesRejectOutOfRangeUnitRandomValues(int rawUnit)
+    {
+        decimal unit = rawUnit;
+        var damage = new ProductionCombatRuleset(new FixedRandomSource(unit));
+        var ailments = new ProductionCombatRuleset(new FixedRandomSource(unit));
+        IBattleInitiativeRollPolicy initiative = new StandardBattleInitiativeRollPolicy(
+            new FixedRandomSource(unit));
+        IBattleRewardYieldPolicy rewards = new StandardBattleRewardYieldPolicy(
+            new FixedRandomSource(unit));
+
+        InvalidOperationException damageFailure = Assert.Throws<InvalidOperationException>(() =>
+            damage.ResolveDamage(new ProductionDamageResolutionRequest(
+                Actor(),
+                Actor(),
+                DamageElement.Physical,
+                ElementalAffinity.Normal,
+                100,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))));
+        InvalidOperationException ailmentFailure = Assert.Throws<InvalidOperationException>(() =>
+            ailments.ResolveAilmentApplication(new ProductionAilmentApplicationRequest(
+                Actor(),
+                Actor(),
+                50,
+                ResistanceLevel.Normal)));
+        InvalidOperationException initiativeFailure = Assert.Throws<InvalidOperationException>(() =>
+            initiative.IsPlayerFirst(20m, 20m));
+        InvalidOperationException rewardFailure = Assert.Throws<InvalidOperationException>(() =>
+            rewards.CalculateCurrencyYield(new BattleRewardEnemySnapshot(
+                ContentId.Parse("invalid_random_reward_enemy"),
+                1,
+                1m,
+                1m,
+                1m,
+                1m,
+                1m)));
+
+        Assert.Contains("[0, 1)", damageFailure.Message, StringComparison.Ordinal);
+        Assert.Contains("[0, 1)", ailmentFailure.Message, StringComparison.Ordinal);
+        Assert.Contains("[0, 1)", initiativeFailure.Message, StringComparison.Ordinal);
+        Assert.Contains("[0, 1)", rewardFailure.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void ConstructorRejectsUnsafeConfigurationBeforeRuntimeUse()
     {
@@ -341,6 +388,17 @@ public sealed class ProductionCombatRulesetTests
             HitDistribution.Uniform));
 
         Assert.Equal(int.MaxValue, result);
+    }
+
+    [Fact]
+    public void UniformHitCountRejectsOutOfRangeRandomSourceResult()
+    {
+        var ruleset = new ProductionCombatRuleset(new OutOfRangeIntRandomSource());
+
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            ruleset.ResolveHitCount(new HitCountDefinition(2, 4, HitDistribution.Uniform)));
+
+        Assert.Contains("[0, 3)", failure.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -543,5 +601,17 @@ public sealed class ProductionCombatRulesetTests
     {
         public int NextInt32(int minimumInclusive, int maximumExclusive) => maximumExclusive - 1;
         public decimal NextUnitDecimal() => 0.999999m;
+    }
+
+    private sealed class FixedRandomSource(decimal unit) : IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
+        public decimal NextUnitDecimal() => unit;
+    }
+
+    private sealed class OutOfRangeIntRandomSource : IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) => maximumExclusive;
+        public decimal NextUnitDecimal() => 0m;
     }
 }

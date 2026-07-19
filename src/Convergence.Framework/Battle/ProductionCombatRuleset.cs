@@ -173,7 +173,7 @@ public sealed class StandardBattleInitiativeRollPolicy : IBattleInitiativeRollPo
             Config.VarianceMinimum,
             CombatArithmetic.SaturatingMultiply(
                 Config.VarianceMaximum - Config.VarianceMinimum,
-                _random.NextUnitDecimal()));
+                CombatArithmetic.RequireUnitInterval(_random.NextUnitDecimal())));
 }
 
 public sealed record ProductionCombatStats(
@@ -915,7 +915,14 @@ public sealed class ProductionCombatRuleset :
         }
 
         int width = checked((int)(((long)hits.Maximum - hits.Minimum) + 1L));
-        return checked(hits.Minimum + _random.NextInt32(0, width));
+        int offset = _random.NextInt32(0, width);
+        if (offset is < 0 || offset >= width)
+        {
+            throw new InvalidOperationException(
+                $"Random sources must return integers within [0, {width}); received '{offset}'.");
+        }
+
+        return checked(hits.Minimum + offset);
     }
 
     private bool RollPercent(int chance)
@@ -929,14 +936,16 @@ public sealed class ProductionCombatRuleset :
             return true;
         }
 
-        return CombatArithmetic.SaturatingMultiply(_random.NextUnitDecimal(), 100m) < chance;
+        return CombatArithmetic.SaturatingMultiply(
+            CombatArithmetic.RequireUnitInterval(_random.NextUnitDecimal()),
+            100m) < chance;
     }
 
     private decimal RollVariance(decimal minimum, decimal maximum) =>
         CombatArithmetic.SaturatingAdd(
             minimum,
             CombatArithmetic.SaturatingMultiply(
-                _random.NextUnitDecimal(),
+                CombatArithmetic.RequireUnitInterval(_random.NextUnitDecimal()),
                 CombatArithmetic.SaturatingSubtract(maximum, minimum)));
 
     private static ElementalAffinity NormalizeGuardedAffinity(ElementalAffinity affinity, bool isGuarding) =>
