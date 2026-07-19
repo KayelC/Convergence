@@ -367,6 +367,26 @@ public interface ICustomEffectHandler
 }
 
 /// <summary>
+/// Damage execution that exposes the exact hit and critical policies used by
+/// its resolution pipeline.
+/// </summary>
+public interface ICombatDamageExecutionPolicy : IDamageExecutionPolicy
+{
+    IHitResolutionPolicy HitResolution { get; }
+    ICriticalEligibilityPolicy CriticalEligibility { get; }
+    ICriticalChancePolicy CriticalChance { get; }
+}
+
+/// <summary>
+/// Instant-defeat execution that exposes the exact resistance and probability
+/// policy used by its resolution pipeline.
+/// </summary>
+public interface ICombatInstantDefeatExecutionPolicy : IInstantDeathExecutionPolicy
+{
+    IInstantDefeatResolutionPolicy Resolution { get; }
+}
+
+/// <summary>
 /// Immutable selection of the independently replaceable policies required by
 /// typed combat execution. Authored ruleset binding returns this neutral
 /// composition instead of requiring hosts to depend on a supplied concrete
@@ -377,13 +397,9 @@ public sealed class CombatExecutionPolicySet
     public CombatExecutionPolicySet(
         ContentId rulesetId,
         ContentId policyId,
-        IDamageExecutionPolicy damage,
-        IHitResolutionPolicy hitResolution,
-        ICriticalEligibilityPolicy criticalEligibility,
-        ICriticalChancePolicy criticalChance,
+        ICombatDamageExecutionPolicy damage,
         IChargePolicyService charges,
-        IInstantDeathExecutionPolicy instantDefeat,
-        IInstantDefeatResolutionPolicy instantDefeatResolution,
+        ICombatInstantDefeatExecutionPolicy instantDefeat,
         IAilmentApplicationPolicy ailments,
         IChanceExecutionPolicy chance,
         IPowerAmountPolicy amounts,
@@ -403,13 +419,8 @@ public sealed class CombatExecutionPolicySet
         RulesetId = rulesetId;
         PolicyId = policyId;
         Damage = damage ?? throw new ArgumentNullException(nameof(damage));
-        HitResolution = hitResolution ?? throw new ArgumentNullException(nameof(hitResolution));
-        CriticalEligibility = criticalEligibility ?? throw new ArgumentNullException(nameof(criticalEligibility));
-        CriticalChance = criticalChance ?? throw new ArgumentNullException(nameof(criticalChance));
         Charges = charges ?? throw new ArgumentNullException(nameof(charges));
         InstantDefeat = instantDefeat ?? throw new ArgumentNullException(nameof(instantDefeat));
-        InstantDefeatResolution = instantDefeatResolution
-            ?? throw new ArgumentNullException(nameof(instantDefeatResolution));
         Ailments = ailments ?? throw new ArgumentNullException(nameof(ailments));
         Chance = chance ?? throw new ArgumentNullException(nameof(chance));
         Amounts = amounts ?? throw new ArgumentNullException(nameof(amounts));
@@ -423,13 +434,13 @@ public sealed class CombatExecutionPolicySet
     public ContentId PolicyId { get; }
     public IReadOnlyDictionary<string, object?> AuthoredParameters { get; }
     public IReadOnlyDictionary<string, object?> EffectiveConfiguration { get; }
-    public IDamageExecutionPolicy Damage { get; }
-    public IHitResolutionPolicy HitResolution { get; }
-    public ICriticalEligibilityPolicy CriticalEligibility { get; }
-    public ICriticalChancePolicy CriticalChance { get; }
+    public ICombatDamageExecutionPolicy Damage { get; }
+    public IHitResolutionPolicy HitResolution => Damage.HitResolution;
+    public ICriticalEligibilityPolicy CriticalEligibility => Damage.CriticalEligibility;
+    public ICriticalChancePolicy CriticalChance => Damage.CriticalChance;
     public IChargePolicyService Charges { get; }
-    public IInstantDeathExecutionPolicy InstantDefeat { get; }
-    public IInstantDefeatResolutionPolicy InstantDefeatResolution { get; }
+    public ICombatInstantDefeatExecutionPolicy InstantDefeat { get; }
+    public IInstantDefeatResolutionPolicy InstantDefeatResolution => InstantDefeat.Resolution;
     public IAilmentApplicationPolicy Ailments { get; }
     public IChanceExecutionPolicy Chance { get; }
     public IPowerAmountPolicy Amounts { get; }

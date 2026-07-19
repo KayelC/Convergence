@@ -546,8 +546,8 @@ public sealed record ProductionAilmentApplicationRequest(
 public sealed record ProductionAilmentApplicationResult(bool Applied, int Chance);
 
 public sealed class ProductionCombatRuleset :
-    IDamageExecutionPolicy,
-    IInstantDeathExecutionPolicy,
+    ICombatDamageExecutionPolicy,
+    ICombatInstantDefeatExecutionPolicy,
     IAilmentApplicationPolicy,
     IChanceExecutionPolicy,
     IPowerAmountPolicy
@@ -603,6 +603,12 @@ public sealed class ProductionCombatRuleset :
     public ICriticalEligibilityPolicy CriticalEligibilityPolicy => _criticalEligibilityPolicy;
     public ICriticalChancePolicy CriticalChancePolicy => _criticalChancePolicy;
     public IInstantDefeatResolutionPolicy InstantDefeatPolicy => _instantDefeatPolicy;
+    IHitResolutionPolicy ICombatDamageExecutionPolicy.HitResolution => _hitPolicy;
+    ICriticalEligibilityPolicy ICombatDamageExecutionPolicy.CriticalEligibility =>
+        _criticalEligibilityPolicy;
+    ICriticalChancePolicy ICombatDamageExecutionPolicy.CriticalChance => _criticalChancePolicy;
+    IInstantDefeatResolutionPolicy ICombatInstantDefeatExecutionPolicy.Resolution =>
+        _instantDefeatPolicy;
 
     public DamagePolicyResolution Resolve(DamagePolicyRequest request)
     {

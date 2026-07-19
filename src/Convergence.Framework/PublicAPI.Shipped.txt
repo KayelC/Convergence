@@ -10543,9 +10543,9 @@ Convergence.Execution.CombatExecutionPolicySet.Chance.get -> Convergence.Executi
 Convergence.Execution.CombatExecutionPolicySet.Charges.get -> Convergence.Execution.IChargePolicyService!
 Convergence.Execution.CombatExecutionPolicySet.CriticalChance.get -> Convergence.Battle.ICriticalChancePolicy!
 Convergence.Execution.CombatExecutionPolicySet.CriticalEligibility.get -> Convergence.Battle.ICriticalEligibilityPolicy!
-Convergence.Execution.CombatExecutionPolicySet.Damage.get -> Convergence.Execution.IDamageExecutionPolicy!
+Convergence.Execution.CombatExecutionPolicySet.Damage.get -> Convergence.Execution.ICombatDamageExecutionPolicy!
 Convergence.Execution.CombatExecutionPolicySet.HitResolution.get -> Convergence.Battle.IHitResolutionPolicy!
-Convergence.Execution.CombatExecutionPolicySet.InstantDefeat.get -> Convergence.Execution.IInstantDeathExecutionPolicy!
+Convergence.Execution.CombatExecutionPolicySet.InstantDefeat.get -> Convergence.Execution.ICombatInstantDefeatExecutionPolicy!
 Convergence.Execution.CombatExecutionPolicySet.InstantDefeatResolution.get -> Convergence.Battle.IInstantDefeatResolutionPolicy!
 Convergence.Execution.CombatExecutionPolicySet.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Execution.CombatExecutionPolicySet.RulesetId.get -> Convergence.Content.ContentId
@@ -10569,5 +10569,11 @@ static Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.operator !=(C
 static Convergence.Battle.StandardBattleInitiativeRollPolicyConfig.operator ==(Convergence.Battle.StandardBattleInitiativeRollPolicyConfig? left, Convergence.Battle.StandardBattleInitiativeRollPolicyConfig? right) -> bool
 static Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.operator !=(Convergence.Encounters.StandardBattleRewardYieldPolicyConfig? left, Convergence.Encounters.StandardBattleRewardYieldPolicyConfig? right) -> bool
 static Convergence.Encounters.StandardBattleRewardYieldPolicyConfig.operator ==(Convergence.Encounters.StandardBattleRewardYieldPolicyConfig? left, Convergence.Encounters.StandardBattleRewardYieldPolicyConfig? right) -> bool
-Convergence.Execution.CombatExecutionPolicySet.CombatExecutionPolicySet(Convergence.Content.ContentId rulesetId, Convergence.Content.ContentId policyId, Convergence.Execution.IDamageExecutionPolicy! damage, Convergence.Battle.IHitResolutionPolicy! hitResolution, Convergence.Battle.ICriticalEligibilityPolicy! criticalEligibility, Convergence.Battle.ICriticalChancePolicy! criticalChance, Convergence.Execution.IChargePolicyService! charges, Convergence.Execution.IInstantDeathExecutionPolicy! instantDefeat, Convergence.Battle.IInstantDefeatResolutionPolicy! instantDefeatResolution, Convergence.Execution.IAilmentApplicationPolicy! ailments, Convergence.Execution.IChanceExecutionPolicy! chance, Convergence.Execution.IPowerAmountPolicy! amounts, Convergence.Execution.IActionOutcomeAggregationPolicy! actionOutcomes, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, object?>>? authoredParameters = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, object?>>? effectiveConfiguration = null) -> void
+Convergence.Execution.CombatExecutionPolicySet.CombatExecutionPolicySet(Convergence.Content.ContentId rulesetId, Convergence.Content.ContentId policyId, Convergence.Execution.ICombatDamageExecutionPolicy! damage, Convergence.Execution.IChargePolicyService! charges, Convergence.Execution.ICombatInstantDefeatExecutionPolicy! instantDefeat, Convergence.Execution.IAilmentApplicationPolicy! ailments, Convergence.Execution.IChanceExecutionPolicy! chance, Convergence.Execution.IPowerAmountPolicy! amounts, Convergence.Execution.IActionOutcomeAggregationPolicy! actionOutcomes, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, object?>>? authoredParameters = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, object?>>? effectiveConfiguration = null) -> void
 Convergence.Execution.CombatExecutionPolicySet.EffectiveConfiguration.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+Convergence.Execution.ICombatDamageExecutionPolicy
+Convergence.Execution.ICombatDamageExecutionPolicy.CriticalChance.get -> Convergence.Battle.ICriticalChancePolicy!
+Convergence.Execution.ICombatDamageExecutionPolicy.CriticalEligibility.get -> Convergence.Battle.ICriticalEligibilityPolicy!
+Convergence.Execution.ICombatDamageExecutionPolicy.HitResolution.get -> Convergence.Battle.IHitResolutionPolicy!
+Convergence.Execution.ICombatInstantDefeatExecutionPolicy
+Convergence.Execution.ICombatInstantDefeatExecutionPolicy.Resolution.get -> Convergence.Battle.IInstantDefeatResolutionPolicy!

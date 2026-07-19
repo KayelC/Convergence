@@ -232,15 +232,19 @@ public sealed class RuntimeRulesetBindingTests
     }
 
     [Fact]
-    public void CombatPolicySet_AllowsEveryAuthorityToBeReplacedIndependently()
+    public void CombatPolicySet_ExposesTheAuthoritiesUsedByItsComposedExecutors()
     {
-        var damage = new ProductionCombatRuleset(new SequenceRandomSource());
-        var hit = new StandardHitResolutionPolicy(new SequenceRandomSource());
+        var hit = new RecordingMissHitPolicy();
         var criticalEligibility = new AllDamageCriticalEligibilityPolicy();
         var criticalChance = new AccuracyScaledCriticalChancePolicy(new SequenceRandomSource());
-        var charges = new UnifiedChargePolicy();
-        var instantExecution = new ProductionCombatRuleset(new SequenceRandomSource());
         var instantResolution = new StandardInstantDefeatResolutionPolicy(new SequenceRandomSource());
+        var damage = new ProductionCombatRuleset(
+            new SequenceRandomSource(),
+            hitPolicy: hit,
+            criticalEligibilityPolicy: criticalEligibility,
+            criticalChancePolicy: criticalChance,
+            instantDefeatPolicy: instantResolution);
+        var charges = new UnifiedChargePolicy();
         var ailments = new ProductionCombatRuleset(new SequenceRandomSource());
         var chance = new ProductionCombatRuleset(new SequenceRandomSource());
         var amounts = new ProductionCombatRuleset(new SequenceRandomSource());
@@ -255,12 +259,8 @@ public sealed class RuntimeRulesetBindingTests
             Id("test.pack:custom_combat"),
             Id("custom_combat"),
             damage,
-            hit,
-            criticalEligibility,
-            criticalChance,
             charges,
-            instantExecution,
-            instantResolution,
+            damage,
             ailments,
             chance,
             amounts,
@@ -274,7 +274,7 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Same(criticalEligibility, policies.CriticalEligibility);
         Assert.Same(criticalChance, policies.CriticalChance);
         Assert.Same(charges, policies.Charges);
-        Assert.Same(instantExecution, policies.InstantDefeat);
+        Assert.Same(damage, policies.InstantDefeat);
         Assert.Same(instantResolution, policies.InstantDefeatResolution);
         Assert.Same(ailments, policies.Ailments);
         Assert.Same(chance, policies.Chance);
@@ -285,6 +285,20 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(
             [1m, 2m],
             Assert.IsAssignableFrom<IReadOnlyList<object?>>(policies.AuthoredParameters["weights"]));
+
+        ProductionDamageResolutionResult resolution = damage.ResolveDamage(
+            new ProductionDamageResolutionRequest(
+                new ProductionCombatantProfile(1, new ProductionCombatStats(10, 10, 10, 10, 10)),
+                new ProductionCombatantProfile(1, new ProductionCombatStats(10, 10, 10, 10, 10)),
+                DamageElement.Physical,
+                ElementalAffinity.Normal,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1)));
+
+        Assert.False(Assert.Single(resolution.Hits).Hit);
+        Assert.Equal(1, hit.CallCount);
     }
 
     [Fact]
@@ -1030,16 +1044,35 @@ public sealed class RuntimeRulesetBindingTests
             Id("test.pack:combat"),
             policyId,
             standard,
-            standard.HitPolicy,
-            standard.CriticalEligibilityPolicy,
-            standard.CriticalChancePolicy,
             new SplitChargePolicy(),
             standard,
-            standard.InstantDefeatPolicy,
             standard,
             standard,
             standard,
             new StandardActionOutcomeAggregationPolicy());
+
+    private sealed class RecordingMissHitPolicy : IHitResolutionPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public HitResolutionResult Resolve(HitResolutionRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            CallCount++;
+            return new HitResolutionResult(
+                false,
+                request.AuthoredAccuracy,
+                0m,
+                0m,
+                request.AuthoredAccuracy,
+                0m,
+                request.AuthoredAccuracy,
+                0m,
+                request.AuthoredAccuracy,
+                request.AuthoredAccuracy,
+                100m);
+        }
+    }
 
     private sealed class FixedCombatFactory(
         ContentId policyId,
