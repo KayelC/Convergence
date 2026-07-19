@@ -141,6 +141,35 @@ All three `typed_action_and_effect_execution` audience entries are now
 `existing_unreviewed`, 18 missing, and 7 `not_applicable` entries. Order 2,
 `combat_resolution`, is next.
 
+## Active Order 2
+
+The source-based
+[Combat Resolution Order 2 Review](../reviews/combat-resolution-order-2-source-review-2026-07-19.md)
+traced the supplied damage formula, accuracy, criticals, affinity precedence,
+instant death, passive modifiers, charge state, multi-hit application, and
+authored policy binding. It found four reachable implementation gaps and six
+mechanics or extension decisions that require project-owner confirmation.
+
+Current checkpoints:
+
+| Checkpoint | State | Required outcome |
+|---|---|---|
+| O2-H1 | `source_confirmed` | Use authoritative charge data and define one coherent consumption lifecycle. |
+| O2-M1 | `source_confirmed` | Remove or implement the two inert standard chance defaults. |
+| O2-M2 | `source_confirmed` | Implement or remove authored Accuracy, Evasion, and Critical Chance passive modifiers. |
+| O2-M3 | `source_confirmed` | Make authored combat-policy binding return a genuinely replaceable neutral contract. |
+| O2-D1 | `pending_owner_confirmation` | Confirm charge multiplier, timing, miss/defense, and mixed-element behavior. |
+| O2-D2 | `pending_owner_confirmation` | Confirm passive Accuracy, Evasion, and Critical Chance formula ordering. |
+| O2-D3 | `pending_owner_confirmation` | Define authored critical-chance meaning. |
+| O2-D4 | `pending_owner_confirmation` | Define Vulnerable and Resistant instant-death behavior. |
+| O2-D5 | `pending_owner_confirmation` | Define sequential multi-hit mutation and per-hit host evidence. |
+| O2-D6 | `pending_owner_confirmation` | Confirm the supplied hit, critical, and instant-death chance ranges. |
+| O2-DOC | `blocked_by_corrections` | Complete and confirm all three audience documents against corrected source. |
+
+Until these checkpoints close, `combat_resolution` remains `partial` and its
+documentation entries remain unreviewed or missing. The active overview pages
+are evidence to revise, not confirmed combat authority.
+
 ## Deferred Documentation
 
 Two capability IDs describe extension seams rather than completed mechanics:

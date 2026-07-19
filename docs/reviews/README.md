@@ -24,6 +24,7 @@ or implementation authority.
 - [Stat Modifier Policy Planning Documentation Review, 17 July 2026](stat-modifier-policy-planning-documentation-review-2026-07-17.md)
 - [Order 1 Code And Documentation Review, 18 July 2026](order-1-code-and-documentation-review-2026-07-18.md)
 - [Order 1 Final Closure Review, 18 July 2026](order-1-final-closure-review-2026-07-18.md)
+- [Combat Resolution Order 2 Source Review, 19 July 2026](combat-resolution-order-2-source-review-2026-07-19.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.
 Current implementation behavior belongs in source and executable tests.

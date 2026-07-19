@@ -78,12 +78,17 @@
     },
     {
       "id": "combat_resolution",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["ProductionCombatRulesetTests", "StatStageScalingTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": []
+      "knownGaps": [
+        "Authored charge multipliers are collapsed to a ruleset boolean and matching charges are not consumed by offensive execution.",
+        "Two exposed chance defaults and passive Accuracy, Evasion, and Critical Chance modifiers are accepted but inert.",
+        "Authored damage-policy factories return the concrete standard ruleset rather than a neutral replaceable combat-policy contract.",
+        "Critical, instant-death resistance, chance-range, and multi-hit execution semantics await Order 2 owner confirmation."
+      ]
     },
     {
       "id": "turn_economy",
