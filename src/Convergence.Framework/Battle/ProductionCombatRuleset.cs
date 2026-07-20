@@ -368,6 +368,15 @@ public sealed class ProductionDamageResolutionRequest
     {
         Attacker = attacker ?? throw new ArgumentNullException(nameof(attacker));
         Target = target ?? throw new ArgumentNullException(nameof(target));
+        if (!Enum.IsDefined(element))
+        {
+            throw new ArgumentOutOfRangeException(nameof(element), element, "Damage element must be defined.");
+        }
+        if (!Enum.IsDefined(affinity))
+        {
+            throw new ArgumentOutOfRangeException(nameof(affinity), affinity, "Affinity must be defined.");
+        }
+
         Element = element;
         Affinity = affinity;
         Power = power;
@@ -853,6 +862,15 @@ public sealed class ProductionCombatRuleset :
     public ProductionAilmentApplicationResult ResolveAilmentApplication(ProductionAilmentApplicationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Attacker);
+        ArgumentNullException.ThrowIfNull(request.Target);
+        if (!Enum.IsDefined(request.Resistance))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(request),
+                request.Resistance,
+                "Ailment resistance must be defined.");
+        }
 
         if (request.Resistance == ResistanceLevel.Immune)
         {
@@ -907,6 +925,13 @@ public sealed class ProductionCombatRuleset :
     internal int ResolveHitCount(HitCountDefinition hits)
     {
         ArgumentNullException.ThrowIfNull(hits);
+        if (!Enum.IsDefined(hits.Distribution))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(hits),
+                hits.Distribution,
+                "Hit distribution must be defined.");
+        }
         if (hits.Minimum <= 0 || hits.Maximum < hits.Minimum)
         {
             throw new ArgumentOutOfRangeException(nameof(hits), "Hit counts must be positive and ordered.");

@@ -402,6 +402,41 @@ public sealed class ProductionCombatRulesetTests
     }
 
     [Fact]
+    public void PublicCombatBoundariesRejectUndefinedVocabularyBeforeResolution()
+    {
+        const int undefined = 999;
+        ProductionCombatantProfile actor = Actor();
+        var ruleset = Rules();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProductionDamageResolutionRequest(
+            actor,
+            actor,
+            (DamageElement)undefined,
+            ElementalAffinity.Normal,
+            10,
+            0,
+            new NeverCriticalDefinition(),
+            new HitCountDefinition(1, 1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProductionDamageResolutionRequest(
+            actor,
+            actor,
+            DamageElement.Physical,
+            (ElementalAffinity)undefined,
+            10,
+            0,
+            new NeverCriticalDefinition(),
+            new HitCountDefinition(1, 1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ruleset.ResolveHitCount(
+            new HitCountDefinition(1, 2, (HitDistribution)undefined)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ruleset.ResolveAilmentApplication(
+            new ProductionAilmentApplicationRequest(
+                actor,
+                actor,
+                50,
+                (ResistanceLevel)undefined)));
+    }
+
+    [Fact]
     public void RuntimeCombatProfileUsesCanonicalActorProgressionLevel()
     {
         var actor = new RuntimeActorState(

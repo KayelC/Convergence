@@ -471,8 +471,18 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 RequireRegistration(source, statId, source.Path + $".stats.{statId}", _registrations.StatIds, "stat");
             }
 
-            foreach ((DamageElement element, _) in entity.ElementalAffinities)
+            foreach ((DamageElement element, ElementalAffinity affinity) in entity.ElementalAffinities)
             {
+                RequireDefinedEnum(
+                    source,
+                    element,
+                    source.Path + $".elementalAffinities.{element}",
+                    "Elemental-affinity element");
+                RequireDefinedEnum(
+                    source,
+                    affinity,
+                    source.Path + $".elementalAffinities.{element}",
+                    "Elemental affinity");
                 if (element == DamageElement.Almighty)
                 {
                     Add(source, source.Path + ".elementalAffinities.almighty",
@@ -481,10 +491,29 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 }
             }
 
-            foreach ((ContentId ailmentId, _) in entity.AilmentResistances)
+            foreach ((ContentId ailmentId, ResistanceLevel resistance) in entity.AilmentResistances)
             {
                 ValidateContentReference(source, ailmentId, source.Path + $".ailmentResistances.{ailmentId}",
                     _ailmentIndex, "ailment");
+                RequireDefinedEnum(
+                    source,
+                    resistance,
+                    source.Path + $".ailmentResistances.{ailmentId}",
+                    "Ailment resistance");
+            }
+
+            foreach ((InstantDeathChannel channel, ResistanceLevel resistance) in entity.InstantDeathResistances)
+            {
+                RequireDefinedEnum(
+                    source,
+                    channel,
+                    source.Path + $".instantDeathResistances.{channel}",
+                    "Instant-defeat channel");
+                RequireDefinedEnum(
+                    source,
+                    resistance,
+                    source.Path + $".instantDeathResistances.{channel}",
+                    "Instant-defeat resistance");
             }
 
             ValidateDuplicates(source, entity.InheritanceRules.GroupPolicy.GroupIds,
@@ -705,6 +734,11 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 
             if (equipment.Weapon is EquipmentWeaponProfileDefinition weapon)
             {
+                RequireDefinedEnum(
+                    source,
+                    weapon.BasicAttack.Element,
+                    source.Path + ".weapon.basicAttack.elementId",
+                    "Basic-attack element");
                 RequireNonNegative(source, weapon.BasicAttack.Power, source.Path + ".weapon.basicAttack.power",
                     "Weapon power");
                 RequirePercentage(source, weapon.BasicAttack.Accuracy, source.Path + ".weapon.basicAttack.accuracy",
@@ -1311,6 +1345,8 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             switch (effect)
             {
                 case DamageEffectDefinition damage:
+                    RequireDefinedEnum(source, damage.Element, path + ".elementId", "Damage element");
+                    RequireDefinedEnum(source, damage.Drain, path + ".drain", "Damage drain mode");
                     RequireNonNegative(source, damage.Power, path + ".power", "Damage power");
                     RequirePercentage(source, damage.Accuracy, path + ".accuracy", "Damage accuracy");
                     ValidateCritical(source, damage.Critical, path + ".critical");
@@ -1363,11 +1399,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     }
                     break;
                 case GrantChargeEffectDefinition charge:
-                    if (!Enum.IsDefined(charge.Charge))
-                    {
-                        Add(source, path + ".charge", ContentValidationErrorCode.ShapeInvalid,
-                            "Charge kind must be a defined framework value.");
-                    }
+                    RequireDefinedEnum(source, charge.Charge, path + ".charge", "Charge kind");
                     RequirePositive(source, charge.Multiplier, path + ".multiplier", "Charge multiplier");
                     if (charge.Duration is not null)
                     {
@@ -1531,14 +1563,37 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 
                 switch (modifier)
                 {
-                    case NumericRuleModifierDefinition numeric when numeric.Operation == ModifierOperation.Multiply:
-                        RequirePositive(source, numeric.Value, modifierPath + ".value", "Multiplicative modifier");
+                    case NumericRuleModifierDefinition numeric:
+                        RequireDefinedEnum(
+                            source,
+                            numeric.ModifierType,
+                            modifierPath + ".type",
+                            "Numeric modifier type");
+                        RequireDefinedEnum(
+                            source,
+                            numeric.Operation,
+                            modifierPath + ".operation",
+                            "Numeric modifier operation");
+                        if (numeric.Operation == ModifierOperation.Multiply)
+                        {
+                            RequirePositive(source, numeric.Value, modifierPath + ".value", "Multiplicative modifier");
+                        }
                         break;
-                    case ElementalAffinityRuleModifierDefinition affinity when affinity.Element == DamageElement.Almighty:
-                        Add(source, modifierPath + ".elementId", ContentValidationErrorCode.AlmightyAffinityForbidden,
-                            "Almighty cannot receive an authored passive affinity replacement.");
+                    case ElementalAffinityRuleModifierDefinition affinity:
+                        RequireDefinedEnum(source, affinity.Element, modifierPath + ".elementId", "Affinity element");
+                        RequireDefinedEnum(source, affinity.Affinity, modifierPath + ".affinityId", "Affinity");
+                        if (affinity.Element == DamageElement.Almighty)
+                        {
+                            Add(source, modifierPath + ".elementId", ContentValidationErrorCode.AlmightyAffinityForbidden,
+                                "Almighty cannot receive an authored passive affinity replacement.");
+                        }
                         break;
                     case AilmentResistanceRuleModifierDefinition resistance:
+                        RequireDefinedEnum(
+                            source,
+                            resistance.Resistance,
+                            modifierPath + ".resistance",
+                            "Ailment resistance");
                         ValidateContentReference(
                             source,
                             resistance.AilmentId,
@@ -1551,8 +1606,19 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         Add(source, modifierPath, ContentValidationErrorCode.ShapeInvalid,
                             "Basic-attack replacements require an element, targeting rule, or drain rule.");
                         break;
-                    case BasicAttackRuleModifierDefinition attack when attack.Targeting is not null:
-                        ValidateTargeting(source, attack.Targeting, modifierPath + ".targeting");
+                    case BasicAttackRuleModifierDefinition attack:
+                        if (attack.Element is DamageElement element)
+                        {
+                            RequireDefinedEnum(source, element, modifierPath + ".elementId", "Basic-attack element");
+                        }
+                        if (attack.Drain is DamageDrainMode drain)
+                        {
+                            RequireDefinedEnum(source, drain, modifierPath + ".drain", "Basic-attack drain mode");
+                        }
+                        if (attack.Targeting is not null)
+                        {
+                            ValidateTargeting(source, attack.Targeting, modifierPath + ".targeting");
+                        }
                         break;
                 }
             }
@@ -1616,9 +1682,14 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     RequireRegistration(source, buff.ModifierTrackId, path + ".modifierTrackId",
                         _registrations.ModifierTrackIds, "modifier track");
                     break;
-                case HasAffinityConditionDefinition affinity when affinity.Element == DamageElement.Almighty:
-                    Add(source, path + ".elementId", ContentValidationErrorCode.AlmightyAffinityForbidden,
-                        "Almighty cannot be used in an authored affinity condition.");
+                case HasAffinityConditionDefinition affinity:
+                    RequireDefinedEnum(source, affinity.Element, path + ".elementId", "Affinity-condition element");
+                    RequireDefinedEnum(source, affinity.Affinity, path + ".affinityId", "Affinity condition");
+                    if (affinity.Element == DamageElement.Almighty)
+                    {
+                        Add(source, path + ".elementId", ContentValidationErrorCode.AlmightyAffinityForbidden,
+                            "Almighty cannot be used in an authored affinity condition.");
+                    }
                     break;
                 case HasCapabilityConditionDefinition capability:
                     RequireRegistration(source, capability.CapabilityId, path + ".capabilityId",
@@ -1637,6 +1708,9 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     break;
                 case ChanceConditionDefinition chance:
                     RequirePercentage(source, chance.Chance, path + ".chance", "Condition chance");
+                    break;
+                case EffectElementConditionDefinition element:
+                    RequireDefinedEnum(source, element.Element, path + ".elementId", "Effect-condition element");
                     break;
                 case CustomConditionDefinition custom:
                     ValidateParameters(source, custom.HandlerId, custom.Parameters, path + ".parameters",
@@ -1722,6 +1796,9 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             TargetingDefinition targeting,
             string path)
         {
+            RequireDefinedEnum(source, targeting.Relation, path + ".relation", "Target relation");
+            RequireDefinedEnum(source, targeting.Selection, path + ".selection", "Target selection");
+            RequireDefinedEnum(source, targeting.LifeState, path + ".lifeState", "Target life state");
             bool relationNone = targeting.Relation == TargetRelation.None;
             bool selectionNone = targeting.Selection == TargetSelection.None;
             if (relationNone != selectionNone)
@@ -1753,6 +1830,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             HitCountDefinition hits,
             string path)
         {
+            RequireDefinedEnum(source, hits.Distribution, path + ".distribution", "Hit distribution");
             RequirePositive(source, hits.Minimum, path + ".minimum", "Minimum hit count");
             RequirePositive(source, hits.Maximum, path + ".maximum", "Maximum hit count");
             if (hits.Minimum > hits.Maximum)
@@ -1764,6 +1842,23 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             {
                 Add(source, path, ContentValidationErrorCode.ShapeInvalid,
                     "Fixed hit counts require equal minimum and maximum values.");
+            }
+        }
+
+        private void RequireDefinedEnum<TDefinition, TEnum>(
+            RecordSource<TDefinition> source,
+            TEnum value,
+            string path,
+            string label)
+            where TEnum : struct, Enum
+        {
+            if (!Enum.IsDefined(value))
+            {
+                Add(
+                    source,
+                    path,
+                    ContentValidationErrorCode.ShapeInvalid,
+                    $"{label} must be a defined framework value.");
             }
         }
 

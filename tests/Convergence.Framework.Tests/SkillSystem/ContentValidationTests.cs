@@ -336,6 +336,81 @@ public sealed class ContentValidationTests
     }
 
     [Fact]
+    public void ProgrammaticCombatVocabulary_RejectsUndefinedEnumValues()
+    {
+        const int undefined = 999;
+        ContentId poisonId = Id("poison");
+        SkillDefinition active = ActiveSkill(
+            "invalid_damage_vocabulary",
+            [
+                new DamageEffectDefinition(
+                    (DamageElement)undefined,
+                    10,
+                    100,
+                    new NeverCriticalDefinition(),
+                    new HitCountDefinition(1, 2, (HitDistribution)undefined),
+                    (DamageDrainMode)undefined)
+            ]);
+        SkillDefinition passive = new(
+            Id("invalid_modifier_vocabulary"),
+            "Invalid Modifier Vocabulary",
+            "Exercises programmatic enum validation.",
+            SkillActivation.Passive,
+            null,
+            InheritanceGroup.Passive,
+            new SkillInheritanceDefinition(true),
+            modifiers:
+            [
+                new ElementalAffinityRuleModifierDefinition(
+                    (DamageElement)undefined,
+                    (ElementalAffinity)undefined),
+                new AilmentResistanceRuleModifierDefinition(
+                    poisonId,
+                    (ResistanceLevel)undefined),
+                new BasicAttackRuleModifierDefinition(
+                    (DamageElement)undefined,
+                    Drain: (DamageDrainMode)undefined)
+            ]);
+        EntityDefinition entity = Entity(
+            "invalid_defense_vocabulary",
+            Id("sample_race"),
+            elementalAffinities:
+            [
+                new KeyValuePair<DamageElement, ElementalAffinity>(
+                    DamageElement.Fire,
+                    (ElementalAffinity)undefined)
+            ],
+            ailmentResistances:
+            [
+                new KeyValuePair<ContentId, ResistanceLevel>(
+                    poisonId,
+                    (ResistanceLevel)undefined)
+            ]);
+
+        ContentValidationResult result = _validator.Validate(Request(
+            ComprehensiveRegistrations(),
+            skills: [active, passive],
+            entities: [entity],
+            ailments: [Ailment("poison")]));
+
+        string[] expectedPaths =
+        [
+            "$.skills[0].effects[0].elementId",
+            "$.skills[0].effects[0].drain",
+            "$.skills[0].effects[0].hits.distribution",
+            "$.skills[1].modifiers[0].elementId",
+            "$.skills[1].modifiers[0].affinityId",
+            "$.skills[1].modifiers[1].resistance",
+            "$.skills[1].modifiers[2].elementId",
+            "$.skills[1].modifiers[2].drain",
+            "$.entities[0].elementalAffinities.Fire",
+            "$.entities[0].ailmentResistances.poison"
+        ];
+        Assert.All(expectedPaths, path => Assert.Contains(result.Errors, error =>
+            error.JsonPath == path && error.Code == ContentValidationErrorCode.ShapeInvalid));
+    }
+
+    [Fact]
     public void MeaningfulOperandsCompositeConditionsAndAlmightyAffinitiesAreRequired()
     {
         SkillDefinition active = ActiveSkill(
@@ -717,6 +792,7 @@ public sealed class ContentValidationTests
         ContentId raceId,
         EntityInheritanceRulesDefinition? inheritanceRules = null,
         IEnumerable<KeyValuePair<DamageElement, ElementalAffinity>>? elementalAffinities = null,
+        IEnumerable<KeyValuePair<ContentId, ResistanceLevel>>? ailmentResistances = null,
         IEnumerable<ContentId>? baseSkillIds = null,
         IEnumerable<SkillUnlockDefinition>? unlocks = null) =>
         new(
@@ -726,6 +802,7 @@ public sealed class ContentValidationTests
                 new InheritanceGroupPolicyDefinition(InheritanceGroupPolicyMode.DenyList)),
             [new KeyValuePair<ContentId, int>(Id("strength"), 1)],
             elementalAffinities,
+            ailmentResistances,
             baseSkillIds: baseSkillIds,
             skillUnlocks: unlocks);
 
