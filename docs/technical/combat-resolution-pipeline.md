@@ -114,20 +114,58 @@ is converted to a typed rejection or fault by the owning boundary.
 
 ## Charge State Machine
 
+Charge is not one binary actor flag. An actor retains a policy identity and a
+collection of typed charge slots. The following state machine describes one
+slot, not the complete actor collection:
+
 ```mermaid
 stateDiagram-v2
-    [*] --> Empty
-    Empty --> Charged: accepted grant
-    Charged --> Charged: duplicate grant rejected; state unchanged
-    Charged --> Empty: committed matching damage action completes
-    Charged --> Empty: authored duration expires
-    Charged --> Empty: battle or cleanup boundary removes it
+    direction TB
+    [*] --> Absent
+    Absent --> Retained: accepted typed grant
+    Retained --> Absent: matching outer action commits
+    Retained --> Absent: authored duration expires
+    Retained --> Absent: cleanup removes the slot
 ```
 
-One actor's retained charge state has one policy ID. Split state permits
-Physical and Magical keys; unified state permits only General. Validation and
-restoration resolve that policy ID through `IChargePolicyResolver` and reject
-unsupported kinds, duplicate keys, invalid durations, or a mismatched policy.
+`Absent` means that particular slot is not retained. It does not mean the
+actor's selected charge-policy identity has been erased. A rejected grant is a
+command result rather than a runtime state: its `Before` and `After` snapshots
+are identical, and a duplicate grant does not refresh the existing slot's
+duration.
+
+Application and consumption use separate boundaries. Grant assessment is one
+small transaction:
+
+```mermaid
+flowchart TB
+    Grant["Typed charge grant"] --> Assess{"Policy ID, charge kind,<br/>duration, and slot are valid?"}
+    Assess -->|"no"| Rejected["Rejected result<br/>Before = After"]
+    Assess -->|"yes"| Store["Retain typed slot<br/>multiplier + optional duration"]
+```
+
+Consumption is scoped to the complete action rather than to an individual hit
+or nested effect:
+
+```mermaid
+flowchart TB
+    Action["Prepared action executes"] --> Damage{"At least one damage effect executes?"}
+    Damage -->|"no: rejected, cancelled, or only skipped effects"| Unchanged["Record no category;<br/>retained slots remain"]
+    Damage -->|"yes: hit, miss, or defensive affinity"| Record["Record each distinct damage category<br/>in the outer action scope"]
+    Record --> Complete["At outermost scope completion,<br/>map categories through the selected policy"]
+    Complete --> Stage["Remove each matching slot once<br/>from the staged actor"]
+    Stage --> Commit{"Owning actor transaction publishes?"}
+    Commit -->|"yes"| Published["Live actor reflects consumed slots"]
+    Commit -->|"no"| Discarded["Discard staged removals;<br/>live slots remain"]
+```
+
+One actor's retained charge state has one policy ID. `SplitChargePolicy` permits
+independent Physical and Magical slots at the same time. It maps Physical
+damage to Physical and every other damage element to Magical.
+`UnifiedChargePolicy` permits only one General slot and maps every damage
+element to it. Validation and restoration resolve the policy ID through
+`IChargePolicyResolver` and reject unsupported kinds, duplicate keys, invalid
+durations, or a mismatched policy.
 
 `OrderedEffectExecutor` owns an async-local outer action scope. Nested passive
 or ailment effects join that scope. It records distinct damage elements by

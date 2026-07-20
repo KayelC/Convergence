@@ -28,6 +28,7 @@ or implementation authority.
 - [Combat Resolution Order 2 Completion Review, 19 July 2026](combat-resolution-order-2-completion-review-2026-07-19.md)
 - [Combat Resolution Order 2 Independent Review, 20 July 2026](combat-resolution-order-2-independent-review-2026-07-20.md)
 - [Combat Resolution Order 2 Post-Correction Review, 20 July 2026](combat-resolution-order-2-post-correction-review-2026-07-20.md)
+- [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.
 Current implementation behavior belongs in source and executable tests.

@@ -115,29 +115,25 @@ must be null. `Tick` is unchanged.
 ### Timed Exclusive
 
 One contribution stores one of `-2`, `-1`, `+1`, or `+2` and one counted
-duration.
+duration. Neutral is represented by the absence of a track. Rejection is a
+result with unchanged state, not another retained state.
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Neutral
-    Neutral --> Positive: apply +
-    Neutral --> StrongPositive: apply ++
-    Neutral --> Negative: apply -
-    Neutral --> StrongNegative: apply --
+flowchart TB
+    Apply["Apply one signal<br/>--, -, +, or ++"] --> Exists{"Track already exists?"}
+    Exists -->|"no"| Create["Create one contribution<br/>with the incoming full duration"]
+    Exists -->|"yes"| Sign{"Same sign as retained signal?"}
 
-    Positive --> Positive: + / restart timer
-    Positive --> StrongPositive: ++ / replace
-    StrongPositive --> StrongPositive: + / reject weaker
-    Positive --> Neutral: - / cancel
-    StrongPositive --> Positive: - / keep existing timer
-    Positive --> Negative: -- / use incoming timer
+    Sign -->|"yes"| Strength{"Incoming magnitude is weaker?"}
+    Strength -->|"yes"| Reject["Reject: AlreadyInEffect<br/>signal and timer unchanged"]
+    Strength -->|"no"| Replace["Store incoming signal<br/>restart its full duration"]
 
-    Negative --> Negative: - / restart timer
-    Negative --> StrongNegative: -- / replace
-    StrongNegative --> StrongNegative: - / reject weaker
-    Negative --> Neutral: + / cancel
-    StrongNegative --> Negative: + / keep existing timer
-    Negative --> Positive: ++ / use incoming timer
+    Sign -->|"no"| Combine["Add retained and incoming signals"]
+    Combine --> Zero{"Combined signal is zero?"}
+    Zero -->|"yes"| Remove["Remove track<br/>actor returns to neutral"]
+    Zero -->|"no"| Winner{"Which sign survives?"}
+    Winner -->|"retained sign"| KeepTimer["Store combined signal<br/>keep retained remaining duration"]
+    Winner -->|"incoming sign"| UseTimer["Store combined signal<br/>use incoming full duration"]
 ```
 
 The weaker same-sign rejection is `AlreadyInEffect`. Equal opposite magnitudes
@@ -216,11 +212,10 @@ The complete boundary identity is an event ID + positive monotonic boundary sequ
 flowchart TD
     T["Receive lifecycle boundary"] --> M{"Event ID matches duration?"}
     M -->|"no"| U["Unchanged"]
-    M -->|"yes"| O{"Sequence older than cursor?"}
-    O -->|"yes"| R["Reject complete tick"]
-    O -->|"no"| S{"Same sequence already observed?"}
-    S -->|"Applied in this exact boundary or already observed"| U
-    S -->|"no"| D{"Reserve suspension active?"}
+    M -->|"yes"| O{"Incoming sequence compared<br/>with retained cursor"}
+    O -->|"older"| R["Reject complete tick"]
+    O -->|"same: Applied in this exact boundary<br/>or already observed"| U
+    O -->|"newer or not observed"| D{"Reserve suspension active?"}
     D -->|"yes"| C["Advance cursor only"]
     D -->|"no"| V{"Remaining value is 1?"}
     V -->|"yes"| X["Expire contribution"]

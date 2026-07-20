@@ -226,6 +226,20 @@ Diagrams are explanatory evidence, not an alternative implementation. Node label
 should use domain language, and the surrounding text must state whether each step
 is framework-owned, configured, or host-owned.
 
+For state and transaction diagrams:
+
+- use state nodes only for values that the runtime actually retains;
+- show rejection, cancellation, diagnostics, and rollback as command or result
+  paths rather than inventing stored states for them;
+- when an aggregate contains independent entries, diagram one entry's lifecycle
+  and explain aggregate cardinality separately;
+- avoid rejected-command self-transitions that can be mistaken for re-entry,
+  duration refresh, or another mutation;
+- prefer a top-to-bottom decision flow over a densely connected state diagram
+  when the behavior is an application matrix rather than a small state machine;
+- split application, lifecycle, and transaction publication into separate
+  diagrams when combining them would obscure the commit boundary.
+
 ## Decision Records
 
 Use `docs/decisions` for choices that materially shape behavior or public

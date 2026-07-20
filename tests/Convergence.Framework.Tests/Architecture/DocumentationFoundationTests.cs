@@ -79,6 +79,8 @@ public sealed class DocumentationFoundationTests
             "## Collaborative Workflow",
             "```mermaid",
             "Project owner confirms or corrects intended design",
+            "use state nodes only for values that the runtime actually retains",
+            "avoid rejected-command self-transitions",
             "## Coverage States",
             "## Definition Of Documented"
         ];
@@ -187,6 +189,8 @@ public sealed class DocumentationFoundationTests
 
         Assert.Contains("event ID + positive monotonic boundary sequence", technical, StringComparison.Ordinal);
         Assert.Contains("Applied in this exact boundary", technical, StringComparison.Ordinal);
+        Assert.Contains("Which sign survives?", technical, StringComparison.Ordinal);
+        Assert.DoesNotContain("StrongPositive --> StrongPositive", technical, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -241,6 +245,10 @@ public sealed class DocumentationFoundationTests
             "```mermaid"
         ];
         Assert.All(technicalTokens, token => Assert.Contains(token, technical, StringComparison.Ordinal));
+        Assert.Contains("collection of typed charge slots", technical, StringComparison.Ordinal);
+        Assert.Contains("Remove each matching slot once", technical, StringComparison.Ordinal);
+        Assert.Contains("Before = After", technical, StringComparison.Ordinal);
+        Assert.DoesNotContain("Charged --> Charged", technical, StringComparison.Ordinal);
 
         Assert.Contains("written_pending_owner_confirmation", roadmap, StringComparison.Ordinal);
     }
