@@ -1,11 +1,87 @@
 namespace Convergence.Execution;
 
 /// <summary>
+/// Identifies the action surface whose typed effects are being aggregated.
+/// </summary>
+public enum ActionOutcomeSourceKind
+{
+    Skill,
+    BasicAttack,
+    Item,
+    Other
+}
+
+/// <summary>
+/// Selects how the supplied standard policy prices item actions.
+/// </summary>
+public enum ItemActionOutcomeBehavior
+{
+    Normal,
+    EffectDriven
+}
+
+/// <summary>
+/// Supplies immutable source and effect facts to an action-outcome policy.
+/// </summary>
+public sealed class ActionOutcomeAggregationRequest
+{
+    public ActionOutcomeAggregationRequest(
+        ActionOutcomeSourceKind sourceKind,
+        IEnumerable<EffectExecutionResult> effects)
+    {
+        if (!Enum.IsDefined(sourceKind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(sourceKind));
+        }
+
+        ArgumentNullException.ThrowIfNull(effects);
+        EffectExecutionResult[] snapshot = effects.ToArray();
+        if (snapshot.Any(effect => effect is null))
+        {
+            throw new ArgumentException(
+                "Action outcome collections cannot contain null results.",
+                nameof(effects));
+        }
+
+        SourceKind = sourceKind;
+        Effects = Array.AsReadOnly(snapshot);
+    }
+
+    public ActionOutcomeSourceKind SourceKind { get; }
+    public IReadOnlyList<EffectExecutionResult> Effects { get; }
+}
+
+/// <summary>
+/// Configures Convergence's supplied action-outcome policy.
+/// </summary>
+public sealed class StandardActionOutcomeAggregationPolicyConfig
+{
+    public StandardActionOutcomeAggregationPolicyConfig(
+        ItemActionOutcomeBehavior itemBehavior = ItemActionOutcomeBehavior.Normal)
+    {
+        if (!Enum.IsDefined(itemBehavior))
+        {
+            throw new ArgumentOutOfRangeException(nameof(itemBehavior));
+        }
+
+        ItemBehavior = itemBehavior;
+    }
+
+    public ItemActionOutcomeBehavior ItemBehavior { get; }
+}
+
+/// <summary>
 /// Derives one action-level turn-economy result from ordered per-target effect results.
 /// </summary>
 public interface IActionOutcomeAggregationPolicy
 {
     TurnEconomyResolution Aggregate(IReadOnlyList<EffectExecutionResult> effects);
+
+    TurnEconomyResolution Aggregate(ActionOutcomeAggregationRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Aggregate(request.Effects);
+    }
 }
 
 /// <summary>
@@ -13,7 +89,36 @@ public interface IActionOutcomeAggregationPolicy
 /// </summary>
 public sealed class StandardActionOutcomeAggregationPolicy : IActionOutcomeAggregationPolicy
 {
+    public StandardActionOutcomeAggregationPolicy()
+        : this(new StandardActionOutcomeAggregationPolicyConfig())
+    {
+    }
+
+    public StandardActionOutcomeAggregationPolicy(
+        StandardActionOutcomeAggregationPolicyConfig config)
+    {
+        Config = config ?? throw new ArgumentNullException(nameof(config));
+    }
+
+    public StandardActionOutcomeAggregationPolicyConfig Config { get; }
+
     public TurnEconomyResolution Aggregate(IReadOnlyList<EffectExecutionResult> effects)
+    {
+        ArgumentNullException.ThrowIfNull(effects);
+        return AggregateEffects(effects);
+    }
+
+    public TurnEconomyResolution Aggregate(ActionOutcomeAggregationRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return request.SourceKind == ActionOutcomeSourceKind.Item &&
+               Config.ItemBehavior == ItemActionOutcomeBehavior.Normal
+            ? new TurnEconomyResolution(TurnEconomyOutcome.Normal, false, false)
+            : AggregateEffects(request.Effects);
+    }
+
+    private static TurnEconomyResolution AggregateEffects(
+        IReadOnlyList<EffectExecutionResult> effects)
     {
         ArgumentNullException.ThrowIfNull(effects);
         if (effects.Any(effect => effect is null))

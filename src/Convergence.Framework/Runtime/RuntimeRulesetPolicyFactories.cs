@@ -208,6 +208,7 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
 
         var diagnostics = new List<RulesetBindingDiagnostic>();
         var config = new ProductionCombatRulesetConfig();
+        var actionOutcomeConfig = new StandardActionOutcomeAggregationPolicyConfig();
         foreach ((string key, object? value) in definition.Parameters)
         {
             switch (key)
@@ -292,6 +293,36 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
                 case "defaultInstantDeathChance":
                     RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
                     break;
+                case "itemActionOutcomeBehavior":
+                    if (value is not string behavior)
+                    {
+                        RulesetPolicyFactoryDiagnostics.InvalidType(
+                            definition,
+                            key,
+                            "a string",
+                            diagnostics);
+                        break;
+                    }
+
+                    ItemActionOutcomeBehavior? itemBehavior = behavior switch
+                    {
+                        "normal" => ItemActionOutcomeBehavior.Normal,
+                        "effect_driven" => ItemActionOutcomeBehavior.EffectDriven,
+                        _ => null
+                    };
+                    if (itemBehavior is null)
+                    {
+                        RulesetPolicyFactoryDiagnostics.InvalidConfiguration(
+                            definition,
+                            $"Parameter '{key}' must be 'normal' or 'effect_driven'.",
+                            diagnostics,
+                            key);
+                        break;
+                    }
+
+                    actionOutcomeConfig = new StandardActionOutcomeAggregationPolicyConfig(
+                        itemBehavior.Value);
+                    break;
                 default:
                     RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
                     break;
@@ -325,9 +356,9 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
                     combat,
                     combat,
                     combat,
-                    new StandardActionOutcomeAggregationPolicy(),
+                    new StandardActionOutcomeAggregationPolicy(actionOutcomeConfig),
                     definition.Parameters,
-                    EffectiveConfiguration(config)));
+                    EffectiveConfiguration(config, actionOutcomeConfig)));
         }
         catch (ArgumentException exception)
         {
@@ -337,7 +368,8 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
     }
 
     private static IEnumerable<KeyValuePair<string, object?>> EffectiveConfiguration(
-        ProductionCombatRulesetConfig config) =>
+        ProductionCombatRulesetConfig config,
+        StandardActionOutcomeAggregationPolicyConfig actionOutcomeConfig) =>
     [
         KeyValuePair.Create<string, object?>("damageFormulaScalar", config.DamageFormulaScalar),
         KeyValuePair.Create<string, object?>("damageVarianceMinimum", config.DamageVarianceMinimum),
@@ -371,7 +403,12 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
             config.InstantDeathResistantMultiplier),
         KeyValuePair.Create<string, object?>(
             "instantDeathImmuneMultiplier",
-            config.InstantDeathImmuneMultiplier)
+            config.InstantDeathImmuneMultiplier),
+        KeyValuePair.Create<string, object?>(
+            "itemActionOutcomeBehavior",
+            actionOutcomeConfig.ItemBehavior == ItemActionOutcomeBehavior.Normal
+                ? "normal"
+                : "effect_driven")
     ];
 
     private static ProductionCombatRulesetConfig ReadDecimal(

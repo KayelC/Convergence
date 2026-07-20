@@ -110,7 +110,9 @@ public sealed class SkillExecutor : ISkillExecutor
                 stagedRequest.ToEffectActionRequest(),
                 request.Skill.Effects,
                 transaction.Map(preparedTargets));
-            turnEconomy = _services.ResolveActionOutcome(execution.Effects);
+            turnEconomy = _services.ResolveActionOutcome(
+                execution.Effects,
+                ActionOutcomeSourceKind.Skill);
         }
         catch (Exception exception)
         {

@@ -618,6 +618,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 attack.SelectedTargetIds,
                 [BasicAttackEffect(attack.BasicAttack)],
                 ActionTurnConsumptionKind.TurnEconomy,
+                ActionOutcomeSourceKind.BasicAttack,
                 assessment),
             AnalyzeBattleActionCommand analyze => ExecuteEffects(
                 request,
@@ -627,6 +628,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 [analyze.TargetId],
                 [new AnalyzeEffectDefinition(analyze.Layers)],
                 ActionTurnConsumptionKind.Normal,
+                ActionOutcomeSourceKind.Other,
                 assessment),
             EscapeAttemptBattleActionCommand escape => ExecuteEscape(request, escape, assessment),
             GuardBattleActionCommand => ExecuteGuard(request),
@@ -935,6 +937,12 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             }
 
             cancellationToken.ThrowIfCancellationRequested();
+            ActionTurnConsumption turnConsumption = item.EscapeRequested
+                ? ActionTurnConsumption.None
+                : ActionTurnConsumption.FromTurnEconomy(_services.ResolveActionOutcome(
+                    item.Effects,
+                    ActionOutcomeSourceKind.Item));
+
             bool committed = false;
             if (item.Consumption == ItemConsumptionDecision.ConsumeOne)
             {
@@ -991,7 +999,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                     ? BattleActionExecutionStatus.Interrupted
                     : BattleActionExecutionStatus.Executed,
                 command.Kind,
-                item.EscapeRequested ? ActionTurnConsumption.None : ActionTurnConsumption.Normal,
+                turnConsumption,
                 item.Effects,
                 events: events,
                 itemConsumption: item.Consumption,
@@ -1016,10 +1024,20 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                     BattleActionDiagnosticCode.ExecutionFailed,
                     $"Item action failed before actor-state commit: {exception.Message}")
             };
-            if (reservation is not null && !reservation.IsCommitted && !reservation.IsRolledBack &&
-                !TryRollbackReservation(reservation, out BattleActionDiagnostic? rollbackDiagnostic))
+            if (reservation is not null && !reservation.IsCommitted && !reservation.IsRolledBack)
             {
-                diagnostics.Add(rollbackDiagnostic!);
+                if (!TryRollbackReservation(reservation, out BattleActionDiagnostic? rollbackDiagnostic))
+                {
+                    diagnostics.Add(rollbackDiagnostic!);
+                }
+                else
+                {
+                    events.Add(new BattleActionEvent(
+                        BattleActionEventKind.ItemRolledBack,
+                        $"Rolled back item '{command.Item.Id}'.",
+                        request.Actor.InstanceId,
+                        SourceId: command.Item.Id));
+                }
             }
 
             return Rejected(command.Kind, diagnostics, events);
@@ -1034,6 +1052,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
         IEnumerable<RuntimeInstanceId> selectedTargetIds,
         IReadOnlyList<EffectDefinition> effects,
         ActionTurnConsumptionKind defaultTurnKind,
+        ActionOutcomeSourceKind outcomeSourceKind,
         BattleActionAssessment assessment)
     {
         if (!assessment.HasResolvedTargets ||
@@ -1078,7 +1097,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 targeting,
                 selectedTargetIds);
             execution = _orderedEffects.Execute(stagedAction, effects, transaction.Map(targets));
-            turnEconomy = _services.ResolveActionOutcome(execution.Effects);
+            turnEconomy = _services.ResolveActionOutcome(execution.Effects, outcomeSourceKind);
         }
         catch (Exception exception)
         {
@@ -1116,6 +1135,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             [],
             [new EscapeEffectDefinition(command.EligibilityRuleId, command.Chance)],
             ActionTurnConsumptionKind.Normal,
+            ActionOutcomeSourceKind.Other,
             assessment);
         return result.EscapeRequested
             ? result with { TurnConsumption = ActionTurnConsumption.None }

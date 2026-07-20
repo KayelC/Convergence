@@ -527,9 +527,11 @@ public sealed class BattleExecutionServices
     public IActionOutcomeAggregationPolicy ActionOutcomes { get; }
 
     internal TurnEconomyResolution ResolveActionOutcome(
-        IReadOnlyList<EffectExecutionResult> effects)
+        IReadOnlyList<EffectExecutionResult> effects,
+        ActionOutcomeSourceKind sourceKind)
     {
-        TurnEconomyResolution resolution = ActionOutcomes.Aggregate(effects)
+        var request = new ActionOutcomeAggregationRequest(sourceKind, effects);
+        TurnEconomyResolution resolution = ActionOutcomes.Aggregate(request)
             ?? throw new InvalidOperationException("The action-outcome policy returned no resolution.");
         if (!Enum.IsDefined(resolution.Outcome))
         {

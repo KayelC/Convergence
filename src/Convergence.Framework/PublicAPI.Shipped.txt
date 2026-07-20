@@ -10577,3 +10577,22 @@ Convergence.Execution.ICombatDamageExecutionPolicy.CriticalEligibility.get -> Co
 Convergence.Execution.ICombatDamageExecutionPolicy.HitResolution.get -> Convergence.Battle.IHitResolutionPolicy!
 Convergence.Execution.ICombatInstantDefeatExecutionPolicy
 Convergence.Execution.ICombatInstantDefeatExecutionPolicy.Resolution.get -> Convergence.Battle.IInstantDefeatResolutionPolicy!
+Convergence.Execution.ActionOutcomeAggregationRequest
+Convergence.Execution.ActionOutcomeAggregationRequest.ActionOutcomeAggregationRequest(Convergence.Execution.ActionOutcomeSourceKind sourceKind, System.Collections.Generic.IEnumerable<Convergence.Execution.EffectExecutionResult!>! effects) -> void
+Convergence.Execution.ActionOutcomeAggregationRequest.Effects.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>!
+Convergence.Execution.ActionOutcomeAggregationRequest.SourceKind.get -> Convergence.Execution.ActionOutcomeSourceKind
+Convergence.Execution.ActionOutcomeSourceKind
+Convergence.Execution.ActionOutcomeSourceKind.BasicAttack = 1 -> Convergence.Execution.ActionOutcomeSourceKind
+Convergence.Execution.ActionOutcomeSourceKind.Item = 2 -> Convergence.Execution.ActionOutcomeSourceKind
+Convergence.Execution.ActionOutcomeSourceKind.Other = 3 -> Convergence.Execution.ActionOutcomeSourceKind
+Convergence.Execution.ActionOutcomeSourceKind.Skill = 0 -> Convergence.Execution.ActionOutcomeSourceKind
+Convergence.Execution.IActionOutcomeAggregationPolicy.Aggregate(Convergence.Execution.ActionOutcomeAggregationRequest! request) -> Convergence.Execution.TurnEconomyResolution!
+Convergence.Execution.ItemActionOutcomeBehavior
+Convergence.Execution.ItemActionOutcomeBehavior.EffectDriven = 1 -> Convergence.Execution.ItemActionOutcomeBehavior
+Convergence.Execution.ItemActionOutcomeBehavior.Normal = 0 -> Convergence.Execution.ItemActionOutcomeBehavior
+Convergence.Execution.StandardActionOutcomeAggregationPolicy.Aggregate(Convergence.Execution.ActionOutcomeAggregationRequest! request) -> Convergence.Execution.TurnEconomyResolution!
+Convergence.Execution.StandardActionOutcomeAggregationPolicy.Config.get -> Convergence.Execution.StandardActionOutcomeAggregationPolicyConfig!
+Convergence.Execution.StandardActionOutcomeAggregationPolicy.StandardActionOutcomeAggregationPolicy(Convergence.Execution.StandardActionOutcomeAggregationPolicyConfig! config) -> void
+Convergence.Execution.StandardActionOutcomeAggregationPolicyConfig
+Convergence.Execution.StandardActionOutcomeAggregationPolicyConfig.ItemBehavior.get -> Convergence.Execution.ItemActionOutcomeBehavior
+Convergence.Execution.StandardActionOutcomeAggregationPolicyConfig.StandardActionOutcomeAggregationPolicyConfig(Convergence.Execution.ItemActionOutcomeBehavior itemBehavior = Convergence.Execution.ItemActionOutcomeBehavior.Normal) -> void

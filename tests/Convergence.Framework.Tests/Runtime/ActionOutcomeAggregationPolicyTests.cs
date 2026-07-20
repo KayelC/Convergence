@@ -136,6 +136,103 @@ public sealed class ActionOutcomeAggregationPolicyTests
         Assert.False(result.AnyCritical);
     }
 
+    [Theory]
+    [InlineData(TurnEconomyOutcome.Normal)]
+    [InlineData(TurnEconomyOutcome.Weakness)]
+    [InlineData(TurnEconomyOutcome.Critical)]
+    [InlineData(TurnEconomyOutcome.Miss)]
+    [InlineData(TurnEconomyOutcome.Null)]
+    [InlineData(TurnEconomyOutcome.Repel)]
+    [InlineData(TurnEconomyOutcome.Absorb)]
+    public void Aggregate_DefaultItemBehaviorSpendsOneNormalTurnWithoutRewritingEffects(
+        TurnEconomyOutcome effectOutcome)
+    {
+        EffectExecutionResult effect = effectOutcome switch
+        {
+            TurnEconomyOutcome.Miss =>
+                DamageEffect(FirstTarget, effectOutcome, [Hit(FirstTarget, 0, false)]),
+            TurnEconomyOutcome.Critical =>
+                DamageEffect(FirstTarget, effectOutcome, [Hit(FirstTarget, 0, true, true)]),
+            _ => DamageEffect(FirstTarget, effectOutcome, [Hit(FirstTarget, 0, true)])
+        };
+
+        TurnEconomyResolution result = _policy.Aggregate(new ActionOutcomeAggregationRequest(
+            ActionOutcomeSourceKind.Item,
+            [effect]));
+
+        Assert.Equal(TurnEconomyOutcome.Normal, result.Outcome);
+        Assert.False(result.AnyCritical);
+        Assert.False(result.TerminatesPhase);
+        Assert.Equal(effectOutcome, effect.TurnEconomyOutcome);
+    }
+
+    [Fact]
+    public void Aggregate_EffectDrivenItemsAndOffensiveSourcesRetainTypedOutcomes()
+    {
+        EffectExecutionResult weakness = DamageEffect(
+            FirstTarget,
+            TurnEconomyOutcome.Weakness,
+            [Hit(FirstTarget, 0, true)]);
+        var effectDriven = new StandardActionOutcomeAggregationPolicy(
+            new StandardActionOutcomeAggregationPolicyConfig(
+                ItemActionOutcomeBehavior.EffectDriven));
+
+        TurnEconomyResolution item = effectDriven.Aggregate(new ActionOutcomeAggregationRequest(
+            ActionOutcomeSourceKind.Item,
+            [weakness]));
+        TurnEconomyResolution skill = _policy.Aggregate(new ActionOutcomeAggregationRequest(
+            ActionOutcomeSourceKind.Skill,
+            [weakness]));
+        TurnEconomyResolution basicAttack = _policy.Aggregate(new ActionOutcomeAggregationRequest(
+            ActionOutcomeSourceKind.BasicAttack,
+            [weakness]));
+
+        Assert.Equal(TurnEconomyOutcome.Weakness, item.Outcome);
+        Assert.Equal(TurnEconomyOutcome.Weakness, skill.Outcome);
+        Assert.Equal(TurnEconomyOutcome.Weakness, basicAttack.Outcome);
+    }
+
+    [Fact]
+    public void Request_SnapshotsEffectsAndRejectsUndefinedSourceKinds()
+    {
+        var effects = new List<EffectExecutionResult>
+        {
+            DamageEffect(
+                FirstTarget,
+                TurnEconomyOutcome.Normal,
+                [Hit(FirstTarget, 0, true)])
+        };
+        var request = new ActionOutcomeAggregationRequest(ActionOutcomeSourceKind.Item, effects);
+
+        effects.Clear();
+
+        Assert.Single(request.Effects);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<EffectExecutionResult>)request.Effects).Clear());
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new ActionOutcomeAggregationRequest((ActionOutcomeSourceKind)99, []));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new StandardActionOutcomeAggregationPolicyConfig((ItemActionOutcomeBehavior)99));
+    }
+
+    [Fact]
+    public void SourceAwareDispatch_PreservesExistingCustomPolicyImplementations()
+    {
+        var legacyPolicy = new LegacyActionOutcomePolicy();
+        EffectExecutionResult weakness = DamageEffect(
+            FirstTarget,
+            TurnEconomyOutcome.Weakness,
+            [Hit(FirstTarget, 0, true)]);
+
+        TurnEconomyResolution result = ((IActionOutcomeAggregationPolicy)legacyPolicy).Aggregate(
+            new ActionOutcomeAggregationRequest(
+                ActionOutcomeSourceKind.Item,
+                [weakness]));
+
+        Assert.Equal(1, legacyPolicy.CallCount);
+        Assert.Equal(TurnEconomyOutcome.Weakness, result.Outcome);
+    }
+
     private static EffectExecutionResult DamageEffect(
         RuntimeInstanceId targetId,
         TurnEconomyOutcome outcome,
@@ -180,4 +277,18 @@ public sealed class ActionOutcomeAggregationPolicyTests
                 chargeKind: null,
                 chargeMultiplier: 1m),
             ElementalAffinity.Normal);
+
+    private sealed class LegacyActionOutcomePolicy : IActionOutcomeAggregationPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public TurnEconomyResolution Aggregate(IReadOnlyList<EffectExecutionResult> effects)
+        {
+            CallCount++;
+            return new TurnEconomyResolution(
+                effects[0].TurnEconomyOutcome,
+                effects[0].IsCritical,
+                effects[0].TurnEconomyOutcome is TurnEconomyOutcome.Repel or TurnEconomyOutcome.Absorb);
+        }
+    }
 }

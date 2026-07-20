@@ -844,6 +844,75 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task ItemAction_DefaultOutcomePolicySpendsNormalTurnAndPreservesWeaknessEvidence()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor(
+            "target",
+            TeamB,
+            defense: new CombatDefenseProfile(
+                [new KeyValuePair<DamageElement, ElementalAffinity>(
+                    DamageElement.Ice,
+                    ElementalAffinity.Weak)]));
+        ItemDefinition item = ConsumableItem(
+            "ice_capsule",
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))],
+            SingleEnemy());
+        var inventory = new TestItemInventory(item.Id, quantity: 1);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(item, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(ActionTurnConsumptionKind.TurnEconomy, result.TurnConsumption.Kind);
+        Assert.Equal(TurnEconomyOutcome.Normal, result.TurnConsumption.TurnEconomy!.Outcome);
+        Assert.False(result.TurnConsumption.TurnEconomy.AnyCritical);
+        Assert.Equal(TurnEconomyOutcome.Weakness, Assert.Single(result.Effects).TurnEconomyOutcome);
+        Assert.Equal(90, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(0, inventory.Quantity);
+    }
+
+    [Fact]
+    public async Task ItemAction_EffectDrivenPolicyUsesTypedDamageOutcome()
+    {
+        var outcomes = new StandardActionOutcomeAggregationPolicy(
+            new StandardActionOutcomeAggregationPolicyConfig(
+                ItemActionOutcomeBehavior.EffectDriven));
+        BattleActionExecutor executor = Executor(actionOutcomes: outcomes);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor(
+            "target",
+            TeamB,
+            defense: new CombatDefenseProfile(
+                [new KeyValuePair<DamageElement, ElementalAffinity>(
+                    DamageElement.Ice,
+                    ElementalAffinity.Weak)]));
+        ItemDefinition item = ConsumableItem(
+            "ice_capsule",
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))],
+            SingleEnemy());
+        var inventory = new TestItemInventory(item.Id, quantity: 1);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(item, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(TurnEconomyOutcome.Weakness, result.TurnConsumption.TurnEconomy!.Outcome);
+        Assert.Equal(TurnEconomyOutcome.Weakness, Assert.Single(result.Effects).TurnEconomyOutcome);
+        Assert.Equal(0, inventory.Quantity);
+    }
+
+    [Fact]
     public async Task ItemAction_RequiresInventoryPortBeforeExecution()
     {
         BattleActionExecutor executor = Executor();
@@ -911,6 +980,33 @@ public sealed class BattleActionExecutorTests
             diagnostic.Code == BattleActionDiagnosticCode.ItemRejected &&
             diagnostic.Message.Contains("failed before commit", StringComparison.Ordinal));
         Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.False(result.ItemConsumptionCommitted);
+        Assert.Contains(result.Events, battleEvent => battleEvent.Kind == BattleActionEventKind.ItemRolledBack);
+    }
+
+    [Fact]
+    public async Task ItemAction_ThrowingOutcomePolicyRollsBackReservationAndActorState()
+    {
+        BattleActionExecutor executor = Executor(actionOutcomes: new ThrowingActionOutcomePolicy());
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        ItemDefinition item = ConsumableItem(
+            "unstable_capsule",
+            [new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))],
+            SingleEnemy());
+        var inventory = new TestItemInventory(item.Id, quantity: 1);
+
+        BattleActionExecutionResult result = await executor.ExecuteAsync(
+            Request(new ItemBattleActionCommand(item, [target.InstanceId]), actor, [actor, target], inventory));
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
         Assert.Equal(1, inventory.Quantity);
         Assert.False(result.ItemConsumptionCommitted);
         Assert.Contains(result.Events, battleEvent => battleEvent.Kind == BattleActionEventKind.ItemRolledBack);
@@ -1291,6 +1387,12 @@ public sealed class BattleActionExecutorTests
             CallCount++;
             return result;
         }
+    }
+
+    private sealed class ThrowingActionOutcomePolicy : IActionOutcomeAggregationPolicy
+    {
+        public TurnEconomyResolution Aggregate(IReadOnlyList<EffectExecutionResult> effects) =>
+            throw new InvalidOperationException("Outcome aggregation failed deliberately.");
     }
 
     private sealed class OrderedRandomTargetPolicy : IRandomTargetSelectionPolicy

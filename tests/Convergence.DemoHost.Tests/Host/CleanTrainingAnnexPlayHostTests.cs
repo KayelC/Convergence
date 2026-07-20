@@ -2127,8 +2127,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
             evidence.ActionId == Qualified("annex_tonic") &&
             evidence.BeforeFullTokens == 1 &&
             evidence.BeforePartialTokens == 0 &&
-            evidence.TurnConsumptionKind == ActionTurnConsumptionKind.Normal &&
-            evidence.TurnEconomyOutcome is null &&
+            evidence.TurnConsumptionKind == ActionTurnConsumptionKind.TurnEconomy &&
+            evidence.TurnEconomyOutcome == TurnEconomyOutcome.Normal &&
             evidence.AfterFullTokens == 0 &&
             evidence.AfterPartialTokens == 0);
         Assert.Contains(

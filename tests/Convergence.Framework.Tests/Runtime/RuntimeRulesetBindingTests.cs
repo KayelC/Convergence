@@ -48,7 +48,9 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Same(damage, combat.Ailments);
         Assert.Same(damage, combat.Chance);
         Assert.Same(damage, combat.Amounts);
-        Assert.IsType<StandardActionOutcomeAggregationPolicy>(combat.ActionOutcomes);
+        var actionOutcomes = Assert.IsType<StandardActionOutcomeAggregationPolicy>(combat.ActionOutcomes);
+        Assert.Equal(ItemActionOutcomeBehavior.Normal, actionOutcomes.Config.ItemBehavior);
+        Assert.Equal("normal", combat.EffectiveConfiguration["itemActionOutcomeBehavior"]);
 
         IBattleRewardService rewards = resolver.BindBattleRewardService(
             catalog,
@@ -508,6 +510,51 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(0.9m, config.InstantDeathNormalMultiplier);
         Assert.Equal(0.4m, config.InstantDeathResistantMultiplier);
         Assert.Equal(0.05m, config.InstantDeathImmuneMultiplier);
+    }
+
+    [Fact]
+    public void DamageBinding_ConfiguresItemActionOutcomesAndRejectsInvalidValues()
+    {
+        ContentId configuredId = Id("test.pack:item_outcomes");
+        GameDataCatalog configuredCatalog = Catalog(new RulesetDefinition(
+            configuredId,
+            "Item Outcomes",
+            "Effect-driven offensive items.",
+            RulesetCategory.Damage,
+            StandardRulesetPolicyIds.StandardDamage,
+            Parameters(("itemActionOutcomeBehavior", "effect_driven"))));
+
+        CombatExecutionPolicySet configured = CreateResolver()
+            .BindCombatPolicies(configuredCatalog, configuredId, new SequenceRandomSource(), StagePolicy())
+            .RequireService();
+        var policy = Assert.IsType<StandardActionOutcomeAggregationPolicy>(configured.ActionOutcomes);
+
+        Assert.Equal(ItemActionOutcomeBehavior.EffectDriven, policy.Config.ItemBehavior);
+        Assert.Equal("effect_driven", configured.EffectiveConfiguration["itemActionOutcomeBehavior"]);
+
+        foreach ((object value, RulesetBindingDiagnosticCode expectedCode) in new[]
+                 {
+                     ((object)42, RulesetBindingDiagnosticCode.InvalidParameterType),
+                     ((object)"surprising", RulesetBindingDiagnosticCode.InvalidParameterValue)
+                 })
+        {
+            ContentId invalidId = Id($"test.pack:invalid_item_outcome_{expectedCode}");
+            RulesetBindingResult<CombatExecutionPolicySet> invalid = CreateResolver().BindCombatPolicies(
+                Catalog(new RulesetDefinition(
+                    invalidId,
+                    "Invalid Item Outcomes",
+                    "Invalid item outcome configuration.",
+                    RulesetCategory.Damage,
+                    StandardRulesetPolicyIds.StandardDamage,
+                    Parameters(("itemActionOutcomeBehavior", value)))),
+                invalidId,
+                new SequenceRandomSource(),
+                StagePolicy());
+
+            RulesetBindingDiagnostic diagnostic = Assert.Single(invalid.Diagnostics);
+            Assert.Equal(expectedCode, diagnostic.Code);
+            Assert.Equal("itemActionOutcomeBehavior", diagnostic.ParameterName);
+        }
     }
 
     [Fact]
