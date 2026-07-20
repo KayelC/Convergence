@@ -134,6 +134,7 @@ sequenceDiagram
     I-->>B: Live matching reservation
     B->>B: Validate ID, quantity, and lifecycle
     B->>X: Execute effects against staged actors
+    B->>B: Resolve source-aware item turn outcome
     alt meaningful success
         B->>I: Commit reservation
         I-->>B: Applied
@@ -148,8 +149,11 @@ sequenceDiagram
 
 Malformed reservations reject before item effects. A wrong-ID or wrong-quantity
 live reservation receives a rollback attempt. Null or already-completed
-reservations are rejected as invalid. If item execution rejects, consumption is
-not required, or commit fails, staged actor state is not published.
+reservations are rejected as invalid. If item execution rejects, outcome
+aggregation fails, consumption is not required, or commit fails, staged actor
+state is not published. Outcome aggregation occurs before the inventory
+reservation or actor transaction is committed, so a custom policy exception
+rolls both boundaries back.
 
 The inventory adapter is a trusted transactional port. The Framework verifies
 observable identity and lifecycle fields, but it cannot prove or undo hidden
@@ -199,9 +203,11 @@ for presentation and orchestration without receiving mutable Framework-owned
 collections.
 
 `ActionTurnConsumption` reports intent to the encounter runner. Rejected
-actions report `None`; successful skills and basic attacks carry their typed
-turn-economy result; guard, item, pass, roster, and host-mediated commands use
-their command-specific turn contract.
+actions report `None`; successful skills, basic attacks, and non-escape items
+carry the result selected by `IActionOutcomeAggregationPolicy`. The supplied
+policy prices items as `TurnEconomy(Normal)` unless its item behavior is
+configured as effect-driven. Guard, pass, roster, host-mediated, and successful
+escape commands retain their command-specific contracts.
 
 The replacement authority for stat-stage application and duration is specified
 in [Stat Modifier Policy Runtime Authority](stat-modifier-policy-runtime.md).

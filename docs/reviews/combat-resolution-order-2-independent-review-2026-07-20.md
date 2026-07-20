@@ -4,7 +4,7 @@
 
 **Date:** 20 July 2026  
 **Revision reviewed:** `7a06320` (`docs: complete combat resolution order 2`)  
-**Disposition:** reopened for focused corrections; owner decision confirmed
+**Disposition:** findings corrected and source-verified; audience confirmation pending
 
 This review was performed from the current source, tests, schemas, and active
 content. Earlier Order 2 reports were used only to identify the claimed scope;
@@ -286,6 +286,35 @@ findings: the missing cases are not represented by current tests.
 6. Rerun the full quality gate, then update the Order 2 completion review and
    roadmap from "complete" to a new verified post-correction state.
 
-Until those steps are complete, the source remains usable and the supplied
-standard demos remain stable, but Order 2 should be described as
-**implemented with focused corrections pending**, not fully closed.
+At revision `7a06320`, the source remained usable and the supplied standard
+demos remained stable, but Order 2 was correctly described as **implemented
+with focused corrections pending**, not fully closed. The post-correction
+record below supersedes that disposition for current source.
+
+## Post-Correction Verification
+
+The historical findings above describe revision `7a06320`. A new source-first
+trace was completed after the isolated correction commits; the original text
+is retained so the reason for each change remains auditable.
+
+| Finding | Current implementation evidence | Commit |
+|---|---|---|
+| M1 | `RandomSourceContract` validates every Framework-owned unit and half-open integer draw; a source-boundary test rejects new raw calls outside that helper and `IRandomSource`. Negotiation, lifecycle, progression, fusion, combat, initiative, and reward regressions cover invalid host values. | `88d30bc` |
+| M2 | schema v5 authors `grant_charge.charge = "general"`; semantic validation rejects undefined kinds; the integration test loads, applies, consumes, validates, and restores unified charge state. | `c18c18d` |
+| M3 | `DamageEffectExecutor` derives action Critical only from hits processed before defeat. Later skipped attempts retain immutable evidence without changing action outcome. | `905aaf1` |
+| L1 | public combat requests and programmatic content reject undefined element, affinity, distribution, critical, resistance, targeting, and related combat vocabulary at their owning boundaries. | `3d16406` |
+| D1 | `ActionOutcomeAggregationRequest` carries source kind and immutable effects. The supplied standard policy prices Item as Normal by default, supports authored `effect_driven`, preserves effect facts, and resolves before inventory or actor commit. | `711ba83` |
+
+The third-party report's two negotiation indexes were therefore valid examples
+of M1, but not the complete scope. They now fail through the same explicit
+random-contract boundary as every other supplied consumer rather than through
+an incidental list exception.
+
+The corrected paths were reviewed from current source and tests rather than
+from this report. No remaining realistic, reachable Order 2 correctness defect
+was found. The final gate passed 1,330 tests (1,150 Framework, 173 DemoHost, and
+7 ContentValidator), zero skipped tests, zero-warning Framework and solution
+builds, formatting and diff checks, all five DemoHost modes, 6 active packs / 36
+documents / 98 definitions, and the real Godot 4.7.1 headless smoke. The code
+capability is complete; its three audience pages still require the normal
+project-owner confirmation before documentation-matrix promotion.

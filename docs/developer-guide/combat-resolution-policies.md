@@ -101,10 +101,44 @@ Every `IRandomSource` implementation must return:
 - `NextInt32(minimumInclusive, maximumExclusive)` in the requested half-open
   integer range.
 
-The supplied combat, reward, initiative, and hit-count policies reject values
-outside those ranges. A Godot adapter should normalize engine random output
-before returning it rather than returning a percentage such as `50` for
-fifty percent.
+Every Framework-owned random consumer crosses the same validated boundary,
+including combat, reward, initiative, negotiation, lifecycle, progression, and
+fusion services. A Godot adapter should normalize engine random output before
+returning it rather than returning a percentage such as `50` for fifty
+percent. A contract violation fails with a clear `InvalidOperationException`
+before an invalid value can index content or decide gameplay.
+
+## Select Item Turn Outcomes
+
+`IActionOutcomeAggregationPolicy` receives an immutable
+`ActionOutcomeAggregationRequest`. Its `SourceKind` distinguishes Skill,
+BasicAttack, Item, and other effect-backed actions without coupling the policy
+to a particular turn economy.
+
+The supplied standard policy makes non-escape items cost one normal turn. To
+make offensive item outcomes follow their typed effects, author this optional
+parameter on the selected `standard_damage` ruleset:
+
+```json
+{
+  "itemActionOutcomeBehavior": "effect_driven"
+}
+```
+
+The accepted values are `normal` and `effect_driven`; malformed or unknown
+values reject ruleset binding. Direct composition can make the same choice:
+
+```csharp
+var outcomes = new StandardActionOutcomeAggregationPolicy(
+    new StandardActionOutcomeAggregationPolicyConfig(
+        ItemActionOutcomeBehavior.EffectDriven));
+```
+
+The policy changes only `TurnEconomyResolution`. Per-effect affinity, hit,
+critical, interruption, and resource evidence remains truthful for host
+presentation. Existing custom policies that implement the original
+`Aggregate(effects)` method continue to work; source-aware policies may
+implement the request overload.
 
 ## Replace A Policy Family
 
@@ -181,7 +215,7 @@ state.
 ## Configuration Ownership
 
 The standard damage ruleset exposes damage, variance, affinity, guard, hit,
-and instant-defeat parameters. See
+instant-defeat, and item-action-outcome parameters. See
 [Ruleset Policy Contracts](../ruleset-policy-contracts.md) for the complete
 authored parameter table. Reward and initiative have separate interfaces and
 ruleset categories; changing damage configuration does not silently change

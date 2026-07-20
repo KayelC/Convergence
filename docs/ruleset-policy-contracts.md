@@ -99,6 +99,7 @@ binding rather than producing a partial service.
 | `instantDeathNormalMultiplier` | decimal | `1` | nonnegative |
 | `instantDeathResistantMultiplier` | decimal | `0.5` | nonnegative |
 | `instantDeathImmuneMultiplier` | decimal | `0` | nonnegative |
+| `itemActionOutcomeBehavior` | string | `normal` | `normal` or `effect_driven` |
 
 Unknown parameters, nonnumeric values, and invalid combined configuration
 produce typed `RulesetBindingDiagnostic` values. The standard factory does not
@@ -145,6 +146,12 @@ combat composition selects `SplitChargePolicy`; a custom combat factory may
 select `UnifiedChargePolicy` or another `IChargePolicyService`. The authored
 `grant_charge` effect supplies the multiplier, while the selected policy owns
 slot compatibility and consumption.
+
+The same combat composition selects action-outcome aggregation. `normal` makes
+each non-escape item spend one normal turn while preserving its effect facts.
+`effect_driven` applies the standard Weak, Critical, Miss, Null, Repel, and
+Absorb mapping to item actions as well as skills and basic attacks. A custom
+combat factory may supply another `IActionOutcomeAggregationPolicy`.
 
 ## Reward Yield And Initiative
 

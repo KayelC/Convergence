@@ -23,6 +23,6 @@ requires owner review. The Documentation Completion Roadmap governs the ordered
 collaborative review of those outstanding entries.
 
 Order 1, `typed_action_and_effect_execution`, is complete and owner-confirmed.
-Order 2, `combat_resolution`, is implemented but reopened for the focused
-corrections in its correction roadmap. Its final collaborative-review state is
-not promoted again until those corrections and a fresh source review pass.
+Order 2, `combat_resolution`, is implemented and source-verified after the
+focused corrections in its correction roadmap. Its three audience entries
+remain unpromoted until the project owner confirms the reconciled explanation.

@@ -38,12 +38,15 @@ one item use, validates the returned reservation before effect execution, and
 publishes staged actor changes only after the required inventory transition
 succeeds. It also authorizes equipped canonical skills and resolved
 basic-attack profiles during assessment and immediately before execution.
+Action-outcome policy receives the source kind and immutable effect facts:
+skills and basic attacks are effect-driven, while the supplied item default is
+one normal turn with an authored effect-driven option.
 Lower-level `SkillExecutor` and `ItemExecutor` services remain available for
 callers that deliberately own the omitted loadout or inventory boundary.
 
 ## Combat And Turn Economy
 
-Combat rules resolve damage, accuracy, criticals, elemental affinity, ailment resistance, instant-death channels, chance, and power through bound policies. Action Token is one optional `IBattleTurnEconomy`; games may supply another economy. Almighty, shields, Break, affinity replacement, and separated resistance channels are explicit typed rules.
+Combat rules resolve damage, accuracy, criticals, elemental affinity, ailment resistance, instant-death channels, chance, and power through bound policies. Every supplied random draw validates the host's promised range before becoming authoritative. Action Token is one optional `IBattleTurnEconomy`; games may supply another economy. Almighty, shields, Break, affinity replacement, and separated resistance channels are explicit typed rules.
 
 ## Status And Passives
 

@@ -182,6 +182,22 @@ miss-style penalty; Weak or Critical grants the configured benefit when no
 conflicting evasion exists; mixed Critical and evasion normalizes to normal
 cost. Another game may replace this aggregation policy.
 
+### Skills, basic attacks, and offensive items
+
+The action-outcome policy receives both the action source and its ordered typed
+effect results. Under the supplied standard policy, skills and basic attacks
+use the effect-driven mapping above. Non-escape items instead spend one normal
+turn by default, even when an item effect reports Weak, Critical, Miss, Null,
+Repel, or Absorb.
+
+This normal item cost does not rewrite the effect. A reflected item still
+reports Repel, an absorbed item still reports Absorb, and an interrupted effect
+still stops its remaining effect sequence. The distinction controls only the
+complete action's turn cost. A game may author
+`itemActionOutcomeBehavior: "effect_driven"` on its standard damage ruleset or
+provide another action-outcome policy. Escape items retain their explicit
+no-turn escape contract.
+
 ## Turn Economy
 
 `IBattleTurnEconomy` is the reusable turn interface. Action Token is one optional implementation, not a mandatory battle model.

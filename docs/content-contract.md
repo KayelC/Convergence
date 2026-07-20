@@ -85,6 +85,12 @@ how signed stat changes accumulate, expire, and clear; it does not select the
 and parameters are normatively listed in
 [Ruleset Policy Contracts](ruleset-policy-contracts.md).
 
+Schema v5 accepts the neutral `general` value for `grant_charge` so a custom
+combat composition can select `UnifiedChargePolicy`; the supplied split policy
+continues to accept only `physical` and `magical`. The optional standard-damage
+parameter `itemActionOutcomeBehavior` selects `normal` or `effect_driven`
+turn-cost aggregation without changing any item effect definition.
+
 Entity `skillUnlocks` are ordered authored progression records. Each row pairs a
 positive level with a skill ID. Runtime growth evaluates the rows in document
 order when an actor crosses those levels. Content does not decide what happens

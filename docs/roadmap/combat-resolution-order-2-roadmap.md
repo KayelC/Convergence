@@ -1,16 +1,14 @@
 # Order 2 Combat Resolution Roadmap
 
-**Status:** active
+**Status:** implementation complete; documentation owner confirmation pending
 
 **Started:** 19 July 2026
 
 **Capability:** `combat_resolution`
 
-**Correction status:** reopened on 20 July 2026. The active correction sequence
-is governed by the
-[Order 2 Corrections Roadmap](combat-resolution-order-2-corrections-roadmap.md).
-Completion text later in this record describes the pre-correction revision and
-is not the current verification state.
+**Correction status:** the 20 July 2026 correction sequence is implemented and
+source-verified. Its exact findings, commits, and final gates are governed by
+the [Order 2 Corrections Roadmap](combat-resolution-order-2-corrections-roadmap.md).
 
 ## Goal
 
@@ -67,7 +65,7 @@ review are complete.
 | O2-C4 | `verified` | Add configurable instant-defeat resistance multipliers, explicit bypass behavior, one roll, no hidden Luck, and typed no-effect failures. | `battle: complete instant defeat policy` |
 | O2-C5 | `verified` | Execute landed hits sequentially in staged state, publish immutable per-hit/per-target evidence, and move outcome aggregation behind a policy. | `battle: expose combat resolution evidence` |
 | O2-C6 | `verified` | Replace concrete authored damage binding with a neutral combat-policy aggregate; decouple reward and initiative interfaces from the standard implementation. | `runtime: compose authored combat policies` |
-| O2-C7 | `written_pending_owner_confirmation` | Fresh source review completed, four substantiated findings corrected independently, and all three documentation views written. Owner confirmation remains the final gate. | `docs: complete combat resolution order 2` |
+| O2-C7 | `written_pending_owner_confirmation` | Two source-first reviews completed, all substantiated findings corrected independently, and all three documentation views reconciled. Owner confirmation remains the documentation gate. | `docs: complete combat resolution order 2`; `docs: verify combat resolution corrections` |
 
 ## O2-C1: Charge Policy Family
 
@@ -386,15 +384,21 @@ four reachable defects in isolated commits:
 - `021c5a8` ensures builds refresh tracked content, schema, and ledger assets
   even when Git timestamps make an obsolete output copy appear newer.
 
-No additional reachable Order 2 defect remained after those corrections. The
-consumer mechanics page, developer integration guide, technical pipeline, and
-completion review now describe current source. The implementation capability
-is `complete`; O2-C7 remains `written_pending_owner_confirmation` until the
-project owner confirms the final explanation. The final solution gate passed
-`1,302` tests (`1,122` Framework, `173` DemoHost, and `7` ContentValidator),
-with zero failures and zero skips. Framework and solution Release builds passed
-with zero warnings; all five DemoHost modes and active content validation also
-passed.
+Those conclusions described the first completion revision. The independent
+review on 20 July then found incomplete host-random validation, un-authorable
+unified charge, post-defeat Critical aggregation, undefined combat-enum
+acceptance, and ambiguous offensive-item turn behavior. The owner confirmed
+that item behavior belongs to a source-aware policy, with one normal turn as
+the supplied default and effect-driven behavior as an opt-in.
+
+Commits `88d30bc`, `c18c18d`, `905aaf1`, `3d16406`, and `711ba83` corrected
+those paths. A second current-source trace found no remaining reachable Order 2
+defect. The corrected final gate passed 1,330 tests (1,150 Framework, 173
+DemoHost, and 7 ContentValidator), zero skipped tests, zero-warning builds,
+every DemoHost mode, active content validation, and the real Godot 4.7.1
+headless smoke. The implementation capability is complete; O2-C7 is
+`written_pending_owner_confirmation`, so only documentation-matrix
+promotion remains.
 
 ## Explicit Boundaries
 

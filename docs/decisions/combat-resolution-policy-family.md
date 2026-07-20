@@ -4,7 +4,9 @@
 
 **Decision date:** 19 July 2026
 
-**Implementation state:** O2-C1 through O2-C7 implemented; independent-review corrections O2-R1 through O2-R6 pending
+**Implementation state:** O2-C1 through O2-C7 and independent-review
+corrections O2-R1 through O2-R6 implemented and source-verified; audience
+confirmation pending
 
 ## Context
 

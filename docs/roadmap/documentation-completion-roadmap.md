@@ -153,7 +153,10 @@ mechanics or extension decisions. The project owner confirmed those decisions
 on 19 July 2026 in the normative
 [Combat Resolution Policy Family](../decisions/combat-resolution-policy-family.md).
 Implementation is now governed by the
-[Order 2 Combat Resolution Roadmap](combat-resolution-order-2-roadmap.md).
+[Order 2 Combat Resolution Roadmap](combat-resolution-order-2-roadmap.md). A
+second independent review found five additional correction subjects; all are
+now implemented and source-verified through the
+[Order 2 Corrections Roadmap](combat-resolution-order-2-corrections-roadmap.md).
 
 Current checkpoints:
 
@@ -169,11 +172,13 @@ Current checkpoints:
 | O2-D4 | `confirmed` | Configurable instant-defeat resistance multipliers and one explicit roll. |
 | O2-D5 | `confirmed` | Sequential staged multi-hit mutation and immutable hit/target evidence. |
 | O2-D6 | `confirmed` | Configurable probability bounds with neutral supplied defaults of `0..100`. |
-| O2-DOC | `written_pending_owner_confirmation` | All three audience documents match corrected source; project-owner confirmation remains. |
+| O2-DOC | `written_pending_owner_confirmation` | All three audience documents match the second corrected source trace; project-owner confirmation remains. |
 
 The `combat_resolution` implementation is now `complete`. Its mechanics,
 developer, and technical documentation remains `existing_unreviewed` until the
-project owner confirms the final explanation. The active pages are accurate
+project owner confirms the final explanation. The active pages now include the
+shared random boundary, authored unified charge, committed-hit Critical rule,
+strict combat vocabulary, and source-aware item outcomes. They are accurate
 source-reviewed evidence, but owner confirmation is still required by the
 documentation promotion rule.
 

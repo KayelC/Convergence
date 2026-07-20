@@ -7,8 +7,9 @@ This roadmap reopens Order 2 after the independent source review of 20 July
 checkpoint and records the project owner's decision for offensive-item turn
 behavior.
 
-The current implementation remains usable, but Order 2 is not considered
-verified again until every checkpoint and the final source-first review pass.
+All correction checkpoints are now implemented and source-verified. Order 2's
+implementation is complete again; its three audience documents remain subject
+to the normal project-owner confirmation gate.
 
 ## Authority
 
@@ -41,7 +42,7 @@ turn cost is fixed.
 
 ### O2-R0: Correction authority and owner decision
 
-**State:** in progress
+**State:** verified
 
 - Preserve the independent review under `docs/reviews`.
 - Record the confirmed offensive-item decision in the combat policy decision.
@@ -52,7 +53,7 @@ turn cost is fixed.
 
 ### O2-R1: Validate every Framework-supplied random draw
 
-**State:** pending
+**State:** verified
 
 - Add one internal host-random contract helper for unit and half-open integer
   draws.
@@ -67,7 +68,7 @@ turn cost is fixed.
 
 ### O2-R2: Complete unified-charge authoring
 
-**State:** pending
+**State:** verified
 
 - Add the neutral `general` charge value to schema v5.
 - Reject undefined programmatic charge kinds during semantic validation.
@@ -80,7 +81,7 @@ turn cost is fixed.
 
 ### O2-R3: Derive Critical from committed sequential hits
 
-**State:** pending
+**State:** verified
 
 - Keep ordered evidence for every pre-resolved hit.
 - Exclude hits skipped after target defeat from the action Critical flag.
@@ -92,7 +93,7 @@ turn cost is fixed.
 
 ### O2-R4: Close public combat vocabulary boundaries
 
-**State:** pending
+**State:** verified
 
 - Reject undefined damage element, affinity, hit distribution, critical mode,
   charge kind, and resistance values at the earliest owning boundary.
@@ -103,7 +104,7 @@ turn cost is fixed.
 
 ### O2-R5: Make item outcome behavior policy-owned
 
-**State:** pending
+**State:** verified
 
 - Add an immutable action-outcome request carrying source kind and effects.
 - Preserve the existing aggregation method as a compatibility path for current
@@ -121,7 +122,7 @@ turn cost is fixed.
 
 ### O2-R6: Verification and documentation reconciliation
 
-**State:** pending
+**State:** verified
 
 - Conduct a fresh source-first review of the corrected paths.
 - Update the independent and original completion reviews with exact correction
@@ -131,6 +132,27 @@ turn cost is fixed.
 - Record exact test, build, schema, host, and documentation results.
 
 **Commit:** `docs: verify combat resolution corrections`
+
+## Completion Record
+
+| Checkpoint | Commit | Full-suite result after checkpoint |
+|---|---|---:|
+| O2-R0 | `4a91a70` | planning authority established |
+| O2-R1 | `88d30bc` | 1,308 passed |
+| O2-R2 | `c18c18d` | 1,311 passed |
+| O2-R3 | `905aaf1` | 1,314 passed |
+| O2-R4 | `3d16406` | 1,316 passed |
+| O2-R5 | `711ba83` | 1,330 passed |
+| O2-R6 | this documentation checkpoint | 1,330 passed |
+
+The post-correction source trace found no remaining reachable defect in the
+reviewed Order 2 paths. The final gate reported 1,150 Framework tests, 173
+DemoHost tests, and 7 ContentValidator tests, with zero failures or skips.
+Framework and complete-solution Release builds reported zero warnings. All
+five DemoHost modes passed, the content validator accepted 6 packs, 36
+documents, and 98 qualified definitions, Framework coverage measured 90.27%
+lines / 75.18% branches, and the real local Godot 4.7.1 headless smoke emitted
+`CONVERGENCE_GODOT_SMOKE_OK`.
 
 ## Quality Gate Per Checkpoint
 

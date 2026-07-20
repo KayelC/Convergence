@@ -148,17 +148,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/combat-defenses-and-turns.md"],
-        "reason": "Current source and formulas were reviewed and corrected; the completed mechanics page awaits project-owner confirmation."
+        "reason": "The twice-reviewed mechanics page covers corrected random, charge, committed-hit, vocabulary, and source-aware item rules; project-owner confirmation remains."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/combat-resolution-policies.md"],
-        "reason": "The source-reviewed policy binding and evidence guide awaits project-owner confirmation."
+        "reason": "The source-reviewed policy guide covers source-aware item configuration and the shared random contract; project-owner confirmation remains."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/combat-resolution-pipeline.md"],
-        "reason": "The source-reviewed pipeline and state diagrams await project-owner confirmation."
+        "reason": "The second source review reconciled the pipeline, atomic item outcome ordering, and correction evidence; project-owner confirmation remains."
       }
     },
     {

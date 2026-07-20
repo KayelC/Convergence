@@ -65,7 +65,7 @@ sequenceDiagram
         O->>O: Record immutable hit evidence
     end
     O->>P: Complete matching charge once for outer action
-    S->>P: Aggregate one turn-economy resolution
+    S->>P: Aggregate source kind and effects into one turn result
     S->>T: Commit accepted staged state
     S-->>A: Typed effects, evidence, costs, and turn result
     A-->>H: Immutable BattleActionExecutionResult
@@ -98,13 +98,14 @@ of the supplied Order 2 probability or damage policies read it.
 
 ## Random Boundary
 
-`IRandomSource` is host-owned. Every consumer must validate its promised range
-at the point where the value becomes authoritative:
+`IRandomSource` is host-owned. Every Framework-supplied consumer routes a draw
+through the internal validated random boundary before the value becomes
+authoritative:
 
-| Method | Required range | Current combat uses |
+| Method | Required range | Supplied Framework uses |
 |---|---|---|
 | `NextUnitDecimal()` | `[0, 1)` | hit, critical, instant defeat, ailment, variance, initiative, rewards |
-| `NextInt32(min, max)` | `[min, max)` | variable hit count and host/policy selection |
+| `NextInt32(min, max)` | `[min, max)` | hit count, negotiation, lifecycle, progression, and fusion selection |
 
 Zero- and one-hundred-percent outcomes do not consume a random unit. Variable
 hit count validates the returned integer offset before adding it to the
@@ -136,8 +137,9 @@ charge removal along with other actor mutations.
 
 ## Outcome Aggregation
 
-`IActionOutcomeAggregationPolicy` receives the ordered immutable effect result
-list. The supplied policy applies this precedence:
+`IActionOutcomeAggregationPolicy` receives an immutable request containing the
+action source kind and ordered effect result list. For Skill, BasicAttack, and
+effect-driven Item requests, the supplied policy applies this precedence:
 
 1. first Repel or Absorb interrupts and terminates the phase;
 2. any Null applies the Null result;
@@ -151,9 +153,17 @@ Typed custom effects without damage evidence may still use a Miss outcome for
 compatibility. A failed ailment or instant-defeat probability reports normal
 no effect and does not masquerade as damage evasion.
 
+For Item requests, the supplied configuration defaults to Normal regardless of
+those effect facts. `itemActionOutcomeBehavior: "effect_driven"` opts into the
+precedence above. A normal-cost item returns no action-level Critical reward or
+phase termination but does not alter any `EffectExecutionResult`. Escape items keep
+their explicit no-turn path.
+
 The policy returns a neutral `TurnEconomyResolution`. `IBattleTurnEconomy`
 decides what that means for its own state. Action Token is one consumer, not a
-dependency of damage execution.
+dependency of damage execution. The original list-only aggregation method is
+retained as a compatibility dispatch for existing custom policy
+implementations.
 
 ## Atomicity And Failure
 

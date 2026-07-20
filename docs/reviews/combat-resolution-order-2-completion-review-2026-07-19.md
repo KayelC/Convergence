@@ -8,7 +8,9 @@
 implementation proof
 
 **Subsequent status:** an independent source review on 20 July 2026 reopened
-Order 2 for focused corrections. See the
+Order 2 for focused corrections. Those corrections are now implemented and
+source-verified; see the post-correction record at the end of this document,
+the
 [independent review](combat-resolution-order-2-independent-review-2026-07-20.md)
 and [correction roadmap](../roadmap/combat-resolution-order-2-corrections-roadmap.md).
 The completion conclusions below remain evidence for the revision reviewed on
@@ -153,3 +155,36 @@ Consumer, developer, and technical documentation has been written from this
 trace. It remains `existing_unreviewed` until the project owner confirms the
 plain-language behavior. That owner confirmation, not this report alone, closes
 O2-C7.
+
+## Second Correction And Verification Pass
+
+The first completion review's R2 correction was real but incomplete: it
+validated several combat/reward random consumers without proving every
+Framework-owned draw. The independent review found the remaining negotiation,
+lifecycle, progression, and fusion paths. Current source now routes every
+supplied random call through one validated internal contract, backed by a
+source-boundary guard.
+
+The same independent pass exposed four additional correctness or contract
+gaps, now corrected in isolated commits:
+
+- `c18c18d` makes the supplied unified charge policy authorable as `general`;
+- `905aaf1` prevents skipped post-defeat critical attempts from earning an
+  action-level benefit;
+- `3d16406` rejects undefined combat vocabulary consistently at public and
+  semantic-validation boundaries; and
+- `711ba83` makes item turn outcomes source-aware and policy-owned, with normal
+  cost as the supplied default and `effect_driven` as an authored opt-in.
+
+The last correction resolves item outcomes before inventory or actor commit.
+A custom outcome-policy exception therefore returns typed rejection, restores
+the reservation, and leaves live actor state unchanged. Skills and basic
+attacks retain effect-driven outcomes, and per-effect item evidence remains
+truthful even when the complete item action costs one normal turn.
+
+A fresh current-source review found no remaining reachable defect in the Order
+2 scope. The final gate passed 1,330 tests (1,150 Framework, 173 DemoHost, and 7
+ContentValidator), zero skipped tests, zero-warning strict builds, all five
+DemoHost modes, active-content validation, and the real Godot 4.7.1 headless
+smoke. Order 2's implementation is complete again. Audience-document promotion
+still waits for project-owner confirmation under the documentation process.

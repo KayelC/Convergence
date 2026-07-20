@@ -44,11 +44,14 @@ weapon basic attacks to declare critical behavior.
 
 Every attempted damage hit now carries immutable accuracy, critical, affinity,
 charge, damage, and applied-resource evidence. Landed hits mutate staged actor
-state sequentially, and a replaceable action policy derives one turn-economy
-result from the complete effect set. Authored binding returns a coherent neutral
-combat aggregate: the hit, critical, and instant-defeat authorities it exposes
-are the same authorities its executors call. The code capability is complete;
-its three documentation views remain pending project-owner confirmation.
+state sequentially, and only committed critical hits affect the action result.
+A source-aware action policy derives one turn-economy result from the complete
+effect set: supplied items use normal cost by default while effect-driven item
+behavior is an authored option. Authored binding returns a coherent neutral
+combat aggregate, unified charge is authorable, public combat vocabulary is
+validated, and all supplied random draws cross one checked host boundary. The
+code capability is complete; its three documentation views remain pending
+project-owner confirmation.
 
 ## Authority
 
