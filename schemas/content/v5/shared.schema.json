@@ -437,7 +437,7 @@
           "type": "object", "required": ["charge", "multiplier"],
           "properties": {
             "type": { "const": "grant_charge" },
-            "charge": { "enum": ["physical", "magical"] },
+            "charge": { "enum": ["physical", "magical", "general"] },
             "multiplier": { "type": "number" },
             "duration": { "$ref": "#/$defs/duration" }
           }

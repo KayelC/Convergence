@@ -1363,6 +1363,11 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     }
                     break;
                 case GrantChargeEffectDefinition charge:
+                    if (!Enum.IsDefined(charge.Charge))
+                    {
+                        Add(source, path + ".charge", ContentValidationErrorCode.ShapeInvalid,
+                            "Charge kind must be a defined framework value.");
+                    }
                     RequirePositive(source, charge.Multiplier, path + ".multiplier", "Charge multiplier");
                     if (charge.Duration is not null)
                     {

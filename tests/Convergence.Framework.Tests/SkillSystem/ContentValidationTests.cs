@@ -320,6 +320,22 @@ public sealed class ContentValidationTests
     }
 
     [Fact]
+    public void GrantCharge_RejectsUndefinedProgrammaticChargeKind()
+    {
+        SkillDefinition skill = ActiveSkill(
+            "invalid_charge_kind",
+            [new GrantChargeEffectDefinition((ChargeKind)int.MaxValue, 2m)]);
+
+        ContentValidationResult result = _validator.Validate(Request(
+            ComprehensiveRegistrations(),
+            skills: [skill]));
+
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.skills[0].effects[0].charge" &&
+            error.Code == ContentValidationErrorCode.ShapeInvalid);
+    }
+
+    [Fact]
     public void MeaningfulOperandsCompositeConditionsAndAlmightyAffinitiesAreRequired()
     {
         SkillDefinition active = ActiveSkill(

@@ -203,6 +203,7 @@ public sealed class ContentSchemaContractTests
             """{"type":"remove_ailment","scope":"selected","ailmentIds":["poison"]}""",
             """{"type":"modify_stat_stage","modifierTrackIds":["attack"],"stageDelta":1,"duration":{"type":"turns","value":3,"tick":"owner_turn_end","suspendWhileReserve":true}}""",
             """{"type":"grant_charge","charge":"physical","multiplier":2.0,"duration":{"type":"battle"}}""",
+            """{"type":"grant_charge","charge":"general","multiplier":2.0,"duration":{"type":"battle"}}""",
             """{"type":"grant_shield","shield":"magical","duration":{"type":"turns","value":1,"tick":"owner_turn_end","suspendWhileReserve":false}}""",
             """{"type":"break_affinity","elementIds":["fire"],"duration":{"type":"battle"}}""",
             """{"type":"override_affinity","elementIds":["ice"],"affinityId":"repel","duration":{"type":"battle"}}""",

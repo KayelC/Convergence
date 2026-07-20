@@ -122,6 +122,60 @@ public sealed class ChargePolicyTests
     }
 
     [Fact]
+    public void AuthoredGeneralCharge_DeserializesAndExecutesThroughUnifiedPolicy()
+    {
+        const string json =
+            """
+            {
+              "schemaVersion": 5,
+              "skills": [{
+                "id": "unified_focus",
+                "displayName": "Unified Focus",
+                "description": "Grants one general charge.",
+                "activation": "active",
+                "menuGroup": "utility",
+                "inheritanceGroupId": "utility",
+                "inheritance": { "isInheritable": true },
+                "targeting": {
+                  "relation": "self",
+                  "selection": "single",
+                  "lifeState": "alive",
+                  "allowSelf": true
+                },
+                "availability": { "contexts": ["battle"] },
+                "effects": [{
+                  "type": "grant_charge",
+                  "charge": "general",
+                  "multiplier": 2.25,
+                  "duration": { "type": "battle" }
+                }]
+              }]
+            }
+            """;
+        SkillDefinition skill = Assert.Single(
+            new SkillSystemJsonDeserializer().DeserializeSkills(json, "unified-charge.skills.json").Records);
+        GrantChargeEffectDefinition effect = Assert.IsType<GrantChargeEffectDefinition>(
+            Assert.Single(skill.Effects));
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        var policy = new UnifiedChargePolicy();
+
+        ChargeApplicationResult application = policy.Apply(new ChargeApplicationRequest(
+            actor,
+            effect.Charge,
+            effect.Multiplier,
+            effect.Duration));
+
+        Assert.True(application.Applied);
+        Assert.Equal(ChargeKind.General, Assert.Single(actor.Charges).Key);
+        Assert.Equal(2.25m, policy.ResolveDamageModifier(actor, DamageElement.Physical).Multiplier);
+        Assert.Equal(2.25m, policy.ResolveDamageModifier(actor, DamageElement.Ice).Multiplier);
+        Assert.Equal(
+            [ChargeKind.General],
+            policy.CompleteAction(actor, [DamageElement.Physical, DamageElement.Ice]).ConsumedChargeKinds);
+        Assert.Empty(actor.Charges);
+    }
+
+    [Fact]
     public void PolicyMismatch_IsRejectedAndRetainedPolicyOwnershipPersistsAfterConsumption()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam);
