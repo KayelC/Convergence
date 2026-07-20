@@ -168,7 +168,6 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                 damageHits: misses);
         }
 
-        bool critical = hits.Any(hit => hit.Hit && hit.Critical);
         switch (affinity)
         {
             case ElementalAffinity.Null:
@@ -201,7 +200,6 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                     target,
                     hits,
                     affinity,
-                    critical,
                     attackModifierContext,
                     defenseModifierContext);
         }
@@ -213,7 +211,6 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
         RuntimeActorState target,
         IReadOnlyList<DamageHitResolution> hits,
         ElementalAffinity affinity,
-        bool critical,
         RuleModifierContext attackModifierContext,
         RuleModifierContext defenseModifierContext)
     {
@@ -221,6 +218,7 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
         var changes = new List<ExecutionResourceChange>();
         var evidence = new List<DamageHitExecutionEvidence>(hits.Count);
         decimal totalDealt = 0m;
+        bool committedCritical = false;
 
         foreach (DamageHitResolution hit in hits)
         {
@@ -229,6 +227,8 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                 evidence.Add(Evidence(context, target, hit, affinity));
                 continue;
             }
+
+            committedCritical |= hit.Critical;
 
             decimal amount = ResolveHitDamage(
                 context,
@@ -258,12 +258,12 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
 
         TurnEconomyOutcome outcome = affinity == ElementalAffinity.Weak
             ? TurnEconomyOutcome.Weakness
-            : critical ? TurnEconomyOutcome.Critical : TurnEconomyOutcome.Normal;
+            : committedCritical ? TurnEconomyOutcome.Critical : TurnEconomyOutcome.Normal;
         return Success(
             context,
             totalDealt,
             turnEconomy: outcome,
-            critical: critical,
+            critical: committedCritical,
             passiveActivations: Array.AsReadOnly(activations.ToArray()),
             resolvedAffinity: affinity,
             resourceChanges: Array.AsReadOnly(changes.ToArray()),

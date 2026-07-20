@@ -21,8 +21,7 @@ public sealed class StandardActionOutcomeAggregationPolicy : IActionOutcomeAggre
             throw new ArgumentException("Action outcome collections cannot contain null results.", nameof(effects));
         }
 
-        bool anyCritical = effects.Any(effect =>
-            effect.IsCritical || effect.DamageHits.Any(hit => hit.Critical));
+        bool anyCritical = effects.Any(effect => effect.IsCritical);
         EffectExecutionResult? interruption = effects.FirstOrDefault(effect =>
             effect.TurnEconomyOutcome is TurnEconomyOutcome.Repel or TurnEconomyOutcome.Absorb);
         if (interruption is not null)

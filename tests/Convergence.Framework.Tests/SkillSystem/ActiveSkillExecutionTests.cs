@@ -317,6 +317,67 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_DoesNotGrantCriticalOutcomeForHitSkippedAfterTargetDefeat()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 10m);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new ChanceCriticalDefinition(100),
+                new HitCountDefinition(2, 2))
+        ]);
+        BattleExecutionServices services = Services(damage: _ =>
+        [
+            new DamageHitResolution(true, 10m, critical: false),
+            new DamageHitResolution(true, 10m, critical: true)
+        ]);
+
+        SkillExecutionResult result = new SkillExecutor(services).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(SkillExecutionStatus.Executed, result.Status);
+        Assert.Equal(TurnEconomyOutcome.Normal, result.TurnEconomy.Outcome);
+        Assert.False(result.TurnEconomy.AnyCritical);
+        Assert.False(effect.IsCritical);
+        Assert.Equal([false, true], effect.DamageHits.Select(hit => hit.Critical));
+        Assert.Equal(-10m, effect.DamageHits[0].AppliedResourceDelta);
+        Assert.Null(effect.DamageHits[1].AffectedActorId);
+        Assert.Equal(0m, effect.DamageHits[1].AppliedResourceDelta);
+    }
+
+    [Fact]
+    public void Execute_GrantsCriticalOutcomeForCommittedZeroDamageCriticalHit()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new ChanceCriticalDefinition(100),
+                FixedHits())
+        ]);
+        BattleExecutionServices services = Services(
+            damage: _ => [new DamageHitResolution(true, 0m, critical: true)]);
+
+        SkillExecutionResult result = new SkillExecutor(services).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(TurnEconomyOutcome.Critical, result.TurnEconomy.Outcome);
+        Assert.True(result.TurnEconomy.AnyCritical);
+        Assert.True(effect.IsCritical);
+        Assert.Equal(100m, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public void Execute_DamageEvidencePreservesPolicyAuthoredAccuracyCriticalAffinityAndChargeFacts()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam);

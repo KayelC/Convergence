@@ -119,6 +119,23 @@ public sealed class ActionOutcomeAggregationPolicyTests
         Assert.Equal(TurnEconomyOutcome.Miss, _policy.Aggregate([customMiss]).Outcome);
     }
 
+    [Fact]
+    public void Aggregate_DoesNotInferCommittedCriticalFromEvidenceAlone()
+    {
+        var skippedCriticalEvidence = new EffectExecutionResult(
+            0,
+            FirstTarget,
+            EffectExecutionOutcome.Success,
+            TurnEconomyOutcome.Normal,
+            IsCritical: false,
+            DamageHits: [Hit(FirstTarget, 0, true, critical: true)]);
+
+        TurnEconomyResolution result = _policy.Aggregate([skippedCriticalEvidence]);
+
+        Assert.Equal(TurnEconomyOutcome.Normal, result.Outcome);
+        Assert.False(result.AnyCritical);
+    }
+
     private static EffectExecutionResult DamageEffect(
         RuntimeInstanceId targetId,
         TurnEconomyOutcome outcome,
