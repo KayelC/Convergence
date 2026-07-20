@@ -178,6 +178,34 @@ public sealed class FrameworkBoundaryTests
     }
 
     [Fact]
+    public void FrameworkRandomConsumers_UseTheSharedHostOutputGuard()
+    {
+        string frameworkRoot = RepositoryPath("src", "Convergence.Framework");
+        string guardPath = NormalizePath(Path.Combine("Internal", "RandomSourceContract.cs"));
+
+        foreach (string file in Directory.EnumerateFiles(frameworkRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
+                file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string relativePath = NormalizePath(Path.GetRelativePath(frameworkRoot, file));
+            if (relativePath == guardPath)
+            {
+                continue;
+            }
+
+            string source = File.ReadAllText(file)
+                .Replace("RandomSourceContract.NextInt32(", string.Empty, StringComparison.Ordinal)
+                .Replace("RandomSourceContract.NextUnitDecimal(", string.Empty, StringComparison.Ordinal);
+            Assert.DoesNotContain(".NextInt32(", source, StringComparison.Ordinal);
+            Assert.DoesNotContain(".NextUnitDecimal(", source, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void FrameworkPublicApi_IsVersionedDocumentedAndBaselineGuarded()
     {
         Assembly framework = typeof(ContentId).Assembly;

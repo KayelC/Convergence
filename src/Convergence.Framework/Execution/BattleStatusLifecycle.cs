@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Convergence.Content;
 using Convergence.Hosting;
 using Convergence.Battle;
+using Convergence.Internal;
 using Convergence.Runtime;
 
 namespace Convergence.Execution;
@@ -1015,7 +1016,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         ChanceSkipOrFleeAilmentTurnBehaviorDefinition fear,
         bool canRecallToRoster)
     {
-        int roll = _random.NextInt32(0, 100);
+        int roll = RandomSourceContract.NextInt32(_random, 0, 100);
         if (roll < fear.FleeChance)
         {
             return canRecallToRoster && fear.CompanionFleeOutcome == CompanionFleeOutcome.RecallToRoster
@@ -1028,7 +1029,8 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
             : BattleTurnStartOutcome.CanAct;
     }
 
-    private bool Roll(int chance) => _random.NextInt32(0, 100) < Math.Clamp(chance, 0, 100);
+    private bool Roll(int chance) =>
+        RandomSourceContract.NextInt32(_random, 0, 100) < Math.Clamp(chance, 0, 100);
 
     private static void ExecuteAilmentTriggers(
         BattleTurnEndLifecycleRequest request,

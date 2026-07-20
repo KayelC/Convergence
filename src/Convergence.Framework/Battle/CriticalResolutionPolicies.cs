@@ -1,6 +1,7 @@
 using Convergence.Content;
 using Convergence.Execution;
 using Convergence.Hosting;
+using Convergence.Internal;
 
 namespace Convergence.Battle;
 
@@ -279,11 +280,7 @@ public abstract class CriticalChancePolicyBase : ICriticalChancePolicy
             return Result(null, true);
         }
 
-        decimal unit = _random.NextUnitDecimal();
-        if (unit is < 0m or >= 1m)
-        {
-            throw new InvalidOperationException("Random sources must return unit decimals within [0, 1).");
-        }
+        decimal unit = RandomSourceContract.NextUnitDecimal(_random);
         decimal roll = CombatArithmetic.SaturatingMultiply(unit, 100m);
         return Result(roll, roll < finalChance);
 

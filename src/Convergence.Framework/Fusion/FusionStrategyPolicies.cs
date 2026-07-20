@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Convergence.Content;
 using Convergence.Hosting;
+using Convergence.Internal;
 
 namespace Convergence.Fusion;
 
@@ -176,7 +177,7 @@ public sealed class PercentageFusionAccidentPolicy : IFusionAccidentPolicy
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(random);
         return _chancePercent == 100 ||
-            _chancePercent > 0 && random.NextInt32(0, 100) < _chancePercent;
+            _chancePercent > 0 && RandomSourceContract.NextInt32(random, 0, 100) < _chancePercent;
     }
 }
 
@@ -214,7 +215,8 @@ public sealed class ContextualPercentageFusionAccidentPolicy : IFusionAccidentPo
         int chance = request.Context.TryGetNumericValue(_contextValueId, out decimal value) && value == _matchingValue
             ? _matchingChancePercent
             : _defaultChancePercent;
-        return chance == 100 || chance > 0 && random.NextInt32(0, 100) < chance;
+        return chance == 100 ||
+            chance > 0 && RandomSourceContract.NextInt32(random, 0, 100) < chance;
     }
 }
 
@@ -248,14 +250,14 @@ public sealed class AdjacentTierFusionMutationPolicy : IFusionMutationPolicy
         ArgumentNullException.ThrowIfNull(random);
 
         if (_chancePercent == 0 ||
-            _chancePercent < 100 && random.NextInt32(0, 100) >= _chancePercent ||
+            _chancePercent < 100 && RandomSourceContract.NextInt32(random, 0, 100) >= _chancePercent ||
             !request.Content.TryGetSkill(request.SkillId, out SkillDefinition? current) ||
             current?.Mutation is null)
         {
             return request.SkillId;
         }
 
-        int direction = random.NextInt32(0, 2) == 0 ? 1 : -1;
+        int direction = RandomSourceContract.NextInt32(random, 0, 2) == 0 ? 1 : -1;
         if (current.Mutation.Tier == 1 && direction == -1)
         {
             direction = 1;

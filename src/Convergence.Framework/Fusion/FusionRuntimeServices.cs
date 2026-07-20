@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Convergence.Content;
 using Convergence.Hosting;
 using Convergence.Inheritance;
+using Convergence.Internal;
 using Convergence.Runtime;
 using static Convergence.Fusion.FusionRuntimeCollections;
 
@@ -1138,7 +1139,7 @@ public sealed class FusionPlanningService : IFusionPlanningService
             .Select(candidate => candidate.Skill)
             .DistinctBy(skill => skill.Id)
             .Select(skill => new KeyValuePair<int, SkillDefinition>(
-                _random.NextInt32(0, int.MaxValue),
+                RandomSourceContract.NextInt32(_random, 0, int.MaxValue),
                 skill))
             .OrderBy(pair => pair.Key)
             .Select(pair => pair.Value)

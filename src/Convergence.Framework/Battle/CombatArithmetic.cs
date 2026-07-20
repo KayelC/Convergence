@@ -133,15 +133,4 @@ internal static class CombatArithmetic
 
         return decimal.ToInt32(floored);
     }
-
-    public static decimal RequireUnitInterval(decimal value)
-    {
-        if (value is < 0m or >= 1m)
-        {
-            throw new InvalidOperationException(
-                $"Random sources must return unit decimals within [0, 1); received '{value}'.");
-        }
-
-        return value;
-    }
 }

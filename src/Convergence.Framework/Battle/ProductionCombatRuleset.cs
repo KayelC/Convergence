@@ -1,6 +1,7 @@
 using Convergence.Content;
 using Convergence.Hosting;
 using Convergence.Execution;
+using Convergence.Internal;
 using Convergence.Runtime;
 
 namespace Convergence.Battle;
@@ -173,7 +174,7 @@ public sealed class StandardBattleInitiativeRollPolicy : IBattleInitiativeRollPo
             Config.VarianceMinimum,
             CombatArithmetic.SaturatingMultiply(
                 Config.VarianceMaximum - Config.VarianceMinimum,
-                CombatArithmetic.RequireUnitInterval(_random.NextUnitDecimal())));
+                RandomSourceContract.NextUnitDecimal(_random)));
 }
 
 public sealed record ProductionCombatStats(
@@ -921,12 +922,7 @@ public sealed class ProductionCombatRuleset :
         }
 
         int width = checked((int)(((long)hits.Maximum - hits.Minimum) + 1L));
-        int offset = _random.NextInt32(0, width);
-        if (offset is < 0 || offset >= width)
-        {
-            throw new InvalidOperationException(
-                $"Random sources must return integers within [0, {width}); received '{offset}'.");
-        }
+        int offset = RandomSourceContract.NextInt32(_random, 0, width);
 
         return checked(hits.Minimum + offset);
     }
@@ -943,7 +939,7 @@ public sealed class ProductionCombatRuleset :
         }
 
         return CombatArithmetic.SaturatingMultiply(
-            CombatArithmetic.RequireUnitInterval(_random.NextUnitDecimal()),
+            RandomSourceContract.NextUnitDecimal(_random),
             100m) < chance;
     }
 
@@ -951,7 +947,7 @@ public sealed class ProductionCombatRuleset :
         CombatArithmetic.SaturatingAdd(
             minimum,
             CombatArithmetic.SaturatingMultiply(
-                CombatArithmetic.RequireUnitInterval(_random.NextUnitDecimal()),
+                RandomSourceContract.NextUnitDecimal(_random),
                 CombatArithmetic.SaturatingSubtract(maximum, minimum)));
 
     private static ElementalAffinity NormalizeGuardedAffinity(ElementalAffinity affinity, bool isGuarding) =>

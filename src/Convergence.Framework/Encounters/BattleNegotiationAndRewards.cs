@@ -1,6 +1,7 @@
 using Convergence.Content;
 using Convergence.Hosting;
 using Convergence.Battle;
+using Convergence.Internal;
 
 namespace Convergence.Encounters;
 
@@ -432,7 +433,7 @@ public sealed class NegotiationSessionService : INegotiationSessionService
         for (int i = 0; i < _policy.QuestionLimit && questions.Count > 0; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            int questionIndex = _random.NextInt32(0, questions.Count);
+            int questionIndex = RandomSourceContract.NextInt32(_random, 0, questions.Count);
             cancellationToken.ThrowIfCancellationRequested();
             NegotiationQuestionPrompt question = questions[questionIndex];
             questions.RemoveAt(questionIndex);
@@ -506,7 +507,11 @@ public sealed class NegotiationSessionService : INegotiationSessionService
         else if (request.FamiliarDialogueLines.Count > 0)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            dialogue = $"{request.TargetName}: \"{request.FamiliarDialogueLines[_random.NextInt32(0, request.FamiliarDialogueLines.Count)]}\"";
+            int dialogueIndex = RandomSourceContract.NextInt32(
+                _random,
+                0,
+                request.FamiliarDialogueLines.Count);
+            dialogue = $"{request.TargetName}: \"{request.FamiliarDialogueLines[dialogueIndex]}\"";
             cancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -783,7 +788,7 @@ public sealed class NegotiationSessionService : INegotiationSessionService
                 "Authored negotiation demand weights must have a positive aggregate within the supported numeric domain.");
         }
 
-        int roll = _random.NextInt32(0, totalWeight);
+        int roll = RandomSourceContract.NextInt32(_random, 0, totalWeight);
         long cumulative = 0;
         foreach (NegotiationRuntimeDemand demand in demands)
         {
@@ -1042,7 +1047,7 @@ public sealed class StandardBattleRewardYieldPolicy : IBattleRewardYieldPolicy
             Config.CurrencyVarianceMinimum,
             CombatArithmetic.SaturatingMultiply(
                 Config.CurrencyVarianceMaximum - Config.CurrencyVarianceMinimum,
-                CombatArithmetic.RequireUnitInterval(_random.NextUnitDecimal())));
+                RandomSourceContract.NextUnitDecimal(_random)));
         return CombatArithmetic.SaturatingFloorToInt(CombatArithmetic.SaturatingMultiply(
             CombatArithmetic.SaturatingAdd(baseCurrency, luckBonus),
             variance));

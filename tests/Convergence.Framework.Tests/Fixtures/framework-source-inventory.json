@@ -458,6 +458,11 @@
       "publicSurface": "internal_only"
     },
     {
+      "path": "Internal/RandomSourceContract.cs",
+      "owner": "internal_shared",
+      "publicSurface": "internal_only"
+    },
+    {
       "path": "Knowledge/CombatKnowledgeStores.cs",
       "owner": "combat_knowledge",
       "publicSurface": "exported"

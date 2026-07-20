@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Convergence.Content;
 using Convergence.Hosting;
+using Convergence.Internal;
 using static Convergence.Runtime.ProgressionCollections;
 
 namespace Convergence.Runtime;
@@ -621,7 +622,10 @@ public sealed class StandardLevelGrowthPolicy : ILevelGrowthPolicy
                      increaseIndex++)
                 {
                     ContentId stat = StandardProgressionIds.CoreStats[
-                        request.RandomSource.NextInt32(0, StandardProgressionIds.CoreStats.Count)];
+                        RandomSourceContract.NextInt32(
+                            request.RandomSource,
+                            0,
+                            StandardProgressionIds.CoreStats.Count)];
                     decimal current = baseStats.GetValueOrDefault(stat);
                     decimal increase = current < _statCap ? 1m : 0m;
                     if (increase > 0)
@@ -638,8 +642,8 @@ public sealed class StandardLevelGrowthPolicy : ILevelGrowthPolicy
                 Dictionary<ContentId, decimal> baseResourceIncreases = [];
                 if (request.GrowthProfile.GrowsBaseResources)
                 {
-                    decimal hpIncrease = request.RandomSource.NextInt32(6, 11);
-                    decimal spIncrease = request.RandomSource.NextInt32(3, 8);
+                    decimal hpIncrease = RandomSourceContract.NextInt32(request.RandomSource, 6, 11);
+                    decimal spIncrease = RandomSourceContract.NextInt32(request.RandomSource, 3, 8);
                     baseResources[StandardProgressionIds.Hp] = checked(
                         baseResources.GetValueOrDefault(StandardProgressionIds.Hp) + hpIncrease);
                     baseResources[StandardProgressionIds.Sp] = checked(
