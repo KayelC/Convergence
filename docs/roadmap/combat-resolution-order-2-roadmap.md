@@ -6,6 +6,12 @@
 
 **Capability:** `combat_resolution`
 
+**Correction status:** reopened on 20 July 2026. The active correction sequence
+is governed by the
+[Order 2 Corrections Roadmap](combat-resolution-order-2-corrections-roadmap.md).
+Completion text later in this record describes the pre-correction revision and
+is not the current verification state.
+
 ## Goal
 
 Complete combat resolution as a framework-owned, policy-composed capability and

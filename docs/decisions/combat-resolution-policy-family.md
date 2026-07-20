@@ -4,7 +4,7 @@
 
 **Decision date:** 19 July 2026
 
-**Implementation state:** O2-C1 through O2-C6 verified; O2-C7 written and pending project-owner confirmation
+**Implementation state:** O2-C1 through O2-C7 implemented; independent-review corrections O2-R1 through O2-R6 pending
 
 ## Context
 
@@ -229,6 +229,23 @@ The supplied Action Token aggregation is:
 
 Passing remains owned by the Action Token economy itself: consume an existing
 partial token first; otherwise convert one full token to one partial token.
+
+### Action source and offensive items
+
+**Confirmed by the project owner on 20 July 2026:** action-outcome aggregation
+is source-aware and policy-owned.
+
+The supplied standard outcome policy derives Skill and basic-attack turn
+results from their typed effects. Its default for Item actions is one normal
+turn regardless of Weak, Critical, Miss, Null, Repel, or Absorb effect facts.
+Those effect facts remain available for presentation and replacement policies;
+the normal item cost does not rewrite or hide the effect result.
+
+A developer may select an effect-driven item configuration or provide another
+action-outcome policy. This distinction belongs to policy composition rather
+than `BattleActionExecutor`, allowing a future bonus-action economy or another
+combat model to interpret offensive items without inheriting Action Token
+assumptions.
 
 ## Alternatives Rejected
 

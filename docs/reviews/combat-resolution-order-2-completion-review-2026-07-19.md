@@ -7,6 +7,13 @@
 **Method:** source-first; roadmaps and earlier reports were not accepted as
 implementation proof
 
+**Subsequent status:** an independent source review on 20 July 2026 reopened
+Order 2 for focused corrections. See the
+[independent review](combat-resolution-order-2-independent-review-2026-07-20.md)
+and [correction roadmap](../roadmap/combat-resolution-order-2-corrections-roadmap.md).
+The completion conclusions below remain evidence for the revision reviewed on
+19 July and are not the current closure decision.
+
 ## Review Standard
 
 A defect was recorded only when the current code showed:
