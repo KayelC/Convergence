@@ -252,7 +252,7 @@ public sealed class DocumentationFoundationTests
 
         Assert.Contains("| O2-C7 | `verified`", roadmap, StringComparison.Ordinal);
         Assert.Contains("revision `e26bdc5`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("O2-R24 through O2-R27", roadmap, StringComparison.Ordinal);
+        Assert.Contains("O2-R24 through O2-R29", roadmap, StringComparison.Ordinal);
         Assert.Contains(
             "combat-resolution-order-2-pre-closure-audit-corrections-roadmap.md",
             roadmap,

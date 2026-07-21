@@ -69,18 +69,16 @@
     },
     {
       "id": "typed_action_and_effect_execution",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["ActiveSkillExecutionTests", "BattleActionExecutorTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": [
-        "Custom effect results can carry undefined execution and turn-economy outcomes into ordered action execution."
-      ]
+      "knownGaps": []
     },
     {
       "id": "combat_resolution",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": [
         "ChargePolicyTests",
         "HitResolutionPolicyTests",
@@ -99,9 +97,7 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": [
-        "Custom effect results can carry undefined execution and turn-economy outcomes into ordered action execution."
-      ]
+      "knownGaps": []
     },
     {
       "id": "turn_economy",
@@ -217,14 +213,12 @@
     },
     {
       "id": "host_contracts",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["FrameworkBoundaryTests", "GodotIntegrationContractTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": [
-        "The supported custom-effect extension port does not reject malformed effect-result outcome values."
-      ]
+      "knownGaps": []
     },
     {
       "id": "authored_schema_contracts",

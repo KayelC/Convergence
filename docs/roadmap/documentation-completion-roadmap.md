@@ -142,7 +142,7 @@ ordered-secondary-effect design, and audience reconciliation. The executable
 matrix now records 17 reviewed, 34 `existing_unreviewed`, 17 missing, and 7
 `not_applicable` entries.
 
-## Reopened Order 2 Implementation Gate
+## Closed Order 2 Implementation Gate
 
 The source-based
 [Combat Resolution Order 2 Review](../reviews/combat-resolution-order-2-source-review-2026-07-19.md)
@@ -178,8 +178,12 @@ omission, O2-R22 corrected it, and the O2-R23 current-source recheck found no
 further reachable defect at revision `e26bdc5`. A subsequent pre-closure audit
 started again from current source and found three narrower discrepancies:
 order-dependent duplicate resource costs, invalid host turn-consumption shapes,
-and a party-size schema/semantic mismatch. Order 2 is therefore reopened under
-the [Pre-Closure Audit Corrections Roadmap](combat-resolution-order-2-pre-closure-audit-corrections-roadmap.md).
+and a party-size schema/semantic mismatch. O2-R24 through O2-R27 corrected and
+rechecked those paths. The post-R27 source trace found one final malformed
+custom-effect result boundary; O2-R28 now rejects it before commit, and O2-R29
+found no remaining reachable defect in the supported scope. Exact closure
+evidence is in the
+[Final Pre-Closure Corrections Review](../reviews/combat-resolution-order-2-final-pre-closure-corrections-review-2026-07-21.md).
 
 Current checkpoints:
 
@@ -195,16 +199,16 @@ Current checkpoints:
 | O2-D4 | `confirmed` | Configurable instant-defeat resistance multipliers and one explicit roll. |
 | O2-D5 | `confirmed` | Sequential staged multi-hit mutation and immutable hit/target evidence. |
 | O2-D6 | `confirmed` | Configurable probability bounds with neutral supplied defaults of `0..100`. |
-| O2-DOC | `reopened` | Existing audience documents remain substantially accurate, but final reconciliation waits for O2-R24 through O2-R27. |
+| O2-DOC | `verified` | Mechanics, developer, and technical documents agree with corrected O2-R24 through O2-R29 source and tests. |
 
 The table records the first implementation cycle; O2-R7 through O2-R16 record
 the complete-action and ordered-secondary-effect correction cycle. O2-R18
 through O2-R20 add bounded hit execution, authored-percentage parity, and the
 resulting audience reconciliation. O2-R22 and O2-R23 record the schema parity
-correction and its revision-specific source closure. O2-R24 through O2-R27 are
-the active pre-closure correction gate. The three `combat_resolution` audience
-entries remain `reviewed` for the confirmed mechanics, but formal Order 2
-closure is withheld until implementation and final synchronization are green.
+correction and its revision-specific source closure. O2-R24 through O2-R29
+record the final pre-closure audit, custom-result correction, and independent
+source verification. The three `combat_resolution` audience entries remain
+`reviewed`, and formal Order 2 implementation/documentation closure is green.
 
 ## Deferred Documentation
 

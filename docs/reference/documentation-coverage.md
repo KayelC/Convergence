@@ -34,8 +34,10 @@ the three audience documents. O2-R22 corrected the schema-only range omission
 found by the first independent recheck. O2-R23 completed a new current-source
 trace and the full release gate without finding another reachable defect at
 revision `e26bdc5`. A later pre-closure audit reopened the implementation gate
-for three narrower cross-contract corrections. The confirmed audience entries
-remain reviewed; final text reconciliation is tracked by O2-R27.
+for three narrower cross-contract corrections. O2-R24 through O2-R27 corrected
+those paths, O2-R28 closed the final custom-effect result boundary found by the
+post-R27 source trace, and O2-R29 completed independent source and release-gate
+verification. The confirmed audience entries remain reviewed and reconciled.
 
 The documentation matrix currently records 75 audience entries: 17 reviewed,
 34 existing_unreviewed, 17 missing, and 7 not_applicable.

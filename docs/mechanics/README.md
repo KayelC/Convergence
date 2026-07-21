@@ -18,9 +18,9 @@ family as used by typed effects; other capability entries remain
 [Documentation Design Pattern](../documentation-design-pattern.md).
 The Order 2 combat pages are owner-confirmed and source-reviewed through
 complete-action aggregation, ordered dependencies, staged life-state checks,
-and secondary damage contact. Their coverage entries remain `reviewed` because
-those confirmed mechanics have not changed. A later implementation audit has
-reopened the Order 2 closure gate for three narrower cross-contract corrections.
+secondary damage contact, and host result validation. The final pre-closure
+correction review found no remaining reachable defect in that supported scope;
+their coverage entries remain `reviewed` and the implementation gate is closed.
 
 ## Rule Index
 

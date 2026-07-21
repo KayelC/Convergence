@@ -25,12 +25,8 @@ framework capability may be implemented completely while its documentation still
 requires owner review. The Documentation Completion Roadmap governs the ordered
 collaborative review of those outstanding entries.
 
-Order 1's mechanics and audience documentation remain owner-confirmed. Its
-`typed_action_and_effect_execution` implementation state is temporarily
-`partial` because O2-R24 owns the newly found duplicate-cost boundary.
-Order 2, `combat_resolution`, remains owner-confirmed at the mechanics level.
-O2-R23 closed its earlier bounded-hit and authored-percentage corrections at
-revision `e26bdc5`. A later source-first audit found three narrower action,
-host-contract, and authoring-boundary discrepancies. Order 2 is reopened under
-O2-R24 through O2-R27; Order 3 waits for those corrections and a fresh closure
-review.
+Order 1's mechanics, audience documentation, and typed execution capability
+remain owner-confirmed and complete. Order 2, `combat_resolution`, is likewise
+owner-confirmed and current-source verified. O2-R24 through O2-R29 record the
+final action, host-contract, authoring, custom-result, and independent closure
+checkpoints. Order 3 may now proceed under the documentation order.

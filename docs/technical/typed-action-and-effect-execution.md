@@ -231,6 +231,14 @@ actors, but any unrelated file, scene, network, or service mutation they perform
 cannot be rolled back. Host-mediated action IDs likewise describe work for the
 host rather than claiming Framework atomicity.
 
+`ICustomEffectHandler` output re-enters the canonical pipeline through
+`EffectExecutionResult`. The result validates its effect index, execution and
+turn-economy outcomes, optional enum/ID fields, host request IDs, and reference
+collection entries during both construction and record cloning. Consequently,
+an undefined custom outcome throws before transaction commit and is converted
+by the skill/item/action boundary into typed rejection. It cannot fall through
+ordered failure handling or action aggregation as ordinary success.
+
 ## Result Contracts
 
 Public assessments, diagnostics, target IDs, effects, events, resource-cost
@@ -252,6 +260,11 @@ kinds cannot carry one. Encounter command results similarly reject undefined
 statuses/outcomes, invalid optional team IDs, missing consumption, and null
 event entries. Supplied turn economies handle every legal kind explicitly and
 do not reinterpret an unknown value as a normal action.
+
+Effect results enforce the same principle at the earlier extension boundary.
+Custom handlers may choose any legal documented outcome, but malformed scalar
+or collection state is rejected before it can control effect continuation or
+turn pricing.
 
 The replacement authority for stat-stage application and duration is specified
 in [Stat Modifier Policy Runtime Authority](stat-modifier-policy-runtime.md).

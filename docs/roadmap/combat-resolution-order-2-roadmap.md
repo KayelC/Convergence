@@ -1,6 +1,6 @@
 # Order 2 Combat Resolution Roadmap
 
-**Status:** reopened; O2-R24 through O2-R27 pending
+**Status:** complete; source-verified through O2-R29
 
 **Started:** 19 July 2026
 
@@ -34,7 +34,7 @@ completion records remain accurate only for the revisions they reviewed. A
 subsequent fresh audit identified three narrower action, host-contract, and
 authoring-boundary discrepancies. The
 [Order 2 Pre-Closure Audit Corrections Roadmap](combat-resolution-order-2-pre-closure-audit-corrections-roadmap.md)
-is now the current correction authority; the
+records O2-R24 through O2-R29 and the final independent green closure; the
 [Final Closure Review](../reviews/combat-resolution-order-2-final-closure-review-2026-07-21.md)
 is historical evidence for its reviewed revision.
 
@@ -461,6 +461,6 @@ Order 2 is complete only when:
   validation, forbidden references, and `git diff --check` pass; and
 - the project owner confirms the final three-audience explanation.
 
-All conditions above were satisfied after the O2-R18 through O2-R23 correction
-cycle on 21 July 2026. The later pre-closure audit reopened this gate. Current
-closure now also requires O2-R24 through O2-R27 and a fresh full verification.
+All conditions above are satisfied through O2-R29. O2-R24 through O2-R28
+corrected the later pre-closure findings, and O2-R29 independently retraced the
+current source and completed the full release gate on 21 July 2026.

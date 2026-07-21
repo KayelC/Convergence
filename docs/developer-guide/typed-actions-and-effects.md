@@ -263,6 +263,20 @@ set. It does not mean an empty owned roster.
 
 ## Dispatch Host-Mediated Work
 
+An `ICustomEffectHandler` receives staged runtime actors and returns an
+`EffectExecutionResult`. Construct that result only with defined
+`EffectExecutionOutcome`, `TurnEconomyOutcome`, optional affinity/life-state/
+skip values, valid runtime/content IDs, and non-null collection entries. These
+invariants also apply to record-clone assignments. Malformed output throws
+inside staged execution and becomes the normal typed action rejection, so no
+prepared cost, actor mutation, inventory use, later effect, or turn cost is
+committed.
+
+The result contract protects Framework state; it cannot undo unrelated scene,
+file, network, or service changes made inside the handler. Custom handlers
+should request external work through `HostActionRequestIds` and let the host
+perform it after the Framework result is accepted.
+
 Use a typed host-mediated command when an operation belongs to the application
 instead of the Framework, such as a presentation-specific interaction or a
 scripted scene operation. The result returns host action IDs and turn intent;

@@ -4,9 +4,9 @@
 
 **Decision date:** 19 July 2026
 
-**Implementation state:** confirmed mechanics implemented through O2-R23 and
-all three audiences owner-confirmed; O2-R24 through O2-R27 are implemented and
-awaiting the final independent pre-closure review
+**Implementation state:** confirmed mechanics and pre-closure corrections
+implemented and source-verified through O2-R29; all three audiences
+owner-confirmed
 
 ## Context
 

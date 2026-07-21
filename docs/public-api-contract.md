@@ -62,6 +62,13 @@ same resource ID before target randomness or amount resolution.
 consumption, and event values. This is a deliberate guarded-`0.1.0` baseline
 correction: no stable Convergence release used the former clone-mutable shape.
 
+`EffectExecutionResult` retains its public record shape for custom effect
+composition, but its scalar and collection `init` assignments now enforce the
+same legal boundary during construction and record cloning. Undefined effect
+or turn outcomes, invalid optional IDs/enums, invalid host request IDs, and
+null result entries reject inside staged execution rather than being
+reinterpreted by ordered effects or action-outcome aggregation.
+
 ## Compatibility Policy
 
 The checked-in `PublicAPI.Shipped.txt` file is the textual `0.1.0` baseline.

@@ -1,6 +1,6 @@
 # Order 2 Pre-Closure Audit Corrections Roadmap
 
-**Status:** open; O2-R24 through O2-R28 implemented, O2-R29 pending
+**Status:** complete; O2-R24 through O2-R29 verified
 
 **Started:** 21 July 2026
 
@@ -115,7 +115,7 @@ warnings and errors; formatting and `git diff --check` also passed.
 
 ### O2-R29: Reconcile evidence and independently close Order 2
 
-**State:** pending
+**State:** complete
 
 - Re-read current combat and action source after O2-R28 without treating prior
   reports as implementation proof.
@@ -125,6 +125,16 @@ warnings and errors; formatting and `git diff --check` also passed.
 - Run the complete release gate and record exact evidence.
 
 **Planned commit:** `docs: verify order 2 pre-closure corrections`
+
+The final source recheck found no remaining realistic reachable defect in the
+reviewed combat, ordered-effect, action-outcome, Action Token, or host-result
+paths. All affected audience and capability records now match corrected source.
+The complete gate passed 1,450 tests with no failures or skips, a strict
+zero-warning Release build, formatting, trimming analysis, active content,
+DemoHost modes, managed Godot integration coverage, Framework coverage at
+90.54% lines / 75.74% branches, and `git diff --check`. Exact evidence and
+review limits are recorded in the
+[Final Pre-Closure Corrections Review](../reviews/combat-resolution-order-2-final-pre-closure-corrections-review-2026-07-21.md).
 
 ## Review Standard
 

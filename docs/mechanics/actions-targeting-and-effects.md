@@ -180,6 +180,11 @@ Formula, custom-condition, custom-effect, and escape handlers are available
 only through explicit registered IDs. No rule examines an action name,
 description, category label, or free-form effect text.
 
+A custom effect must return a valid typed effect result. Invalid execution or
+turn outcomes, invalid IDs, and malformed result collections reject the whole
+action before staged actor changes or turn use are published; they are not
+silently treated as ordinary success.
+
 Host-mediated commands and host-action requests deliberately stop at the
 Framework boundary. Convergence reports what the host must do; it does not
 perform or roll back the external operation.
