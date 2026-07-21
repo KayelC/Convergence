@@ -318,7 +318,7 @@ zero stage delta, and non-positive charge multipliers.
 
 ### O2-R15: Align schema numeric ranges
 
-**State:** pending
+**State:** complete in this checkpoint
 
 - Encode basic local numeric ranges in schema v5.
 - Add independent invalid schema cases and preserve semantic validation as

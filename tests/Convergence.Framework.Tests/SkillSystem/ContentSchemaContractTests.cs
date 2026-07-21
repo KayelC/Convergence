@@ -79,6 +79,18 @@ public sealed class ContentSchemaContractTests
     }
 
     [Theory]
+    [MemberData(nameof(InvalidSharedNumericVariants))]
+    public void SharedNumericContracts_RejectEachInvalidLocalValueIndependently(string definition, string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        EvaluationResults result = SchemaSet.Load().EvaluateReference(
+            SchemaPrefix + $"shared#/$defs/{definition}",
+            document.RootElement);
+
+        Assert.False(result.IsValid, $"{definition} accepted invalid numeric contract {json}.");
+    }
+
+    [Theory]
     [MemberData(nameof(FamilyUnionVariants))]
     public void FamilyUnionVariants_AreIndependentlyValid(string reference, string json)
     {
@@ -245,6 +257,24 @@ public sealed class ContentSchemaContractTests
 
         return variants;
     }
+
+    public static TheoryData<string, string> InvalidSharedNumericVariants() => new()
+    {
+        { "amount", """{"type":"flat","value":-0.1}""" },
+        { "amount", """{"type":"percent_max","value":-1}""" },
+        { "amount", """{"type":"percent_current","value":-1}""" },
+        { "amount", """{"type":"power","power":-1}""" },
+        { "duration", """{"type":"turns","value":0,"tick":"owner_turn_end","suspendWhileReserve":false}""" },
+        { "critical", """{"mode":"chance","chance":101}""" },
+        { "condition", """{"type":"chance","chance":-1}""" },
+        { "effect", """{"type":"damage","elementId":"physical","power":-1,"accuracy":100,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1}}""" },
+        { "effect", """{"type":"damage","elementId":"physical","power":1,"accuracy":101,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1}}""" },
+        { "effect", """{"type":"instant_kill","chance":-1,"resistanceCheck":{"mode":"none"}}""" },
+        { "effect", """{"type":"apply_ailment","ailmentId":"poison","chance":101}""" },
+        { "effect", """{"type":"modify_stat_stage","modifierTrackIds":["attack"],"stageDelta":0}""" },
+        { "effect", """{"type":"grant_charge","charge":"physical","multiplier":0}""" },
+        { "effect", """{"type":"escape","eligibilityRuleId":"standard_escape","chance":101}""" }
+    };
 
     public static TheoryData<string, string> FamilyUnionVariants()
     {

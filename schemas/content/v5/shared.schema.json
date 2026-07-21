@@ -67,7 +67,7 @@
           "required": ["type", "value"],
           "properties": {
             "type": { "enum": ["flat", "percent_max", "percent_current"] },
-            "value": { "type": "number" }
+            "value": { "type": "number", "minimum": 0 }
           }
         },
         {
@@ -82,7 +82,7 @@
           "required": ["type", "power"],
           "properties": {
             "type": { "const": "power" },
-            "power": { "type": "integer" }
+            "power": { "type": "integer", "minimum": 0 }
           }
         },
         {
@@ -345,7 +345,7 @@
           "properties": {
             "type": { "const": "damage" },
             "elementId": { "$ref": "#/$defs/damageElement" },
-            "power": { "type": "integer" },
+            "power": { "type": "integer", "minimum": 0 },
             "accuracy": { "type": "integer", "minimum": 0, "maximum": 100 },
             "critical": { "$ref": "#/$defs/critical" },
             "hits": {
@@ -436,7 +436,7 @@
           "properties": {
             "type": { "const": "modify_stat_stage" },
             "modifierTrackIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/contentId" } },
-            "stageDelta": { "type": "integer" },
+            "stageDelta": { "type": "integer", "not": { "const": 0 } },
             "duration": { "$ref": "#/$defs/duration" }
           }
         }
@@ -451,7 +451,7 @@
           "properties": {
             "type": { "const": "grant_charge" },
             "charge": { "enum": ["physical", "magical", "general"] },
-            "multiplier": { "type": "number" },
+            "multiplier": { "type": "number", "exclusiveMinimum": 0 },
             "duration": { "$ref": "#/$defs/duration" }
           }
         }
