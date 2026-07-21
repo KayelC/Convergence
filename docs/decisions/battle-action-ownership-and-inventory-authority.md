@@ -51,6 +51,16 @@ Both checks run before actor mutation. Canonical item authority is rechecked
 immediately before execution so a prepared assessment cannot outlive the
 catalog-backed action surface that authorized it.
 
+### Prepared Skill Cost Quotes
+
+Skill assessment resolves one immutable cost quote per distinct resource ID.
+Execution revalidates authored identity and current affordability, then commits
+that quoted amount through the actor transaction. It deliberately does not
+rerun formula handlers or resource-cost modifiers. This keeps the amount shown
+by a host identical to the amount charged and ensures random/custom amount
+policies execute once. A host that wants changed modifier state reflected must
+discard the assessment and request another one.
+
 ### Actor Action Authorization
 
 The Framework, not the presentation host, is the canonical authority for which

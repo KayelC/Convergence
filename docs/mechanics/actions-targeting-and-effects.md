@@ -61,10 +61,16 @@ deterministic candidate order.
 Active skills may declare resource costs and valid execution contexts. Passive
 skills use lifecycle triggers rather than the active command shape.
 
-Costs are calculated during assessment and rechecked before execution. They are
-applied to staged actor state before effects, then published with the rest of
-the action transaction. Assessment rejection, cancellation, stale-state
-rejection, or an exception before commit spends nothing.
+One skill may declare at most one cost for each resource ID. Costs are resolved
+once during assessment, including amount formulas and resource-cost modifiers.
+That immutable result is the skill's single-use quote. Execution checks that
+the quote still describes the authored cost and that the actor can still pay
+the quoted amount; it does not resolve the amount a second time. Hosts should
+request a new assessment when they want a new quote after state changes.
+
+Accepted costs are applied to staged actor state before effects, then published
+with the rest of the action transaction. Assessment rejection, cancellation,
+stale-state rejection, or an exception before commit spends nothing.
 
 An executable skill still pays its cost when an authored effect reports an
 ordinary failure, stops a target, stops the action, or interrupts after earlier

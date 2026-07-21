@@ -76,6 +76,15 @@ cannot assess one random target and silently execute another. Removed,
 duplicated, defeated, or otherwise ineligible prepared targets reject as stale
 state rather than causing a reroll.
 
+Skill amount formulas and `ResourceCost` modifiers likewise run during
+assessment only. The prepared assessment stores one resolved cost per distinct
+resource ID. Execution compares those prepared entries with the authored cost
+sequence and checks current affordability, then applies the quoted amounts to
+the staged actor transaction. It does not recalculate them. This avoids a UI
+quote differing from the amount committed and prevents random or custom amount
+handlers from running twice. A consumed or rejected assessment cannot be
+retried; a host that wants current policy state must assess again.
+
 ## Skill Transaction
 
 ```mermaid
@@ -235,6 +244,14 @@ carry the result selected by `IActionOutcomeAggregationPolicy`. The supplied
 policy prices items as `TurnEconomy(Normal)` unless its item behavior is
 configured as effect-driven. Guard, pass, roster, host-mediated, and successful
 escape commands retain their command-specific contracts.
+
+`ActionTurnConsumption` and `TurnEconomyResolution` expose get-only state and
+validate their enum/payload combinations during construction. A
+`TurnEconomy` consumption requires exactly one resolution; other consumption
+kinds cannot carry one. Encounter command results similarly reject undefined
+statuses/outcomes, invalid optional team IDs, missing consumption, and null
+event entries. Supplied turn economies handle every legal kind explicitly and
+do not reinterpret an unknown value as a normal action.
 
 The replacement authority for stat-stage application and duration is specified
 in [Stat Modifier Policy Runtime Authority](stat-modifier-policy-runtime.md).

@@ -63,12 +63,14 @@ Action Token strategy.
 
 ### O2-R27: Reconcile documentation and re-evaluate closure
 
-**State:** open
+**State:** implementation and audience reconciliation complete; independent
+source re-evaluation pending
 
-- Confirm whether prepared skill cost amounts are intentionally quote-locked
-  between single-use assessment and execution.
-- Update mechanics, developer, technical, decision, API, and roadmap text from
-  the corrected source.
+- Prepared skill cost amounts are intentionally quote-locked between single-use
+  assessment and execution. Execution revalidates authored identity and current
+  affordability but does not rerun formula or modifier policies.
+- Mechanics, developer, technical, content-contract, decision, public-API, and
+  roadmap text now describe the corrected source contract.
 - Re-read the corrected implementation without treating this roadmap or prior
   reports as proof.
 - Run focused tests, the complete suite, strict builds, formatting, active

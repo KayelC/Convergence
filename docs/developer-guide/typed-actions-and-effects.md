@@ -117,6 +117,13 @@ twice. Random targets are already fixed in `TargetIds`. Execution rechecks
 target eligibility, resource affordability, equipped skills, canonical item
 identity, and basic-attack authority before mutation.
 
+Skill cost amounts are also fixed by the assessment. Formula handlers and
+resource-cost modifiers run once to create the quote; execution verifies the
+authored resource entry and current affordability of that exact amount. It does
+not invoke those policies again. Reassess deliberately if the host wants a new
+quote after a modifier or other relevant state changes. Author no more than one
+cost entry for the same resource ID in one skill.
+
 Cancellation is checked before action execution and before item reservation or
 commit. `OperationCanceledException` is a host cancellation signal, not a
 gameplay diagnostic.

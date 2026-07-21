@@ -51,6 +51,17 @@ Direct policy and lifecycle requests reject the same malformed values as
 programming errors. The existing numeric values of earlier enum members remain
 unchanged.
 
+The pre-release action boundary now appends
+`SkillExecutionDiagnosticCode.DuplicateResourceCost`. Programmatic assessment
+and semantic content validation both reject more than one cost entry for the
+same resource ID before target randomness or amount resolution.
+
+`ActionTurnConsumption` and `TurnEconomyResolution` no longer expose public
+`init` setters. Their constructors enforce legal enum and payload shapes, and
+`BattleEncounterCommandResult` validates host-supplied status, outcome, team,
+consumption, and event values. This is a deliberate guarded-`0.1.0` baseline
+correction: no stable Convergence release used the former clone-mutable shape.
+
 ## Compatibility Policy
 
 The checked-in `PublicAPI.Shipped.txt` file is the textual `0.1.0` baseline.

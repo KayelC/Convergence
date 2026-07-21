@@ -86,6 +86,12 @@ cannot establish from one document, including dependency visibility, duplicate
 IDs, catalog references, registrations, floor ranges, and operation-specific
 host capabilities.
 
+One skill may contain at most one cost entry for each resource ID. This keeps
+assessment and affordability independent of authored list order. The
+`party_size` condition accepts nonnegative values; it counts living deployed
+participants on the acting actor's team, so zero is a meaningful empty-
+deployment condition rather than malformed content.
+
 The schema contract is independently exercised with `JsonSchema.Net` 9.2.2.
 All active documents must pass both the schema and Framework deserialization,
 validation, and catalog construction paths.
