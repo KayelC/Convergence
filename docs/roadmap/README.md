@@ -26,5 +26,6 @@ collaborative review of those outstanding entries.
 
 Order 1, `typed_action_and_effect_execution`, is complete and owner-confirmed.
 Order 2, `combat_resolution`, is owner-confirmed and its bounded-hit and
-authored-percentage corrections are implemented and documented through O2-R20.
-Its independent O2-R21 source closure check remains before Order 3 begins.
+authored-percentage corrections are implemented and documented. Its first
+independent recheck found one schema-only percentage-range omission, corrected
+by O2-R22. O2-R23 remains the final source closure check before Order 3 begins.

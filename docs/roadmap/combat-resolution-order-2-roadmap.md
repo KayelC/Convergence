@@ -1,6 +1,6 @@
 # Order 2 Combat Resolution Roadmap
 
-**Status:** closure verification; O2-R17 through O2-R20 complete, O2-R21 pending
+**Status:** closure verification; O2-R17 through O2-R22 complete, O2-R23 pending
 
 **Started:** 19 July 2026
 
@@ -25,9 +25,10 @@ record that work.
 **Current correction status:** a later source-first closure review found an
 unbounded schema-valid hit-count path and inconsistent code-authored percentage
 validation. O2-R18 and O2-R19 corrected those paths, and O2-R20 reconciled the
-active contracts. The active
+active contracts. The first independent recheck then found and O2-R22 corrected
+one isolated schema-only resource-percentage range omission. The active
 [Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md)
-governs the remaining independent O2-R21 verification. Earlier completion
+governs the remaining independent O2-R23 verification. Earlier completion
 records remain accurate only for the revisions they reviewed.
 
 ## Goal

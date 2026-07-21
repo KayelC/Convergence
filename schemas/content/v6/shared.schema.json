@@ -203,7 +203,7 @@
         "type": { "enum": ["actor_resource_percentage", "target_resource_percentage"] },
         "resourceId": { "$ref": "#/$defs/contentId" },
         "comparison": { "enum": ["less_than", "less_than_or_equal", "equal", "greater_than_or_equal", "greater_than"] },
-        "value": { "type": "number" }
+        "value": { "type": "number", "minimum": 0, "maximum": 100 }
       }
     },
     "hasAilmentCondition": {

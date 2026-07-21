@@ -1,6 +1,6 @@
 # Order 2 Closure Corrections Roadmap
 
-**Status:** active; O2-R17 through O2-R20 complete, O2-R21 pending
+**Status:** active; O2-R17 through O2-R22 complete, O2-R23 pending
 
 **Started:** 21 July 2026
 
@@ -152,11 +152,43 @@ runtime feature.
 
 ### O2-R21: Independent closure re-evaluation
 
-**State:** pending
+**State:** complete; one isolated schema-layer discrepancy found
 
 - Re-read corrected source rather than relying on this roadmap or earlier
   reports.
 - Reproduce both former paths and verify their rejection boundaries.
+- Compare every semantic authored-percentage field with its independent schema
+  declaration.
+
+The source trace reproduced the corrected runtime paths and found no remaining
+runtime mutation or turn-economy defect. It did find that schema v6 left
+`resourcePercentageCondition.value` unconstrained even though semantic
+validation and runtime assessment already enforced `0..100`. Malformed content
+could not enter a catalog, but schema-only authoring tools did not report the
+same error. Closure therefore moved to O2-R22 and O2-R23.
+
+**Commit:** included with `schema: bound resource percentage conditions`
+
+### O2-R22: Align resource-percentage conditions with schema v6
+
+**State:** complete
+
+- Add the missing inclusive `0..100` JSON Schema range.
+- Prove both lower and upper violations fail independent Draft 2020-12
+  validation.
+- Preserve the already-correct semantic, programmatic-assessment, rollback,
+  and runtime behavior.
+
+**Commit:** `schema: bound resource percentage conditions`
+
+### O2-R23: Final independent closure re-evaluation
+
+**State:** pending
+
+- Re-read the corrected source and schema without treating earlier reports as
+  authority.
+- Reproduce the former hit-count, code-authored percentage, and schema-only
+  percentage paths.
 - Run the full release gate, active content validation, DemoHost modes, scripted
   play, Godot contract/headless smoke where available, API checks, documentation
   links, formatting, forbidden references, and `git diff --check`.

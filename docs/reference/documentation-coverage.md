@@ -30,7 +30,8 @@ Their review order and promotion gates are maintained in the active
 
 Order 2 documentation now also reflects O2-R18 bounded hit execution and
 O2-R19 authored-percentage rejection. O2-R20 reconciled those changes across
-the three audience documents; O2-R21 remains the independent source closure
+the three audience documents. O2-R22 corrected the schema-only range omission
+found by the first independent recheck; O2-R23 remains the final source closure
 check rather than an owner-design question.
 
 The documentation matrix currently records 75 audience entries: 17 reviewed,

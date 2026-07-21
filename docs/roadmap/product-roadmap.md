@@ -87,7 +87,8 @@ owner confirms intended mechanics and extension boundaries before an audience
 entry becomes `reviewed`. Existing prose must not be bulk-promoted. Order 1 is
 complete and owner-confirmed. Order 2's mechanics remain owner-confirmed; its
 bounded hit execution and authored-percentage corrections are implemented and
-documented, with only the independent O2-R21 closure review outstanding.
+documented. O2-R22 also aligned resource-percentage conditions with the same
+schema range. Only the independent O2-R23 closure review remains outstanding.
 
 ## Priority 2: Persistence Evolution
 
