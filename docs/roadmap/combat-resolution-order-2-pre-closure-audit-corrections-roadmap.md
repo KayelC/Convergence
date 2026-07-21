@@ -1,6 +1,6 @@
 # Order 2 Pre-Closure Audit Corrections Roadmap
 
-**Status:** open; O2-R24 through O2-R27 implemented, O2-R28 pending
+**Status:** open; O2-R24 through O2-R28 implemented, O2-R29 pending
 
 **Started:** 21 July 2026
 
@@ -87,7 +87,7 @@ re-evaluation completed and found O2-M3
 
 ### O2-R28: Validate custom effect result contracts
 
-**State:** pending
+**State:** complete
 
 - Make `EffectExecutionResult` validate scalar assignments made by both its
   constructor and record cloning.
@@ -98,6 +98,18 @@ re-evaluation completed and found O2-M3
 - Prove no actor, resource, charge, inventory, later effect, or turn-economy
   mutation escapes that rejection.
 - Preserve every legal built-in and host-custom result shape.
+
+`EffectExecutionResult` now validates constructor and record-clone assignments
+for effect indexes, execution and turn outcomes, optional enum values, optional
+runtime/content IDs, host request IDs, and reference collection entries. A
+focused action regression executes a costed, three-effect skill whose middle
+custom effect returns an undefined outcome. The action now returns the existing
+typed rejection with no committed cost, target change, published effect, or
+turn consumption.
+
+Verification passed 157 focused tests and 1,450 solution tests with zero
+failures or skips. The strict nonincremental Release build completed with zero
+warnings and errors; formatting and `git diff --check` also passed.
 
 **Planned commit:** `execution: validate custom effect results`
 

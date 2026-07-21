@@ -2447,6 +2447,42 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void EffectExecutionResult_RejectsMalformedConstructionAndRecordCloning()
+    {
+        var valid = new EffectExecutionResult(
+            0,
+            RuntimeInstanceId.Parse("target"),
+            EffectExecutionOutcome.Success);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new EffectExecutionResult(-1, null, EffectExecutionOutcome.Success));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new EffectExecutionResult(0, null, (EffectExecutionOutcome)999));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            valid with { TurnEconomyOutcome = (TurnEconomyOutcome)999 });
+        Assert.Throws<ArgumentException>(() =>
+            valid with { TargetId = default(RuntimeInstanceId) });
+        Assert.Throws<ArgumentException>(() =>
+            valid with { RelatedId = default(ContentId) });
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            valid with { SkipReason = (EffectExecutionSkipReason)999 });
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            valid with { RequiredTargetLifeState = (TargetLifeState)999 });
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            valid with { ResolvedAffinity = (ElementalAffinity)999 });
+        Assert.Throws<ArgumentException>(() =>
+            valid with { HostActionRequestIds = [default] });
+        Assert.Throws<ArgumentException>(() =>
+            valid with { PassiveActivations = [null!] });
+        Assert.Throws<ArgumentException>(() =>
+            valid with { ResourceChanges = [null!] });
+        Assert.Throws<ArgumentException>(() =>
+            valid with { StatModifierTransitions = [null!] });
+        Assert.Throws<ArgumentException>(() =>
+            valid with { DamageHits = [null!] });
+    }
+
+    [Fact]
     public void ExecutionResourceChange_RejectsInvalidIdentityAndZeroDelta()
     {
         Assert.Throws<ArgumentException>(() =>

@@ -1318,6 +1318,39 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task SkillAction_MalformedCustomEffectResultRejectsBeforeCommitOrTurnUse()
+    {
+        ContentId handlerId = Id("malformed_custom_effect");
+        BattleActionExecutor executor = Executor(
+            customEffects: [new(handlerId, new MalformedCustomEffectHandler())]);
+        RuntimeActorState actor = Actor("actor", TeamA, sp: 10);
+        RuntimeActorState target = Actor("target", TeamB, hp: 20);
+        SkillDefinition skill = ActiveSkill(
+            "malformed_chain",
+            [new SkillCostDefinition(Sp, new FlatAmountDefinition(3))],
+            [
+                new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20)),
+                new CustomEffectDefinition(handlerId),
+                new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20))
+            ]);
+
+        BattleActionExecutionResult result = await Execute(
+            executor,
+            new SkillBattleActionCommand(skill, [target.InstanceId]),
+            actor,
+            [actor, target]);
+
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(ActionTurnConsumptionKind.None, result.TurnConsumption.Kind);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == BattleActionDiagnosticCode.SkillRejected &&
+            diagnostic.Message.Contains("Effect outcome must be defined", StringComparison.Ordinal));
+        Assert.Empty(result.Effects);
+        Assert.Equal(10, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(20, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public async Task ItemAction_ThrowingOutcomePolicyRollsBackReservationAndActorState()
     {
         BattleActionExecutor executor = Executor(actionOutcomes: new ThrowingActionOutcomePolicy());
@@ -1812,6 +1845,16 @@ public sealed class BattleActionExecutorTests
     {
         public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context) =>
             throw new InvalidOperationException("Custom item effect failed deliberately.");
+    }
+
+    private sealed class MalformedCustomEffectHandler : ICustomEffectHandler
+    {
+        public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context) =>
+            new(
+                context.EffectIndex,
+                context.Target?.InstanceId,
+                (EffectExecutionOutcome)999,
+                (TurnEconomyOutcome)999);
     }
 
     private sealed class AllowAllBattleActionAuthorizationPolicy : IBattleActionAuthorizationPolicy

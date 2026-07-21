@@ -310,7 +310,15 @@ public sealed class DamageHitExecutionEvidence
 
 public sealed record EffectExecutionResult
 {
+    private int _effectIndex;
+    private RuntimeInstanceId? _targetId;
+    private EffectExecutionOutcome _outcome;
+    private TurnEconomyOutcome _turnEconomyOutcome;
+    private ContentId? _relatedId;
+    private EffectExecutionSkipReason? _skipReason;
+    private TargetLifeState? _requiredTargetLifeState;
     private EffectLocalId? _effectId;
+    private ElementalAffinity? _resolvedAffinity;
     private readonly IReadOnlyList<PassiveTriggerExecutionResult> _passiveActivations =
         Array.Empty<PassiveTriggerExecutionResult>();
     private readonly IReadOnlyList<ContentId> _hostActionRequestIds = Array.Empty<ContentId>();
@@ -354,19 +362,99 @@ public sealed record EffectExecutionResult
         this.DamageHits = DamageHits ?? [];
     }
 
-    public int EffectIndex { get; init; }
-    public RuntimeInstanceId? TargetId { get; init; }
-    public EffectExecutionOutcome Outcome { get; init; }
-    public TurnEconomyOutcome TurnEconomyOutcome { get; init; }
+    public int EffectIndex
+    {
+        get => _effectIndex;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(value);
+            _effectIndex = value;
+        }
+    }
+    public RuntimeInstanceId? TargetId
+    {
+        get => _targetId;
+        init
+        {
+            if (value is RuntimeInstanceId targetId && !targetId.IsValid)
+            {
+                throw new ArgumentException("Target ID must be valid when supplied.", nameof(value));
+            }
+
+            _targetId = value;
+        }
+    }
+    public EffectExecutionOutcome Outcome
+    {
+        get => _outcome;
+        init
+        {
+            if (!Enum.IsDefined(value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Effect outcome must be defined.");
+            }
+
+            _outcome = value;
+        }
+    }
+    public TurnEconomyOutcome TurnEconomyOutcome
+    {
+        get => _turnEconomyOutcome;
+        init
+        {
+            if (!Enum.IsDefined(value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Turn-economy outcome must be defined.");
+            }
+
+            _turnEconomyOutcome = value;
+        }
+    }
     public bool IsCritical { get; init; }
     public decimal? Value { get; init; }
-    public ContentId? RelatedId { get; init; }
+    public ContentId? RelatedId
+    {
+        get => _relatedId;
+        init
+        {
+            if (value is ContentId relatedId && !relatedId.IsValid)
+            {
+                throw new ArgumentException("Related content ID must be valid when supplied.", nameof(value));
+            }
+
+            _relatedId = value;
+        }
+    }
     public string? Detail { get; init; }
     public bool EscapeRequested { get; init; }
     /// <summary>Gets the typed reason for a skipped effect, when applicable.</summary>
-    public EffectExecutionSkipReason? SkipReason { get; init; }
+    public EffectExecutionSkipReason? SkipReason
+    {
+        get => _skipReason;
+        init
+        {
+            if (value is EffectExecutionSkipReason reason && !Enum.IsDefined(reason))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Effect skip reason must be defined.");
+            }
+
+            _skipReason = value;
+        }
+    }
     /// <summary>Gets the life state required when a target was dynamically ineligible.</summary>
-    public TargetLifeState? RequiredTargetLifeState { get; init; }
+    public TargetLifeState? RequiredTargetLifeState
+    {
+        get => _requiredTargetLifeState;
+        init
+        {
+            if (value is TargetLifeState lifeState && !Enum.IsDefined(lifeState))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Required target life state must be defined.");
+            }
+
+            _requiredTargetLifeState = value;
+        }
+    }
     /// <summary>Gets the optional authored local ID of this effect.</summary>
     public EffectLocalId? EffectId
     {
@@ -386,31 +474,66 @@ public sealed record EffectExecutionResult
     public IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations
     {
         get => _passiveActivations;
-        init => _passiveActivations = Array.AsReadOnly(value?.ToArray() ?? []);
+        init => _passiveActivations = SnapshotReferences(value, nameof(PassiveActivations));
     }
-    public ElementalAffinity? ResolvedAffinity { get; init; }
+    public ElementalAffinity? ResolvedAffinity
+    {
+        get => _resolvedAffinity;
+        init
+        {
+            if (value is ElementalAffinity affinity && !Enum.IsDefined(affinity))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Resolved affinity must be defined.");
+            }
+
+            _resolvedAffinity = value;
+        }
+    }
     public IReadOnlyList<ContentId> HostActionRequestIds
     {
         get => _hostActionRequestIds;
-        init => _hostActionRequestIds = Array.AsReadOnly(value?.ToArray() ?? []);
+        init
+        {
+            ContentId[] snapshot = value?.ToArray() ?? [];
+            if (snapshot.Any(id => !id.IsValid))
+            {
+                throw new ArgumentException("Host-action request IDs must be valid.", nameof(value));
+            }
+
+            _hostActionRequestIds = Array.AsReadOnly(snapshot);
+        }
     }
     /// <summary>Gets the exact resource mutations committed while resolving this effect.</summary>
     public IReadOnlyList<ExecutionResourceChange> ResourceChanges
     {
         get => _resourceChanges;
-        init => _resourceChanges = Array.AsReadOnly(value?.ToArray() ?? []);
+        init => _resourceChanges = SnapshotReferences(value, nameof(ResourceChanges));
     }
     /// <summary>Gets the canonical modifier transitions committed by this effect.</summary>
     public IReadOnlyList<StatModifierTransitionResult> StatModifierTransitions
     {
         get => _statModifierTransitions;
-        init => _statModifierTransitions = Array.AsReadOnly(value?.ToArray() ?? []);
+        init => _statModifierTransitions = SnapshotReferences(value, nameof(StatModifierTransitions));
     }
     /// <summary>Gets ordered immutable evidence for every attempted damage hit.</summary>
     public IReadOnlyList<DamageHitExecutionEvidence> DamageHits
     {
         get => _damageHits;
-        init => _damageHits = Array.AsReadOnly(value?.ToArray() ?? []);
+        init => _damageHits = SnapshotReferences(value, nameof(DamageHits));
+    }
+
+    private static IReadOnlyList<T> SnapshotReferences<T>(
+        IEnumerable<T>? values,
+        string parameterName)
+        where T : class
+    {
+        T[] snapshot = values?.ToArray() ?? [];
+        if (snapshot.Any(value => value is null))
+        {
+            throw new ArgumentException("Effect-result collections cannot contain null entries.", parameterName);
+        }
+
+        return Array.AsReadOnly(snapshot);
     }
 }
 
