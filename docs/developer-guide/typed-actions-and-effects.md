@@ -249,6 +249,11 @@ validation checks graph rules and references. Runtime assessment repeats the
 ordered dependency-graph checks for programmatic definitions; it is not a
 replacement for validating the rest of a content pack.
 
+For `party_size` conditions, author a nonnegative count. The evaluator counts
+living deployed actors on the acting actor's team, so `0` deliberately means
+that team currently has no living deployed actor in the supplied participant
+set. It does not mean an empty owned roster.
+
 ## Dispatch Host-Mediated Work
 
 Use a typed host-mediated command when an operation belongs to the application

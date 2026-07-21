@@ -187,6 +187,11 @@ committed per-hit resource changes, not calculated damage or a display outcome.
 `same_target` evaluates each prepared target separately; `any_target` may read
 any result from the referenced earlier effect.
 
+`PartySizeConditionDefinition` compares against the number of living deployed
+participants on `context.Actor.TeamId`. Reserve and defeated participants are
+excluded. The contract accepts zero and rejects negative authored values in
+both JSON Schema and semantic validation.
+
 The sequence graph is checked during skill, item, and basic-attack assessment
 and again by execution. This preserves assessment/execution parity for
 programmatic definitions while the content validator remains authoritative for

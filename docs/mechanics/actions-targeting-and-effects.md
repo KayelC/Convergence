@@ -165,6 +165,11 @@ elements, affinities, contexts, and battle metadata. Logical `all`, `any`, and
 `not` definitions compose them. A battle-only condition evaluates false when a
 field action does not supply the required battle metadata.
 
+`party_size` counts living, deployed actors whose team matches the acting
+actor's team. It does not count reserve or defeated actors, and it does not
+measure roster ownership. Zero is a valid authored value for an empty
+deployment.
+
 Formula, custom-condition, custom-effect, and escape handlers are available
 only through explicit registered IDs. No rule examines an action name,
 description, category label, or free-form effect text.

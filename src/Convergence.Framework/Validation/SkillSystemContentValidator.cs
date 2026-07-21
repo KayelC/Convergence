@@ -1804,7 +1804,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         _registrations.MoonPhaseIds, "moon phase");
                     break;
                 case PartySizeConditionDefinition party:
-                    RequirePositive(source, party.Value, path + ".value", "Party size");
+                    RequireNonNegative(source, party.Value, path + ".value", "Party size");
                     break;
                 case ChanceConditionDefinition chance:
                     RequirePercentage(source, chance.Chance, path + ".chance", "Condition chance");

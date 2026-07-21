@@ -212,7 +212,7 @@ public sealed class ContentSchemaContractTests
             """{"type":"target_life_state","lifeState":"dead"}""",
             """{"type":"battle_kind","allowed":["standard"]}""",
             """{"type":"moon_phase","allowed":["full"]}""",
-            """{"type":"party_size","comparison":"equal","value":1}""",
+            """{"type":"party_size","comparison":"equal","value":0}""",
             """{"type":"chance","chance":50}""",
             """{"type":"effect_element_is","elementId":"wind"}""",
             """{"type":"custom","handlerId":"sample_condition","parameters":{"enabled":true}}""");
@@ -270,6 +270,7 @@ public sealed class ContentSchemaContractTests
         { "condition", """{"type":"chance","chance":-1}""" },
         { "condition", """{"type":"actor_resource_percentage","resourceId":"hp","comparison":"less_than","value":-1}""" },
         { "condition", """{"type":"target_resource_percentage","resourceId":"hp","comparison":"greater_than","value":101}""" },
+        { "condition", """{"type":"party_size","comparison":"equal","value":-1}""" },
         { "effect", """{"type":"damage","elementId":"physical","power":-1,"accuracy":100,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1}}""" },
         { "effect", """{"type":"damage","elementId":"physical","power":1,"accuracy":101,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1}}""" },
         { "effect", """{"type":"damage","elementId":"physical","power":1,"accuracy":100,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1025,"distribution":"uniform"}}""" },

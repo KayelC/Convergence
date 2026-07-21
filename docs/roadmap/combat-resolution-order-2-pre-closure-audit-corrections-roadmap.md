@@ -51,13 +51,13 @@ Action Token strategy.
 
 ### O2-R26: Resolve the party-size zero contract
 
-**State:** open; owner decision required before implementation
+**State:** implemented pending review
 
-- Confirm whether `party_size = 0` is a valid "no deployed living team member"
-  condition.
-- Align Draft 2020-12 schema, semantic validation, runtime semantics, and
-  audience documentation with that decision.
-- Add independent schema and semantic boundary tests for the selected minimum.
+- `party_size = 0` is explicitly valid and means that the acting actor's team
+  has no living deployed participant in the supplied battle context.
+- Draft 2020-12 schema, semantic validation, runtime evaluation tests, and
+  audience guidance now share that definition.
+- Independent authoring-boundary tests reject negative counts.
 
 **Planned commit:** `schema: align party size condition bounds`
 

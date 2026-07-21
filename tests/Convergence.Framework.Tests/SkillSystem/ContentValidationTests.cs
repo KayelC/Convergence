@@ -320,6 +320,37 @@ public sealed class ContentValidationTests
     }
 
     [Fact]
+    public void PartySizeCondition_AllowsZeroAndRejectsNegativeCounts()
+    {
+        SkillDefinition zeroParty = ActiveSkill(
+            "zero_party",
+            [
+                new AnalyzeEffectDefinition(
+                    [AnalysisLayer.Stats],
+                    new PartySizeConditionDefinition(NumericComparison.Equal, 0))
+            ]);
+        SkillDefinition negativeParty = ActiveSkill(
+            "negative_party",
+            [
+                new AnalyzeEffectDefinition(
+                    [AnalysisLayer.Stats],
+                    new PartySizeConditionDefinition(NumericComparison.Equal, -1))
+            ]);
+
+        ContentValidationResult zeroResult = _validator.Validate(Request(
+            ComprehensiveRegistrations(),
+            skills: [zeroParty]));
+        ContentValidationResult negativeResult = _validator.Validate(Request(
+            ComprehensiveRegistrations(),
+            skills: [negativeParty]));
+
+        Assert.True(zeroResult.IsValid, string.Join(Environment.NewLine, zeroResult.Errors.Select(error => error.Message)));
+        Assert.Contains(negativeResult.Errors, error =>
+            error.JsonPath == "$.skills[0].effects[0].when.value" &&
+            error.Code == ContentValidationErrorCode.ValueMustBeNonNegative);
+    }
+
+    [Fact]
     public void SkillCostsRejectDuplicateResourceReferencesIncludingSamePackAliases()
     {
         SkillDefinition skill = ActiveSkill(

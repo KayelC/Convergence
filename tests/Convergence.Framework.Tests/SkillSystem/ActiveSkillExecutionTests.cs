@@ -1930,6 +1930,31 @@ public sealed class ActiveSkillExecutionTests
         Assert.All(result.Effects, effect => Assert.Equal(EffectExecutionOutcome.Success, effect.Outcome));
     }
 
+    [Fact]
+    public void Execute_PartySizeZeroMeansNoLivingDeployedActorOnTheActingTeam()
+    {
+        RuntimeActorState reserveActor = Actor("reserve_actor", PlayerTeam, isDeployed: false);
+        RuntimeActorState enemy = Actor("enemy", EnemyTeam);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new AnalyzeEffectDefinition(
+                [AnalysisLayer.Stats],
+                new PartySizeConditionDefinition(NumericComparison.Equal, 0))
+        ]);
+
+        SkillExecutionResult emptyDeployment = new SkillExecutor(Services()).Execute(
+            Request(skill, reserveActor, [reserveActor, enemy], [enemy.InstanceId]));
+
+        RuntimeActorState deployedAlly = Actor("deployed_ally", PlayerTeam);
+        SkillExecutionResult occupiedDeployment = new SkillExecutor(Services()).Execute(
+            Request(skill, reserveActor, [reserveActor, deployedAlly, enemy], [enemy.InstanceId]));
+
+        Assert.Equal(EffectExecutionOutcome.Success, Assert.Single(emptyDeployment.Effects).Outcome);
+        EffectExecutionResult skipped = Assert.Single(occupiedDeployment.Effects);
+        Assert.Equal(EffectExecutionOutcome.Skipped, skipped.Outcome);
+        Assert.Equal(EffectExecutionSkipReason.ConditionUnsatisfied, skipped.SkipReason);
+    }
+
     [Theory]
     [InlineData(1, EffectExecutionOutcome.Success)]
     [InlineData(0, EffectExecutionOutcome.Skipped)]
@@ -2506,7 +2531,8 @@ public sealed class ActiveSkillExecutionTests
         IEnumerable<ContentId>? skillIds = null,
         IEnumerable<ContentId>? capabilityIds = null,
         ContentId? commandAuthorityId = null,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? stats = null) =>
+        IEnumerable<KeyValuePair<ContentId, decimal>>? stats = null,
+        bool isDeployed = true) =>
         new(
             RuntimeInstanceId.Parse(id),
             ContentId.Parse($"{id}_entity"),
@@ -2514,7 +2540,7 @@ public sealed class ActiveSkillExecutionTests
             Hp,
             defense ?? CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, hp, 100), new BattleResourceState(Sp, sp, 100)],
-            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: isDeployed),
             new RuntimeActorAffiliationSnapshot(
                 commandAuthorityId ?? ContentId.Parse("test_host"),
                 team),
