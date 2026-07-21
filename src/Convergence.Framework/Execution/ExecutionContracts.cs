@@ -19,6 +19,14 @@ public enum EffectExecutionOutcome
     Interrupted
 }
 
+/// <summary>Explains why an ordered effect was not dispatched.</summary>
+public enum EffectExecutionSkipReason
+{
+    DependencyUnsatisfied,
+    TargetLifeStateIneligible,
+    ConditionUnsatisfied
+}
+
 /// <summary>Explains why an authored effect dependency did or did not pass.</summary>
 public enum EffectDependencyEvaluationReason
 {
@@ -294,6 +302,10 @@ public sealed record EffectExecutionResult
     public ContentId? RelatedId { get; init; }
     public string? Detail { get; init; }
     public bool EscapeRequested { get; init; }
+    /// <summary>Gets the typed reason for a skipped effect, when applicable.</summary>
+    public EffectExecutionSkipReason? SkipReason { get; init; }
+    /// <summary>Gets the life state required when a target was dynamically ineligible.</summary>
+    public TargetLifeState? RequiredTargetLifeState { get; init; }
     /// <summary>Gets the optional authored local ID of this effect.</summary>
     public EffectLocalId? EffectId
     {
@@ -378,6 +390,12 @@ public sealed record EffectExecutionEnvironment
             : null;
 }
 
+internal enum EffectExecutionPurpose
+{
+    Standard,
+    DefeatPrevention
+}
+
 public sealed record EffectActionExecutionRequest
 {
     public EffectActionExecutionRequest(
@@ -389,6 +407,29 @@ public sealed record EffectActionExecutionRequest
         IEnumerable<RuntimeInstanceId>? selectedTargetIds = null,
         SkillDefinition? skill = null,
         ItemDefinition? item = null)
+        : this(
+            sourceId,
+            actor,
+            participants,
+            environment,
+            targeting,
+            selectedTargetIds,
+            skill,
+            item,
+            EffectExecutionPurpose.Standard)
+    {
+    }
+
+    internal EffectActionExecutionRequest(
+        ContentId sourceId,
+        RuntimeActorState actor,
+        IEnumerable<RuntimeActorState> participants,
+        EffectExecutionEnvironment environment,
+        TargetingDefinition targeting,
+        IEnumerable<RuntimeInstanceId>? selectedTargetIds,
+        SkillDefinition? skill,
+        ItemDefinition? item,
+        EffectExecutionPurpose purpose)
     {
         SourceId = sourceId;
         Actor = actor ?? throw new ArgumentNullException(nameof(actor));
@@ -399,6 +440,7 @@ public sealed record EffectActionExecutionRequest
         SelectedTargetIds = Array.AsReadOnly(selectedTargetIds?.ToArray() ?? []);
         Skill = skill;
         Item = item;
+        Purpose = purpose;
     }
 
     public ContentId SourceId { get; }
@@ -409,6 +451,7 @@ public sealed record EffectActionExecutionRequest
     public IReadOnlyList<RuntimeInstanceId> SelectedTargetIds { get; }
     public SkillDefinition? Skill { get; }
     public ItemDefinition? Item { get; }
+    internal EffectExecutionPurpose Purpose { get; }
     public ContentId ContextId => Environment.ContextId;
     public ContentId? BattleKindId => Environment.BattleKindId;
     public ContentId? MoonPhaseId => Environment.MoonPhaseId;

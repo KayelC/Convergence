@@ -753,7 +753,11 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
                 dispatchRequest.ActiveStatModifierBoundaries),
             new TargetingDefinition(TargetRelation.Self, TargetSelection.Single, TargetLifeState.Any, true),
             [target.InstanceId],
-            skill: skill);
+            skill,
+            item: null,
+            purpose: dispatchRequest.EventId == services.OwnerWouldBeDefeatedEventId
+                ? EffectExecutionPurpose.DefeatPrevention
+                : EffectExecutionPurpose.Standard);
 
         OrderedEffectExecution execution = new OrderedEffectExecutor(
             services,

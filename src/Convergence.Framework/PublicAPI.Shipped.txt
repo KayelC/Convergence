@@ -10660,3 +10660,11 @@ static Convergence.Content.EffectLocalId.Parse(string! value) -> Convergence.Con
 static Convergence.Content.EffectLocalId.TryParse(string? value, out Convergence.Content.EffectLocalId effectId) -> bool
 static Convergence.Execution.EffectDependencyEvaluation.operator !=(Convergence.Execution.EffectDependencyEvaluation? left, Convergence.Execution.EffectDependencyEvaluation? right) -> bool
 static Convergence.Execution.EffectDependencyEvaluation.operator ==(Convergence.Execution.EffectDependencyEvaluation? left, Convergence.Execution.EffectDependencyEvaluation? right) -> bool
+Convergence.Execution.EffectExecutionResult.RequiredTargetLifeState.get -> Convergence.Content.TargetLifeState?
+Convergence.Execution.EffectExecutionResult.RequiredTargetLifeState.init -> void
+Convergence.Execution.EffectExecutionResult.SkipReason.get -> Convergence.Execution.EffectExecutionSkipReason?
+Convergence.Execution.EffectExecutionResult.SkipReason.init -> void
+Convergence.Execution.EffectExecutionSkipReason
+Convergence.Execution.EffectExecutionSkipReason.ConditionUnsatisfied = 2 -> Convergence.Execution.EffectExecutionSkipReason
+Convergence.Execution.EffectExecutionSkipReason.DependencyUnsatisfied = 0 -> Convergence.Execution.EffectExecutionSkipReason
+Convergence.Execution.EffectExecutionSkipReason.TargetLifeStateIneligible = 1 -> Convergence.Execution.EffectExecutionSkipReason

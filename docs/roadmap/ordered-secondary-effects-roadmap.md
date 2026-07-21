@@ -268,7 +268,7 @@ zero stage delta, and non-positive charge multipliers.
 
 ### O2-R11: Enforce ordered life-state eligibility
 
-**State:** pending
+**State:** complete in this checkpoint
 
 - Prevent damage, Absorb, and ordinary vital-resource restoration from reviving
   defeated actors.

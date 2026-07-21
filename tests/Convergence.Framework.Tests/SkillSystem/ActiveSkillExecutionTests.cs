@@ -680,6 +680,7 @@ public sealed class ActiveSkillExecutionTests
             Request(skill, actor, [actor, target], [target.InstanceId]));
 
         Assert.Equal([EffectExecutionOutcome.Skipped, EffectExecutionOutcome.Success], result.Effects.Select(effect => effect.Outcome));
+        Assert.Equal(EffectExecutionSkipReason.ConditionUnsatisfied, result.Effects[0].SkipReason);
         Assert.Equal(100, target.GetRequiredResource(Hp).Current);
         Assert.Equal(0, result.Effects[1].Value);
     }
@@ -772,6 +773,7 @@ public sealed class ActiveSkillExecutionTests
             result.Effects[1].DependencyEvaluation);
         Assert.False(evaluation.Satisfied);
         Assert.Equal(EffectDependencyEvaluationReason.SourceNotSuccessful, evaluation.Reason);
+        Assert.Equal(EffectExecutionSkipReason.DependencyUnsatisfied, result.Effects[1].SkipReason);
     }
 
     [Theory]
@@ -827,6 +829,150 @@ public sealed class ActiveSkillExecutionTests
         EffectDependencyEvaluation evaluation = Assert.IsType<EffectDependencyEvaluation>(
             secondFollowUp.DependencyEvaluation);
         Assert.Equal(scope == EffectDependencyScope.AnyTarget, evaluation.Satisfied);
+    }
+
+    [Theory]
+    [InlineData(ElementalAffinity.Weak)]
+    [InlineData(ElementalAffinity.Absorb)]
+    public void Execute_LaterDamageSkipsAfterDefeatWithoutFalseTurnBenefit(
+        ElementalAffinity laterAffinity)
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor(
+            "target",
+            EnemyTeam,
+            hp: 10,
+            defense: new CombatDefenseProfile(
+                [new(DamageElement.Fire, laterAffinity)]));
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits()),
+            new DamageEffectDefinition(
+                DamageElement.Fire,
+                10,
+                100,
+                new ChanceCriticalDefinition(100),
+                FixedHits())
+        ]);
+        int damagePolicyCalls = 0;
+        BattleExecutionServices services = Services(damage: request =>
+        {
+            damagePolicyCalls++;
+            return [new DamageHitResolution(true, 10, request.Effect.Element == DamageElement.Fire)];
+        });
+
+        SkillExecutionResult result = new SkillExecutor(services).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(1, damagePolicyCalls);
+        Assert.True(target.IsDefeated);
+        Assert.Equal(0, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(TurnEconomyOutcome.Normal, result.TurnEconomy.Outcome);
+        Assert.False(result.TurnEconomy.AnyCritical);
+        EffectExecutionResult skipped = result.Effects[1];
+        Assert.Equal(EffectExecutionOutcome.Skipped, skipped.Outcome);
+        Assert.Equal(EffectExecutionSkipReason.TargetLifeStateIneligible, skipped.SkipReason);
+        Assert.Equal(TargetLifeState.Alive, skipped.RequiredTargetLifeState);
+        Assert.Empty(skipped.DamageHits);
+    }
+
+    [Fact]
+    public void Execute_OrdinaryVitalRestorationSkipsAfterDefeatWhileNonVitalRestorationContinues()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 10, sp: 20);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits()),
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(30)),
+            new SetResourceEffectDefinition(Hp, new FlatAmountDefinition(30)),
+            new RestoreResourceEffectDefinition(Sp, new FlatAmountDefinition(10))
+        ]);
+
+        SkillExecutionResult result = new SkillExecutor(Services()).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(0, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(30, target.GetRequiredResource(Sp).Current);
+        Assert.Equal(
+            [
+                EffectExecutionOutcome.Success,
+                EffectExecutionOutcome.Skipped,
+                EffectExecutionOutcome.Skipped,
+                EffectExecutionOutcome.Success
+            ],
+            result.Effects.Select(effect => effect.Outcome));
+        Assert.All(result.Effects.Skip(1).Take(2), effect =>
+        {
+            Assert.Equal(EffectExecutionSkipReason.TargetLifeStateIneligible, effect.SkipReason);
+            Assert.Equal(TargetLifeState.Alive, effect.RequiredTargetLifeState);
+            Assert.Empty(effect.ResourceChanges);
+        });
+    }
+
+    [Fact]
+    public void Execute_ExplicitReviveRestoresTargetDefeatedEarlierInSequence()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 10);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits()),
+            new ReviveEffectDefinition(Hp, new FlatAmountDefinition(25))
+        ]);
+
+        SkillExecutionResult result = new SkillExecutor(Services()).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(
+            [EffectExecutionOutcome.Success, EffectExecutionOutcome.Success],
+            result.Effects.Select(effect => effect.Outcome));
+        Assert.False(target.IsDefeated);
+        Assert.Equal(25, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(25, Assert.Single(result.Effects[1].ResourceChanges).Delta);
+    }
+
+    [Fact]
+    public void Execute_LaterReviveSkipsAfterEarlierReviveChangesLifeState()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 0);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new ReviveEffectDefinition(Hp, new FlatAmountDefinition(25)),
+            new ReviveEffectDefinition(Hp, new FlatAmountDefinition(50))
+        ],
+        targeting: new TargetingDefinition(
+            TargetRelation.Enemy,
+            TargetSelection.Single,
+            TargetLifeState.Dead,
+            false));
+
+        SkillExecutionResult result = new SkillExecutor(Services()).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(25, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(EffectExecutionOutcome.Success, result.Effects[0].Outcome);
+        Assert.Equal(EffectExecutionOutcome.Skipped, result.Effects[1].Outcome);
+        Assert.Equal(
+            EffectExecutionSkipReason.TargetLifeStateIneligible,
+            result.Effects[1].SkipReason);
+        Assert.Equal(TargetLifeState.Dead, result.Effects[1].RequiredTargetLifeState);
     }
 
     [Fact]

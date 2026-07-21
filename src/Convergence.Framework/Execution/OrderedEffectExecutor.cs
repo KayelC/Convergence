@@ -135,7 +135,29 @@ internal sealed class OrderedEffectExecutor
                         Detail: $"Effect dependency was not satisfied: {dependencyEvaluation.Reason}.")
                     {
                         EffectId = effect.EffectId,
-                        DependencyEvaluation = dependencyEvaluation
+                        DependencyEvaluation = dependencyEvaluation,
+                        SkipReason = EffectExecutionSkipReason.DependencyUnsatisfied
+                    });
+                    continue;
+                }
+
+                TargetLifeState? requiredLifeState = RequiredTargetLifeState(
+                    effect,
+                    target,
+                    request.Purpose);
+                if (requiredLifeState is TargetLifeState required &&
+                    !LifeStateMatches(target!, required))
+                {
+                    results.Add(new EffectExecutionResult(
+                        effectIndex,
+                        target!.InstanceId,
+                        EffectExecutionOutcome.Skipped,
+                        Detail: $"The effect requires a target whose life state is {required}.")
+                    {
+                        EffectId = effect.EffectId,
+                        DependencyEvaluation = dependencyEvaluation,
+                        SkipReason = EffectExecutionSkipReason.TargetLifeStateIneligible,
+                        RequiredTargetLifeState = required
                     });
                     continue;
                 }
@@ -149,7 +171,8 @@ internal sealed class OrderedEffectExecutor
                         Detail: "The effect condition was false.")
                     {
                         EffectId = effect.EffectId,
-                        DependencyEvaluation = dependencyEvaluation
+                        DependencyEvaluation = dependencyEvaluation,
+                        SkipReason = EffectExecutionSkipReason.ConditionUnsatisfied
                     });
                     continue;
                 }
@@ -248,6 +271,42 @@ internal sealed class OrderedEffectExecutor
 
         return new System.Collections.ObjectModel.ReadOnlyDictionary<EffectLocalId, int>(indexes);
     }
+
+    private static TargetLifeState? RequiredTargetLifeState(
+        EffectDefinition effect,
+        RuntimeActorState? target,
+        EffectExecutionPurpose purpose)
+    {
+        if (target is null)
+        {
+            return null;
+        }
+
+        return effect switch
+        {
+            DamageEffectDefinition => TargetLifeState.Alive,
+            InstantKillEffectDefinition => TargetLifeState.Alive,
+            ApplyAilmentEffectDefinition => TargetLifeState.Alive,
+            RestoreResourceEffectDefinition restore
+                when restore.ResourceId == target.VitalResourceId &&
+                     purpose != EffectExecutionPurpose.DefeatPrevention =>
+                TargetLifeState.Alive,
+            SetResourceEffectDefinition set
+                when set.ResourceId == target.VitalResourceId &&
+                     purpose != EffectExecutionPurpose.DefeatPrevention =>
+                TargetLifeState.Alive,
+            ReviveEffectDefinition => TargetLifeState.Dead,
+            _ => null
+        };
+    }
+
+    private static bool LifeStateMatches(RuntimeActorState target, TargetLifeState required) => required switch
+    {
+        TargetLifeState.Alive => !target.IsDefeated,
+        TargetLifeState.Dead => target.IsDefeated,
+        TargetLifeState.Any => true,
+        _ => throw new InvalidOperationException($"Unsupported target life state '{required}'.")
+    };
 
     private static EffectDependencyEvaluation EvaluateDependency(
         EffectDependencyDefinition dependency,
