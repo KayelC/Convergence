@@ -142,6 +142,8 @@ Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathChanceMaximum.get -
 Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathChanceMaximum.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathChanceMinimum.get -> int
 Convergence.Battle.ProductionCombatRulesetConfig.InstantDeathChanceMinimum.init -> void
+Convergence.Battle.ProductionCombatRulesetConfig.MaximumHitsPerDamageEffect.get -> int
+Convergence.Battle.ProductionCombatRulesetConfig.MaximumHitsPerDamageEffect.init -> void
 Convergence.Battle.ProductionCombatRulesetConfig.ProductionCombatRulesetConfig() -> void
 Convergence.Battle.ProductionCombatRulesetConfig.ResistDamageMultiplier.get -> decimal
 Convergence.Battle.ProductionCombatRulesetConfig.ResistDamageMultiplier.init -> void

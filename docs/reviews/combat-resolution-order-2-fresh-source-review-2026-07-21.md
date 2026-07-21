@@ -180,7 +180,7 @@ simple local ranges.
 
 **Current behavior**
 
-[`shared.schema.json`](../../schemas/content/v5/shared.schema.json) declares
+[`shared.schema.json`](../../schemas/content/v6/shared.schema.json) declares
 several combat fields only as `integer` or `number`, including:
 
 - amount values and power at lines 70 and 85;

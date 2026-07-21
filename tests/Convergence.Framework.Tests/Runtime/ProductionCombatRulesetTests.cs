@@ -394,6 +394,8 @@ public sealed class ProductionCombatRulesetTests
     {
         ProductionCombatRulesetConfig[] invalidConfigurations =
         [
+            new() { MaximumHitsPerDamageEffect = 0 },
+            new() { MaximumHitsPerDamageEffect = 1025 },
             new() { HitChanceMinimum = 90, HitChanceMaximum = 10 },
             new() { DamageVarianceMinimum = 1.1m, DamageVarianceMaximum = 0.9m },
             new() { GuardDamageMultiplier = -0.1m }
@@ -418,16 +420,30 @@ public sealed class ProductionCombatRulesetTests
     }
 
     [Fact]
-    public void UniformHitCountSupportsIntMaximumWithoutOverflowingTheExclusiveBound()
+    public void ConfiguredHitCountLimitAllowsLargerBoundedUniformRanges()
     {
-        var ruleset = new ProductionCombatRuleset(new MaximumIntRandomSource());
+        var ruleset = new ProductionCombatRuleset(
+            new MaximumIntRandomSource(),
+            new ProductionCombatRulesetConfig { MaximumHitsPerDamageEffect = 128 });
 
         int result = ruleset.ResolveHitCount(new HitCountDefinition(
-            int.MaxValue - 1,
-            int.MaxValue,
+            127,
+            128,
             HitDistribution.Uniform));
 
-        Assert.Equal(int.MaxValue, result);
+        Assert.Equal(128, result);
+    }
+
+    [Fact]
+    public void StandardHitCountLimitRejectsOversizedRangesBeforeRandomSelection()
+    {
+        var ruleset = new ProductionCombatRuleset(new ThrowingRandomSource());
+
+        ArgumentOutOfRangeException failure = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ruleset.ResolveHitCount(new HitCountDefinition(1, 65, HitDistribution.Uniform)));
+
+        Assert.Equal("hits", failure.ParamName);
+        Assert.Contains("configured maximum of 64", failure.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -676,6 +692,15 @@ public sealed class ProductionCombatRulesetTests
     {
         public int NextInt32(int minimumInclusive, int maximumExclusive) => maximumExclusive - 1;
         public decimal NextUnitDecimal() => 0.999999m;
+    }
+
+    private sealed class ThrowingRandomSource : IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) =>
+            throw new InvalidOperationException("Random selection must not occur.");
+
+        public decimal NextUnitDecimal() =>
+            throw new InvalidOperationException("Random selection must not occur.");
     }
 
     private sealed class RecordingHitPolicy(bool hit) : IHitResolutionPolicy

@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v5:items",
-  "schemaVersion": 5,
+  "$schema": "urn:convergence:schema:content:v6:items",
+  "schemaVersion": 6,
   "items": [
     {
       "id": "medicine_demo",

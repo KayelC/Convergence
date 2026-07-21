@@ -41,7 +41,7 @@ but their execution cost needs an explicit, inspectable bound.
 
 - The v5 schema requires a positive hit minimum and maximum but defines no upper
   bound in
-  [`shared.schema.json`](../../schemas/content/v5/shared.schema.json#L351).
+  [`shared.schema.json`](../../schemas/content/v6/shared.schema.json#L351).
 - Framework semantic validation likewise checks positivity, ordering, and the
   fixed-range rule, but no maximum, in
   [`SkillSystemContentValidator.cs`](../../src/Convergence.Framework/Validation/SkillSystemContentValidator.cs#L1921).

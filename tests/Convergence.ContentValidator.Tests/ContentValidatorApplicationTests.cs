@@ -149,7 +149,7 @@ public sealed class ContentValidatorApplicationTests
 
     private static string ContentRoot() => RepositoryPath("content");
 
-    private static string SchemaRoot() => RepositoryPath("schemas", "content", "v5");
+    private static string SchemaRoot() => RepositoryPath("schemas", "content", "v6");
 
     private static string RegistrationsPath() =>
         RepositoryPath("config", "content-validator", "active-samples.registrations.json");

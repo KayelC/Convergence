@@ -1568,6 +1568,34 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_OversizedStandardPolicyHitCountRejectsWithoutRandomnessOrLiveMutation()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 10);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 50);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 65, HitDistribution.Uniform))
+        ],
+        costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(3))]);
+        var damagePolicy = new ProductionCombatRuleset(new ThrowingRandomSource());
+
+        SkillExecutionResult result = new SkillExecutor(Services(damagePolicy: damagePolicy))
+            .Execute(Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        Assert.Equal(SkillExecutionDiagnosticCode.ExecutionFailed, Assert.Single(result.Diagnostics).Code);
+        Assert.False(result.CostsCommitted);
+        Assert.Empty(result.Effects);
+        Assert.Equal(10, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(50, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public void Execute_ResolvesFormulaCostOnceBeforeCommit()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 20);
@@ -2689,6 +2717,15 @@ public sealed class ActiveSkillExecutionTests
         public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
 
         public decimal NextUnitDecimal() => unit;
+    }
+
+    private sealed class ThrowingRandomSource : IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) =>
+            throw new InvalidOperationException("Random selection must not occur.");
+
+        public decimal NextUnitDecimal() =>
+            throw new InvalidOperationException("Random selection must not occur.");
     }
 
     private sealed class PowerAmountPolicy : IPowerAmountPolicy

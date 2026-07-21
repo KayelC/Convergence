@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:convergence:schema:content:v5:shared",
-  "title": "Convergence content v5 shared definitions",
+  "$id": "urn:convergence:schema:content:v6:shared",
+  "title": "Convergence content v6 shared definitions",
   "$defs": {
     "localId": {
       "type": "string",
@@ -352,8 +352,8 @@
               "type": "object", "additionalProperties": false,
               "required": ["minimum", "maximum"],
               "properties": {
-                "minimum": { "type": "integer", "minimum": 1 },
-                "maximum": { "type": "integer", "minimum": 1 },
+                  "minimum": { "type": "integer", "minimum": 1, "maximum": 1024 },
+                  "maximum": { "type": "integer", "minimum": 1, "maximum": 1024 },
                 "distribution": { "enum": ["fixed", "uniform"] }
               }
             },

@@ -217,6 +217,10 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
                     config = ReadDecimal(definition, key, value, diagnostics, config,
                         (current, parsed) => current with { DamageFormulaScalar = parsed });
                     break;
+                case "maximumHitsPerDamageEffect":
+                    config = ReadInt(definition, key, value, diagnostics, config,
+                        (current, parsed) => current with { MaximumHitsPerDamageEffect = parsed });
+                    break;
                 case "damageVarianceMinimum":
                     config = ReadDecimal(definition, key, value, diagnostics, config,
                         (current, parsed) => current with { DamageVarianceMinimum = parsed });
@@ -371,6 +375,9 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
         ProductionCombatRulesetConfig config,
         StandardActionOutcomeAggregationPolicyConfig actionOutcomeConfig) =>
     [
+        KeyValuePair.Create<string, object?>(
+            "maximumHitsPerDamageEffect",
+            config.MaximumHitsPerDamageEffect),
         KeyValuePair.Create<string, object?>("damageFormulaScalar", config.DamageFormulaScalar),
         KeyValuePair.Create<string, object?>("damageVarianceMinimum", config.DamageVarianceMinimum),
         KeyValuePair.Create<string, object?>("damageVarianceMaximum", config.DamageVarianceMaximum),

@@ -8,6 +8,12 @@ namespace Convergence.Battle;
 
 public sealed record ProductionCombatRulesetConfig
 {
+    /// <summary>
+    /// Gets the greatest authored hit count accepted for one damage effect by the supplied policy.
+    /// </summary>
+    public int MaximumHitsPerDamageEffect { get; init; } =
+        CombatExecutionLimits.DefaultMaximumHitsPerDamageEffect;
+
     public decimal DamageFormulaScalar { get; init; } = 5.0m;
     public decimal DamageVarianceMinimum { get; init; } = 0.95m;
     public decimal DamageVarianceMaximum { get; init; } = 1.05m;
@@ -28,6 +34,14 @@ public sealed record ProductionCombatRulesetConfig
 
     public void Validate()
     {
+        if (MaximumHitsPerDamageEffect is < 1 or > CombatExecutionLimits.MaximumAuthoredHitsPerDamageEffect)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MaximumHitsPerDamageEffect),
+                MaximumHitsPerDamageEffect,
+                $"Maximum hits per damage effect must be within 1-{CombatExecutionLimits.MaximumAuthoredHitsPerDamageEffect}.");
+        }
+
         RequirePositive(DamageFormulaScalar, nameof(DamageFormulaScalar));
         RequireOrderedNonNegativeRange(
             DamageVarianceMinimum,
@@ -1014,6 +1028,13 @@ public sealed class ProductionCombatRuleset :
         if (hits.Distribution == HitDistribution.Fixed && hits.Minimum != hits.Maximum)
         {
             throw new ArgumentException("Fixed hit counts require equal minimum and maximum values.", nameof(hits));
+        }
+        if (hits.Maximum > _config.MaximumHitsPerDamageEffect)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(hits),
+                hits.Maximum,
+                $"Authored hit count exceeds the configured maximum of {_config.MaximumHitsPerDamageEffect} per damage effect.");
         }
 
         if (hits.Minimum == hits.Maximum || hits.Distribution == HitDistribution.Fixed)

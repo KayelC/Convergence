@@ -1,10 +1,11 @@
+using Convergence.Battle;
 using Convergence.Content;
 
 namespace Convergence.Validation;
 
 public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 {
-    private const int SupportedSchemaVersion = 5;
+    private const int SupportedSchemaVersion = 6;
 
     public ContentValidationResult Validate(SkillSystemValidationRequest request)
     {
@@ -999,7 +1000,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             if (recipe.Parents.Count != 2)
             {
                 Add(source, source.Path + ".parents", ContentValidationErrorCode.ShapeInvalid,
-                    "Schema v5 fusion recipes require exactly two parents.");
+                    "Schema v6 fusion recipes require exactly two parents.");
             }
 
             var seenParents = new HashSet<(FusionParentSelectorKind Kind, ContentId Id)>();
@@ -1075,7 +1076,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         recipe.Path + ".parents",
                         ContentValidationErrorCode.FusionRecipeAmbiguous,
                         $"Fusion recipe '{recipe.Id}' overlaps equal-specificity recipe '{previous.Id}'.",
-                        "Make the parent selectors non-overlapping; schema v5 has no recipe-priority field.");
+                        "Make the parent selectors non-overlapping; schema v6 has no recipe-priority field.");
                     break;
                 }
             }
@@ -1926,6 +1927,22 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             RequireDefinedEnum(source, hits.Distribution, path + ".distribution", "Hit distribution");
             RequirePositive(source, hits.Minimum, path + ".minimum", "Minimum hit count");
             RequirePositive(source, hits.Maximum, path + ".maximum", "Maximum hit count");
+            if (hits.Minimum > CombatExecutionLimits.MaximumAuthoredHitsPerDamageEffect)
+            {
+                Add(
+                    source,
+                    path + ".minimum",
+                    ContentValidationErrorCode.ValueOutOfRange,
+                    $"Minimum hit count cannot exceed {CombatExecutionLimits.MaximumAuthoredHitsPerDamageEffect} per damage effect.");
+            }
+            if (hits.Maximum > CombatExecutionLimits.MaximumAuthoredHitsPerDamageEffect)
+            {
+                Add(
+                    source,
+                    path + ".maximum",
+                    ContentValidationErrorCode.ValueOutOfRange,
+                    $"Maximum hit count cannot exceed {CombatExecutionLimits.MaximumAuthoredHitsPerDamageEffect} per damage effect.");
+            }
             if (hits.Minimum > hits.Maximum)
             {
                 Add(source, path, ContentValidationErrorCode.MinimumExceedsMaximum,

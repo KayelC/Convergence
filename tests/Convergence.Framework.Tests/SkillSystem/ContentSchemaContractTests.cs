@@ -7,7 +7,7 @@ namespace Convergence.Framework.Tests.SkillSystem;
 
 public sealed class ContentSchemaContractTests
 {
-    private const string SchemaPrefix = "urn:convergence:schema:content:v5:";
+    private const string SchemaPrefix = "urn:convergence:schema:content:v6:";
 
     [Fact]
     public void ActiveContentDocuments_ValidateAgainstTheirDeclaredDraft202012Schemas()
@@ -218,6 +218,7 @@ public sealed class ContentSchemaContractTests
             """{"type":"custom","handlerId":"sample_condition","parameters":{"enabled":true}}""");
         Add(variants, "effect",
             """{"type":"damage","effectId":"primary_hit","elementId":"physical","power":20,"accuracy":95,"critical":{"mode":"chance","chance":10},"hits":{"minimum":1,"maximum":1}}""",
+            """{"type":"damage","elementId":"physical","power":1,"accuracy":100,"critical":{"mode":"never"},"hits":{"minimum":1024,"maximum":1024}}""",
             """{"type":"damage","elementId":"fire","power":10,"accuracy":50,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1},"contactMode":"shared_contact","dependency":{"sourceEffectId":"primary_hit","requirement":"positive_damage","scope":"same_target"}}""",
             """{"type":"instant_kill","chance":25,"resistanceCheck":{"mode":"channel","channelId":"dark"}}""",
             """{"type":"apply_ailment","ailmentId":"poison","chance":50,"duration":{"type":"battle"}}""",
@@ -269,6 +270,7 @@ public sealed class ContentSchemaContractTests
         { "condition", """{"type":"chance","chance":-1}""" },
         { "effect", """{"type":"damage","elementId":"physical","power":-1,"accuracy":100,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1}}""" },
         { "effect", """{"type":"damage","elementId":"physical","power":1,"accuracy":101,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1}}""" },
+        { "effect", """{"type":"damage","elementId":"physical","power":1,"accuracy":100,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1025,"distribution":"uniform"}}""" },
         { "effect", """{"type":"instant_kill","chance":-1,"resistanceCheck":{"mode":"none"}}""" },
         { "effect", """{"type":"apply_ailment","ailmentId":"poison","chance":101}""" },
         { "effect", """{"type":"modify_stat_stage","modifierTrackIds":["attack"],"stageDelta":0}""" },
@@ -334,7 +336,7 @@ public sealed class ContentSchemaContractTests
 
     private static string ContentRoot() => Path.Combine(AppContext.BaseDirectory, "Content");
 
-    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v5");
+    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v6");
 
     private static string Describe(EvaluationResults result)
     {

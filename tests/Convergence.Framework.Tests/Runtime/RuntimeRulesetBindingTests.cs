@@ -37,6 +37,7 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(Qualified("standard_damage_sample"), combat.RulesetId);
         Assert.Equal(StandardRulesetPolicyIds.StandardDamage, combat.PolicyId);
         Assert.Equal(5m, combat.EffectiveConfiguration["damageFormulaScalar"]);
+        Assert.Equal(64L, Assert.IsType<long>(combat.EffectiveConfiguration["maximumHitsPerDamageEffect"]));
         Assert.Equal(1.5m, combat.EffectiveConfiguration["weakDamageMultiplier"]);
         Assert.Same(damage, combat.Damage);
         Assert.Same(damage.HitPolicy, combat.HitResolution);
@@ -469,6 +470,7 @@ public sealed class RuntimeRulesetBindingTests
             RulesetCategory.Damage,
             StandardRulesetPolicyIds.StandardDamage,
             Parameters(
+                ("maximumHitsPerDamageEffect", 128),
                 ("damageFormulaScalar", 6m),
                 ("damageVarianceMinimum", 0.8m),
                 ("damageVarianceMaximum", 1.2m),
@@ -493,6 +495,8 @@ public sealed class RuntimeRulesetBindingTests
         ProductionCombatRulesetConfig config =
             Assert.IsType<ProductionCombatRuleset>(policies.Damage).Config;
 
+        Assert.Equal(128, config.MaximumHitsPerDamageEffect);
+        Assert.Equal(128L, Assert.IsType<long>(policies.EffectiveConfiguration["maximumHitsPerDamageEffect"]));
         Assert.Equal(6m, config.DamageFormulaScalar);
         Assert.Equal(0.8m, config.DamageVarianceMinimum);
         Assert.Equal(1.2m, config.DamageVarianceMaximum);
@@ -555,6 +559,28 @@ public sealed class RuntimeRulesetBindingTests
             Assert.Equal(expectedCode, diagnostic.Code);
             Assert.Equal("itemActionOutcomeBehavior", diagnostic.ParameterName);
         }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1025)]
+    public void DamageBinding_RejectsHitCountLimitsOutsideThePublishedContentDomain(int maximumHits)
+    {
+        ContentId rulesetId = Id($"test.pack:invalid_hit_limit_{maximumHits}");
+        RulesetBindingResult<CombatExecutionPolicySet> result = CreateResolver().BindCombatPolicies(
+            Catalog(new RulesetDefinition(
+                rulesetId,
+                "Invalid Hit Limit",
+                "The supplied combat policy rejects unsafe hit ceilings.",
+                RulesetCategory.Damage,
+                StandardRulesetPolicyIds.StandardDamage,
+                Parameters(("maximumHitsPerDamageEffect", maximumHits)))),
+            rulesetId,
+            new SequenceRandomSource(),
+            StagePolicy());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(RulesetBindingDiagnosticCode.InvalidParameterValue, Assert.Single(result.Diagnostics).Code);
     }
 
     [Fact]

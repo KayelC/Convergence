@@ -29,7 +29,7 @@ public sealed class SchemaDeserializationTests
             File.ReadAllText(TestContentPath.Resolve(jsonRoot, "skill_system_redesign.races.sample.json")),
             "races.sample.json");
 
-        Assert.Equal(5, manifest.SchemaVersion);
+        Assert.Equal(6, manifest.SchemaVersion);
         Assert.Equal(3, manifest.Documents.Count);
         SkillDefinition iceBoost = Assert.Single(skills.Records);
         EntityDefinition cinder = Assert.Single(entities.Records);
@@ -215,7 +215,7 @@ public sealed class SchemaDeserializationTests
     {
         const string valid = """
         {
-          "schemaVersion": 5,
+          "schemaVersion": 6,
           "equipment": [{
             "id": "blade", "displayName": "Blade", "description": "",
             "slot": "weapon", "baseValue": 1,
@@ -239,7 +239,7 @@ public sealed class SchemaDeserializationTests
         """;
         const string oldShape = """
         {
-          "schemaVersion": 5,
+          "schemaVersion": 6,
           "equipment": [{
             "id": "blade", "displayName": "Blade", "description": "",
             "slot": "weapon", "baseValue": 1,
@@ -322,7 +322,7 @@ public sealed class SchemaDeserializationTests
     {
         string json = $$"""
         {
-          "schemaVersion": 5,
+          "schemaVersion": 6,
           "ailments": [
             {
               "id": "test_ailment", "displayName": "Test", "description": "Test ailment.",
@@ -414,7 +414,7 @@ public sealed class SchemaDeserializationTests
             "\"inheritance\": null",
             StringComparison.Ordinal));
         const string nullRecord = """
-            { "schemaVersion": 5, "skills": [null] }
+            { "schemaVersion": 6, "skills": [null] }
             """;
         string nullEffect = WrapSkill(MinimalActiveRecord("[null]"));
 
@@ -593,7 +593,7 @@ public sealed class SchemaDeserializationTests
     }
 
     private static string WrapSkill(string record) => $$"""
-    { "schemaVersion": 5, "skills": [ {{record}} ] }
+    { "schemaVersion": 6, "skills": [ {{record}} ] }
     """;
 
     private static string MinimalPassiveRecord() =>

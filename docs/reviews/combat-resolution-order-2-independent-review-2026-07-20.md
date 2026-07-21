@@ -124,7 +124,7 @@ valid JSON authoring path.
 
 **Source evidence:**
 
-- [`shared.schema.json:440`](../../schemas/content/v5/shared.schema.json#L440)
+- [`shared.schema.json:440`](../../schemas/content/v6/shared.schema.json#L440)
   permits only `physical` and `magical`;
 - [`ChargePolicies.cs:283`](../../src/Convergence.Framework/Execution/ChargePolicies.cs#L283)
   defines `UnifiedChargePolicy`;

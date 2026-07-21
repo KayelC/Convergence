@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v5:fusion",
-  "schemaVersion": 5,
+  "$schema": "urn:convergence:schema:content:v6:fusion",
+  "schemaVersion": 6,
   "fusionRecipes": [
     {
       "id": "demo_spirit_binary_sample",

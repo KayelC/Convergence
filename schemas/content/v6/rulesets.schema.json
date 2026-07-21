@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:convergence:schema:content:v5:rulesets",
-  "title": "Convergence Content v5 Ruleset Document",
+  "$id": "urn:convergence:schema:content:v6:rulesets",
+  "title": "Convergence Content v6 Ruleset Document",
   "type": "object",
   "additionalProperties": false,
   "required": ["$schema", "schemaVersion", "rulesets"],
   "properties": {
-    "$schema": { "const": "urn:convergence:schema:content:v5:rulesets" },
-    "schemaVersion": { "const": 5 },
+    "$schema": { "const": "urn:convergence:schema:content:v6:rulesets" },
+    "schemaVersion": { "const": 6 },
     "rulesets": {
       "type": "array",
       "items": { "$ref": "#/$defs/ruleset" }
@@ -19,12 +19,12 @@
       "additionalProperties": false,
       "required": ["id", "displayName", "description", "category", "policyId"],
       "properties": {
-        "id": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/localId" },
-        "displayName": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/nonEmptyString" },
+        "id": { "$ref": "urn:convergence:schema:content:v6:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v6:shared#/$defs/nonEmptyString" },
         "description": { "type": "string" },
         "category": { "enum": ["damage", "growth", "stat", "stat_modifier", "turn_economy", "roster_capacity", "reward", "economy", "moon_phase"] },
-        "policyId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/localId" },
-        "parameters": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/parameters" }
+        "policyId": { "$ref": "urn:convergence:schema:content:v6:shared#/$defs/localId" },
+        "parameters": { "$ref": "urn:convergence:schema:content:v6:shared#/$defs/parameters" }
       }
     }
   }

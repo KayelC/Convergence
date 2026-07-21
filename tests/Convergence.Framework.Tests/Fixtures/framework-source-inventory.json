@@ -138,6 +138,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Battle/CombatExecutionLimits.cs",
+      "owner": "combat_rules",
+      "publicSurface": "internal_only"
+    },
+    {
       "path": "Battle/CriticalResolutionPolicies.cs",
       "owner": "combat_rules",
       "publicSurface": "exported"

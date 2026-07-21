@@ -14,11 +14,11 @@ Every active manifest lists its documents in authored order. DemoHost preserves 
 
 ## Validation Layers
 
-The active pre-release authoring contract is schema version `5`. Versions `1`
-through `4` are intentionally unsupported after the Action Token,
-catalyst-role, stat-modifier, and explicit weapon-critical migrations. The validator reports an
+The active pre-release authoring contract is schema version `6`. Versions `1`
+through `5` are intentionally unsupported after the Action Token,
+catalyst-role, stat-modifier, explicit weapon-critical, and bounded-hit-count migrations. The validator reports an
 unsupported-schema diagnostic instead of translating old documents. Active
-example packs are version `0.5.0`; exact dependency versions advance with the
+example packs are version `0.6.0`; exact dependency versions advance with the
 contract.
 
 1. Draft 2020-12 schemas validate document structure independently of Framework code.
@@ -26,33 +26,33 @@ contract.
 3. Semantic validation checks IDs, ranges, references, supported types, and explicit host registrations.
 4. Catalog loading checks paths, dependencies, versions, direct visibility, external references, and canonical qualification.
 
-## Schema v5
+## Schema v6
 
-The authored schemas live under [`../schemas/content/v5`](../schemas/content/v5).
-They use stable `urn:convergence:schema:content:v5:*` identifiers and reject
+The authored schemas live under [`../schemas/content/v6`](../schemas/content/v6).
+They use stable `urn:convergence:schema:content:v6:*` identifiers and reject
 unknown properties. Every active document must declare the schema matching its
 manifest document type:
 
 | Manifest type | `$schema` |
 |---|---|
-| `skills` | `urn:convergence:schema:content:v5:skills` |
-| `entities` | `urn:convergence:schema:content:v5:entities` |
-| `races` | `urn:convergence:schema:content:v5:races` |
-| `ailments` | `urn:convergence:schema:content:v5:ailments` |
-| `items` | `urn:convergence:schema:content:v5:items` |
-| `equipment` | `urn:convergence:schema:content:v5:equipment` |
-| `shops` | `urn:convergence:schema:content:v5:shops` |
-| `negotiations` | `urn:convergence:schema:content:v5:negotiations` |
-| `encounters` | `urn:convergence:schema:content:v5:encounters` |
-| `dungeons` | `urn:convergence:schema:content:v5:dungeons` |
-| `fusion` | `urn:convergence:schema:content:v5:fusion` |
-| `rulesets` | `urn:convergence:schema:content:v5:rulesets` |
+| `skills` | `urn:convergence:schema:content:v6:skills` |
+| `entities` | `urn:convergence:schema:content:v6:entities` |
+| `races` | `urn:convergence:schema:content:v6:races` |
+| `ailments` | `urn:convergence:schema:content:v6:ailments` |
+| `items` | `urn:convergence:schema:content:v6:items` |
+| `equipment` | `urn:convergence:schema:content:v6:equipment` |
+| `shops` | `urn:convergence:schema:content:v6:shops` |
+| `negotiations` | `urn:convergence:schema:content:v6:negotiations` |
+| `encounters` | `urn:convergence:schema:content:v6:encounters` |
+| `dungeons` | `urn:convergence:schema:content:v6:dungeons` |
+| `fusion` | `urn:convergence:schema:content:v6:fusion` |
+| `rulesets` | `urn:convergence:schema:content:v6:rulesets` |
 
-Manifests use `urn:convergence:schema:content:v5:manifest`. Shared definitions
-use `urn:convergence:schema:content:v5:shared` and are not content documents.
+Manifests use `urn:convergence:schema:content:v6:manifest`. Shared definitions
+use `urn:convergence:schema:content:v6:shared` and are not content documents.
 
 Every weapon basic attack must explicitly author its critical behavior with the
-same `never` or `chance` definition used by typed damage effects. Schema v5
+same `never` or `chance` definition used by typed damage effects. Schema v6
 rejects the pre-release shape that omitted this decision; the runtime never
 invents a weapon critical chance. A basic attack may additionally expose a
 local `primaryEffectId` and append `secondaryEffects`; those secondary records
@@ -71,7 +71,10 @@ JSON Schema is the structural authoring contract: exact property names, enum
 values, discriminated unions, required members, and basic numeric/string ranges.
 Its local numeric constraints match semantic validation for nonnegative damage
 power and amount values, `0..100` accuracy/chance fields, nonzero stat-stage
-deltas, positive charge multipliers, and positive turn durations. Percentage
+deltas, positive charge multipliers, positive turn durations, and damage-effect
+hit counts within `1..1024`. The supplied standard combat policy applies its
+own configurable `maximumHitsPerDamageEffect` ceiling, which defaults to `64`
+and may not exceed the published `1024` authoring limit. Percentage
 resource amounts are nonnegative but are not capped at one hundred; runtime
 resource bounds remain authoritative when such an amount is applied.
 The Framework validator remains authoritative for graph rules that JSON Schema
@@ -101,7 +104,7 @@ how signed stat changes accumulate, expire, and clear; it does not select the
 and parameters are normatively listed in
 [Ruleset Policy Contracts](ruleset-policy-contracts.md).
 
-Schema v5 accepts the neutral `general` value for `grant_charge` so a custom
+Schema v6 accepts the neutral `general` value for `grant_charge` so a custom
 combat composition can select `UnifiedChargePolicy`; the supplied split policy
 continues to accept only `physical` and `magical`. The optional standard-damage
 parameter `itemActionOutcomeBehavior` selects `normal` or `effect_driven`

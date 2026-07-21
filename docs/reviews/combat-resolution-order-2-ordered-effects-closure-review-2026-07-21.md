@@ -41,8 +41,8 @@ The review traced current behavior through:
 - [`ProductionCombatRuleset.cs`](../../src/Convergence.Framework/Battle/ProductionCombatRuleset.cs)
 - [`ActionTokenTurnEconomy.cs`](../../src/Convergence.Framework/TurnEconomy/ActionTokenTurnEconomy.cs)
 - [`SkillSystemContentValidator.cs`](../../src/Convergence.Framework/Validation/SkillSystemContentValidator.cs)
-- [`shared.schema.json`](../../schemas/content/v5/shared.schema.json)
-- [`equipment.schema.json`](../../schemas/content/v5/equipment.schema.json)
+- [`shared.schema.json`](../../schemas/content/v6/shared.schema.json)
+- [`equipment.schema.json`](../../schemas/content/v6/equipment.schema.json)
 
 The review also inspected the focused tests for action aggregation, active skill
 execution, basic attacks, charge consumption, deserialization, qualification,

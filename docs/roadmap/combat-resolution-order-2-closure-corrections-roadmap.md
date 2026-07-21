@@ -1,6 +1,6 @@
 # Order 2 Closure Corrections Roadmap
 
-**Status:** active; O2-R17 complete, O2-R18 through O2-R21 pending
+**Status:** active; O2-R17 and O2-R18 complete, O2-R19 through O2-R21 pending
 
 **Started:** 21 July 2026
 
@@ -84,7 +84,7 @@ stable release.
 
 ### O2-R18: Bound authored and standard-policy hit counts
 
-**State:** pending
+**State:** complete
 
 - Add the absolute content ceiling and configurable standard-policy maximum.
 - Advance schemas and active content to version 6 / pack version `0.6.0`.
@@ -93,6 +93,11 @@ stable release.
   allocation.
 - Add schema, deserialization, semantic, binding, direct-policy, action
   rollback, active-pack, and API-baseline tests.
+
+Verification completed with 1,414 solution tests, zero failures or skips, a
+zero-warning strict Release build, formatting verification, validation of all
+6 active packs / 36 documents / 98 definitions, and all four noninteractive
+DemoHost modes.
 
 **Commit:** `battle: bound authored hit counts`
 

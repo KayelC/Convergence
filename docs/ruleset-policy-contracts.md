@@ -82,6 +82,7 @@ binding rather than producing a partial service.
 
 | Parameter | Type | Default | Constraint |
 |---|---:|---:|---|
+| `maximumHitsPerDamageEffect` | integer | `64` | `1..1024`; authored effect maximum may not exceed it |
 | `damageFormulaScalar` | decimal | `5.0` | positive |
 | `damageVarianceMinimum` | decimal | `0.95` | nonnegative; no greater than maximum |
 | `damageVarianceMaximum` | decimal | `1.05` | nonnegative; no less than minimum |
