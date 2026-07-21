@@ -140,6 +140,8 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
         options.Converters.Add(new StrictSnakeCaseEnumConverter<SkillMenuGroup>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<InheritanceGroup>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<EffectFailurePolicy>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<EffectDependencyRequirement>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<EffectDependencyScope>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<InstantDeathChannel>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<TargetRelation>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<TargetSelection>());

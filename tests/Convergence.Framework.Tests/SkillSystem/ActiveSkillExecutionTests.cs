@@ -685,6 +685,186 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_SatisfiedDependencyPublishesTypedEvidence()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 50);
+        EffectLocalId sourceId = EffectLocalId.Parse("primary_hit");
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())
+            {
+                EffectId = sourceId
+            },
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))
+            {
+                EffectId = EffectLocalId.Parse("follow_up"),
+                Dependency = new EffectDependencyDefinition(
+                    sourceId,
+                    EffectDependencyRequirement.Succeeded,
+                    EffectDependencyScope.SameTarget)
+            }
+        ]);
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damage: _ => [new DamageHitResolution(true, 10)])).Execute(
+                Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(50, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(sourceId, result.Effects[0].EffectId);
+        EffectExecutionResult followUp = result.Effects[1];
+        Assert.Equal(EffectExecutionOutcome.Success, followUp.Outcome);
+        Assert.Equal(EffectLocalId.Parse("follow_up"), followUp.EffectId);
+        EffectDependencyEvaluation evaluation = Assert.IsType<EffectDependencyEvaluation>(
+            followUp.DependencyEvaluation);
+        Assert.True(evaluation.Satisfied);
+        Assert.Equal(EffectDependencyEvaluationReason.Satisfied, evaluation.Reason);
+        Assert.Equal(0, evaluation.SourceEffectIndex);
+        Assert.Equal(target.InstanceId, evaluation.TargetId);
+    }
+
+    [Fact]
+    public void Execute_UnmetDependencySkipsBeforeConditionAndDoesNotActivateFailurePolicy()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 50);
+        EffectLocalId sourceId = EffectLocalId.Parse("primary_hit");
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())
+            {
+                EffectId = sourceId
+            },
+            new ApplyAilmentEffectDefinition(
+                Poison,
+                100,
+                When: new ChanceConditionDefinition(100),
+                OnFailure: EffectFailurePolicy.StopAction)
+            {
+                Dependency = new EffectDependencyDefinition(
+                    sourceId,
+                    EffectDependencyRequirement.Succeeded,
+                    EffectDependencyScope.SameTarget)
+            },
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))
+        ]);
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damage: _ => [new DamageHitResolution(false, 0)])).Execute(
+                Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(60, target.GetRequiredResource(Hp).Current);
+        Assert.False(target.HasAilment(Poison));
+        Assert.Equal(
+            [EffectExecutionOutcome.Failure, EffectExecutionOutcome.Skipped, EffectExecutionOutcome.Success],
+            result.Effects.Select(effect => effect.Outcome));
+        EffectDependencyEvaluation evaluation = Assert.IsType<EffectDependencyEvaluation>(
+            result.Effects[1].DependencyEvaluation);
+        Assert.False(evaluation.Satisfied);
+        Assert.Equal(EffectDependencyEvaluationReason.SourceNotSuccessful, evaluation.Reason);
+    }
+
+    [Theory]
+    [InlineData(EffectDependencyScope.SameTarget, 4, 95, 50)]
+    [InlineData(EffectDependencyScope.AnyTarget, 4, 95, 55)]
+    public void Execute_DependencyScopeControlsWhetherAnotherTargetsSuccessQualifies(
+        EffectDependencyScope scope,
+        int expectedEffectCount,
+        int expectedFirstHp,
+        int expectedSecondHp)
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState first = Actor("first", EnemyTeam, hp: 100);
+        RuntimeActorState second = Actor("second", EnemyTeam, hp: 50);
+        EffectLocalId sourceId = EffectLocalId.Parse("primary_hit");
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())
+            {
+                EffectId = sourceId
+            },
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(5))
+            {
+                Dependency = new EffectDependencyDefinition(
+                    sourceId,
+                    EffectDependencyRequirement.Succeeded,
+                    scope)
+            }
+        ],
+        targeting: new TargetingDefinition(
+            TargetRelation.Enemy,
+            TargetSelection.All,
+            TargetLifeState.Alive,
+            false));
+        BattleExecutionServices services = Services(damage: request =>
+            request.Target.InstanceId == first.InstanceId
+                ? [new DamageHitResolution(true, 10)]
+                : [new DamageHitResolution(false, 0)]);
+
+        SkillExecutionResult result = new SkillExecutor(services).Execute(
+            Request(skill, actor, [actor, first, second]));
+
+        Assert.Equal(expectedEffectCount, result.Effects.Count);
+        Assert.Equal(expectedFirstHp, first.GetRequiredResource(Hp).Current);
+        Assert.Equal(expectedSecondHp, second.GetRequiredResource(Hp).Current);
+        EffectExecutionResult secondFollowUp = result.Effects.Single(effect =>
+            effect.EffectIndex == 1 && effect.TargetId == second.InstanceId);
+        EffectDependencyEvaluation evaluation = Assert.IsType<EffectDependencyEvaluation>(
+            secondFollowUp.DependencyEvaluation);
+        Assert.Equal(scope == EffectDependencyScope.AnyTarget, evaluation.Satisfied);
+    }
+
+    [Fact]
+    public void Execute_InvalidProgrammaticDependencySequenceRejectsAtomically()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 10);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 50);
+        EffectLocalId duplicateId = EffectLocalId.Parse("duplicate");
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())
+            {
+                EffectId = duplicateId
+            },
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))
+            {
+                EffectId = duplicateId
+            }
+        ],
+        costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(3))]);
+
+        SkillExecutionResult result = new SkillExecutor(Services()).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        Assert.Equal(SkillExecutionDiagnosticCode.ExecutionFailed, Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(10, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(50, target.GetRequiredResource(Hp).Current);
+        Assert.False(result.CostsCommitted);
+        Assert.Empty(result.Effects);
+    }
+
+    [Fact]
     public void Execute_StopTargetSuppressesLaterEffectsOnlyForFailedTarget()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam);

@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using Convergence.Catalog;
 using Convergence.Content;
 using Xunit;
 
@@ -88,6 +89,80 @@ public sealed class DomainDefinitionTests
         Assert.Equal(string.Empty, id.ToString());
         Assert.True(ContentId.Parse("valid_id").IsValid);
         Assert.False(ContentId.Parse("valid_id").IsEmpty);
+    }
+
+    [Fact]
+    public void EffectLocalIdsAndDependenciesAreTypedLocalValues()
+    {
+        EffectLocalId effectId = EffectLocalId.Parse("  Primary_Hit  ");
+        var dependency = new EffectDependencyDefinition(
+            effectId,
+            EffectDependencyRequirement.PositiveDamage,
+            EffectDependencyScope.SameTarget);
+        var effect = new ApplyAilmentEffectDefinition(ContentId.Parse("poison"), 50)
+        {
+            EffectId = EffectLocalId.Parse("poison_rider"),
+            Dependency = dependency
+        };
+
+        Assert.Equal("primary_hit", effectId.Value);
+        Assert.Equal(effectId, dependency.SourceEffectId);
+        Assert.Equal(EffectDependencyRequirement.PositiveDamage, effect.Dependency!.Requirement);
+        Assert.False(default(EffectLocalId).IsValid);
+        Assert.False(EffectLocalId.TryParse("pack:effect", out _));
+        Assert.Throws<ArgumentException>(() => EffectLocalId.Parse("pack:effect"));
+        Assert.Throws<ArgumentException>(() =>
+            new EffectDependencyDefinition(
+                default,
+                EffectDependencyRequirement.Succeeded,
+                EffectDependencyScope.SameTarget));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new EffectDependencyDefinition(effectId, (EffectDependencyRequirement)99, EffectDependencyScope.SameTarget));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new EffectDependencyDefinition(effectId, EffectDependencyRequirement.Succeeded, (EffectDependencyScope)99));
+    }
+
+    [Fact]
+    public void CatalogQualificationPreservesSequenceLocalEffectReferences()
+    {
+        EffectLocalId sourceId = EffectLocalId.Parse("primary_hit");
+        SkillDefinition local = new(
+            ContentId.Parse("qualified_dependency"),
+            "Qualified Dependency",
+            "Exercises local effect IDs through qualification.",
+            SkillActivation.Active,
+            SkillMenuGroup.Ailment,
+            InheritanceGroup.Ailment,
+            new SkillInheritanceDefinition(true),
+            targeting: EnemyTargeting(),
+            effects:
+            [
+                new DamageEffectDefinition(
+                    DamageElement.Physical,
+                    10,
+                    100,
+                    new NeverCriticalDefinition(),
+                    new HitCountDefinition(1, 1))
+                {
+                    EffectId = sourceId
+                },
+                new ApplyAilmentEffectDefinition(ContentId.Parse("poison"), 50)
+                {
+                    Dependency = new EffectDependencyDefinition(
+                        sourceId,
+                        EffectDependencyRequirement.PositiveDamage,
+                        EffectDependencyScope.SameTarget)
+                }
+            ],
+            availability: new SkillAvailabilityDefinition([ContentId.Parse("battle")]));
+
+        SkillDefinition qualified = DefinitionQualifier.Skill("sample.pack", local);
+
+        Assert.Equal(ContentId.Parse("sample.pack:qualified_dependency"), qualified.Id);
+        Assert.Equal(sourceId, qualified.Effects[0].EffectId);
+        Assert.Equal(sourceId, qualified.Effects[1].Dependency!.SourceEffectId);
+        Assert.Equal(ContentId.Parse("sample.pack:poison"),
+            Assert.IsType<ApplyAilmentEffectDefinition>(qualified.Effects[1]).AilmentId);
     }
 
     [Theory]

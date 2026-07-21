@@ -231,7 +231,7 @@ zero stage delta, and non-positive charge multipliers.
 
 ### O2-R8: Aggregate complete actions by target
 
-**State:** pending
+**State:** complete in commit `65b0380`
 
 - Group damage-hit evidence by target across all effect results.
 - Preserve multi-hit and multi-target precedence.
@@ -243,7 +243,7 @@ zero stage delta, and non-positive charge multipliers.
 
 ### O2-R9: Make aggregate outcome authoritative to Action Token
 
-**State:** pending
+**State:** complete in commit `2eb05bf`
 
 - Remove `AnyCritical` as an implicit Action Token pricing override.
 - Preserve it as immutable event/result evidence.
@@ -253,7 +253,7 @@ zero stage delta, and non-positive charge multipliers.
 
 ### O2-R10: Add typed effect dependencies
 
-**State:** pending
+**State:** complete in this checkpoint
 
 - Add immutable effect IDs, dependency definitions, scopes, requirements, and
   typed evaluation evidence.

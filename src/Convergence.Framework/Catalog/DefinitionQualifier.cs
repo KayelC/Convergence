@@ -210,60 +210,69 @@ internal static class DefinitionQualifier
             definition.Effects.Select(effect => Effect(packId, effect)),
             definition.When is null ? null : Condition(packId, definition.When));
 
-    private static EffectDefinition Effect(string packId, EffectDefinition definition) => definition switch
+    private static EffectDefinition Effect(string packId, EffectDefinition definition)
     {
-        DamageEffectDefinition effect => new DamageEffectDefinition(
+        EffectDefinition qualified = definition switch
+        {
+            DamageEffectDefinition effect => new DamageEffectDefinition(
             effect.Element, effect.Power, effect.Accuracy, Critical(effect.Critical), effect.Hits, effect.Drain,
             OptionalCondition(packId, effect.When), effect.OnFailure),
-        InstantKillEffectDefinition effect => new InstantKillEffectDefinition(
-            effect.Chance, effect.ResistanceCheck, OptionalCondition(packId, effect.When), effect.OnFailure),
-        ApplyAilmentEffectDefinition effect => new ApplyAilmentEffectDefinition(
-            ContentReference(packId, effect.AilmentId), effect.Chance,
-            effect.Duration is null ? null : Duration(effect.Duration),
-            OptionalCondition(packId, effect.When), effect.OnFailure),
-        RestoreResourceEffectDefinition effect => new RestoreResourceEffectDefinition(
-            effect.ResourceId, Amount(effect.Amount), OptionalCondition(packId, effect.When), effect.OnFailure),
-        RemoveAilmentEffectDefinition effect => new RemoveAilmentEffectDefinition(
-            effect.Scope,
-            effect.AilmentIds.Select(id => ContentReference(packId, id)),
-            effect.AilmentGroupIds,
-            OptionalCondition(packId, effect.When),
-            effect.OnFailure),
-        ReviveEffectDefinition effect => new ReviveEffectDefinition(
-            effect.ResourceId, Amount(effect.Amount), OptionalCondition(packId, effect.When), effect.OnFailure),
-        ModifyStatStageEffectDefinition effect => new ModifyStatStageEffectDefinition(
-            effect.ModifierTrackIds, effect.StageDelta,
-            effect.Duration is null ? null : Duration(effect.Duration),
-            OptionalCondition(packId, effect.When), effect.OnFailure),
-        GrantChargeEffectDefinition effect => new GrantChargeEffectDefinition(
-            effect.Charge, effect.Multiplier,
-            effect.Duration is null ? null : Duration(effect.Duration),
-            OptionalCondition(packId, effect.When), effect.OnFailure),
-        GrantShieldEffectDefinition effect => new GrantShieldEffectDefinition(
-            effect.Shield,
-            effect.Duration is null ? null : Duration(effect.Duration),
-            OptionalCondition(packId, effect.When), effect.OnFailure),
-        BreakAffinityEffectDefinition effect => new BreakAffinityEffectDefinition(
-            effect.Elements, Duration(effect.Duration),
-            OptionalCondition(packId, effect.When), effect.OnFailure),
-        OverrideAffinityEffectDefinition effect => new OverrideAffinityEffectDefinition(
-            effect.Elements, effect.Affinity, Duration(effect.Duration),
-            OptionalCondition(packId, effect.When), effect.OnFailure),
-        RemoveStatusEffectDefinition effect => new RemoveStatusEffectDefinition(
-            effect.StatusKinds, effect.StatusIds, OptionalCondition(packId, effect.When), effect.OnFailure),
-        ReduceResourceEffectDefinition effect => new ReduceResourceEffectDefinition(
-            effect.ResourceId, Amount(effect.Amount), effect.CanReduceToZero,
-            OptionalCondition(packId, effect.When), effect.OnFailure),
-        SetResourceEffectDefinition effect => new SetResourceEffectDefinition(
-            effect.ResourceId, Amount(effect.Amount), OptionalCondition(packId, effect.When), effect.OnFailure),
-        AnalyzeEffectDefinition effect => new AnalyzeEffectDefinition(
-            effect.Layers, OptionalCondition(packId, effect.When), effect.OnFailure),
-        EscapeEffectDefinition effect => new EscapeEffectDefinition(
-            effect.EligibilityRuleId, effect.Chance, OptionalCondition(packId, effect.When), effect.OnFailure),
-        CustomEffectDefinition effect => new CustomEffectDefinition(
-            effect.HandlerId, effect.Parameters, OptionalCondition(packId, effect.When), effect.OnFailure),
-        _ => throw new InvalidOperationException($"Unsupported effect definition '{definition.GetType().Name}'.")
-    };
+            InstantKillEffectDefinition effect => new InstantKillEffectDefinition(
+                effect.Chance, effect.ResistanceCheck, OptionalCondition(packId, effect.When), effect.OnFailure),
+            ApplyAilmentEffectDefinition effect => new ApplyAilmentEffectDefinition(
+                ContentReference(packId, effect.AilmentId), effect.Chance,
+                effect.Duration is null ? null : Duration(effect.Duration),
+                OptionalCondition(packId, effect.When), effect.OnFailure),
+            RestoreResourceEffectDefinition effect => new RestoreResourceEffectDefinition(
+                effect.ResourceId, Amount(effect.Amount), OptionalCondition(packId, effect.When), effect.OnFailure),
+            RemoveAilmentEffectDefinition effect => new RemoveAilmentEffectDefinition(
+                effect.Scope,
+                effect.AilmentIds.Select(id => ContentReference(packId, id)),
+                effect.AilmentGroupIds,
+                OptionalCondition(packId, effect.When),
+                effect.OnFailure),
+            ReviveEffectDefinition effect => new ReviveEffectDefinition(
+                effect.ResourceId, Amount(effect.Amount), OptionalCondition(packId, effect.When), effect.OnFailure),
+            ModifyStatStageEffectDefinition effect => new ModifyStatStageEffectDefinition(
+                effect.ModifierTrackIds, effect.StageDelta,
+                effect.Duration is null ? null : Duration(effect.Duration),
+                OptionalCondition(packId, effect.When), effect.OnFailure),
+            GrantChargeEffectDefinition effect => new GrantChargeEffectDefinition(
+                effect.Charge, effect.Multiplier,
+                effect.Duration is null ? null : Duration(effect.Duration),
+                OptionalCondition(packId, effect.When), effect.OnFailure),
+            GrantShieldEffectDefinition effect => new GrantShieldEffectDefinition(
+                effect.Shield,
+                effect.Duration is null ? null : Duration(effect.Duration),
+                OptionalCondition(packId, effect.When), effect.OnFailure),
+            BreakAffinityEffectDefinition effect => new BreakAffinityEffectDefinition(
+                effect.Elements, Duration(effect.Duration),
+                OptionalCondition(packId, effect.When), effect.OnFailure),
+            OverrideAffinityEffectDefinition effect => new OverrideAffinityEffectDefinition(
+                effect.Elements, effect.Affinity, Duration(effect.Duration),
+                OptionalCondition(packId, effect.When), effect.OnFailure),
+            RemoveStatusEffectDefinition effect => new RemoveStatusEffectDefinition(
+                effect.StatusKinds, effect.StatusIds, OptionalCondition(packId, effect.When), effect.OnFailure),
+            ReduceResourceEffectDefinition effect => new ReduceResourceEffectDefinition(
+                effect.ResourceId, Amount(effect.Amount), effect.CanReduceToZero,
+                OptionalCondition(packId, effect.When), effect.OnFailure),
+            SetResourceEffectDefinition effect => new SetResourceEffectDefinition(
+                effect.ResourceId, Amount(effect.Amount), OptionalCondition(packId, effect.When), effect.OnFailure),
+            AnalyzeEffectDefinition effect => new AnalyzeEffectDefinition(
+                effect.Layers, OptionalCondition(packId, effect.When), effect.OnFailure),
+            EscapeEffectDefinition effect => new EscapeEffectDefinition(
+                effect.EligibilityRuleId, effect.Chance, OptionalCondition(packId, effect.When), effect.OnFailure),
+            CustomEffectDefinition effect => new CustomEffectDefinition(
+                effect.HandlerId, effect.Parameters, OptionalCondition(packId, effect.When), effect.OnFailure),
+            _ => throw new InvalidOperationException($"Unsupported effect definition '{definition.GetType().Name}'.")
+        };
+
+        return qualified with
+        {
+            EffectId = definition.EffectId,
+            Dependency = definition.Dependency
+        };
+    }
 
     private static RuleModifierDefinition Modifier(string packId, RuleModifierDefinition definition) => definition switch
     {

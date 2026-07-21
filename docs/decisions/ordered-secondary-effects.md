@@ -4,7 +4,7 @@
 
 **Decision date:** 21 July 2026
 
-**Implementation state:** approved for O2-R8 through O2-R16; runtime work pending
+**Implementation state:** O2-R8 through O2-R10 complete; O2-R11 through O2-R16 pending
 
 ## Context
 

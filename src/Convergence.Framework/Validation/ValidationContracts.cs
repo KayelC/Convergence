@@ -43,7 +43,11 @@ public enum ContentValidationErrorCode
     FusionRecipeAmbiguous,
     RecordIdInvalid,
     ReferenceIdInvalid,
-    RegistrationIdInvalid
+    RegistrationIdInvalid,
+    EffectIdDuplicate,
+    EffectDependencySourceMissing,
+    EffectDependencyOrderInvalid,
+    EffectDependencySourceIncompatible
 }
 
 public sealed record ContentValidationError(

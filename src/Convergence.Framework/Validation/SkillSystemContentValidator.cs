@@ -1328,9 +1328,64 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             IReadOnlyList<EffectDefinition> effects,
             string path)
         {
+            var effectIndexes = new Dictionary<EffectLocalId, int>();
             for (int index = 0; index < effects.Count; index++)
             {
+                if (effects[index].EffectId is not EffectLocalId effectId)
+                {
+                    continue;
+                }
+
+                if (!effectIndexes.TryAdd(effectId, index))
+                {
+                    Add(source, $"{path}[{index}].effectId", ContentValidationErrorCode.EffectIdDuplicate,
+                        $"Effect ID '{effectId}' is already used in this effect sequence.");
+                }
+            }
+
+            for (int index = 0; index < effects.Count; index++)
+            {
+                ValidateEffectDependency(source, effects, effectIndexes, index, path);
                 ValidateEffect(source, effects[index], $"{path}[{index}]");
+            }
+        }
+
+        private void ValidateEffectDependency<TDefinition>(
+            RecordSource<TDefinition> source,
+            IReadOnlyList<EffectDefinition> effects,
+            IReadOnlyDictionary<EffectLocalId, int> effectIndexes,
+            int effectIndex,
+            string path)
+        {
+            EffectDependencyDefinition? dependency = effects[effectIndex].Dependency;
+            if (dependency is null)
+            {
+                return;
+            }
+
+            string dependencyPath = $"{path}[{effectIndex}].dependency";
+            if (!effectIndexes.TryGetValue(dependency.SourceEffectId, out int sourceIndex))
+            {
+                Add(source, dependencyPath + ".sourceEffectId",
+                    ContentValidationErrorCode.EffectDependencySourceMissing,
+                    $"Effect dependency source '{dependency.SourceEffectId}' does not exist in this sequence.");
+                return;
+            }
+
+            if (sourceIndex >= effectIndex)
+            {
+                Add(source, dependencyPath + ".sourceEffectId",
+                    ContentValidationErrorCode.EffectDependencyOrderInvalid,
+                    "Effect dependencies must reference an earlier effect in the same sequence.");
+                return;
+            }
+
+            if (dependency.Requirement == EffectDependencyRequirement.PositiveDamage &&
+                effects[sourceIndex] is not DamageEffectDefinition)
+            {
+                Add(source, dependencyPath + ".requirement",
+                    ContentValidationErrorCode.EffectDependencySourceIncompatible,
+                    "A positive-damage dependency must reference a damage effect.");
             }
         }
 

@@ -131,6 +131,16 @@ public sealed class ContentSchemaContractTests
             ["any"] = new JsonArray()
         };
 
+        JsonObject qualifiedEffectId = skill.DeepClone().AsObject();
+        qualifiedEffectId["skills"]![0]!["effects"]![0]!["effectId"] = "pack:primary_hit";
+
+        JsonObject incompleteDependency = skill.DeepClone().AsObject();
+        incompleteDependency["skills"]![0]!["effects"]![0]!["dependency"] = new JsonObject
+        {
+            ["sourceEffectId"] = "primary_hit",
+            ["requirement"] = "positive_damage"
+        };
+
         return new TheoryData<string, string>
         {
             { "skills", unknownField.ToJsonString() },
@@ -141,7 +151,9 @@ public sealed class ContentSchemaContractTests
             { "skills", malformedActive.ToJsonString() },
             { "items", invalidItemUsage.ToJsonString() },
             { "equipment", missingBasicAttackCritical.ToJsonString() },
-            { "skills", ambiguousCondition.ToJsonString() }
+            { "skills", ambiguousCondition.ToJsonString() },
+            { "skills", qualifiedEffectId.ToJsonString() },
+            { "skills", incompleteDependency.ToJsonString() }
         };
     }
 
@@ -193,7 +205,7 @@ public sealed class ContentSchemaContractTests
             """{"type":"effect_element_is","elementId":"wind"}""",
             """{"type":"custom","handlerId":"sample_condition","parameters":{"enabled":true}}""");
         Add(variants, "effect",
-            """{"type":"damage","elementId":"physical","power":20,"accuracy":95,"critical":{"mode":"chance","chance":10},"hits":{"minimum":1,"maximum":1}}""",
+            """{"type":"damage","effectId":"primary_hit","elementId":"physical","power":20,"accuracy":95,"critical":{"mode":"chance","chance":10},"hits":{"minimum":1,"maximum":1}}""",
             """{"type":"instant_kill","chance":25,"resistanceCheck":{"mode":"channel","channelId":"dark"}}""",
             """{"type":"apply_ailment","ailmentId":"poison","chance":50,"duration":{"type":"battle"}}""",
             """{"type":"restore_resource","resourceId":"hp","amount":{"type":"flat","value":20}}""",
@@ -211,6 +223,9 @@ public sealed class ContentSchemaContractTests
             """{"type":"analyze","layers":["full"]}""",
             """{"type":"escape","eligibilityRuleId":"standard_escape","chance":100}""",
             """{"type":"custom","handlerId":"request_host_action","parameters":{"requestId":"sample"}}""");
+        variants.Add(
+            "effect",
+            """{"type":"apply_ailment","ailmentId":"poison","chance":50,"dependency":{"sourceEffectId":"primary_hit","requirement":"positive_damage","scope":"same_target"}}""");
 
         foreach (string numericModifier in new[]
         {

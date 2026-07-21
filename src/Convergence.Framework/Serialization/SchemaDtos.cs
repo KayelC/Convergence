@@ -569,8 +569,17 @@ internal sealed class CustomConditionDto : ConditionDto
 internal abstract class EffectDto
 {
     public required string Type { get; init; }
+    public string? EffectId { get; init; }
+    public EffectDependencyDto? Dependency { get; init; }
     public ConditionDto? When { get; init; }
     public EffectFailurePolicy OnFailure { get; init; } = EffectFailurePolicy.Continue;
+}
+
+internal sealed class EffectDependencyDto
+{
+    public required string SourceEffectId { get; init; }
+    public required EffectDependencyRequirement Requirement { get; init; }
+    public required EffectDependencyScope Scope { get; init; }
 }
 
 internal sealed class DamageEffectDto : EffectDto

@@ -441,7 +441,7 @@ internal static class SkillSystemDtoMapper
     private static EffectDefinition MapEffect(EffectDto dto)
     {
         ConditionDefinition? when = dto.When is null ? null : MapCondition(dto.When);
-        return dto.Type switch
+        EffectDefinition effect = dto.Type switch
         {
             "damage" => MapDamage((DamageEffectDto)dto, when),
             "instant_kill" => new InstantKillEffectDefinition(
@@ -477,6 +477,17 @@ internal static class SkillSystemDtoMapper
                 when,
                 dto.OnFailure),
             _ => throw new InvalidOperationException($"Unsupported effect type '{dto.Type}'.")
+        };
+
+        return effect with
+        {
+            EffectId = dto.EffectId is null ? null : EffectLocalId.Parse(dto.EffectId),
+            Dependency = dto.Dependency is null
+                ? null
+                : new EffectDependencyDefinition(
+                    EffectLocalId.Parse(dto.Dependency.SourceEffectId),
+                    dto.Dependency.Requirement,
+                    dto.Dependency.Scope)
         };
     }
 

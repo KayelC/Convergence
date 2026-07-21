@@ -297,11 +297,23 @@
         "parameters": { "$ref": "#/$defs/parameters" }
       }
     },
+    "effectDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceEffectId", "requirement", "scope"],
+      "properties": {
+        "sourceEffectId": { "$ref": "#/$defs/localId" },
+        "requirement": { "enum": ["succeeded", "positive_damage"] },
+        "scope": { "enum": ["same_target", "any_target"] }
+      }
+    },
     "effectBase": {
       "type": "object",
       "required": ["type"],
       "properties": {
         "type": { "type": "string" },
+        "effectId": { "$ref": "#/$defs/localId" },
+        "dependency": { "$ref": "#/$defs/effectDependency" },
         "when": { "$ref": "#/$defs/condition" },
         "onFailure": { "enum": ["continue", "stop_target", "stop_action"] }
       }

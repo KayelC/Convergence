@@ -44,6 +44,7 @@ internal sealed class OrderedEffectExecutor
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(effects);
         ArgumentNullException.ThrowIfNull(targets);
+        IReadOnlyDictionary<EffectLocalId, int> effectIndexes = ValidateEffectDependencies(effects);
 
         ActionExecutionScope? scope = CurrentExecutionScope.Value;
         bool ownsScope = scope is null;
@@ -59,7 +60,7 @@ internal sealed class OrderedEffectExecutor
 
         try
         {
-            return ExecuteCore(request, effects, targets);
+            return ExecuteCore(request, effects, targets, effectIndexes);
         }
         finally
         {
@@ -88,7 +89,8 @@ internal sealed class OrderedEffectExecutor
     private OrderedEffectExecution ExecuteCore(
         EffectActionExecutionRequest request,
         IReadOnlyList<EffectDefinition> effects,
-        ResolvedRuntimeTargetSet targets)
+        ResolvedRuntimeTargetSet targets,
+        IReadOnlyDictionary<EffectLocalId, int> effectIndexes)
     {
         var results = new List<EffectExecutionResult>();
         var stoppedTargets = new HashSet<RuntimeInstanceId>();
@@ -117,17 +119,46 @@ internal sealed class OrderedEffectExecutor
                     target,
                     effectElement);
 
+                EffectDependencyEvaluation? dependencyEvaluation = effect.Dependency is null
+                    ? null
+                    : EvaluateDependency(
+                        effect.Dependency,
+                        effectIndexes[effect.Dependency.SourceEffectId],
+                        target,
+                        results);
+                if (dependencyEvaluation is { Satisfied: false })
+                {
+                    results.Add(new EffectExecutionResult(
+                        effectIndex,
+                        target?.InstanceId,
+                        EffectExecutionOutcome.Skipped,
+                        Detail: $"Effect dependency was not satisfied: {dependencyEvaluation.Reason}.")
+                    {
+                        EffectId = effect.EffectId,
+                        DependencyEvaluation = dependencyEvaluation
+                    });
+                    continue;
+                }
+
                 if (!BattleConditionEvaluator.Evaluate(effect.When, context))
                 {
                     results.Add(new EffectExecutionResult(
                         effectIndex,
                         target?.InstanceId,
                         EffectExecutionOutcome.Skipped,
-                        Detail: "The effect condition was false."));
+                        Detail: "The effect condition was false.")
+                    {
+                        EffectId = effect.EffectId,
+                        DependencyEvaluation = dependencyEvaluation
+                    });
                     continue;
                 }
 
-                EffectExecutionResult result = _effectExecutors.Execute(effect, context);
+                EffectExecutionResult result = _effectExecutors.Execute(effect, context) with
+                {
+                    EffectId = effect.EffectId,
+                    DependencyEvaluation = dependencyEvaluation
+                };
                 results.Add(result);
                 if (effect is DamageEffectDefinition damageEffect &&
                     result.Outcome != EffectExecutionOutcome.Skipped)
@@ -172,6 +203,102 @@ internal sealed class OrderedEffectExecutor
         return new OrderedEffectExecution(
             Array.AsReadOnly(results.ToArray()),
             targetStopped ? OrderedEffectStopReason.Target : OrderedEffectStopReason.None);
+    }
+
+    private static IReadOnlyDictionary<EffectLocalId, int> ValidateEffectDependencies(
+        IReadOnlyList<EffectDefinition> effects)
+    {
+        var indexes = new Dictionary<EffectLocalId, int>();
+        for (int index = 0; index < effects.Count; index++)
+        {
+            if (effects[index].EffectId is EffectLocalId effectId && !indexes.TryAdd(effectId, index))
+            {
+                throw new InvalidOperationException(
+                    $"Effect ID '{effectId}' is duplicated in one effect sequence.");
+            }
+        }
+
+        for (int index = 0; index < effects.Count; index++)
+        {
+            EffectDependencyDefinition? dependency = effects[index].Dependency;
+            if (dependency is null)
+            {
+                continue;
+            }
+
+            if (!indexes.TryGetValue(dependency.SourceEffectId, out int sourceIndex))
+            {
+                throw new InvalidOperationException(
+                    $"Effect dependency source '{dependency.SourceEffectId}' does not exist in this sequence.");
+            }
+
+            if (sourceIndex >= index)
+            {
+                throw new InvalidOperationException(
+                    $"Effect dependency source '{dependency.SourceEffectId}' must precede its dependent effect.");
+            }
+
+            if (dependency.Requirement == EffectDependencyRequirement.PositiveDamage &&
+                effects[sourceIndex] is not DamageEffectDefinition)
+            {
+                throw new InvalidOperationException(
+                    $"Positive-damage dependency source '{dependency.SourceEffectId}' is not a damage effect.");
+            }
+        }
+
+        return new System.Collections.ObjectModel.ReadOnlyDictionary<EffectLocalId, int>(indexes);
+    }
+
+    private static EffectDependencyEvaluation EvaluateDependency(
+        EffectDependencyDefinition dependency,
+        int sourceEffectIndex,
+        RuntimeActorState? target,
+        IReadOnlyList<EffectExecutionResult> priorResults)
+    {
+        RuntimeInstanceId? targetId = target?.InstanceId;
+        EffectExecutionResult[] sourceResults = priorResults
+            .Where(result =>
+                result.EffectIndex == sourceEffectIndex &&
+                (dependency.Scope == EffectDependencyScope.AnyTarget || result.TargetId == targetId))
+            .ToArray();
+
+        if (sourceResults.Length == 0)
+        {
+            return Evaluation(false, EffectDependencyEvaluationReason.SourceResultMissing);
+        }
+
+        bool satisfied = dependency.Requirement switch
+        {
+            EffectDependencyRequirement.Succeeded =>
+                sourceResults.Any(result => result.Outcome == EffectExecutionOutcome.Success),
+            EffectDependencyRequirement.PositiveDamage =>
+                sourceResults.SelectMany(result => result.DamageHits).Any(hit =>
+                    hit.Hit &&
+                    hit.AppliedResourceDelta < 0m &&
+                    hit.AffectedActorId == hit.TargetId),
+            _ => throw new InvalidOperationException(
+                $"Unsupported effect dependency requirement '{dependency.Requirement}'.")
+        };
+
+        return satisfied
+            ? Evaluation(true, EffectDependencyEvaluationReason.Satisfied)
+            : Evaluation(
+                false,
+                dependency.Requirement == EffectDependencyRequirement.Succeeded
+                    ? EffectDependencyEvaluationReason.SourceNotSuccessful
+                    : EffectDependencyEvaluationReason.PositiveDamageNotDealt);
+
+        EffectDependencyEvaluation Evaluation(
+            bool isSatisfied,
+            EffectDependencyEvaluationReason reason) =>
+            new(
+                dependency.SourceEffectId,
+                sourceEffectIndex,
+                dependency.Requirement,
+                dependency.Scope,
+                targetId,
+                isSatisfied,
+                reason);
     }
 
     private sealed class ActionExecutionScope

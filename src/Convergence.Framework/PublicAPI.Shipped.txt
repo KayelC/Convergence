@@ -10596,3 +10596,67 @@ Convergence.Execution.StandardActionOutcomeAggregationPolicy.StandardActionOutco
 Convergence.Execution.StandardActionOutcomeAggregationPolicyConfig
 Convergence.Execution.StandardActionOutcomeAggregationPolicyConfig.ItemBehavior.get -> Convergence.Execution.ItemActionOutcomeBehavior
 Convergence.Execution.StandardActionOutcomeAggregationPolicyConfig.StandardActionOutcomeAggregationPolicyConfig(Convergence.Execution.ItemActionOutcomeBehavior itemBehavior = Convergence.Execution.ItemActionOutcomeBehavior.Normal) -> void
+~override Convergence.Content.EffectLocalId.Equals(object obj) -> bool
+Convergence.Content.EffectDefinition.Dependency.get -> Convergence.Content.EffectDependencyDefinition?
+Convergence.Content.EffectDefinition.Dependency.init -> void
+Convergence.Content.EffectDefinition.EffectId.get -> Convergence.Content.EffectLocalId?
+Convergence.Content.EffectDefinition.EffectId.init -> void
+Convergence.Content.EffectDependencyDefinition
+Convergence.Content.EffectDependencyDefinition.<Clone>$() -> Convergence.Content.EffectDependencyDefinition!
+Convergence.Content.EffectDependencyDefinition.EffectDependencyDefinition(Convergence.Content.EffectLocalId sourceEffectId, Convergence.Content.EffectDependencyRequirement requirement, Convergence.Content.EffectDependencyScope scope) -> void
+Convergence.Content.EffectDependencyDefinition.Equals(Convergence.Content.EffectDependencyDefinition? other) -> bool
+Convergence.Content.EffectDependencyDefinition.Requirement.get -> Convergence.Content.EffectDependencyRequirement
+Convergence.Content.EffectDependencyDefinition.Scope.get -> Convergence.Content.EffectDependencyScope
+Convergence.Content.EffectDependencyDefinition.SourceEffectId.get -> Convergence.Content.EffectLocalId
+Convergence.Content.EffectDependencyRequirement
+Convergence.Content.EffectDependencyRequirement.PositiveDamage = 1 -> Convergence.Content.EffectDependencyRequirement
+Convergence.Content.EffectDependencyRequirement.Succeeded = 0 -> Convergence.Content.EffectDependencyRequirement
+Convergence.Content.EffectDependencyScope
+Convergence.Content.EffectDependencyScope.AnyTarget = 1 -> Convergence.Content.EffectDependencyScope
+Convergence.Content.EffectDependencyScope.SameTarget = 0 -> Convergence.Content.EffectDependencyScope
+Convergence.Content.EffectLocalId
+Convergence.Content.EffectLocalId.EffectLocalId() -> void
+Convergence.Content.EffectLocalId.EffectLocalId(string! value) -> void
+Convergence.Content.EffectLocalId.Equals(Convergence.Content.EffectLocalId other) -> bool
+Convergence.Content.EffectLocalId.IsValid.get -> bool
+Convergence.Content.EffectLocalId.Value.get -> string!
+Convergence.Execution.EffectDependencyEvaluation
+Convergence.Execution.EffectDependencyEvaluation.<Clone>$() -> Convergence.Execution.EffectDependencyEvaluation!
+Convergence.Execution.EffectDependencyEvaluation.EffectDependencyEvaluation(Convergence.Content.EffectLocalId sourceEffectId, int sourceEffectIndex, Convergence.Content.EffectDependencyRequirement requirement, Convergence.Content.EffectDependencyScope scope, Convergence.Runtime.RuntimeInstanceId? targetId, bool satisfied, Convergence.Execution.EffectDependencyEvaluationReason reason) -> void
+Convergence.Execution.EffectDependencyEvaluation.Equals(Convergence.Execution.EffectDependencyEvaluation? other) -> bool
+Convergence.Execution.EffectDependencyEvaluation.Reason.get -> Convergence.Execution.EffectDependencyEvaluationReason
+Convergence.Execution.EffectDependencyEvaluation.Requirement.get -> Convergence.Content.EffectDependencyRequirement
+Convergence.Execution.EffectDependencyEvaluation.Satisfied.get -> bool
+Convergence.Execution.EffectDependencyEvaluation.Scope.get -> Convergence.Content.EffectDependencyScope
+Convergence.Execution.EffectDependencyEvaluation.SourceEffectId.get -> Convergence.Content.EffectLocalId
+Convergence.Execution.EffectDependencyEvaluation.SourceEffectIndex.get -> int
+Convergence.Execution.EffectDependencyEvaluation.TargetId.get -> Convergence.Runtime.RuntimeInstanceId?
+Convergence.Execution.EffectDependencyEvaluationReason
+Convergence.Execution.EffectDependencyEvaluationReason.PositiveDamageNotDealt = 3 -> Convergence.Execution.EffectDependencyEvaluationReason
+Convergence.Execution.EffectDependencyEvaluationReason.Satisfied = 0 -> Convergence.Execution.EffectDependencyEvaluationReason
+Convergence.Execution.EffectDependencyEvaluationReason.SourceNotSuccessful = 2 -> Convergence.Execution.EffectDependencyEvaluationReason
+Convergence.Execution.EffectDependencyEvaluationReason.SourceResultMissing = 1 -> Convergence.Execution.EffectDependencyEvaluationReason
+Convergence.Execution.EffectExecutionResult.DependencyEvaluation.get -> Convergence.Execution.EffectDependencyEvaluation?
+Convergence.Execution.EffectExecutionResult.DependencyEvaluation.init -> void
+Convergence.Execution.EffectExecutionResult.EffectId.get -> Convergence.Content.EffectLocalId?
+Convergence.Execution.EffectExecutionResult.EffectId.init -> void
+Convergence.Validation.ContentValidationErrorCode.EffectDependencyOrderInvalid = 42 -> Convergence.Validation.ContentValidationErrorCode
+Convergence.Validation.ContentValidationErrorCode.EffectDependencySourceIncompatible = 43 -> Convergence.Validation.ContentValidationErrorCode
+Convergence.Validation.ContentValidationErrorCode.EffectDependencySourceMissing = 41 -> Convergence.Validation.ContentValidationErrorCode
+Convergence.Validation.ContentValidationErrorCode.EffectIdDuplicate = 40 -> Convergence.Validation.ContentValidationErrorCode
+override Convergence.Content.EffectDependencyDefinition.Equals(object? obj) -> bool
+override Convergence.Content.EffectDependencyDefinition.GetHashCode() -> int
+override Convergence.Content.EffectDependencyDefinition.ToString() -> string!
+override Convergence.Content.EffectLocalId.GetHashCode() -> int
+override Convergence.Content.EffectLocalId.ToString() -> string!
+override Convergence.Execution.EffectDependencyEvaluation.Equals(object? obj) -> bool
+override Convergence.Execution.EffectDependencyEvaluation.GetHashCode() -> int
+override Convergence.Execution.EffectDependencyEvaluation.ToString() -> string!
+static Convergence.Content.EffectDependencyDefinition.operator !=(Convergence.Content.EffectDependencyDefinition? left, Convergence.Content.EffectDependencyDefinition? right) -> bool
+static Convergence.Content.EffectDependencyDefinition.operator ==(Convergence.Content.EffectDependencyDefinition? left, Convergence.Content.EffectDependencyDefinition? right) -> bool
+static Convergence.Content.EffectLocalId.operator !=(Convergence.Content.EffectLocalId left, Convergence.Content.EffectLocalId right) -> bool
+static Convergence.Content.EffectLocalId.operator ==(Convergence.Content.EffectLocalId left, Convergence.Content.EffectLocalId right) -> bool
+static Convergence.Content.EffectLocalId.Parse(string! value) -> Convergence.Content.EffectLocalId
+static Convergence.Content.EffectLocalId.TryParse(string? value, out Convergence.Content.EffectLocalId effectId) -> bool
+static Convergence.Execution.EffectDependencyEvaluation.operator !=(Convergence.Execution.EffectDependencyEvaluation? left, Convergence.Execution.EffectDependencyEvaluation? right) -> bool
+static Convergence.Execution.EffectDependencyEvaluation.operator ==(Convergence.Execution.EffectDependencyEvaluation? left, Convergence.Execution.EffectDependencyEvaluation? right) -> bool

@@ -44,6 +44,7 @@ namespace Convergence.Serialization;
 [JsonSerializable(typeof(ChanceConditionDto))]
 [JsonSerializable(typeof(EffectElementConditionDto))]
 [JsonSerializable(typeof(CustomConditionDto))]
+[JsonSerializable(typeof(EffectDependencyDto))]
 [JsonSerializable(typeof(DamageEffectDto))]
 [JsonSerializable(typeof(InstantKillEffectDto))]
 [JsonSerializable(typeof(ApplyAilmentEffectDto))]

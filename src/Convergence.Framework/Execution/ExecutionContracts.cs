@@ -19,6 +19,70 @@ public enum EffectExecutionOutcome
     Interrupted
 }
 
+/// <summary>Explains why an authored effect dependency did or did not pass.</summary>
+public enum EffectDependencyEvaluationReason
+{
+    Satisfied,
+    SourceResultMissing,
+    SourceNotSuccessful,
+    PositiveDamageNotDealt
+}
+
+/// <summary>Captures the typed dependency decision made before an effect executes.</summary>
+public sealed record EffectDependencyEvaluation
+{
+    public EffectDependencyEvaluation(
+        EffectLocalId sourceEffectId,
+        int sourceEffectIndex,
+        EffectDependencyRequirement requirement,
+        EffectDependencyScope scope,
+        RuntimeInstanceId? targetId,
+        bool satisfied,
+        EffectDependencyEvaluationReason reason)
+    {
+        if (!sourceEffectId.IsValid)
+        {
+            throw new ArgumentException("Dependency evaluation requires a valid source effect ID.", nameof(sourceEffectId));
+        }
+
+        ArgumentOutOfRangeException.ThrowIfNegative(sourceEffectIndex);
+        if (!Enum.IsDefined(requirement))
+        {
+            throw new ArgumentOutOfRangeException(nameof(requirement));
+        }
+        if (!Enum.IsDefined(scope))
+        {
+            throw new ArgumentOutOfRangeException(nameof(scope));
+        }
+        if (targetId is RuntimeInstanceId target && !target.IsValid)
+        {
+            throw new ArgumentException("Dependency target ID must be valid when supplied.", nameof(targetId));
+        }
+        if (!Enum.IsDefined(reason) || satisfied != (reason == EffectDependencyEvaluationReason.Satisfied))
+        {
+            throw new ArgumentException(
+                "Dependency satisfaction and reason must describe the same decision.",
+                nameof(reason));
+        }
+
+        SourceEffectId = sourceEffectId;
+        SourceEffectIndex = sourceEffectIndex;
+        Requirement = requirement;
+        Scope = scope;
+        TargetId = targetId;
+        Satisfied = satisfied;
+        Reason = reason;
+    }
+
+    public EffectLocalId SourceEffectId { get; }
+    public int SourceEffectIndex { get; }
+    public EffectDependencyRequirement Requirement { get; }
+    public EffectDependencyScope Scope { get; }
+    public RuntimeInstanceId? TargetId { get; }
+    public bool Satisfied { get; }
+    public EffectDependencyEvaluationReason Reason { get; }
+}
+
 public enum TurnEconomyOutcome
 {
     Normal,
@@ -177,6 +241,7 @@ public sealed class DamageHitExecutionEvidence
 
 public sealed record EffectExecutionResult
 {
+    private EffectLocalId? _effectId;
     private readonly IReadOnlyList<PassiveTriggerExecutionResult> _passiveActivations =
         Array.Empty<PassiveTriggerExecutionResult>();
     private readonly IReadOnlyList<ContentId> _hostActionRequestIds = Array.Empty<ContentId>();
@@ -229,6 +294,22 @@ public sealed record EffectExecutionResult
     public ContentId? RelatedId { get; init; }
     public string? Detail { get; init; }
     public bool EscapeRequested { get; init; }
+    /// <summary>Gets the optional authored local ID of this effect.</summary>
+    public EffectLocalId? EffectId
+    {
+        get => _effectId;
+        init
+        {
+            if (value.HasValue && !value.Value.IsValid)
+            {
+                throw new ArgumentException("Effect ID must be valid when supplied.", nameof(value));
+            }
+
+            _effectId = value;
+        }
+    }
+    /// <summary>Gets the dependency decision made before this effect was considered.</summary>
+    public EffectDependencyEvaluation? DependencyEvaluation { get; init; }
     public IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations
     {
         get => _passiveActivations;

@@ -64,12 +64,21 @@ public sealed class SchemaDeserializationTests
               "availability": { "contexts": ["battle", "field"] },
               "effects": [
                 {
-                  "type": "damage", "elementId": "physical", "power": 60, "accuracy": 90,
+                  "type": "damage", "effectId": "primary_hit",
+                  "elementId": "physical", "power": 60, "accuracy": 90,
                   "critical": { "mode": "chance", "chance": 20 },
                   "hits": { "minimum": 1, "maximum": 2, "distribution": "uniform" },
                   "drain": "hp", "onFailure": "stop_target"
                 },
-                { "type": "instant_kill", "chance": 30, "resistanceCheck": { "mode": "channel", "channelId": "light" } },
+                {
+                  "type": "instant_kill", "chance": 30,
+                  "resistanceCheck": { "mode": "channel", "channelId": "light" },
+                  "dependency": {
+                    "sourceEffectId": "primary_hit",
+                    "requirement": "succeeded",
+                    "scope": "same_target"
+                  }
+                },
                 { "type": "apply_ailment", "ailmentId": "poison", "chance": 40, "duration": { "type": "battle" } },
                 { "type": "restore_resource", "resourceId": "hp", "amount": { "type": "full" } },
                 { "type": "remove_ailment", "scope": "selected", "ailmentIds": ["poison"], "ailmentGroupIds": ["mental"] },
@@ -104,6 +113,11 @@ public sealed class SchemaDeserializationTests
             skill.Effects.Select(effect => effect.GetType()));
         Assert.Equal([ContentId.Parse("battle"), ContentId.Parse("field")], skill.Availability!.ContextIds);
         Assert.IsType<ChanceCriticalDefinition>(Assert.IsType<DamageEffectDefinition>(skill.Effects[0]).Critical);
+        Assert.Equal(EffectLocalId.Parse("primary_hit"), skill.Effects[0].EffectId);
+        EffectDependencyDefinition dependency = skill.Effects[1].Dependency!;
+        Assert.Equal(EffectLocalId.Parse("primary_hit"), dependency.SourceEffectId);
+        Assert.Equal(EffectDependencyRequirement.Succeeded, dependency.Requirement);
+        Assert.Equal(EffectDependencyScope.SameTarget, dependency.Scope);
         Assert.IsType<ChannelInstantDeathResistanceCheckDefinition>(
             Assert.IsType<InstantKillEffectDefinition>(skill.Effects[1]).ResistanceCheck);
         BreakAffinityEffectDefinition affinityBreak = Assert.IsType<BreakAffinityEffectDefinition>(skill.Effects[9]);
@@ -416,6 +430,37 @@ public sealed class SchemaDeserializationTests
 
         Assert.Throws<ContentDeserializationException>(
             () => _deserializer.DeserializeSkills(json, "unknown-enum.json"));
+    }
+
+    [Fact]
+    public void StrictReader_RejectsUnknownDependencyVocabularyAndMembers()
+    {
+        string unknownRequirement = WrapSkill(MinimalActiveRecord(
+            """
+            [
+              {
+                "type": "damage", "effectId": "primary_hit", "elementId": "physical",
+                "power": 10, "accuracy": 100, "critical": { "mode": "never" },
+                "hits": { "minimum": 1, "maximum": 1 }
+              },
+              {
+                "type": "apply_ailment", "ailmentId": "poison", "chance": 50,
+                "dependency": {
+                  "sourceEffectId": "primary_hit", "requirement": "landed",
+                  "scope": "same_target"
+                }
+              }
+            ]
+            """));
+        string unknownMember = unknownRequirement.Replace(
+            "\"requirement\": \"landed\"",
+            "\"requirement\": \"positive_damage\", \"mystery\": true",
+            StringComparison.Ordinal);
+
+        Assert.Throws<ContentDeserializationException>(() =>
+            _deserializer.DeserializeSkills(unknownRequirement, "unknown-dependency-requirement.json"));
+        Assert.Throws<ContentDeserializationException>(() =>
+            _deserializer.DeserializeSkills(unknownMember, "unknown-dependency-member.json"));
     }
 
     [Fact]

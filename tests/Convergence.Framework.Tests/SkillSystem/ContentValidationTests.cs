@@ -320,6 +320,99 @@ public sealed class ContentValidationTests
     }
 
     [Fact]
+    public void EffectDependenciesRequireUniqueEarlierCompatibleSources()
+    {
+        EffectLocalId duplicateId = EffectLocalId.Parse("duplicate");
+        EffectLocalId futureId = EffectLocalId.Parse("future_damage");
+        EffectLocalId restoreId = EffectLocalId.Parse("restore_source");
+        SkillDefinition skill = ActiveSkill(
+            "invalid_dependencies",
+            [
+                new AnalyzeEffectDefinition([AnalysisLayer.Stats]) { EffectId = duplicateId },
+                new AnalyzeEffectDefinition([AnalysisLayer.Affinities]) { EffectId = duplicateId },
+                new ApplyAilmentEffectDefinition(Id("poison"), 50)
+                {
+                    Dependency = new EffectDependencyDefinition(
+                        EffectLocalId.Parse("missing_source"),
+                        EffectDependencyRequirement.Succeeded,
+                        EffectDependencyScope.SameTarget)
+                },
+                new ApplyAilmentEffectDefinition(Id("poison"), 50)
+                {
+                    Dependency = new EffectDependencyDefinition(
+                        futureId,
+                        EffectDependencyRequirement.Succeeded,
+                        EffectDependencyScope.SameTarget)
+                },
+                new DamageEffectDefinition(
+                    DamageElement.Physical, 10, 100, new NeverCriticalDefinition(),
+                    new HitCountDefinition(1, 1))
+                {
+                    EffectId = futureId
+                },
+                new RestoreResourceEffectDefinition(Id("hp"), new FlatAmountDefinition(10))
+                {
+                    EffectId = restoreId
+                },
+                new ApplyAilmentEffectDefinition(Id("poison"), 50)
+                {
+                    Dependency = new EffectDependencyDefinition(
+                        restoreId,
+                        EffectDependencyRequirement.PositiveDamage,
+                        EffectDependencyScope.SameTarget)
+                }
+            ]);
+
+        ContentValidationResult result = _validator.Validate(Request(
+            ComprehensiveRegistrations(),
+            skills: [skill],
+            ailments: [Ailment("poison")]));
+
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.skills[0].effects[1].effectId" &&
+            error.Code == ContentValidationErrorCode.EffectIdDuplicate);
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.skills[0].effects[2].dependency.sourceEffectId" &&
+            error.Code == ContentValidationErrorCode.EffectDependencySourceMissing);
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.skills[0].effects[3].dependency.sourceEffectId" &&
+            error.Code == ContentValidationErrorCode.EffectDependencyOrderInvalid);
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.skills[0].effects[6].dependency.requirement" &&
+            error.Code == ContentValidationErrorCode.EffectDependencySourceIncompatible);
+    }
+
+    [Fact]
+    public void PositiveDamageDependencyAcceptsAnEarlierDamageSource()
+    {
+        EffectLocalId sourceId = EffectLocalId.Parse("needle_hit");
+        SkillDefinition skill = ActiveSkill(
+            "valid_dependency",
+            [
+                new DamageEffectDefinition(
+                    DamageElement.Physical, 50, 100, new NeverCriticalDefinition(),
+                    new HitCountDefinition(1, 1))
+                {
+                    EffectId = sourceId
+                },
+                new ApplyAilmentEffectDefinition(Id("poison"), 50)
+                {
+                    Dependency = new EffectDependencyDefinition(
+                        sourceId,
+                        EffectDependencyRequirement.PositiveDamage,
+                        EffectDependencyScope.SameTarget)
+                }
+            ]);
+
+        ContentValidationResult result = _validator.Validate(Request(
+            ComprehensiveRegistrations(),
+            skills: [skill],
+            ailments: [Ailment("poison")]));
+
+        Assert.True(result.IsValid, string.Join(Environment.NewLine, result.Errors.Select(error => error.Message)));
+    }
+
+    [Fact]
     public void GrantCharge_RejectsUndefinedProgrammaticChargeKind()
     {
         SkillDefinition skill = ActiveSkill(
