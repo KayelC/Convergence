@@ -51,6 +51,7 @@ sequenceDiagram
     participant P as Runtime policies
 
     H->>A: Assess command
+    A->>A: Validate authored percentages
     A->>A: Authorize canonical action and prepare targets
     H->>A: Execute same prepared command
     A->>T: Clone actor and participants
@@ -147,6 +148,28 @@ saturating arithmetic:
 Hit/evasion and critical policy requests carry all explicit modifiers.
 `ProductionCombatantProfile.Luck` is retained as neutral profile data but none
 of the supplied Order 2 probability or damage policies read it.
+
+## Authored Numeric Safety Boundary
+
+Hit-count limits are applied at two layers. Schema v6 and semantic validation
+accept only `1..1024` for one damage effect. The supplied standard policy then
+compares the authored maximum with its configured
+`MaximumHitsPerDamageEffect`, default `64`, before random selection, list
+allocation, hit resolution, or staged mutation. A range above either applicable
+ceiling is rejected as one operation.
+
+Authored probabilities use one inclusive `0..100` domain. Assessment walks the
+complete effect, including recursively nested `all`, `any`, and `not`
+conditions, before target preparation or cost handling. Public policy and
+lifecycle request constructors enforce the same domain, including record
+cloning through `with`. Only a chance derived from a valid authored base may be
+clamped after resistance or modifier arithmetic.
+
+The two validation failures have different public shapes. Skill, item, and
+effect-backed action assessment returns the stable
+`AuthoredPercentageOutOfRange` diagnostic and no turn consumption. A malformed
+direct supplied-policy or lifecycle request is a programming error and throws
+`ArgumentOutOfRangeException` before random or live-state work.
 
 ## Random Boundary
 

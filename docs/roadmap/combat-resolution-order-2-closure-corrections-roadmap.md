@@ -1,6 +1,6 @@
 # Order 2 Closure Corrections Roadmap
 
-**Status:** active; O2-R17 through O2-R19 complete, O2-R20 and O2-R21 pending
+**Status:** active; O2-R17 through O2-R20 complete, O2-R21 pending
 
 **Started:** 21 July 2026
 
@@ -132,13 +132,21 @@ DemoHost modes.
 
 ### O2-R20: Reconcile active documentation
 
-**State:** pending
+**State:** complete
 
 - Update mechanics, developer, technical, ruleset, content-contract, API, and
   roadmap documentation from corrected source.
 - Explain the standard `64` limit, absolute `1024` ceiling, schema-v6 break, and
   `0..100` authored/derived distinction.
 - Promote the capability matrix only after focused and complete gates pass.
+
+Mechanics, developer, technical, ruleset, content-contract, API, decision,
+quality-gate, and roadmap documents now describe schema v6, the absolute
+`1..1024` authoring range, the supplied standard ceiling of `64`, and the
+authored-versus-derived percentage boundary. The executable capability matrix
+returns `combat_resolution` to `complete` with no hidden implementation gap;
+O2-R21 remains an independent source verification rather than an unfinished
+runtime feature.
 
 **Commit:** `docs: reconcile combat safety contracts`
 

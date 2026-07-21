@@ -86,7 +86,7 @@ social/fusion systems, authoring infrastructure, and host integration.
 | 15 | `portable_deserialization` | Host-supplied text, strict conversion, diagnostics, serializer boundary | Review developer guide; add technical reference |
 | 16 | `content_validation` | Structural versus semantic authority, registrations, dependency visibility | Review developer guide; add technical reference |
 | 17 | `catalog_loading` | Qualification, dependency order, repository lookup, collision handling | Review developer guide; add technical reference |
-| 18 | `authored_schema_contracts` | Schema v5 authoring workflow, discriminator coverage, semantic limits | Review developer guide; add technical reference |
+| 18 | `authored_schema_contracts` | Schema v6 authoring workflow, discriminator coverage, semantic limits | Review developer guide; add technical reference |
 | 19 | `host_contracts` | Commands, events, cancellation, content sources, randomness, application ownership | Review developer and technical references |
 | 20 | `godot_adapter` | `res://` loading, Node mapping, signals, save envelope, headless proof | Review developer and technical references |
 
@@ -170,9 +170,10 @@ parity defect, and found no remaining reachable defect in the reviewed paths.
 The later
 [Order 2 Closure Source Review](../reviews/combat-resolution-order-2-closure-source-review-2026-07-21.md)
 found two reachable safety-boundary defects. The mechanics decisions and three
-audience reviews remain owner-confirmed, but implementation closure is reopened
-under the
+audience reviews remain owner-confirmed. Bounded hit execution and authored
+percentage rejection are implemented and reconciled under the
 [Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md).
+Only its independent O2-R21 source closure check remains.
 
 Current checkpoints:
 
@@ -191,9 +192,10 @@ Current checkpoints:
 | O2-DOC | `verified` | Mechanics, developer, and technical documents now match the corrected source, confirmed owner decisions, and final closure review. |
 
 The table records the first implementation cycle; O2-R7 through O2-R16 record
-the complete-action and ordered-secondary-effect correction cycle. All three
-`combat_resolution` audience entries remain `reviewed`; that documentation
-state does not override the reopened implementation gate.
+the complete-action and ordered-secondary-effect correction cycle. O2-R18
+through O2-R20 add bounded hit execution, authored-percentage parity, and the
+resulting audience reconciliation. All three `combat_resolution` audience
+entries remain `reviewed`.
 
 ## Deferred Documentation
 

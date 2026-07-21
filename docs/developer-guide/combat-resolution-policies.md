@@ -101,6 +101,34 @@ target evasion when another damage component lands on that target, and
 `TurnEconomyResolution.Outcome` is authoritative even when `AnyCritical`
 retains Critical evidence for presentation.
 
+## Bound Multi-Hit Work
+
+Schema v6 and Framework semantic validation allow `1..1024` hits for one
+damage effect. The supplied `standard_damage` policy adds
+`maximumHitsPerDamageEffect`, which defaults to `64` and must itself remain
+within `1..1024`.
+
+The standard policy rejects an authored hit range whose maximum exceeds the
+selected policy ceiling before it asks for a random hit count, allocates hit
+storage, or mutates an actor. Raising the standard ceiling is therefore an
+explicit game decision; it does not bypass the absolute content ceiling. A
+custom `IDamageExecutionPolicy` remains replaceable, but content loaded through
+the published schema is still constrained to `1024`.
+
+## Author Percentages, Do Not Repair Them
+
+Damage accuracy, critical chance, instant-defeat chance, ailment chance,
+escape chance, nested chance conditions, and resource-percentage conditions
+must be authored within inclusive `0..100`. Skill, item, basic-attack, and
+escape assessments report `AuthoredPercentageOutOfRange` before targets,
+costs, reservations, random draws, mutations, or turn economy are touched.
+
+Direct code composition receives the same domain rule. Public supplied-policy
+and lifecycle requests reject malformed authored values with an argument error;
+they do not clamp them. Clamping belongs only after a valid authored base has
+been transformed by selected resistance or modifier policy. Zero and one
+hundred remain deterministic and do not request a random draw.
+
 ## Random Source Contract
 
 Every `IRandomSource` implementation must return:

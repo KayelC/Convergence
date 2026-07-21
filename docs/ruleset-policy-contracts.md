@@ -106,6 +106,13 @@ Unknown parameters, nonnumeric values, and invalid combined configuration
 produce typed `RulesetBindingDiagnostic` values. The standard factory does not
 silently ignore them.
 
+Schema v6 and semantic validation impose the absolute `1..1024` authoring
+range. The selected standard configuration imposes its own ceiling, default
+`64`, and rejects an effect whose authored maximum exceeds it before hit-count
+randomness, allocation, or mutation. A game may deliberately raise the
+standard ceiling up to `1024`; no standard ruleset parameter can exceed the
+published content limit.
+
 There is no default action accuracy or default instant-defeat chance. Typed
 effects and equipment basic-attack profiles author those values explicitly.
 The removed parameter names are rejected as unknown rather than being accepted
@@ -126,6 +133,13 @@ neither guarantee consumes a random roll. A rigid target is an explicit
 always-hit exception and reports a final chance of one hundred. A game may
 replace `IHitResolutionPolicy` if it wants another formula or a deliberate Luck
 contribution.
+
+All authored combat percentages use inclusive `0..100`: damage accuracy,
+critical chance, instant-defeat chance, ailment chance, escape chance, chance
+conditions, and resource-percentage conditions. Invalid base values are
+rejected rather than clamped. Resistance and explicit modifiers may produce a
+derived chance outside that range; the selected supplied policy may clamp that
+derived result only after the authored value has passed validation.
 
 Critical eligibility and chance are independent extension boundaries. The
 supplied `PhysicalOnlyCriticalEligibilityPolicy` permits explicitly critical

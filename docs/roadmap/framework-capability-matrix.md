@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v11 restoration. Its
@@ -39,7 +39,7 @@ Charge state is policy-owned; supplied hit/evasion uses
 authored accuracy, explicit Agility coefficients, typed modifiers, exact
 probability bounds, and no hidden Luck. Critical eligibility and chance are
 separate replaceable policies. Instant defeat uses authored chance, explicit
-resistance multipliers, bypass semantics, and one roll. Schema v5 requires
+resistance multipliers, bypass semantics, and one roll. Schema v6 requires
 weapon basic attacks to declare critical behavior.
 
 Every attempted damage hit now carries immutable accuracy, critical, affinity,
@@ -56,10 +56,14 @@ where per-hit facts become one action outcome and where earlier effects change
 later life-state eligibility. O2-R7 through O2-R16 corrected those paths,
 introduced explicit effect dependencies and shared-contact damage, composed
 weapon secondary effects, aligned schema ranges, and passed a fresh source
-review. A later closure review found two reachable safety-boundary defects:
-unbounded authored hit counts and inconsistent code-authored percentage
-validation. The executable capability is therefore `partial` while O2-R17
-through O2-R21 are active.
+review. A later closure review found two reachable safety-boundary defects.
+O2-R18 now limits active content to `1..1024` hits and applies the standard
+policy's configurable default ceiling of `64` before random selection or
+allocation. O2-R19 now rejects every authored combat percentage outside
+`0..100` before targets, costs, randomness, mutation, or turn use, while
+preserving clamping only for policy-derived chances. The executable capability
+is complete; O2-R21 remains the independent documentation-and-source closure
+check.
 
 ## Authority
 

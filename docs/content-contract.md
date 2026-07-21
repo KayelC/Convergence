@@ -77,6 +77,10 @@ own configurable `maximumHitsPerDamageEffect` ceiling, which defaults to `64`
 and may not exceed the published `1024` authoring limit. Percentage
 resource amounts are nonnegative but are not capped at one hundred; runtime
 resource bounds remain authoritative when such an amount is applied.
+Authored accuracy, critical, ailment, instant-defeat, escape, chance-condition,
+and resource-percentage-condition values are rejected outside `0..100`; they
+are never repaired by clamping. A selected runtime policy may clamp only a
+derived chance produced from a valid authored base and explicit modifiers.
 The Framework validator remains authoritative for graph rules that JSON Schema
 cannot establish from one document, including dependency visibility, duplicate
 IDs, catalog references, registrations, floor ranges, and operation-specific

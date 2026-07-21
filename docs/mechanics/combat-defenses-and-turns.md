@@ -74,6 +74,13 @@ basic attacks may now compose ordered typed secondary effects. Full armor
 defense/evasion, granted skills, and other equipment behavior remain separate
 work.
 
+One authored damage effect may request between `1` and `1024` hits. The supplied
+standard policy applies a second, game-selected ceiling before hit-count
+randomness, allocation, or actor mutation; that ceiling defaults to `64` and
+may be authored lower or higher within the public `1..1024` range. This is a
+safety boundary, not a claim that ordinary attacks should contain dozens of
+hits. A rejected range does not partially execute.
+
 ## Accuracy And Evasion
 
 `IHitResolutionPolicy` is the hit/evasion extension boundary. The supplied
@@ -107,6 +114,14 @@ The supplied policy does not read Luck. Its standard range is `0..100`: zero
 cannot hit and one hundred cannot miss. A game that wants Luck or another
 formula supplies another hit policy rather than relying on a hidden modifier.
 
+Authored accuracy and probability inputs are always inclusive `0..100` values.
+This includes critical, instant-defeat, ailment, escape, chance-condition, and
+resource-percentage-condition values. Invalid authored input is rejected before
+target selection, costs, inventory reservation, randomness, mutation, or turn
+use. A valid base chance may subsequently be multiplied by resistance or other
+selected policy rules and clamped back into `0..100`; that derived clamp does
+not make an invalid authored value valid.
+
 ## Critical Hits
 
 Critical eligibility is separate from critical chance. The standard
@@ -121,7 +136,7 @@ then applies explicit target vulnerability, actor, and passive Critical Chance
 modifiers. The optional `AccuracyScaledCriticalChancePolicy` scales the
 authored chance by `final hit chance / authored accuracy` first. Luck is absent
 from both supplied policies, there is no hidden minimum, and critical chance is
-rolled only after the corresponding hit lands. Schema-v5 weapon profiles must
+rolled only after the corresponding hit lands. Schema-v6 weapon profiles must
 author `never` or `chance`; basic attacks do not receive a runtime default.
 
 ## Elemental Defense

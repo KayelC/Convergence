@@ -28,8 +28,10 @@ Other subsystem entries remain unreviewed until they complete the same process.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
-Order 2 closed through O2-R16 after the ordered-secondary-effect corrections,
-fresh source review, documentation reconciliation, and confirmed owner design.
+Order 2 documentation now also reflects O2-R18 bounded hit execution and
+O2-R19 authored-percentage rejection. O2-R20 reconciled those changes across
+the three audience documents; O2-R21 remains the independent source closure
+check rather than an owner-design question.
 
 The documentation matrix currently records 75 audience entries: 17 reviewed,
 34 existing_unreviewed, 17 missing, and 7 not_applicable.

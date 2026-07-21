@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in
@@ -58,8 +58,9 @@ Correct the completion-review findings in order:
 Catalyst rank shifting now uses explicit authored catalyst and target roles. It
 moves the target by an exact offset within that target's catalog race, rejects
 stale participant rank data, and returns a typed no-fusion result when an exact
-destination does not exist. Schema v5 retains the explicit catalyst/target
-shape introduced by schema v3 and adds authored stat-modifier policy selection.
+destination does not exist. Schema v6 retains the explicit catalyst/target
+shape introduced by schema v3 and authored stat-modifier policy selection, and
+adds bounded damage hit counts.
 
 Authored rulesets now resolve through an explicit host-supplied typed factory
 registry. The standard damage factory exposes every existing combat setting,
@@ -84,9 +85,9 @@ Complete the active
 capability at a time. Source and tests establish current behavior; the project
 owner confirms intended mechanics and extension boundaries before an audience
 entry becomes `reviewed`. Existing prose must not be bulk-promoted. Order 1 is
-complete and owner-confirmed. Order 2's mechanics remain owner-confirmed, but
-its implementation is temporarily `partial` while O2-R17 through O2-R21 add
-bounded hit execution and consistent code-authored percentage rejection.
+complete and owner-confirmed. Order 2's mechanics remain owner-confirmed; its
+bounded hit execution and authored-percentage corrections are implemented and
+documented, with only the independent O2-R21 closure review outstanding.
 
 ## Priority 2: Persistence Evolution
 

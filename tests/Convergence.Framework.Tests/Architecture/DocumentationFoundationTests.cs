@@ -250,7 +250,8 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("Before = After", technical, StringComparison.Ordinal);
         Assert.DoesNotContain("Charged --> Charged", technical, StringComparison.Ordinal);
 
-        Assert.Contains("written_pending_owner_confirmation", roadmap, StringComparison.Ordinal);
+        Assert.Contains("| O2-C7 | `verified`", roadmap, StringComparison.Ordinal);
+        Assert.Contains("O2-R21 pending", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

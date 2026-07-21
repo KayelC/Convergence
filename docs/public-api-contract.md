@@ -35,6 +35,22 @@ immutable hit results and the effective affinity. The effect pipeline consumes
 that result directly, which prevents hosts from composing separate damage
 stages that reapply guard, critical, affinity, or stat modifiers.
 
+### Combat Safety Additions
+
+The guarded `0.1.0` surface exposes
+`ProductionCombatRulesetConfig.MaximumHitsPerDamageEffect`; the supplied
+default is `64`, and valid configurations remain within the schema-v6 absolute
+limit of `1..1024`. This is an execution ceiling for one damage effect, applied
+before random hit selection or allocation.
+
+`SkillExecutionDiagnosticCode`, `ItemExecutionDiagnosticCode`, and
+`BattleActionDiagnosticCode` append `AuthoredPercentageOutOfRange`. Effect-backed
+assessment uses that diagnostic for authored percentages outside inclusive
+`0..100`, with no target preparation, cost, mutation, or turn consumption.
+Direct policy and lifecycle requests reject the same malformed values as
+programming errors. The existing numeric values of earlier enum members remain
+unchanged.
+
 ## Compatibility Policy
 
 The checked-in `PublicAPI.Shipped.txt` file is the textual `0.1.0` baseline.

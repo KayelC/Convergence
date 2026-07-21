@@ -289,17 +289,21 @@ action-outcome aggregation. Authored ruleset binding returns a neutral coherent
 `CombatExecutionPolicySet`; the hit, critical, and instant-defeat authorities it
 advertises are the exact authorities its executors call.
 
-Content is currently schema v5 and active packs are version `0.5.0`. Weapon
-basic attacks must declare critical behavior. Save contract v11 retains charge
-policy identity and rejects restoration under incompatible charge semantics.
+Content is currently schema v6 and active packs are version `0.6.0`. Weapon
+basic attacks must declare critical behavior. One authored damage effect is
+limited to `1..1024` hits; the supplied standard policy defaults to a stricter
+`64`-hit execution ceiling. Authored probabilities are inclusive `0..100` and
+are rejected before execution, while only policy-derived chances may clamp.
+Save contract v11 retains charge policy identity and rejects restoration under
+incompatible charge semantics.
 
 The final source-first review corrected active schema validation, normalized
 host-random boundaries, combat-policy composition integrity, and stale copied
 contract assets. Its evidence is recorded in the
 [Order 2 Completion Review](../reviews/combat-resolution-order-2-completion-review-2026-07-19.md).
-The code capability is complete. The three documentation audiences remain
-`existing_unreviewed` until the project owner confirms the resulting
-plain-language explanation.
+The three documentation audiences are owner-confirmed and reviewed. The later
+closure-safety correction cycle is governed by the
+[Order 2 Closure Corrections Roadmap](../roadmap/combat-resolution-order-2-closure-corrections-roadmap.md).
 
 ## Evidence And References
 

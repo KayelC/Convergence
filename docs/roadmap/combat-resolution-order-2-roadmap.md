@@ -1,6 +1,6 @@
 # Order 2 Combat Resolution Roadmap
 
-**Status:** reopened; O2-R17 complete, O2-R18 through O2-R21 pending
+**Status:** closure verification; O2-R17 through O2-R20 complete, O2-R21 pending
 
 **Started:** 19 July 2026
 
@@ -24,10 +24,11 @@ record that work.
 
 **Current correction status:** a later source-first closure review found an
 unbounded schema-valid hit-count path and inconsistent code-authored percentage
-validation. The active
+validation. O2-R18 and O2-R19 corrected those paths, and O2-R20 reconciled the
+active contracts. The active
 [Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md)
-governs O2-R17 through O2-R21. Earlier completion records remain accurate only
-for the revisions they reviewed.
+governs the remaining independent O2-R21 verification. Earlier completion
+records remain accurate only for the revisions they reviewed.
 
 ## Goal
 
@@ -84,7 +85,7 @@ review are complete.
 | O2-C4 | `verified` | Add configurable instant-defeat resistance multipliers, explicit bypass behavior, one roll, no hidden Luck, and typed no-effect failures. | `battle: complete instant defeat policy` |
 | O2-C5 | `verified` | Execute landed hits sequentially in staged state, publish immutable per-hit/per-target evidence, and move outcome aggregation behind a policy. | `battle: expose combat resolution evidence` |
 | O2-C6 | `verified` | Replace concrete authored damage binding with a neutral combat-policy aggregate; decouple reward and initiative interfaces from the standard implementation. | `runtime: compose authored combat policies` |
-| O2-C7 | `written_pending_owner_confirmation` | Two source-first reviews completed, all substantiated findings corrected independently, and all three documentation views reconciled. Owner confirmation remains the documentation gate. | `docs: complete combat resolution order 2`; `docs: verify combat resolution corrections` |
+| O2-C7 | `verified` | Two source-first reviews completed, all substantiated findings corrected independently, all three documentation views reconciled, and the project owner confirmed the mechanics. | `docs: complete combat resolution order 2`; `docs: verify combat resolution corrections` |
 
 ## O2-C1: Charge Policy Family
 

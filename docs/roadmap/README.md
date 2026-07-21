@@ -25,7 +25,6 @@ requires owner review. The Documentation Completion Roadmap governs the ordered
 collaborative review of those outstanding entries.
 
 Order 1, `typed_action_and_effect_execution`, is complete and owner-confirmed.
-Order 2, `combat_resolution`, remains owner-confirmed at the mechanics level,
-but its implementation gate is reopened by O2-R17 through O2-R21 for bounded
-hit execution and code-authored percentage parity. Order 3 does not begin until
-that narrow correction cycle closes.
+Order 2, `combat_resolution`, is owner-confirmed and its bounded-hit and
+authored-percentage corrections are implemented and documented through O2-R20.
+Its independent O2-R21 source closure check remains before Order 3 begins.
