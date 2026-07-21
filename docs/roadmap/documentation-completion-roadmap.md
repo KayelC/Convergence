@@ -137,12 +137,12 @@ The earlier
 remains evidence for the original checkpoints. The expanded scope is closed by
 the [final Order 1 closure review](../reviews/order-1-final-closure-review-2026-07-18.md).
 All three `typed_action_and_effect_execution` audience entries are now
-`reviewed`. After the source-reviewed Order 2 pages were written, the executable
-matrix records 14 reviewed, 37 `existing_unreviewed`, 17 missing, and 7
-`not_applicable` entries. Order 2, `combat_resolution`, has since been reopened
-for O2-R7 through O2-R16 and is not awaiting documentation confirmation alone.
+`reviewed`. Order 2 then completed its source review, correction cycles,
+ordered-secondary-effect design, and audience reconciliation. The executable
+matrix now records 17 reviewed, 34 `existing_unreviewed`, 17 missing, and 7
+`not_applicable` entries.
 
-## Active Order 2
+## Completed Order 2
 
 The source-based
 [Combat Resolution Order 2 Review](../reviews/combat-resolution-order-2-source-review-2026-07-19.md)
@@ -161,7 +161,11 @@ A broader 21 July source review found complete-action and ordered-effect gaps.
 The confirmed
 [Ordered Secondary Effects decision](../decisions/ordered-secondary-effects.md)
 and its
-[active roadmap](ordered-secondary-effects-roadmap.md) now govern closure.
+[ordered roadmap](ordered-secondary-effects-roadmap.md) governed its final
+closure. The final
+[Ordered Effects Closure Review](../reviews/combat-resolution-order-2-ordered-effects-closure-review-2026-07-21.md)
+traced current source after O2-R7 through O2-R15, corrected one assessment
+parity defect, and found no remaining reachable defect in the reviewed paths.
 
 Current checkpoints:
 
@@ -177,14 +181,11 @@ Current checkpoints:
 | O2-D4 | `confirmed` | Configurable instant-defeat resistance multipliers and one explicit roll. |
 | O2-D5 | `confirmed` | Sequential staged multi-hit mutation and immutable hit/target evidence. |
 | O2-D6 | `confirmed` | Configurable probability bounds with neutral supplied defaults of `0..100`. |
-| O2-DOC | `written_pending_owner_confirmation` | All three audience documents match the second corrected source trace; project-owner confirmation remains. |
+| O2-DOC | `verified` | Mechanics, developer, and technical documents now match the corrected source, confirmed owner decisions, and final closure review. |
 
-The table above records the first implementation cycle. `combat_resolution` is
-currently reopened while O2-R7 through O2-R16 correct complete-action outcomes
-and add explicit ordered-secondary-effect behavior. Its mechanics, developer,
-and technical documentation remains `existing_unreviewed` until those changes
-are implemented, freshly source-reviewed, reconciled across all three audience
-pages, and confirmed by the project owner.
+The table records the first implementation cycle; O2-R7 through O2-R16 record
+the complete-action and ordered-secondary-effect correction cycle. All three
+`combat_resolution` audience entries are now `reviewed`.
 
 ## Deferred Documentation
 

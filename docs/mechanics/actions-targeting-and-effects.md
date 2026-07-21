@@ -123,6 +123,38 @@ action. Results retain the effect index, target runtime ID, outcome, resolved
 value, related IDs, combat details, passive activations, and any host-action
 request IDs.
 
+Effect order alone does not make a later effect depend on an earlier one. A
+later effect may instead name an earlier effect through a local `effectId` and
+an explicit dependency:
+
+- `succeeded` requires the source effect to have succeeded;
+- `positive_damage` requires the source damage to have removed a positive
+  amount of the intended target's vital resource;
+- `same_target` checks that fact independently for each target; and
+- `any_target` permits a source result from any target in the same action.
+
+An unmet dependency produces a typed skipped result before the later effect's
+condition or random chance is evaluated. It does not trigger that effect's
+failure policy. This permits both dependent riders and deliberately independent
+later effects without inferring intent from their position.
+
+Current staged life state is checked after the dependency and before the
+condition. A strike may therefore establish positive damage and defeat its
+target, while a later Poison rider still skips because ailments require a
+living target. Ordinary damage, absorption, and vital-resource restoration do
+not revive; only an explicit revival effect may do so.
+
+Dependent secondary damage has two authored contact modes. `independent`
+performs its own hit check. `shared_contact` reuses the earlier positive-damage
+contact, but still resolves its own element, affinity, power, charge category,
+and Critical policy. Neither mode inherits the earlier Critical result.
+
+Weapon basic attacks use the same sequence. Their primary damage may expose a
+local ID and the profile may append ordered typed secondary effects. A Fire
+weapon can therefore be authored as Fire-only, Physical with an ailment rider,
+or Physical with a separate Fire component; names and descriptions never pick
+one of those models.
+
 Convergence does not currently provide a skill-grant effect. Skill acquisition
 and move-list changes belong to the progression services.
 

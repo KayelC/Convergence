@@ -54,10 +54,26 @@ use `urn:convergence:schema:content:v5:shared` and are not content documents.
 Every weapon basic attack must explicitly author its critical behavior with the
 same `never` or `chance` definition used by typed damage effects. Schema v5
 rejects the pre-release shape that omitted this decision; the runtime never
-invents a weapon critical chance.
+invents a weapon critical chance. A basic attack may additionally expose a
+local `primaryEffectId` and append `secondaryEffects`; those secondary records
+use the same typed effect union as skills and items.
+
+Effects may expose a local `effectId` and later effects may declare a typed
+`dependency` on an earlier ID in the same sequence. Local IDs cannot carry a
+pack qualifier. Dependencies declare `succeeded` or `positive_damage` and a
+`same_target` or `any_target` scope. Shared-contact damage requires a
+same-target positive-damage dependency; independent damage performs its own hit
+resolution. Semantic validation rejects duplicate IDs, missing or forward
+sources, incompatible positive-damage sources, and malformed shared-contact
+graphs.
 
 JSON Schema is the structural authoring contract: exact property names, enum
 values, discriminated unions, required members, and basic numeric/string ranges.
+Its local numeric constraints match semantic validation for nonnegative damage
+power and amount values, `0..100` accuracy/chance fields, nonzero stat-stage
+deltas, positive charge multipliers, and positive turn durations. Percentage
+resource amounts are nonnegative but are not capped at one hundred; runtime
+resource bounds remain authoritative when such an amount is applied.
 The Framework validator remains authoritative for graph rules that JSON Schema
 cannot establish from one document, including dependency visibility, duplicate
 IDs, catalog references, registrations, floor ranges, and operation-specific

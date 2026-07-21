@@ -171,16 +171,38 @@ execution rather than an owned-item transaction.
 For each authored effect index, `OrderedEffectExecutor` evaluates each prepared
 target in deterministic order:
 
-1. evaluate the typed condition;
-2. execute the registered executor;
-3. append an immutable `EffectExecutionResult`;
-4. continue, stop that target, stop the action, or interrupt according to the
+1. validate the sequence-local effect/dependency graph;
+2. evaluate any dependency against earlier immutable effect evidence;
+3. evaluate current staged target life-state eligibility;
+4. evaluate the typed condition;
+5. execute the registered executor;
+6. append an immutable `EffectExecutionResult`;
+7. continue, stop that target, stop the action, or interrupt according to the
    outcome and `EffectFailurePolicy`.
+
+Dependency failure, current-life-state failure, and condition failure each
+produce distinct typed skipped evidence. They do not invoke the effect executor
+or activate `EffectFailurePolicy`. A `positive_damage` dependency reads actual
+committed per-hit resource changes, not calculated damage or a display outcome.
+`same_target` evaluates each prepared target separately; `any_target` may read
+any result from the referenced earlier effect.
+
+The sequence graph is checked during skill, item, and basic-attack assessment
+and again by execution. This preserves assessment/execution parity for
+programmatic definitions while the content validator remains authoritative for
+the full catalog contract.
 
 `StopTarget` skips later effects only for the failed target. `StopAction` ends
 the remaining action. `Interrupted` ends the action independently of authored
 failure policy. Action-duration lifecycle processing runs once around the
 outermost ordered-effect scope.
+
+Current life state is read from the staged actor, not from the assessment
+snapshot. Damage, instant defeat, ailment application, and ordinary vital
+resource restoration require a living target when their turn arrives. Revival
+requires a defeated target. A prior effect can therefore defeat or revive a
+target and change which later effects are eligible without publishing partial
+live state.
 
 ## Mutation Boundary
 

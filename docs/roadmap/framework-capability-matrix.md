@@ -53,9 +53,11 @@ validated, and all supplied random draws cross one checked host boundary.
 
 A broader 21 July source review reopened the capability after finding defects
 where per-hit facts become one action outcome and where earlier effects change
-later life-state eligibility. The confirmed ordered-secondary-effect decision
-and O2-R7 through O2-R16 now govern closure. The capability remains partial
-until those checkpoints pass a fresh review.
+later life-state eligibility. O2-R7 through O2-R16 corrected those paths,
+introduced explicit effect dependencies and shared-contact damage, composed
+weapon secondary effects, aligned schema ranges, and passed a fresh source
+review. The executable capability remains `complete`; the review found no
+remaining reachable defect in this scope.
 
 ## Authority
 

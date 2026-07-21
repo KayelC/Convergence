@@ -77,6 +77,58 @@ executor then applies landed hit records sequentially to staged runtime actors.
 This separation preserves deterministic policy evidence while allowing defeat
 prevention and drains to observe the current staged resource value at each hit.
 
+## Ordered Effect Dependency Gate
+
+Effect IDs and dependencies are local to one authored sequence. The executor
+finishes every target for effect `N` before beginning effect `N + 1`, so an
+`any_target` dependency has the complete source-effect evidence available.
+
+```mermaid
+flowchart TB
+    E["Next effect for prepared target"] --> D{"Dependency authored?"}
+    D -->|"no"| L{"Current life state eligible?"}
+    D -->|"yes"| F["Read earlier typed effect evidence"]
+    F --> S{"Requirement and scope satisfied?"}
+    S -->|"no"| DS["Skipped: DependencyUnsatisfied<br/>no condition or random draw"]
+    S -->|"yes"| L
+    L -->|"no"| LS["Skipped: TargetLifeStateIneligible"]
+    L -->|"yes"| C{"Typed condition true?"}
+    C -->|"no"| CS["Skipped: ConditionUnsatisfied"]
+    C -->|"yes"| X["Dispatch registered effect executor"]
+    X --> R["Append immutable result and evidence"]
+```
+
+An unmet dependency is a skip, not an authored failure, so it does not trigger
+`StopTarget` or `StopAction`. `positive_damage` requires an earlier damage hit
+whose committed resource delta removes a positive amount from that same target.
+Calculated damage, a zero delta, reflection, and absorption do not satisfy it.
+
+## Secondary Damage Contact
+
+Dependent damage selects one of two explicit contact modes. Neither mode copies
+the source Critical result.
+
+```mermaid
+flowchart TB
+    P["Earlier damage evidence"] --> G{"Positive damage to this target?"}
+    G -->|"no"| SK["Skip secondary component"]
+    G -->|"yes"| M{"Secondary contact mode"}
+    M -->|"independent"| H["Resolve secondary accuracy and hit"]
+    M -->|"shared_contact"| C["Reuse established contact<br/>no second accuracy roll"]
+    H --> O["Resolve secondary element, affinity,<br/>power, charge, and Critical policy"]
+    C --> O
+    O --> A["Apply secondary hit evidence and mutation"]
+```
+
+Shared contact still records the secondary authored accuracy but has no
+accuracy roll. It carries the source effect ID and index in
+`DamageHitExecutionEvidence` so a host can associate animations without parsing
+messages. The supplied production ruleset implements this behavior; a custom
+damage policy receives `ContactMode` and owns equivalent semantics.
+
+The first supported rider cardinality is once per qualifying target. A
+multi-hit source does not repeat the later effect for each landed source hit.
+
 ## Standard Arithmetic
 
 For one landed hit, `ProductionCombatRuleset` performs these operations with
@@ -185,6 +237,13 @@ effect-driven Item requests, the supplied policy applies this precedence:
 4. an all-hit target evasion applies Miss;
 5. Weakness applies Weakness;
 6. Critical applies Critical; otherwise Normal.
+
+Damage evidence is grouped by target across all effects before the evasion
+check. A missed Physical component followed by a landed Fire component against
+the same target is therefore not a target evasion. Conversely, a separate
+target whose every damage component misses still supplies the action-level
+evasion fact. `AnyCritical` remains evidence only; Action Token consumes the
+final aggregate `Outcome` and does not re-promote a normalized Critical.
 
 An effect with damage evidence counts as evaded only when every hit is false.
 Typed custom effects without damage evidence may still use a Miss outcome for

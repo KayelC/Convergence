@@ -1,5 +1,7 @@
 # Ordered Secondary Effects And Order 2 Correction Roadmap
 
+**Status:** complete; O2-R7 through O2-R16 verified
+
 ## Purpose
 
 This roadmap reopens Combat Resolution Order 2 after the fresh source review of
@@ -329,12 +331,19 @@ zero stage delta, and non-positive charge multipliers.
 
 ### O2-R16: Documentation, verification, and fresh review
 
-**State:** pending
+**State:** complete in this checkpoint
 
 - Reconcile mechanics, developer, technical, content, and API documentation.
 - Add Mermaid flows for dependency gating and shared-contact damage.
 - Run the complete quality gate and record exact results.
 - Conduct a new source-first Order 2 review before marking it complete.
+
+The closure review found one low-severity assessment parity defect for
+programmatic dependency graphs. Commit `751b9ca` corrected skill, item, and
+basic-attack assessment before this checkpoint closed. The final gate recorded
+1,407 passing tests with zero failures/skips, a zero-warning strict build, six
+valid packs containing 36 documents and 98 definitions, all DemoHost modes,
+scripted Training Annex play, Framework guards, and Godot headless smoke.
 
 **Planned commit:** `docs: verify ordered secondary effects`
 

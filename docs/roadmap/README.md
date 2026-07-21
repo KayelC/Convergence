@@ -24,6 +24,7 @@ requires owner review. The Documentation Completion Roadmap governs the ordered
 collaborative review of those outstanding entries.
 
 Order 1, `typed_action_and_effect_execution`, is complete and owner-confirmed.
-Order 2, `combat_resolution`, is reopened after the 21 July source review and
-the project owner's secondary-effect clarification. O2-R7 through O2-R16 in the
-Ordered Secondary Effects Roadmap are the active completion path.
+Order 2, `combat_resolution`, is also complete and owner-confirmed after
+O2-R7 through O2-R16 implemented and reviewed complete-action and ordered
+secondary-effect behavior. Order 3 is the next capability review in the
+Documentation Completion Roadmap.

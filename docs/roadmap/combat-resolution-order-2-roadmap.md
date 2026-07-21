@@ -1,6 +1,6 @@
 # Order 2 Combat Resolution Roadmap
 
-**Status:** reopened; O2-R7 through O2-R16 in progress
+**Status:** complete; O2-R7 through O2-R16 verified
 
 **Started:** 19 July 2026
 
@@ -10,13 +10,17 @@
 source-verified. Its exact findings, commits, and final gates are governed by
 the [Order 2 Corrections Roadmap](combat-resolution-order-2-corrections-roadmap.md).
 
-**Current correction status:** the broader 21 July source review superseded the
-earlier closure decision. Complete-action aggregation, Action Token pricing,
-ordered life-state eligibility, explicit secondary-effect dependencies,
-secondary damage, equipment composition, and schema ranges are governed by the
-[Ordered Secondary Effects Roadmap](ordered-secondary-effects-roadmap.md) and
-the confirmed
-[Ordered Secondary Effects decision](../decisions/ordered-secondary-effects.md).
+**Final correction status:** the broader 21 July source review superseded the
+earlier closure decision. O2-R7 through O2-R16 then completed complete-action
+aggregation, Action Token pricing, ordered life-state eligibility, explicit
+secondary-effect dependencies, secondary damage, equipment composition,
+schema ranges, documentation, and independent source verification. The
+[Ordered Secondary Effects Roadmap](ordered-secondary-effects-roadmap.md), the
+confirmed
+[Ordered Secondary Effects decision](../decisions/ordered-secondary-effects.md),
+and the
+[final closure review](../reviews/combat-resolution-order-2-ordered-effects-closure-review-2026-07-21.md)
+record that work.
 
 ## Goal
 
@@ -406,7 +410,10 @@ DemoHost, and 7 ContentValidator), zero skipped tests, zero-warning builds,
 every DemoHost mode, active content validation, and the real Godot 4.7.1
 headless smoke. That revision completed the first correction cycle. The later
 21 July source review expanded the exercised combinations and reopened runtime
-work; documentation-matrix promotion is no longer the only remaining gate.
+work. O2-R7 through O2-R16 subsequently completed that work. The final source
+review corrected one low-severity programmatic-assessment mismatch and found no
+remaining reachable defect in the reviewed paths; the three audience entries
+are now `reviewed`.
 
 ## Explicit Boundaries
 
@@ -437,3 +444,7 @@ Order 2 is complete only when:
 - documentation links, terminology, API baseline, schema validation, content
   validation, forbidden references, and `git diff --check` pass; and
 - the project owner confirms the final three-audience explanation.
+
+All conditions above were satisfied on 21 July 2026. Exact final verification
+evidence is recorded in the
+[Ordered Effects Closure Review](../reviews/combat-resolution-order-2-ordered-effects-closure-review-2026-07-21.md).

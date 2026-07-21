@@ -4,7 +4,7 @@
 
 **Decision date:** 21 July 2026
 
-**Implementation state:** O2-R8 through O2-R15 complete; O2-R16 pending
+**Implementation state:** complete through O2-R16
 
 ## Context
 
@@ -142,6 +142,7 @@ poison_rider:
 - [Combat Resolution Policies](../developer-guide/combat-resolution-policies.md)
 - [Combat Resolution Pipeline](../technical/combat-resolution-pipeline.md)
 - [Fresh Order 2 Source Review](../reviews/combat-resolution-order-2-fresh-source-review-2026-07-21.md)
+- [Ordered Effects Closure Review](../reviews/combat-resolution-order-2-ordered-effects-closure-review-2026-07-21.md)
 
-O2-R16 must reconcile the three audience documents with the completed source
-before Order 2 can close again.
+O2-R16 reconciled the three audience documents with the completed source and
+closed Order 2.

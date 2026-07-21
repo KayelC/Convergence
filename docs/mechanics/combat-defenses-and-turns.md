@@ -69,8 +69,10 @@ from typed passives are applied to each hit at the execution boundary after the
 damage policy returns and before the resource mutation is committed.
 
 Damage never reads Luck. Equipment contributes to this formula only through
-the runtime fields currently composed by the actor/equipment modules. Full
-armor defense/evasion and secondary equipment behavior remain separate work.
+the runtime fields currently composed by the actor/equipment modules. Weapon
+basic attacks may now compose ordered typed secondary effects. Full armor
+defense/evasion, granted skills, and other equipment behavior remain separate
+work.
 
 ## Accuracy And Evasion
 
@@ -176,11 +178,30 @@ may animate those facts one by one without recalculating combat.
 
 Turn cost is decided once for the complete action, not once per hit. The
 supplied aggregation policy treats a target as having evaded only when all
-damage hits aimed at that target miss. Repeated misses against one target do
-not stack extra penalties. Repel or Absorb terminates the phase; Null has the
-miss-style penalty; Weak or Critical grants the configured benefit when no
-conflicting evasion exists; mixed Critical and evasion normalizes to normal
-cost. Another game may replace this aggregation policy.
+damage hits across every damage effect aimed at that target miss. A miss from
+one component is not an evasion when another component lands on that same
+target. Repeated misses against one target do not stack extra penalties. Repel
+or Absorb terminates the phase; Null has the miss-style penalty; Weak or
+Critical grants the configured benefit when no conflicting target evasion
+exists; mixed Critical and evasion normalizes to normal cost. Critical remains
+presentation evidence after that normalization, but it does not secretly
+override the final action outcome. Another game may replace this aggregation
+policy.
+
+### Ordered secondary effects
+
+A later effect may explicitly depend on an earlier local effect ID. The
+standard on-hit rider requires positive committed damage to the same target.
+Miss, Null, Repel, Absorb, or zero damage therefore cannot apply it. The rider
+is attempted once per qualifying target, not once per landed source hit, and
+its own chance is rolled only after the dependency succeeds.
+
+Shared-contact secondary damage avoids a second accuracy roll after that gate.
+It is not a hidden copy of the primary hit: its element, affinity, power,
+charge, and Critical definition remain independent. Ordinary independent
+secondary damage performs a separate hit check. Current target life state is
+rechecked between components, so later hostile or restorative effects cannot
+silently revive a target defeated by the primary component.
 
 ### Skills, basic attacks, and offensive items
 

@@ -75,6 +75,12 @@ The Framework compares skill catalog identity and the complete resolved basic
 profile. Reconstructing a same-ID skill, replacing damage, or changing targeting
 is rejected with `ActionNotAuthorized`.
 
+The complete basic profile includes its primary effect ID and immutable
+secondary-effect sequence. Equipment-backed profiles come from validated
+catalog content. A natural or otherwise programmatic profile must satisfy the
+same ordered-effect contracts; assessment rejects duplicate, missing, forward,
+incompatible, or malformed shared-contact dependencies before execution.
+
 ## Assess, Present, Then Execute
 
 Create one request and retain that exact object while the assessment is being
@@ -164,6 +170,84 @@ participants, encounter environment, selected skill, and resolved targets. It
 also verifies that the skill is the equipped canonical definition from that
 `CatalogBattleActor`'s repository. A custom selector may rank legal actions; it
 cannot grant itself an arbitrary skill.
+
+## Author Ordered Effects
+
+Assign a local `effectId` only when a later effect needs to reference that
+effect. IDs are unique within one skill, item usage, passive trigger, or
+composed basic-attack sequence; they are not catalog IDs and are not qualified
+with a pack ID.
+
+This example attempts Poison once for each target that actually loses positive
+HP to the Physical effect:
+
+```json
+{
+  "type": "damage",
+  "effectId": "needle_hit",
+  "elementId": "physical",
+  "power": 50,
+  "accuracy": 90,
+  "critical": { "mode": "chance", "chance": 10 },
+  "hits": { "minimum": 1, "maximum": 1 }
+},
+{
+  "type": "apply_ailment",
+  "ailmentId": "poison",
+  "chance": 35,
+  "dependency": {
+    "sourceEffectId": "needle_hit",
+    "requirement": "positive_damage",
+    "scope": "same_target"
+  }
+}
+```
+
+Use `requirement: "succeeded"` when success rather than positive damage is the
+true prerequisite. Use `scope: "any_target"` only when one target's source
+result is deliberately allowed to unlock the later effect for another target.
+Omit `dependency` when the later effect is independent.
+
+For secondary damage, `contactMode: "independent"` performs another hit check.
+`contactMode: "shared_contact"` requires a same-target positive-damage
+dependency and skips that second accuracy roll. It still uses the secondary
+effect's own damage element, affinity response, power, hit count, charge
+category, and Critical definition.
+
+Weapon basic attacks expose the same model through `primaryEffectId` and
+`secondaryEffects`:
+
+```json
+{
+  "element": "physical",
+  "power": 30,
+  "accuracy": 95,
+  "critical": { "mode": "chance", "chance": 8 },
+  "isLongRange": false,
+  "primaryEffectId": "weapon_hit",
+  "secondaryEffects": [
+    {
+      "type": "damage",
+      "elementId": "fire",
+      "power": 12,
+      "accuracy": 95,
+      "critical": { "mode": "never" },
+      "hits": { "minimum": 1, "maximum": 1 },
+      "contactMode": "shared_contact",
+      "dependency": {
+        "sourceEffectId": "weapon_hit",
+        "requirement": "positive_damage",
+        "scope": "same_target"
+      }
+    }
+  ]
+}
+```
+
+The schema catches local numeric shapes and required fields. Semantic catalog
+validation checks graph rules and references. Runtime assessment repeats the
+ordered dependency-graph checks for programmatic definitions; it is not a
+replacement for validating the rest of a content pack.
 
 ## Dispatch Host-Mediated Work
 

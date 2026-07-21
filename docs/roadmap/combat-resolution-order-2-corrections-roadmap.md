@@ -204,6 +204,8 @@ The first correction cycle established the following requirements:
 - a fresh review finds no remaining reachable correctness defect in these
   paths.
 
-Order 2 now additionally requires every O2-R7 through O2-R16 completion
-condition in the Ordered Secondary Effects Roadmap. Until then, it remains
-reopened rather than complete.
+Order 2 additionally required every O2-R7 through O2-R16 completion condition
+in the Ordered Secondary Effects Roadmap. Those conditions are now satisfied.
+The
+[Ordered Effects Closure Review](../reviews/combat-resolution-order-2-ordered-effects-closure-review-2026-07-21.md)
+records the final source trace, correction, and complete verification gate.

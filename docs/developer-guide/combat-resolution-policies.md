@@ -86,12 +86,20 @@ results. It identifies:
 - critical eligibility, chance, roll, and result;
 - resolved affinity;
 - charge kind and multiplier;
+- independent or shared-contact mode and, for shared contact, the earlier
+  effect ID/index that established contact;
 - calculated hit damage; and
 - the actual actor/resource delta applied to staged state.
 
 Use these records to drive target cues, combat logs, hit animation, affinity
 feedback, and Action Token presentation. Do not recalculate damage or parse a
 debug message.
+
+Complete-action pricing groups `DamageHits` by target across the entire effect
+sequence. Do not price each effect separately. One component miss is not a
+target evasion when another damage component lands on that target, and
+`TurnEconomyResolution.Outcome` is authoritative even when `AnyCritical`
+retains Critical evidence for presentation.
 
 ## Random Source Contract
 

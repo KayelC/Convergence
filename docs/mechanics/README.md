@@ -16,8 +16,9 @@ collaborative review. The reviewed Order 1 scope includes the stat-modifier
 family as used by typed effects; other capability entries remain
 `existing_unreviewed` until they complete the process in the
 [Documentation Design Pattern](../documentation-design-pattern.md).
-The Order 2 combat pages have completed source review and await project-owner
-confirmation before their coverage entries become `reviewed`.
+The Order 2 combat pages are owner-confirmed and source-reviewed through
+complete-action aggregation, ordered dependencies, staged life-state checks,
+and secondary damage contact. Their coverage entries are `reviewed`.
 
 ## Rule Index
 

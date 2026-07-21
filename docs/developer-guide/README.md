@@ -32,8 +32,9 @@ Developer guides focus on:
 
 The actor and typed action/effect guides have completed collaborative review.
 That Order 1 review includes stat-modifier policy composition and integration.
-The combat guide is source-reviewed and awaits project-owner confirmation as
-the final Order 2 documentation gate. Other subsystem guides remain tracked as
+The combat guide completed the Order 2 source review and documentation gate,
+including ordered secondary effects and complete-action outcome pricing. Other
+subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).
 

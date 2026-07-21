@@ -13,31 +13,31 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The actor composition, progression, party/roster, actor-restoration, and typed
-action/effect documentation has completed the collaborative workflow. The
+The actor composition, progression, party/roster, actor-restoration, typed
+action/effect, and combat-resolution documentation has completed the
+collaborative workflow. The
 Order 1 review includes canonical action authority, prepared targets,
 exactly-one item transactions, ordered effects, and the persistent,
 timed-exclusive, and timed-contribution modifier policies. Their production
 execution, lifecycle, ruleset, host, and save integration was checked against
 current source before the project owner confirmed the explanation on 18 July
-2026. Other subsystem entries remain unreviewed until they complete the same
-process.
+2026. Order 2 additionally covers the supplied combat policy family,
+complete-action aggregation, explicit ordered effect dependencies, staged
+life-state eligibility, secondary damage contact, and Action Token integration.
+Other subsystem entries remain unreviewed until they complete the same process.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
-Order 2 combat resolution is reopened under the ordered-secondary-effect
-roadmap. Its mechanics, developer, and technical pages remain
-`existing_unreviewed`; they become `reviewed` only after the runtime corrections,
-fresh source review, documentation reconciliation, and project-owner
-confirmation.
+Order 2 closed through O2-R16 after the ordered-secondary-effect corrections,
+fresh source review, documentation reconciliation, and confirmed owner design.
 
-The documentation matrix currently records 75 audience entries: 14 reviewed,
-37 existing_unreviewed, 17 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 17 reviewed,
+34 existing_unreviewed, 17 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 14 |
-| `existing_unreviewed` | 37 |
+| `reviewed` | 17 |
+| `existing_unreviewed` | 34 |
 | `missing` | 17 |
 | `not_applicable` | 7 |
 
