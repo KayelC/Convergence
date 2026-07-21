@@ -88,7 +88,8 @@ entry becomes `reviewed`. Existing prose must not be bulk-promoted. Order 1 is
 complete and owner-confirmed. Order 2's mechanics remain owner-confirmed; its
 bounded hit execution and authored-percentage corrections are implemented and
 documented. O2-R22 also aligned resource-percentage conditions with the same
-schema range. Only the independent O2-R23 closure review remains outstanding.
+schema range. The independent O2-R23 source review and complete release gate
+are green. Order 2 is closed and Order 3 is the next collaborative capability.
 
 ## Priority 2: Persistence Evolution
 

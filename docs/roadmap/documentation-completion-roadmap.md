@@ -173,7 +173,9 @@ found two reachable safety-boundary defects. The mechanics decisions and three
 audience reviews remain owner-confirmed. Bounded hit execution and authored
 percentage rejection are implemented and reconciled under the
 [Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md).
-Only its independent O2-R21 source closure check remains.
+The first independent recheck found one schema-only resource-percentage range
+omission, O2-R22 corrected it, and the final O2-R23 current-source recheck found
+no further reachable defect.
 
 Current checkpoints:
 
@@ -194,7 +196,8 @@ Current checkpoints:
 The table records the first implementation cycle; O2-R7 through O2-R16 record
 the complete-action and ordered-secondary-effect correction cycle. O2-R18
 through O2-R20 add bounded hit execution, authored-percentage parity, and the
-resulting audience reconciliation. All three `combat_resolution` audience
+resulting audience reconciliation. O2-R22 and O2-R23 record the schema parity
+correction and final source closure. All three `combat_resolution` audience
 entries remain `reviewed`.
 
 ## Deferred Documentation

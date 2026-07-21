@@ -1,6 +1,6 @@
 # Order 2 Combat Resolution Roadmap
 
-**Status:** closure verification; O2-R17 through O2-R22 complete, O2-R23 pending
+**Status:** complete; O2-R17 through O2-R23 verified
 
 **Started:** 19 July 2026
 
@@ -28,8 +28,11 @@ validation. O2-R18 and O2-R19 corrected those paths, and O2-R20 reconciled the
 active contracts. The first independent recheck then found and O2-R22 corrected
 one isolated schema-only resource-percentage range omission. The active
 [Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md)
-governs the remaining independent O2-R23 verification. Earlier completion
-records remain accurate only for the revisions they reviewed.
+governed the final independent O2-R23 verification. That post-correction source
+review found no further reachable defect. Earlier completion records remain
+accurate only for the revisions they reviewed; the
+[Final Closure Review](../reviews/combat-resolution-order-2-final-closure-review-2026-07-21.md)
+is the current closure authority.
 
 ## Goal
 
@@ -454,6 +457,6 @@ Order 2 is complete only when:
   validation, forbidden references, and `git diff --check` pass; and
 - the project owner confirms the final three-audience explanation.
 
-All conditions above were satisfied on 21 July 2026. Exact final verification
-evidence is recorded in the
-[Ordered Effects Closure Review](../reviews/combat-resolution-order-2-ordered-effects-closure-review-2026-07-21.md).
+All conditions above were satisfied again after the O2-R18 through O2-R22
+corrections on 21 July 2026. Exact current verification evidence is recorded in
+the [Final Closure Review](../reviews/combat-resolution-order-2-final-closure-review-2026-07-21.md).

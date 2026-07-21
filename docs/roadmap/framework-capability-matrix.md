@@ -61,9 +61,10 @@ O2-R18 now limits active content to `1..1024` hits and applies the standard
 policy's configurable default ceiling of `64` before random selection or
 allocation. O2-R19 now rejects every authored combat percentage outside
 `0..100` before targets, costs, randomness, mutation, or turn use, while
-preserving clamping only for policy-derived chances. The executable capability
-is complete; O2-R21 remains the independent documentation-and-source closure
-check.
+preserving clamping only for policy-derived chances. O2-R22 aligned the final
+schema-only resource-percentage condition, and O2-R23's fresh source trace
+found no further reachable defect. The executable capability and its closure
+gate are complete.
 
 ## Authority
 

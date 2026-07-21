@@ -1,6 +1,6 @@
 # Order 2 Closure Corrections Roadmap
 
-**Status:** active; O2-R17 through O2-R22 complete, O2-R23 pending
+**Status:** complete; O2-R17 through O2-R23 verified
 
 **Started:** 21 July 2026
 
@@ -145,8 +145,9 @@ quality-gate, and roadmap documents now describe schema v6, the absolute
 `1..1024` authoring range, the supplied standard ceiling of `64`, and the
 authored-versus-derived percentage boundary. The executable capability matrix
 returns `combat_resolution` to `complete` with no hidden implementation gap;
-O2-R21 remains an independent source verification rather than an unfinished
-runtime feature.
+O2-R21 was scheduled as an independent source verification rather than an
+unfinished runtime feature. That verification subsequently found the isolated
+schema discrepancy corrected by O2-R22.
 
 **Commit:** `docs: reconcile combat safety contracts`
 
@@ -183,7 +184,7 @@ same error. Closure therefore moved to O2-R22 and O2-R23.
 
 ### O2-R23: Final independent closure re-evaluation
 
-**State:** pending
+**State:** complete
 
 - Re-read the corrected source and schema without treating earlier reports as
   authority.
@@ -194,6 +195,22 @@ same error. Closure therefore moved to O2-R22 and O2-R23.
   links, formatting, forbidden references, and `git diff --check`.
 - Record exact evidence and close Order 2 only if no realistic reachable defect
   remains in this correction scope.
+
+The post-O2-R22 recheck started again from the current implementation and
+schema. It traced policy binding, hit/critical/instant-defeat resolution,
+ordered execution, lifecycle probabilities, charge consumption, complete-action
+aggregation, Action Token application, semantic validation, and every v6
+percentage declaration. It reproduced the former hit-count and percentage
+paths and found no further realistic reachable defect.
+
+The final gate passed 552 focused tests and 1,439 solution tests with zero
+failures or skips, a zero-warning strict Release build, formatting, all active
+content, all DemoHost modes, scripted play, Framework coverage thresholds,
+boundary checks, and the Godot 4.7.1 headless smoke. The local Godot invocation
+used ignored workspace paths for its user-data directories because the Codex
+process environment could not supply the engine's normal user-data path. Exact
+evidence and review limits are recorded in the
+[Final Closure Review](../reviews/combat-resolution-order-2-final-closure-review-2026-07-21.md).
 
 **Commit:** `docs: verify combat resolution closure corrections`
 

@@ -251,7 +251,7 @@ public sealed class DocumentationFoundationTests
         Assert.DoesNotContain("Charged --> Charged", technical, StringComparison.Ordinal);
 
         Assert.Contains("| O2-C7 | `verified`", roadmap, StringComparison.Ordinal);
-        Assert.Contains("O2-R23 pending", roadmap, StringComparison.Ordinal);
+        Assert.Contains("O2-R23 verified", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]
