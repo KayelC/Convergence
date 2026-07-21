@@ -194,6 +194,17 @@ public sealed class ItemExecutor : IItemExecutor
                 $"Item '{request.Item.Id}' is unavailable in context '{request.Environment.ContextId}'."));
         }
 
+        try
+        {
+            OrderedEffectExecutor.ValidateSequence(usage.Effects);
+        }
+        catch (InvalidOperationException exception)
+        {
+            diagnostics.Add(new ItemExecutionDiagnostic(
+                ItemExecutionDiagnosticCode.ExecutionFailed,
+                $"Item '{request.Item.Id}' has an invalid effect sequence: {exception.Message}"));
+        }
+
         EffectActionExecutionRequest actionRequest = CreateActionRequest(request, usage);
         if (!RuntimeTargetResolver.TryResolve(
                 actionRequest,

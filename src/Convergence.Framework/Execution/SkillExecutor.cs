@@ -217,6 +217,17 @@ public sealed class SkillExecutor : ISkillExecutor
                 $"Skill '{skill.Id}' is unavailable in context '{request.ContextId}'."));
         }
 
+        try
+        {
+            OrderedEffectExecutor.ValidateSequence(skill.Effects);
+        }
+        catch (InvalidOperationException exception)
+        {
+            diagnostics.Add(new SkillExecutionDiagnostic(
+                SkillExecutionDiagnosticCode.ExecutionFailed,
+                $"Skill '{skill.Id}' has an invalid effect sequence: {exception.Message}"));
+        }
+
         if (!BattleTargetResolver.TryResolve(request, _services, out targets, out SkillExecutionDiagnostic? targetingDiagnostic) &&
             targetingDiagnostic is not null)
         {

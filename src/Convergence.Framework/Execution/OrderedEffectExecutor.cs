@@ -44,7 +44,7 @@ internal sealed class OrderedEffectExecutor
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(effects);
         ArgumentNullException.ThrowIfNull(targets);
-        IReadOnlyDictionary<EffectLocalId, int> effectIndexes = ValidateEffectDependencies(effects);
+        IReadOnlyDictionary<EffectLocalId, int> effectIndexes = ValidateSequence(effects);
 
         ActionExecutionScope? scope = CurrentExecutionScope.Value;
         bool ownsScope = scope is null;
@@ -233,9 +233,10 @@ internal sealed class OrderedEffectExecutor
             targetStopped ? OrderedEffectStopReason.Target : OrderedEffectStopReason.None);
     }
 
-    private static IReadOnlyDictionary<EffectLocalId, int> ValidateEffectDependencies(
+    internal static IReadOnlyDictionary<EffectLocalId, int> ValidateSequence(
         IReadOnlyList<EffectDefinition> effects)
     {
+        ArgumentNullException.ThrowIfNull(effects);
         var indexes = new Dictionary<EffectLocalId, int>();
         for (int index = 0; index < effects.Count; index++)
         {

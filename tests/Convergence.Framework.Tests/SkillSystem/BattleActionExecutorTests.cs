@@ -919,6 +919,77 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public void ItemExecutor_AssessmentRejectsInvalidProgrammaticEffectSequence()
+    {
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        var invalidSharedContact = new DamageEffectDefinition(
+            DamageElement.Fire,
+            10,
+            100,
+            new NeverCriticalDefinition(),
+            new HitCountDefinition(1, 1))
+        {
+            ContactMode = DamageContactMode.SharedContact
+        };
+        ItemDefinition item = ConsumableItem(
+            "invalid_item",
+            [invalidSharedContact],
+            SingleEnemy());
+        var executor = new ItemExecutor(ExecutionServices());
+
+        ItemExecutionAssessment assessment = executor.Assess(new ItemExecutionRequest(
+            item,
+            actor,
+            [actor, target],
+            new EffectExecutionEnvironment(Battle),
+            [target.InstanceId]));
+
+        Assert.False(assessment.CanExecute);
+        ItemExecutionDiagnostic diagnostic = Assert.Single(assessment.Diagnostics);
+        Assert.Equal(ItemExecutionDiagnosticCode.ExecutionFailed, diagnostic.Code);
+        Assert.Contains("same-target positive-damage dependency", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BasicAttackAssessmentRejectsInvalidProgrammaticEffectSequence()
+    {
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        var basicAttack = new EquipmentBasicAttackDefinition(
+            DamageElement.Physical,
+            10,
+            100,
+            new NeverCriticalDefinition(),
+            false)
+        {
+            SecondaryEffects =
+            [
+                new DamageEffectDefinition(
+                    DamageElement.Fire,
+                    5,
+                    100,
+                    new NeverCriticalDefinition(),
+                    new HitCountDefinition(1, 1))
+                {
+                    ContactMode = DamageContactMode.SharedContact
+                }
+            ]
+        };
+        var request = Request(
+            new BasicAttackBattleActionCommand(basicAttack, SingleEnemy(), [target.InstanceId]),
+            actor,
+            [actor, target]);
+
+        BattleActionAssessment assessment = Executor().Assess(request);
+
+        Assert.False(assessment.CanExecute);
+        BattleActionDiagnostic diagnostic = Assert.Single(assessment.Diagnostics);
+        Assert.Equal(BattleActionDiagnosticCode.ExecutionFailed, diagnostic.Code);
+        Assert.Contains("same-target positive-damage dependency", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Analyze_PreparedAssessmentExecutesItsDisplayedTargetWithoutRandomSelection()
     {
         var randomTargets = new AlternatingRuntimeRandomTargetPolicy();

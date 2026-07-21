@@ -737,6 +737,17 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             }
         }
 
+        try
+        {
+            OrderedEffectExecutor.ValidateSequence(effects);
+        }
+        catch (InvalidOperationException exception)
+        {
+            diagnostics.Add(new BattleActionDiagnostic(
+                BattleActionDiagnosticCode.ExecutionFailed,
+                $"The action has an invalid effect sequence: {exception.Message}"));
+        }
+
         return diagnostics.Count == 0
             ? CreateAssessment(
                 request,

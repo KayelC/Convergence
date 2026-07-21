@@ -1297,7 +1297,7 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
-    public void Execute_InvalidProgrammaticDependencySequenceRejectsAtomically()
+    public void AssessAndExecute_InvalidProgrammaticDependencySequenceRejectsAtomically()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 10);
         RuntimeActorState target = Actor("target", EnemyTeam, hp: 50);
@@ -1320,9 +1320,14 @@ public sealed class ActiveSkillExecutionTests
         ],
         costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(3))]);
 
-        SkillExecutionResult result = new SkillExecutor(Services()).Execute(
-            Request(skill, actor, [actor, target], [target.InstanceId]));
+        var executor = new SkillExecutor(Services());
+        SkillExecutionRequest request = Request(skill, actor, [actor, target], [target.InstanceId]);
 
+        SkillExecutionAssessment assessment = executor.Assess(request);
+        SkillExecutionResult result = executor.Execute(request, assessment);
+
+        Assert.False(assessment.CanExecute);
+        Assert.Equal(SkillExecutionDiagnosticCode.ExecutionFailed, Assert.Single(assessment.Diagnostics).Code);
         Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
         Assert.Equal(SkillExecutionDiagnosticCode.ExecutionFailed, Assert.Single(result.Diagnostics).Code);
         Assert.Equal(10, actor.GetRequiredResource(Sp).Current);
