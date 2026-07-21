@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 16 complete, 7 partial, and 2 deferred.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in
@@ -89,7 +89,13 @@ complete and owner-confirmed. Order 2's mechanics remain owner-confirmed; its
 bounded hit execution and authored-percentage corrections are implemented and
 documented. O2-R22 also aligned resource-percentage conditions with the same
 schema range. The independent O2-R23 source review and complete release gate
-are green. Order 2 is closed and Order 3 is the next collaborative capability.
+remain valid for that revision. A later source-first pre-closure audit found
+three narrower discrepancies and reopened Order 2 under the
+[Pre-Closure Audit Corrections Roadmap](combat-resolution-order-2-pre-closure-audit-corrections-roadmap.md).
+The capability matrix records each affected action, combat, turn-economy,
+encounter, validation, schema, and host boundary as `partial`; this is one
+correction sequence, not seven separate redesigns. Order 3 does not begin until
+O2-R24 through O2-R27 are corrected and rechecked.
 
 ## Priority 2: Persistence Evolution
 

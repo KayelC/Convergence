@@ -32,7 +32,10 @@ Order 2 documentation now also reflects O2-R18 bounded hit execution and
 O2-R19 authored-percentage rejection. O2-R20 reconciled those changes across
 the three audience documents. O2-R22 corrected the schema-only range omission
 found by the first independent recheck. O2-R23 completed a new current-source
-trace and the full release gate without finding another reachable defect.
+trace and the full release gate without finding another reachable defect at
+revision `e26bdc5`. A later pre-closure audit reopened the implementation gate
+for three narrower cross-contract corrections. The confirmed audience entries
+remain reviewed; final text reconciliation is tracked by O2-R27.
 
 The documentation matrix currently records 75 audience entries: 17 reviewed,
 34 existing_unreviewed, 17 missing, and 7 not_applicable.

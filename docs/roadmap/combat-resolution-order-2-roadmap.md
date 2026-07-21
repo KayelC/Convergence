@@ -1,6 +1,6 @@
 # Order 2 Combat Resolution Roadmap
 
-**Status:** complete; O2-R17 through O2-R23 verified
+**Status:** reopened; O2-R24 through O2-R27 pending
 
 **Started:** 19 July 2026
 
@@ -22,17 +22,21 @@ and the
 [final closure review](../reviews/combat-resolution-order-2-ordered-effects-closure-review-2026-07-21.md)
 record that work.
 
-**Current correction status:** a later source-first closure review found an
+**Earlier correction status:** a source-first closure review found an
 unbounded schema-valid hit-count path and inconsistent code-authored percentage
 validation. O2-R18 and O2-R19 corrected those paths, and O2-R20 reconciled the
 active contracts. The first independent recheck then found and O2-R22 corrected
 one isolated schema-only resource-percentage range omission. The active
 [Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md)
 governed the final independent O2-R23 verification. That post-correction source
-review found no further reachable defect. Earlier completion records remain
-accurate only for the revisions they reviewed; the
+review found no further reachable defect at revision `e26bdc5`. Earlier
+completion records remain accurate only for the revisions they reviewed. A
+subsequent fresh audit identified three narrower action, host-contract, and
+authoring-boundary discrepancies. The
+[Order 2 Pre-Closure Audit Corrections Roadmap](combat-resolution-order-2-pre-closure-audit-corrections-roadmap.md)
+is now the current correction authority; the
 [Final Closure Review](../reviews/combat-resolution-order-2-final-closure-review-2026-07-21.md)
-is the current closure authority.
+is historical evidence for its reviewed revision.
 
 ## Goal
 
@@ -457,6 +461,6 @@ Order 2 is complete only when:
   validation, forbidden references, and `git diff --check` pass; and
 - the project owner confirms the final three-audience explanation.
 
-All conditions above were satisfied again after the O2-R18 through O2-R22
-corrections on 21 July 2026. Exact current verification evidence is recorded in
-the [Final Closure Review](../reviews/combat-resolution-order-2-final-closure-review-2026-07-21.md).
+All conditions above were satisfied after the O2-R18 through O2-R23 correction
+cycle on 21 July 2026. The later pre-closure audit reopened this gate. Current
+closure now also requires O2-R24 through O2-R27 and a fresh full verification.

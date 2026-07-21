@@ -4,9 +4,9 @@
 
 **Decision date:** 19 July 2026
 
-**Implementation state:** O2-C1 through O2-C7 and independent-review
-corrections O2-R1 through O2-R6 implemented and source-verified; audience
-confirmation pending
+**Implementation state:** confirmed mechanics implemented through O2-R23 and
+all three audiences owner-confirmed; the later O2-R24 through O2-R27
+pre-closure correction gate is open
 
 ## Context
 
@@ -281,9 +281,11 @@ assumptions.
 
 ## Implementation Result
 
-Order 2 now implements the complete confirmed policy family. The supplied
-composition includes split and unified charge policies, explicit hit/evasion,
-separate critical eligibility and chance, resistance-aware instant defeat,
+Order 2 implements the confirmed policy family. Convergence supplies Split and
+Unified charge policies; the standard authored combat factory selects Split,
+while a host may select Unified through a custom factory or direct composition.
+The family also includes explicit hit/evasion, separate critical eligibility
+and chance, resistance-aware instant defeat,
 immutable per-hit evidence, sequential staged hit application, and replaceable
 action-outcome aggregation. Authored ruleset binding returns a neutral coherent
 `CombatExecutionPolicySet`; the hit, critical, and instant-defeat authorities it

@@ -35,7 +35,9 @@ The actor and typed action/effect references have completed collaborative
 review. That Order 1 review includes stat-modifier runtime authority and its
 integration boundaries. The combat pipeline completed its owner-confirmed
 Order 2 source review, including dependency gating, current life-state
-eligibility, shared contact, and complete-action aggregation. Other subsystem
+eligibility, shared contact, and complete-action aggregation. Those technical
+rules remain current, while a later implementation audit has reopened formal
+Order 2 closure for three narrower shared-contract fixes. Other subsystem
 references remain tracked as
 `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

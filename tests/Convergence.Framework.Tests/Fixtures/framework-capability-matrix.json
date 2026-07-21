@@ -24,12 +24,14 @@
     },
     {
       "id": "content_validation",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["ContentValidationTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": []
+      "knownGaps": [
+        "Semantic validation rejects party-size zero even though the published schema permits it."
+      ]
     },
     {
       "id": "catalog_loading",
@@ -69,16 +71,18 @@
     },
     {
       "id": "typed_action_and_effect_execution",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["ActiveSkillExecutionTests", "BattleActionExecutorTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": []
+      "knownGaps": [
+        "Duplicate skill costs for one resource can make the nonzero payment floor depend on authored list order."
+      ]
     },
     {
       "id": "combat_resolution",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "ChargePolicyTests",
         "HitResolutionPolicyTests",
@@ -97,16 +101,22 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": []
+      "knownGaps": [
+        "Duplicate skill costs for one resource can make the nonzero payment floor depend on authored list order.",
+        "Host-supplied turn-consumption and encounter command records accept impossible enum and payload combinations.",
+        "Schema v6 permits party-size zero while Framework semantic validation rejects it."
+      ]
     },
     {
       "id": "turn_economy",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["BattleEncounterRunnerTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Public action-consumption and economy-resolution records accept impossible enum and payload combinations that supplied economies silently reinterpret."
+      ]
     },
     {
       "id": "status_and_passive_lifecycle",
@@ -119,12 +129,14 @@
     },
     {
       "id": "encounter_orchestration",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["BattleEncounterRunnerTests", "EncounterPreparationServiceTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Encounter command results accept undefined statuses and requested outcomes instead of faulting at the host boundary."
+      ]
     },
     {
       "id": "battle_knowledge",
@@ -213,21 +225,25 @@
     },
     {
       "id": "host_contracts",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["FrameworkBoundaryTests", "GodotIntegrationContractTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": []
+      "knownGaps": [
+        "Host-supplied turn-consumption and encounter command records do not enforce their legal shapes at construction or port entry."
+      ]
     },
     {
       "id": "authored_schema_contracts",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["SchemaDeserializationTests", "CatalogSurfaceTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": []
+      "knownGaps": [
+        "Schema v6 permits party-size zero while Framework semantic validation rejects it."
+      ]
     },
     {
       "id": "godot_adapter",
