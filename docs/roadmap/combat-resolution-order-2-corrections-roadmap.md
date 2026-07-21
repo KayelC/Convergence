@@ -7,9 +7,12 @@ This roadmap reopens Order 2 after the independent source review of 20 July
 checkpoint and records the project owner's decision for offensive-item turn
 behavior.
 
-All correction checkpoints are now implemented and source-verified. Order 2's
-implementation is complete again; its three audience documents remain subject
-to the normal project-owner confirmation gate.
+The first correction cycle, O2-R0 through O2-R6, is implemented and preserved
+below as historical evidence. A fresh source review on 21 July 2026 found three
+reachable complete-action defects and one schema mismatch. The project owner
+also clarified that secondary effects such as an ailment rider may depend on a
+primary hit. Order 2 is therefore reopened under the
+[Ordered Secondary Effects Roadmap](ordered-secondary-effects-roadmap.md).
 
 ## Authority
 
@@ -18,6 +21,10 @@ to the normal project-owner confirmation gate.
   defines confirmed mechanics.
 - [Order 2 Independent Review](../reviews/combat-resolution-order-2-independent-review-2026-07-20.md)
   supplies correction evidence.
+- [Order 2 Fresh Source Review](../reviews/combat-resolution-order-2-fresh-source-review-2026-07-21.md)
+  supplies the second-cycle findings.
+- [Ordered Secondary Effects Roadmap](ordered-secondary-effects-roadmap.md)
+  owns O2-R7 through O2-R16 and the confirmed primary-hit dependency model.
 - This roadmap owns correction order and completion tracking only.
 
 ## Confirmed Item Decision
@@ -145,8 +152,10 @@ turn cost is fixed.
 | O2-R5 | `711ba83` | 1,330 passed |
 | O2-R6 | this documentation checkpoint | 1,330 passed |
 
-The post-correction source trace found no remaining reachable defect in the
-reviewed Order 2 paths. The final gate reported 1,150 Framework tests, 173
+At that historical checkpoint, the post-correction source trace found no
+remaining reachable defect in the reviewed paths. The later 21 July review
+expanded the tested combinations and supersedes that closure decision. The
+first-cycle final gate reported 1,150 Framework tests, 173
 DemoHost tests, and 7 ContentValidator tests, with zero failures or skips.
 Framework and complete-solution Release builds reported zero warnings. All
 five DemoHost modes passed, the content validator accepted 6 packs, 36
@@ -183,7 +192,7 @@ documentation links, API compatibility, and forbidden-reference searches.
 
 ## Definition Of Corrected
 
-Order 2 is corrected only when:
+The first correction cycle established the following requirements:
 
 - every supplied random draw uses the shared validated boundary;
 - unified charge is authorable and restorable from clean content;
@@ -194,3 +203,7 @@ Order 2 is corrected only when:
 - all quality gates pass; and
 - a fresh review finds no remaining reachable correctness defect in these
   paths.
+
+Order 2 now additionally requires every O2-R7 through O2-R16 completion
+condition in the Ordered Secondary Effects Roadmap. Until then, it remains
+reopened rather than complete.

@@ -12,6 +12,7 @@ records. It does not define individual mechanics.
 - [Stat Modifier Policy Roadmap](stat-modifier-policy-roadmap.md)
 - [Order 2 Combat Resolution Roadmap](combat-resolution-order-2-roadmap.md)
 - [Order 2 Combat Resolution Corrections Roadmap](combat-resolution-order-2-corrections-roadmap.md)
+- [Ordered Secondary Effects And Order 2 Correction Roadmap](ordered-secondary-effects-roadmap.md)
 - [Documentation Completion Roadmap](documentation-completion-roadmap.md)
 - [Framework Capability Matrix](framework-capability-matrix.md)
 - [Production-Readiness Completion Record](production-readiness-roadmap.md)
@@ -23,6 +24,6 @@ requires owner review. The Documentation Completion Roadmap governs the ordered
 collaborative review of those outstanding entries.
 
 Order 1, `typed_action_and_effect_execution`, is complete and owner-confirmed.
-Order 2, `combat_resolution`, is implemented and source-verified after the
-focused corrections in its correction roadmap. Its three audience entries
-remain unpromoted until the project owner confirms the reconciled explanation.
+Order 2, `combat_resolution`, is reopened after the 21 July source review and
+the project owner's secondary-effect clarification. O2-R7 through O2-R16 in the
+Ordered Secondary Effects Roadmap are the active completion path.

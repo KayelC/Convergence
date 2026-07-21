@@ -25,9 +25,10 @@ process.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
-Order 2 combat resolution has completed implementation and source review. Its
-mechanics, developer, and technical pages are now present as
-`existing_unreviewed`; they become `reviewed` only after project-owner
+Order 2 combat resolution is reopened under the ordered-secondary-effect
+roadmap. Its mechanics, developer, and technical pages remain
+`existing_unreviewed`; they become `reviewed` only after the runtime corrections,
+fresh source review, documentation reconciliation, and project-owner
 confirmation.
 
 The documentation matrix currently records 75 audience entries: 14 reviewed,

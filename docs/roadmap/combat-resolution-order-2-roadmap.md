@@ -1,6 +1,6 @@
 # Order 2 Combat Resolution Roadmap
 
-**Status:** implementation complete; documentation owner confirmation pending
+**Status:** reopened; O2-R7 through O2-R16 in progress
 
 **Started:** 19 July 2026
 
@@ -9,6 +9,14 @@
 **Correction status:** the 20 July 2026 correction sequence is implemented and
 source-verified. Its exact findings, commits, and final gates are governed by
 the [Order 2 Corrections Roadmap](combat-resolution-order-2-corrections-roadmap.md).
+
+**Current correction status:** the broader 21 July source review superseded the
+earlier closure decision. Complete-action aggregation, Action Token pricing,
+ordered life-state eligibility, explicit secondary-effect dependencies,
+secondary damage, equipment composition, and schema ranges are governed by the
+[Ordered Secondary Effects Roadmap](ordered-secondary-effects-roadmap.md) and
+the confirmed
+[Ordered Secondary Effects decision](../decisions/ordered-secondary-effects.md).
 
 ## Goal
 
@@ -396,9 +404,9 @@ those paths. A second current-source trace found no remaining reachable Order 2
 defect. The corrected final gate passed 1,330 tests (1,150 Framework, 173
 DemoHost, and 7 ContentValidator), zero skipped tests, zero-warning builds,
 every DemoHost mode, active content validation, and the real Godot 4.7.1
-headless smoke. The implementation capability is complete; O2-C7 is
-`written_pending_owner_confirmation`, so only documentation-matrix
-promotion remains.
+headless smoke. That revision completed the first correction cycle. The later
+21 July source review expanded the exercised combinations and reopened runtime
+work; documentation-matrix promotion is no longer the only remaining gate.
 
 ## Explicit Boundaries
 

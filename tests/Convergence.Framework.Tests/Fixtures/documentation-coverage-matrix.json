@@ -148,17 +148,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/combat-defenses-and-turns.md"],
-        "reason": "The twice-reviewed mechanics page covers corrected random, charge, committed-hit, vocabulary, and source-aware item rules; project-owner confirmation remains."
+        "reason": "The mechanics page covers the first corrected combat cycle; ordered secondary effects and complete-action corrections are reopened under O2-R7 through O2-R16 before owner confirmation."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/combat-resolution-policies.md"],
-        "reason": "The source-reviewed policy guide covers source-aware item configuration and the shared random contract; project-owner confirmation remains."
+        "reason": "The policy guide covers the first corrected combat cycle; dependency, secondary-damage, and aggregate-outcome integration remain to be reconciled after O2-R7 through O2-R16."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/combat-resolution-pipeline.md"],
-        "reason": "The second source review reconciled the pipeline, atomic item outcome ordering, and correction evidence; project-owner confirmation remains."
+        "reason": "The pipeline documents the first corrected combat cycle; ordered life-state and dependent-effect execution remain to be reconciled after O2-R7 through O2-R16."
       }
     },
     {

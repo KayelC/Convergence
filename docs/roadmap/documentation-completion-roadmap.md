@@ -139,8 +139,8 @@ the [final Order 1 closure review](../reviews/order-1-final-closure-review-2026-
 All three `typed_action_and_effect_execution` audience entries are now
 `reviewed`. After the source-reviewed Order 2 pages were written, the executable
 matrix records 14 reviewed, 37 `existing_unreviewed`, 17 missing, and 7
-`not_applicable` entries. Order 2, `combat_resolution`, awaits final
-project-owner confirmation.
+`not_applicable` entries. Order 2, `combat_resolution`, has since been reopened
+for O2-R7 through O2-R16 and is not awaiting documentation confirmation alone.
 
 ## Active Order 2
 
@@ -157,6 +157,11 @@ Implementation is now governed by the
 second independent review found five additional correction subjects; all are
 now implemented and source-verified through the
 [Order 2 Corrections Roadmap](combat-resolution-order-2-corrections-roadmap.md).
+A broader 21 July source review found complete-action and ordered-effect gaps.
+The confirmed
+[Ordered Secondary Effects decision](../decisions/ordered-secondary-effects.md)
+and its
+[active roadmap](ordered-secondary-effects-roadmap.md) now govern closure.
 
 Current checkpoints:
 
@@ -174,13 +179,12 @@ Current checkpoints:
 | O2-D6 | `confirmed` | Configurable probability bounds with neutral supplied defaults of `0..100`. |
 | O2-DOC | `written_pending_owner_confirmation` | All three audience documents match the second corrected source trace; project-owner confirmation remains. |
 
-The `combat_resolution` implementation is now `complete`. Its mechanics,
-developer, and technical documentation remains `existing_unreviewed` until the
-project owner confirms the final explanation. The active pages now include the
-shared random boundary, authored unified charge, committed-hit Critical rule,
-strict combat vocabulary, and source-aware item outcomes. They are accurate
-source-reviewed evidence, but owner confirmation is still required by the
-documentation promotion rule.
+The table above records the first implementation cycle. `combat_resolution` is
+currently reopened while O2-R7 through O2-R16 correct complete-action outcomes
+and add explicit ordered-secondary-effect behavior. Its mechanics, developer,
+and technical documentation remains `existing_unreviewed` until those changes
+are implemented, freshly source-reviewed, reconciled across all three audience
+pages, and confirmed by the project owner.
 
 ## Deferred Documentation
 

@@ -84,9 +84,9 @@ Complete the active
 capability at a time. Source and tests establish current behavior; the project
 owner confirms intended mechanics and extension boundaries before an audience
 entry becomes `reviewed`. Existing prose must not be bulk-promoted. Order 1 is
-complete and owner-confirmed. Order 2, `combat_resolution`, is
-implementation-complete and awaits final owner confirmation of its three
-source-reviewed audience documents.
+complete and owner-confirmed. Order 2, `combat_resolution`, is reopened after
+the 21 July source review and the confirmed ordered-secondary-effect decision.
+O2-R7 through O2-R16 are its active correction path.
 
 ## Priority 2: Persistence Evolution
 

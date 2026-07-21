@@ -34,8 +34,8 @@ restoration, and cross-policy host evidence. The final source-first review found
 no remaining reachable Order 1 defect, and the project owner confirmed the
 public mechanics on 18 July 2026.
 
-Order 2 returned `combat_resolution` to complete after a source-first redesign
-and completion review. Charge state is policy-owned; supplied hit/evasion uses
+Order 2's first correction cycle established a coherent combat policy family.
+Charge state is policy-owned; supplied hit/evasion uses
 authored accuracy, explicit Agility coefficients, typed modifiers, exact
 probability bounds, and no hidden Luck. Critical eligibility and chance are
 separate replaceable policies. Instant defeat uses authored chance, explicit
@@ -49,9 +49,13 @@ A source-aware action policy derives one turn-economy result from the complete
 effect set: supplied items use normal cost by default while effect-driven item
 behavior is an authored option. Authored binding returns a coherent neutral
 combat aggregate, unified charge is authorable, public combat vocabulary is
-validated, and all supplied random draws cross one checked host boundary. The
-code capability is complete; its three documentation views remain pending
-project-owner confirmation.
+validated, and all supplied random draws cross one checked host boundary.
+
+A broader 21 July source review reopened the capability after finding defects
+where per-hit facts become one action outcome and where earlier effects change
+later life-state eligibility. The confirmed ordered-secondary-effect decision
+and O2-R7 through O2-R16 now govern closure. The capability remains partial
+until those checkpoints pass a fresh review.
 
 ## Authority
 
