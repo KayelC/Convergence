@@ -1,3 +1,5 @@
+using Convergence.Runtime;
+
 namespace Convergence.Execution;
 
 /// <summary>
@@ -135,7 +137,7 @@ public sealed class StandardActionOutcomeAggregationPolicy : IActionOutcomeAggre
         }
 
         bool anyNull = effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Null);
-        bool anyEvadedTarget = effects.Any(IsEvadedTarget);
+        bool anyEvadedTarget = HasAnyEvadedTarget(effects);
         bool anyWeakness = effects.Any(effect => effect.TurnEconomyOutcome == TurnEconomyOutcome.Weakness);
 
         TurnEconomyOutcome outcome = anyNull
@@ -153,14 +155,20 @@ public sealed class StandardActionOutcomeAggregationPolicy : IActionOutcomeAggre
         return new TurnEconomyResolution(outcome, anyCritical, false);
     }
 
-    private static bool IsEvadedTarget(EffectExecutionResult effect)
+    private static bool HasAnyEvadedTarget(IReadOnlyList<EffectExecutionResult> effects)
     {
-        if (effect.DamageHits.Count > 0)
+        IEnumerable<IGrouping<RuntimeInstanceId, DamageHitExecutionEvidence>> typedTargets =
+            effects
+                .SelectMany(effect => effect.DamageHits)
+                .GroupBy(hit => hit.TargetId);
+        if (typedTargets.Any(target => target.All(hit => !hit.Hit)))
         {
-            return effect.DamageHits.All(hit => !hit.Hit);
+            return true;
         }
 
-        // Preserve custom effect compatibility while typed damage uses per-hit facts.
-        return effect.TurnEconomyOutcome == TurnEconomyOutcome.Miss;
+        // Custom effects without typed hit evidence continue to own their explicit outcome.
+        return effects.Any(effect =>
+            effect.DamageHits.Count == 0 &&
+            effect.TurnEconomyOutcome == TurnEconomyOutcome.Miss);
     }
 }

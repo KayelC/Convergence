@@ -83,6 +83,66 @@ public sealed class ActionOutcomeAggregationPolicyTests
             _policy.Aggregate([firstMiss, secondMiss]).Outcome);
     }
 
+    [Theory]
+    [InlineData(TurnEconomyOutcome.Normal, false)]
+    [InlineData(TurnEconomyOutcome.Weakness, false)]
+    [InlineData(TurnEconomyOutcome.Critical, true)]
+    public void Aggregate_GroupsDamageHitsForTheSameTargetAcrossEffects(
+        TurnEconomyOutcome landedOutcome,
+        bool critical)
+    {
+        EffectExecutionResult missedEffect = DamageEffect(
+            FirstTarget,
+            TurnEconomyOutcome.Miss,
+            [Hit(FirstTarget, 0, false)]);
+        EffectExecutionResult landedEffect = DamageEffect(
+            FirstTarget,
+            landedOutcome,
+            [Hit(FirstTarget, 0, true, critical)]);
+
+        TurnEconomyResolution result = _policy.Aggregate([missedEffect, landedEffect]);
+
+        Assert.Equal(landedOutcome, result.Outcome);
+        Assert.Equal(critical, result.AnyCritical);
+        Assert.False(result.TerminatesPhase);
+    }
+
+    [Fact]
+    public void Aggregate_GroupsRepeatedMissesForTheSameTargetAcrossEffects()
+    {
+        EffectExecutionResult firstMiss = DamageEffect(
+            FirstTarget,
+            TurnEconomyOutcome.Miss,
+            [Hit(FirstTarget, 0, false)]);
+        EffectExecutionResult secondMiss = DamageEffect(
+            FirstTarget,
+            TurnEconomyOutcome.Miss,
+            [Hit(FirstTarget, 0, false)]);
+
+        TurnEconomyResolution result = _policy.Aggregate([firstMiss, secondMiss]);
+
+        Assert.Equal(TurnEconomyOutcome.Miss, result.Outcome);
+        Assert.False(result.AnyCritical);
+        Assert.False(result.TerminatesPhase);
+    }
+
+    [Fact]
+    public void Aggregate_PreservesEvasionForADifferentTargetAcrossEffects()
+    {
+        EffectExecutionResult landed = DamageEffect(
+            FirstTarget,
+            TurnEconomyOutcome.Normal,
+            [Hit(FirstTarget, 0, true)]);
+        EffectExecutionResult missed = DamageEffect(
+            SecondTarget,
+            TurnEconomyOutcome.Miss,
+            [Hit(SecondTarget, 0, false)]);
+
+        TurnEconomyResolution result = _policy.Aggregate([landed, missed]);
+
+        Assert.Equal(TurnEconomyOutcome.Miss, result.Outcome);
+    }
+
     [Fact]
     public void Aggregate_NullPenaltyAndPhaseTerminationTakePrecedence()
     {
