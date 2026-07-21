@@ -22,17 +22,15 @@ Action Token strategy.
 
 ### O2-R24: Make aggregate skill-cost legality order-invariant
 
-**State:** open; owner decision required before implementation
+**State:** implemented pending review
 
-- Decide whether duplicate cost entries for one `resourceId` are rejected or
-  deliberately aggregated.
-- Recommended supplied contract: reject duplicate resource IDs in authored and
-  programmatic preflight.
-- If additive entries are retained, aggregate the permission as well as the
-  amount: any component that forbids zero makes the complete obligation forbid
-  zero.
-- Test both list orders, mixed permission flags, HP and SP, assessment,
-  prepared-state revalidation, commit, and rollback.
+- One skill may declare at most one cost for a given `resourceId`.
+- Semantic content validation rejects repeated resources, including a local ID
+  and its same-pack qualified alias.
+- Programmatic runtime assessment rejects duplicates before target randomness,
+  amount resolution, mutation, or turn consumption.
+- Regression coverage exercises both list orders, mixed zero-floor flags, HP,
+  SP, rejected execution, and unchanged actor/target state.
 
 **Planned commit:** `execution: make aggregate skill costs order invariant`
 

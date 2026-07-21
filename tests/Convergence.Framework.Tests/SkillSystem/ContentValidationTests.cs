@@ -320,6 +320,27 @@ public sealed class ContentValidationTests
     }
 
     [Fact]
+    public void SkillCostsRejectDuplicateResourceReferencesIncludingSamePackAliases()
+    {
+        SkillDefinition skill = ActiveSkill(
+            "duplicate_resource_cost",
+            [new AnalyzeEffectDefinition([AnalysisLayer.Stats])],
+            costs:
+            [
+                new SkillCostDefinition(Id("sp"), new FlatAmountDefinition(1)),
+                new SkillCostDefinition(Id("test.pack:sp"), new FlatAmountDefinition(2), true)
+            ]);
+
+        ContentValidationResult result = _validator.Validate(Request(
+            ComprehensiveRegistrations(),
+            skills: [skill]));
+
+        Assert.Contains(result.Errors, error =>
+            error.Code == ContentValidationErrorCode.ListDuplicateValue &&
+            error.JsonPath == "$.skills[0].costs[1].resourceId");
+    }
+
+    [Fact]
     public void DamageHitCountsCannotExceedThePublishedContentCeiling()
     {
         SkillDefinition skill = ActiveSkill(

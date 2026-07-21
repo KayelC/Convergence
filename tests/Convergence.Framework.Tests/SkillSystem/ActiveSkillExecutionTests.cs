@@ -500,27 +500,16 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
-    public void Assess_RejectsAnUnrepresentableAggregateSkillCostWithoutMutation()
+    public void Assess_RejectsDuplicateResourceCostsBeforeMutation()
     {
-        var actor = new RuntimeActorState(
-            RuntimeInstanceId.Parse("actor"),
-            ContentId.Parse("actor_entity"),
-            PlayerTeam,
-            Hp,
-            CombatDefenseProfile.Empty,
-            [
-                new BattleResourceState(Hp, 100m, 100m),
-                new BattleResourceState(Sp, decimal.MaxValue, decimal.MaxValue)
-            ],
-            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
-            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), PlayerTeam));
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 10);
         RuntimeActorState target = Actor("target", EnemyTeam);
         SkillDefinition skill = ActiveSkill(
             [new DamageEffectDefinition(DamageElement.Fire, 10, 100, new NeverCriticalDefinition(), FixedHits())],
             costs:
             [
-                new SkillCostDefinition(Sp, new FlatAmountDefinition(decimal.MaxValue), true),
-                new SkillCostDefinition(Sp, new FlatAmountDefinition(decimal.MaxValue), true)
+                new SkillCostDefinition(Sp, new FlatAmountDefinition(5), false),
+                new SkillCostDefinition(Sp, new FlatAmountDefinition(5), true)
             ]);
         var executor = new SkillExecutor(Services());
         SkillExecutionRequest request = Request(skill, actor, [actor, target], [target.InstanceId]);
@@ -530,10 +519,44 @@ public sealed class ActiveSkillExecutionTests
 
         Assert.False(assessment.CanExecute);
         Assert.Contains(assessment.Diagnostics, diagnostic =>
-            diagnostic.Code == SkillExecutionDiagnosticCode.InsufficientResource);
+            diagnostic.Code == SkillExecutionDiagnosticCode.DuplicateResourceCost);
         Assert.Equal(SkillExecutionStatus.Rejected, execution.Status);
-        Assert.Equal(decimal.MaxValue, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(10, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
         Assert.False(execution.CostsCommitted);
+    }
+
+    [Fact]
+    public void Assess_DuplicateResourceCostRejectionIsOrderInvariantForHpAndSp()
+    {
+        foreach (ContentId resourceId in new[] { Hp, Sp })
+        {
+            foreach (bool zeroAllowedFirst in new[] { false, true })
+            {
+                RuntimeActorState actor = Actor("actor", PlayerTeam, hp: 10, sp: 10);
+                RuntimeActorState target = Actor("target", EnemyTeam);
+                SkillCostDefinition allowsZero = new(resourceId, new FlatAmountDefinition(5), true);
+                SkillCostDefinition preservesOne = new(resourceId, new FlatAmountDefinition(5), false);
+                SkillDefinition skill = ActiveSkill(
+                    [new DamageEffectDefinition(DamageElement.Fire, 10, 100, new NeverCriticalDefinition(), FixedHits())],
+                    costs: zeroAllowedFirst ? [allowsZero, preservesOne] : [preservesOne, allowsZero]);
+                var executor = new SkillExecutor(Services());
+                SkillExecutionRequest request = Request(skill, actor, [actor, target], [target.InstanceId]);
+
+                SkillExecutionAssessment assessment = executor.Assess(request);
+                SkillExecutionResult execution = executor.Execute(request, assessment);
+
+                Assert.False(assessment.CanExecute);
+                Assert.Contains(assessment.Diagnostics, diagnostic =>
+                    diagnostic.Code == SkillExecutionDiagnosticCode.DuplicateResourceCost);
+                Assert.Equal(SkillExecutionStatus.Rejected, execution.Status);
+                Assert.Equal(10, actor.GetRequiredResource(Hp).Current);
+                Assert.Equal(10, actor.GetRequiredResource(Sp).Current);
+                Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+                Assert.False(execution.CostsCommitted);
+                Assert.Empty(execution.Effects);
+            }
+        }
     }
 
     [Fact]

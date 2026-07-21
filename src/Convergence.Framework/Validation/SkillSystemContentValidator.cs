@@ -434,12 +434,18 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 }
             }
 
+            var costResourceIds = new HashSet<ContentId>();
             for (int index = 0; index < skill.Costs.Count; index++)
             {
                 SkillCostDefinition cost = skill.Costs[index];
                 string path = source.Path + $".costs[{index}]";
                 RequireRegistration(source, cost.ResourceId, path + ".resourceId", _registrations.ResourceIds, "resource");
                 ValidateAmount(source, cost.Amount, path + ".amount");
+                if (cost.ResourceId.IsValid && !costResourceIds.Add(NormalizeContentReference(cost.ResourceId)))
+                {
+                    Add(source, path + ".resourceId", ContentValidationErrorCode.ListDuplicateValue,
+                        $"Resource '{cost.ResourceId}' is already charged by this skill.");
+                }
             }
 
             if (skill.Targeting is not null)

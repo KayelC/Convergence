@@ -10689,3 +10689,4 @@ Convergence.Content.EquipmentBasicAttackDefinition.PrimaryEffectId.get -> Conver
 Convergence.Content.EquipmentBasicAttackDefinition.PrimaryEffectId.init -> void
 Convergence.Content.EquipmentBasicAttackDefinition.SecondaryEffects.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.EffectDefinition!>!
 Convergence.Content.EquipmentBasicAttackDefinition.SecondaryEffects.init -> void
+Convergence.Execution.SkillExecutionDiagnosticCode.DuplicateResourceCost = 17 -> Convergence.Execution.SkillExecutionDiagnosticCode

@@ -237,6 +237,13 @@ public sealed class SkillExecutor : ISkillExecutor
             return diagnostics;
         }
 
+        ValidateUniqueCostResources(skill.Costs, diagnostics);
+        if (diagnostics.Any(diagnostic =>
+                diagnostic.Code == SkillExecutionDiagnosticCode.DuplicateResourceCost))
+        {
+            return diagnostics;
+        }
+
         if (!BattleTargetResolver.TryResolve(request, _services, out targets, out SkillExecutionDiagnostic? targetingDiagnostic) &&
             targetingDiagnostic is not null)
         {
@@ -274,12 +281,26 @@ public sealed class SkillExecutor : ISkillExecutor
         return diagnostics;
     }
 
+    private static void ValidateUniqueCostResources(
+        IReadOnlyList<SkillCostDefinition> costs,
+        ICollection<SkillExecutionDiagnostic> diagnostics)
+    {
+        var seen = new HashSet<ContentId>();
+        foreach (SkillCostDefinition cost in costs)
+        {
+            if (!seen.Add(cost.ResourceId))
+            {
+                diagnostics.Add(new SkillExecutionDiagnostic(
+                    SkillExecutionDiagnosticCode.DuplicateResourceCost,
+                    $"Resource '{cost.ResourceId}' cannot be charged more than once by one skill."));
+            }
+        }
+    }
+
     private IReadOnlyList<ResolvedSkillCost> ValidateCosts(
         SkillExecutionRequest request,
         ICollection<SkillExecutionDiagnostic> diagnostics)
     {
-        var requiredByResource = new Dictionary<ContentId, decimal>();
-        var unrepresentableTotals = new HashSet<ContentId>();
         var resolvedCosts = new List<ResolvedSkillCost>();
         foreach (SkillCostDefinition cost in request.Skill.Costs)
         {
@@ -319,17 +340,7 @@ public sealed class SkillExecutor : ISkillExecutor
                 amount,
                 new RuleModifierContext(conditionContext, request.Skill, cost.ResourceId)));
             resolvedCosts.Add(new ResolvedSkillCost(cost.ResourceId, amount, cost.CanReduceToZero));
-            decimal previousRequired = requiredByResource.GetValueOrDefault(cost.ResourceId);
-            bool representable = CombatArithmetic.TryAdd(previousRequired, amount, out decimal required);
-            requiredByResource[cost.ResourceId] = required;
-            if (!representable)
-            {
-                unrepresentableTotals.Add(cost.ResourceId);
-            }
-
-            decimal remaining = unrepresentableTotals.Contains(cost.ResourceId)
-                ? -1m
-                : resource.Current - required;
+            decimal remaining = resource.Current - amount;
             if (remaining < 0 || (!cost.CanReduceToZero && remaining <= 0))
             {
                 diagnostics.Add(new SkillExecutionDiagnostic(
@@ -364,7 +375,6 @@ public sealed class SkillExecutor : ISkillExecutor
             return diagnostics;
         }
 
-        var requiredByResource = new Dictionary<ContentId, decimal>();
         for (int index = 0; index < assessment.Costs.Count; index++)
         {
             ResolvedSkillCost cost = assessment.Costs[index];
@@ -387,17 +397,7 @@ public sealed class SkillExecutor : ISkillExecutor
                 continue;
             }
 
-            decimal previousRequired = requiredByResource.GetValueOrDefault(cost.ResourceId);
-            if (!CombatArithmetic.TryAdd(previousRequired, cost.Amount, out decimal required))
-            {
-                diagnostics.Add(new SkillExecutionDiagnostic(
-                    SkillExecutionDiagnosticCode.InsufficientResource,
-                    $"Resource '{cost.ResourceId}' cannot represent the prepared aggregate skill cost."));
-                continue;
-            }
-
-            requiredByResource[cost.ResourceId] = required;
-            decimal remaining = resource.Current - required;
+            decimal remaining = resource.Current - cost.Amount;
             if (remaining < 0 || (!cost.CanReduceToZero && remaining <= 0))
             {
                 diagnostics.Add(new SkillExecutionDiagnostic(

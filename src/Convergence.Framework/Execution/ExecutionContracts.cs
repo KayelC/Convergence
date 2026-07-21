@@ -120,7 +120,8 @@ public enum SkillExecutionDiagnosticCode
     NoApplicableEffect,
     AssessmentInvalid,
     ExecutionFailed,
-    AuthoredPercentageOutOfRange
+    AuthoredPercentageOutOfRange,
+    DuplicateResourceCost
 }
 
 public sealed record SkillExecutionDiagnostic(
