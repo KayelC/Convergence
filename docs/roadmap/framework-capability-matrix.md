@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 16 complete, 7 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 20 complete, 3 partial, and 2 deferred.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v11 restoration. Its
@@ -65,13 +65,14 @@ preserving clamping only for policy-derived chances. O2-R22 aligned the final
 schema-only resource-percentage condition, and O2-R23's fresh source trace
 found no further reachable defect at that revision. A subsequent pre-closure
 audit found order-dependent duplicate resource costs, invalid host
-turn-consumption shapes, and a party-size schema/semantic mismatch. The central
-combat policy family remains usable, but its completion gate is `partial` until
-O2-R24 through O2-R27 are corrected and independently rechecked. The executable
-matrix also marks each directly affected contract `partial`: typed action
-execution, turn economy, encounter orchestration, content validation, authored
-schemas, and host contracts. This records ownership of the gaps rather than
-hiding every issue beneath the active documentation order.
+turn-consumption shapes, and a party-size schema/semantic mismatch. O2-R24
+through O2-R27 corrected and independently rechecked those paths. The post-R27
+source trace found one remaining supported extension-boundary defect: a custom
+effect result can carry undefined execution and turn-economy outcomes into the
+ordered pipeline. The executable matrix therefore keeps only typed action
+execution, combat resolution, and host contracts `partial` until O2-R28 and
+O2-R29 reject that malformed output and verify closure. This records ownership
+of the gap rather than hiding it beneath the active documentation order.
 
 ## Authority
 

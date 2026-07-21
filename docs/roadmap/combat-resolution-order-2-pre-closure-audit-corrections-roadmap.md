@@ -1,6 +1,6 @@
 # Order 2 Pre-Closure Audit Corrections Roadmap
 
-**Status:** open
+**Status:** open; O2-R24 through O2-R27 implemented, O2-R28 pending
 
 **Started:** 21 July 2026
 
@@ -13,6 +13,10 @@ The fresh
 found three current-source discrepancies after revision `e26bdc5`. This roadmap
 keeps those findings explicit until code, tests, schemas, documents, and a
 source-first re-evaluation agree.
+
+The post-R27 source recheck found one additional supported host-extension
+boundary defect. Its evidence is recorded in the
+[Post-R27 Source Review](../reviews/combat-resolution-order-2-post-r27-source-review-2026-07-21.md).
 
 It does not redesign the approved damage formula, accuracy, criticals,
 affinities, charges, multi-hit behavior, secondary-effect dependencies, or
@@ -63,8 +67,8 @@ Action Token strategy.
 
 ### O2-R27: Reconcile documentation and re-evaluate closure
 
-**State:** implementation and audience reconciliation complete; independent
-source re-evaluation pending
+**State:** implementation and audience reconciliation complete; source
+re-evaluation completed and found O2-M3
 
 - Prepared skill cost amounts are intentionally quote-locked between single-use
   assessment and execution. Execution revalidates authored identity and current
@@ -80,6 +84,35 @@ source re-evaluation pending
   defect remains in its reviewed paths.
 
 **Planned commit:** `docs: reverify order 2 closure`
+
+### O2-R28: Validate custom effect result contracts
+
+**State:** pending
+
+- Make `EffectExecutionResult` validate scalar assignments made by both its
+  constructor and record cloning.
+- Reject negative effect indexes, undefined execution/turn/optional enum
+  values, invalid optional IDs, and null or invalid collection entries.
+- Prove a malformed `ICustomEffectHandler` result becomes a typed pre-commit
+  action rejection.
+- Prove no actor, resource, charge, inventory, later effect, or turn-economy
+  mutation escapes that rejection.
+- Preserve every legal built-in and host-custom result shape.
+
+**Planned commit:** `execution: validate custom effect results`
+
+### O2-R29: Reconcile evidence and independently close Order 2
+
+**State:** pending
+
+- Re-read current combat and action source after O2-R28 without treating prior
+  reports as implementation proof.
+- Reproduce O2-R24 through O2-R28 at their public boundaries.
+- Update all affected capability entries and active audience documentation from
+  corrected source.
+- Run the complete release gate and record exact evidence.
+
+**Planned commit:** `docs: verify order 2 pre-closure corrections`
 
 ## Review Standard
 
