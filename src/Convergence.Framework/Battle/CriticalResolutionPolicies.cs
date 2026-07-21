@@ -111,27 +111,21 @@ public sealed class CriticalChanceRequest
         IEnumerable<NumericRuleModifierDefinition>? criticalChanceModifiers = null)
     {
         Critical = critical ?? throw new ArgumentNullException(nameof(critical));
-        if (critical is ChanceCriticalDefinition chance && chance.Chance is < 0 or > 100)
+        if (critical is ChanceCriticalDefinition chance)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(critical),
+            AuthoredPercentage.RequireValid(
                 chance.Chance,
-                "Authored critical chance must be within 0-100.");
+                nameof(critical),
+                "Authored critical chance");
         }
-        if (authoredAccuracy is < 0 or > 100)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(authoredAccuracy),
-                authoredAccuracy,
-                "Authored accuracy must be within 0-100.");
-        }
-        if (finalHitChance is < 0 or > 100)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(finalHitChance),
-                finalHitChance,
-                "Final hit chance must be within 0-100.");
-        }
+        AuthoredPercentage.RequireValid(
+            authoredAccuracy,
+            nameof(authoredAccuracy),
+            "Authored accuracy");
+        AuthoredPercentage.RequireValid(
+            finalHitChance,
+            nameof(finalHitChance),
+            "Final hit chance");
         if (criticalChanceMultiplier < 0m)
         {
             throw new ArgumentOutOfRangeException(

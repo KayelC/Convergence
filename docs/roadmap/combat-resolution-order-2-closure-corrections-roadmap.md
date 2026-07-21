@@ -1,6 +1,6 @@
 # Order 2 Closure Corrections Roadmap
 
-**Status:** active; O2-R17 and O2-R18 complete, O2-R19 through O2-R21 pending
+**Status:** active; O2-R17 through O2-R19 complete, O2-R20 and O2-R21 pending
 
 **Started:** 21 July 2026
 
@@ -103,7 +103,7 @@ DemoHost modes.
 
 ### O2-R19: Unify authored-percentage boundaries
 
-**State:** pending
+**State:** complete
 
 - Add one internal authored-percentage validator.
 - Validate public supplied-policy and lifecycle request boundaries.
@@ -113,6 +113,20 @@ DemoHost modes.
 - Return stable typed diagnostics from action assessment.
 - Prove invalid values consume no randomness, resources, inventory, charges,
   actor state, or turn economy.
+
+Implementation now uses one internal inclusive `0..100` domain guard. Skill,
+item, equipment basic-attack, escape, and recursively nested condition
+assessment return the appended `AuthoredPercentageOutOfRange` diagnostic before
+target selection, cost resolution, inventory reservation, or turn use. Supplied
+damage, critical, instant-defeat, ailment, chance, turn-restriction, and natural
+recovery paths reject malformed code-authored values; canonical request records
+also preserve that invariant through `with` cloning. Zero and one hundred do not
+draw randomness.
+
+Verification completed with 1,437 solution tests, zero failures or skips, a
+zero-warning strict Release build, formatting verification, validation of all 6
+active packs / 36 documents / 98 definitions, and all four noninteractive
+DemoHost modes.
 
 **Commit:** `execution: reject invalid authored percentages`
 

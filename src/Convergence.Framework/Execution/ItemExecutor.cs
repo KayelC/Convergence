@@ -30,7 +30,8 @@ public enum ItemExecutionDiagnosticCode
     AilmentMissing,
     NoApplicableEffect,
     AssessmentInvalid,
-    ExecutionFailed
+    ExecutionFailed,
+    AuthoredPercentageOutOfRange
 }
 
 public sealed record ItemExecutionDiagnostic(
@@ -203,6 +204,17 @@ public sealed class ItemExecutor : IItemExecutor
             diagnostics.Add(new ItemExecutionDiagnostic(
                 ItemExecutionDiagnosticCode.ExecutionFailed,
                 $"Item '{request.Item.Id}' has an invalid effect sequence: {exception.Message}"));
+        }
+
+        ValidateAuthoredPercentages(usage.Effects, diagnostics);
+        if (diagnostics.Any(diagnostic =>
+                diagnostic.Code == ItemExecutionDiagnosticCode.AuthoredPercentageOutOfRange))
+        {
+            return new ItemExecutionAssessment(
+                diagnostics,
+                targets: null,
+                authority: _assessmentAuthority,
+                request: request);
         }
 
         EffectActionExecutionRequest actionRequest = CreateActionRequest(request, usage);
@@ -564,6 +576,23 @@ public sealed class ItemExecutor : IItemExecutor
 
         return result.StatModifierTransitions.Any(transition => transition.StateChanged) ||
                result.Value is null || result.Value != 0;
+    }
+
+    private static void ValidateAuthoredPercentages(
+        IReadOnlyList<EffectDefinition> effects,
+        ICollection<ItemExecutionDiagnostic> diagnostics)
+    {
+        for (int index = 0; index < effects.Count; index++)
+        {
+            foreach (AuthoredPercentageIssue issue in
+                     AuthoredEffectPercentageValidator.Validate(effects[index]))
+            {
+                diagnostics.Add(new ItemExecutionDiagnostic(
+                    ItemExecutionDiagnosticCode.AuthoredPercentageOutOfRange,
+                    issue.Message,
+                    index));
+            }
+        }
     }
 
     private static bool BoundariesAreEquivalent(

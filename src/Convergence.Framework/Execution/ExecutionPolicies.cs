@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Convergence.Battle;
 using Convergence.Content;
 using Convergence.Catalog;
+using Convergence.Internal;
 using Convergence.Runtime;
 
 namespace Convergence.Execution;
@@ -22,6 +23,17 @@ public sealed class DamagePolicyRequest
         Actor = actor ?? throw new ArgumentNullException(nameof(actor));
         Target = target ?? throw new ArgumentNullException(nameof(target));
         Effect = effect ?? throw new ArgumentNullException(nameof(effect));
+        AuthoredPercentage.RequireValid(
+            effect.Accuracy,
+            nameof(effect),
+            "Authored accuracy");
+        if (effect.Critical is ChanceCriticalDefinition critical)
+        {
+            AuthoredPercentage.RequireValid(
+                critical.Chance,
+                nameof(effect),
+                "Authored critical chance");
+        }
         if (!Enum.IsDefined(affinity))
         {
             throw new ArgumentOutOfRangeException(nameof(affinity), affinity, "Affinity must be defined.");
@@ -276,7 +288,26 @@ public sealed record InstantDeathPolicyRequest(
     RuntimeActorState Actor,
     RuntimeActorState Target,
     InstantKillEffectDefinition Effect,
-    InstantDeathResistanceResolution Resistance);
+    InstantDeathResistanceResolution Resistance)
+{
+    private InstantKillEffectDefinition _effect = ValidateEffect(Effect);
+
+    public InstantKillEffectDefinition Effect
+    {
+        get => _effect;
+        init => _effect = ValidateEffect(value);
+    }
+
+    private static InstantKillEffectDefinition ValidateEffect(InstantKillEffectDefinition effect)
+    {
+        ArgumentNullException.ThrowIfNull(effect);
+        AuthoredPercentage.RequireValid(
+            effect.Chance,
+            nameof(Effect),
+            "Authored instant-defeat chance");
+        return effect;
+    }
+}
 
 public interface IInstantDeathExecutionPolicy
 {
@@ -288,7 +319,25 @@ public sealed record AilmentApplicationPolicyRequest(
     RuntimeActorState Target,
     int Chance,
     AilmentDefinition Ailment,
-    ResistanceLevel Resistance);
+    ResistanceLevel Resistance)
+{
+    private int _chance = ValidateChance(Chance);
+
+    public int Chance
+    {
+        get => _chance;
+        init => _chance = ValidateChance(value);
+    }
+
+    private static int ValidateChance(int chance)
+    {
+        AuthoredPercentage.RequireValid(
+            chance,
+            nameof(Chance),
+            "Authored ailment chance");
+        return chance;
+    }
+}
 
 public interface IAilmentApplicationPolicy
 {
@@ -299,7 +348,25 @@ public sealed record ChancePolicyRequest(
     int Chance,
     RuntimeActorState Actor,
     RuntimeActorState? Target,
-    string Purpose);
+    string Purpose)
+{
+    private int _chance = ValidateChance(Chance);
+
+    public int Chance
+    {
+        get => _chance;
+        init => _chance = ValidateChance(value);
+    }
+
+    private static int ValidateChance(int chance)
+    {
+        AuthoredPercentage.RequireValid(
+            chance,
+            nameof(Chance),
+            "Authored chance");
+        return chance;
+    }
+}
 
 public interface IChanceExecutionPolicy
 {

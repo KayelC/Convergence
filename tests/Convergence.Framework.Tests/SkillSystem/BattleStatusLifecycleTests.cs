@@ -73,6 +73,60 @@ public sealed class BattleStatusLifecycleTests
         Assert.Equal(BattleTurnStartOutcome.CanAct, service.ProcessTurnStart(new(actFear, true)).Outcome);
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(101)]
+    public void TurnStart_RejectsInvalidAuthoredChanceBeforeRandomnessAndRollsBack(int chance)
+    {
+        var service = new BattleStatusLifecycleService(new ThrowingRandomSource());
+        RuntimeActorState actor = Actor("invalid_chance");
+        actor.SetGuarding(true);
+        actor.ApplyAilment(
+            Ailment("invalid_chance_ailment", new ChanceSkipAilmentTurnBehaviorDefinition(chance)),
+            Turns(3));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => service.ProcessTurnStart(new(actor)));
+
+        Assert.True(actor.IsGuarding);
+        Assert.True(actor.HasAilment(ContentId.Parse("invalid_chance_ailment")));
+    }
+
+    [Fact]
+    public void TurnStart_RejectsCombinedFleeAndSkipChanceAboveOneHundred()
+    {
+        var service = new BattleStatusLifecycleService(new ThrowingRandomSource());
+        RuntimeActorState actor = Actor("invalid_combined_chance");
+        actor.ApplyAilment(
+            Ailment(
+                "invalid_combined_chance_ailment",
+                new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(
+                    60,
+                    50,
+                    CompanionFleeOutcome.RecallToRoster)),
+            Turns(3));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => service.ProcessTurnStart(new(actor)));
+
+        Assert.True(actor.HasAilment(ContentId.Parse("invalid_combined_chance_ailment")));
+    }
+
+    [Fact]
+    public void TurnStart_ZeroAndOneHundredPercentDoNotDrawRandomness()
+    {
+        var service = new BattleStatusLifecycleService(new ThrowingRandomSource());
+        RuntimeActorState zero = Actor("zero_chance");
+        zero.ApplyAilment(
+            Ailment("zero_chance_ailment", new ChanceSkipAilmentTurnBehaviorDefinition(0)),
+            Turns(3));
+        RuntimeActorState guaranteed = Actor("guaranteed_chance");
+        guaranteed.ApplyAilment(
+            Ailment("guaranteed_chance_ailment", new ChanceSkipAilmentTurnBehaviorDefinition(100)),
+            Turns(3));
+
+        Assert.Equal(BattleTurnStartOutcome.CanAct, service.ProcessTurnStart(new(zero)).Outcome);
+        Assert.Equal(BattleTurnStartOutcome.Skip, service.ProcessTurnStart(new(guaranteed)).Outcome);
+    }
+
     [Fact]
     public void TurnStart_CombinesAllAilmentsAndPreservesAllowedActionIds()
     {
@@ -206,6 +260,18 @@ public sealed class BattleStatusLifecycleTests
         Assert.True(target.HasAilment(Poison));
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(101)]
+    public void AilmentApplicationRequestRejectsInvalidAuthoredChance(int chance)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BattleAilmentApplicationRequest(
+            Actor("attacker"),
+            Actor("target"),
+            Ailment("poison", new NormalAilmentTurnBehaviorDefinition()),
+            chance));
+    }
+
     [Fact]
     public void TurnEnd_AppliesLethalPoisonSleepRecoveryNaturalRecoveryAndDurationTicks()
     {
@@ -265,6 +331,32 @@ public sealed class BattleStatusLifecycleTests
             result.Events,
             item => item.Kind == BattleStatusLifecycleEventKind.AilmentRecovered);
         Assert.Equal(100m, recovered.Value);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(101)]
+    public void TurnEnd_RejectsInvalidNaturalRecoveryChanceWithoutMutation(int chance)
+    {
+        RuntimeActorState actor = Actor("invalid_recovery", hp: 50, luck: 40);
+        ContentId ailmentId = ContentId.Parse("invalid_recovery_ailment");
+        actor.ApplyAilment(
+            Ailment(
+                ailmentId.ToString(),
+                new NormalAilmentTurnBehaviorDefinition(),
+                recovery: new AilmentRecoveryDefinition(
+                    new NaturalAilmentRecoveryDefinition(chance, Luck, 0.5m))),
+            Turns(3));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new BattleStatusLifecycleService(new ThrowingRandomSource()).ProcessTurnEnd(
+                new(actor, [actor], Battle, OwnerTurnEnd),
+                Services()));
+
+        Assert.True(actor.HasAilment(ailmentId));
+        Assert.Equal(50, actor.GetRequiredResource(Hp).Current);
+        Assert.Equal(3, Assert.IsType<TurnDurationDefinition>(
+            Assert.Single(actor.Ailments).Value.Duration).Value);
     }
 
     [Fact]
@@ -886,6 +978,15 @@ public sealed class BattleStatusLifecycleTests
         }
 
         public decimal NextUnitDecimal() => NextInt32(0, 100) / 100m;
+    }
+
+    private sealed class ThrowingRandomSource : IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) =>
+            throw new InvalidOperationException("Random selection must not occur.");
+
+        public decimal NextUnitDecimal() =>
+            throw new InvalidOperationException("Random selection must not occur.");
     }
 
     private sealed class PoisonFormulaHandler : IFormulaAmountHandler

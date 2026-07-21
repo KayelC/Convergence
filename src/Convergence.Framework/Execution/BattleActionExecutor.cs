@@ -54,7 +54,8 @@ public enum BattleActionDiagnosticCode
     ItemRollbackFailed,
     ItemReservationInvalid,
     ItemInventoryRequired,
-    ActionNotAuthorized
+    ActionNotAuthorized,
+    AuthoredPercentageOutOfRange
 }
 
 public enum BattleActionEventKind
@@ -715,6 +716,28 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             targeting,
             selectedTargetIds);
         List<BattleActionDiagnostic> diagnostics = [];
+
+        for (int effectIndex = 0; effectIndex < effects.Count; effectIndex++)
+        {
+            foreach (AuthoredPercentageIssue issue in
+                     AuthoredEffectPercentageValidator.Validate(effects[effectIndex]))
+            {
+                diagnostics.Add(new BattleActionDiagnostic(
+                    BattleActionDiagnosticCode.AuthoredPercentageOutOfRange,
+                    issue.Message,
+                    effectIndex));
+            }
+        }
+
+        if (diagnostics.Count > 0)
+        {
+            return CreateAssessment(
+                request,
+                kind,
+                diagnostics,
+                turnConsumption: ActionTurnConsumption.None);
+        }
+
         bool resolved = RuntimeTargetResolver.TryResolve(
             action,
             _services,
@@ -755,7 +778,11 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 targetIds: targets!.Targets.Select(target => target.InstanceId),
                 hasResolvedTargets: true,
                 isUntargeted: targets.IsUntargeted)
-            : CreateAssessment(request, kind, diagnostics);
+            : CreateAssessment(
+                request,
+                kind,
+                diagnostics,
+                turnConsumption: ActionTurnConsumption.None);
     }
 
     private BattleActionAssessment AssessPartyRoster(
@@ -1262,14 +1289,18 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
 
     private static BattleActionDiagnostic ToActionDiagnostic(SkillExecutionDiagnostic diagnostic) =>
         new(
-            BattleActionDiagnosticCode.SkillRejected,
+            diagnostic.Code == SkillExecutionDiagnosticCode.AuthoredPercentageOutOfRange
+                ? BattleActionDiagnosticCode.AuthoredPercentageOutOfRange
+                : BattleActionDiagnosticCode.SkillRejected,
             diagnostic.Message,
             diagnostic.EffectIndex,
             diagnostic.TargetId);
 
     private static BattleActionDiagnostic ToActionDiagnostic(ItemExecutionDiagnostic diagnostic) =>
         new(
-            BattleActionDiagnosticCode.ItemRejected,
+            diagnostic.Code == ItemExecutionDiagnosticCode.AuthoredPercentageOutOfRange
+                ? BattleActionDiagnosticCode.AuthoredPercentageOutOfRange
+                : BattleActionDiagnosticCode.ItemRejected,
             diagnostic.Message,
             diagnostic.EffectIndex,
             diagnostic.TargetId);

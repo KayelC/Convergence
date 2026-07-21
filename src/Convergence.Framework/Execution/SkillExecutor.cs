@@ -193,6 +193,8 @@ public sealed class SkillExecutor : ISkillExecutor
         out ResolvedTargetSet? targets,
         out IReadOnlyList<ResolvedSkillCost> costs)
     {
+        targets = null;
+        costs = [];
         var diagnostics = new List<SkillExecutionDiagnostic>();
         SkillDefinition skill = request.Skill;
 
@@ -226,6 +228,13 @@ public sealed class SkillExecutor : ISkillExecutor
             diagnostics.Add(new SkillExecutionDiagnostic(
                 SkillExecutionDiagnosticCode.ExecutionFailed,
                 $"Skill '{skill.Id}' has an invalid effect sequence: {exception.Message}"));
+        }
+
+        ValidateAuthoredPercentages(skill.Effects, diagnostics);
+        if (diagnostics.Any(diagnostic =>
+                diagnostic.Code == SkillExecutionDiagnosticCode.AuthoredPercentageOutOfRange))
+        {
+            return diagnostics;
         }
 
         if (!BattleTargetResolver.TryResolve(request, _services, out targets, out SkillExecutionDiagnostic? targetingDiagnostic) &&
@@ -401,6 +410,23 @@ public sealed class SkillExecutor : ISkillExecutor
         AddChargeApplicabilityDiagnostic(request, preparedTargets.Targets, diagnostics);
 
         return diagnostics;
+    }
+
+    private static void ValidateAuthoredPercentages(
+        IReadOnlyList<EffectDefinition> effects,
+        ICollection<SkillExecutionDiagnostic> diagnostics)
+    {
+        for (int index = 0; index < effects.Count; index++)
+        {
+            foreach (AuthoredPercentageIssue issue in
+                     AuthoredEffectPercentageValidator.Validate(effects[index]))
+            {
+                diagnostics.Add(new SkillExecutionDiagnostic(
+                    SkillExecutionDiagnosticCode.AuthoredPercentageOutOfRange,
+                    issue.Message,
+                    index));
+            }
+        }
     }
 
     private void AddStatModifierApplicabilityDiagnostic(

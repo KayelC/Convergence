@@ -62,13 +62,10 @@ public sealed record InstantDefeatResolutionRequest
         ResistanceLevel? resistance,
         bool bypassesResistance = false)
     {
-        if (authoredChance is < 0 or > 100)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(authoredChance),
-                authoredChance,
-                "Authored instant-defeat chance must be within 0-100.");
-        }
+        AuthoredPercentage.RequireValid(
+            authoredChance,
+            nameof(authoredChance),
+            "Authored instant-defeat chance");
         if (resistance is ResistanceLevel value && !Enum.IsDefined(value))
         {
             throw new ArgumentOutOfRangeException(

@@ -119,7 +119,8 @@ public enum SkillExecutionDiagnosticCode
     AilmentMissing,
     NoApplicableEffect,
     AssessmentInvalid,
-    ExecutionFailed
+    ExecutionFailed,
+    AuthoredPercentageOutOfRange
 }
 
 public sealed record SkillExecutionDiagnostic(

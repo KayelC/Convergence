@@ -274,6 +274,10 @@ public sealed class ProductionHitCheckRequest
     {
         Attacker = attacker ?? throw new ArgumentNullException(nameof(attacker));
         Target = target ?? throw new ArgumentNullException(nameof(target));
+        AuthoredPercentage.RequireValid(
+            authoredAccuracy,
+            nameof(authoredAccuracy),
+            "Authored accuracy");
         AuthoredAccuracy = authoredAccuracy;
         AccuracyModifiers = Snapshot(accuracyModifiers, nameof(accuracyModifiers));
         EvasionModifiers = Snapshot(evasionModifiers, nameof(evasionModifiers));
@@ -317,14 +321,21 @@ public sealed class ProductionCriticalCheckRequest
             throw new ArgumentOutOfRangeException(nameof(element), element, "Damage element must be defined.");
         }
         Critical = critical ?? throw new ArgumentNullException(nameof(critical));
-        if (authoredAccuracy is < 0 or > 100)
+        if (critical is ChanceCriticalDefinition chance)
         {
-            throw new ArgumentOutOfRangeException(nameof(authoredAccuracy));
+            AuthoredPercentage.RequireValid(
+                chance.Chance,
+                nameof(critical),
+                "Authored critical chance");
         }
-        if (finalHitChance is < 0 or > 100)
-        {
-            throw new ArgumentOutOfRangeException(nameof(finalHitChance));
-        }
+        AuthoredPercentage.RequireValid(
+            authoredAccuracy,
+            nameof(authoredAccuracy),
+            "Authored accuracy");
+        AuthoredPercentage.RequireValid(
+            finalHitChance,
+            nameof(finalHitChance),
+            "Final hit chance");
 
         Element = element;
         AuthoredAccuracy = authoredAccuracy;
@@ -434,6 +445,17 @@ public sealed class ProductionDamageResolutionRequest
         Element = element;
         Affinity = affinity;
         Power = power;
+        AuthoredPercentage.RequireValid(
+            accuracy,
+            nameof(accuracy),
+            "Authored accuracy");
+        if (critical is ChanceCriticalDefinition criticalChance)
+        {
+            AuthoredPercentage.RequireValid(
+                criticalChance.Chance,
+                nameof(critical),
+                "Authored critical chance");
+        }
         Accuracy = accuracy;
         Critical = critical ?? throw new ArgumentNullException(nameof(critical));
         Hits = hits ?? throw new ArgumentNullException(nameof(hits));
@@ -720,6 +742,10 @@ public sealed class ProductionCombatRuleset :
     public bool ShouldDefeat(InstantDeathPolicyRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        AuthoredPercentage.RequireValid(
+            request.Effect.Chance,
+            nameof(request),
+            "Authored instant-defeat chance");
 
         ProductionInstantDeathResult result = ResolveInstantDeath(new ProductionInstantDeathRequest(
             CreateCombatantProfile(request.Actor),
@@ -733,6 +759,10 @@ public sealed class ProductionCombatRuleset :
     public bool ShouldApply(AilmentApplicationPolicyRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        AuthoredPercentage.RequireValid(
+            request.Chance,
+            nameof(request),
+            "Authored ailment chance");
 
         ProductionAilmentApplicationResult result = ResolveAilmentApplication(
             new ProductionAilmentApplicationRequest(
@@ -743,8 +773,15 @@ public sealed class ProductionCombatRuleset :
         return result.Applied;
     }
 
-    public bool Roll(ChancePolicyRequest request) =>
-        RollPercent(request.Chance);
+    public bool Roll(ChancePolicyRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        AuthoredPercentage.RequireValid(
+            request.Chance,
+            nameof(request),
+            "Authored chance");
+        return RollPercent(request.Chance);
+    }
 
     public decimal Resolve(PowerAmountDefinition amount, AmountResolutionContext context) =>
         amount.Power;
@@ -931,6 +968,10 @@ public sealed class ProductionCombatRuleset :
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Attacker);
         ArgumentNullException.ThrowIfNull(request.Target);
+        AuthoredPercentage.RequireValid(
+            request.BaseChance,
+            nameof(request),
+            "Authored instant-defeat chance");
 
         InstantDefeatResolutionResult result = _instantDefeatPolicy.Resolve(
             new InstantDefeatResolutionRequest(
@@ -953,6 +994,10 @@ public sealed class ProductionCombatRuleset :
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Attacker);
         ArgumentNullException.ThrowIfNull(request.Target);
+        AuthoredPercentage.RequireValid(
+            request.BaseChance,
+            nameof(request),
+            "Authored ailment chance");
         if (!Enum.IsDefined(request.Resistance))
         {
             throw new ArgumentOutOfRangeException(
@@ -1050,11 +1095,12 @@ public sealed class ProductionCombatRuleset :
 
     private bool RollPercent(int chance)
     {
-        if (chance <= 0)
+        AuthoredPercentage.RequireValid(chance, nameof(chance), "Chance");
+        if (chance == 0)
         {
             return false;
         }
-        if (chance >= 100)
+        if (chance == 100)
         {
             return true;
         }

@@ -323,6 +323,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Execution/AuthoredEffectPercentageValidator.cs",
+      "owner": "effect_execution",
+      "publicSurface": "internal_only"
+    },
+    {
       "path": "Execution/BattleActionAuthorization.cs",
       "owner": "effect_execution",
       "publicSurface": "exported"
@@ -459,6 +464,11 @@
     },
     {
       "path": "Internal/EnumDomain.cs",
+      "owner": "internal_shared",
+      "publicSurface": "internal_only"
+    },
+    {
+      "path": "Internal/AuthoredPercentage.cs",
       "owner": "internal_shared",
       "publicSurface": "internal_only"
     },

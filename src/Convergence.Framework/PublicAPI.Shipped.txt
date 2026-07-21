@@ -2702,6 +2702,7 @@ Convergence.Execution.BattleActionDiagnostic.TargetId.get -> Convergence.Runtime
 Convergence.Execution.BattleActionDiagnostic.TargetId.init -> void
 Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.ActionNotAuthorized = 15 -> Convergence.Execution.BattleActionDiagnosticCode
+Convergence.Execution.BattleActionDiagnosticCode.AuthoredPercentageOutOfRange = 16 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.AssessmentInvalid = 8 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.EffectExecutorMissing = 4 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.ExecutionFailed = 9 -> Convergence.Execution.BattleActionDiagnosticCode
@@ -3363,6 +3364,7 @@ Convergence.Execution.ItemExecutionDiagnostic.TargetId.get -> Convergence.Runtim
 Convergence.Execution.ItemExecutionDiagnostic.TargetId.init -> void
 Convergence.Execution.ItemExecutionDiagnosticCode
 Convergence.Execution.ItemExecutionDiagnosticCode.AilmentMissing = 9 -> Convergence.Execution.ItemExecutionDiagnosticCode
+Convergence.Execution.ItemExecutionDiagnosticCode.AuthoredPercentageOutOfRange = 13 -> Convergence.Execution.ItemExecutionDiagnosticCode
 Convergence.Execution.ItemExecutionDiagnosticCode.AssessmentInvalid = 11 -> Convergence.Execution.ItemExecutionDiagnosticCode
 Convergence.Execution.ItemExecutionDiagnosticCode.ContextUnavailable = 2 -> Convergence.Execution.ItemExecutionDiagnosticCode
 Convergence.Execution.ItemExecutionDiagnosticCode.CustomConditionHandlerMissing = 7 -> Convergence.Execution.ItemExecutionDiagnosticCode
@@ -9967,6 +9969,7 @@ Convergence.Execution.PassiveTriggerDispatchRequest.ActiveStatModifierBoundaries
 Convergence.Execution.PassiveTriggerDispatchRequest.PassiveTriggerDispatchRequest(Convergence.Content.ContentId eventId, Convergence.Execution.RuntimeActorState! owner, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! targets, Convergence.Content.ContentId contextId, Convergence.Content.ContentId? battleKindId, Convergence.Content.ContentId? moonPhaseId, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? activeStatModifierBoundaries = null) -> void
 Convergence.Execution.RuntimeActorState.StatModifierState.get -> Convergence.Runtime.RuntimeStatModifierStateSnapshot?
 Convergence.Execution.SkillExecutionDiagnosticCode.AssessmentInvalid = 14 -> Convergence.Execution.SkillExecutionDiagnosticCode
+Convergence.Execution.SkillExecutionDiagnosticCode.AuthoredPercentageOutOfRange = 16 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.ExecutionFailed = 15 -> Convergence.Execution.SkillExecutionDiagnosticCode
 Convergence.Execution.SkillExecutionDiagnosticCode.NoApplicableEffect = 13 -> Convergence.Execution.SkillExecutionDiagnosticCode
 abstract Convergence.Execution.ChargePolicyServiceBase.Match(Convergence.Content.DamageElement element) -> Convergence.Content.ChargeKind?

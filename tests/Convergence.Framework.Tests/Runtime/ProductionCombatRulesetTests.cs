@@ -492,6 +492,131 @@ public sealed class ProductionCombatRulesetTests
                 (ResistanceLevel)undefined)));
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(101)]
+    public void PublicCombatBoundariesRejectInvalidAuthoredPercentagesBeforeRandomness(int chance)
+    {
+        var ruleset = new ProductionCombatRuleset(new ThrowingRandomSource());
+        ProductionCombatantProfile profile = Actor();
+        RuntimeActorState runtimeActor = RuntimeActor("actor");
+        RuntimeActorState runtimeTarget = RuntimeActor("target");
+        AilmentDefinition ailment = StandardAilment("test_ailment");
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProductionDamageResolutionRequest(
+            profile,
+            profile,
+            DamageElement.Physical,
+            ElementalAffinity.Normal,
+            10,
+            chance,
+            new NeverCriticalDefinition(),
+            new HitCountDefinition(1, 1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProductionDamageResolutionRequest(
+            profile,
+            profile,
+            DamageElement.Physical,
+            ElementalAffinity.Normal,
+            10,
+            100,
+            new ChanceCriticalDefinition(chance),
+            new HitCountDefinition(1, 1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ruleset.ResolveInstantDeath(
+            new ProductionInstantDeathRequest(
+                profile,
+                profile,
+                chance,
+                ResistanceLevel.Normal)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ruleset.ResolveAilmentApplication(
+            new ProductionAilmentApplicationRequest(
+                profile,
+                profile,
+                chance,
+                ResistanceLevel.Normal)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ruleset.ShouldDefeat(
+            new InstantDeathPolicyRequest(
+                runtimeActor,
+                runtimeTarget,
+                new InstantKillEffectDefinition(
+                    chance,
+                    new NoInstantDeathResistanceCheckDefinition()),
+                new InstantDeathResistanceResolution(
+                    InstantDeathResistanceMode.None,
+                    null,
+                    null))));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ruleset.ShouldApply(
+            new AilmentApplicationPolicyRequest(
+                runtimeActor,
+                runtimeTarget,
+                chance,
+                ailment,
+                ResistanceLevel.Normal)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ruleset.Roll(
+            new ChancePolicyRequest(chance, runtimeActor, runtimeTarget, "test")));
+    }
+
+    [Fact]
+    public void ZeroAndOneHundredPercentPolicyBoundariesDoNotDrawRandomness()
+    {
+        var ruleset = new ProductionCombatRuleset(new ThrowingRandomSource());
+        RuntimeActorState actor = RuntimeActor("actor");
+
+        Assert.False(ruleset.Roll(new ChancePolicyRequest(0, actor, actor, "zero")));
+        Assert.True(ruleset.Roll(new ChancePolicyRequest(100, actor, actor, "guaranteed")));
+        Assert.False(ruleset.ResolveAilmentApplication(new ProductionAilmentApplicationRequest(
+            Actor(),
+            Actor(),
+            0,
+            ResistanceLevel.Normal)).Applied);
+        Assert.True(ruleset.ResolveAilmentApplication(new ProductionAilmentApplicationRequest(
+            Actor(),
+            Actor(),
+            100,
+            ResistanceLevel.Normal)).Applied);
+        Assert.False(ruleset.ResolveInstantDeath(new ProductionInstantDeathRequest(
+            Actor(),
+            Actor(),
+            0,
+            ResistanceLevel.Normal)).Defeated);
+        Assert.True(ruleset.ResolveInstantDeath(new ProductionInstantDeathRequest(
+            Actor(),
+            Actor(),
+            100,
+            ResistanceLevel.Normal)).Defeated);
+    }
+
+    [Fact]
+    public void PolicyRequestRecordCloningCannotBypassAuthoredPercentageValidation()
+    {
+        RuntimeActorState actor = RuntimeActor("actor");
+        RuntimeActorState target = RuntimeActor("target");
+        AilmentDefinition ailment = StandardAilment("test_ailment");
+        var chance = new ChancePolicyRequest(50, actor, target, "test");
+        var ailmentRequest = new AilmentApplicationPolicyRequest(
+            actor,
+            target,
+            50,
+            ailment,
+            ResistanceLevel.Normal);
+        var instantDefeat = new InstantDeathPolicyRequest(
+            actor,
+            target,
+            new InstantKillEffectDefinition(
+                50,
+                new NoInstantDeathResistanceCheckDefinition()),
+            new InstantDeathResistanceResolution(
+                InstantDeathResistanceMode.None,
+                null,
+                null));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => chance with { Chance = 101 });
+        Assert.Throws<ArgumentOutOfRangeException>(() => ailmentRequest with { Chance = -1 });
+        Assert.Throws<ArgumentOutOfRangeException>(() => instantDefeat with
+        {
+            Effect = instantDefeat.Effect with { Chance = 101 }
+        });
+    }
+
     [Fact]
     public void RuntimeCombatProfileUsesCanonicalActorProgressionLevel()
     {
@@ -658,6 +783,36 @@ public sealed class ProductionCombatRulesetTests
         ProductionCombatStatus? status = null,
         ProductionCombatModifiers? modifiers = null) =>
         new(level, stats ?? new ProductionCombatStats(20, 20, 20, 20, 20), status, modifiers);
+
+    private static RuntimeActorState RuntimeActor(string id) =>
+        new(
+            RuntimeInstanceId.Parse(id),
+            ContentId.Parse(id + "_entity"),
+            ContentId.Parse("player_team"),
+            StandardProgressionIds.Hp,
+            CombatDefenseProfile.Empty,
+            [new BattleResourceState(StandardProgressionIds.Hp, 100, 100)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(
+                ContentId.Parse("test_host"),
+                ContentId.Parse("player_team")),
+            [
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Strength, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Magic, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Vitality, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Agility, 10),
+                new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Luck, 10)
+            ]);
+
+    private static AilmentDefinition StandardAilment(string id) =>
+        new(
+            ContentId.Parse(id),
+            id,
+            "Test ailment.",
+            new BattleDurationDefinition(),
+            new NormalAilmentTurnBehaviorDefinition(),
+            new AilmentModifiersDefinition(1m, 0, 1m, 1m, false),
+            new AilmentRecoveryDefinition());
 
     private static AilmentDefinition ExtremeAilment(string id) =>
         new(

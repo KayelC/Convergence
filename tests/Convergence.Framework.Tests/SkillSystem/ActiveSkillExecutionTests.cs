@@ -1336,6 +1336,62 @@ public sealed class ActiveSkillExecutionTests
         Assert.Empty(result.Effects);
     }
 
+    [Theory]
+    [InlineData("damage_accuracy", 101)]
+    [InlineData("critical_chance", -1)]
+    [InlineData("instant_defeat", 101)]
+    [InlineData("ailment", -1)]
+    [InlineData("escape", 101)]
+    [InlineData("nested_chance", -1)]
+    [InlineData("resource_percentage", 101)]
+    public void AssessmentRejectsInvalidAuthoredPercentagesBeforeRandomTargetsOrCosts(
+        string scenario,
+        int invalidValue)
+    {
+        int randomTargetCalls = 0;
+        BattleExecutionServices services = Services(randomTargets: (candidates, count, _) =>
+        {
+            randomTargetCalls++;
+            return candidates.Take(count.Minimum).ToArray();
+        });
+        RuntimeActorState actor = Actor("actor", PlayerTeam, sp: 10);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 50);
+        Assert.True(services.Charges.Apply(new ChargeApplicationRequest(
+            actor,
+            ChargeKind.Physical,
+            2m)).Applied);
+        EffectDefinition effect = InvalidPercentageEffect(scenario, invalidValue);
+        SkillDefinition skill = ActiveSkill(
+            [effect],
+            costs: [new SkillCostDefinition(Sp, new FlatAmountDefinition(3))],
+            targeting: new TargetingDefinition(
+                TargetRelation.Enemy,
+                TargetSelection.Random,
+                TargetLifeState.Alive,
+                false,
+                new TargetCountDefinition(1, 1)));
+        var executor = new SkillExecutor(services);
+        SkillExecutionRequest request = Request(skill, actor, [actor, target]);
+
+        SkillExecutionAssessment assessment = executor.Assess(request);
+        SkillExecutionResult result = executor.Execute(request, assessment);
+
+        Assert.False(assessment.CanExecute);
+        Assert.Equal(
+            SkillExecutionDiagnosticCode.AuthoredPercentageOutOfRange,
+            Assert.Single(assessment.Diagnostics).Code);
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        Assert.Equal(
+            SkillExecutionDiagnosticCode.AuthoredPercentageOutOfRange,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(0, randomTargetCalls);
+        Assert.Equal(10, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(50, target.GetRequiredResource(Hp).Current);
+        Assert.Single(actor.Charges);
+        Assert.False(result.CostsCommitted);
+        Assert.Empty(result.Effects);
+    }
+
     [Fact]
     public void Execute_StopTargetSuppressesLaterEffectsOnlyForFailedTarget()
     {
@@ -2456,6 +2512,52 @@ public sealed class ActiveSkillExecutionTests
         new(TargetRelation.None, TargetSelection.None, TargetLifeState.Any, false);
 
     private static HitCountDefinition FixedHits() => new(1, 1);
+
+    private static EffectDefinition InvalidPercentageEffect(string scenario, int value) => scenario switch
+    {
+        "damage_accuracy" => new DamageEffectDefinition(
+            DamageElement.Physical,
+            10,
+            value,
+            new NeverCriticalDefinition(),
+            FixedHits()),
+        "critical_chance" => new DamageEffectDefinition(
+            DamageElement.Physical,
+            10,
+            100,
+            new ChanceCriticalDefinition(value),
+            FixedHits()),
+        "instant_defeat" => new InstantKillEffectDefinition(
+            value,
+            new NoInstantDeathResistanceCheckDefinition()),
+        "ailment" => new ApplyAilmentEffectDefinition(Poison, value),
+        "escape" => new EscapeEffectDefinition(ContentId.Parse("escape_rule"), value),
+        "nested_chance" => new DamageEffectDefinition(
+            DamageElement.Physical,
+            10,
+            100,
+            new NeverCriticalDefinition(),
+            FixedHits(),
+            When: new AllConditionDefinition(
+            [
+                new NotConditionDefinition(new AnyConditionDefinition(
+                [
+                    new ChanceConditionDefinition(value)
+                ]))
+            ])),
+        "resource_percentage" => new DamageEffectDefinition(
+            DamageElement.Physical,
+            10,
+            100,
+            new NeverCriticalDefinition(),
+            FixedHits(),
+            When: new ResourcePercentageConditionDefinition(
+                ConditionSubject.Actor,
+                Hp,
+                NumericComparison.GreaterThanOrEqual,
+                value)),
+        _ => throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "Unknown test scenario.")
+    };
 
     private static SkillDefinition PositiveDamageAilmentSkill(
         int hitCount = 1,

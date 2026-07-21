@@ -306,6 +306,10 @@ public sealed record BattleAilmentApplicationRequest
         Actor = actor ?? throw new ArgumentNullException(nameof(actor));
         Target = target ?? throw new ArgumentNullException(nameof(target));
         Ailment = ailment ?? throw new ArgumentNullException(nameof(ailment));
+        AuthoredPercentage.RequireValid(
+            chance,
+            nameof(chance),
+            "Authored ailment chance");
         Chance = chance;
         Duration = duration;
         IsRemovable = isRemovable;
@@ -406,7 +410,7 @@ public sealed class BattleAilmentApplicationService : IBattleAilmentApplicationS
             return Blocked(request, BattleAilmentApplicationStatus.Immune, "immune");
         }
 
-        int chance = Math.Clamp(request.Chance, 0, 100);
+        int chance = request.Chance;
         if (!services.AilmentPolicy.ShouldApply(
                 new AilmentApplicationPolicyRequest(
                     request.Actor,
@@ -1016,6 +1020,26 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         ChanceSkipOrFleeAilmentTurnBehaviorDefinition fear,
         bool canRecallToRoster)
     {
+        AuthoredPercentage.RequireCombinedMaximum(
+            fear.FleeChance,
+            fear.SkipChance,
+            nameof(fear),
+            "Authored flee and skip chances");
+        if (fear.FleeChance == 100)
+        {
+            return canRecallToRoster && fear.CompanionFleeOutcome == CompanionFleeOutcome.RecallToRoster
+                ? BattleTurnStartOutcome.RecallToRoster
+                : BattleTurnStartOutcome.FleeBattle;
+        }
+        if (fear.FleeChance == 0 && fear.SkipChance == 0)
+        {
+            return BattleTurnStartOutcome.CanAct;
+        }
+        if (fear.FleeChance == 0 && fear.SkipChance == 100)
+        {
+            return BattleTurnStartOutcome.Skip;
+        }
+
         int roll = RandomSourceContract.NextInt32(_random, 0, 100);
         if (roll < fear.FleeChance)
         {
@@ -1029,8 +1053,16 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
             : BattleTurnStartOutcome.CanAct;
     }
 
-    private bool Roll(int chance) =>
-        RandomSourceContract.NextInt32(_random, 0, 100) < Math.Clamp(chance, 0, 100);
+    private bool Roll(int chance)
+    {
+        AuthoredPercentage.RequireValid(chance, nameof(chance), "Authored chance");
+        return chance switch
+        {
+            0 => false,
+            100 => true,
+            _ => RandomSourceContract.NextInt32(_random, 0, 100) < chance
+        };
+    }
 
     private static void ExecuteAilmentTriggers(
         BattleTurnEndLifecycleRequest request,
@@ -1137,7 +1169,11 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         NaturalAilmentRecoveryDefinition recovery,
         decimal stat)
     {
-        decimal baseChance = Math.Clamp(recovery.BaseChance, 0m, 100m);
+        AuthoredPercentage.RequireValid(
+            recovery.BaseChance,
+            nameof(recovery),
+            "Authored natural-recovery chance");
+        decimal baseChance = recovery.BaseChance;
         if (baseChance >= 100m || stat <= 0m || recovery.StatMultiplier <= 0m)
         {
             return decimal.ToInt32(Math.Floor(baseChance));

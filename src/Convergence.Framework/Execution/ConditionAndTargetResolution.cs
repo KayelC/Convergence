@@ -1,5 +1,6 @@
 using Convergence.Content;
 using Convergence.Battle;
+using Convergence.Internal;
 using Convergence.Runtime;
 
 namespace Convergence.Execution;
@@ -93,6 +94,10 @@ internal static class BattleConditionEvaluator
 
     private static bool EvaluateResource(ResourcePercentageConditionDefinition condition, BattleConditionContext context)
     {
+        AuthoredPercentage.RequireValid(
+            condition.Value,
+            nameof(condition),
+            "Authored resource percentage");
         RuntimeActorState? actor = Subject(condition.Subject, context);
         if (actor is null || !actor.TryGetResource(condition.ResourceId, out BattleResourceState? resource) || resource is null)
         {

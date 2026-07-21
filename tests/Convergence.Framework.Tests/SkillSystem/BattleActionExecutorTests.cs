@@ -952,6 +952,40 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task ItemActionRejectsInvalidAuthoredPercentageBeforeTargetingOrReservation()
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState ally = Actor("ally", TeamA, hp: 50);
+        ItemDefinition item = ConsumableItem(
+            "invalid_item",
+            [new ApplyAilmentEffectDefinition(Id("test_ailment"), 101)],
+            RandomAlly());
+        var inventory = new TestItemInventory(item.Id, 1);
+        var request = Request(
+            new ItemBattleActionCommand(item),
+            actor,
+            [actor, ally],
+            inventory);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.False(assessment.CanExecute);
+        Assert.Equal(ActionTurnConsumptionKind.None, assessment.TurnConsumption.Kind);
+        Assert.Equal(
+            BattleActionDiagnosticCode.AuthoredPercentageOutOfRange,
+            Assert.Single(assessment.Diagnostics).Code);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(ActionTurnConsumptionKind.None, result.TurnConsumption.Kind);
+        Assert.Equal(0, randomTargets.CallCount);
+        Assert.Equal(0, inventory.ReservationsCreated);
+        Assert.Equal(1, inventory.Quantity);
+        Assert.Equal(50, ally.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public void BasicAttackAssessmentRejectsInvalidProgrammaticEffectSequence()
     {
         RuntimeActorState actor = Actor("actor", TeamA);
@@ -987,6 +1021,68 @@ public sealed class BattleActionExecutorTests
         BattleActionDiagnostic diagnostic = Assert.Single(assessment.Diagnostics);
         Assert.Equal(BattleActionDiagnosticCode.ExecutionFailed, diagnostic.Code);
         Assert.Contains("same-target positive-damage dependency", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BasicAttackRejectsInvalidPrimaryOrSecondaryPercentageBeforeTargeting(bool secondary)
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        var basicAttack = new EquipmentBasicAttackDefinition(
+            DamageElement.Physical,
+            10,
+            secondary ? 100 : 101,
+            new NeverCriticalDefinition(),
+            false)
+        {
+            SecondaryEffects = secondary
+                ? [new ApplyAilmentEffectDefinition(Id("test_ailment"), -1)]
+                : []
+        };
+        var request = Request(
+            new BasicAttackBattleActionCommand(basicAttack, RandomEnemy()),
+            actor,
+            [actor, target]);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.False(assessment.CanExecute);
+        Assert.Equal(ActionTurnConsumptionKind.None, assessment.TurnConsumption.Kind);
+        Assert.Equal(
+            BattleActionDiagnosticCode.AuthoredPercentageOutOfRange,
+            Assert.Single(assessment.Diagnostics).Code);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(ActionTurnConsumptionKind.None, result.TurnConsumption.Kind);
+        Assert.Equal(0, randomTargets.CallCount);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task EscapeRejectsInvalidAuthoredPercentageWithoutTurnConsumption()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        var request = Request(
+            new EscapeAttemptBattleActionCommand(Id("escape_rule"), -1),
+            actor,
+            [actor]);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.False(assessment.CanExecute);
+        Assert.Equal(ActionTurnConsumptionKind.None, assessment.TurnConsumption.Kind);
+        Assert.Equal(
+            BattleActionDiagnosticCode.AuthoredPercentageOutOfRange,
+            Assert.Single(assessment.Diagnostics).Code);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(ActionTurnConsumptionKind.None, result.TurnConsumption.Kind);
+        Assert.False(result.EscapeRequested);
     }
 
     [Fact]

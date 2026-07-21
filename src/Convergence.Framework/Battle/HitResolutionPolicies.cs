@@ -61,13 +61,10 @@ public sealed class HitResolutionRequest
         IEnumerable<NumericRuleModifierDefinition>? evasionModifiers = null,
         bool targetIsRigid = false)
     {
-        if (authoredAccuracy is < 0 or > 100)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(authoredAccuracy),
-                authoredAccuracy,
-                "Authored accuracy must be within 0-100.");
-        }
+        AuthoredPercentage.RequireValid(
+            authoredAccuracy,
+            nameof(authoredAccuracy),
+            "Authored accuracy");
         if (attackerAgility < 0m)
         {
             throw new ArgumentOutOfRangeException(
