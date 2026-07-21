@@ -30,7 +30,12 @@
                 "power": { "type": "integer", "minimum": 0 },
                 "accuracy": { "type": "integer", "minimum": 0, "maximum": 100 },
                 "critical": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/critical" },
-                "isLongRange": { "type": "boolean" }
+                "isLongRange": { "type": "boolean" },
+                "primaryEffectId": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/localId" },
+                "secondaryEffects": {
+                  "type": "array", "minItems": 1,
+                  "items": { "$ref": "urn:convergence:schema:content:v5:shared#/$defs/effect" }
+                }
               }
             }
           }

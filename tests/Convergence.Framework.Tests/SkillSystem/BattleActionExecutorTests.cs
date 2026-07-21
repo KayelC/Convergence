@@ -109,6 +109,136 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task BasicAttack_FireOnlyProfileUsesFireAsItsPrimaryDamage()
+    {
+        var damage = new RecordingDamagePolicy();
+        BattleActionExecutor executor = Executor(damagePolicy: damage);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor(
+            "target",
+            TeamB,
+            defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]));
+        var command = new BasicAttackBattleActionCommand(
+            new EquipmentBasicAttackDefinition(
+                DamageElement.Fire,
+                15,
+                100,
+                new NeverCriticalDefinition(),
+                false),
+            SingleEnemy(),
+            [target.InstanceId]);
+
+        BattleActionExecutionResult result = await Execute(executor, command, actor, [actor, target]);
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(DamageElement.Fire, Assert.Single(damage.Requests).Effect.Element);
+        Assert.Equal(TurnEconomyOutcome.Weakness, result.TurnConsumption.TurnEconomy!.Outcome);
+    }
+
+    [Fact]
+    public async Task BasicAttack_PhysicalContactCanApplyAHandledAilmentRider()
+    {
+        ContentId burnId = Id("burn");
+        var burn = new AilmentDefinition(
+            burnId,
+            "Burn",
+            "Test ailment.",
+            new BattleDurationDefinition(),
+            new NormalAilmentTurnBehaviorDefinition(),
+            new AilmentModifiersDefinition(1m, 0, 1m, 1m, false),
+            new AilmentRecoveryDefinition());
+        BattleActionExecutor executor = Executor(
+            ailments: new TestAilmentRepository(burn),
+            ailmentPolicy: new AlwaysAilmentPolicy());
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        EffectLocalId primaryId = EffectLocalId.Parse("weapon_contact");
+        var basicAttack = new EquipmentBasicAttackDefinition(
+            DamageElement.Physical,
+            15,
+            100,
+            new NeverCriticalDefinition(),
+            false)
+        {
+            PrimaryEffectId = primaryId,
+            SecondaryEffects =
+            [
+                new ApplyAilmentEffectDefinition(burnId, 100)
+                {
+                    Dependency = new EffectDependencyDefinition(
+                        primaryId,
+                        EffectDependencyRequirement.PositiveDamage,
+                        EffectDependencyScope.SameTarget)
+                }
+            ]
+        };
+
+        BattleActionExecutionResult result = await Execute(
+            executor,
+            new BasicAttackBattleActionCommand(basicAttack, SingleEnemy(), [target.InstanceId]),
+            actor,
+            [actor, target]);
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal(2, result.Effects.Count);
+        Assert.True(target.HasAilment(burnId));
+        Assert.True(result.Effects[1].DependencyEvaluation!.Satisfied);
+    }
+
+    [Fact]
+    public async Task BasicAttack_PhysicalAndFireComponentsShareOrderedEffectExecution()
+    {
+        var damage = new RecordingDamagePolicy();
+        BattleActionExecutor executor = Executor(damagePolicy: damage);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor(
+            "target",
+            TeamB,
+            defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]));
+        EffectLocalId primaryId = EffectLocalId.Parse("weapon_contact");
+        var basicAttack = new EquipmentBasicAttackDefinition(
+            DamageElement.Physical,
+            15,
+            100,
+            new NeverCriticalDefinition(),
+            false)
+        {
+            PrimaryEffectId = primaryId,
+            SecondaryEffects =
+            [
+                new DamageEffectDefinition(
+                    DamageElement.Fire,
+                    5,
+                    20,
+                    new NeverCriticalDefinition(),
+                    new HitCountDefinition(1, 1))
+                {
+                    ContactMode = DamageContactMode.SharedContact,
+                    Dependency = new EffectDependencyDefinition(
+                        primaryId,
+                        EffectDependencyRequirement.PositiveDamage,
+                        EffectDependencyScope.SameTarget)
+                }
+            ]
+        };
+
+        BattleActionExecutionResult result = await Execute(
+            executor,
+            new BasicAttackBattleActionCommand(basicAttack, SingleEnemy(), [target.InstanceId]),
+            actor,
+            [actor, target]);
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, result.Status);
+        Assert.Equal([DamageElement.Physical, DamageElement.Fire],
+            damage.Requests.Select(request => request.Effect.Element));
+        Assert.Equal(2, result.Effects.Count);
+        DamageHitExecutionEvidence fire = Assert.Single(result.Effects[1].DamageHits);
+        Assert.Equal(DamageContactMode.SharedContact, fire.ContactMode);
+        Assert.Equal(primaryId, fire.ContactSourceEffectId);
+        Assert.Equal(TurnEconomyOutcome.Weakness, result.TurnConsumption.TurnEconomy!.Outcome);
+    }
+
+    [Fact]
     public async Task SkillAction_SharesAssessmentWithExecutionAndCommitsCosts()
     {
         BattleActionExecutor executor = Executor();
@@ -440,6 +570,41 @@ public sealed class BattleActionExecutorTests
             Assert.Single(direct.Diagnostics).Code);
         Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
         Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public void CatalogAuthorization_RejectsSubstitutedBasicAttackSecondaryEffects()
+    {
+        var canonical = new EquipmentBasicAttackDefinition(
+            DamageElement.Physical,
+            15,
+            100,
+            new NeverCriticalDefinition(),
+            false);
+        var substituted = canonical with
+        {
+            SecondaryEffects = [new AnalyzeEffectDefinition([AnalysisLayer.Stats])]
+        };
+        TargetingDefinition targeting = SingleEnemy();
+        var profile = new BattleBasicAttackProfile(Id("natural_attack"), canonical, targeting);
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([]),
+            new TestItemRepository([]),
+            new FixedBasicAttackProfileSource(profile));
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+
+        BattleActionAuthorizationResult result = authorization.Authorize(
+            actor,
+            new BasicAttackBattleActionCommand(
+                substituted,
+                targeting,
+                [target.InstanceId],
+                profile.ActionId));
+
+        Assert.Equal(
+            BattleActionAuthorizationDiagnosticCode.BasicAttackDefinitionMismatch,
+            Assert.Single(result.Diagnostics).Code);
     }
 
     [Fact]
@@ -1199,7 +1364,9 @@ public sealed class BattleActionExecutorTests
         IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null,
         IBattleActionAuthorizationPolicy? authorization = null,
         IDamageExecutionPolicy? damagePolicy = null,
-        IActionOutcomeAggregationPolicy? actionOutcomes = null)
+        IActionOutcomeAggregationPolicy? actionOutcomes = null,
+        IAilmentDefinitionRepository? ailments = null,
+        IAilmentApplicationPolicy? ailmentPolicy = null)
     {
         BattleExecutionServices services = ExecutionServices(
             escapeRules,
@@ -1207,7 +1374,9 @@ public sealed class BattleActionExecutorTests
             randomTargetPolicy,
             runtimeRandomTargetPolicy,
             damagePolicy,
-            actionOutcomes);
+            actionOutcomes,
+            ailments,
+            ailmentPolicy);
         return new BattleActionExecutor(
             new SkillExecutor(services),
             new ItemExecutor(services),
@@ -1221,12 +1390,14 @@ public sealed class BattleActionExecutorTests
         IRandomTargetSelectionPolicy? randomTargetPolicy = null,
         IRuntimeRandomTargetSelectionPolicy? runtimeRandomTargetPolicy = null,
         IDamageExecutionPolicy? damagePolicy = null,
-        IActionOutcomeAggregationPolicy? actionOutcomes = null) =>
+        IActionOutcomeAggregationPolicy? actionOutcomes = null,
+        IAilmentDefinitionRepository? ailments = null,
+        IAilmentApplicationPolicy? ailmentPolicy = null) =>
         new(
-            EmptyAilments.Instance,
+            ailments ?? EmptyAilments.Instance,
             damagePolicy ?? new FixedDamagePolicy(),
             new NeverInstantDeathPolicy(),
-            new NeverAilmentPolicy(),
+            ailmentPolicy ?? new NeverAilmentPolicy(),
             new AlwaysChancePolicy(),
             new PowerAmountPolicy(),
             randomTargetPolicy ?? new OrderedRandomTargetPolicy(),
@@ -1365,6 +1536,26 @@ public sealed class BattleActionExecutorTests
     private sealed class NeverAilmentPolicy : IAilmentApplicationPolicy
     {
         public bool ShouldApply(AilmentApplicationPolicyRequest request) => false;
+    }
+
+    private sealed class AlwaysAilmentPolicy : IAilmentApplicationPolicy
+    {
+        public bool ShouldApply(AilmentApplicationPolicyRequest request) => true;
+    }
+
+    private sealed class TestAilmentRepository(params AilmentDefinition[] ailments)
+        : IAilmentDefinitionRepository
+    {
+        private readonly IReadOnlyDictionary<ContentId, AilmentDefinition> _ailments =
+            ailments.ToDictionary(ailment => ailment.Id);
+
+        public bool TryGetAilment(ContentId id, out AilmentDefinition? definition) =>
+            _ailments.TryGetValue(id, out definition);
+
+        public AilmentDefinition GetRequiredAilment(ContentId id) =>
+            TryGetAilment(id, out AilmentDefinition? definition)
+                ? definition!
+                : throw new KeyNotFoundException(id.ToString());
     }
 
     private sealed class AlwaysChancePolicy : IChanceExecutionPolicy

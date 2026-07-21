@@ -170,6 +170,8 @@ internal sealed class EquipmentBasicAttackDto
     public required int Accuracy { get; init; }
     public required CriticalDto Critical { get; init; }
     public required bool IsLongRange { get; init; }
+    public string? PrimaryEffectId { get; init; }
+    public List<EffectDto> SecondaryEffects { get; init; } = [];
 }
 
 internal sealed class EquipmentArmorProfileDto

@@ -108,7 +108,15 @@ internal static class DefinitionQualifier
             definition.Slot,
             definition.BaseValue,
             definition.GrantedSkillIds.Select(id => ContentReference(packId, id)),
-            definition.Weapon,
+            definition.Weapon is null
+                ? null
+                : new EquipmentWeaponProfileDefinition(
+                    definition.Weapon.BasicAttack with
+                    {
+                        SecondaryEffects = definition.Weapon.BasicAttack.SecondaryEffects
+                            .Select(effect => Effect(packId, effect))
+                            .ToArray()
+                    }),
             definition.Armor,
             definition.Boots,
             definition.Accessory);

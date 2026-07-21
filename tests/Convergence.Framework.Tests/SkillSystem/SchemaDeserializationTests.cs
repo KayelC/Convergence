@@ -222,7 +222,17 @@ public sealed class SchemaDeserializationTests
             "weapon": { "basicAttack": {
               "element": "physical", "power": 10, "accuracy": 95,
               "critical": { "mode": "chance", "chance": 12 },
-              "isLongRange": false
+              "isLongRange": false,
+              "primaryEffectId": "weapon_contact",
+              "secondaryEffects": [{
+                "type": "damage", "elementId": "fire", "power": 4, "accuracy": 25,
+                "critical": { "mode": "never" }, "hits": { "minimum": 1, "maximum": 1 },
+                "contactMode": "shared_contact",
+                "dependency": {
+                  "sourceEffectId": "weapon_contact", "requirement": "positive_damage",
+                  "scope": "same_target"
+                }
+              }]
             }}
           }]
         }
@@ -246,6 +256,11 @@ public sealed class SchemaDeserializationTests
 
         Assert.Equal(12, Assert.IsType<ChanceCriticalDefinition>(
             equipment.Weapon!.BasicAttack.Critical).Chance);
+        Assert.Equal(EffectLocalId.Parse("weapon_contact"), equipment.Weapon.BasicAttack.PrimaryEffectId);
+        Assert.Equal(
+            DamageContactMode.SharedContact,
+            Assert.IsType<DamageEffectDefinition>(
+                Assert.Single(equipment.Weapon.BasicAttack.SecondaryEffects)).ContactMode);
         Assert.Throws<ContentDeserializationException>(() =>
             _deserializer.DeserializeEquipment(oldShape, "old-equipment.json"));
     }

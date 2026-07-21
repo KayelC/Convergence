@@ -744,6 +744,15 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 RequirePercentage(source, weapon.BasicAttack.Accuracy, source.Path + ".weapon.basicAttack.accuracy",
                     "Weapon accuracy");
                 ValidateCritical(source, weapon.BasicAttack.Critical, source.Path + ".weapon.basicAttack.critical");
+                IReadOnlyList<EffectDefinition> composedEffects = weapon.BasicAttack.ComposeEffects();
+                ValidateEffects(
+                    source,
+                    composedEffects,
+                    source.Path + ".weapon.basicAttack.secondaryEffects",
+                    index => index == 0
+                        ? source.Path + ".weapon.basicAttack"
+                        : source.Path + $".weapon.basicAttack.secondaryEffects[{index - 1}]",
+                    firstEffectToValidate: 1);
             }
 
             if (equipment.Armor is EquipmentArmorProfileDefinition armor)
@@ -1326,8 +1335,12 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
         private void ValidateEffects<TDefinition>(
             RecordSource<TDefinition> source,
             IReadOnlyList<EffectDefinition> effects,
-            string path)
+            string path,
+            Func<int, string>? effectPath = null,
+            int firstEffectToValidate = 0)
         {
+            string PathFor(int index) => effectPath?.Invoke(index) ?? $"{path}[{index}]";
+
             var effectIndexes = new Dictionary<EffectLocalId, int>();
             for (int index = 0; index < effects.Count; index++)
             {
@@ -1338,15 +1351,19 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 
                 if (!effectIndexes.TryAdd(effectId, index))
                 {
-                    Add(source, $"{path}[{index}].effectId", ContentValidationErrorCode.EffectIdDuplicate,
+                    Add(source, PathFor(index) + ".effectId", ContentValidationErrorCode.EffectIdDuplicate,
                         $"Effect ID '{effectId}' is already used in this effect sequence.");
                 }
             }
 
             for (int index = 0; index < effects.Count; index++)
             {
-                ValidateEffectDependency(source, effects, effectIndexes, index, path);
-                ValidateEffect(source, effects[index], $"{path}[{index}]");
+                string currentPath = PathFor(index);
+                ValidateEffectDependency(source, effects, effectIndexes, index, currentPath);
+                if (index >= firstEffectToValidate)
+                {
+                    ValidateEffect(source, effects[index], currentPath);
+                }
             }
         }
 
@@ -1355,7 +1372,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             IReadOnlyList<EffectDefinition> effects,
             IReadOnlyDictionary<EffectLocalId, int> effectIndexes,
             int effectIndex,
-            string path)
+            string effectPath)
         {
             bool sharedContact = effects[effectIndex] is DamageEffectDefinition
             {
@@ -1366,7 +1383,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             {
                 if (sharedContact)
                 {
-                    Add(source, $"{path}[{effectIndex}].contactMode",
+                    Add(source, effectPath + ".contactMode",
                         ContentValidationErrorCode.SharedContactDependencyInvalid,
                         "Shared-contact damage requires a same-target positive-damage dependency.");
                 }
@@ -1374,7 +1391,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 return;
             }
 
-            string dependencyPath = $"{path}[{effectIndex}].dependency";
+            string dependencyPath = effectPath + ".dependency";
             if (!effectIndexes.TryGetValue(dependency.SourceEffectId, out int sourceIndex))
             {
                 Add(source, dependencyPath + ".sourceEffectId",
@@ -1403,7 +1420,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 (dependency.Requirement != EffectDependencyRequirement.PositiveDamage ||
                  dependency.Scope != EffectDependencyScope.SameTarget))
             {
-                Add(source, $"{path}[{effectIndex}].contactMode",
+                Add(source, effectPath + ".contactMode",
                     ContentValidationErrorCode.SharedContactDependencyInvalid,
                     "Shared-contact damage requires a same-target positive-damage dependency.");
             }

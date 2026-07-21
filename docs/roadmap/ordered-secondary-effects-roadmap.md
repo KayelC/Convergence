@@ -305,7 +305,7 @@ zero stage delta, and non-positive charge multipliers.
 
 ### O2-R14: Compose equipment basic-attack effects
 
-**State:** pending
+**State:** complete in this checkpoint
 
 - Retain the current single-element basic attack as the minimal profile.
 - Add optional ordered secondary effects to the clean equipment profile.

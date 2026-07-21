@@ -10680,3 +10680,7 @@ Convergence.Execution.DamageHitExecutionEvidence.ContactSourceEffectId.get -> Co
 Convergence.Execution.DamageHitExecutionEvidence.ContactSourceEffectIndex.get -> int?
 Convergence.Execution.DamageHitExecutionEvidence.DamageHitExecutionEvidence(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, int effectIndex, Convergence.Execution.DamageHitResolution! resolution, Convergence.Content.ElementalAffinity resolvedAffinity, Convergence.Runtime.RuntimeInstanceId? affectedActorId, Convergence.Content.ContentId? affectedResourceId, decimal appliedResourceDelta, Convergence.Content.DamageContactMode contactMode, Convergence.Content.EffectLocalId? contactSourceEffectId, int? contactSourceEffectIndex) -> void
 Convergence.Validation.ContentValidationErrorCode.SharedContactDependencyInvalid = 44 -> Convergence.Validation.ContentValidationErrorCode
+Convergence.Content.EquipmentBasicAttackDefinition.PrimaryEffectId.get -> Convergence.Content.EffectLocalId?
+Convergence.Content.EquipmentBasicAttackDefinition.PrimaryEffectId.init -> void
+Convergence.Content.EquipmentBasicAttackDefinition.SecondaryEffects.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.EffectDefinition!>!
+Convergence.Content.EquipmentBasicAttackDefinition.SecondaryEffects.init -> void

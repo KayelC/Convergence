@@ -167,7 +167,15 @@ internal static class SkillSystemDtoMapper
                     dto.Weapon.BasicAttack.Power,
                     dto.Weapon.BasicAttack.Accuracy,
                     MapCritical(dto.Weapon.BasicAttack.Critical),
-                    dto.Weapon.BasicAttack.IsLongRange)),
+                    dto.Weapon.BasicAttack.IsLongRange)
+                {
+                    PrimaryEffectId = dto.Weapon.BasicAttack.PrimaryEffectId is null
+                        ? null
+                        : EffectLocalId.Parse(dto.Weapon.BasicAttack.PrimaryEffectId),
+                    SecondaryEffects = (dto.Weapon.BasicAttack.SecondaryEffects ?? [])
+                        .Select(MapEffect)
+                        .ToArray()
+                }),
             dto.Armor is null
                 ? null
                 : new EquipmentArmorProfileDefinition(dto.Armor.Defense, dto.Armor.Evasion),

@@ -183,6 +183,84 @@ public sealed class CatalogSurfaceTests
     }
 
     [Fact]
+    public void EquipmentBasicAttackSecondaryEffectsValidateAsOneOrderedSequence()
+    {
+        EffectLocalId primaryId = EffectLocalId.Parse("weapon_contact");
+        EquipmentDefinition Equipment(bool exposePrimary) => new(
+            Id(exposePrimary ? "valid_weapon" : "invalid_weapon"),
+            "Weapon",
+            "Exercises composed basic attacks.",
+            EquipmentSlot.Weapon,
+            1,
+            weapon: new EquipmentWeaponProfileDefinition(new EquipmentBasicAttackDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                false)
+            {
+                PrimaryEffectId = exposePrimary ? primaryId : null,
+                SecondaryEffects =
+                [
+                    new DamageEffectDefinition(
+                        DamageElement.Fire,
+                        5,
+                        20,
+                        new NeverCriticalDefinition(),
+                        new HitCountDefinition(1, 1))
+                    {
+                        ContactMode = DamageContactMode.SharedContact,
+                        Dependency = new EffectDependencyDefinition(
+                            primaryId,
+                            EffectDependencyRequirement.PositiveDamage,
+                            EffectDependencyScope.SameTarget)
+                    }
+                ]
+            }));
+        var manifest = new ContentPackManifest(
+            5,
+            "test.pack",
+            SemanticVersion.Parse("1.0.0"),
+            "Test Pack",
+            null,
+            null,
+            [new ContentPackDocumentReference("equipment", "equipment.json")]);
+        SkillSystemRegistrationSnapshot registrations = new SkillSystemRegistrationBuilder()
+            .SupportEffect<DamageEffectDefinition>()
+            .Build();
+
+        ContentValidationResult valid = new SkillSystemContentValidator().Validate(
+            new SkillSystemValidationRequest(
+                manifest,
+                "manifest.json",
+                registrations,
+                equipmentDocuments:
+                [
+                    Source(
+                        "equipment.json",
+                        "equipment.json",
+                        new DeserializedContentDocument<EquipmentDefinition>(5, [Equipment(true)]))
+                ]));
+        ContentValidationResult invalid = new SkillSystemContentValidator().Validate(
+            new SkillSystemValidationRequest(
+                manifest,
+                "manifest.json",
+                registrations,
+                equipmentDocuments:
+                [
+                    Source(
+                        "equipment.json",
+                        "equipment.json",
+                        new DeserializedContentDocument<EquipmentDefinition>(5, [Equipment(false)]))
+                ]));
+
+        Assert.True(valid.IsValid, string.Join(Environment.NewLine, valid.Errors.Select(error => error.Message)));
+        Assert.Contains(invalid.Errors, error =>
+            error.JsonPath == "$.equipment[0].weapon.basicAttack.secondaryEffects[0].dependency.sourceEffectId" &&
+            error.Code == ContentValidationErrorCode.EffectDependencySourceMissing);
+    }
+
+    [Fact]
     public void CatalogSurfaceValidation_RejectsUnsafeNegotiationAggregates()
     {
         ContentPackManifest manifest = new(

@@ -476,7 +476,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                     attack.ActionId,
                     attack.Targeting,
                     attack.SelectedTargetIds,
-                    [BasicAttackEffect(attack.BasicAttack)]),
+                    attack.BasicAttack.ComposeEffects()),
                 AnalyzeBattleActionCommand analyze => AssessEffectAction(
                     request,
                     analyze.Kind,
@@ -616,7 +616,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 attack.ActionId,
                 attack.Targeting,
                 attack.SelectedTargetIds,
-                [BasicAttackEffect(attack.BasicAttack)],
+                attack.BasicAttack.ComposeEffects(),
                 ActionTurnConsumptionKind.TurnEconomy,
                 ActionOutcomeSourceKind.BasicAttack,
                 assessment),
@@ -1391,11 +1391,4 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
     private static TargetingDefinition Untargeted() =>
         new(TargetRelation.None, TargetSelection.None, TargetLifeState.Any, true);
 
-    private static DamageEffectDefinition BasicAttackEffect(EquipmentBasicAttackDefinition basicAttack) =>
-        new(
-            basicAttack.Element,
-            basicAttack.Power,
-            basicAttack.Accuracy,
-            basicAttack.Critical,
-            new HitCountDefinition(1, 1));
 }

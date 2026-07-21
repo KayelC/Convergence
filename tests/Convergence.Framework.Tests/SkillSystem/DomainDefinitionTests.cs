@@ -141,6 +141,85 @@ public sealed class DomainDefinitionTests
     }
 
     [Fact]
+    public void EquipmentBasicAttackSnapshotsAndComposesOrderedSecondaryEffects()
+    {
+        EffectLocalId primaryId = EffectLocalId.Parse("weapon_contact");
+        var source = new List<EffectDefinition>
+        {
+            new ApplyAilmentEffectDefinition(ContentId.Parse("burn"), 25)
+            {
+                Dependency = new EffectDependencyDefinition(
+                    primaryId,
+                    EffectDependencyRequirement.PositiveDamage,
+                    EffectDependencyScope.SameTarget)
+            }
+        };
+        var basicAttack = new EquipmentBasicAttackDefinition(
+            DamageElement.Physical,
+            10,
+            90,
+            new NeverCriticalDefinition(),
+            false)
+        {
+            PrimaryEffectId = primaryId,
+            SecondaryEffects = source
+        };
+
+        source.Clear();
+        IReadOnlyList<EffectDefinition> composed = basicAttack.ComposeEffects();
+
+        Assert.Single(basicAttack.SecondaryEffects);
+        Assert.Equal(2, composed.Count);
+        Assert.Equal(primaryId, Assert.IsType<DamageEffectDefinition>(composed[0]).EffectId);
+        Assert.IsType<ApplyAilmentEffectDefinition>(composed[1]);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<EffectDefinition>)basicAttack.SecondaryEffects).Add(
+                new AnalyzeEffectDefinition([AnalysisLayer.Stats])));
+        Assert.Throws<ArgumentException>(() => basicAttack with { PrimaryEffectId = default(EffectLocalId) });
+    }
+
+    [Fact]
+    public void EquipmentQualificationQualifiesSecondaryContentReferencesButKeepsLocalEffectIds()
+    {
+        EffectLocalId primaryId = EffectLocalId.Parse("weapon_contact");
+        var equipment = new EquipmentDefinition(
+            ContentId.Parse("ember_blade"),
+            "Ember Blade",
+            "Test weapon.",
+            EquipmentSlot.Weapon,
+            10,
+            weapon: new EquipmentWeaponProfileDefinition(new EquipmentBasicAttackDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                false)
+            {
+                PrimaryEffectId = primaryId,
+                SecondaryEffects =
+                [
+                    new ApplyAilmentEffectDefinition(ContentId.Parse("burn"), 25)
+                    {
+                        Dependency = new EffectDependencyDefinition(
+                            primaryId,
+                            EffectDependencyRequirement.PositiveDamage,
+                            EffectDependencyScope.SameTarget)
+                    }
+                ]
+            }));
+
+        EquipmentDefinition qualified = DefinitionQualifier.Equipment("sample.pack", equipment);
+        EquipmentBasicAttackDefinition attack = qualified.Weapon!.BasicAttack;
+
+        Assert.Equal(ContentId.Parse("sample.pack:ember_blade"), qualified.Id);
+        Assert.Equal(primaryId, attack.PrimaryEffectId);
+        Assert.Equal(primaryId, Assert.Single(attack.SecondaryEffects).Dependency!.SourceEffectId);
+        Assert.Equal(
+            ContentId.Parse("sample.pack:burn"),
+            Assert.IsType<ApplyAilmentEffectDefinition>(Assert.Single(attack.SecondaryEffects)).AilmentId);
+    }
+
+    [Fact]
     public void CatalogQualificationPreservesSequenceLocalEffectReferences()
     {
         EffectLocalId sourceId = EffectLocalId.Parse("primary_hit");

@@ -80,7 +80,56 @@ public sealed record EquipmentBasicAttackDefinition(
     int Power,
     int Accuracy,
     CriticalDefinition Critical,
-    bool IsLongRange);
+    bool IsLongRange)
+{
+    private EffectLocalId? _primaryEffectId;
+    private IReadOnlyList<EffectDefinition> _secondaryEffects = Array.Empty<EffectDefinition>();
+
+    /// <summary>Gets the optional sequence-local ID exposed by the primary damage effect.</summary>
+    public EffectLocalId? PrimaryEffectId
+    {
+        get => _primaryEffectId;
+        init
+        {
+            if (value.HasValue && !value.Value.IsValid)
+            {
+                throw new ArgumentException("Primary effect ID must be valid when supplied.", nameof(value));
+            }
+
+            _primaryEffectId = value;
+        }
+    }
+
+    /// <summary>Gets the ordered typed effects executed after the primary damage effect.</summary>
+    public IReadOnlyList<EffectDefinition> SecondaryEffects
+    {
+        get => _secondaryEffects;
+        init
+        {
+            EffectDefinition[] snapshot = value?.ToArray() ?? [];
+            if (snapshot.Any(effect => effect is null))
+            {
+                throw new ArgumentException("Secondary effects cannot contain null entries.", nameof(value));
+            }
+
+            _secondaryEffects = Array.AsReadOnly(snapshot);
+        }
+    }
+
+    internal IReadOnlyList<EffectDefinition> ComposeEffects()
+    {
+        var primary = new DamageEffectDefinition(
+            Element,
+            Power,
+            Accuracy,
+            Critical,
+            new HitCountDefinition(1, 1))
+        {
+            EffectId = PrimaryEffectId
+        };
+        return Array.AsReadOnly<EffectDefinition>([primary, .. SecondaryEffects]);
+    }
+}
 
 public sealed record EquipmentWeaponProfileDefinition(EquipmentBasicAttackDefinition BasicAttack);
 
