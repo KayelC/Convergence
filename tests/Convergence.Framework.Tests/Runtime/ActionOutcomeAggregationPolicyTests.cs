@@ -1,6 +1,7 @@
 using Convergence.Content;
 using Convergence.Execution;
 using Convergence.Runtime;
+using Convergence.TurnEconomy;
 using Xunit;
 
 namespace Convergence.Framework.Tests.Runtime;
@@ -57,6 +58,29 @@ public sealed class ActionOutcomeAggregationPolicyTests
         Assert.Equal(TurnEconomyOutcome.Normal, result.Outcome);
         Assert.True(result.AnyCritical);
         Assert.False(result.TerminatesPhase);
+    }
+
+    [Fact]
+    public void Aggregate_NormalizedMixedCriticalIsPricedAsNormalByActionToken()
+    {
+        EffectExecutionResult critical = DamageEffect(
+            FirstTarget,
+            TurnEconomyOutcome.Critical,
+            [Hit(FirstTarget, 0, true, true)]);
+        EffectExecutionResult evaded = DamageEffect(
+            SecondTarget,
+            TurnEconomyOutcome.Miss,
+            [Hit(SecondTarget, 0, false)]);
+        TurnEconomyResolution aggregate = _policy.Aggregate([critical, evaded]);
+        var economy = new ActionTokenTurnEconomy();
+        economy.StartPhase(1);
+
+        economy.ConsumeAction(aggregate);
+
+        Assert.Equal(TurnEconomyOutcome.Normal, aggregate.Outcome);
+        Assert.True(aggregate.AnyCritical);
+        Assert.Equal(0, economy.FullTokens);
+        Assert.Equal(0, economy.PartialTokens);
     }
 
     [Fact]

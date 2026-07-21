@@ -1663,6 +1663,7 @@ public sealed class CatalogBattleRuntimeTests
 
     [Theory]
     [InlineData(TurnEconomyOutcome.Normal, false, false, 1, 0)]
+    [InlineData(TurnEconomyOutcome.Normal, true, false, 1, 0)]
     [InlineData(TurnEconomyOutcome.Weakness, false, false, 1, 1)]
     [InlineData(TurnEconomyOutcome.Critical, true, false, 1, 1)]
     [InlineData(TurnEconomyOutcome.Miss, false, false, 0, 0)]

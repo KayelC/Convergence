@@ -105,8 +105,7 @@ public sealed class ActionTokenTurnEconomy : IBattleTurnEconomy
             return;
         }
 
-        if (resolution.Outcome is TurnEconomyOutcome.Weakness or TurnEconomyOutcome.Critical ||
-            resolution.AnyCritical)
+        if (resolution.Outcome is TurnEconomyOutcome.Weakness or TurnEconomyOutcome.Critical)
         {
             if (_fullTokens > 0)
             {
