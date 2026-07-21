@@ -142,7 +142,7 @@ ordered-secondary-effect design, and audience reconciliation. The executable
 matrix now records 17 reviewed, 34 `existing_unreviewed`, 17 missing, and 7
 `not_applicable` entries.
 
-## Completed Order 2
+## Reopened Order 2 Implementation Gate
 
 The source-based
 [Combat Resolution Order 2 Review](../reviews/combat-resolution-order-2-source-review-2026-07-19.md)
@@ -167,6 +167,13 @@ closure. The final
 traced current source after O2-R7 through O2-R15, corrected one assessment
 parity defect, and found no remaining reachable defect in the reviewed paths.
 
+The later
+[Order 2 Closure Source Review](../reviews/combat-resolution-order-2-closure-source-review-2026-07-21.md)
+found two reachable safety-boundary defects. The mechanics decisions and three
+audience reviews remain owner-confirmed, but implementation closure is reopened
+under the
+[Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md).
+
 Current checkpoints:
 
 | Checkpoint | State | Required outcome |
@@ -185,7 +192,8 @@ Current checkpoints:
 
 The table records the first implementation cycle; O2-R7 through O2-R16 record
 the complete-action and ordered-secondary-effect correction cycle. All three
-`combat_resolution` audience entries are now `reviewed`.
+`combat_resolution` audience entries remain `reviewed`; that documentation
+state does not override the reopened implementation gate.
 
 ## Deferred Documentation
 

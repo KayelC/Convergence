@@ -78,7 +78,7 @@
     },
     {
       "id": "combat_resolution",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "ChargePolicyTests",
         "HitResolutionPolicyTests",
@@ -95,7 +95,10 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": []
+      "knownGaps": [
+        "Authored hit counts are not yet bounded across schema, semantic validation, and standard runtime execution.",
+        "Code-authored probability values do not yet share the catalog's 0..100 rejection behavior."
+      ]
     },
     {
       "id": "turn_economy",

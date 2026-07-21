@@ -2,6 +2,11 @@
 
 **Status:** complete; O2-R7 through O2-R16 verified
 
+**Later status:** this roadmap remains the completion record for ordered
+secondary effects. The separate
+[Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md)
+reopens only bounded hit execution and code-authored percentage validation.
+
 ## Purpose
 
 This roadmap reopens Combat Resolution Order 2 after the fresh source review of

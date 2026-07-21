@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in
@@ -84,11 +84,9 @@ Complete the active
 capability at a time. Source and tests establish current behavior; the project
 owner confirms intended mechanics and extension boundaries before an audience
 entry becomes `reviewed`. Existing prose must not be bulk-promoted. Order 1 is
-complete and owner-confirmed. Order 2, `combat_resolution`, is also complete
-after O2-R7 through O2-R16 corrected complete-action aggregation, explicit
-ordered dependencies, staged life-state eligibility, secondary damage contact,
-equipment basic-attack composition, and schema alignment, followed by a fresh
-source review.
+complete and owner-confirmed. Order 2's mechanics remain owner-confirmed, but
+its implementation is temporarily `partial` while O2-R17 through O2-R21 add
+bounded hit execution and consistent code-authored percentage rejection.
 
 ## Priority 2: Persistence Evolution
 

@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v11 restoration. Its
@@ -56,8 +56,10 @@ where per-hit facts become one action outcome and where earlier effects change
 later life-state eligibility. O2-R7 through O2-R16 corrected those paths,
 introduced explicit effect dependencies and shared-contact damage, composed
 weapon secondary effects, aligned schema ranges, and passed a fresh source
-review. The executable capability remains `complete`; the review found no
-remaining reachable defect in this scope.
+review. A later closure review found two reachable safety-boundary defects:
+unbounded authored hit counts and inconsistent code-authored percentage
+validation. The executable capability is therefore `partial` while O2-R17
+through O2-R21 are active.
 
 ## Authority
 

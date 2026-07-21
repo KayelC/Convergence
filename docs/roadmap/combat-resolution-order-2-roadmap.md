@@ -1,6 +1,6 @@
 # Order 2 Combat Resolution Roadmap
 
-**Status:** complete; O2-R7 through O2-R16 verified
+**Status:** reopened; O2-R17 complete, O2-R18 through O2-R21 pending
 
 **Started:** 19 July 2026
 
@@ -21,6 +21,13 @@ confirmed
 and the
 [final closure review](../reviews/combat-resolution-order-2-ordered-effects-closure-review-2026-07-21.md)
 record that work.
+
+**Current correction status:** a later source-first closure review found an
+unbounded schema-valid hit-count path and inconsistent code-authored percentage
+validation. The active
+[Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md)
+governs O2-R17 through O2-R21. Earlier completion records remain accurate only
+for the revisions they reviewed.
 
 ## Goal
 

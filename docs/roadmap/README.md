@@ -13,6 +13,7 @@ records. It does not define individual mechanics.
 - [Order 2 Combat Resolution Roadmap](combat-resolution-order-2-roadmap.md)
 - [Order 2 Combat Resolution Corrections Roadmap](combat-resolution-order-2-corrections-roadmap.md)
 - [Ordered Secondary Effects And Order 2 Correction Roadmap](ordered-secondary-effects-roadmap.md)
+- [Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md)
 - [Documentation Completion Roadmap](documentation-completion-roadmap.md)
 - [Framework Capability Matrix](framework-capability-matrix.md)
 - [Production-Readiness Completion Record](production-readiness-roadmap.md)
@@ -24,7 +25,7 @@ requires owner review. The Documentation Completion Roadmap governs the ordered
 collaborative review of those outstanding entries.
 
 Order 1, `typed_action_and_effect_execution`, is complete and owner-confirmed.
-Order 2, `combat_resolution`, is also complete and owner-confirmed after
-O2-R7 through O2-R16 implemented and reviewed complete-action and ordered
-secondary-effect behavior. Order 3 is the next capability review in the
-Documentation Completion Roadmap.
+Order 2, `combat_resolution`, remains owner-confirmed at the mechanics level,
+but its implementation gate is reopened by O2-R17 through O2-R21 for bounded
+hit execution and code-authored percentage parity. Order 3 does not begin until
+that narrow correction cycle closes.
