@@ -174,6 +174,35 @@ public sealed class DamageHitExecutionEvidence
         RuntimeInstanceId? affectedActorId = null,
         ContentId? affectedResourceId = null,
         decimal appliedResourceDelta = 0m)
+        : this(
+            sourceActionId,
+            actorId,
+            targetId,
+            effectIndex,
+            resolution,
+            resolvedAffinity,
+            affectedActorId,
+            affectedResourceId,
+            appliedResourceDelta,
+            DamageContactMode.Independent,
+            contactSourceEffectId: null,
+            contactSourceEffectIndex: null)
+    {
+    }
+
+    public DamageHitExecutionEvidence(
+        ContentId sourceActionId,
+        RuntimeInstanceId actorId,
+        RuntimeInstanceId targetId,
+        int effectIndex,
+        DamageHitResolution resolution,
+        ElementalAffinity resolvedAffinity,
+        RuntimeInstanceId? affectedActorId,
+        ContentId? affectedResourceId,
+        decimal appliedResourceDelta,
+        DamageContactMode contactMode,
+        EffectLocalId? contactSourceEffectId,
+        int? contactSourceEffectIndex)
     {
         if (!sourceActionId.IsValid)
         {
@@ -212,6 +241,30 @@ public sealed class DamageHitExecutionEvidence
         {
             throw new ArgumentException("A nonzero resource delta requires an affected actor and resource.");
         }
+        if (!Enum.IsDefined(contactMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(contactMode), contactMode, "Damage contact mode must be defined.");
+        }
+        if (contactMode == DamageContactMode.SharedContact)
+        {
+            if (contactSourceEffectId is not EffectLocalId sourceId || !sourceId.IsValid)
+            {
+                throw new ArgumentException(
+                    "Shared-contact evidence requires a valid source effect ID.",
+                    nameof(contactSourceEffectId));
+            }
+            if (contactSourceEffectIndex is not int sourceIndex || sourceIndex < 0 || sourceIndex >= effectIndex)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(contactSourceEffectIndex),
+                    contactSourceEffectIndex,
+                    "Shared-contact evidence requires an earlier source effect index.");
+            }
+        }
+        else if (contactSourceEffectId is not null || contactSourceEffectIndex is not null)
+        {
+            throw new ArgumentException("Independent damage cannot declare shared-contact source evidence.");
+        }
 
         SourceActionId = sourceActionId;
         ActorId = actorId;
@@ -221,6 +274,9 @@ public sealed class DamageHitExecutionEvidence
         AffectedActorId = affectedActorId;
         AffectedResourceId = affectedResourceId;
         AppliedResourceDelta = appliedResourceDelta;
+        ContactMode = contactMode;
+        ContactSourceEffectId = contactSourceEffectId;
+        ContactSourceEffectIndex = contactSourceEffectIndex;
     }
 
     public ContentId SourceActionId { get; }
@@ -244,6 +300,9 @@ public sealed class DamageHitExecutionEvidence
     public RuntimeInstanceId? AffectedActorId { get; }
     public ContentId? AffectedResourceId { get; }
     public decimal AppliedResourceDelta { get; }
+    public DamageContactMode ContactMode { get; }
+    public EffectLocalId? ContactSourceEffectId { get; }
+    public int? ContactSourceEffectIndex { get; }
     private DamageHitResolution Resolution { get; }
 }
 
@@ -626,6 +685,8 @@ public sealed record EffectExecutionContext(
     DamageElement? EffectElement = null)
 {
     public RuntimeActorState Actor => Request.Actor;
+
+    internal EffectDependencyEvaluation? DependencyEvaluation { get; init; }
 }
 
 public interface IEffectExecutor<in TDefinition> where TDefinition : EffectDefinition

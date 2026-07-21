@@ -10668,3 +10668,15 @@ Convergence.Execution.EffectExecutionSkipReason
 Convergence.Execution.EffectExecutionSkipReason.ConditionUnsatisfied = 2 -> Convergence.Execution.EffectExecutionSkipReason
 Convergence.Execution.EffectExecutionSkipReason.DependencyUnsatisfied = 0 -> Convergence.Execution.EffectExecutionSkipReason
 Convergence.Execution.EffectExecutionSkipReason.TargetLifeStateIneligible = 1 -> Convergence.Execution.EffectExecutionSkipReason
+Convergence.Battle.ProductionDamageResolutionRequest.ContactMode.get -> Convergence.Content.DamageContactMode
+Convergence.Battle.ProductionDamageResolutionRequest.ProductionDamageResolutionRequest(Convergence.Battle.ProductionCombatantProfile! attacker, Convergence.Battle.ProductionCombatantProfile! target, Convergence.Content.DamageElement element, Convergence.Content.ElementalAffinity affinity, int power, int accuracy, Convergence.Content.CriticalDefinition! critical, Convergence.Content.HitCountDefinition! hits, decimal chargeMultiplier, Convergence.Content.ChargeKind? chargeKind, System.Collections.Generic.IEnumerable<Convergence.Content.NumericRuleModifierDefinition!>? accuracyModifiers, System.Collections.Generic.IEnumerable<Convergence.Content.NumericRuleModifierDefinition!>? evasionModifiers, System.Collections.Generic.IEnumerable<Convergence.Content.NumericRuleModifierDefinition!>? criticalChanceModifiers, Convergence.Content.DamageContactMode contactMode) -> void
+Convergence.Content.DamageContactMode
+Convergence.Content.DamageContactMode.Independent = 0 -> Convergence.Content.DamageContactMode
+Convergence.Content.DamageContactMode.SharedContact = 1 -> Convergence.Content.DamageContactMode
+Convergence.Content.DamageEffectDefinition.ContactMode.get -> Convergence.Content.DamageContactMode
+Convergence.Content.DamageEffectDefinition.ContactMode.init -> void
+Convergence.Execution.DamageHitExecutionEvidence.ContactMode.get -> Convergence.Content.DamageContactMode
+Convergence.Execution.DamageHitExecutionEvidence.ContactSourceEffectId.get -> Convergence.Content.EffectLocalId?
+Convergence.Execution.DamageHitExecutionEvidence.ContactSourceEffectIndex.get -> int?
+Convergence.Execution.DamageHitExecutionEvidence.DamageHitExecutionEvidence(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, int effectIndex, Convergence.Execution.DamageHitResolution! resolution, Convergence.Content.ElementalAffinity resolvedAffinity, Convergence.Runtime.RuntimeInstanceId? affectedActorId, Convergence.Content.ContentId? affectedResourceId, decimal appliedResourceDelta, Convergence.Content.DamageContactMode contactMode, Convergence.Content.EffectLocalId? contactSourceEffectId, int? contactSourceEffectIndex) -> void
+Convergence.Validation.ContentValidationErrorCode.SharedContactDependencyInvalid = 44 -> Convergence.Validation.ContentValidationErrorCode

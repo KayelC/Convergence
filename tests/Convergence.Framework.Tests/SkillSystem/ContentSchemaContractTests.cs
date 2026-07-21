@@ -206,6 +206,7 @@ public sealed class ContentSchemaContractTests
             """{"type":"custom","handlerId":"sample_condition","parameters":{"enabled":true}}""");
         Add(variants, "effect",
             """{"type":"damage","effectId":"primary_hit","elementId":"physical","power":20,"accuracy":95,"critical":{"mode":"chance","chance":10},"hits":{"minimum":1,"maximum":1}}""",
+            """{"type":"damage","elementId":"fire","power":10,"accuracy":50,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1},"contactMode":"shared_contact","dependency":{"sourceEffectId":"primary_hit","requirement":"positive_damage","scope":"same_target"}}""",
             """{"type":"instant_kill","chance":25,"resistanceCheck":{"mode":"channel","channelId":"dark"}}""",
             """{"type":"apply_ailment","ailmentId":"poison","chance":50,"duration":{"type":"battle"}}""",
             """{"type":"restore_resource","resourceId":"hp","amount":{"type":"flat","value":20}}""",

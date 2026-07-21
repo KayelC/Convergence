@@ -292,7 +292,7 @@ zero stage delta, and non-positive charge multipliers.
 
 ### O2-R13: Add secondary damage resolution modes
 
-**State:** pending; shared-contact behavior owner-confirmed
+**State:** complete in this checkpoint
 
 - Preserve ordinary independent secondary damage.
 - Add a typed shared-contact path that avoids a second accuracy roll.

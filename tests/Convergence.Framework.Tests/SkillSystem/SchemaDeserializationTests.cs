@@ -464,6 +464,42 @@ public sealed class SchemaDeserializationTests
     }
 
     [Fact]
+    public void DamageContactMode_MapsSharedContactAndRejectsUnknownVocabulary()
+    {
+        string json = WrapSkill(MinimalActiveRecord(
+            """
+            [
+              {
+                "type": "damage", "effectId": "primary_hit", "elementId": "physical",
+                "power": 10, "accuracy": 100, "critical": { "mode": "never" },
+                "hits": { "minimum": 1, "maximum": 1 }
+              },
+              {
+                "type": "damage", "elementId": "fire", "power": 5, "accuracy": 25,
+                "critical": { "mode": "never" }, "hits": { "minimum": 1, "maximum": 1 },
+                "contactMode": "shared_contact",
+                "dependency": {
+                  "sourceEffectId": "primary_hit", "requirement": "positive_damage",
+                  "scope": "same_target"
+                }
+              }
+            ]
+            """));
+
+        SkillDefinition skill = Assert.Single(
+            _deserializer.DeserializeSkills(json, "shared-contact.json").Records);
+        DamageEffectDefinition primary = Assert.IsType<DamageEffectDefinition>(skill.Effects[0]);
+        DamageEffectDefinition secondary = Assert.IsType<DamageEffectDefinition>(skill.Effects[1]);
+
+        Assert.Equal(DamageContactMode.Independent, primary.ContactMode);
+        Assert.Equal(DamageContactMode.SharedContact, secondary.ContactMode);
+        Assert.Throws<ContentDeserializationException>(() =>
+            _deserializer.DeserializeSkills(
+                json.Replace("shared_contact", "reuse_accuracy", StringComparison.Ordinal),
+                "unknown-contact-mode.json"));
+    }
+
+    [Fact]
     public void CustomParameters_AreImmutableClrValuesWithoutJsonElements()
     {
         string json = WrapSkill(MinimalActiveRecord(

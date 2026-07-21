@@ -216,7 +216,10 @@ internal static class DefinitionQualifier
         {
             DamageEffectDefinition effect => new DamageEffectDefinition(
             effect.Element, effect.Power, effect.Accuracy, Critical(effect.Critical), effect.Hits, effect.Drain,
-            OptionalCondition(packId, effect.When), effect.OnFailure),
+            OptionalCondition(packId, effect.When), effect.OnFailure)
+            {
+                ContactMode = effect.ContactMode
+            },
             InstantKillEffectDefinition effect => new InstantKillEffectDefinition(
                 effect.Chance, effect.ResistanceCheck, OptionalCondition(packId, effect.When), effect.OnFailure),
             ApplyAilmentEffectDefinition effect => new ApplyAilmentEffectDefinition(

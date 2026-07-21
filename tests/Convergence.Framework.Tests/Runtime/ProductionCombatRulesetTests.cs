@@ -131,6 +131,46 @@ public sealed class ProductionCombatRulesetTests
     }
 
     [Fact]
+    public void SharedContactBypassesOnlyHitResolutionAndKeepsItsOwnDamageRules()
+    {
+        var hitPolicy = new RecordingHitPolicy(hit: false);
+        var ruleset = new ProductionCombatRuleset(
+            new SequenceRandomSource([]),
+            hitPolicy: hitPolicy,
+            criticalEligibilityPolicy: new AllDamageCriticalEligibilityPolicy());
+
+        ProductionDamageResolutionResult independent = ruleset.ResolveDamage(
+            DamageRequest(DamageContactMode.Independent));
+        ProductionDamageResolutionResult shared = ruleset.ResolveDamage(
+            DamageRequest(DamageContactMode.SharedContact));
+
+        Assert.False(Assert.Single(independent.Hits).Hit);
+        ProductionDamageResolutionHit sharedHit = Assert.Single(shared.Hits);
+        Assert.True(sharedHit.Hit);
+        Assert.True(sharedHit.Critical);
+        Assert.Equal(ElementalAffinity.Weak, sharedHit.ResolvedAffinity);
+        Assert.Equal(ChargeKind.Magical, sharedHit.ChargeKind);
+        Assert.Equal(2m, sharedHit.ChargeMultiplier);
+        Assert.Equal(1, hitPolicy.CallCount);
+
+        ProductionDamageResolutionRequest DamageRequest(DamageContactMode mode) => new(
+            Actor(),
+            Actor(),
+            DamageElement.Fire,
+            ElementalAffinity.Weak,
+            10,
+            25,
+            new ChanceCriticalDefinition(100),
+            new HitCountDefinition(1, 1),
+            2m,
+            ChargeKind.Magical,
+            accuracyModifiers: null,
+            evasionModifiers: null,
+            criticalChanceModifiers: null,
+            mode);
+    }
+
+    [Fact]
     public void GuardHalvesDamageSuppressesCriticalAndNormalizesWeakness()
     {
         ProductionCombatRuleset ruleset = Rules();
@@ -636,6 +676,28 @@ public sealed class ProductionCombatRulesetTests
     {
         public int NextInt32(int minimumInclusive, int maximumExclusive) => maximumExclusive - 1;
         public decimal NextUnitDecimal() => 0.999999m;
+    }
+
+    private sealed class RecordingHitPolicy(bool hit) : IHitResolutionPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public HitResolutionResult Resolve(HitResolutionRequest request)
+        {
+            CallCount++;
+            return new HitResolutionResult(
+                hit,
+                request.AuthoredAccuracy,
+                AttackerAgilityContribution: 0m,
+                TargetAgilityContribution: 0m,
+                AccuracyScoreBeforeModifiers: request.AuthoredAccuracy,
+                EvasionScoreBeforeModifiers: 0m,
+                ResolvedAccuracyScore: request.AuthoredAccuracy,
+                ResolvedEvasionScore: 0m,
+                RawChance: request.AuthoredAccuracy,
+                FinalChance: request.AuthoredAccuracy,
+                Roll: hit ? null : request.AuthoredAccuracy);
+        }
     }
 
     private sealed class FixedRandomSource(decimal unit) : IRandomSource

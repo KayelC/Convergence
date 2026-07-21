@@ -144,6 +144,16 @@ public enum DamageDrainMode
     Sp
 }
 
+/// <summary>Defines how a damage effect establishes contact with its target.</summary>
+public enum DamageContactMode
+{
+    /// <summary>The damage effect performs its own hit resolution.</summary>
+    Independent,
+
+    /// <summary>An earlier positive-damage dependency supplies contact for this effect.</summary>
+    SharedContact
+}
+
 public enum ChargeKind
 {
     Physical,

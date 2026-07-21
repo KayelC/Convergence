@@ -590,6 +590,7 @@ internal sealed class DamageEffectDto : EffectDto
     public required CriticalDto Critical { get; init; }
     public required HitCountDto Hits { get; init; }
     public DamageDrainMode Drain { get; init; } = DamageDrainMode.None;
+    public DamageContactMode ContactMode { get; init; } = DamageContactMode.Independent;
 }
 
 internal sealed class InstantKillEffectDto : EffectDto

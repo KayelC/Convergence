@@ -2,6 +2,7 @@ using Convergence.Content;
 using Convergence.Catalog;
 using Convergence.Battle;
 using Convergence.Execution;
+using Convergence.Hosting;
 using Convergence.Runtime;
 using Xunit;
 
@@ -1036,6 +1037,138 @@ public sealed class ActiveSkillExecutionTests
         Assert.Equal(EffectExecutionOutcome.Skipped, rider.Outcome);
         Assert.Equal(EffectExecutionSkipReason.TargetLifeStateIneligible, rider.SkipReason);
         Assert.True(rider.DependencyEvaluation!.Satisfied);
+    }
+
+    [Fact]
+    public void Execute_SharedContactReusesPrimaryContactButResolvesItsOwnAffinityAndCritical()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, stats: CoreStats(20));
+        RuntimeActorState target = Actor(
+            "target",
+            EnemyTeam,
+            defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]),
+            stats: CoreStats(20));
+        var hitPolicy = new SequenceHitPolicy([true]);
+        var ruleset = new ProductionCombatRuleset(
+            new ConstantRandomSource(0.5m),
+            hitPolicy: hitPolicy,
+            criticalEligibilityPolicy: new AllDamageCriticalEligibilityPolicy());
+
+        SkillExecutionResult result = new SkillExecutor(Services(damagePolicy: ruleset)).Execute(
+            Request(
+                SecondaryDamageSkill(DamageContactMode.SharedContact),
+                actor,
+                [actor, target],
+                [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, result.Status);
+        Assert.Equal(1, hitPolicy.CallCount);
+        Assert.Equal(TurnEconomyOutcome.Weakness, result.TurnEconomy.Outcome);
+        DamageHitExecutionEvidence primary = Assert.Single(result.Effects[0].DamageHits);
+        DamageHitExecutionEvidence secondary = Assert.Single(result.Effects[1].DamageHits);
+        Assert.False(primary.Critical);
+        Assert.Equal(DamageContactMode.Independent, primary.ContactMode);
+        Assert.Equal(ElementalAffinity.Weak, secondary.ResolvedAffinity);
+        Assert.True(secondary.Critical);
+        Assert.Equal(DamageContactMode.SharedContact, secondary.ContactMode);
+        Assert.Equal(EffectLocalId.Parse("primary_hit"), secondary.ContactSourceEffectId);
+        Assert.Equal(0, secondary.ContactSourceEffectIndex);
+    }
+
+    [Fact]
+    public void Execute_IndependentSecondaryDamagePerformsItsOwnHitResolution()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, stats: CoreStats(20));
+        RuntimeActorState target = Actor("target", EnemyTeam, stats: CoreStats(20));
+        var hitPolicy = new SequenceHitPolicy([true, false]);
+        var ruleset = new ProductionCombatRuleset(
+            new ConstantRandomSource(0.5m),
+            hitPolicy: hitPolicy);
+
+        SkillExecutionResult result = new SkillExecutor(Services(damagePolicy: ruleset)).Execute(
+            Request(
+                SecondaryDamageSkill(DamageContactMode.Independent),
+                actor,
+                [actor, target],
+                [target.InstanceId]));
+
+        Assert.Equal(2, hitPolicy.CallCount);
+        Assert.Equal(EffectExecutionOutcome.Success, result.Effects[0].Outcome);
+        Assert.Equal(EffectExecutionOutcome.Failure, result.Effects[1].Outcome);
+        DamageHitExecutionEvidence secondary = Assert.Single(result.Effects[1].DamageHits);
+        Assert.False(secondary.Hit);
+        Assert.Equal(DamageContactMode.Independent, secondary.ContactMode);
+        Assert.Null(secondary.ContactSourceEffectId);
+        Assert.Null(secondary.ContactSourceEffectIndex);
+    }
+
+    [Theory]
+    [InlineData(ElementalAffinity.Normal, EffectExecutionOutcome.Success, SkillExecutionStatus.Executed)]
+    [InlineData(ElementalAffinity.Resist, EffectExecutionOutcome.Success, SkillExecutionStatus.Executed)]
+    [InlineData(ElementalAffinity.Weak, EffectExecutionOutcome.Success, SkillExecutionStatus.Executed)]
+    [InlineData(ElementalAffinity.Null, EffectExecutionOutcome.Failure, SkillExecutionStatus.Executed)]
+    [InlineData(ElementalAffinity.Repel, EffectExecutionOutcome.Interrupted, SkillExecutionStatus.Interrupted)]
+    [InlineData(ElementalAffinity.Absorb, EffectExecutionOutcome.Interrupted, SkillExecutionStatus.Interrupted)]
+    public void Execute_SharedContactResolvesEverySecondaryAffinityIndependently(
+        ElementalAffinity affinity,
+        EffectExecutionOutcome expectedEffectOutcome,
+        SkillExecutionStatus expectedStatus)
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam, stats: CoreStats(20));
+        RuntimeActorState target = Actor(
+            "target",
+            EnemyTeam,
+            defense: new CombatDefenseProfile([new(DamageElement.Fire, affinity)]),
+            stats: CoreStats(20));
+        var hitPolicy = new SequenceHitPolicy([true]);
+        var ruleset = new ProductionCombatRuleset(
+            new ConstantRandomSource(0.5m),
+            hitPolicy: hitPolicy);
+
+        SkillExecutionResult result = new SkillExecutor(Services(damagePolicy: ruleset)).Execute(
+            Request(
+                SecondaryDamageSkill(DamageContactMode.SharedContact),
+                actor,
+                [actor, target],
+                [target.InstanceId]));
+
+        Assert.Equal(expectedStatus, result.Status);
+        Assert.Equal(1, hitPolicy.CallCount);
+        EffectExecutionResult secondary = result.Effects[1];
+        Assert.Equal(expectedEffectOutcome, secondary.Outcome);
+        DamageHitExecutionEvidence evidence = Assert.Single(secondary.DamageHits);
+        Assert.True(evidence.Hit);
+        Assert.Equal(affinity, evidence.ResolvedAffinity);
+        Assert.Equal(DamageContactMode.SharedContact, evidence.ContactMode);
+        Assert.Equal(EffectLocalId.Parse("primary_hit"), evidence.ContactSourceEffectId);
+    }
+
+    [Fact]
+    public void Execute_RejectsSharedContactWithoutItsRequiredDependencyBeforeMutation()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Fire,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())
+            {
+                ContactMode = DamageContactMode.SharedContact
+            }
+        ]);
+
+        SkillExecutionResult result = new SkillExecutor(Services()).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        SkillExecutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(SkillExecutionDiagnosticCode.ExecutionFailed, diagnostic.Code);
+        Assert.Contains("same-target positive-damage dependency", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
     }
 
     [Theory]
@@ -2260,7 +2393,8 @@ public sealed class ActiveSkillExecutionTests
         CombatDefenseProfile? defense = null,
         IEnumerable<ContentId>? skillIds = null,
         IEnumerable<ContentId>? capabilityIds = null,
-        ContentId? commandAuthorityId = null) =>
+        ContentId? commandAuthorityId = null,
+        IEnumerable<KeyValuePair<ContentId, decimal>>? stats = null) =>
         new(
             RuntimeInstanceId.Parse(id),
             ContentId.Parse($"{id}_entity"),
@@ -2272,8 +2406,18 @@ public sealed class ActiveSkillExecutionTests
             new RuntimeActorAffiliationSnapshot(
                 commandAuthorityId ?? ContentId.Parse("test_host"),
                 team),
+            stats,
             skillIds: skillIds,
             capabilityIds: capabilityIds);
+
+    private static IReadOnlyList<KeyValuePair<ContentId, decimal>> CoreStats(decimal value) =>
+    [
+        new(StandardProgressionIds.Strength, value),
+        new(StandardProgressionIds.Magic, value),
+        new(StandardProgressionIds.Vitality, value),
+        new(StandardProgressionIds.Agility, value),
+        new(StandardProgressionIds.Luck, value)
+    ];
 
     private static TargetingDefinition Untargeted() =>
         new(TargetRelation.None, TargetSelection.None, TargetLifeState.Any, false);
@@ -2307,6 +2451,36 @@ public sealed class ActiveSkillExecutionTests
             }
         ],
         targeting: targeting);
+    }
+
+    private static SkillDefinition SecondaryDamageSkill(DamageContactMode contactMode)
+    {
+        EffectLocalId sourceId = EffectLocalId.Parse("primary_hit");
+        return ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())
+            {
+                EffectId = sourceId
+            },
+            new DamageEffectDefinition(
+                DamageElement.Fire,
+                10,
+                5,
+                new ChanceCriticalDefinition(100),
+                FixedHits())
+            {
+                ContactMode = contactMode,
+                Dependency = new EffectDependencyDefinition(
+                    sourceId,
+                    EffectDependencyRequirement.PositiveDamage,
+                    EffectDependencyScope.SameTarget)
+            }
+        ]);
     }
 
     private static AilmentDefinition Ailment(ContentId id, ContentId? exclusivity = null) =>
@@ -2473,6 +2647,43 @@ public sealed class ActiveSkillExecutionTests
             CallCount++;
             return result;
         }
+    }
+
+    private sealed class SequenceHitPolicy(IEnumerable<bool> results) : IHitResolutionPolicy
+    {
+        private readonly Queue<bool> _results = new(results);
+
+        public int CallCount { get; private set; }
+
+        public HitResolutionResult Resolve(HitResolutionRequest request)
+        {
+            CallCount++;
+            if (_results.Count == 0)
+            {
+                throw new InvalidOperationException("The test hit sequence was exhausted.");
+            }
+
+            bool hit = _results.Dequeue();
+            return new HitResolutionResult(
+                hit,
+                request.AuthoredAccuracy,
+                AttackerAgilityContribution: 0m,
+                TargetAgilityContribution: 0m,
+                AccuracyScoreBeforeModifiers: request.AuthoredAccuracy,
+                EvasionScoreBeforeModifiers: 0m,
+                ResolvedAccuracyScore: request.AuthoredAccuracy,
+                ResolvedEvasionScore: 0m,
+                RawChance: request.AuthoredAccuracy,
+                FinalChance: request.AuthoredAccuracy,
+                Roll: hit ? null : request.AuthoredAccuracy);
+        }
+    }
+
+    private sealed class ConstantRandomSource(decimal unit) : IRandomSource
+    {
+        public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
+
+        public decimal NextUnitDecimal() => unit;
     }
 
     private sealed class PowerAmountPolicy : IPowerAmountPolicy

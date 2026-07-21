@@ -365,6 +365,39 @@ public sealed class ProductionDamageResolutionRequest
         IEnumerable<NumericRuleModifierDefinition>? accuracyModifiers = null,
         IEnumerable<NumericRuleModifierDefinition>? evasionModifiers = null,
         IEnumerable<NumericRuleModifierDefinition>? criticalChanceModifiers = null)
+        : this(
+            attacker,
+            target,
+            element,
+            affinity,
+            power,
+            accuracy,
+            critical,
+            hits,
+            chargeMultiplier,
+            chargeKind,
+            accuracyModifiers,
+            evasionModifiers,
+            criticalChanceModifiers,
+            DamageContactMode.Independent)
+    {
+    }
+
+    public ProductionDamageResolutionRequest(
+        ProductionCombatantProfile attacker,
+        ProductionCombatantProfile target,
+        DamageElement element,
+        ElementalAffinity affinity,
+        int power,
+        int accuracy,
+        CriticalDefinition critical,
+        HitCountDefinition hits,
+        decimal chargeMultiplier,
+        ChargeKind? chargeKind,
+        IEnumerable<NumericRuleModifierDefinition>? accuracyModifiers,
+        IEnumerable<NumericRuleModifierDefinition>? evasionModifiers,
+        IEnumerable<NumericRuleModifierDefinition>? criticalChanceModifiers,
+        DamageContactMode contactMode)
     {
         Attacker = attacker ?? throw new ArgumentNullException(nameof(attacker));
         Target = target ?? throw new ArgumentNullException(nameof(target));
@@ -375,6 +408,13 @@ public sealed class ProductionDamageResolutionRequest
         if (!Enum.IsDefined(affinity))
         {
             throw new ArgumentOutOfRangeException(nameof(affinity), affinity, "Affinity must be defined.");
+        }
+        if (!Enum.IsDefined(contactMode))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(contactMode),
+                contactMode,
+                "Damage contact mode must be defined.");
         }
 
         Element = element;
@@ -388,6 +428,7 @@ public sealed class ProductionDamageResolutionRequest
         AccuracyModifiers = Snapshot(accuracyModifiers, nameof(accuracyModifiers));
         EvasionModifiers = Snapshot(evasionModifiers, nameof(evasionModifiers));
         CriticalChanceModifiers = Snapshot(criticalChanceModifiers, nameof(criticalChanceModifiers));
+        ContactMode = contactMode;
     }
 
     public ProductionCombatantProfile Attacker { get; }
@@ -403,6 +444,9 @@ public sealed class ProductionDamageResolutionRequest
     public IReadOnlyList<NumericRuleModifierDefinition> AccuracyModifiers { get; }
     public IReadOnlyList<NumericRuleModifierDefinition> EvasionModifiers { get; }
     public IReadOnlyList<NumericRuleModifierDefinition> CriticalChanceModifiers { get; }
+
+    /// <summary>Gets whether this request rolls accuracy or reuses contact established by its caller.</summary>
+    public DamageContactMode ContactMode { get; }
 
     private static IReadOnlyList<NumericRuleModifierDefinition> Snapshot(
         IEnumerable<NumericRuleModifierDefinition>? modifiers,
@@ -637,7 +681,8 @@ public sealed class ProductionCombatRuleset :
             request.ChargeKind,
             request.AccuracyModifiers,
             request.EvasionModifiers,
-            request.CriticalChanceModifiers));
+            request.CriticalChanceModifiers,
+            request.Effect.ContactMode));
 
         return new DamagePolicyResolution(
             result.Hits.Select(hit => new DamageHitResolution(
@@ -712,12 +757,18 @@ public sealed class ProductionCombatRuleset :
             request.Target.Status.IsGuarding);
         for (int i = 0; i < hitCount; i++)
         {
-            HitResolutionResult hit = CheckHit(new ProductionHitCheckRequest(
-                request.Attacker,
-                request.Target,
-                request.Accuracy,
-                request.AccuracyModifiers,
-                request.EvasionModifiers));
+            HitResolutionResult hit = request.ContactMode switch
+            {
+                DamageContactMode.Independent => CheckHit(new ProductionHitCheckRequest(
+                    request.Attacker,
+                    request.Target,
+                    request.Accuracy,
+                    request.AccuracyModifiers,
+                    request.EvasionModifiers)),
+                DamageContactMode.SharedContact => SharedContactHit(request.Accuracy),
+                _ => throw new InvalidOperationException(
+                    $"Unsupported damage contact mode '{request.ContactMode}'.")
+            };
             if (!hit.Hit)
             {
                 hits.Add(new ProductionDamageResolutionHit(
@@ -775,6 +826,30 @@ public sealed class ProductionCombatRuleset :
         }
 
         return new ProductionDamageResolutionResult(hits, resolvedAffinity);
+    }
+
+    private static HitResolutionResult SharedContactHit(int authoredAccuracy)
+    {
+        if (authoredAccuracy is < 0 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(authoredAccuracy),
+                authoredAccuracy,
+                "Authored accuracy must be within 0-100.");
+        }
+
+        return new HitResolutionResult(
+            true,
+            authoredAccuracy,
+            AttackerAgilityContribution: 0m,
+            TargetAgilityContribution: 0m,
+            AccuracyScoreBeforeModifiers: authoredAccuracy,
+            EvasionScoreBeforeModifiers: 0m,
+            ResolvedAccuracyScore: authoredAccuracy,
+            ResolvedEvasionScore: 0m,
+            RawChance: authoredAccuracy,
+            FinalChance: authoredAccuracy,
+            Roll: null);
     }
 
     public HitResolutionResult CheckHit(ProductionHitCheckRequest request)

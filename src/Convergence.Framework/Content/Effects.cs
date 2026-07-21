@@ -140,7 +140,25 @@ public sealed record DamageEffectDefinition(
     DamageDrainMode Drain = DamageDrainMode.None,
     ConditionDefinition? When = null,
     EffectFailurePolicy OnFailure = EffectFailurePolicy.Continue)
-    : EffectDefinition(When, OnFailure);
+    : EffectDefinition(When, OnFailure)
+{
+    private DamageContactMode _contactMode = DamageContactMode.Independent;
+
+    /// <summary>Gets whether this effect resolves its own hit or reuses established contact.</summary>
+    public DamageContactMode ContactMode
+    {
+        get => _contactMode;
+        init
+        {
+            if (!Enum.IsDefined(value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Damage contact mode must be defined.");
+            }
+
+            _contactMode = value;
+        }
+    }
+}
 
 public sealed record InstantKillEffectDefinition(
     int Chance,

@@ -342,6 +342,56 @@ public sealed class ChargePolicyTests
         Assert.Empty(actor.Charges);
     }
 
+    [Fact]
+    public void SharedContactComponent_StillResolvesAndConsumesItsOwnSplitCharge()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        var charges = new SplitChargePolicy();
+        charges.Apply(new ChargeApplicationRequest(actor, ChargeKind.Physical, 2m));
+        charges.Apply(new ChargeApplicationRequest(actor, ChargeKind.Magical, 3m));
+        var damage = new RecordingDamagePolicy(request =>
+            new DamagePolicyResolution(
+                [new DamageHitResolution(true, request.ChargeMultiplier)],
+                request.Affinity));
+        EffectLocalId sourceId = EffectLocalId.Parse("physical_contact");
+        DamageEffectDefinition primary = PhysicalDamage() with { EffectId = sourceId };
+        DamageEffectDefinition secondary = MagicalDamage() with
+        {
+            ContactMode = DamageContactMode.SharedContact,
+            Dependency = new EffectDependencyDefinition(
+                sourceId,
+                EffectDependencyRequirement.PositiveDamage,
+                EffectDependencyScope.SameTarget)
+        };
+        SkillDefinition skill = new(
+            ContentId.Parse("charged_shared_contact"),
+            "Charged Shared Contact",
+            "Exercises split charges across linked damage components.",
+            SkillActivation.Active,
+            SkillMenuGroup.Offense,
+            InheritanceGroup.Physical,
+            new SkillInheritanceDefinition(true),
+            targeting: new TargetingDefinition(
+                TargetRelation.Enemy,
+                TargetSelection.Single,
+                TargetLifeState.Alive,
+                false),
+            effects: [primary, secondary],
+            availability: new SkillAvailabilityDefinition([Battle]));
+
+        SkillExecutionResult result = new SkillExecutor(Services(damage, charges)).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, result.Status);
+        Assert.Equal([ChargeKind.Physical, ChargeKind.Magical], damage.Requests.Select(request => request.ChargeKind));
+        Assert.Equal([2m, 3m], damage.Requests.Select(request => request.ChargeMultiplier));
+        Assert.Equal(
+            DamageContactMode.SharedContact,
+            Assert.Single(result.Effects[1].DamageHits).ContactMode);
+        Assert.Empty(actor.Charges);
+    }
+
     private static RuntimeActorState Actor(
         string id,
         ContentId team,

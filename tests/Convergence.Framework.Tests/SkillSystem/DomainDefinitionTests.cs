@@ -123,6 +123,24 @@ public sealed class DomainDefinitionTests
     }
 
     [Fact]
+    public void DamageContactMode_DefaultsToIndependentAndRejectsUndefinedValues()
+    {
+        var damage = new DamageEffectDefinition(
+            DamageElement.Physical,
+            10,
+            100,
+            new NeverCriticalDefinition(),
+            new HitCountDefinition(1, 1));
+
+        Assert.Equal(DamageContactMode.Independent, damage.ContactMode);
+        Assert.Equal(
+            DamageContactMode.SharedContact,
+            (damage with { ContactMode = DamageContactMode.SharedContact }).ContactMode);
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            damage with { ContactMode = (DamageContactMode)int.MaxValue });
+    }
+
+    [Fact]
     public void CatalogQualificationPreservesSequenceLocalEffectReferences()
     {
         EffectLocalId sourceId = EffectLocalId.Parse("primary_hit");

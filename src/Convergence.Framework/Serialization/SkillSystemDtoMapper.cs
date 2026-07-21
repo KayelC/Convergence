@@ -494,7 +494,10 @@ internal static class SkillSystemDtoMapper
     private static DamageEffectDefinition MapDamage(DamageEffectDto dto, ConditionDefinition? when) =>
         new(dto.ElementId, dto.Power, dto.Accuracy, MapCritical(dto.Critical),
             new HitCountDefinition(dto.Hits.Minimum, dto.Hits.Maximum, dto.Hits.Distribution),
-            dto.Drain, when, dto.OnFailure);
+            dto.Drain, when, dto.OnFailure)
+        {
+            ContactMode = dto.ContactMode
+        };
 
     private static RestoreResourceEffectDefinition MapRestore(ResourceAmountEffectDto dto, ConditionDefinition? when) =>
         new(Id(dto.ResourceId), MapAmount(dto.Amount), when, dto.OnFailure);

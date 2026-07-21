@@ -1357,9 +1357,20 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             int effectIndex,
             string path)
         {
+            bool sharedContact = effects[effectIndex] is DamageEffectDefinition
+            {
+                ContactMode: DamageContactMode.SharedContact
+            };
             EffectDependencyDefinition? dependency = effects[effectIndex].Dependency;
             if (dependency is null)
             {
+                if (sharedContact)
+                {
+                    Add(source, $"{path}[{effectIndex}].contactMode",
+                        ContentValidationErrorCode.SharedContactDependencyInvalid,
+                        "Shared-contact damage requires a same-target positive-damage dependency.");
+                }
+
                 return;
             }
 
@@ -1387,6 +1398,15 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     ContentValidationErrorCode.EffectDependencySourceIncompatible,
                     "A positive-damage dependency must reference a damage effect.");
             }
+
+            if (sharedContact &&
+                (dependency.Requirement != EffectDependencyRequirement.PositiveDamage ||
+                 dependency.Scope != EffectDependencyScope.SameTarget))
+            {
+                Add(source, $"{path}[{effectIndex}].contactMode",
+                    ContentValidationErrorCode.SharedContactDependencyInvalid,
+                    "Shared-contact damage requires a same-target positive-damage dependency.");
+            }
         }
 
         private void ValidateEffect<TDefinition>(RecordSource<TDefinition> source, EffectDefinition effect, string path)
@@ -1402,6 +1422,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 case DamageEffectDefinition damage:
                     RequireDefinedEnum(source, damage.Element, path + ".elementId", "Damage element");
                     RequireDefinedEnum(source, damage.Drain, path + ".drain", "Damage drain mode");
+                    RequireDefinedEnum(source, damage.ContactMode, path + ".contactMode", "Damage contact mode");
                     RequireNonNegative(source, damage.Power, path + ".power", "Damage power");
                     RequirePercentage(source, damage.Accuracy, path + ".accuracy", "Damage accuracy");
                     ValidateCritical(source, damage.Critical, path + ".critical");

@@ -357,7 +357,8 @@
                 "distribution": { "enum": ["fixed", "uniform"] }
               }
             },
-            "drain": { "enum": ["none", "hp", "sp"] }
+            "drain": { "enum": ["none", "hp", "sp"] },
+            "contactMode": { "enum": ["independent", "shared_contact"] }
           }
         }
       ],

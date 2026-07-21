@@ -141,6 +141,11 @@ internal sealed class OrderedEffectExecutor
                     continue;
                 }
 
+                context = context with
+                {
+                    DependencyEvaluation = dependencyEvaluation
+                };
+
                 TargetLifeState? requiredLifeState = RequiredTargetLifeState(
                     effect,
                     target,
@@ -243,9 +248,19 @@ internal sealed class OrderedEffectExecutor
 
         for (int index = 0; index < effects.Count; index++)
         {
+            bool sharedContact = effects[index] is DamageEffectDefinition
+            {
+                ContactMode: DamageContactMode.SharedContact
+            };
             EffectDependencyDefinition? dependency = effects[index].Dependency;
             if (dependency is null)
             {
+                if (sharedContact)
+                {
+                    throw new InvalidOperationException(
+                        "Shared-contact damage requires a same-target positive-damage dependency.");
+                }
+
                 continue;
             }
 
@@ -266,6 +281,14 @@ internal sealed class OrderedEffectExecutor
             {
                 throw new InvalidOperationException(
                     $"Positive-damage dependency source '{dependency.SourceEffectId}' is not a damage effect.");
+            }
+
+            if (sharedContact &&
+                (dependency.Requirement != EffectDependencyRequirement.PositiveDamage ||
+                 dependency.Scope != EffectDependencyScope.SameTarget))
+            {
+                throw new InvalidOperationException(
+                    "Shared-contact damage requires a same-target positive-damage dependency.");
             }
         }
 

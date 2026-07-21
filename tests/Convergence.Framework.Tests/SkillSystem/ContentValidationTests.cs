@@ -413,6 +413,55 @@ public sealed class ContentValidationTests
     }
 
     [Fact]
+    public void SharedContactRequiresSameTargetPositiveDamageDependency()
+    {
+        EffectLocalId sourceId = EffectLocalId.Parse("primary_hit");
+        DamageEffectDefinition Source() => new(
+            DamageElement.Physical, 10, 100, new NeverCriticalDefinition(),
+            new HitCountDefinition(1, 1))
+        {
+            EffectId = sourceId
+        };
+        DamageEffectDefinition Shared(EffectDependencyDefinition? dependency = null) => new(
+            DamageElement.Fire, 10, 100, new NeverCriticalDefinition(),
+            new HitCountDefinition(1, 1))
+        {
+            ContactMode = DamageContactMode.SharedContact,
+            Dependency = dependency
+        };
+
+        SkillDefinition missing = ActiveSkill("shared_missing_dependency", [Source(), Shared()]);
+        SkillDefinition wrongRequirement = ActiveSkill(
+            "shared_wrong_requirement",
+            [Source(), Shared(new EffectDependencyDefinition(
+                sourceId,
+                EffectDependencyRequirement.Succeeded,
+                EffectDependencyScope.SameTarget))]);
+        SkillDefinition wrongScope = ActiveSkill(
+            "shared_wrong_scope",
+            [Source(), Shared(new EffectDependencyDefinition(
+                sourceId,
+                EffectDependencyRequirement.PositiveDamage,
+                EffectDependencyScope.AnyTarget))]);
+        SkillDefinition valid = ActiveSkill(
+            "shared_valid",
+            [Source(), Shared(new EffectDependencyDefinition(
+                sourceId,
+                EffectDependencyRequirement.PositiveDamage,
+                EffectDependencyScope.SameTarget))]);
+
+        ContentValidationResult result = _validator.Validate(Request(
+            ComprehensiveRegistrations(),
+            skills: [missing, wrongRequirement, wrongScope, valid]));
+
+        Assert.Equal(3, result.Errors.Count(error =>
+            error.Code == ContentValidationErrorCode.SharedContactDependencyInvalid));
+        Assert.DoesNotContain(result.Errors, error =>
+            error.RecordId == valid.Id &&
+            error.Code == ContentValidationErrorCode.SharedContactDependencyInvalid);
+    }
+
+    [Fact]
     public void GrantCharge_RejectsUndefinedProgrammaticChargeKind()
     {
         SkillDefinition skill = ActiveSkill(

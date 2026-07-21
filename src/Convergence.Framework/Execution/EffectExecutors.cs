@@ -402,8 +402,21 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
         ElementalAffinity affinity,
         RuntimeActorState? affectedActor = null,
         ContentId? affectedResourceId = null,
-        decimal appliedResourceDelta = 0m) =>
-        new(
+        decimal appliedResourceDelta = 0m)
+    {
+        var definition = (DamageEffectDefinition)context.Effect;
+        EffectLocalId? contactSourceEffectId = null;
+        int? contactSourceEffectIndex = null;
+        if (definition.ContactMode == DamageContactMode.SharedContact)
+        {
+            EffectDependencyEvaluation dependency = context.DependencyEvaluation ??
+                throw new InvalidOperationException(
+                    "Shared-contact damage executed without dependency evidence.");
+            contactSourceEffectId = dependency.SourceEffectId;
+            contactSourceEffectIndex = dependency.SourceEffectIndex;
+        }
+
+        return new DamageHitExecutionEvidence(
             context.Request.SourceId,
             context.Actor.InstanceId,
             target.InstanceId,
@@ -412,7 +425,11 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             affinity,
             affectedActor?.InstanceId,
             affectedResourceId,
-            appliedResourceDelta);
+            appliedResourceDelta,
+            definition.ContactMode,
+            contactSourceEffectId,
+            contactSourceEffectIndex);
+    }
 
     private static IReadOnlyList<ExecutionResourceChange> ApplyDrain(
         DamageDrainMode drain,
