@@ -280,9 +280,9 @@ zero stage delta, and non-positive charge multipliers.
 
 ### O2-R12: Execute same-target on-hit riders
 
-**State:** pending
+**State:** complete in this checkpoint
 
-- Implement `damage_landed` dependency evaluation per target.
+- Prove `positive_damage` dependency evaluation per target.
 - Roll ailment or condition chance only after the dependency succeeds.
 - Cover Poison Needle behavior for Miss, Null, Resist, Weak, defeat, Repel,
   Absorb, multi-hit, and multi-target actions.

@@ -975,6 +975,194 @@ public sealed class ActiveSkillExecutionTests
         Assert.Equal(TargetLifeState.Dead, result.Effects[1].RequiredTargetLifeState);
     }
 
+    [Theory]
+    [InlineData(ElementalAffinity.Normal, false, 0, EffectExecutionOutcome.Skipped, TurnEconomyOutcome.Miss, 0)]
+    [InlineData(ElementalAffinity.Null, true, 10, EffectExecutionOutcome.Skipped, TurnEconomyOutcome.Null, 0)]
+    [InlineData(ElementalAffinity.Normal, true, 0, EffectExecutionOutcome.Skipped, TurnEconomyOutcome.Normal, 0)]
+    [InlineData(ElementalAffinity.Resist, true, 10, EffectExecutionOutcome.Success, TurnEconomyOutcome.Normal, 1)]
+    [InlineData(ElementalAffinity.Weak, true, 10, EffectExecutionOutcome.Success, TurnEconomyOutcome.Weakness, 1)]
+    public void Execute_PositiveDamageRiderUsesCommittedSameTargetDamage(
+        ElementalAffinity affinity,
+        bool hit,
+        int damage,
+        EffectExecutionOutcome expectedRiderOutcome,
+        TurnEconomyOutcome expectedActionOutcome,
+        int expectedAilmentRolls)
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor(
+            "target",
+            EnemyTeam,
+            defense: new CombatDefenseProfile(
+                [new(DamageElement.Physical, affinity)]));
+        var ailmentPolicy = new RecordingAilmentPolicy(applies: true);
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damage: _ => [new DamageHitResolution(hit, damage)],
+            ailmentPolicy: ailmentPolicy)).Execute(
+                Request(PositiveDamageAilmentSkill(), actor, [actor, target], [target.InstanceId]));
+
+        EffectExecutionResult rider = result.Effects[1];
+        Assert.Equal(expectedRiderOutcome, rider.Outcome);
+        Assert.Equal(expectedActionOutcome, result.TurnEconomy.Outcome);
+        Assert.Equal(expectedAilmentRolls, ailmentPolicy.CallCount);
+        Assert.Equal(expectedAilmentRolls == 1, target.HasAilment(Poison));
+        EffectDependencyEvaluation evaluation = Assert.IsType<EffectDependencyEvaluation>(
+            rider.DependencyEvaluation);
+        Assert.Equal(expectedAilmentRolls == 1, evaluation.Satisfied);
+        Assert.Equal(
+            expectedAilmentRolls == 1
+                ? EffectDependencyEvaluationReason.Satisfied
+                : EffectDependencyEvaluationReason.PositiveDamageNotDealt,
+            evaluation.Reason);
+    }
+
+    [Fact]
+    public void Execute_PositiveDamageRiderSkipsAilmentWhenPrimaryDefeatsTarget()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam, hp: 10);
+        var ailmentPolicy = new RecordingAilmentPolicy(applies: true);
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damage: _ => [new DamageHitResolution(true, 10)],
+            ailmentPolicy: ailmentPolicy)).Execute(
+                Request(PositiveDamageAilmentSkill(), actor, [actor, target], [target.InstanceId]));
+
+        EffectExecutionResult rider = result.Effects[1];
+        Assert.True(target.IsDefeated);
+        Assert.False(target.HasAilment(Poison));
+        Assert.Equal(0, ailmentPolicy.CallCount);
+        Assert.Equal(EffectExecutionOutcome.Skipped, rider.Outcome);
+        Assert.Equal(EffectExecutionSkipReason.TargetLifeStateIneligible, rider.SkipReason);
+        Assert.True(rider.DependencyEvaluation!.Satisfied);
+    }
+
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(true, 1)]
+    public void Execute_PositiveDamageDependencyRunsBeforeRiderConditionRandomness(
+        bool primaryHit,
+        int expectedRolls)
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        var chancePolicy = new RecordingChancePolicy(result: true);
+        var ailmentPolicy = new RecordingAilmentPolicy(applies: true);
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damage: _ => [new DamageHitResolution(primaryHit, primaryHit ? 10 : 0)],
+            ailmentPolicy: ailmentPolicy,
+            chancePolicy: chancePolicy)).Execute(
+                Request(
+                    PositiveDamageAilmentSkill(
+                        riderWhen: new ChanceConditionDefinition(50)),
+                    actor,
+                    [actor, target],
+                    [target.InstanceId]));
+
+        Assert.Equal(expectedRolls, chancePolicy.CallCount);
+        Assert.Equal(expectedRolls, ailmentPolicy.CallCount);
+        Assert.Equal(expectedRolls == 1, target.HasAilment(Poison));
+        Assert.Equal(
+            expectedRolls == 1
+                ? EffectExecutionOutcome.Success
+                : EffectExecutionOutcome.Skipped,
+            result.Effects[1].Outcome);
+    }
+
+    [Theory]
+    [InlineData(ElementalAffinity.Repel)]
+    [InlineData(ElementalAffinity.Absorb)]
+    public void Execute_InterruptingAffinityNeverDispatchesPositiveDamageRider(
+        ElementalAffinity affinity)
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor(
+            "target",
+            EnemyTeam,
+            hp: 50,
+            defense: new CombatDefenseProfile(
+                [new(DamageElement.Physical, affinity)]));
+        var ailmentPolicy = new RecordingAilmentPolicy(applies: true);
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damage: _ => [new DamageHitResolution(true, 10)],
+            ailmentPolicy: ailmentPolicy)).Execute(
+                Request(PositiveDamageAilmentSkill(), actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Interrupted, result.Status);
+        Assert.Single(result.Effects);
+        Assert.Equal(affinity == ElementalAffinity.Repel
+            ? TurnEconomyOutcome.Repel
+            : TurnEconomyOutcome.Absorb, result.TurnEconomy.Outcome);
+        Assert.Equal(0, ailmentPolicy.CallCount);
+        Assert.False(target.HasAilment(Poison));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Execute_MultiHitPositiveDamageDispatchesRiderOncePerTarget(
+        bool bothHitsDealDamage)
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        var ailmentPolicy = new RecordingAilmentPolicy(applies: true);
+        IReadOnlyList<DamageHitResolution> hits = bothHitsDealDamage
+            ? [new DamageHitResolution(true, 5), new DamageHitResolution(true, 5)]
+            : [new DamageHitResolution(false, 0), new DamageHitResolution(true, 5)];
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damage: _ => hits,
+            ailmentPolicy: ailmentPolicy)).Execute(
+                Request(PositiveDamageAilmentSkill(hitCount: 2), actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(2, result.Effects[0].DamageHits.Count);
+        Assert.Equal(1, ailmentPolicy.CallCount);
+        Assert.True(target.HasAilment(Poison));
+        Assert.Equal(EffectExecutionOutcome.Success, result.Effects[1].Outcome);
+    }
+
+    [Fact]
+    public void Execute_MultiTargetPositiveDamageRiderIsScopedPerTarget()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState hitTarget = Actor("hit_target", EnemyTeam);
+        RuntimeActorState missedTarget = Actor("missed_target", EnemyTeam);
+        var ailmentPolicy = new RecordingAilmentPolicy(applies: true);
+        TargetingDefinition targeting = new(
+            TargetRelation.Enemy,
+            TargetSelection.All,
+            TargetLifeState.Alive,
+            false);
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damage: request => request.Target.InstanceId == hitTarget.InstanceId
+                ? [new DamageHitResolution(true, 10)]
+                : [new DamageHitResolution(false, 0)],
+            ailmentPolicy: ailmentPolicy)).Execute(
+                Request(
+                    PositiveDamageAilmentSkill(targeting: targeting),
+                    actor,
+                    [actor, hitTarget, missedTarget]));
+
+        Assert.Equal(1, ailmentPolicy.CallCount);
+        Assert.Equal([hitTarget.InstanceId], ailmentPolicy.TargetIds);
+        Assert.True(hitTarget.HasAilment(Poison));
+        Assert.False(missedTarget.HasAilment(Poison));
+        EffectExecutionResult[] riders = result.Effects
+            .Where(effect => effect.EffectIndex == 1)
+            .ToArray();
+        Assert.Equal(2, riders.Length);
+        Assert.Equal(EffectExecutionOutcome.Success, riders.Single(effect =>
+            effect.TargetId == hitTarget.InstanceId).Outcome);
+        EffectExecutionResult skipped = riders.Single(effect =>
+            effect.TargetId == missedTarget.InstanceId);
+        Assert.Equal(EffectExecutionOutcome.Skipped, skipped.Outcome);
+        Assert.Equal(EffectExecutionSkipReason.DependencyUnsatisfied, skipped.SkipReason);
+    }
+
     [Fact]
     public void Execute_InvalidProgrammaticDependencySequenceRejectsAtomically()
     {
@@ -2092,6 +2280,35 @@ public sealed class ActiveSkillExecutionTests
 
     private static HitCountDefinition FixedHits() => new(1, 1);
 
+    private static SkillDefinition PositiveDamageAilmentSkill(
+        int hitCount = 1,
+        TargetingDefinition? targeting = null,
+        ConditionDefinition? riderWhen = null)
+    {
+        EffectLocalId sourceId = EffectLocalId.Parse("needle_hit");
+        return ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Physical,
+                50,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(hitCount, hitCount))
+            {
+                EffectId = sourceId
+            },
+            new ApplyAilmentEffectDefinition(Poison, 50, When: riderWhen)
+            {
+                EffectId = EffectLocalId.Parse("poison_rider"),
+                Dependency = new EffectDependencyDefinition(
+                    sourceId,
+                    EffectDependencyRequirement.PositiveDamage,
+                    EffectDependencyScope.SameTarget)
+            }
+        ],
+        targeting: targeting);
+    }
+
     private static AilmentDefinition Ailment(ContentId id, ContentId? exclusivity = null) =>
         new(
             id,
@@ -2114,13 +2331,15 @@ public sealed class ActiveSkillExecutionTests
         IEnumerable<KeyValuePair<ContentId, ICustomConditionHandler>>? customConditions = null,
         IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
         IBattleAilmentApplicationService? ailmentApplications = null,
+        IAilmentApplicationPolicy? ailmentPolicy = null,
+        IChanceExecutionPolicy? chancePolicy = null,
         IActionOutcomeAggregationPolicy? actionOutcomes = null) =>
         new(
             ailments ?? new TestAilmentRepository([Ailment(Poison)]),
             damagePolicy ?? new DelegateDamagePolicy(damage ?? (_ => [new DamageHitResolution(true, 10)])),
             new DelegateInstantDeathPolicy(instantDeath ?? (_ => true)),
-            new AlwaysApplyAilmentPolicy(),
-            new AlwaysChancePolicy(),
+            ailmentPolicy ?? new AlwaysApplyAilmentPolicy(),
+            chancePolicy ?? new AlwaysChancePolicy(),
             new PowerAmountPolicy(),
             new DelegateRandomTargetPolicy(randomTargets ?? ((candidates, count, _) =>
                 candidates.Take(count.Minimum).ToArray())),
@@ -2208,6 +2427,21 @@ public sealed class ActiveSkillExecutionTests
         public bool ShouldApply(AilmentApplicationPolicyRequest request) => true;
     }
 
+    private sealed class RecordingAilmentPolicy(bool applies) : IAilmentApplicationPolicy
+    {
+        private readonly List<RuntimeInstanceId> _targetIds = [];
+
+        public int CallCount { get; private set; }
+        public IReadOnlyList<RuntimeInstanceId> TargetIds => _targetIds.AsReadOnly();
+
+        public bool ShouldApply(AilmentApplicationPolicyRequest request)
+        {
+            CallCount++;
+            _targetIds.Add(request.Target.InstanceId);
+            return applies;
+        }
+    }
+
     private sealed class RecordingAilmentApplicationService : IBattleAilmentApplicationService
     {
         public int CallCount { get; private set; }
@@ -2228,6 +2462,17 @@ public sealed class ActiveSkillExecutionTests
     private sealed class AlwaysChancePolicy : IChanceExecutionPolicy
     {
         public bool Roll(ChancePolicyRequest request) => true;
+    }
+
+    private sealed class RecordingChancePolicy(bool result) : IChanceExecutionPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public bool Roll(ChancePolicyRequest request)
+        {
+            CallCount++;
+            return result;
+        }
     }
 
     private sealed class PowerAmountPolicy : IPowerAmountPolicy
