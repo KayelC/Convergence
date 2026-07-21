@@ -550,6 +550,31 @@ public sealed class BattleEncounterRunnerTests
         Assert.Equal(1, lifecycle.BattleEndCalls);
     }
 
+    [Fact]
+    public void Runner_ContainsMalformedTurnConsumptionBeforeEconomyOrTurnEndMutation()
+    {
+        BattleEncounterParticipant player = Participant("malformed_consumption_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(
+                new ActionTurnConsumption(ActionTurnConsumptionKind.TurnEconomy)));
+
+        BattleEncounterResult result = Run(
+            [player, Participant("malformed_consumption_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99));
+
+        AssertPortFault(result, BattleEncounterFaultCode.TurnHandlerExecutionFailed, "turn-handler");
+        Assert.Single(handler.Requests);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

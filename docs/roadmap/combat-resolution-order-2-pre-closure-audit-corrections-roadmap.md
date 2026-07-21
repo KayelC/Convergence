@@ -36,14 +36,16 @@ Action Token strategy.
 
 ### O2-R25: Validate host turn-consumption contracts
 
-**State:** open
+**State:** implemented pending review
 
-- Give `ActionTurnConsumption` validated legal shapes.
-- Validate `TurnEconomyResolution.Outcome` and preserve the invariant through
-  record cloning or remove unsafe cloning from the contract.
-- Reject undefined encounter command statuses and requested outcomes.
-- Prove malformed host results fault or reject before economy and lifecycle
-  mutation; preserve every legal supplied and custom-economy path.
+- `ActionTurnConsumption` and `TurnEconomyResolution` now validate construction
+  and expose get-only state, so record cloning cannot create a different shape.
+- Encounter command results reject undefined statuses/outcomes, missing turn
+  consumption, invalid winning-team IDs, and null event entries.
+- Supplied economies handle every legal kind explicitly and throw rather than
+  reinterpret an impossible future value.
+- Encounter regression coverage proves malformed host construction becomes a
+  typed turn-handler fault before economy or turn-end lifecycle mutation.
 
 **Planned commit:** `battle: validate host turn consumption contracts`
 

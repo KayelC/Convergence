@@ -334,9 +334,31 @@ public sealed record BattleEncounterCommandResult
         ContentId? winningTeamId = null,
         string? faultMessage = null)
     {
+        if (!Enum.IsDefined(status))
+        {
+            throw new ArgumentOutOfRangeException(nameof(status));
+        }
+
+        ArgumentNullException.ThrowIfNull(turnConsumption);
+        if (requestedOutcome is BattleEncounterOutcome outcome && !Enum.IsDefined(outcome))
+        {
+            throw new ArgumentOutOfRangeException(nameof(requestedOutcome));
+        }
+
+        if (winningTeamId is ContentId teamId && !teamId.IsValid)
+        {
+            throw new ArgumentException("Winning team ID must be valid when supplied.", nameof(winningTeamId));
+        }
+
+        BattleEncounterEvent[] eventSnapshot = events?.ToArray() ?? [];
+        if (eventSnapshot.Any(battleEvent => battleEvent is null))
+        {
+            throw new ArgumentException("Encounter command events cannot contain null entries.", nameof(events));
+        }
+
         Status = status;
         TurnConsumption = turnConsumption;
-        Events = Array.AsReadOnly(events?.ToArray() ?? []);
+        Events = Array.AsReadOnly(eventSnapshot);
         RequestedOutcome = requestedOutcome;
         WinningTeamId = winningTeamId;
         FaultMessage = faultMessage;

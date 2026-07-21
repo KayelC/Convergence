@@ -2591,9 +2591,7 @@ Convergence.Execution.ActionTurnConsumption.ActionTurnConsumption(Convergence.Ex
 Convergence.Execution.ActionTurnConsumption.Deconstruct(out Convergence.Execution.ActionTurnConsumptionKind Kind, out Convergence.Execution.TurnEconomyResolution? TurnEconomy) -> void
 Convergence.Execution.ActionTurnConsumption.Equals(Convergence.Execution.ActionTurnConsumption? other) -> bool
 Convergence.Execution.ActionTurnConsumption.Kind.get -> Convergence.Execution.ActionTurnConsumptionKind
-Convergence.Execution.ActionTurnConsumption.Kind.init -> void
 Convergence.Execution.ActionTurnConsumption.TurnEconomy.get -> Convergence.Execution.TurnEconomyResolution?
-Convergence.Execution.ActionTurnConsumption.TurnEconomy.init -> void
 Convergence.Execution.ActionTurnConsumptionKind
 Convergence.Execution.ActionTurnConsumptionKind.None = 0 -> Convergence.Execution.ActionTurnConsumptionKind
 Convergence.Execution.ActionTurnConsumptionKind.Normal = 1 -> Convergence.Execution.ActionTurnConsumptionKind
@@ -3652,13 +3650,10 @@ Convergence.Execution.TurnEconomyOutcome.Weakness = 2 -> Convergence.Execution.T
 Convergence.Execution.TurnEconomyResolution
 Convergence.Execution.TurnEconomyResolution.<Clone>$() -> Convergence.Execution.TurnEconomyResolution!
 Convergence.Execution.TurnEconomyResolution.AnyCritical.get -> bool
-Convergence.Execution.TurnEconomyResolution.AnyCritical.init -> void
 Convergence.Execution.TurnEconomyResolution.Deconstruct(out Convergence.Execution.TurnEconomyOutcome Outcome, out bool AnyCritical, out bool TerminatesPhase) -> void
 Convergence.Execution.TurnEconomyResolution.Equals(Convergence.Execution.TurnEconomyResolution? other) -> bool
 Convergence.Execution.TurnEconomyResolution.Outcome.get -> Convergence.Execution.TurnEconomyOutcome
-Convergence.Execution.TurnEconomyResolution.Outcome.init -> void
 Convergence.Execution.TurnEconomyResolution.TerminatesPhase.get -> bool
-Convergence.Execution.TurnEconomyResolution.TerminatesPhase.init -> void
 Convergence.Execution.TurnEconomyResolution.TurnEconomyResolution(Convergence.Execution.TurnEconomyOutcome Outcome, bool AnyCritical, bool TerminatesPhase) -> void
 Convergence.Fusion.AdjacentTierFusionMutationPolicy
 Convergence.Fusion.AdjacentTierFusionMutationPolicy.AdjacentTierFusionMutationPolicy(Convergence.Content.ContentId id, int chancePercent) -> void

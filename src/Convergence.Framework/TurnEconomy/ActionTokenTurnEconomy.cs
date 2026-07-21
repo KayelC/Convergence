@@ -72,15 +72,18 @@ public sealed class ActionTokenTurnEconomy : IBattleTurnEconomy
             case ActionTurnConsumptionKind.Pass:
                 Pass();
                 return;
-            case ActionTurnConsumptionKind.TurnEconomy when consumption.TurnEconomy is not null:
-                ConsumeAction(consumption.TurnEconomy);
+            case ActionTurnConsumptionKind.TurnEconomy:
+                ConsumeAction(consumption.TurnEconomy ?? throw new InvalidOperationException(
+                    "Turn-economy consumption is missing its resolution."));
                 return;
             case ActionTurnConsumptionKind.TerminatePhase:
                 TerminatePhase();
                 return;
-            default:
+            case ActionTurnConsumptionKind.Normal:
                 ConsumeAction(new TurnEconomyResolution(TurnEconomyOutcome.Normal, false, false));
                 return;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(consumption));
         }
     }
 
@@ -99,27 +102,38 @@ public sealed class ActionTokenTurnEconomy : IBattleTurnEconomy
             return;
         }
 
-        if (resolution.Outcome is TurnEconomyOutcome.Miss or TurnEconomyOutcome.Null)
+        switch (resolution.Outcome)
         {
-            ConsumeTokens(2);
-            return;
+            case TurnEconomyOutcome.Miss:
+            case TurnEconomyOutcome.Null:
+                ConsumeTokens(2);
+                return;
+            case TurnEconomyOutcome.Weakness:
+            case TurnEconomyOutcome.Critical:
+                if (_fullTokens > 0)
+                {
+                    _fullTokens--;
+                    _partialTokens++;
+                }
+                else
+                {
+                    _partialTokens--;
+                }
+
+                return;
+            case TurnEconomyOutcome.Normal:
+                ConsumeNormalAction();
+                return;
+            case TurnEconomyOutcome.Repel:
+            case TurnEconomyOutcome.Absorb:
+                throw new InvalidOperationException("Terminating outcomes must be handled before normal consumption.");
+            default:
+                throw new ArgumentOutOfRangeException(nameof(resolution));
         }
+    }
 
-        if (resolution.Outcome is TurnEconomyOutcome.Weakness or TurnEconomyOutcome.Critical)
-        {
-            if (_fullTokens > 0)
-            {
-                _fullTokens--;
-                _partialTokens++;
-            }
-            else
-            {
-                _partialTokens--;
-            }
-
-            return;
-        }
-
+    private void ConsumeNormalAction()
+    {
         if (_partialTokens > 0)
         {
             _partialTokens--;

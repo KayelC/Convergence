@@ -72,14 +72,26 @@ public sealed class StandardActionTurnEconomy : IBattleTurnEconomy
     public void Apply(ActionTurnConsumption consumption)
     {
         ArgumentNullException.ThrowIfNull(consumption);
-        if (!HasTurnsRemaining() || consumption.Kind == ActionTurnConsumptionKind.None)
+        if (!HasTurnsRemaining())
         {
             return;
         }
 
-        _remainingActions = consumption.Kind == ActionTurnConsumptionKind.TerminatePhase
-            ? 0
-            : _remainingActions - 1;
+        switch (consumption.Kind)
+        {
+            case ActionTurnConsumptionKind.None:
+                return;
+            case ActionTurnConsumptionKind.TerminatePhase:
+                _remainingActions = 0;
+                return;
+            case ActionTurnConsumptionKind.Normal:
+            case ActionTurnConsumptionKind.Pass:
+            case ActionTurnConsumptionKind.TurnEconomy:
+                _remainingActions--;
+                return;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(consumption));
+        }
     }
 }
 

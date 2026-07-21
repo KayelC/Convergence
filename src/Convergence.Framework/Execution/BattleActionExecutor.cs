@@ -71,10 +71,36 @@ public enum BattleActionEventKind
     HostActionRequested
 }
 
-public sealed record ActionTurnConsumption(
-    ActionTurnConsumptionKind Kind,
-    TurnEconomyResolution? TurnEconomy = null)
+public sealed record ActionTurnConsumption
 {
+    public ActionTurnConsumption(
+        ActionTurnConsumptionKind Kind,
+        TurnEconomyResolution? TurnEconomy = null)
+    {
+        if (!Enum.IsDefined(Kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(Kind));
+        }
+
+        if (Kind == ActionTurnConsumptionKind.TurnEconomy && TurnEconomy is null)
+        {
+            throw new ArgumentNullException(nameof(TurnEconomy));
+        }
+
+        if (Kind != ActionTurnConsumptionKind.TurnEconomy && TurnEconomy is not null)
+        {
+            throw new ArgumentException(
+                "Only turn-economy consumption may carry a turn-economy resolution.",
+                nameof(TurnEconomy));
+        }
+
+        this.Kind = Kind;
+        this.TurnEconomy = TurnEconomy;
+    }
+
+    public ActionTurnConsumptionKind Kind { get; }
+    public TurnEconomyResolution? TurnEconomy { get; }
+
     public static ActionTurnConsumption None { get; } = new(ActionTurnConsumptionKind.None);
     public static ActionTurnConsumption Normal { get; } = new(ActionTurnConsumptionKind.Normal);
     public static ActionTurnConsumption Pass { get; } = new(ActionTurnConsumptionKind.Pass);
@@ -82,6 +108,14 @@ public sealed record ActionTurnConsumption(
 
     public static ActionTurnConsumption FromTurnEconomy(TurnEconomyResolution resolution) =>
         new(ActionTurnConsumptionKind.TurnEconomy, resolution);
+
+    public void Deconstruct(
+        out ActionTurnConsumptionKind Kind,
+        out TurnEconomyResolution? TurnEconomy)
+    {
+        Kind = this.Kind;
+        TurnEconomy = this.TurnEconomy;
+    }
 }
 
 public sealed record BattleActionDiagnostic(

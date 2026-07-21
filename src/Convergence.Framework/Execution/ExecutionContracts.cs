@@ -549,7 +549,37 @@ internal sealed record ResolvedSkillCost(
     decimal Amount,
     bool CanReduceToZero);
 
-public sealed record TurnEconomyResolution(TurnEconomyOutcome Outcome, bool AnyCritical, bool TerminatesPhase);
+public sealed record TurnEconomyResolution
+{
+    public TurnEconomyResolution(
+        TurnEconomyOutcome Outcome,
+        bool AnyCritical,
+        bool TerminatesPhase)
+    {
+        if (!Enum.IsDefined(Outcome))
+        {
+            throw new ArgumentOutOfRangeException(nameof(Outcome));
+        }
+
+        this.Outcome = Outcome;
+        this.AnyCritical = AnyCritical;
+        this.TerminatesPhase = TerminatesPhase;
+    }
+
+    public TurnEconomyOutcome Outcome { get; }
+    public bool AnyCritical { get; }
+    public bool TerminatesPhase { get; }
+
+    public void Deconstruct(
+        out TurnEconomyOutcome Outcome,
+        out bool AnyCritical,
+        out bool TerminatesPhase)
+    {
+        Outcome = this.Outcome;
+        AnyCritical = this.AnyCritical;
+        TerminatesPhase = this.TerminatesPhase;
+    }
+}
 
 public sealed record SkillExecutionResult
 {
