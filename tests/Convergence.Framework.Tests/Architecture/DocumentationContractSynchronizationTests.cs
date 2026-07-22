@@ -8,6 +8,49 @@ namespace Convergence.Framework.Tests.Architecture;
 public sealed class DocumentationContractSynchronizationTests
 {
     [Fact]
+    public void CurrentContentGuidance_UsesActiveSchemaAndOrderTwoCorrectionChain()
+    {
+        int expectedVersion = Directory
+            .EnumerateFiles(RepositoryPath("content"), "*.manifest.json", SearchOption.AllDirectories)
+            .Select(path =>
+            {
+                using JsonDocument manifest = JsonDocument.Parse(File.ReadAllText(path));
+                return manifest.RootElement.GetProperty("schemaVersion").GetInt32();
+            })
+            .Distinct()
+            .Single();
+
+        string statModifierGuide = File.ReadAllText(
+            RepositoryPath("docs", "developer-guide", "stat-modifier-policies.md"));
+        string productRoadmap = File.ReadAllText(
+            RepositoryPath("docs", "roadmap", "product-roadmap.md"));
+        string orderedEffectsDecision = File.ReadAllText(
+            RepositoryPath("docs", "decisions", "ordered-secondary-effects.md"));
+
+        AssertSingleCurrentVersionClaim(
+            statModifierGuide,
+            @"Schema-v(?<version>\d+) content selects",
+            expectedVersion,
+            "stat-modifier developer guide");
+        AssertSingleCurrentVersionClaim(
+            productRoadmap,
+            @"Active contracts use[^.\r\n]*schema-v(?<version>\d+)",
+            expectedVersion,
+            "product-roadmap active vocabulary");
+        AssertSingleCurrentVersionClaim(
+            productRoadmap,
+            @"strict Draft 2020-12 schema-v(?<version>\d+) set",
+            expectedVersion,
+            "product-roadmap release foundations");
+        Assert.DoesNotContain(
+            "**Implementation state:** complete through O2-R16",
+            orderedEffectsDecision,
+            StringComparison.Ordinal);
+        Assert.Contains("O2-R30 through O2-R34", orderedEffectsDecision, StringComparison.Ordinal);
+        Assert.Contains("O2-R30 through O2-R34", productRoadmap, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void CurrentAuthorityDocuments_UseCompiledRuntimeSaveContractVersion()
     {
         int expectedVersion = RuntimeSaveGameSnapshot.CurrentContractVersion;

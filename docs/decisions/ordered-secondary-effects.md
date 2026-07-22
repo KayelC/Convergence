@@ -4,7 +4,7 @@
 
 **Decision date:** 21 July 2026
 
-**Implementation state:** complete through O2-R16
+**Implementation state:** implemented through O2-R31; verification pending O2-R34
 
 ## Context
 
@@ -145,5 +145,7 @@ poison_rider:
 - [Fresh Order 2 Source Review](../reviews/combat-resolution-order-2-fresh-source-review-2026-07-21.md)
 - [Ordered Effects Closure Review](../reviews/combat-resolution-order-2-ordered-effects-closure-review-2026-07-21.md)
 
-O2-R16 reconciled the three audience documents with the completed source and
-closed Order 2.
+O2-R16 completed and verified the original ordered-secondary-effects scope.
+Later Order 2 reviews expanded its complete-action and validation coverage.
+O2-R30 through O2-R34 preserve the current correction and independent
+re-verification chain without changing this decision's approved mechanics.

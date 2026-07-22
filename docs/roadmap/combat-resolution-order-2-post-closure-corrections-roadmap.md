@@ -1,6 +1,6 @@
 # Order 2 Post-Closure Corrections Roadmap
 
-**Status:** active; O2-R32 complete, contract-label reconciliation pending
+**Status:** active; O2-R33 complete, independent source re-evaluation pending
 
 **Started:** 22 July 2026
 
@@ -86,7 +86,7 @@ A documentation-contract assertion guards that vocabulary boundary.
 
 ### O2-R33: Reconcile active contract and milestone labels
 
-**State:** pending
+**State:** complete
 
 - Update current-authority references from schema v5 to schema v6.
 - Keep historical checkpoint statements at their historical versions.
@@ -99,6 +99,14 @@ A documentation-contract assertion guards that vocabulary boundary.
   checked without hardcoding historical prose.
 
 **Commit:** `docs: reconcile order 2 contract state`
+
+Current developer and product guidance now derives its schema claim from the
+active content manifests and names schema v6. Historical schema-v3 and
+schema-v5 checkpoint statements remain intact. The ordered-effects decision
+preserves O2-R16 as its original implementation milestone while identifying
+O2-R30 through O2-R34 as the current correction chain. Nine focused
+documentation tests and the complete 1,457-test Release suite passed with zero
+failures or skips.
 
 ### O2-R34: Independently re-evaluate Order 2
 

@@ -18,7 +18,7 @@ stat-modifier family supplies persistent staged, timed exclusive, and
 independently timed contribution policies. The closure record is maintained
 under [Completed Order 1](documentation-completion-roadmap.md#completed-order-1).
 
-The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v5, and save-v11 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, aggregate restoration derives the Active Hosted Entity from the canonical party roster, and retained stat modifiers and charges bind to their authored policies during validation and restore.
+The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v6, and save-v11 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, aggregate restoration derives the Active Hosted Entity from the canonical party roster, and retained stat modifiers and charges bind to their authored policies during validation and restore.
 
 ## Completed Actor Design Correction
 
@@ -70,7 +70,7 @@ factory. Moon phase remains absent from the standard composition.
 
 ## Completed Release Foundations
 
-The strict Draft 2020-12 schema-v5 set now covers every implemented content
+The strict Draft 2020-12 schema-v6 set now covers every implemented content
 family, the authoring validator CLI combines schema and semantic gates, the
 0.1 API has a textual baseline, and a real Godot 4.7.1 sample proves source
 integration. The consolidated quality gate and independent final review are
@@ -85,12 +85,13 @@ Complete the active
 capability at a time. Source and tests establish current behavior; the project
 owner confirms intended mechanics and extension boundaries before an audience
 entry becomes `reviewed`. Existing prose must not be bulk-promoted. Orders 1
-and 2 are complete and owner-confirmed. The Order 2 pre-closure audit and
-custom-result correction are implemented and independently source-verified
-through O2-R29 under the
-[Pre-Closure Audit Corrections Roadmap](combat-resolution-order-2-pre-closure-audit-corrections-roadmap.md).
-The capability matrix now records no partial capability; Order 3 is the next
-collaborative documentation subject.
+and the confirmed Order 2 mechanics remain implemented. A fresh source review
+temporarily reopened Order 2 under O2-R30 through O2-R34 to correct direct-action
+registration preflight and current documentation drift. The capability matrix
+still records no partial implementation capability, but Order 3 remains blocked
+until the
+[Post-Closure Corrections Roadmap](combat-resolution-order-2-post-closure-corrections-roadmap.md)
+returns Order 2 to a source-verified state.
 
 ## Priority 2: Persistence Evolution
 
