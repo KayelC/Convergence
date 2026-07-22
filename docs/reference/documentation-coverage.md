@@ -59,8 +59,8 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 20 reviewed,
-32 existing_unreviewed, 16 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 18 reviewed,
+34 existing_unreviewed, 16 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|

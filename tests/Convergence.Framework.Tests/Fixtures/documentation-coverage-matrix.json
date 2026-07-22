@@ -169,14 +169,14 @@
         "reason": "The reviewed mechanics define neutral standard actions, every Action Token transition, exact pass precedence, finite liveness, and the scheduling boundary."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/turn-economy-policies.md"],
-        "reason": "The guide covers authored binding, direct replacement, typed Godot presentation, extension invariants, diagnostics, and scheduling limits."
+        "reason": "The guide covers authored binding, replacement, presentation, diagnostics, and scheduling, but its validated-command claim awaits the O3-R9 correction and source recheck."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/turn-economy-runtime.md"],
-        "reason": "The source-traced runtime page defines phase snapshot authority, transition validation, liveness thresholds, typed events, fault containment, and persistence scope."
+        "reason": "The runtime page defines the intended authority and liveness model, but intra-command continuity and supplied direct-mutation authority await O3-R8 and source recheck."
       }
     },
     {

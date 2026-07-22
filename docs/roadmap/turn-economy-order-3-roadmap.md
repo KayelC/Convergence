@@ -1,12 +1,14 @@
 # Turn Economy Order 3 Roadmap
 
-**Status:** complete
+**Status:** corrections required
 
 **Capability:** `turn_economy`
 
 **Starting revision:** `e4ab7d12`
 
 **Source review:** [Turn Economy Order 3 Source Review](../reviews/turn-economy-order-3-source-review-2026-07-22.md)
+
+**Independent recheck:** [Turn Economy Order 3 Independent Recheck](../reviews/turn-economy-order-3-independent-recheck-2026-07-22.md)
 
 ## Goal
 
@@ -46,6 +48,10 @@ actor order.
 | O3-R5 | `verified` | Complete direct transition, pass-precedence, liveness-threshold, replacement, and malformed-extension contract tests. | `test: complete turn economy contract matrix` |
 | O3-R6 | `verified` | Add the policy decision, developer guide, technical state machine, worked mechanics examples, indexes, and coverage evidence. | `docs: document turn economy policy family` |
 | O3-R7 | `verified` | Re-read corrected source and documents independently, correct the accepted API baseline, run the complete release gate, and close with no unresolved reachable defect. | `docs: verify turn economy order 3` |
+| O3-R8 | `pending` | Reject economy mutation after turn-start lifecycle or command handling and before the runner's accepted `Apply`. Reconcile supplied direct mutators with that authority. | `battle: guard command window economy authority` |
+| O3-R9 | `pending` | Enforce coherent command status, requested outcome, winning-team, fault, and turn-consumption combinations. | `battle: validate encounter command outcomes` |
+| O3-R10 | `pending` | Prevent public record cloning from replacing Framework-calculated turn consumption or introducing null command costs. | `battle: seal turn consumption results` |
+| O3-R11 | `pending` | Reconcile the technical sequence, developer guidance, reference content wording, executable matrices, API baseline, and fresh verification evidence. | `docs: reverify turn economy order 3` |
 
 Each checkpoint is an isolated green commit. A later checkpoint may append its
 commit and verification evidence here, but it must not rewrite an earlier
@@ -110,3 +116,16 @@ headless smoke. Active content was unchanged.
 
 The independent evidence and residual design boundaries are recorded in the
 [Turn Economy Order 3 Final Review](../reviews/turn-economy-order-3-final-review-2026-07-22.md).
+
+## Reopened Completion Gate
+
+A later source-first recheck at `e6949d7b` reproduced three reachable public
+integration defects: retained economy mutation can be double-applied inside a
+command window, contradictory executed/cancelled results can consume a turn and
+tick lifecycle, and record cloning can invalidate non-null or
+Framework-calculated turn consumption. The confirmed player-facing transition
+table is unchanged.
+
+O3-R8 through O3-R11 are now required before this capability returns to
+`complete`. Earlier completion records remain revision-specific history; they
+are not current closure authority.

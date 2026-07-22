@@ -234,7 +234,7 @@ three supported-boundary defects plus one authored-composition gap. The
 completed the independent source review and full release gate without finding
 an unresolved reachable mechanic defect.
 
-## Completed Order 3
+## Reopened Order 3
 
 The [Order 3 source review](../reviews/turn-economy-order-3-source-review-2026-07-22.md)
 derives current behavior from Framework source and tests. It records:
@@ -258,8 +258,17 @@ records 1,496 passing tests, zero skipped tests, zero build warnings, coverage
 above the release thresholds, valid active content, all DemoHost modes, and the
 real Godot 4.7.1 headless smoke.
 
-Order 4 is next. It reviews status, ailment, passive, and duration lifecycle
-from current source before any audience entry is promoted.
+A later [independent recheck](../reviews/turn-economy-order-3-independent-recheck-2026-07-22.md)
+reproduced three public integration defects at `e6949d7b`. The mechanics entry
+remains reviewed because the supplied transition table is correct. Developer
+and technical entries return to `existing_unreviewed` until O3-R8 through
+O3-R11 correct command-window authority, command result coherence, and cloned
+turn-consumption contracts. The executable documentation matrix now records 18
+reviewed, 34 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries.
+
+Order 4 remains next only after those Order 3 corrections close. It reviews
+status, ailment, passive, and duration lifecycle from current source before any
+audience entry is promoted.
 
 ## Deferred Documentation
 
