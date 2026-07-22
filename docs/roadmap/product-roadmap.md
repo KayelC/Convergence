@@ -14,12 +14,13 @@ Phase 8 established the clean product boundary. Framework, DemoHost, tests, and 
 participation, added supplied disabled composition, and reconciled the audience
 documents. O2-R39 found one supported custom-executor receipt-integrity defect;
 O2-R40 corrected it, and O2-R41 completed a fresh source and release-gate
-closure with no unresolved reachable defect. Order 3 is active under the
+closure with no unresolved reachable defect. Order 3 is complete under the
 [Turn Economy Order 3 Roadmap](turn-economy-order-3-roadmap.md). Its source-first
 review preserved the confirmed Action Token rules while reopening the custom
 economy phase-authority and authored replacement surface for correction. O3-R1
 through O3-R6 have corrected that surface and reconciled all three audiences;
-the independent O3-R7 closure gate remains.
+O3-R7 independently re-read the corrected source, passed the full release gate,
+and closed the order without an unresolved reachable mechanic defect.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in
@@ -100,8 +101,9 @@ and 2 are complete and owner-confirmed. O2-R30 through O2-R34 corrected
 direct-action registration preflight, instant-defeat terminology, and current
 documentation drift, then independently rechecked the corrected source. The
 capability matrix records `turn_economy` as complete after its isolated runtime,
-test, and audience-documentation checkpoints. O3-R7 remains the final
-independent source and release-gate verification before Order 4 begins.
+test, and audience-documentation checkpoints. O3-R7 completed the final
+independent source and release-gate verification. Order 4, status and passive
+lifecycle, is the next collaborative documentation subject.
 
 ## Priority 2: Persistence Evolution
 

@@ -226,14 +226,15 @@ participation, supplied optional composition, and audience reconciliation. The
 three `combat_resolution` audience entries are `reviewed` again. O2-R39 found
 one custom-executor receipt-integrity defect, O2-R40 corrected it atomically,
 and O2-R41's current-source recheck found no unresolved reachable defect.
-`combat_resolution` has returned to `complete`; Order 3 is active under the
+`combat_resolution` has returned to `complete`; Order 3 is complete under the
 [Turn Economy Order 3 Roadmap](turn-economy-order-3-roadmap.md). The initial
 source review confirmed the supplied Action Token transition table and found
 three supported-boundary defects plus one authored-composition gap. The
-`turn_economy` returned to `complete` after O3-R1 through O3-R6; O3-R7 remains
-the independent closure and full release-gate checkpoint.
+`turn_economy` returned to `complete` after O3-R1 through O3-R6. O3-R7 then
+completed the independent source review and full release gate without finding
+an unresolved reachable mechanic defect.
 
-## Active Order 3 Implementation Gate
+## Completed Order 3
 
 The [Order 3 source review](../reviews/turn-economy-order-3-source-review-2026-07-22.md)
 derives current behavior from Framework source and tests. It records:
@@ -249,9 +250,16 @@ O3-R1 through O3-R5 corrected and tested the supported runtime boundary. O3-R6
 records the confirmed policy family and reconciles mechanics, developer, and
 technical views. All three `turn_economy` audience entries are now `reviewed`.
 The executable matrix records 20 reviewed, 32 `existing_unreviewed`, 16
-missing, and 7 `not_applicable` entries. O3-R7 must still re-read current source
-and documents and run the complete release gate before Order 3 is formally
-closed.
+missing, and 7 `not_applicable` entries. O3-R7 independently re-read current
+source and documents, corrected the accepted public API baseline, and passed
+the complete release gate. The
+[final review](../reviews/turn-economy-order-3-final-review-2026-07-22.md)
+records 1,496 passing tests, zero skipped tests, zero build warnings, coverage
+above the release thresholds, valid active content, all DemoHost modes, and the
+real Godot 4.7.1 headless smoke.
+
+Order 4 is next. It reviews status, ailment, passive, and duration lifecycle
+from current source before any audience entry is promoted.
 
 ## Deferred Documentation
 

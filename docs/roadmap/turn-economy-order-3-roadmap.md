@@ -1,6 +1,6 @@
 # Turn Economy Order 3 Roadmap
 
-**Status:** active
+**Status:** complete
 
 **Capability:** `turn_economy`
 
@@ -45,7 +45,7 @@ actor order.
 | O3-R4 | `verified` | Register the supplied `standard_actions` economy through authored ruleset binding with explicit liveness parameters. | `runtime: bind standard action economy` |
 | O3-R5 | `verified` | Complete direct transition, pass-precedence, liveness-threshold, replacement, and malformed-extension contract tests. | `test: complete turn economy contract matrix` |
 | O3-R6 | `verified` | Add the policy decision, developer guide, technical state machine, worked mechanics examples, indexes, and coverage evidence. | `docs: document turn economy policy family` |
-| O3-R7 | `pending` | Re-read corrected source and documents independently, run the complete release gate, and close only if no reachable defect remains. | `docs: verify turn economy order 3` |
+| O3-R7 | `verified` | Re-read corrected source and documents independently, correct the accepted API baseline, run the complete release gate, and close with no unresolved reachable defect. | `docs: verify turn economy order 3` |
 
 Each checkpoint is an isolated green commit. A later checkpoint may append its
 commit and verification evidence here, but it must not rewrite an earlier
@@ -93,3 +93,20 @@ Order 3 closes only when:
 6. mechanics, developer, and technical documents agree with source;
 7. the scheduling boundary and future extension work are explicit; and
 8. a fresh review finds no realistic reachable defect in this scope.
+
+## Completion Record
+
+O3-R7 completed the independent current-source review and release gate. The
+review found one API-baseline bookkeeping mismatch: the newly accepted
+`StandardActions` policy ID was still listed as unshipped. It now belongs to the
+shipped `0.1` baseline, and the unshipped file again contains only its sentinel
+line. No reachable turn-economy mechanic defect remained.
+
+The final gate recorded 1,496 passing tests with none failed or skipped, strict
+Release builds with zero warnings, 90.65% Framework line coverage and 76.07%
+branch coverage, 6 valid packs containing 36 documents and 98 definitions, all
+clean DemoHost modes, scripted Training Annex play, and the real Godot 4.7.1
+headless smoke. Active content was unchanged.
+
+The independent evidence and residual design boundaries are recorded in the
+[Turn Economy Order 3 Final Review](../reviews/turn-economy-order-3-final-review-2026-07-22.md).

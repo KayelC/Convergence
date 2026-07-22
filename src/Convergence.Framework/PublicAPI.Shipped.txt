@@ -9654,6 +9654,7 @@ static Convergence.Runtime.StandardProgressionIds.Strength.get -> Convergence.Co
 static Convergence.Runtime.StandardProgressionIds.Vessel.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardProgressionIds.Vitality.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardRulesetPolicyIds.StandardActionToken.get -> Convergence.Content.ContentId
+static Convergence.Runtime.StandardRulesetPolicyIds.StandardActions.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardRulesetPolicyIds.StandardDamage.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardRulesetPolicyIds.StandardEconomy.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardRulesetPolicyIds.StandardGrowth.get -> Convergence.Content.ContentId

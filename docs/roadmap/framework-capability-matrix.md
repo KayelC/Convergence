@@ -25,9 +25,10 @@ initial and continuous phase snapshot authority, validate typed event payloads,
 bind the neutral standard-actions economy, and cover the complete transition
 and liveness matrix. O3-R6 reconciles all three documentation audiences. The
 confirmed Action Token transition table remains unchanged, and
-`turn_economy` has returned to `complete` while the independent closure gate
-runs under the
-[Turn Economy Order 3 Roadmap](turn-economy-order-3-roadmap.md).
+`turn_economy` has returned to `complete`. O3-R7 independently verified the
+corrected source and complete release gate under the
+[Turn Economy Order 3 Roadmap](turn-economy-order-3-roadmap.md); no unresolved
+reachable mechanic defect remained.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v11 restoration. Its

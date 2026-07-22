@@ -27,6 +27,11 @@ Order 3 now covers neutral standard actions, Action Token transitions, pass
 precedence, finite liveness, typed phase evidence, and the explicit boundary
 between opportunity counting and actor scheduling. Other subsystem entries
 remain unreviewed until they complete the same process.
+O3-R7 independently verified the current source and audience documents, passed
+the complete release gate, and formally closed Order 3. The executable matrix
+therefore remains 20 `reviewed`, 32 `existing_unreviewed`, 16 `missing`, and 7
+`not_applicable` entries; Order 4 is the next review rather than a bulk status
+promotion.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 

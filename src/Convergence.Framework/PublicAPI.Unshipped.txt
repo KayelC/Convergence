@@ -1,2 +1,1 @@
 #nullable enable
-static Convergence.Runtime.StandardRulesetPolicyIds.StandardActions.get -> Convergence.Content.ContentId
