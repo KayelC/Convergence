@@ -94,9 +94,26 @@ public sealed record BattleRoundStartedEventPayload : BattleEncounterEventPayloa
     public int RoundNumber { get; }
 }
 
-public sealed record BattlePhaseStartedEventPayload(
-    ContentId TeamId,
-    BattleTurnEconomySnapshot TurnEconomyState) : BattleEncounterEventPayload;
+public sealed record BattlePhaseStartedEventPayload : BattleEncounterEventPayload
+{
+    public BattlePhaseStartedEventPayload(
+        ContentId TeamId,
+        BattleTurnEconomySnapshot TurnEconomyState)
+    {
+        BattleTurnEconomyEventPayloadValidator.ValidateTeamSnapshot(TeamId, TurnEconomyState);
+        this.TeamId = TeamId;
+        this.TurnEconomyState = TurnEconomyState;
+    }
+
+    public ContentId TeamId { get; init; }
+    public BattleTurnEconomySnapshot TurnEconomyState { get; init; }
+
+    public void Deconstruct(out ContentId TeamId, out BattleTurnEconomySnapshot TurnEconomyState)
+    {
+        TeamId = this.TeamId;
+        TurnEconomyState = this.TurnEconomyState;
+    }
+}
 
 public sealed record BattleTurnStartedEventPayload(
     RuntimeInstanceId ActorId,
@@ -149,11 +166,38 @@ public sealed record BattleResourceChangedEventPayload(
     ContentId? ResourceId = null,
     ContentId? SourceId = null) : BattleEncounterEventPayload;
 
-public sealed record BattleTurnEconomyChangedEventPayload(
-    RuntimeInstanceId ActorId,
-    BattleTurnEconomySnapshot Before,
-    BattleTurnEconomySnapshot After,
-    ActionTurnConsumption Consumption) : BattleEncounterEventPayload;
+public sealed record BattleTurnEconomyChangedEventPayload : BattleEncounterEventPayload
+{
+    public BattleTurnEconomyChangedEventPayload(
+        RuntimeInstanceId ActorId,
+        BattleTurnEconomySnapshot Before,
+        BattleTurnEconomySnapshot After,
+        ActionTurnConsumption Consumption)
+    {
+        BattleTurnEconomyEventPayloadValidator.ValidateTransition(ActorId, Before, After, Consumption);
+        this.ActorId = ActorId;
+        this.Before = Before;
+        this.After = After;
+        this.Consumption = Consumption;
+    }
+
+    public RuntimeInstanceId ActorId { get; init; }
+    public BattleTurnEconomySnapshot Before { get; init; }
+    public BattleTurnEconomySnapshot After { get; init; }
+    public ActionTurnConsumption Consumption { get; init; }
+
+    public void Deconstruct(
+        out RuntimeInstanceId ActorId,
+        out BattleTurnEconomySnapshot Before,
+        out BattleTurnEconomySnapshot After,
+        out ActionTurnConsumption Consumption)
+    {
+        ActorId = this.ActorId;
+        Before = this.Before;
+        After = this.After;
+        Consumption = this.Consumption;
+    }
+}
 
 public sealed record BattleEncounterPresenceChangedEventPayload(
     RuntimeInstanceId ActorId,
@@ -164,9 +208,26 @@ public sealed record BattleActorDefeatedEventPayload(
     RuntimeInstanceId ActorId,
     ContentId TeamId) : BattleEncounterEventPayload;
 
-public sealed record BattlePhaseEndedEventPayload(
-    ContentId TeamId,
-    BattleTurnEconomySnapshot TurnEconomyState) : BattleEncounterEventPayload;
+public sealed record BattlePhaseEndedEventPayload : BattleEncounterEventPayload
+{
+    public BattlePhaseEndedEventPayload(
+        ContentId TeamId,
+        BattleTurnEconomySnapshot TurnEconomyState)
+    {
+        BattleTurnEconomyEventPayloadValidator.ValidateTeamSnapshot(TeamId, TurnEconomyState);
+        this.TeamId = TeamId;
+        this.TurnEconomyState = TurnEconomyState;
+    }
+
+    public ContentId TeamId { get; init; }
+    public BattleTurnEconomySnapshot TurnEconomyState { get; init; }
+
+    public void Deconstruct(out ContentId TeamId, out BattleTurnEconomySnapshot TurnEconomyState)
+    {
+        TeamId = this.TeamId;
+        TurnEconomyState = this.TurnEconomyState;
+    }
+}
 
 public sealed record BattleFaultedEventPayload(
     BattleEncounterFaultCode FaultCode,
@@ -227,6 +288,8 @@ public sealed record BattleEncounterEvent
                 $"Payload '{payload.GetType().Name}' does not match event kind '{kind}'.",
                 nameof(payload));
         }
+
+        ValidateTurnEconomyPayload(payload);
     }
 
     public int Sequence { get; init; }
@@ -332,4 +395,73 @@ public sealed record BattleEncounterEvent
             BattleEncounterEventKind.HostActionRequested => payload is BattleHostActionRequestedEventPayload,
             _ => false
         };
+
+    private static void ValidateTurnEconomyPayload(BattleEncounterEventPayload payload)
+    {
+        switch (payload)
+        {
+            case BattlePhaseStartedEventPayload started:
+                BattleTurnEconomyEventPayloadValidator.ValidateTeamSnapshot(
+                    started.TeamId,
+                    started.TurnEconomyState);
+                break;
+            case BattleTurnEconomyChangedEventPayload changed:
+                BattleTurnEconomyEventPayloadValidator.ValidateTransition(
+                    changed.ActorId,
+                    changed.Before,
+                    changed.After,
+                    changed.Consumption);
+                break;
+            case BattlePhaseEndedEventPayload ended:
+                BattleTurnEconomyEventPayloadValidator.ValidateTeamSnapshot(
+                    ended.TeamId,
+                    ended.TurnEconomyState);
+                break;
+        }
+    }
+}
+
+internal static class BattleTurnEconomyEventPayloadValidator
+{
+    public static void ValidateTeamSnapshot(
+        ContentId teamId,
+        BattleTurnEconomySnapshot turnEconomyState)
+    {
+        if (!teamId.IsValid)
+        {
+            throw new ArgumentException("Team ID must be valid.", nameof(teamId));
+        }
+
+        ArgumentNullException.ThrowIfNull(turnEconomyState);
+    }
+
+    public static void ValidateTransition(
+        RuntimeInstanceId actorId,
+        BattleTurnEconomySnapshot before,
+        BattleTurnEconomySnapshot after,
+        ActionTurnConsumption consumption)
+    {
+        if (!actorId.IsValid)
+        {
+            throw new ArgumentException("Actor runtime ID must be valid.", nameof(actorId));
+        }
+
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentNullException.ThrowIfNull(after);
+        ArgumentNullException.ThrowIfNull(consumption);
+
+        if (before.EconomyId != after.EconomyId)
+        {
+            throw new ArgumentException(
+                "Turn-economy transition snapshots must use the same economy ID.",
+                nameof(after));
+        }
+
+        if (before.GetType() != after.GetType())
+        {
+            throw new ArgumentException(
+                "Turn-economy transition snapshots must use the same concrete type.",
+                nameof(after));
+        }
+    }
 }

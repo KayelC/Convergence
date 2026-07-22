@@ -11,6 +11,11 @@ public abstract record BattleTurnEconomySnapshot
 {
     protected BattleTurnEconomySnapshot(ContentId economyId, int remainingActions)
     {
+        if (!economyId.IsValid)
+        {
+            throw new ArgumentException("Turn-economy ID must be valid.", nameof(economyId));
+        }
+
         if (remainingActions < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(remainingActions));
