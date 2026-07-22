@@ -277,6 +277,12 @@ events can currently impersonate runner-owned structural encounter events,
 including `TurnEconomyChanged` and `BattleEnded`. O3-R13 must enforce event
 provenance, and O3-R14 must reverify all three audiences before Order 3 closes.
 
+O3-R13 now rejects every runner-owned or unclassified event kind at command
+and lifecycle ingress before sequencing or publication. O3-R14 independently
+re-read the corrected source, tests, host consumers, and audience documents,
+then reconciled the event-ownership guidance. The three Order 3 audience
+entries are reviewed and Order 3 is formally complete.
+
 Order 4 is next. It reviews
 status, ailment, passive, and duration lifecycle from current source before any
 audience entry is promoted.

@@ -146,6 +146,8 @@ authored parameters.
 - Neutral standard actions and Action Token use the same authored binding path.
 - Custom economies have a strict snapshot and liveness contract.
 - Typed encounter events are the presentation boundary.
+- Runner-owned structural events are provenance-protected; command and
+  lifecycle ports use a fail-closed allow-list of detail event kinds.
 - Individual-turn and immediate-bonus scheduling remains explicit future
   encounter-orchestration work rather than an implied turn-economy feature.
 - Phase economy state is transient encounter state; it is not part of the

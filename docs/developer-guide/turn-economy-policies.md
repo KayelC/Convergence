@@ -132,6 +132,32 @@ Framework-calculated assessment and execution-result turn costs are
 getter-only. A host-mediated command may be cloned to another valid cost, but
 its validating initializer rejects null.
 
+### Return only port-owned events
+
+A command or lifecycle adapter may attach detail evidence to its result, but
+it does not author encounter structure. The allowed port event kinds are:
+
+- command evidence: `CommandSelected`, `CommandPassed`, `ActionExecuted`, and
+  `ActionRejected`;
+- execution evidence: `EffectResolved`, `PassiveActivated`, `StatusChanged`,
+  and `ResourceChanged`;
+- deployment and host integration: `EncounterPresenceChanged` and
+  `HostActionRequested`.
+
+Do not return `ActorCreated`, battle/round/phase/turn events,
+`TurnEconomyChanged`, `ActorDefeated`, `BattleFaulted`, or `BattleEnded` from a
+port. Those are runner-owned structural facts. The runner validates the
+allow-list before sequencing or publishing a returned event, and it rejects a
+new or unclassified event kind by default.
+
+For example, return `BattleEncounterCommandResult.Faulted(message)` when an
+action cannot be completed. Add `ActionRejected` only when the host needs
+typed action-level detail. The runner will publish the canonical
+`BattleFaulted` and `BattleEnded` events. An invalid turn-handler event becomes
+a typed `TurnHandlerExecutionFailed` result before the action cost is applied;
+an invalid lifecycle event becomes `LifecycleExecutionFailed` before its
+staged lifecycle transaction commits.
+
 ## Present Typed State In Godot
 
 Implement `IBattleEncounterEventSink` and inspect the payload kind:
@@ -185,6 +211,10 @@ private void PresentEconomy(BattleTurnEconomySnapshot snapshot)
 
 `DebugText` is optional diagnostics. Never parse it to recover token counts,
 actor identity, or consumption type.
+
+The structural payloads in this switch are runner-owned. Once received by the
+sink, they are the accepted encounter state rather than a duplicate claim from
+a command or lifecycle adapter.
 
 ## Action Token Worked Example
 

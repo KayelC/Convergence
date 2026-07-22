@@ -13,7 +13,7 @@
         "reason": "Content definition structure is an authoring concern rather than a player-visible mechanic."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/content-contract.md"],
         "reason": "An active authoring overview exists but has not completed collaborative owner review."
       },
@@ -166,17 +166,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/combat-defenses-and-turns.md"],
-        "reason": "The confirmed mechanics define the intended Action Token rules, but the typed event-authority explanation must be reverified after port-event provenance is enforced."
+        "reason": "The reviewed mechanics define neutral standard actions, every Action Token transition, exact pass precedence, finite liveness, scheduling separation, and runner-owned structural evidence."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/turn-economy-policies.md"],
-        "reason": "The integration guidance is implemented except that port-provided events can currently impersonate the structural events hosts are told to trust."
+        "reason": "The reviewed guide covers authored binding, replacement, presentation, command-result coherence, retained economy authority, diagnostics, scheduling, and the fail-closed port-event allow-list."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/turn-economy-runtime.md"],
-        "reason": "The runtime trace correctly describes state transitions, but its typed-event authority claim is pending event-provenance enforcement and source recheck."
+        "reason": "The reviewed runtime reference traces initial, intra-command, post-transition, phase-end, and event-provenance authority plus staged lifecycle commit behavior."
       }
     },
     {

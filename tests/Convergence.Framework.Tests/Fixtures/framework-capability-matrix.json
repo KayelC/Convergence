@@ -101,14 +101,12 @@
     },
     {
       "id": "turn_economy",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["TurnEconomyContractTests", "BattleEncounterRunnerTests", "RuntimeRulesetBindingTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "Command and lifecycle ports can currently publish runner-owned structural encounter event kinds, so typed turn-economy event provenance is not yet exclusive."
-      ]
+      "knownGaps": []
     },
     {
       "id": "status_and_passive_lifecycle",

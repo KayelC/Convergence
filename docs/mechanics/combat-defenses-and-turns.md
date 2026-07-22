@@ -328,4 +328,10 @@ The encounter runner owns initiative, battle start, team phases, actor turns, li
 
 Each ordered event has a payload matched to its event kind. For example, initiative contains the ordered team IDs, an effect contains the immutable effect result, an Action Token change contains before/after snapshots plus the applied consumption, and battle end contains the outcome, winning team, completed rounds, and optional fault code. `DebugText` may aid logs but is optional and must not be parsed as a gameplay contract.
 
+Structural events come from the encounter runner only. Action and lifecycle
+extensions may report command, effect, status, resource, deployment, and
+host-action details, but they cannot invent a phase change, Action Token
+change, defeat, fault, or battle ending. This keeps the state shown by a host
+consistent with the state the runner actually accepted.
+
 The runner ends with victory, defeat, escape, draw/round limit, host cancellation, or fault. Rewards and recruitment are separate services; an encounter does not silently grant either.

@@ -1,6 +1,6 @@
 # Turn Economy Order 3 Roadmap
 
-**Status:** reopened at `7aa3467e`; event-provenance correction required
+**Status:** complete after O3-R14; implementation authority at `87fc8ad`
 
 **Capability:** `turn_economy`
 
@@ -58,7 +58,7 @@ actor order.
 | O3-R11 | `verified` | Reconcile the technical sequence, developer guidance, reference content wording, executable matrices, API baseline, and fresh verification evidence. | `docs: reverify turn economy order 3` |
 | O3-R12 | `verified` | Re-read the post-correction source, tests, host composition, and audience documents without treating earlier reports as authority; close only if no realistic reachable defect remains. | `docs: close turn economy order 3` |
 | O3-R13 | `verified` | Prevent command and lifecycle ports from publishing runner-owned structural encounter events; retain one canonical source for phase, economy, fault, and battle-end evidence. | `battle: enforce encounter event provenance` |
-| O3-R14 | `pending` | Reconcile audience guidance and independently re-run the Order 3 source, focused, and release gates. | `docs: close turn economy event authority` |
+| O3-R14 | `verified` | Reconcile audience guidance and independently re-run the Order 3 source, focused, and release gates. | `docs: close turn economy event authority` |
 
 Each checkpoint is an isolated green commit. A later checkpoint may append its
 commit and verification evidence here, but it must not rewrite an earlier
@@ -264,3 +264,24 @@ Release build completed with zero warnings, formatting and diff checks passed,
 and all four noninteractive DemoHost modes completed successfully. Order 3
 remains reopened only for the independent O3-R14 source and documentation
 reconciliation.
+
+### O3-R14 Completion
+
+The closure review re-read the corrected event classifier, both ingress paths,
+canonical runner emission sites, built-in automated producer, adversarial
+tests, DemoHost sink, and the mechanics, developer, technical, and decision
+documents. It confirmed that port evidence is accepted only from the explicit
+ten-kind allow-list, while all twelve current structural kinds and every
+future unclassified kind fail before sequencing or publication.
+
+The three audience documents now distinguish port detail from runner-owned
+structure and explain the typed fault behavior. The capability and
+documentation matrices return to `complete` and `reviewed` respectively.
+No Action Token transition, action pricing, scheduler behavior, or persistence
+boundary changed during this correction. Order 3 is complete; Order 4 remains
+the next full documentation order.
+
+O3-R14 passed 194 focused tests, 24 documentation and executable-matrix tests,
+and the complete 1,529-test solution with no failures or skips. The strict
+Release build completed with zero warnings, formatting and diff checks passed,
+and all four noninteractive DemoHost modes completed successfully.

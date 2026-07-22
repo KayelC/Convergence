@@ -148,6 +148,7 @@ sequenceDiagram
         Runner->>Runner: require authority
         Runner->>Handler: ExecuteTurnAsync(actor, before snapshot)
         Handler-->>Runner: command + ActionTurnConsumption
+        Runner->>Runner: require port-owned command event kinds
         Runner->>Economy: CaptureSnapshot() + HasTurnsRemaining()
         Runner->>Runner: require authority
         Runner->>Sink: publish command events
@@ -251,6 +252,30 @@ typed encounter event.
 
 `DebugText` is optional and non-authoritative. Presentation must use payloads.
 
+### Event ownership
+
+Encounter events have one authority, even though every event uses the same
+public immutable envelope:
+
+| Authority | Event kinds |
+|---|---|
+| Encounter runner | `ActorCreated`, `BattleStarted`, `InitiativeRolled`, `RoundStarted`, `PhaseStarted`, `TurnStarted`, `TurnRestricted`, `TurnEconomyChanged`, `ActorDefeated`, `PhaseEnded`, `BattleFaulted`, `BattleEnded` |
+| Command or lifecycle port | `CommandSelected`, `CommandPassed`, `ActionExecuted`, `ActionRejected`, `EffectResolved`, `PassiveActivated`, `StatusChanged`, `ResourceChanged`, `EncounterPresenceChanged`, `HostActionRequested` |
+
+The port side is an explicit allow-list. A new event kind is rejected until
+its authority is deliberately assigned. A turn handler that returns a
+runner-owned or unclassified kind fails through
+`TurnHandlerExecutionFailed`; a lifecycle port fails through
+`LifecycleExecutionFailed`. Validation occurs before those events are
+sequenced or published. Command validation also occurs before economy
+application and owner-turn-end lifecycle.
+
+A faulted command therefore returns a faulted
+`BattleEncounterCommandResult` and may include an `ActionRejected` detail
+event. It must not manufacture `BattleFaulted`; the runner publishes the one
+canonical fault event and the final `BattleEnded` event. This provenance rule
+is why a host can treat the three economy payloads above as accepted state.
+
 ## Scheduling Boundary
 
 ```mermaid
@@ -294,6 +319,8 @@ A replacement economy and factory are valid only when:
 - one phase retains one economy ID and one concrete snapshot type;
 - `RemainingActions` and `HasTurnsRemaining()` agree;
 - state changes only through the runner-owned `Apply` call;
+- ports return only their explicitly allowed command, effect, lifecycle, and
+  deployment event kinds;
 - invalid `ActionTurnConsumption` is rejected rather than repaired;
 - factory parameters are either recognized or reported as unknown;
 - finite liveness limits are supplied; and
