@@ -418,6 +418,12 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
                 "Participating charge modifiers cannot contain null entries.",
                 nameof(participatingCharges));
         }
+        if (participation.Any(modifier => modifier.IsCharged && modifier.SourceState is null))
+        {
+            throw new ArgumentException(
+                "Participating charged modifiers must originate from ResolveDamageModifier.",
+                nameof(participatingCharges));
+        }
         if (participation.Any(modifier =>
                 modifier.ChargeKind is ChargeKind kind && Normalize(kind) != kind))
         {
@@ -433,8 +439,7 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
             .GroupBy(modifier => modifier.ChargeKind!.Value)
             .Where(group =>
                 actor.Charges.TryGetValue(group.Key, out BattleChargeState? current) &&
-                group.Any(modifier =>
-                    modifier.SourceState is null || ReferenceEquals(modifier.SourceState, current)))
+                group.Any(modifier => ReferenceEquals(modifier.SourceState, current)))
             .Select(group => group.Key)
             .Order()
             .ToArray();

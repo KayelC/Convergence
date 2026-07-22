@@ -124,6 +124,23 @@ public sealed class ChargePolicyTests
     }
 
     [Fact]
+    public void CompleteAction_RejectsSourceLessChargedModifierWithoutMutation()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        var policy = new SplitChargePolicy();
+        policy.Apply(new ChargeApplicationRequest(actor, ChargeKind.Physical, 2m));
+
+        ArgumentException exception = Assert.Throws<ArgumentException>(() =>
+            policy.CompleteAction(
+                actor,
+                [new ChargeDamageModifier(2m, ChargeKind.Physical)]));
+
+        Assert.Contains("ResolveDamageModifier", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(StandardChargePolicyIds.Split, actor.ChargePolicyId);
+        Assert.Equal(2m, Assert.Single(actor.Charges).Value.Multiplier);
+    }
+
+    [Fact]
     public void DisabledPolicy_RejectsApplicationAndKeepsDamageNeutral()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam);
@@ -467,6 +484,32 @@ public sealed class ChargePolicyTests
     }
 
     [Fact]
+    public void CustomDamageExecutor_FabricatedChargeReceiptRejectsActionWithoutLiveMutation()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        var charges = new SplitChargePolicy();
+        charges.Apply(new ChargeApplicationRequest(actor, ChargeKind.Physical, 2m));
+        EffectExecutorRegistry executors = new EffectExecutorRegistry()
+            .Register(new FabricatedChargeDamageExecutor());
+
+        SkillExecutionResult result = new SkillExecutor(
+            Services(new RecordingDamagePolicy(), charges, executors)).Execute(
+                Request(
+                    DamageSkill(PhysicalDamage()),
+                    actor,
+                    [actor, target],
+                    [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        SkillExecutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(SkillExecutionDiagnosticCode.ExecutionFailed, diagnostic.Code);
+        Assert.Contains("ResolveDamageModifier", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Equal(2m, Assert.Single(actor.Charges).Value.Multiplier);
+        Assert.Equal(100m, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public void MixedDamageAction_ConsumesBothSplitChargesOnlyAfterBothEffectsResolve()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam);
@@ -571,7 +614,8 @@ public sealed class ChargePolicyTests
 
     private static BattleExecutionServices Services(
         IDamageExecutionPolicy damage,
-        IChargePolicyService charges) =>
+        IChargePolicyService charges,
+        EffectExecutorRegistry? effectExecutors = null) =>
         new(
             EmptyAilments.Instance,
             damage,
@@ -582,7 +626,8 @@ public sealed class ChargePolicyTests
             new FirstRandomTargetPolicy(),
             new OrderedRuntimeTargetSelectionPolicy(),
             TestStatModifierPolicy.CreatePersistent(),
-            charges);
+            charges,
+            effectExecutors: effectExecutors);
 
     private static SkillExecutionRequest Request(
         SkillDefinition skill,
@@ -660,6 +705,21 @@ public sealed class ChargePolicyTests
             Requests.Add(request);
             return _resolve(request);
         }
+    }
+
+    private sealed class FabricatedChargeDamageExecutor : IEffectExecutor<DamageEffectDefinition>
+    {
+        public EffectExecutionResult Execute(
+            DamageEffectDefinition definition,
+            EffectExecutionContext context) =>
+            new(
+                context.EffectIndex,
+                context.Target?.InstanceId,
+                EffectExecutionOutcome.Success,
+                Value: 10m)
+            {
+                ParticipatingCharge = new ChargeDamageModifier(2m, ChargeKind.Physical)
+            };
     }
 
     private sealed class EmptyAilments : Convergence.Catalog.IAilmentDefinitionRepository
