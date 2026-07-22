@@ -101,12 +101,15 @@
     },
     {
       "id": "turn_economy",
-      "implementationState": "complete",
-      "frameworkTests": ["BattleEncounterRunnerTests"],
+      "implementationState": "partial",
+      "frameworkTests": ["TurnEconomyContractTests", "BattleEncounterRunnerTests", "RuntimeRulesetBindingTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Order 3 must validate initial and continuous custom-economy snapshot authority before restoring complete status.",
+        "The supplied neutral standard-actions economy is not yet available through the standard authored ruleset registry."
+      ]
     },
     {
       "id": "status_and_passive_lifecycle",

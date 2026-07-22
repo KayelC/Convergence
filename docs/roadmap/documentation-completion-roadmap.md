@@ -225,7 +225,28 @@ participation, supplied optional composition, and audience reconciliation. The
 three `combat_resolution` audience entries are `reviewed` again. O2-R39 found
 one custom-executor receipt-integrity defect, O2-R40 corrected it atomically,
 and O2-R41's current-source recheck found no unresolved reachable defect.
-`combat_resolution` has returned to `complete`; Order 3 is next.
+`combat_resolution` has returned to `complete`; Order 3 is active under the
+[Turn Economy Order 3 Roadmap](turn-economy-order-3-roadmap.md). The initial
+source review confirmed the supplied Action Token transition table and found
+three supported-boundary defects plus one authored-composition gap. The
+`turn_economy` capability is temporarily `partial` until O3-R1 through O3-R7
+complete.
+
+## Active Order 3 Implementation Gate
+
+The [Order 3 source review](../reviews/turn-economy-order-3-source-review-2026-07-22.md)
+derives current behavior from Framework source and tests. It records:
+
+- phase-start snapshot/liveness validation before any command;
+- stable economy identity, snapshot shape, and state continuity;
+- valid immutable typed event evidence;
+- authored binding for both supplied economy choices;
+- complete supplied transition and liveness tests; and
+- explicit separation between economy state and encounter actor scheduling.
+
+Mechanics and technical entries remain `existing_unreviewed`, and the developer
+entry remains `missing`, until the implementation corrections are green and the
+project owner confirms the final audience documents.
 
 ## Deferred Documentation
 

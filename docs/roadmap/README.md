@@ -17,6 +17,7 @@ records. It does not define individual mechanics.
 - [Order 2 Pre-Closure Audit Corrections Roadmap](combat-resolution-order-2-pre-closure-audit-corrections-roadmap.md)
 - [Order 2 Post-Closure Corrections Roadmap](combat-resolution-order-2-post-closure-corrections-roadmap.md)
 - [Order 2 Charge Closure Corrections Roadmap](combat-resolution-order-2-charge-closure-roadmap.md)
+- [Turn Economy Order 3 Roadmap](turn-economy-order-3-roadmap.md)
 - [Documentation Completion Roadmap](documentation-completion-roadmap.md)
 - [Framework Capability Matrix](framework-capability-matrix.md)
 - [Production-Readiness Completion Record](production-readiness-roadmap.md)
@@ -31,5 +32,5 @@ Order 1's mechanics, audience documentation, and typed execution capability
 remain owner-confirmed and complete. Order 2, `combat_resolution`, is also
 complete: O2-R35 through O2-R40 corrected exact charge participation, optional
 composition, and malformed custom receipts; O2-R41 completed the fresh source
-and release-gate recheck. Order 3 is now the next collaborative documentation
-subject.
+and release-gate recheck. Order 3 is active under its source-first correction
+roadmap, and `turn_economy` is temporarily partial until that gate closes.
