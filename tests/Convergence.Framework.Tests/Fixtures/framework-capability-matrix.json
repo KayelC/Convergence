@@ -101,12 +101,14 @@
     },
     {
       "id": "turn_economy",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["TurnEconomyContractTests", "BattleEncounterRunnerTests", "RuntimeRulesetBindingTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "A custom economy can leave actions remaining after explicit TerminatePhase consumption and the encounter runner currently accepts that transition."
+      ]
     },
     {
       "id": "status_and_passive_lifecycle",

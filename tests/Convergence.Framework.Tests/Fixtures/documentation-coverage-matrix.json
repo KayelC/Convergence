@@ -169,14 +169,14 @@
         "reason": "The reviewed mechanics define neutral standard actions, every Action Token transition, exact pass precedence, finite liveness, scheduling separation, and runner-owned structural evidence."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/turn-economy-policies.md"],
-        "reason": "The reviewed guide covers authored binding, replacement, presentation, command-result coherence, retained economy authority, diagnostics, scheduling, and the fail-closed port-event allow-list."
+        "reason": "The guide describes explicit phase termination as absolute, but runtime enforcement for custom economies awaits O3-R16 and a fresh source recheck."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/turn-economy-runtime.md"],
-        "reason": "The reviewed runtime reference traces initial, intra-command, post-transition, phase-end, and event-provenance authority plus staged lifecycle commit behavior."
+        "reason": "The runtime reference describes explicit phase termination, but custom transition enforcement awaits O3-R16 and a fresh source recheck."
       }
     },
     {

@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial
@@ -50,6 +50,12 @@ O3-R13 now applies a fail-closed allow-list at both command and lifecycle
 ingress and preserves one runner-owned source for structural events. O3-R14
 re-read the corrected path, reconciled all three audience documents, and found
 no remaining reachable Order 3 defect. `turn_economy` is complete again.
+
+The fresh closure audit at `6e1169b5` found one remaining supported custom
+policy defect: `TerminatePhase` can change a custom economy while leaving
+positive actions, and the encounter runner accepts the transition. The two
+supplied policies remain correct. `turn_economy` is `partial` until O3-R16
+enforces explicit termination and O3-R17 rechecks the complete contract.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v11 restoration. Its

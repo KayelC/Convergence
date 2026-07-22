@@ -36,6 +36,11 @@ port-provided events could impersonate runner-owned structural events. O3-R13
 now enforces a fail-closed port-event allow-list, and O3-R14 re-read the source
 and reconciled all three audience documents. They are reviewed again. Order 4
 remains the next full capability review rather than a bulk status promotion.
+The fresh closure audit at `6e1169b5` subsequently found that custom economies
+can ignore explicit phase termination while still passing transition
+validation. All three Order 3 audience entries are temporarily
+`existing_unreviewed` until O3-R16 corrects that boundary and O3-R17 completes
+owner-confirmed reconciliation.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
@@ -63,13 +68,13 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 20 reviewed,
-32 existing_unreviewed, 16 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 18 reviewed,
+34 existing_unreviewed, 16 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 20 |
-| `existing_unreviewed` | 32 |
+| `reviewed` | 18 |
+| `existing_unreviewed` | 34 |
 | `missing` | 16 |
 | `not_applicable` | 7 |
 

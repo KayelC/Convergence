@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -26,6 +26,12 @@ through O3-R10 corrected them, and O3-R11 reconciled the audience documents,
 API contract, content wording, executable matrices, and release evidence.
 O3-R12 then completed a fresh post-correction source and documentation review
 without finding another realistic reachable defect.
+
+A later fresh closure audit found that the two supplied economies correctly
+honor explicit phase termination, while a custom economy can leave actions
+remaining and still pass encounter transition validation. Order 3 is reopened
+for the focused O3-R16 runtime guard and O3-R17 source/document reconciliation;
+Order 4 has not started.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in

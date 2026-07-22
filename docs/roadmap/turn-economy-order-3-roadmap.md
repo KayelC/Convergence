@@ -1,6 +1,6 @@
 # Turn Economy Order 3 Roadmap
 
-**Status:** complete after O3-R14; implementation authority at `87fc8ad`
+**Status:** reopened after O3-R15; O3-R16 and O3-R17 pending
 
 **Capability:** `turn_economy`
 
@@ -13,6 +13,8 @@
 **Post-correction closure:** [Turn Economy Order 3 Post-Correction Closure Review](../reviews/turn-economy-order-3-post-correction-closure-review-2026-07-22.md)
 
 **Owner-closure audit:** [Turn Economy Order 3 Owner-Closure Audit](../reviews/turn-economy-order-3-owner-closure-audit-2026-07-22.md)
+
+**Fresh closure audit:** [Turn Economy Order 3 Fresh Closure Audit](../reviews/turn-economy-order-3-fresh-closure-audit-2026-07-22.md)
 
 ## Goal
 
@@ -59,6 +61,9 @@ actor order.
 | O3-R12 | `verified` | Re-read the post-correction source, tests, host composition, and audience documents without treating earlier reports as authority; close only if no realistic reachable defect remains. | `docs: close turn economy order 3` |
 | O3-R13 | `verified` | Prevent command and lifecycle ports from publishing runner-owned structural encounter events; retain one canonical source for phase, economy, fault, and battle-end evidence. | `battle: enforce encounter event provenance` |
 | O3-R14 | `verified` | Reconcile audience guidance and independently re-run the Order 3 source, focused, and release gates. | `docs: close turn economy event authority` |
+| O3-R15 | `verified` | Re-read current source, consumers, tests, and all audience documents; identify the unsupported explicit-termination transition and the executable documentation-state mismatch. | `docs: reopen turn economy termination contract` |
+| O3-R16 | `open` | Require custom economies to end the phase for `TerminatePhase`, return a typed transition fault on violation, and add direct encounter regression coverage. | `battle: enforce explicit phase termination` |
+| O3-R17 | `open` | Re-read the corrected source and all three audience documents, reconcile executable matrices, and close only after owner confirmation. | `docs: close turn economy termination contract` |
 
 Each checkpoint is an isolated green commit. A later checkpoint may append its
 commit and verification evidence here, but it must not rewrite an earlier
@@ -285,3 +290,24 @@ O3-R14 passed 194 focused tests, 24 documentation and executable-matrix tests,
 and the complete 1,529-test solution with no failures or skips. The strict
 Release build completed with zero warnings, formatting and diff checks passed,
 and all four noninteractive DemoHost modes completed successfully.
+
+## Fresh Closure Audit Reopening
+
+The fresh source audit at `6e1169b5` found that the runner validates a custom
+economy's identity, snapshot type, liveness, and state advancement after
+`Apply`, but does not enforce the one economy-independent semantic carried by
+`ActionTurnConsumption.TerminatePhase`. A custom policy may leave positive
+remaining actions, change its snapshot, and receive another command window.
+Both supplied policies are correct; the gap belongs to the supported
+replacement-policy boundary.
+
+The audit also found that the executable documentation matrix still marks the
+mechanics entry `existing_unreviewed` while the roadmap claims all three
+audiences are reviewed. Developer and technical entries are reopened as well
+because their absolute-termination guidance is not yet enforced for custom
+economies.
+
+O3-R16 and O3-R17 are required before formal closure. The audit passed 368
+focused tests, the complete 1,529-test solution with no failures or skips, and
+a strict nonincremental Release build with zero warnings. Those tests do not
+currently exercise the violating custom-termination shape.
