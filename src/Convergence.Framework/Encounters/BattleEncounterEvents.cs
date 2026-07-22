@@ -465,3 +465,45 @@ internal static class BattleTurnEconomyEventPayloadValidator
         }
     }
 }
+
+internal static class BattleEncounterEventOwnership
+{
+    public static void RequirePortOwned(
+        IEnumerable<BattleEncounterEvent> events,
+        string portName)
+    {
+        ArgumentNullException.ThrowIfNull(events);
+        if (string.IsNullOrWhiteSpace(portName))
+        {
+            throw new ArgumentException("An encounter port name is required.", nameof(portName));
+        }
+
+        foreach (BattleEncounterEvent battleEvent in events)
+        {
+            if (battleEvent is null)
+            {
+                throw new InvalidOperationException(
+                    $"Encounter port '{portName}' returned a null event.");
+            }
+
+            if (!IsPortOwned(battleEvent.Kind))
+            {
+                throw new InvalidOperationException(
+                    $"Encounter port '{portName}' cannot publish runner-owned or unclassified " +
+                    $"event kind '{battleEvent.Kind}'.");
+            }
+        }
+    }
+
+    private static bool IsPortOwned(BattleEncounterEventKind kind) =>
+        kind is BattleEncounterEventKind.CommandSelected
+            or BattleEncounterEventKind.CommandPassed
+            or BattleEncounterEventKind.ActionExecuted
+            or BattleEncounterEventKind.ActionRejected
+            or BattleEncounterEventKind.EffectResolved
+            or BattleEncounterEventKind.PassiveActivated
+            or BattleEncounterEventKind.StatusChanged
+            or BattleEncounterEventKind.ResourceChanged
+            or BattleEncounterEventKind.EncounterPresenceChanged
+            or BattleEncounterEventKind.HostActionRequested;
+}

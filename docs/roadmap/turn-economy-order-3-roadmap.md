@@ -57,7 +57,7 @@ actor order.
 | O3-R10 | `verified` | Prevent public record cloning from replacing Framework-calculated turn consumption or introducing null command costs. | `battle: seal turn consumption results` |
 | O3-R11 | `verified` | Reconcile the technical sequence, developer guidance, reference content wording, executable matrices, API baseline, and fresh verification evidence. | `docs: reverify turn economy order 3` |
 | O3-R12 | `verified` | Re-read the post-correction source, tests, host composition, and audience documents without treating earlier reports as authority; close only if no realistic reachable defect remains. | `docs: close turn economy order 3` |
-| O3-R13 | `pending` | Prevent command and lifecycle ports from publishing runner-owned structural encounter events; retain one canonical source for phase, economy, fault, and battle-end evidence. | `battle: enforce encounter event provenance` |
+| O3-R13 | `verified` | Prevent command and lifecycle ports from publishing runner-owned structural encounter events; retain one canonical source for phase, economy, fault, and battle-end evidence. | `battle: enforce encounter event provenance` |
 | O3-R14 | `pending` | Reconcile audience guidance and independently re-run the Order 3 source, focused, and release gates. | `docs: close turn economy event authority` |
 
 Each checkpoint is an isolated green commit. A later checkpoint may append its
@@ -239,3 +239,28 @@ published without provenance validation, so an event sink can receive a false
 O3-R13 and O3-R14 are therefore required before formal closure. The correction
 is shared with Order 6's broader event-contract review, but no scheduler or
 Action Token balance redesign is part of this reopening.
+
+### O3-R13 Completion
+
+The encounter runner now classifies actor creation, battle/round/phase/turn
+structure, turn restrictions, accepted turn-economy transitions, defeat,
+fault, and battle completion as runner-owned events. Command and lifecycle
+ports may still return command, action, effect, passive, status, resource,
+deployment, and host-action evidence, but a structural event is rejected at
+port ingress before it can be sequenced or published. The port-owned kinds are
+an explicit allow-list, so a future event kind is rejected until its authority
+is deliberately assigned.
+
+Turn-handler rejection uses the existing typed
+`TurnHandlerExecutionFailed` boundary, while lifecycle rejection uses
+`LifecycleExecutionFailed`. The automated clean runner now returns an
+`ActionRejected` detail event for an invalid selected action and relies on the
+encounter runner for the single canonical `BattleFaulted` event.
+
+Focused tests exercise all twelve runner-owned event kinds through both port
+families and prove that none reaches the sink. O3-R13 passed 194 focused tests
+and the complete 1,529-test solution with no failures or skips. The strict
+Release build completed with zero warnings, formatting and diff checks passed,
+and all four noninteractive DemoHost modes completed successfully. Order 3
+remains reopened only for the independent O3-R14 source and documentation
+reconciliation.

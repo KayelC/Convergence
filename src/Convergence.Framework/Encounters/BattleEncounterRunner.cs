@@ -1098,17 +1098,26 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     BattleEncounterCommandResult command = await InvokePortAsync(
                             BattleEncounterFaultCode.TurnHandlerExecutionFailed,
                             "turn-handler",
-                            async () => await services.TurnHandler.ExecuteTurnAsync(
-                                    new BattleEncounterTurnRequest(
-                                        request,
-                                        actor,
-                                        request.Participants,
-                                        turnStart.Restriction,
-                                        beforeEconomy,
-                                        activeStatModifierBoundaries),
-                                    cancellationToken)
-                                .ConfigureAwait(false)
-                                ?? throw new InvalidOperationException("The battle turn handler returned null."),
+                            async () =>
+                            {
+                                BattleEncounterCommandResult returned =
+                                    await services.TurnHandler.ExecuteTurnAsync(
+                                            new BattleEncounterTurnRequest(
+                                                request,
+                                                actor,
+                                                request.Participants,
+                                                turnStart.Restriction,
+                                                beforeEconomy,
+                                                activeStatModifierBoundaries),
+                                            cancellationToken)
+                                        .ConfigureAwait(false)
+                                    ?? throw new InvalidOperationException(
+                                        "The battle turn handler returned null.");
+                                BattleEncounterEventOwnership.RequirePortOwned(
+                                    returned.Events,
+                                    "turn-handler");
+                                return returned;
+                            },
                             actor.InstanceId)
                         .ConfigureAwait(false);
 
@@ -1648,10 +1657,14 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         static IReadOnlyList<BattleEncounterEvent> SnapshotLifecycleEvents(
             IReadOnlyList<BattleEncounterEvent>? lifecycleEvents,
-            string stage) =>
-            Array.AsReadOnly((lifecycleEvents ?? throw new InvalidOperationException(
+            string stage)
+        {
+            BattleEncounterEvent[] snapshot = (lifecycleEvents ?? throw new InvalidOperationException(
                     $"The battle lifecycle returned a null {stage} event collection."))
-                .ToArray());
+                .ToArray();
+            BattleEncounterEventOwnership.RequirePortOwned(snapshot, $"lifecycle-{stage}");
+            return Array.AsReadOnly(snapshot);
+        }
     }
 
     private sealed class BattleEncounterPortException : Exception

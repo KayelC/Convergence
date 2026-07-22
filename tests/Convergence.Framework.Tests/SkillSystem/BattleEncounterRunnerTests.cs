@@ -21,6 +21,22 @@ public sealed class BattleEncounterRunnerTests
     private static readonly ContentId OwnerTurnEnd = Id("owner_turn_end");
     private static readonly ContentId PhaseEnd = Id("phase_end");
 
+    public static TheoryData<BattleEncounterEventKind> RunnerOwnedStructuralEventKinds { get; } = new()
+    {
+        BattleEncounterEventKind.ActorCreated,
+        BattleEncounterEventKind.BattleStarted,
+        BattleEncounterEventKind.InitiativeRolled,
+        BattleEncounterEventKind.RoundStarted,
+        BattleEncounterEventKind.PhaseStarted,
+        BattleEncounterEventKind.TurnStarted,
+        BattleEncounterEventKind.TurnRestricted,
+        BattleEncounterEventKind.TurnEconomyChanged,
+        BattleEncounterEventKind.ActorDefeated,
+        BattleEncounterEventKind.PhaseEnded,
+        BattleEncounterEventKind.BattleFaulted,
+        BattleEncounterEventKind.BattleEnded
+    };
+
     [Fact]
     public void Runner_UsesInitiativeAndOrdersLifecycleEvents()
     {
@@ -955,6 +971,70 @@ public sealed class BattleEncounterRunnerTests
             battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
     }
 
+    [Theory]
+    [MemberData(nameof(RunnerOwnedStructuralEventKinds))]
+    public void Runner_RejectsRunnerOwnedStructuralEventsFromTurnHandlers(
+        BattleEncounterEventKind eventKind)
+    {
+        BattleEncounterParticipant player = Participant("command_event_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("command_event_enemy", EnemyTeam);
+        var lifecycle = new RecordingLifecycle();
+        string forgedMarker = $"forged-command-{eventKind}";
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                [RunnerOwnedEvent(eventKind, player, forgedMarker)])),
+            new CompleteAfterTurnsPolicy(99));
+
+        AssertPortFault(
+            result,
+            BattleEncounterFaultCode.TurnHandlerExecutionFailed,
+            "turn-handler");
+        Assert.Contains(eventKind.ToString(), result.FaultMessage, StringComparison.Ordinal);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.DoesNotContain(result.Events, battleEvent => battleEvent.DebugText == forgedMarker);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Theory]
+    [MemberData(nameof(RunnerOwnedStructuralEventKinds))]
+    public void Runner_RejectsRunnerOwnedStructuralEventsFromLifecyclePorts(
+        BattleEncounterEventKind eventKind)
+    {
+        BattleEncounterParticipant player = Participant("lifecycle_event_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("lifecycle_event_enemy", EnemyTeam);
+        string forgedMarker = $"forged-lifecycle-{eventKind}";
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleStartEvents = [RunnerOwnedEvent(eventKind, player, forgedMarker)]
+        };
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.LifecycleExecutionFailed, result.FaultCode);
+        Assert.Contains("battle-start", result.FaultMessage, StringComparison.Ordinal);
+        Assert.Contains(eventKind.ToString(), result.FaultMessage, StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
+        Assert.DoesNotContain(result.Events, battleEvent => battleEvent.DebugText == forgedMarker);
+        Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.BattleFaulted);
+        Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.BattleEnded);
+    }
+
     [Fact]
     public async Task Runner_PreCancelledTokenTouchesNoEncounterPortOrActorState()
     {
@@ -1540,6 +1620,64 @@ public sealed class BattleEncounterRunnerTests
             new BattleResourceChangedEventPayload(actorId, actorId, 0m, Hp),
             "Battle-end cleanup completed.");
 
+    private static BattleEncounterEvent RunnerOwnedEvent(
+        BattleEncounterEventKind kind,
+        BattleEncounterParticipant actor,
+        string debugText)
+    {
+        var before = new StandardActionTurnEconomySnapshot(1);
+        var after = new StandardActionTurnEconomySnapshot(0);
+        BattleEncounterEventPayload payload = kind switch
+        {
+            BattleEncounterEventKind.ActorCreated => new BattleActorCreatedEventPayload(
+                actor.InstanceId,
+                actor.State.EntityId,
+                actor.TeamId),
+            BattleEncounterEventKind.BattleStarted => new BattleStartedEventPayload(
+                Battle,
+                Kind,
+                Moon,
+                1,
+                [actor.InstanceId],
+                [actor.TeamId]),
+            BattleEncounterEventKind.InitiativeRolled => new BattleInitiativeRolledEventPayload(
+                [actor.TeamId]),
+            BattleEncounterEventKind.RoundStarted => new BattleRoundStartedEventPayload(1),
+            BattleEncounterEventKind.PhaseStarted => new BattlePhaseStartedEventPayload(
+                actor.TeamId,
+                before),
+            BattleEncounterEventKind.TurnStarted => new BattleTurnStartedEventPayload(
+                actor.InstanceId,
+                actor.TeamId),
+            BattleEncounterEventKind.TurnRestricted => new BattleTurnRestrictedEventPayload(
+                actor.InstanceId,
+                new BattleTurnStartRestriction(BattleTurnStartOutcome.Skip)),
+            BattleEncounterEventKind.TurnEconomyChanged => new BattleTurnEconomyChangedEventPayload(
+                actor.InstanceId,
+                before,
+                after,
+                ActionTurnConsumption.Normal),
+            BattleEncounterEventKind.ActorDefeated => new BattleActorDefeatedEventPayload(
+                actor.InstanceId,
+                actor.TeamId),
+            BattleEncounterEventKind.PhaseEnded => new BattlePhaseEndedEventPayload(
+                actor.TeamId,
+                after),
+            BattleEncounterEventKind.BattleFaulted => new BattleFaultedEventPayload(
+                BattleEncounterFaultCode.TurnHandlerExecutionFailed,
+                actor.InstanceId,
+                actor.TeamId,
+                "forged-port"),
+            BattleEncounterEventKind.BattleEnded => new BattleEndedEventPayload(
+                BattleEncounterOutcome.Draw,
+                null,
+                0),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+        };
+
+        return new BattleEncounterEvent(0, kind, payload, debugText);
+    }
+
     private static void AssertPortFault(
         BattleEncounterResult result,
         BattleEncounterFaultCode expectedCode,
@@ -1795,6 +1933,7 @@ public sealed class BattleEncounterRunnerTests
         public Action<BattleEncounterTurnLifecycleRequest>? TurnEndAction { get; init; }
         public Action<BattleEncounterLifecycleRequest>? PhaseEndAction { get; init; }
         public Action<BattleEncounterLifecycleRequest>? BattleEndAction { get; init; }
+        public IReadOnlyList<BattleEncounterEvent> BattleStartEvents { get; init; } = [];
         public IReadOnlyList<BattleEncounterEvent> BattleEndEvents { get; init; } = [];
         public int BattleStartCalls { get; private set; }
         public int TurnStartCalls { get; private set; }
@@ -1808,7 +1947,7 @@ public sealed class BattleEncounterRunnerTests
         {
             BattleStartCalls++;
             BattleStartTeamOrder = request.TeamOrder;
-            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(Array.Empty<BattleEncounterEvent>());
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(BattleStartEvents);
         }
 
         public ValueTask<BattleTurnStartLifecycleResult> ProcessTurnStartAsync(

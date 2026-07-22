@@ -672,12 +672,10 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         {
             events.Add(new BattleEncounterEvent(
                 0,
-                BattleEncounterEventKind.BattleFaulted,
-                new BattleFaultedEventPayload(
-                    BattleEncounterFaultCode.CommandExecutionFaulted,
+                BattleEncounterEventKind.ActionRejected,
+                new BattleActionRejectedEventPayload(
                     actor.State.InstanceId,
-                    actor.State.TeamId,
-                    "automated-action"),
+                    BattleEncounterCommandStatus.Faulted),
                 fault));
             return new ValueTask<BattleEncounterCommandResult>(
                 BattleEncounterCommandResult.Faulted(fault, events));
