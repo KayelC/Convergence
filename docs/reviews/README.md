@@ -43,6 +43,7 @@ or implementation authority.
 - [Turn Economy Order 3 Source Review, 22 July 2026](turn-economy-order-3-source-review-2026-07-22.md)
 - [Turn Economy Order 3 Final Review, 22 July 2026](turn-economy-order-3-final-review-2026-07-22.md)
 - [Turn Economy Order 3 Independent Recheck, 22 July 2026](turn-economy-order-3-independent-recheck-2026-07-22.md)
+- [Turn Economy Order 3 Post-Correction Closure Review, 22 July 2026](turn-economy-order-3-post-correction-closure-review-2026-07-22.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.

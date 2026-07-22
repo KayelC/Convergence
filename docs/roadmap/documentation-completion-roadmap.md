@@ -266,7 +266,12 @@ technical references with those contracts and returns both entries to
 `reviewed`. The executable documentation matrix records 20 reviewed, 32
 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries.
 
-Order 4 is next after the post-correction Order 3 source review. It reviews
+The [post-correction closure review](../reviews/turn-economy-order-3-post-correction-closure-review-2026-07-22.md)
+then re-read the current implementation, tests, host composition, and audience
+documents without using earlier conclusions as authority. It found no
+unresolved realistic reachable defect, so O3-R12 formally closes Order 3.
+
+Order 4 is next. It reviews
 status, ailment, passive, and duration lifecycle from current source before any
 audience entry is promoted.
 

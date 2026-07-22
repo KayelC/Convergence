@@ -24,6 +24,8 @@ and closed that revision without an unresolved reachable mechanic defect. A
 later recheck found three narrower command-boundary integration defects. O3-R8
 through O3-R10 corrected them, and O3-R11 reconciled the audience documents,
 API contract, content wording, executable matrices, and release evidence.
+O3-R12 then completed a fresh post-correction source and documentation review
+without finding another realistic reachable defect.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in
@@ -108,8 +110,9 @@ test, and audience-documentation checkpoints. O3-R7 completed the final
 independent source and release-gate verification at that revision. A later
 recheck found and O3-R8 through O3-R11 corrected three command-boundary
 integration defects before returning the capability and all three audience
-documents to complete/reviewed. Order 4, status and passive lifecycle, is the
-next collaborative documentation subject.
+documents to complete/reviewed. O3-R12 independently confirmed that closure
+from current code. Order 4, status and passive lifecycle, is the next
+collaborative documentation subject.
 
 ## Priority 2: Persistence Evolution
 

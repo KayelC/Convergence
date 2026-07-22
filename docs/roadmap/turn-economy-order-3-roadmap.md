@@ -1,6 +1,6 @@
 # Turn Economy Order 3 Roadmap
 
-**Status:** corrections implemented; independent closure review pending
+**Status:** complete; independently re-reviewed at `4c6dde7`
 
 **Capability:** `turn_economy`
 
@@ -9,6 +9,8 @@
 **Source review:** [Turn Economy Order 3 Source Review](../reviews/turn-economy-order-3-source-review-2026-07-22.md)
 
 **Independent recheck:** [Turn Economy Order 3 Independent Recheck](../reviews/turn-economy-order-3-independent-recheck-2026-07-22.md)
+
+**Post-correction closure:** [Turn Economy Order 3 Post-Correction Closure Review](../reviews/turn-economy-order-3-post-correction-closure-review-2026-07-22.md)
 
 ## Goal
 
@@ -52,6 +54,7 @@ actor order.
 | O3-R9 | `verified` | Enforce coherent command status, requested outcome, winning-team, fault, and turn-consumption combinations at public construction. | `battle: validate encounter command outcomes` |
 | O3-R10 | `verified` | Prevent public record cloning from replacing Framework-calculated turn consumption or introducing null command costs. | `battle: seal turn consumption results` |
 | O3-R11 | `verified` | Reconcile the technical sequence, developer guidance, reference content wording, executable matrices, API baseline, and fresh verification evidence. | `docs: reverify turn economy order 3` |
+| O3-R12 | `verified` | Re-read the post-correction source, tests, host composition, and audience documents without treating earlier reports as authority; close only if no realistic reachable defect remains. | `docs: close turn economy order 3` |
 
 Each checkpoint is an isolated green commit. A later checkpoint may append its
 commit and verification evidence here, but it must not rewrite an earlier
@@ -200,3 +203,21 @@ DemoHost modes, scripted Training Annex play, trim analysis, and the real Godot
 normal `user://logs` path; the identical command passed when allowed to use the
 engine's user-data directory. No engine binary or generated artifact is
 tracked.
+
+### O3-R12 Completion
+
+The post-correction closure review independently traced the current economy
+implementations, consumption contracts, action-result production, encounter
+callbacks, liveness limits, ruleset binding, typed events, DemoHost wiring,
+Godot wiring, focused tests, and all three audience documents. It found no
+unresolved realistic reachable defect in the Order 3 scope.
+
+The review confirms that the remaining individual-turn, immediate-bonus, and
+mid-battle-suspend work belongs to explicit future scheduler and persistence
+designs. Those are documented product boundaries rather than incomplete Action
+Token transitions. Order 3 is therefore complete at `4c6dde7` with the R11
+release evidence retained as its executable gate.
+
+O3-R12 reran 156 focused tests and the complete 1,505-test solution with no
+failures or skips. The warning-as-error Release build completed with zero
+warnings, and format and diff verification passed.

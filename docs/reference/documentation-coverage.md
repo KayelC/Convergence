@@ -31,7 +31,9 @@ O3-R7 independently verified the source and audience documents at that
 revision. A later source-first recheck reopened the developer and technical
 entries while three command-boundary defects were corrected. O3-R8 through
 O3-R11 now reconcile those boundaries and return all three Order 3 audiences to
-`reviewed`; Order 4 is the next review rather than a bulk status promotion.
+`reviewed`. O3-R12 independently re-read the corrected implementation and
+documents and found no remaining realistic reachable defect; Order 4 is the
+next review rather than a bulk status promotion.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
