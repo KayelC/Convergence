@@ -846,6 +846,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         .ConfigureAwait(false);
                 }
 
+                BattleTurnEconomySnapshot acceptedEconomyState = phaseStartState;
                 await AddAsync(
                         BattleEncounterEventKind.PhaseStarted,
                         new BattlePhaseStartedEventPayload(teamId, phaseStartState),
@@ -865,6 +866,18 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                 $"Team {teamId} exceeded the configured phase command limit " +
                                 $"of {services.PhaseProgress.MaximumCommands}.",
                                 faultCode: BattleEncounterFaultCode.PhaseCommandLimitExceeded)
+                            .ConfigureAwait(false);
+                    }
+
+                    BattleTurnEconomySnapshot beforeEconomy = CaptureTurnEconomySnapshot(turnEconomy);
+                    string? continuityFault = ValidateEconomyContinuity(
+                        acceptedEconomyState,
+                        beforeEconomy);
+                    if (continuityFault is not null)
+                    {
+                        return await FaultDuringBattleAsync(
+                                continuityFault,
+                                faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
                             .ConfigureAwait(false);
                     }
 
@@ -925,9 +938,6 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             .ConfigureAwait(false);
                     }
 
-                    BattleTurnEconomySnapshot beforeEconomy = CaptureTurnEconomySnapshot(
-                        turnEconomy,
-                        actor.InstanceId);
                     IReadOnlyList<StatModifierLifecycleBoundary> activeStatModifierBoundaries =
                         services.Lifecycle is IBattleEncounterStatModifierBoundarySource boundarySource
                             ? InvokePort(
@@ -1028,6 +1038,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             .ConfigureAwait(false);
                     }
 
+                    acceptedEconomyState = afterEconomy;
                     bool economyAdvanced = !Equals(beforeEconomy, afterEconomy);
                     if (!economyAdvanced && command.RequestedOutcome is null)
                     {
@@ -1109,6 +1120,16 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
+                BattleTurnEconomySnapshot phaseEndState = CaptureTurnEconomySnapshot(turnEconomy);
+                string? phaseEndFault = ValidateEconomyContinuity(acceptedEconomyState, phaseEndState);
+                if (phaseEndFault is not null)
+                {
+                    return await FaultDuringBattleAsync(
+                            phaseEndFault,
+                            faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                        .ConfigureAwait(false);
+                }
+
                 IReadOnlyList<BattleEncounterEvent> phaseEndEvents;
                 try
                 {
@@ -1138,7 +1159,6 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 }
 
                 await AddRangeAsync(phaseEndEvents).ConfigureAwait(false);
-                BattleTurnEconomySnapshot phaseEndState = CaptureTurnEconomySnapshot(turnEconomy);
                 await AddAsync(
                         BattleEncounterEventKind.PhaseEnded,
                         new BattlePhaseEndedEventPayload(teamId, phaseEndState),
@@ -1462,6 +1482,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             return $"Turn economy changed identity from {before.EconomyId} to {after.EconomyId} during a phase.";
         }
 
+        if (before.GetType() != after.GetType())
+        {
+            return $"Turn economy {after.EconomyId} changed snapshot type from " +
+                   $"{before.GetType().Name} to {after.GetType().Name} during a phase.";
+        }
+
         string? stateFault = ValidateEconomyState(after, hasTurnsRemaining);
         if (stateFault is not null)
         {
@@ -1474,6 +1500,27 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         }
 
         return null;
+    }
+
+    private static string? ValidateEconomyContinuity(
+        BattleTurnEconomySnapshot expected,
+        BattleTurnEconomySnapshot actual)
+    {
+        if (expected.EconomyId != actual.EconomyId)
+        {
+            return $"Turn economy changed identity from {expected.EconomyId} to {actual.EconomyId} " +
+                   "outside an accepted transition.";
+        }
+
+        if (expected.GetType() != actual.GetType())
+        {
+            return $"Turn economy {actual.EconomyId} changed snapshot type from " +
+                   $"{expected.GetType().Name} to {actual.GetType().Name} outside an accepted transition.";
+        }
+
+        return !Equals(expected, actual)
+            ? $"Turn economy {actual.EconomyId} changed state outside an accepted transition."
+            : null;
     }
 
     private static string? ValidateEconomyState(

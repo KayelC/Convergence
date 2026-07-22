@@ -1149,6 +1149,78 @@ public sealed class BattleEncounterRunnerTests
             battleEvent.Kind == BattleEncounterEventKind.PhaseStarted);
     }
 
+    [Theory]
+    [InlineData(SnapshotDriftKind.Identity)]
+    [InlineData(SnapshotDriftKind.Type)]
+    public void Runner_RejectsSnapshotAuthorityDriftBeforeTurnLifecycle(SnapshotDriftKind driftKind)
+    {
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [Participant("drift_player", PlayerTeam), Participant("drift_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            () => new SnapshotDriftTurnEconomy(SnapshotDriftStage.BeforeCommand, driftKind));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
+        Assert.Contains(
+            driftKind == SnapshotDriftKind.Identity ? "changed identity" : "changed snapshot type",
+            result.FaultMessage);
+        Assert.Empty(handler.Requests);
+        Assert.Equal(0, lifecycle.TurnStartCalls);
+    }
+
+    [Fact]
+    public void Runner_RejectsSnapshotTypeChangeProducedByEconomyApplication()
+    {
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [Participant("apply_drift_player", PlayerTeam), Participant("apply_drift_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            () => new SnapshotDriftTurnEconomy(SnapshotDriftStage.AfterApply, SnapshotDriftKind.Type));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
+        Assert.Contains("changed snapshot type", result.FaultMessage);
+        Assert.Single(handler.Requests);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Fact]
+    public void Runner_RejectsSnapshotStateDriftBeforePhaseEndLifecycle()
+    {
+        var lifecycle = new RecordingLifecycle();
+
+        BattleEncounterResult result = Run(
+            [Participant("phase_drift_player", PlayerTeam), Participant("phase_drift_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(99),
+            () => new SnapshotDriftTurnEconomy(SnapshotDriftStage.PhaseEnd, SnapshotDriftKind.State));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
+        Assert.Contains("changed state outside an accepted transition", result.FaultMessage);
+        Assert.Equal(1, lifecycle.TurnEndCalls);
+        Assert.Equal(0, lifecycle.PhaseEndCalls);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.PhaseEnded);
+    }
+
     [Fact]
     public void Runner_CommandLimitBoundsAnEconomyThatContinuouslyAddsTurns()
     {
@@ -1494,6 +1566,7 @@ public sealed class BattleEncounterRunnerTests
         public int BattleStartCalls { get; private set; }
         public int TurnStartCalls { get; private set; }
         public int TurnEndCalls { get; private set; }
+        public int PhaseEndCalls { get; private set; }
         public int BattleEndCalls { get; private set; }
 
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
@@ -1527,8 +1600,12 @@ public sealed class BattleEncounterRunnerTests
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
             BattleEncounterLifecycleRequest request,
             ContentId teamId,
-            CancellationToken cancellationToken = default) =>
-            new(Array.Empty<BattleEncounterEvent>());
+            CancellationToken cancellationToken = default)
+        {
+            PhaseEndCalls++;
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
+                Array.Empty<BattleEncounterEvent>());
+        }
 
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
             BattleEncounterLifecycleRequest request,
@@ -1876,6 +1953,87 @@ public sealed class BattleEncounterRunnerTests
 
         public void Apply(ActionTurnConsumption consumption) =>
             throw new InvalidOperationException("An inconsistent initial economy must never receive a command.");
+    }
+
+    public enum SnapshotDriftStage
+    {
+        BeforeCommand,
+        AfterApply,
+        PhaseEnd
+    }
+
+    public enum SnapshotDriftKind
+    {
+        Identity,
+        Type,
+        State
+    }
+
+    private sealed class SnapshotDriftTurnEconomy(
+        SnapshotDriftStage driftStage,
+        SnapshotDriftKind driftKind) : IBattleTurnEconomy
+    {
+        private static readonly ContentId StableEconomyId = Id("stable_scripted_economy");
+        private static readonly ContentId DriftedEconomyId = Id("drifted_scripted_economy");
+        private int _captureCount;
+        private int _remaining;
+
+        public void StartPhase(int activeActorCount) => _remaining = 1;
+
+        public bool HasTurnsRemaining() => _remaining > 0;
+
+        public BattleTurnEconomySnapshot CaptureSnapshot()
+        {
+            _captureCount++;
+            bool shouldDrift = driftStage switch
+            {
+                SnapshotDriftStage.BeforeCommand => _captureCount == 2,
+                SnapshotDriftStage.AfterApply => _captureCount == 3,
+                SnapshotDriftStage.PhaseEnd => _captureCount == 4,
+                _ => false
+            };
+
+            if (!shouldDrift)
+            {
+                return new ScriptedTurnEconomySnapshot(StableEconomyId, _remaining, revision: 0);
+            }
+
+            return driftKind switch
+            {
+                SnapshotDriftKind.Identity =>
+                    new ScriptedTurnEconomySnapshot(DriftedEconomyId, _remaining, revision: 0),
+                SnapshotDriftKind.Type =>
+                    new AlternateScriptedTurnEconomySnapshot(StableEconomyId, _remaining),
+                SnapshotDriftKind.State =>
+                    new ScriptedTurnEconomySnapshot(StableEconomyId, _remaining, revision: 1),
+                _ => throw new ArgumentOutOfRangeException(nameof(driftKind))
+            };
+        }
+
+        public void Apply(ActionTurnConsumption consumption)
+        {
+            ArgumentNullException.ThrowIfNull(consumption);
+            _remaining = 0;
+        }
+    }
+
+    private sealed record ScriptedTurnEconomySnapshot : BattleTurnEconomySnapshot
+    {
+        public ScriptedTurnEconomySnapshot(ContentId economyId, int remainingActions, int revision)
+            : base(economyId, remainingActions)
+        {
+            Revision = revision;
+        }
+
+        public int Revision { get; }
+    }
+
+    private sealed record AlternateScriptedTurnEconomySnapshot : BattleTurnEconomySnapshot
+    {
+        public AlternateScriptedTurnEconomySnapshot(ContentId economyId, int remainingActions)
+            : base(economyId, remainingActions)
+        {
+        }
     }
 
     private sealed class RecordingTurnEconomy : IBattleTurnEconomy
