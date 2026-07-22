@@ -39,6 +39,7 @@ or implementation authority.
 - [Combat Resolution Order 2 Registration-Parity Corrections Review, 22 July 2026](combat-resolution-order-2-registration-parity-corrections-review-2026-07-22.md)
 - [Combat Resolution Order 2 Closure-Readiness Review, 22 July 2026](combat-resolution-order-2-closure-readiness-review-2026-07-22.md)
 - [Combat Resolution Order 2 Charge Corrections Source Review, 22 July 2026](combat-resolution-order-2-charge-corrections-review-2026-07-22.md)
+- [Combat Resolution Order 2 Final Charge Closure Review, 22 July 2026](combat-resolution-order-2-final-charge-closure-review-2026-07-22.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.

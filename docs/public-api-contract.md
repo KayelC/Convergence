@@ -76,6 +76,11 @@ participating `ChargeDamageModifier` receipts. `EffectExecutionResult` exposes
 modifier it resolved. The supplied policy base consumes only the same retained
 runtime charge represented by that receipt; later grants and same-kind
 replacements are not removed accidentally.
+The supplied policy base rejects a charged receipt that was not issued by its
+`ResolveDamageModifier` path. A custom damage executor must therefore publish
+the actual returned modifier rather than reconstructing one from its public
+values. A direct custom `IChargePolicyService` implementation still owns its
+own completion contract.
 
 `DisabledChargePolicy` is the explicit no-charge composition and
 `StandardChargePolicyIds.Disabled` is registered by

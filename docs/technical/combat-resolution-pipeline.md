@@ -259,6 +259,10 @@ when the outermost effect sequence finishes. `ChargePolicyServiceBase` removes
 only the same runtime charge that participated; a later grant or same-kind
 replacement therefore survives. Because execution uses staged actors, a later
 exception discards any charge removal along with other actor mutations.
+Charged receipts submitted to the supplied policy base must carry the internal
+source identity minted by `ResolveDamageModifier`. A source-less receipt from a
+custom executor throws before completion mutation, and the enclosing action
+transaction converts that failure into a typed rejection without committing.
 
 ## Outcome Aggregation
 

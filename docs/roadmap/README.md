@@ -28,9 +28,8 @@ requires owner review. The Documentation Completion Roadmap governs the ordered
 collaborative review of those outstanding entries.
 
 Order 1's mechanics, audience documentation, and typed execution capability
-remain owner-confirmed and complete. Order 2, `combat_resolution`, is reopened
-as `partial`: the 22 July closure-readiness review found a reachable
-charge-ordering defect and an optional-composition mismatch. O2-R35 through
-O2-R39 corrected and reviewed those issues, then exposed one source-less custom
-receipt defect. O2-R40 and O2-R41 own the final correction and recheck. Order 3
-does not begin until that gate is green.
+remain owner-confirmed and complete. Order 2, `combat_resolution`, is also
+complete: O2-R35 through O2-R40 corrected exact charge participation, optional
+composition, and malformed custom receipts; O2-R41 completed the fresh source
+and release-gate recheck. Order 3 is now the next collaborative documentation
+subject.

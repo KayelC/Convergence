@@ -1,6 +1,6 @@
 # Order 2 Charge Closure Corrections Roadmap
 
-**Status:** active; O2-R35 through O2-R39 complete, O2-R40 and O2-R41 pending
+**Status:** complete; O2-R35 through O2-R41 verified
 
 **Started:** 22 July 2026
 
@@ -164,7 +164,7 @@ by the supplied policy base. The finding is recorded in the
 
 ### O2-R40: Reject fabricated participation receipts
 
-**State:** pending
+**State:** complete
 
 - Require every charged modifier submitted to `ChargePolicyServiceBase` to
   carry the internal source receipt created by `ResolveDamageModifier`.
@@ -174,17 +174,30 @@ by the supplied policy base. The finding is recorded in the
 - Preserve valid Split, Unified, nested, replacement, multi-target, miss, and
   defensive-affinity behavior.
 
+**Result:** `ChargePolicyServiceBase` now rejects source-less charged
+modifiers before mutation and matches only the exact retained source state.
+Direct-call and public custom-executor regressions prove malformed input leaves
+live actor and target state unchanged while valid receipts retain their prior
+behavior.
+
 **Commit:** `execution: reject fabricated charge participation`
 
 ### O2-R41: Final independent closure recheck
 
-**State:** pending
+**State:** complete
 
 - Re-read current charge source and custom extension boundaries after O2-R40.
 - Reproduce all ordering, optionality, persistence, and malformed-receipt tests.
 - Reconcile the active matrices and completion records.
 - Run the complete release gate and close Order 2 only if no reachable defect
   remains in scope.
+
+**Result:** The fresh source trace found no unresolved reachable defect in the
+corrected charge paths. The complete 1,472-test solution, strict zero-warning
+build, content validator, all noninteractive demos, formatting, links,
+boundaries, API/schema gates, and whitespace checks passed. The evidence is
+recorded in the
+[Order 2 Final Charge Closure Review](../reviews/combat-resolution-order-2-final-charge-closure-review-2026-07-22.md).
 
 **Commit:** `docs: verify order 2 charge closure`
 
@@ -212,8 +225,8 @@ skips, a strict nonincremental Release build with zero warnings, formatting
 verification, relevant documentation or content checks, `git diff --check`, and
 one narrow commit before the next checkpoint begins.
 
-O2-R41 additionally runs all noninteractive DemoHost modes and validates all
-active packs. The review standard requires an intended invariant, a realistic
+O2-R41 ran all noninteractive DemoHost modes and validated all active packs.
+The review standard requires an intended invariant, a realistic
 reachable path, a concrete consequence, and source or executable evidence.
 Theoretical malformed values and alternative product designs remain labeled
 separately.
@@ -229,4 +242,4 @@ Order 2 may close only when:
   standard composition;
 - mechanics, developer, and technical documents describe the same behavior;
 - capability and documentation matrices report current truth; and
-- O2-R41 finds no remaining reachable defect in these corrected paths.
+- O2-R41 found no remaining reachable defect in these corrected paths.

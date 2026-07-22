@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v11 restoration. Its
@@ -81,11 +81,12 @@ The later 22 July closure-readiness review reopened `combat_resolution` as
 `partial`. O2-R36 now finalizes exact participating charge receipts and
 preserves later grants or same-kind replacements. O2-R37 supplies authored
 disabled, split, and unified composition, and O2-R38 reconciles all three
-documentation audiences. The capability remains partial solely until O2-R39
-performs the independent source recheck. That completed review found a
-custom-executor receipt-integrity defect: a source-less charged modifier is
-currently accepted as a wildcard. O2-R40 owns the correction, and O2-R41 owns
-the final source and release-gate closure recheck.
+documentation audiences. O2-R39's independent source review then found a
+custom-executor receipt-integrity defect: a source-less charged modifier was
+accepted as a wildcard. O2-R40 now rejects such input before mutation, and its
+custom-executor regression proves staged rollback. O2-R41's fresh source trace
+and complete release gate found no remaining reachable defect in the corrected
+scope, so `combat_resolution` is `complete`.
 
 ## Authority
 

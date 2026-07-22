@@ -263,6 +263,10 @@ the exact retained charge represented by that receipt once after all targets
 and hits have used it. It does not merely look up the damage element at action
 end. Consequently, an uncharged damage effect followed by a grant keeps the
 new charge, and a same-kind replacement is not mistaken for the earlier charge.
+Custom damage executors must publish the exact modifier returned by
+`ResolveDamageModifier`. The supplied policy base rejects a source-less charged
+modifier before mutation; the enclosing staged action then rejects without
+committing actor or target state.
 
 Retained charge state includes its policy ID. Supply the same policies to
 `ChargePolicyRegistry` during save validation and session restoration:

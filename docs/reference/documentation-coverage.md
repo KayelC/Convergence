@@ -45,8 +45,11 @@ completed another independent source and release-gate verification.
 The subsequent 22 July closure-readiness review temporarily returned all three
 `combat_resolution` audience entries to `existing_unreviewed`. O2-R36 through
 O2-R38 corrected exact charge participation, supplied disabled composition,
-and reconciled all three audiences. They are reviewed again; formal capability
-closure remains pending the independent O2-R39 source review.
+and reconciled all three audiences. O2-R39 then found one supported custom
+executor could fabricate a source-less participation receipt. O2-R40 rejects
+that receipt before mutation, and O2-R41's fresh source and release-gate review
+found no unresolved reachable defect. The audience entries remain reviewed and
+`combat_resolution` is complete.
 
 The documentation matrix currently records 75 audience entries: 17 reviewed,
 34 existing_unreviewed, 17 missing, and 7 not_applicable.

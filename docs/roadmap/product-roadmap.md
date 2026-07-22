@@ -8,14 +8,14 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`combat_resolution` is the temporary partial entry. O2-R36 through O2-R38 have
-corrected exact charge participation, added supplied disabled composition, and
-reconciled the audience documents. The completed O2-R39 independent source
-review found one supported custom-executor receipt-integrity defect. O2-R40
-owns its correction, and O2-R41 owns the final source and release-gate closure
-before Order 3 begins.
+`combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
+participation, added supplied disabled composition, and reconciled the audience
+documents. O2-R39 found one supported custom-executor receipt-integrity defect;
+O2-R40 corrected it, and O2-R41 completed a fresh source and release-gate
+closure with no unresolved reachable defect. Order 3 is now the next
+collaborative documentation subject.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in

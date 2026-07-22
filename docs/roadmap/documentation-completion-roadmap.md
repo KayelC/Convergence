@@ -200,7 +200,7 @@ Current checkpoints:
 
 | Checkpoint | State | Required outcome |
 |---|---|---|
-| O2-H1 | `correction_required` | Exact receipt flow and optional composition are implemented, but O2-R39 found that source-less fabricated receipts must be rejected by O2-R40 before O2-R41 verification. |
+| O2-H1 | `verified` | Exact receipt flow, optional composition, malformed-receipt rejection, staged rollback, and final source verification are complete. |
 | O2-M1 | `verified` | Inert standard chance defaults are removed; typed content remains authoritative. |
 | O2-M2 | `verified` | Authored Accuracy, Evasion, and Critical Chance modifiers reach their typed policy boundaries. |
 | O2-M3 | `verified` | Authored combat binding returns a coherent neutral aggregate whose exposed authorities are the executing authorities. |
@@ -210,7 +210,7 @@ Current checkpoints:
 | O2-D4 | `confirmed` | Configurable instant-defeat resistance multipliers and one explicit roll. |
 | O2-D5 | `confirmed` | Sequential staged multi-hit mutation and immutable hit/target evidence. |
 | O2-D6 | `confirmed` | Configurable probability bounds with neutral supplied defaults of `0..100`. |
-| O2-DOC | `verified` | Mechanics, developer, and technical charge documentation agree on participation receipts and explicit disabled composition; O2-R41 owns formal capability closure after the O2-R40 source correction. |
+| O2-DOC | `verified` | Mechanics, developer, and technical charge documentation agree on participation receipts, malformed-receipt rejection, and explicit disabled composition. |
 
 The table records the first implementation cycle; O2-R7 through O2-R16 record
 the complete-action and ordered-secondary-effect correction cycle. O2-R18
@@ -222,10 +222,10 @@ source verification. O2-R30 through O2-R34 record registration-parity,
 terminology, active-contract, audience-documentation, and final source
 verification corrections. O2-R36 through O2-R38 implement exact charge
 participation, supplied optional composition, and audience reconciliation. The
-three `combat_resolution` audience entries are `reviewed` again, while formal
-Order 2 capability closure remains pending. O2-R39 found one custom-executor
-receipt-integrity defect; O2-R40 owns the correction and O2-R41 owns final
-closure.
+three `combat_resolution` audience entries are `reviewed` again. O2-R39 found
+one custom-executor receipt-integrity defect, O2-R40 corrected it atomically,
+and O2-R41's current-source recheck found no unresolved reachable defect.
+`combat_resolution` has returned to `complete`; Order 3 is next.
 
 ## Deferred Documentation
 
