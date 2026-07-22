@@ -1116,6 +1116,55 @@ public sealed class BattleEncounterRunnerTests
         Assert.Contains("consecutive free-action limit of 2", result.FaultMessage);
     }
 
+    [Fact]
+    public void Runner_AllowsExactlyTheConfiguredFreeActionLimit()
+    {
+        int commandIndex = 0;
+        var handler = new QueueTurnHandler(_ =>
+        {
+            commandIndex++;
+            return BattleEncounterCommandResult.Executed(
+                commandIndex <= 2 ? ActionTurnConsumption.None : ActionTurnConsumption.Normal);
+        });
+
+        BattleEncounterResult result = Run(
+            [Participant("bounded_free_player", PlayerTeam), Participant("bounded_free_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(3),
+            phaseProgress: new BattlePhaseProgressPolicy(8, 2));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Equal(3, handler.Requests.Count);
+    }
+
+    [Fact]
+    public void Runner_ResetsConsecutiveFreeActionCountAfterEconomyAdvances()
+    {
+        int commandIndex = 0;
+        var handler = new QueueTurnHandler(_ =>
+        {
+            commandIndex++;
+            return BattleEncounterCommandResult.Executed(
+                commandIndex is 1 or 3
+                    ? ActionTurnConsumption.None
+                    : ActionTurnConsumption.Normal);
+        });
+
+        BattleEncounterResult result = Run(
+            [Participant("reset_free_player", PlayerTeam), Participant("reset_free_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(4),
+            () => new ExpandingTurnEconomy(),
+            new BattlePhaseProgressPolicy(8, 1));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Equal(4, handler.Requests.Count);
+    }
+
     [Theory]
     [InlineData(0, true)]
     [InlineData(1, false)]

@@ -153,27 +153,143 @@ public sealed class TurnEconomyContractTests
             validTransition with { After = new ActionTokenTurnEconomySnapshot(0, 0) }));
     }
 
-    [Fact]
-    public void SuppliedTurnEconomiesPreserveEveryLegalConsumptionShape()
+    [Theory]
+    [InlineData(ActionTurnConsumptionKind.Normal)]
+    [InlineData(ActionTurnConsumptionKind.Pass)]
+    [InlineData(ActionTurnConsumptionKind.TurnEconomy)]
+    public void StandardActionEconomy_ConsumesOneOpportunityForEveryPricedAction(
+        ActionTurnConsumptionKind kind)
     {
         var standard = new StandardActionTurnEconomy();
         standard.StartPhase(2);
+
         standard.Apply(ActionTurnConsumption.None);
         Assert.Equal(2, standard.CaptureSnapshot().RemainingActions);
-        standard.Apply(ActionTurnConsumption.FromTurnEconomy(
-            new TurnEconomyResolution(TurnEconomyOutcome.Weakness, false, false)));
+
+        standard.Apply(kind switch
+        {
+            ActionTurnConsumptionKind.Normal => ActionTurnConsumption.Normal,
+            ActionTurnConsumptionKind.Pass => ActionTurnConsumption.Pass,
+            ActionTurnConsumptionKind.TurnEconomy => Outcome(TurnEconomyOutcome.Weakness),
+            _ => throw new ArgumentOutOfRangeException(nameof(kind))
+        });
+
         Assert.Equal(1, standard.CaptureSnapshot().RemainingActions);
         standard.Apply(ActionTurnConsumption.TerminatePhase);
         Assert.Equal(0, standard.CaptureSnapshot().RemainingActions);
+        standard.Apply(ActionTurnConsumption.Normal);
+        Assert.Equal(0, standard.CaptureSnapshot().RemainingActions);
+    }
 
-        var actionTokens = new ActionTokenTurnEconomy();
-        actionTokens.StartPhase(1);
-        actionTokens.Apply(ActionTurnConsumption.FromTurnEconomy(
-            new TurnEconomyResolution(TurnEconomyOutcome.Weakness, false, false)));
-        Assert.Equal(0, actionTokens.FullTokens);
-        Assert.Equal(1, actionTokens.PartialTokens);
-        actionTokens.Apply(ActionTurnConsumption.Pass);
-        Assert.False(actionTokens.HasTurnsRemaining());
+    [Fact]
+    public void ActionToken_NormalAndPassConsumePartialTokensBeforeFullTokens()
+    {
+        var normal = new ActionTokenTurnEconomy();
+        normal.StartPhase(2);
+        normal.Apply(Outcome(TurnEconomyOutcome.Weakness));
+        AssertTokens(normal, full: 1, partial: 1);
+        normal.Apply(ActionTurnConsumption.Normal);
+        AssertTokens(normal, full: 1, partial: 0);
+        normal.Apply(ActionTurnConsumption.Normal);
+        AssertTokens(normal, full: 0, partial: 0);
+
+        var pass = new ActionTokenTurnEconomy();
+        pass.StartPhase(2);
+        pass.Apply(Outcome(TurnEconomyOutcome.Weakness));
+        AssertTokens(pass, full: 1, partial: 1);
+        pass.Apply(ActionTurnConsumption.Pass);
+        AssertTokens(pass, full: 1, partial: 0);
+        pass.Apply(ActionTurnConsumption.Pass);
+        AssertTokens(pass, full: 0, partial: 1);
+        pass.Apply(ActionTurnConsumption.Pass);
+        AssertTokens(pass, full: 0, partial: 0);
+    }
+
+    [Theory]
+    [InlineData(TurnEconomyOutcome.Weakness)]
+    [InlineData(TurnEconomyOutcome.Critical)]
+    public void ActionToken_RewardedOutcomesConvertAFullTokenOrConsumeAPartial(
+        TurnEconomyOutcome outcome)
+    {
+        var economy = new ActionTokenTurnEconomy();
+        economy.StartPhase(1);
+
+        economy.Apply(Outcome(outcome));
+        AssertTokens(economy, full: 0, partial: 1);
+        economy.Apply(Outcome(outcome));
+        AssertTokens(economy, full: 0, partial: 0);
+    }
+
+    [Theory]
+    [InlineData(TurnEconomyOutcome.Miss)]
+    [InlineData(TurnEconomyOutcome.Null)]
+    public void ActionToken_PenaltyOutcomesConsumeUpToTwoTokensPartialFirst(
+        TurnEconomyOutcome outcome)
+    {
+        var economy = new ActionTokenTurnEconomy();
+        economy.StartPhase(3);
+        economy.Apply(Outcome(TurnEconomyOutcome.Weakness));
+        AssertTokens(economy, full: 2, partial: 1);
+
+        economy.Apply(Outcome(outcome));
+        AssertTokens(economy, full: 1, partial: 0);
+        economy.Apply(Outcome(outcome));
+        AssertTokens(economy, full: 0, partial: 0);
+    }
+
+    [Theory]
+    [InlineData(TurnEconomyOutcome.Repel)]
+    [InlineData(TurnEconomyOutcome.Absorb)]
+    public void ActionToken_TerminatingDefenseOutcomesClearThePhase(TurnEconomyOutcome outcome)
+    {
+        var economy = new ActionTokenTurnEconomy();
+        economy.StartPhase(3);
+
+        economy.Apply(Outcome(outcome));
+
+        AssertTokens(economy, full: 0, partial: 0);
+    }
+
+    [Fact]
+    public void ActionToken_ExplicitTerminationAndResolutionTerminationClearThePhase()
+    {
+        var explicitTermination = new ActionTokenTurnEconomy();
+        explicitTermination.StartPhase(2);
+        explicitTermination.Apply(ActionTurnConsumption.TerminatePhase);
+        AssertTokens(explicitTermination, full: 0, partial: 0);
+
+        var resolutionTermination = new ActionTokenTurnEconomy();
+        resolutionTermination.StartPhase(2);
+        resolutionTermination.Apply(ActionTurnConsumption.FromTurnEconomy(
+            new TurnEconomyResolution(TurnEconomyOutcome.Normal, false, true)));
+        AssertTokens(resolutionTermination, full: 0, partial: 0);
+    }
+
+    [Fact]
+    public void SuppliedTurnEconomies_ValidatePhaseAndSnapshotNumericBoundaries()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new StandardActionTurnEconomy().StartPhase(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new ActionTokenTurnEconomy().StartPhase(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new ActionTokenTurnEconomySnapshot(-1, 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new ActionTokenTurnEconomySnapshot(0, -1));
+        Assert.Throws<OverflowException>(() =>
+            new ActionTokenTurnEconomySnapshot(int.MaxValue, 1));
+    }
+
+    private static ActionTurnConsumption Outcome(TurnEconomyOutcome outcome) =>
+        ActionTurnConsumption.FromTurnEconomy(new TurnEconomyResolution(outcome, false, false));
+
+    private static void AssertTokens(ActionTokenTurnEconomy economy, int full, int partial)
+    {
+        var snapshot = Assert.IsType<ActionTokenTurnEconomySnapshot>(economy.CaptureSnapshot());
+        Assert.Equal(full, snapshot.FullTokens);
+        Assert.Equal(partial, snapshot.PartialTokens);
+        Assert.Equal(full + partial, snapshot.RemainingActions);
+        Assert.Equal(full + partial > 0, economy.HasTurnsRemaining());
     }
 
     private sealed record TestTurnEconomySnapshot : BattleTurnEconomySnapshot

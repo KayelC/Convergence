@@ -43,7 +43,7 @@ actor order.
 | O3-R2 | `verified` | Require one valid economy ID, concrete snapshot type, and accepted state chain through phase start, every command, and phase end. | `battle: enforce stable turn economy snapshots` |
 | O3-R3 | `verified` | Reject malformed turn-economy snapshots and typed event payloads at public construction boundaries. | `battle: validate turn economy event payloads` |
 | O3-R4 | `verified` | Register the supplied `standard_actions` economy through authored ruleset binding with explicit liveness parameters. | `runtime: bind standard action economy` |
-| O3-R5 | `pending` | Complete direct transition, pass-precedence, liveness-threshold, replacement, and malformed-extension contract tests. | `test: complete turn economy contract matrix` |
+| O3-R5 | `verified` | Complete direct transition, pass-precedence, liveness-threshold, replacement, and malformed-extension contract tests. | `test: complete turn economy contract matrix` |
 | O3-R6 | `pending` | Add the policy decision, developer guide, technical state machine, worked mechanics examples, indexes, and coverage evidence. | `docs: document turn economy policy family` |
 | O3-R7 | `pending` | Re-read corrected source and documents independently, run the complete release gate, and close only if no reachable defect remains. | `docs: verify turn economy order 3` |
 
