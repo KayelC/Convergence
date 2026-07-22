@@ -1741,6 +1741,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             return stateFault;
         }
 
+        if (consumption.Kind == ActionTurnConsumptionKind.TerminatePhase && hasTurnsRemaining)
+        {
+            return $"Turn economy {after.EconomyId} retained {after.RemainingActions} action(s) " +
+                   "after explicit phase termination.";
+        }
+
         if (consumption.Kind != ActionTurnConsumptionKind.None && Equals(before, after))
         {
             return $"Turn economy {after.EconomyId} did not advance for {consumption.Kind} consumption.";

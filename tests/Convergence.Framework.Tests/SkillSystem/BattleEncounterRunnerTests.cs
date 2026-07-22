@@ -1351,6 +1351,36 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_RejectsEconomyThatRetainsActionsAfterExplicitPhaseTermination()
+    {
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.TerminatePhase));
+        var economy = new RecordingTurnEconomy();
+
+        BattleEncounterResult result = Run(
+            [
+                Participant("termination_first_player", PlayerTeam),
+                Participant("termination_second_player", PlayerTeam),
+                Participant("termination_enemy", EnemyTeam)
+            ],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            () => economy);
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
+        Assert.Contains("after explicit phase termination", result.FaultMessage);
+        Assert.Single(handler.Requests);
+        Assert.Equal(1, economy.ApplyCalls);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Fact]
     public void Runner_RejectsSnapshotStateDriftDuringTurnEconomyEventPublication()
     {
         var lifecycle = new RecordingLifecycle();
