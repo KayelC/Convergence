@@ -21,6 +21,9 @@ complete-action aggregation, ordered dependencies, staged life-state checks,
 secondary damage contact, and host result validation. The final pre-closure
 correction review found no remaining reachable defect in that supported scope;
 their coverage entries remain `reviewed` and the implementation gate is closed.
+Order 3 has now reconciled the Action Token and neutral standard-actions rules,
+pass precedence, phase liveness, and the boundary between opportunity counting
+and actor scheduling across all three audiences.
 
 ## Rule Index
 

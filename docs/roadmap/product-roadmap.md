@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -17,7 +17,9 @@ O2-R40 corrected it, and O2-R41 completed a fresh source and release-gate
 closure with no unresolved reachable defect. Order 3 is active under the
 [Turn Economy Order 3 Roadmap](turn-economy-order-3-roadmap.md). Its source-first
 review preserved the confirmed Action Token rules while reopening the custom
-economy phase-authority and authored replacement surface for correction.
+economy phase-authority and authored replacement surface for correction. O3-R1
+through O3-R6 have corrected that surface and reconciled all three audiences;
+the independent O3-R7 closure gate remains.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in
@@ -97,8 +99,9 @@ entry becomes `reviewed`. Existing prose must not be bulk-promoted. Orders 1
 and 2 are complete and owner-confirmed. O2-R30 through O2-R34 corrected
 direct-action registration preflight, instant-defeat terminology, and current
 documentation drift, then independently rechecked the corrected source. The
-capability matrix records `turn_economy` as the sole partial implementation
-while the isolated Order 3 correction and documentation checkpoints run.
+capability matrix records `turn_economy` as complete after its isolated runtime,
+test, and audience-documentation checkpoints. O3-R7 remains the final
+independent source and release-gate verification before Order 4 begins.
 
 ## Priority 2: Persistence Evolution
 

@@ -29,6 +29,9 @@ Developer guides focus on:
 - [Combat Resolution Policies](combat-resolution-policies.md): authored combat
   binding, execution-service composition, typed hit evidence, random-source
   contracts, replacement policies, and retained charge state.
+- [Turn Economy Policies](turn-economy-policies.md): supplied economy
+  selection, authored binding, typed presentation, replacement contracts,
+  liveness, and the encounter-scheduling boundary.
 
 The actor and typed action/effect guides have completed collaborative review.
 That Order 1 review includes stat-modifier policy composition and integration.
@@ -36,6 +39,9 @@ The combat guide completed the Order 2 source review and documentation gate,
 including ordered secondary effects, complete-action outcome pricing, and
 validated host-custom effect results. The final pre-closure correction review
 found no remaining reachable defect in that supported scope.
+The turn-economy guide completed the Order 3 source and correction workflow for
+Action Token, neutral standard actions, custom snapshot authority, and finite
+phase liveness.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

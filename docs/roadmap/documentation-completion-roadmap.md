@@ -139,8 +139,9 @@ the [final Order 1 closure review](../reviews/order-1-final-closure-review-2026-
 All three `typed_action_and_effect_execution` audience entries are now
 `reviewed`. Order 2 then completed its source review, correction cycles,
 ordered-secondary-effect design, and audience reconciliation. The executable
-matrix now records 17 reviewed, 34 `existing_unreviewed`, 17 missing, and 7
-`not_applicable` entries.
+matrix recorded 17 reviewed, 34 `existing_unreviewed`, 17 missing, and 7
+`not_applicable` entries after Order 2. Order 3 promotes three additional
+audience entries after its source review and correction cycle.
 
 ## Reopened Order 2 Implementation Gate
 
@@ -229,8 +230,8 @@ and O2-R41's current-source recheck found no unresolved reachable defect.
 [Turn Economy Order 3 Roadmap](turn-economy-order-3-roadmap.md). The initial
 source review confirmed the supplied Action Token transition table and found
 three supported-boundary defects plus one authored-composition gap. The
-`turn_economy` capability is temporarily `partial` until O3-R1 through O3-R7
-complete.
+`turn_economy` returned to `complete` after O3-R1 through O3-R6; O3-R7 remains
+the independent closure and full release-gate checkpoint.
 
 ## Active Order 3 Implementation Gate
 
@@ -244,9 +245,13 @@ derives current behavior from Framework source and tests. It records:
 - complete supplied transition and liveness tests; and
 - explicit separation between economy state and encounter actor scheduling.
 
-Mechanics and technical entries remain `existing_unreviewed`, and the developer
-entry remains `missing`, until the implementation corrections are green and the
-project owner confirms the final audience documents.
+O3-R1 through O3-R5 corrected and tested the supported runtime boundary. O3-R6
+records the confirmed policy family and reconciles mechanics, developer, and
+technical views. All three `turn_economy` audience entries are now `reviewed`.
+The executable matrix records 20 reviewed, 32 `existing_unreviewed`, 16
+missing, and 7 `not_applicable` entries. O3-R7 must still re-read current source
+and documents and run the complete release gate before Order 3 is formally
+closed.
 
 ## Deferred Documentation
 

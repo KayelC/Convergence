@@ -248,27 +248,79 @@ no-turn escape contract.
 
 ## Turn Economy
 
-`IBattleTurnEconomy` is the reusable turn interface. Action Token is one optional implementation, not a mandatory battle model.
+`IBattleTurnEconomy` is the reusable opportunity-counting interface. Action
+Token is one optional implementation, not a mandatory battle model. The
+supplied `standard_actions` policy is the neutral alternative: one priced
+action for each actor present at phase start.
 
-In ruleset content, `turn_economy` is the generic category and `standard_action_token` is the supplied policy ID. The category is intentionally not named `action_token`, because another host may bind a different implementation of the same turn-economy contract.
+In ruleset content, `turn_economy` is the generic category. The supplied policy
+IDs are:
 
-The standard Action Token ruleset requires authored phase-liveness limits for
-maximum commands and consecutive free actions. They prevent a malformed or
-hostile command source from keeping one phase alive forever; the resolver does
-not hide default limits.
+- `standard_actions`: one ordinary action per phase-start actor;
+- `standard_action_token`: full and partial Action Token behavior.
 
-The supplied Action Token behavior is:
+Both require authored maximum-command and consecutive-free-action limits.
+These finite values protect the encounter from a policy or command source that
+never ends its phase. They are safety bounds, not hidden balance rules.
 
-- A phase starts with one full token per active living actor.
-- A normal action consumes one partial token first, otherwise one full token.
-- Passing consumes an existing partial token before touching any full token. Only when no partial token exists does passing convert one full token to partial.
-- Weakness or Critical converts a full token to a partial token; if only partial tokens remain, it consumes one.
-- Miss or Null consumes up to two tokens.
-- Repel or Absorb ends the phase.
-- A free action consumes no token.
-- A terminate-phase result clears all remaining tokens.
+### Standard actions
 
-**Host responsibility:** presentation may use icons, pips, text, or no visible turn meter. The state change comes from Framework snapshots and events.
+Normal, Pass, and effect-derived consumption each spend one action. A free
+action spends none, and explicit phase termination removes every remaining
+action. Weakness, Critical, Miss, Null, Repel, and Absorb do not receive special
+pricing under this neutral economy.
+
+### Action Token
+
+| Result | Token change |
+|---|---|
+| Phase start | Gain one full token per active living actor. |
+| Normal | Consume a partial token first, otherwise a full token. |
+| Pass | Consume a partial token first; only when none exists, convert a full token to partial. |
+| Weakness or Critical | Convert a full token to partial; if only partial remains, consume one. |
+| Miss or Null | Consume up to two tokens, partial first. |
+| Repel or Absorb | End the phase. |
+| Free action | Do not change supplied token state. |
+| Explicit termination | End the phase. |
+
+The pass order is a strategic rule, not an implementation detail:
+
+```text
+[partial, full] --pass--> [full]
+[full]          --pass--> [partial]
+[partial]       --pass--> []
+```
+
+Passing cannot manufacture another partial token while one already exists.
+
+A two-actor example is:
+
+```text
+phase start       [full, full]
+strike weakness   [partial, full]
+pass              [full]
+normal action     []
+```
+
+### What turn economy does not decide
+
+Turn economy changes the opportunity pool after a command. It does not choose
+initiative, teams, or the next actor. The current encounter schedule uses team
+phases and rotates active actors after each executed command window, including
+a free command. A free command does not complete owner-turn-end lifecycle, but
+it does not automatically grant the same actor another command.
+
+An agility-ordered battle or immediate same-actor bonus system therefore needs
+a future encounter-scheduling policy in addition to an economy. Swapping only
+`IBattleTurnEconomy` does not claim to implement that schedule.
+
+**Host responsibility:** presentation may use icons, pips, text, or no visible
+turn meter. Godot reads typed phase and before/after transition payloads. It
+must not derive rules by parsing optional debug text.
+
+See [Turn Economy Policies](../developer-guide/turn-economy-policies.md) for
+integration and [Turn Economy Runtime](../technical/turn-economy-runtime.md)
+for state authority and fault containment.
 
 ## Encounter Loop
 

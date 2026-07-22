@@ -44,6 +44,27 @@ factories. Duplicate or qualified factory policy IDs are rejected. Moon phase
 has no standard runtime factory; a game that wants such a module owns its
 policy and composition outside this supplied registry.
 
+## Standard Turn Economies
+
+The supplied registry exposes two `turn_economy` factories:
+
+| Policy ID | Runtime service | Behavior |
+|---|---|---|
+| `standard_actions` | `StandardActionTurnEconomy` | One priced action per actor present at phase start. |
+| `standard_action_token` | `ActionTokenTurnEconomy` | Full and partial Action Token transitions. |
+
+Both require the same two integer parameters:
+
+- `maximumCommands` must be positive;
+- `maximumConsecutiveFreeActions` must be nonnegative and lower than the
+  command limit.
+
+Unknown parameters and missing, non-integer, or inconsistent limits reject the
+complete binding. `BattleTurnEconomyRuleset` returns a fresh-economy factory
+and the validated `BattlePhaseProgressPolicy`; it does not select actor order.
+See [Turn Economy Policies](developer-guide/turn-economy-policies.md) and
+[Turn Economy Runtime](technical/turn-economy-runtime.md).
+
 ## Neutral Combat Composition
 
 `BindCombatPolicies(...)` returns an immutable `CombatExecutionPolicySet`, not

@@ -46,7 +46,18 @@ callers that deliberately own the omitted loadout or inventory boundary.
 
 ## Combat And Turn Economy
 
-Combat rules resolve damage, accuracy, criticals, elemental affinity, ailment resistance, instant-death channels, chance, and power through bound policies. Every supplied random draw validates the host's promised range before becoming authoritative. Action Token is one optional `IBattleTurnEconomy`; games may supply another economy. Almighty, shields, Break, affinity replacement, and separated resistance channels are explicit typed rules.
+Combat rules resolve damage, accuracy, criticals, elemental affinity, ailment
+resistance, instant-death channels, chance, and power through bound policies.
+Every supplied random draw validates the host's promised range before becoming
+authoritative. Almighty, shields, Break, affinity replacement, and separated
+resistance channels are explicit typed rules.
+
+Turn economy is a separate optional policy family. The standard registry binds
+either neutral `standard_actions` or `standard_action_token`, with explicit
+finite phase limits. The encounter runner validates one immutable economy
+snapshot chain and emits typed phase and before/after transition payloads.
+Economies count action opportunities; encounter orchestration still owns team
+and actor scheduling, while hosts own token presentation.
 
 ## Status And Passives
 

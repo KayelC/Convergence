@@ -23,7 +23,10 @@ current source before the project owner confirmed the explanation on 18 July
 2026. Order 2 additionally covers the supplied combat policy family,
 complete-action aggregation, explicit ordered effect dependencies, staged
 life-state eligibility, secondary damage contact, and Action Token integration.
-Other subsystem entries remain unreviewed until they complete the same process.
+Order 3 now covers neutral standard actions, Action Token transitions, pass
+precedence, finite liveness, typed phase evidence, and the explicit boundary
+between opportunity counting and actor scheduling. Other subsystem entries
+remain unreviewed until they complete the same process.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
@@ -51,14 +54,14 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 17 reviewed,
-34 existing_unreviewed, 17 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 20 reviewed,
+32 existing_unreviewed, 16 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 17 |
-| `existing_unreviewed` | 34 |
-| `missing` | 17 |
+| `reviewed` | 20 |
+| `existing_unreviewed` | 32 |
+| `missing` | 16 |
 | `not_applicable` | 7 |
 
 These totals describe documentation only. They do not reduce the implementation

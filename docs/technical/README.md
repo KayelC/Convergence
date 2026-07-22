@@ -30,6 +30,9 @@ Technical pages focus on:
 - [Combat Resolution Pipeline](combat-resolution-pipeline.md): coherent
   authored policy composition, hit/critical sequencing, standard arithmetic,
   charge lifetime, multi-hit mutation, outcome aggregation, and atomicity.
+- [Turn Economy Runtime](turn-economy-runtime.md): phase snapshot authority,
+  supplied transition tables, liveness counters, typed events, fault
+  containment, and the boundary with actor scheduling.
 
 The actor and typed action/effect references have completed collaborative
 review. That Order 1 review includes stat-modifier runtime authority and its
@@ -37,7 +40,9 @@ integration boundaries. The combat pipeline completed its owner-confirmed
 Order 2 source review, including dependency gating, current life-state
 eligibility, shared contact, complete-action aggregation, and custom result
 validation. The final pre-closure correction review found no remaining
-reachable defect in that supported scope. Other subsystem references remain
+reachable defect in that supported scope. Order 3 source-reconciled the
+turn-economy runtime authority, liveness, and scheduling boundary. Other
+subsystem references remain
 tracked as
 `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

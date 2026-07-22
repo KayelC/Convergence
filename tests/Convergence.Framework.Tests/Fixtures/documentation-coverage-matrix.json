@@ -164,19 +164,19 @@
     {
       "id": "turn_economy",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/combat-defenses-and-turns.md"],
-        "reason": "Action Token rules exist but need a complete state-transition review."
+        "reason": "The reviewed mechanics define neutral standard actions, every Action Token transition, exact pass precedence, finite liveness, and the scheduling boundary."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Custom turn economy composition and event presentation need a guide."
+        "state": "reviewed",
+        "documents": ["docs/developer-guide/turn-economy-policies.md"],
+        "reason": "The guide covers authored binding, direct replacement, typed Godot presentation, extension invariants, diagnostics, and scheduling limits."
       },
       "technical": {
-        "state": "existing_unreviewed",
-        "documents": ["docs/gameplay-systems.md", "docs/ruleset-policy-contracts.md"],
-        "reason": "Liveness, transition validation, and encounter ownership need a reviewed technical page."
+        "state": "reviewed",
+        "documents": ["docs/technical/turn-economy-runtime.md"],
+        "reason": "The source-traced runtime page defines phase snapshot authority, transition validation, liveness thresholds, typed events, fault containment, and persistence scope."
       }
     },
     {

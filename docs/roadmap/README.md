@@ -33,4 +33,5 @@ remain owner-confirmed and complete. Order 2, `combat_resolution`, is also
 complete: O2-R35 through O2-R40 corrected exact charge participation, optional
 composition, and malformed custom receipts; O2-R41 completed the fresh source
 and release-gate recheck. Order 3 is active under its source-first correction
-roadmap, and `turn_economy` is temporarily partial until that gate closes.
+roadmap. Its implementation and audience corrections are complete; O3-R7 is
+the remaining independent source and release-gate closure checkpoint.
