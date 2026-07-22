@@ -35,6 +35,7 @@ or implementation authority.
 - [Combat Resolution Order 2 Pre-Closure Code And Documentation Review, 21 July 2026](combat-resolution-order-2-pre-closure-code-and-documentation-review-2026-07-21.md)
 - [Combat Resolution Order 2 Post-R27 Source Review, 21 July 2026](combat-resolution-order-2-post-r27-source-review-2026-07-21.md)
 - [Combat Resolution Order 2 Final Pre-Closure Corrections Review, 21 July 2026](combat-resolution-order-2-final-pre-closure-corrections-review-2026-07-21.md)
+- [Combat Resolution Order 2 Code And Documentation Review, 22 July 2026](combat-resolution-order-2-code-and-documentation-review-2026-07-22.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.

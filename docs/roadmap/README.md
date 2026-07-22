@@ -15,6 +15,7 @@ records. It does not define individual mechanics.
 - [Ordered Secondary Effects And Order 2 Correction Roadmap](ordered-secondary-effects-roadmap.md)
 - [Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md)
 - [Order 2 Pre-Closure Audit Corrections Roadmap](combat-resolution-order-2-pre-closure-audit-corrections-roadmap.md)
+- [Order 2 Post-Closure Corrections Roadmap](combat-resolution-order-2-post-closure-corrections-roadmap.md)
 - [Documentation Completion Roadmap](documentation-completion-roadmap.md)
 - [Framework Capability Matrix](framework-capability-matrix.md)
 - [Production-Readiness Completion Record](production-readiness-roadmap.md)
@@ -26,7 +27,8 @@ requires owner review. The Documentation Completion Roadmap governs the ordered
 collaborative review of those outstanding entries.
 
 Order 1's mechanics, audience documentation, and typed execution capability
-remain owner-confirmed and complete. Order 2, `combat_resolution`, is likewise
-owner-confirmed and current-source verified. O2-R24 through O2-R29 record the
-final action, host-contract, authoring, custom-result, and independent closure
-checkpoints. Order 3 may now proceed under the documentation order.
+remain owner-confirmed and complete. Order 2, `combat_resolution`, retains its
+confirmed mechanics but is temporarily reopened by O2-R30 through O2-R34 after
+a fresh source review found a direct-action registration-preflight defect and
+active documentation drift. Order 3 must not begin until the correction roadmap
+returns Order 2 to a source-verified state.
