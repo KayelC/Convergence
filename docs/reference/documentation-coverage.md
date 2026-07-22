@@ -27,11 +27,11 @@ Order 3 now covers neutral standard actions, Action Token transitions, pass
 precedence, finite liveness, typed phase evidence, and the explicit boundary
 between opportunity counting and actor scheduling. Other subsystem entries
 remain unreviewed until they complete the same process.
-O3-R7 independently verified the current source and audience documents, passed
-the complete release gate, and formally closed Order 3. The executable matrix
-therefore remains 20 `reviewed`, 32 `existing_unreviewed`, 16 `missing`, and 7
-`not_applicable` entries; Order 4 is the next review rather than a bulk status
-promotion.
+O3-R7 independently verified the source and audience documents at that
+revision. A later source-first recheck reopened the developer and technical
+entries while three command-boundary defects were corrected. O3-R8 through
+O3-R11 now reconcile those boundaries and return all three Order 3 audiences to
+`reviewed`; Order 4 is the next review rather than a bulk status promotion.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
@@ -59,8 +59,8 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 18 reviewed,
-34 existing_unreviewed, 16 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 20 reviewed,
+32 existing_unreviewed, 16 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|

@@ -62,6 +62,13 @@ same resource ID before target randomness or amount resolution.
 consumption, and event values. This is a deliberate guarded-`0.1.0` baseline
 correction: no stable Convergence release used the former clone-mutable shape.
 
+`BattleActionAssessment.TurnConsumption` and
+`BattleActionExecutionResult.TurnConsumption` are likewise getter-only
+Framework decisions. `HostMediatedBattleActionCommand.TurnConsumption` retains
+a validating `init` setter so a host may deliberately clone a command to
+another non-null cost without gaining authority to rewrite prepared or executed
+results.
+
 `ActionTokenTurnEconomy` exposes `Apply(ActionTurnConsumption)` as its only
 public consumption mutation. The former policy-specific `ConsumeAction`,
 `Pass`, and `TerminatePhase` methods are removed from the guarded pre-release

@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -20,7 +20,10 @@ review preserved the confirmed Action Token rules while reopening the custom
 economy phase-authority and authored replacement surface for correction. O3-R1
 through O3-R6 have corrected that surface and reconciled all three audiences;
 O3-R7 independently re-read the corrected source, passed the full release gate,
-and closed the order without an unresolved reachable mechanic defect.
+and closed that revision without an unresolved reachable mechanic defect. A
+later recheck found three narrower command-boundary integration defects. O3-R8
+through O3-R10 corrected them, and O3-R11 reconciled the audience documents,
+API contract, content wording, executable matrices, and release evidence.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in
@@ -102,8 +105,11 @@ direct-action registration preflight, instant-defeat terminology, and current
 documentation drift, then independently rechecked the corrected source. The
 capability matrix records `turn_economy` as complete after its isolated runtime,
 test, and audience-documentation checkpoints. O3-R7 completed the final
-independent source and release-gate verification. Order 4, status and passive
-lifecycle, is the next collaborative documentation subject.
+independent source and release-gate verification at that revision. A later
+recheck found and O3-R8 through O3-R11 corrected three command-boundary
+integration defects before returning the capability and all three audience
+documents to complete/reviewed. Order 4, status and passive lifecycle, is the
+next collaborative documentation subject.
 
 ## Priority 2: Persistence Evolution
 

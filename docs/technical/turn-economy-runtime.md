@@ -77,14 +77,19 @@ stateDiagram-v2
 
     AwaitingCommand --> Faulted: command limit exceeded
     AwaitingCommand --> Faulted: pre-command snapshot drift
-    AwaitingCommand --> Applying: handler returns Executed
-    AwaitingCommand --> Faulted: handler rejects or faults
-    AwaitingCommand --> Finished: handler cancels
+    AwaitingCommand --> Faulted: lifecycle changes economy
+    AwaitingCommand --> CommandWindow: lifecycle authority validates
+    CommandWindow --> Guarded: handler and command events return
+    Guarded --> Faulted: economy changed outside Apply
+    Guarded --> Applying: command shape is Executed
+    Guarded --> Faulted: handler rejects or faults
+    Guarded --> Finished: handler cancels
 
     Applying --> Faulted: Apply/snapshot/liveness throws
     Applying --> Faulted: ID, type, or liveness invalid
-    Applying --> Accepted: transition validates
+    Applying --> Accepted: transition and liveness validate
     Accepted --> Faulted: consecutive free-action limit exceeded
+    Accepted --> Faulted: post-transition host boundary changes economy
     Accepted --> Finished: command requests encounter outcome
     Accepted --> AwaitingCommand: actions remain
     Accepted --> Ending: no actions remain
@@ -96,9 +101,12 @@ stateDiagram-v2
     Finished --> [*]
 ```
 
-The accepted phase-start snapshot is the first authority. Before each command,
-the runner requires a new capture to equal the last accepted snapshot. After
-`Apply`, it accepts a changed snapshot only when:
+The accepted phase-start snapshot is the first authority. Before each command
+and after every lifecycle, handler, event, and synchronization boundary, the
+runner requires a new capture and liveness report to equal the last accepted
+authority. Staged turn-start, owner-turn-end, and phase-end lifecycle work is
+committed only after that check passes. After `Apply`, the runner accepts a
+changed snapshot only when:
 
 - economy IDs match;
 - concrete snapshot types match;
@@ -130,37 +138,53 @@ sequenceDiagram
 
     loop while validated actions remain
         Runner->>Economy: CaptureSnapshot()
-        Runner->>Runner: require accepted state continuity
+        Runner->>Economy: HasTurnsRemaining()
+        Runner->>Runner: require accepted authority
         Runner->>Lifecycle: ProcessTurnStartAsync(staged actors)
-        Lifecycle-->>Runner: restriction + committed lifecycle state
+        Lifecycle-->>Runner: restriction + uncommitted lifecycle state
+        Runner->>Economy: CaptureSnapshot() + HasTurnsRemaining()
+        Runner->>Runner: require authority; commit staged turn-start
+        Runner->>Sink: publish turn-start lifecycle events
+        Runner->>Runner: require authority
         Runner->>Handler: ExecuteTurnAsync(actor, before snapshot)
         Handler-->>Runner: command + ActionTurnConsumption
+        Runner->>Economy: CaptureSnapshot() + HasTurnsRemaining()
+        Runner->>Runner: require authority
+        Runner->>Sink: publish command events
+        Runner->>Runner: require authority
         Runner->>Economy: Apply(consumption)
         Runner->>Economy: CaptureSnapshot()
         Runner->>Economy: HasTurnsRemaining()
         Runner->>Runner: validate and accept transition
         opt consumption is not None
             Runner->>Lifecycle: ProcessTurnEndAsync(staged actors)
+            Runner->>Runner: require authority; commit staged turn-end
         end
         Runner->>Sink: TurnEconomyChanged(actor, before, after, consumption)
+        Runner->>Runner: synchronize actors and require authority
     end
 
-    Runner->>Economy: CaptureSnapshot()
-    Runner->>Runner: require final accepted state
+    Runner->>Economy: CaptureSnapshot() + HasTurnsRemaining()
+    Runner->>Runner: require final accepted authority
     Runner->>Lifecycle: ProcessPhaseEndAsync(staged encounter)
+    Runner->>Runner: require authority; commit staged phase-end
     Runner->>Sink: PhaseEnded(team, snapshot)
 ```
 
 Turn-start and turn-end lifecycle use staged participant transactions. An
-initial or between-command economy contradiction is rejected before the next
-lifecycle or command call.
+economy contradiction raised by those lifecycle ports rejects their staged
+actor changes. Command handlers remain responsible for their own atomic action
+transaction, while the runner rejects any unexplained economy mutation before
+it applies the returned cost.
 
 The economy is external state, not part of the actor transaction. A malformed
 post-`Apply` snapshot is detected after the turn handler has returned, so the
 runner cannot undo arbitrary mutations performed by a custom host handler.
 This is why a replacement economy must make `Apply`, snapshot capture, and
-liveness reporting exception-safe and truthful. Framework-owned action paths
-use their own staged actor and inventory transactions.
+liveness reporting exception-safe and truthful. A host must never mutate a
+retained economy instance from lifecycle, handler, event, or synchronization
+ports. Framework-owned action paths use their own staged actor and inventory
+transactions.
 
 ## Liveness
 
@@ -269,7 +293,7 @@ A replacement economy and factory are valid only when:
 - snapshots are immutable and compare by complete authoritative state;
 - one phase retains one economy ID and one concrete snapshot type;
 - `RemainingActions` and `HasTurnsRemaining()` agree;
-- state changes only through `Apply`;
+- state changes only through the runner-owned `Apply` call;
 - invalid `ActionTurnConsumption` is rejected rather than repaired;
 - factory parameters are either recognized or reported as unknown;
 - finite liveness limits are supplied; and

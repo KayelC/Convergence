@@ -112,6 +112,26 @@ The turn handler returns a validated `BattleEncounterCommandResult`. Its
 
 The economy does not inspect the skill, item, effect list, or display text.
 
+### Return A Coherent Command Result
+
+`BattleEncounterCommandResult` validates the relationship between status,
+outcome, winner, diagnostic, and turn cost at construction:
+
+| Status | Turn cost | Requested outcome | Winner | Fault message |
+|---|---|---|---|---|
+| `Executed` | Any valid cost | No request, `Victory`, `Defeat`, `Escape`, or `Draw` | Only with victory/defeat | None |
+| `Cancelled` | `None` | `Cancelled` | None | None |
+| `Rejected` | `None` | `Faulted` | None | Required |
+| `Faulted` | `None` | `Faulted` | None | Required |
+
+Use the static factories for ordinary construction. A contradictory host
+result throws inside the turn-handler port boundary; the runner reports a typed
+fault before economy application or owner-turn-end lifecycle.
+
+Framework-calculated assessment and execution-result turn costs are
+getter-only. A host-mediated command may be cloned to another valid cost, but
+its validating initializer rejects null.
+
 ## Present Typed State In Godot
 
 Implement `IBattleEncounterEventSink` and inspect the payload kind:
@@ -197,7 +217,7 @@ supplied policies. A valid implementation must:
 2. return a fresh immutable snapshot on every capture;
 3. keep one valid `EconomyId` and one concrete snapshot type for the phase;
 4. make `HasTurnsRemaining()` agree with `RemainingActions > 0`;
-5. change state only inside `Apply`;
+5. change state only when the encounter runner calls `Apply`;
 6. validate every `ActionTurnConsumption` it uses; and
 7. remain finite under the host's phase-progress limits.
 
@@ -242,10 +262,14 @@ The runner converts supported economy failures into typed encounter faults:
 | Too many commands in one phase | `PhaseCommandLimitExceeded` |
 
 Initial and between-command contradictions are rejected before the next
-lifecycle or command mutation. If a custom economy returns malformed state
-after an already committed host command, the encounter faults, but the runner
-cannot retroactively roll back arbitrary host-owned command work. Custom
-economies must therefore keep `Apply` exception-safe and truthful.
+lifecycle or command mutation. The runner also revalidates retained economy
+authority after lifecycle, handler, event, and synchronization callbacks.
+Staged lifecycle work is discarded when a callback changes the economy. If a
+custom economy returns malformed state after an already committed host command,
+the encounter faults, but the runner cannot retroactively roll back arbitrary
+host-owned command work. Custom economies must therefore keep `Apply`
+exception-safe and truthful, and host ports must not mutate a retained economy
+instance.
 
 ## Related Documentation
 

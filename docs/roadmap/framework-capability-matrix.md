@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial
@@ -34,8 +34,10 @@ A later source-first recheck at `e6949d7b` reproduced three public integration
 defects at the command-window boundary: retained economy mutation can be
 double-applied, an executed/cancelled result can spend a turn and tick
 lifecycle, and record cloning can invalidate turn-consumption contracts.
-`turn_economy` is therefore `partial` again while O3-R8 through O3-R11 are
-pending. The supplied transition table itself remains correct.
+O3-R8 through O3-R10 corrected those boundaries with isolated regression
+coverage. O3-R11 reconciled the public guidance, accepted API baseline, content
+wording, and executable evidence, so `turn_economy` has returned to `complete`.
+The supplied transition table itself was unchanged.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v11 restoration. Its

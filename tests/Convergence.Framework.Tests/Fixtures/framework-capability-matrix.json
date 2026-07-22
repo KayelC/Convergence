@@ -101,15 +101,12 @@
     },
     {
       "id": "turn_economy",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["TurnEconomyContractTests", "BattleEncounterRunnerTests", "RuntimeRulesetBindingTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "Command-window economy mutation is not revalidated immediately before Apply.",
-        "Encounter command status/outcome combinations and cloned turn-consumption values require stronger public validation."
-      ]
+      "knownGaps": []
     },
     {
       "id": "status_and_passive_lifecycle",

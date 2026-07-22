@@ -259,14 +259,14 @@ above the release thresholds, valid active content, all DemoHost modes, and the
 real Godot 4.7.1 headless smoke.
 
 A later [independent recheck](../reviews/turn-economy-order-3-independent-recheck-2026-07-22.md)
-reproduced three public integration defects at `e6949d7b`. The mechanics entry
-remains reviewed because the supplied transition table is correct. Developer
-and technical entries return to `existing_unreviewed` until O3-R8 through
-O3-R11 correct command-window authority, command result coherence, and cloned
-turn-consumption contracts. The executable documentation matrix now records 18
-reviewed, 34 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries.
+reproduced three public integration defects at `e6949d7b`. O3-R8 through O3-R10
+now guard retained economy authority, enforce coherent command results, and
+seal Framework-calculated turn costs. O3-R11 reconciles the developer and
+technical references with those contracts and returns both entries to
+`reviewed`. The executable documentation matrix records 20 reviewed, 32
+`existing_unreviewed`, 16 missing, and 7 `not_applicable` entries.
 
-Order 4 remains next only after those Order 3 corrections close. It reviews
+Order 4 is next after the post-correction Order 3 source review. It reviews
 status, ailment, passive, and duration lifecycle from current source before any
 audience entry is promoted.
 

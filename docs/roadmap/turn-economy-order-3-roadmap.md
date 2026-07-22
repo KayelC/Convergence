@@ -1,6 +1,6 @@
 # Turn Economy Order 3 Roadmap
 
-**Status:** corrections required
+**Status:** corrections implemented; independent closure review pending
 
 **Capability:** `turn_economy`
 
@@ -51,7 +51,7 @@ actor order.
 | O3-R8 | `verified` | Reject economy mutation across lifecycle, handler, event, synchronization, and terminal command boundaries. Make `Apply` the supplied Action Token policy's only public consumption mutation. | `battle: guard command window economy authority` |
 | O3-R9 | `verified` | Enforce coherent command status, requested outcome, winning-team, fault, and turn-consumption combinations at public construction. | `battle: validate encounter command outcomes` |
 | O3-R10 | `verified` | Prevent public record cloning from replacing Framework-calculated turn consumption or introducing null command costs. | `battle: seal turn consumption results` |
-| O3-R11 | `pending` | Reconcile the technical sequence, developer guidance, reference content wording, executable matrices, API baseline, and fresh verification evidence. | `docs: reverify turn economy order 3` |
+| O3-R11 | `verified` | Reconcile the technical sequence, developer guidance, reference content wording, executable matrices, API baseline, and fresh verification evidence. | `docs: reverify turn economy order 3` |
 
 Each checkpoint is an isolated green commit. A later checkpoint may append its
 commit and verification evidence here, but it must not rewrite an earlier
@@ -178,3 +178,25 @@ assignment. The accepted pre-release API baseline records this intentional
 removal of two result setters. The checkpoint gate recorded 83 focused tests
 and 1,505 full solution tests passing with none skipped, a strict Release build
 with zero warnings, and clean format and diff checks.
+
+### O3-R11 Completion
+
+The technical sequence now places authority checks before staged lifecycle
+commit and after every host-observable command boundary. The developer guide
+defines the complete legal command-result matrix and the ownership difference
+between host-authored commands and Framework-calculated results. Reference
+content now describes Action Token as Framework-supplied and host-selected.
+
+The executable capability matrix records 23 complete, 0 partial, and 2
+deferred capabilities. The documentation matrix records 20 reviewed, 32
+`existing_unreviewed`, 16 missing, and 7 `not_applicable` audience entries.
+
+The R11 release gate passed locked restore and vulnerability auditing, format
+verification, 1,505 tests with none skipped, strict Release builds with zero
+warnings, 90.65% Framework line coverage and 76.16% branch coverage, 6 valid
+packs containing 36 documents and 98 definitions, all four noninteractive
+DemoHost modes, scripted Training Annex play, trim analysis, and the real Godot
+4.7.1 headless smoke. The first sandboxed Godot launch could not write its
+normal `user://logs` path; the identical command passed when allowed to use the
+engine's user-data directory. No engine binary or generated artifact is
+tracked.

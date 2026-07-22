@@ -66,7 +66,7 @@
     {
       "id": "standard_action_token_sample",
       "displayName": "Standard Action Token Policy",
-      "description": "Names the host-owned Action Token policy.",
+      "description": "Selects the Framework-supplied Action Token policy through host composition.",
       "category": "turn_economy",
       "policyId": "standard_action_token",
       "parameters": {
