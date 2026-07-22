@@ -57,7 +57,7 @@ sequenceDiagram
     A->>T: Clone actor and participants
     A->>S: Execute against staged actors
     S->>O: Execute authored effects in order
-    O->>P: Resolve affinity and matching charge
+    O->>P: Resolve affinity and matching charge receipt
     O->>D: Resolve hit count and each hit
     D->>P: Hit, then critical, then damage math
     D-->>O: Immutable DamagePolicyResolution
@@ -65,7 +65,8 @@ sequenceDiagram
         O->>T: Apply damage, drain, repel, absorb, prevention
         O->>O: Record immutable hit evidence
     end
-    O->>P: Complete matching charge once for outer action
+    O->>O: Retain each participating charge receipt
+    O->>P: Complete participating receipts once for outer action
     S->>P: Aggregate source kind and effects into one turn result
     S->>T: Commit accepted staged state
     S-->>A: Typed effects, evidence, costs, and turn result
@@ -220,16 +221,24 @@ flowchart TB
 ```
 
 Consumption is scoped to the complete action rather than to an individual hit
-or nested effect:
+or nested effect. It follows the modifier receipt captured at resolution time,
+not a damage-category lookup performed later:
 
 ```mermaid
 flowchart TB
-    Action["Prepared action executes"] --> Damage{"At least one damage effect executes?"}
-    Damage -->|"no: rejected, cancelled, or only skipped effects"| Unchanged["Record no category;<br/>retained slots remain"]
-    Damage -->|"yes: hit, miss, or defensive affinity"| Record["Record each distinct damage category<br/>in the outer action scope"]
-    Record --> Complete["At outermost scope completion,<br/>map categories through the selected policy"]
-    Complete --> Stage["Remove each matching slot once<br/>from the staged actor"]
+    Action["Prepared action executes"] --> Resolve["Selected policy resolves<br/>damage modifier"]
+    Resolve --> Charged{"Modifier identifies a<br/>participating retained charge?"}
+    Charged -->|"no"| NoReceipt["Record no charge receipt"]
+    Charged -->|"yes"| Receipt["Record exact modifier receipt<br/>in outer action scope"]
+    Receipt --> Outcome["Resolve hit, miss, Null,<br/>Repel, or Absorb"]
+    Outcome --> Later["Later effects may clear,<br/>grant, or replace charge state"]
+    NoReceipt --> Later
+    Later --> Complete["At outermost completion,<br/>submit participating receipts"]
+    Complete --> Same{"Is the retained slot the same<br/>runtime charge that participated?"}
+    Same -->|"yes"| Stage["Remove it once from<br/>the staged actor"]
+    Same -->|"no or absent"| Preserve["Preserve later grant<br/>or replacement"]
     Stage --> Commit{"Owning actor transaction publishes?"}
+    Preserve --> Commit
     Commit -->|"yes"| Published["Live actor reflects consumed slots"]
     Commit -->|"no"| Discarded["Discard staged removals;<br/>live slots remain"]
 ```
@@ -238,15 +247,18 @@ One actor's retained charge state has one policy ID. `SplitChargePolicy` permits
 independent Physical and Magical slots at the same time. It maps Physical
 damage to Physical and every other damage element to Magical.
 `UnifiedChargePolicy` permits only one General slot and maps every damage
-element to it. Validation and restoration resolve the policy ID through
-`IChargePolicyResolver` and reject unsupported kinds, duplicate keys, invalid
-durations, or a mismatched policy.
+element to it. `DisabledChargePolicy` maps no element, rejects every grant, and
+validates only empty state carrying its own policy ID. Validation and
+restoration resolve the policy ID through `IChargePolicyResolver` and reject
+unsupported kinds, duplicate keys, invalid durations, or a mismatched policy.
 
 `OrderedEffectExecutor` owns an async-local outer action scope. Nested passive
-or ailment effects join that scope. It records distinct damage elements by
-acting actor and calls `CompleteAction` once when the outermost effect sequence
-finishes. Because execution uses staged actors, a later exception discards any
-charge removal along with other actor mutations.
+or ailment effects join that scope. It records immutable participating
+`ChargeDamageModifier` receipts by acting actor and calls `CompleteAction` once
+when the outermost effect sequence finishes. `ChargePolicyServiceBase` removes
+only the same runtime charge that participated; a later grant or same-kind
+replacement therefore survives. Because execution uses staged actors, a later
+exception discards any charge removal along with other actor mutations.
 
 ## Outcome Aggregation
 

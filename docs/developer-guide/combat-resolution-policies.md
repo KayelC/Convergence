@@ -41,6 +41,20 @@ Inspect `RulesetId`, `PolicyId`, `AuthoredParameters`, and
 contains typed diagnostics and must stop composition; silently constructing a
 different ruleset would make authored content misleading.
 
+The supplied combat factory accepts an explicit charge composition:
+
+```json
+{
+  "parameters": {
+    "chargePolicy": "disabled"
+  }
+}
+```
+
+Accepted values are `split`, `unified`, and `disabled`. Omitting the parameter
+selects `split`. An unknown value or non-string value rejects the ruleset
+binding; it never falls back silently.
+
 ## Build Execution Services
 
 The neutral aggregate supplies the related policy authorities as one coherent
@@ -100,6 +114,13 @@ sequence. Do not price each effect separately. One component miss is not a
 target evasion when another damage component lands on that target, and
 `TurnEconomyResolution.Outcome` is authoritative even when `AnyCritical`
 retains Critical evidence for presentation.
+
+`EffectExecutionResult.ParticipatingCharge` identifies the exact modifier
+receipt used by one damage effect. The ordered executor carries those receipts
+to the selected `IChargePolicyService` only at the outer action boundary. A
+custom damage-effect executor that resolves a charge must publish the returned
+`ChargeDamageModifier` through this property if it wants the standard
+whole-action consumption behavior.
 
 ## Bound Multi-Hit Work
 
@@ -233,9 +254,15 @@ the Framework does not infer a factory from a display name or description.
 ## Charge Policies And Saves
 
 `SplitChargePolicy` stores separate Physical and Magical slots.
-`UnifiedChargePolicy` stores one General slot. Applying an occupied slot is a
-typed rejection rather than a refresh. A resolved matching damage action
-consumes the slot once after all targets and hits have used it.
+`UnifiedChargePolicy` stores one General slot. `DisabledChargePolicy` rejects
+every charge grant and resolves neutral damage modifiers. Applying an occupied
+slot under an enabled policy is a typed rejection rather than a refresh.
+
+A resolved modifier is a participation receipt. The selected policy consumes
+the exact retained charge represented by that receipt once after all targets
+and hits have used it. It does not merely look up the damage element at action
+end. Consequently, an uncharged damage effect followed by a grant keeps the
+new charge, and a same-kind replacement is not mistaken for the earlier charge.
 
 Retained charge state includes its policy ID. Supply the same policies to
 `ChargePolicyRegistry` during save validation and session restoration:
@@ -244,9 +271,11 @@ Retained charge state includes its policy ID. Supply the same policies to
 ChargePolicyRegistry charges = ChargePolicyRegistry.CreateStandard();
 ```
 
-If a game changes charge semantics, it must either reject the old state or
-provide an explicit save migration. It must not relabel split state as unified
-state.
+The standard registry includes disabled, split, and unified policy IDs. Empty
+disabled state can be validated and restored; a disabled snapshot containing a
+charge slot is invalid. If a game changes charge semantics, it must either
+reject the old state or provide an explicit save migration. It must not relabel
+split state as unified state.
 
 ## Configuration Ownership
 
@@ -258,8 +287,10 @@ ruleset categories; changing damage configuration does not silently change
 their formulas.
 
 Convergence supplies defaults so a game can start quickly. A developer remains
-free to register different factories, construct policies directly, omit
-charges, choose another turn economy, or avoid combat entirely.
+free to register different factories, construct policies directly, select the
+supplied disabled charge policy, choose another turn economy, or avoid combat
+entirely. Keeping an explicit policy object in a composed battle avoids nullable
+rule branches while still making charge gameplay optional.
 
 ## Related Evidence
 

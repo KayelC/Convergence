@@ -1,6 +1,6 @@
 # Order 2 Charge Closure Corrections Roadmap
 
-**Status:** active; O2-R35 complete, O2-R36 through O2-R39 pending
+**Status:** active; O2-R35 through O2-R38 complete, O2-R39 pending
 
 **Started:** 22 July 2026
 
@@ -53,7 +53,7 @@ workaround or writing a private no-op implementation.
 
 ### O2-R36: Consume only participating charge state
 
-**State:** pending
+**State:** complete
 
 - Replace damage-element-based finalization with explicit participating charge
   kinds captured when the damage modifier is resolved.
@@ -77,9 +77,15 @@ Required regressions:
 
 **Commit:** `execution: consume participating charge state`
 
+**Result:** Damage execution publishes the actual `ChargeDamageModifier`
+receipt that participated. The outer action submits those receipts once, and
+the supplied policy base removes only the same retained runtime charge. Tests
+cover damage/grant order, same-kind replacement, nested defeat-prevention
+grants, multi-target use, and defensive outcomes.
+
 ### O2-R37: Supply optional disabled charge composition
 
-**State:** pending
+**State:** complete
 
 - Add `DisabledChargePolicy` with an explicit stable policy ID.
 - Make charge application a typed unsupported rejection under that policy.
@@ -105,9 +111,15 @@ Required regressions:
 
 **Commit:** `runtime: add disabled charge composition`
 
+**Result:** `DisabledChargePolicy` is registered beside Split and Unified.
+`standard_damage` accepts `chargePolicy` values `split`, `unified`, and
+`disabled`, exposes the effective selection, rejects malformed values, and
+preserves Split when omitted. Empty disabled state validates and restores;
+retained slots do not.
+
 ### O2-R38: Reconcile the three documentation audiences
 
-**State:** pending
+**State:** complete
 
 - Update mechanics to distinguish a charge that participated from a later
   charge grant.
@@ -121,6 +133,11 @@ Required regressions:
   source verification and owner-confirmed semantics agree.
 
 **Commit:** `docs: reconcile optional charge execution`
+
+**Result:** mechanics, developer, technical, decision, ruleset, and public API
+documents now describe participation receipts and explicit disabled
+composition. The three audience entries are reviewed again; formal capability
+closure remains pending the independent O2-R39 source review.
 
 ### O2-R39: Independently re-evaluate Order 2
 
@@ -141,8 +158,9 @@ Required regressions:
 
 ## Contract Impact
 
-- `IChargePolicyService.CompleteAction` will consume explicit participating
-  charge kinds instead of inferring them from damage elements. This is an
+- `IChargePolicyService.CompleteAction` consumes explicit participating
+  `ChargeDamageModifier` receipts instead of inferring charge state from damage
+  elements. This is an
   intentional pre-release public API correction and requires an API baseline
   update.
 - `DisabledChargePolicy` and its policy ID are additive public contracts.

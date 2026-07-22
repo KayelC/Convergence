@@ -78,11 +78,11 @@ basic attacks, and escape; corrected current documentation drift; and completed
 a fresh source review with no unresolved reachable defect.
 
 The later 22 July closure-readiness review reopened `combat_resolution` as
-`partial`. Charge finalization currently remembers damage elements rather than
-the charge state that actually participated, so a later grant can be removed by
-an earlier uncharged attempt. The supplied combat composition also lacks an
-explicit disabled charge selection despite the modularity guidance. O2-R35
-through O2-R39 own those corrections and the independent closure recheck.
+`partial`. O2-R36 now finalizes exact participating charge receipts and
+preserves later grants or same-kind replacements. O2-R37 supplies authored
+disabled, split, and unified composition, and O2-R38 reconciles all three
+documentation audiences. The capability remains partial solely until O2-R39
+performs the independent source and release-gate recheck.
 
 ## Authority
 

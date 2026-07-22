@@ -8,6 +8,28 @@ namespace Convergence.Framework.Tests.Architecture;
 public sealed class DocumentationContractSynchronizationTests
 {
     [Fact]
+    public void ChargeGuidance_UsesParticipationReceiptsAndExplicitOptionalComposition()
+    {
+        string mechanics = File.ReadAllText(
+            RepositoryPath("docs", "mechanics", "combat-defenses-and-turns.md"));
+        string developer = File.ReadAllText(
+            RepositoryPath("docs", "developer-guide", "combat-resolution-policies.md"));
+        string technical = File.ReadAllText(
+            RepositoryPath("docs", "technical", "combat-resolution-pipeline.md"));
+        string contracts = File.ReadAllText(
+            RepositoryPath("docs", "ruleset-policy-contracts.md"));
+
+        Assert.Contains("later grant", mechanics, StringComparison.Ordinal);
+        Assert.Contains("same-kind replacement", mechanics, StringComparison.Ordinal);
+        Assert.Contains("DisabledChargePolicy", mechanics, StringComparison.Ordinal);
+        Assert.Contains("EffectExecutionResult.ParticipatingCharge", developer, StringComparison.Ordinal);
+        Assert.Contains("Record exact modifier receipt", technical, StringComparison.Ordinal);
+        Assert.Contains("same runtime charge that participated", technical, StringComparison.Ordinal);
+        Assert.DoesNotContain("Record each distinct damage category", technical, StringComparison.Ordinal);
+        Assert.Contains("| `chargePolicy` | string | `split` |", contracts, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void EffectConfigurationGuidance_PreservesSharedPreflightBoundary()
     {
         string mechanics = File.ReadAllText(

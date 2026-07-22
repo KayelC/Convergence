@@ -139,7 +139,7 @@ the [final Order 1 closure review](../reviews/order-1-final-closure-review-2026-
 All three `typed_action_and_effect_execution` audience entries are now
 `reviewed`. Order 2 then completed its source review, correction cycles,
 ordered-secondary-effect design, and audience reconciliation. The executable
-matrix now records 14 reviewed, 37 `existing_unreviewed`, 17 missing, and 7
+matrix now records 17 reviewed, 34 `existing_unreviewed`, 17 missing, and 7
 `not_applicable` entries.
 
 ## Reopened Order 2 Implementation Gate
@@ -200,7 +200,7 @@ Current checkpoints:
 
 | Checkpoint | State | Required outcome |
 |---|---|---|
-| O2-H1 | `correction_required` | Split and Unified policies must consume only charge state that actually participated; disabled composition must be supplied explicitly. |
+| O2-H1 | `implemented_pending_verification` | Exact participating-charge receipts and supplied Disabled, Split, and Unified composition are implemented; O2-R39 owns independent verification. |
 | O2-M1 | `verified` | Inert standard chance defaults are removed; typed content remains authoritative. |
 | O2-M2 | `verified` | Authored Accuracy, Evasion, and Critical Chance modifiers reach their typed policy boundaries. |
 | O2-M3 | `verified` | Authored combat binding returns a coherent neutral aggregate whose exposed authorities are the executing authorities. |
@@ -210,7 +210,7 @@ Current checkpoints:
 | O2-D4 | `confirmed` | Configurable instant-defeat resistance multipliers and one explicit roll. |
 | O2-D5 | `confirmed` | Sequential staged multi-hit mutation and immutable hit/target evidence. |
 | O2-D6 | `confirmed` | Configurable probability bounds with neutral supplied defaults of `0..100`. |
-| O2-DOC | `correction_required` | Mechanics, developer, and technical charge documentation must be reconciled through O2-R38 and independently checked by O2-R39. |
+| O2-DOC | `verified` | Mechanics, developer, and technical charge documentation agree on participation receipts and explicit disabled composition; O2-R39 still owns formal capability closure. |
 
 The table records the first implementation cycle; O2-R7 through O2-R16 record
 the complete-action and ordered-secondary-effect correction cycle. O2-R18
@@ -220,9 +220,10 @@ correction and its revision-specific source closure. O2-R24 through O2-R29
 record the final pre-closure audit, custom-result correction, and independent
 source verification. O2-R30 through O2-R34 record registration-parity,
 terminology, active-contract, audience-documentation, and final source
-verification corrections. The three `combat_resolution` audience entries are
-temporarily `existing_unreviewed`, and formal Order 2
-implementation/documentation closure is pending O2-R36 through O2-R39.
+verification corrections. O2-R36 through O2-R38 implement exact charge
+participation, supplied optional composition, and audience reconciliation. The
+three `combat_resolution` audience entries are `reviewed` again, while formal
+Order 2 capability closure remains pending O2-R39.
 
 ## Deferred Documentation
 

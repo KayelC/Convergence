@@ -101,6 +101,7 @@ binding rather than producing a partial service.
 | `instantDeathResistantMultiplier` | decimal | `0.5` | nonnegative |
 | `instantDeathImmuneMultiplier` | decimal | `0` | nonnegative |
 | `itemActionOutcomeBehavior` | string | `normal` | `normal` or `effect_driven` |
+| `chargePolicy` | string | `split` | `split`, `unified`, or `disabled` |
 
 Unknown parameters, nonnumeric values, and invalid combined configuration
 produce typed `RulesetBindingDiagnostic` values. The standard factory does not
@@ -157,10 +158,12 @@ retired `criticalChanceMinimum`, `criticalChanceMaximum`, and
 `criticalChanceBase` ruleset parameters are rejected as unknown.
 
 Charge is not a hidden multiplier parameter of `standard_damage`. The supplied
-combat composition selects `SplitChargePolicy`; a custom combat factory may
-select `UnifiedChargePolicy` or another `IChargePolicyService`. The authored
-`grant_charge` effect supplies the multiplier, while the selected policy owns
-slot compatibility and consumption.
+combat composition selects `SplitChargePolicy`, `UnifiedChargePolicy`, or
+`DisabledChargePolicy` through `chargePolicy`. The authored `grant_charge`
+effect supplies the multiplier, while the selected policy owns slot
+compatibility and exact participating-charge consumption. Disabled composition
+rejects grants and supplies neutral damage modifiers. A custom combat factory
+may still select another `IChargePolicyService`.
 
 The same combat composition selects action-outcome aggregation. `normal` makes
 each non-escape item spend one normal turn while preserving its effect facts.

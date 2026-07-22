@@ -210,6 +210,7 @@ public sealed class DocumentationFoundationTests
         string[] designTokens =
         [
             "Luck has no hidden combat-probability role",
+            "DisabledChargePolicy",
             "SplitChargePolicy",
             "UnifiedChargePolicy",
             "40` resolves to `60`, `40`, `20`, and `0",
@@ -234,7 +235,9 @@ public sealed class DocumentationFoundationTests
             "ICombatDamageExecutionPolicy",
             "ICombatInstantDefeatExecutionPolicy",
             "NextUnitDecimal()",
-            "ChargePolicyRegistry.CreateStandard()"
+            "ChargePolicyRegistry.CreateStandard()",
+            "EffectExecutionResult.ParticipatingCharge",
+            "chargePolicy"
         ];
         Assert.All(integrationTokens, token => Assert.Contains(token, developer, StringComparison.Ordinal));
 
@@ -248,9 +251,11 @@ public sealed class DocumentationFoundationTests
         ];
         Assert.All(technicalTokens, token => Assert.Contains(token, technical, StringComparison.Ordinal));
         Assert.Contains("collection of typed charge slots", technical, StringComparison.Ordinal);
-        Assert.Contains("Remove each matching slot once", technical, StringComparison.Ordinal);
+        Assert.Contains("Record exact modifier receipt", technical, StringComparison.Ordinal);
+        Assert.Contains("same runtime charge that participated", technical, StringComparison.Ordinal);
         Assert.Contains("Before = After", technical, StringComparison.Ordinal);
         Assert.DoesNotContain("Charged --> Charged", technical, StringComparison.Ordinal);
+        Assert.DoesNotContain("Record each distinct damage category", technical, StringComparison.Ordinal);
 
         Assert.Contains("| O2-C7 | `verified`", roadmap, StringComparison.Ordinal);
         Assert.Contains("revision `e26bdc5`", roadmap, StringComparison.Ordinal);

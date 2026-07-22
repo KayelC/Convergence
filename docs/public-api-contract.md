@@ -69,6 +69,21 @@ or turn outcomes, invalid optional IDs/enums, invalid host request IDs, and
 null result entries reject inside staged execution rather than being
 reinterpreted by ordered effects or action-outcome aggregation.
 
+The Order 2 charge correction deliberately changes
+`IChargePolicyService.CompleteAction` from damage-element input to immutable
+participating `ChargeDamageModifier` receipts. `EffectExecutionResult` exposes
+`ParticipatingCharge` so a custom damage-effect executor can publish the exact
+modifier it resolved. The supplied policy base consumes only the same retained
+runtime charge represented by that receipt; later grants and same-kind
+replacements are not removed accidentally.
+
+`DisabledChargePolicy` is the explicit no-charge composition and
+`StandardChargePolicyIds.Disabled` is registered by
+`ChargePolicyRegistry.CreateStandard()`. The standard authored combat factory
+accepts `chargePolicy` values `split`, `unified`, and `disabled`, retaining
+`split` when omitted. These are reviewed guarded-`0.1.0` corrections rather
+than compatibility aliases for the superseded element-based completion call.
+
 ## Compatibility Policy
 
 The checked-in `PublicAPI.Shipped.txt` file is the textual `0.1.0` baseline.

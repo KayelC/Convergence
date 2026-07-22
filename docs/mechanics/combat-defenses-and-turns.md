@@ -168,13 +168,25 @@ no-effect result, not an accuracy miss.
 Guard is executable runtime state and may reduce damage or normalize weakness according to the selected combat policy. Shields, affinity overrides, and Break have typed duration state. Duration ticking and cleanup are handled by the lifecycle service rather than display code.
 
 Charge behavior is selected explicitly. `SplitChargePolicy` provides separate
-Physical and Magical slots; `UnifiedChargePolicy` provides one General slot.
-Applying an occupied slot is rejected as already in effect. A matching charge
-uses its authored multiplier on final damage and is consumed once after every
-matching hit and target in the committed action has resolved. Miss, Null,
-Repel, and Absorb consume it; an unexecuted or rejected action does not. Retained
-charge state includes its policy ID so a host cannot restore it under different
-semantics by accident.
+Physical and Magical slots; `UnifiedChargePolicy` provides one General slot;
+`DisabledChargePolicy` supplies no slots, rejects charge grants, and leaves
+damage unmodified. The standard authored combat composition selects these with
+`chargePolicy: "split"`, `"unified"`, or `"disabled"`. Omission preserves the
+supplied `split` default.
+
+Applying an occupied slot is rejected as already in effect. When a retained
+charge supplies a damage modifier, that exact runtime charge becomes a
+participant in the complete action. Its authored multiplier affects the damage
+attempt, and the participating charge is consumed once after every matching hit
+and target in the committed action has resolved. Miss, Null, Repel, and Absorb
+consume it because the charge participated before those outcomes were known;
+an unexecuted, skipped, cancelled, or rejected action does not.
+
+A later grant is not retroactively part of an earlier uncharged damage attempt.
+Likewise, clearing a participating slot and granting a same-kind replacement
+creates a different runtime charge. The replacement remains unless a later
+damage component actually uses it. Retained charge state includes its policy ID
+so a host cannot restore it under different semantics by accident.
 
 A split charge affects only its matching damage category. A mixed Physical and
 magical action may therefore consume both split slots when it actually resolves

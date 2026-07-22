@@ -146,19 +146,19 @@
     {
       "id": "combat_resolution",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/combat-defenses-and-turns.md"],
-        "reason": "Confirmed combat rules exist, but charge participation wording awaits reconciliation with O2-R36 through O2-R39."
+        "reason": "Confirmed combat rules include exact participating-charge consumption, same-kind replacement safety, and explicit disabled, split, and unified composition."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/combat-resolution-policies.md"],
-        "reason": "The guide requires revision so disabled charge composition and participating-charge consumption match the corrected public contracts."
+        "reason": "The guide documents authored chargePolicy selection, participation receipts, custom executor obligations, and save compatibility."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/combat-resolution-pipeline.md"],
-        "reason": "The pipeline charge diagram currently describes damage-category finalization and must be updated to participating charge receipts."
+        "reason": "The source-traced pipeline records exact charge receipts, outer-scope finalization, and later-grant or replacement preservation."
       }
     },
     {

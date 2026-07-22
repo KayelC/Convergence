@@ -132,11 +132,18 @@ runtime default.
 
 ### Charge policies
 
-Convergence supplies two mutually exclusive charge-state policies:
+Convergence supplies three mutually exclusive charge-state policies:
 
 1. `SplitChargePolicy` retains independent Physical and Magical charge slots.
 2. `UnifiedChargePolicy` retains one General charge slot for all eligible
    damage.
+3. `DisabledChargePolicy` retains no slots, rejects charge grants, and leaves
+   damage unmodified.
+
+The supplied `standard_damage` factory accepts `chargePolicy` values `split`,
+`unified`, and `disabled`; omission retains the `split` default. This is an
+explicit composition choice rather than a nullable service or a charge state
+that a game must work around.
 
 Applying a charge to an already occupied slot is rejected as already in effect.
 It does not silently replace or extend the current charge. Each authored charge
@@ -144,12 +151,19 @@ multiplier is authoritative and multiplies resolved damage outside the square
 root portion of the standard damage formula. The standard examples may author
 `2.5`, but the framework does not hide a global charge multiplier.
 
-A matching charge is consumed once when an accepted action reaches matching
-damage resolution. Consumption occurs after every eligible target and hit in
-that action has received the multiplier. A miss, Null, Repel, or Absorb still
-consumes the matching charge because the offensive action was committed and
-resolved. Assessment rejection, target cancellation, or any other path that
-does not execute damage consumes nothing. Duration remains an expiry fallback.
+A matching charge produces an immutable participation receipt when its damage
+modifier is resolved. The exact retained runtime charge represented by that
+receipt is consumed once after every eligible target and hit in the action has
+received the multiplier. A miss, Null, Repel, or Absorb still consumes it
+because participation occurred before that outcome was known. Assessment
+rejection, target cancellation, or any other path that does not resolve a
+charged modifier consumes nothing. Duration remains an expiry fallback.
+
+Participation is not inferred from damage category at action end. A charge
+granted after an uncharged damage attempt remains available. If a participating
+slot is cleared and replaced by the same kind later in the action, that
+replacement is a different runtime charge and remains unless it subsequently
+participates itself.
 
 Under the split policy, a mixed Physical and magical action behaves component
 by component:
@@ -284,9 +298,11 @@ assumptions.
 
 ## Implementation Result
 
-Order 2 implements the confirmed policy family. Convergence supplies Split and
-Unified charge policies; the standard authored combat factory selects Split,
-while a host may select Unified through a custom factory or direct composition.
+Order 2 implements the confirmed policy family. Convergence supplies Disabled,
+Split, and Unified charge policies; the standard authored combat factory
+selects all three through `chargePolicy` and defaults to Split, while a host may
+still select another implementation through a custom factory or direct
+composition.
 The family also includes explicit hit/evasion, separate critical eligibility
 and chance, resistance-aware instant defeat,
 immutable per-hit evidence, sequential staged hit application, and replaceable

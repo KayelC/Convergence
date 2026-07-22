@@ -98,8 +98,7 @@
       "hostNeutral": true,
       "optionalModule": false,
       "knownGaps": [
-        "Charge finalization currently infers consumption from damage elements and can remove a charge granted after an uncharged damage attempt.",
-        "The supplied combat composition requires a charge policy but does not yet provide an explicit disabled selection."
+        "Participating-charge and disabled-composition corrections are implemented and await the independent O2-R39 source and release-gate review."
       ]
     },
     {

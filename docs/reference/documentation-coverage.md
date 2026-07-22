@@ -42,19 +42,19 @@ skills, items, and direct effect-backed actions, corrected current terminology
 and version labels, documented that boundary for all three audiences, and
 completed another independent source and release-gate verification.
 
-The subsequent 22 July closure-readiness review returned all three
-`combat_resolution` audience entries to `existing_unreviewed`. Their confirmed
-mechanics remain authoritative, but charge participation and disabled
-composition must be reconciled through O2-R35 through O2-R39 before the entries
-return to `reviewed`.
+The subsequent 22 July closure-readiness review temporarily returned all three
+`combat_resolution` audience entries to `existing_unreviewed`. O2-R36 through
+O2-R38 corrected exact charge participation, supplied disabled composition,
+and reconciled all three audiences. They are reviewed again; formal capability
+closure remains pending the independent O2-R39 source review.
 
-The documentation matrix currently records 75 audience entries: 14 reviewed,
-37 existing_unreviewed, 17 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 17 reviewed,
+34 existing_unreviewed, 17 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 14 |
-| `existing_unreviewed` | 37 |
+| `reviewed` | 17 |
+| `existing_unreviewed` | 34 |
 | `missing` | 17 |
 | `not_applicable` | 7 |
 
