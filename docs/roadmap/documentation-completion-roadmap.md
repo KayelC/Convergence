@@ -194,13 +194,13 @@ The later
 found a reachable charge-ordering defect and an optional-composition mismatch.
 The active
 [Charge Closure Corrections Roadmap](combat-resolution-order-2-charge-closure-roadmap.md)
-owns O2-R35 through O2-R39.
+owns O2-R35 through O2-R41.
 
 Current checkpoints:
 
 | Checkpoint | State | Required outcome |
 |---|---|---|
-| O2-H1 | `implemented_pending_verification` | Exact participating-charge receipts and supplied Disabled, Split, and Unified composition are implemented; O2-R39 owns independent verification. |
+| O2-H1 | `correction_required` | Exact receipt flow and optional composition are implemented, but O2-R39 found that source-less fabricated receipts must be rejected by O2-R40 before O2-R41 verification. |
 | O2-M1 | `verified` | Inert standard chance defaults are removed; typed content remains authoritative. |
 | O2-M2 | `verified` | Authored Accuracy, Evasion, and Critical Chance modifiers reach their typed policy boundaries. |
 | O2-M3 | `verified` | Authored combat binding returns a coherent neutral aggregate whose exposed authorities are the executing authorities. |
@@ -210,7 +210,7 @@ Current checkpoints:
 | O2-D4 | `confirmed` | Configurable instant-defeat resistance multipliers and one explicit roll. |
 | O2-D5 | `confirmed` | Sequential staged multi-hit mutation and immutable hit/target evidence. |
 | O2-D6 | `confirmed` | Configurable probability bounds with neutral supplied defaults of `0..100`. |
-| O2-DOC | `verified` | Mechanics, developer, and technical charge documentation agree on participation receipts and explicit disabled composition; O2-R39 still owns formal capability closure. |
+| O2-DOC | `verified` | Mechanics, developer, and technical charge documentation agree on participation receipts and explicit disabled composition; O2-R41 owns formal capability closure after the O2-R40 source correction. |
 
 The table records the first implementation cycle; O2-R7 through O2-R16 record
 the complete-action and ordered-secondary-effect correction cycle. O2-R18
@@ -223,7 +223,9 @@ terminology, active-contract, audience-documentation, and final source
 verification corrections. O2-R36 through O2-R38 implement exact charge
 participation, supplied optional composition, and audience reconciliation. The
 three `combat_resolution` audience entries are `reviewed` again, while formal
-Order 2 capability closure remains pending O2-R39.
+Order 2 capability closure remains pending. O2-R39 found one custom-executor
+receipt-integrity defect; O2-R40 owns the correction and O2-R41 owns final
+closure.
 
 ## Deferred Documentation
 

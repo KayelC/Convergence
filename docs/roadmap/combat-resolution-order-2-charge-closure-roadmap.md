@@ -1,6 +1,6 @@
 # Order 2 Charge Closure Corrections Roadmap
 
-**Status:** active; O2-R35 through O2-R38 complete, O2-R39 pending
+**Status:** active; O2-R35 through O2-R39 complete, O2-R40 and O2-R41 pending
 
 **Started:** 22 July 2026
 
@@ -137,11 +137,11 @@ retained slots do not.
 **Result:** mechanics, developer, technical, decision, ruleset, and public API
 documents now describe participation receipts and explicit disabled
 composition. The three audience entries are reviewed again; formal capability
-closure remains pending the independent O2-R39 source review.
+closure remains pending the O2-R40 correction and O2-R41 final review.
 
 ### O2-R39: Independently re-evaluate Order 2
 
-**State:** pending
+**State:** complete; correction required
 
 - Re-read the corrected source without using this roadmap or earlier verdicts as
   implementation proof.
@@ -153,6 +153,38 @@ closure remains pending the independent O2-R39 source review.
   searches, and `git diff --check`.
 - Return `combat_resolution` to `complete` only if no realistic reachable defect
   remains in the corrected scope.
+
+**Result:** The source-first review confirmed the original ordering and
+optionality corrections, then found one reachable custom-executor contract
+defect: a publicly fabricated charged modifier is treated as a wildcard receipt
+by the supplied policy base. The finding is recorded in the
+[Order 2 Charge Corrections Source Review](../reviews/combat-resolution-order-2-charge-corrections-review-2026-07-22.md).
+
+**Commit:** `docs: review order 2 charge corrections`
+
+### O2-R40: Reject fabricated participation receipts
+
+**State:** pending
+
+- Require every charged modifier submitted to `ChargePolicyServiceBase` to
+  carry the internal source receipt created by `ResolveDamageModifier`.
+- Reject source-less charged modifiers before any retained state is removed.
+- Prove direct-call and custom damage-executor paths preserve live charge state
+  and return contained typed failure at the action boundary.
+- Preserve valid Split, Unified, nested, replacement, multi-target, miss, and
+  defensive-affinity behavior.
+
+**Commit:** `execution: reject fabricated charge participation`
+
+### O2-R41: Final independent closure recheck
+
+**State:** pending
+
+- Re-read current charge source and custom extension boundaries after O2-R40.
+- Reproduce all ordering, optionality, persistence, and malformed-receipt tests.
+- Reconcile the active matrices and completion records.
+- Run the complete release gate and close Order 2 only if no reachable defect
+  remains in scope.
 
 **Commit:** `docs: verify order 2 charge closure`
 
@@ -180,7 +212,7 @@ skips, a strict nonincremental Release build with zero warnings, formatting
 verification, relevant documentation or content checks, `git diff --check`, and
 one narrow commit before the next checkpoint begins.
 
-O2-R39 additionally runs all noninteractive DemoHost modes and validates all
+O2-R41 additionally runs all noninteractive DemoHost modes and validates all
 active packs. The review standard requires an intended invariant, a realistic
 reachable path, a concrete consequence, and source or executable evidence.
 Theoretical malformed values and alternative product designs remain labeled
@@ -197,4 +229,4 @@ Order 2 may close only when:
   standard composition;
 - mechanics, developer, and technical documents describe the same behavior;
 - capability and documentation matrices report current truth; and
-- O2-R39 finds no remaining reachable defect in these corrected paths.
+- O2-R41 finds no remaining reachable defect in these corrected paths.

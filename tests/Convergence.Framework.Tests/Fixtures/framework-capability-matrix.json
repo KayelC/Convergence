@@ -98,7 +98,7 @@
       "hostNeutral": true,
       "optionalModule": false,
       "knownGaps": [
-        "Participating-charge and disabled-composition corrections are implemented and await the independent O2-R39 source and release-gate review."
+        "The supplied charge-policy base currently accepts a source-less charged modifier as a wildcard participation receipt; O2-R40 must reject it before final O2-R41 verification."
       ]
     },
     {

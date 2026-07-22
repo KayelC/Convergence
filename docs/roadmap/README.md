@@ -31,5 +31,6 @@ Order 1's mechanics, audience documentation, and typed execution capability
 remain owner-confirmed and complete. Order 2, `combat_resolution`, is reopened
 as `partial`: the 22 July closure-readiness review found a reachable
 charge-ordering defect and an optional-composition mismatch. O2-R35 through
-O2-R39 own those corrections and the required independent recheck. Order 3 does
-not begin until that gate is green.
+O2-R39 corrected and reviewed those issues, then exposed one source-less custom
+receipt defect. O2-R40 and O2-R41 own the final correction and recheck. Order 3
+does not begin until that gate is green.

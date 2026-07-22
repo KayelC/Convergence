@@ -82,7 +82,10 @@ The later 22 July closure-readiness review reopened `combat_resolution` as
 preserves later grants or same-kind replacements. O2-R37 supplies authored
 disabled, split, and unified composition, and O2-R38 reconciles all three
 documentation audiences. The capability remains partial solely until O2-R39
-performs the independent source and release-gate recheck.
+performs the independent source recheck. That completed review found a
+custom-executor receipt-integrity defect: a source-less charged modifier is
+currently accepted as a wildcard. O2-R40 owns the correction, and O2-R41 owns
+the final source and release-gate closure recheck.
 
 ## Authority
 
