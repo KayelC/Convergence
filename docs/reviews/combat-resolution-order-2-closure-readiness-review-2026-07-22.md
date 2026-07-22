@@ -185,3 +185,6 @@ participating-charge consumption path, resolve the optional-charge composition
 claim, reconcile the charge documentation, then perform one focused source
 recheck of those changes. No wider rewrite of combat resolution is indicated by
 this review.
+
+Corrections are governed by the active
+[Order 2 Charge Closure Corrections Roadmap](../roadmap/combat-resolution-order-2-charge-closure-roadmap.md).

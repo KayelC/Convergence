@@ -13,9 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The actor composition, progression, party/roster, actor-restoration, typed
-action/effect, and combat-resolution documentation has completed the
-collaborative workflow. The
+The actor composition, progression, party/roster, actor-restoration, and typed
+action/effect documentation has completed the collaborative workflow. The
 Order 1 review includes canonical action authority, prepared targets,
 exactly-one item transactions, ordered effects, and the persistent,
 timed-exclusive, and timed-contribution modifier policies. Their production
@@ -43,13 +42,19 @@ skills, items, and direct effect-backed actions, corrected current terminology
 and version labels, documented that boundary for all three audiences, and
 completed another independent source and release-gate verification.
 
-The documentation matrix currently records 75 audience entries: 17 reviewed,
-34 existing_unreviewed, 17 missing, and 7 not_applicable.
+The subsequent 22 July closure-readiness review returned all three
+`combat_resolution` audience entries to `existing_unreviewed`. Their confirmed
+mechanics remain authoritative, but charge participation and disabled
+composition must be reconciled through O2-R35 through O2-R39 before the entries
+return to `reviewed`.
+
+The documentation matrix currently records 75 audience entries: 14 reviewed,
+37 existing_unreviewed, 17 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 17 |
-| `existing_unreviewed` | 34 |
+| `reviewed` | 14 |
+| `existing_unreviewed` | 37 |
 | `missing` | 17 |
 | `not_applicable` | 7 |
 

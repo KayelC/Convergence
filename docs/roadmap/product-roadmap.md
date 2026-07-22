@@ -8,7 +8,12 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+
+`combat_resolution` is the temporary partial entry. The 22 July 2026
+closure-readiness review found a reachable charge-participation defect and a
+missing supplied disabled-charge composition; O2-R35 through O2-R39 own those
+corrections before Order 3 begins.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in

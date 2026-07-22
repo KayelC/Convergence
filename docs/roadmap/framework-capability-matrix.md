@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v11 restoration. Its
@@ -76,6 +76,13 @@ action execution, combat resolution, and host contracts return to `complete`.
 O2-R30 through O2-R34 later unified registration preflight across skills, items,
 basic attacks, and escape; corrected current documentation drift; and completed
 a fresh source review with no unresolved reachable defect.
+
+The later 22 July closure-readiness review reopened `combat_resolution` as
+`partial`. Charge finalization currently remembers damage elements rather than
+the charge state that actually participated, so a later grant can be removed by
+an earlier uncharged attempt. The supplied combat composition also lacks an
+explicit disabled charge selection despite the modularity guidance. O2-R35
+through O2-R39 own those corrections and the independent closure recheck.
 
 ## Authority
 

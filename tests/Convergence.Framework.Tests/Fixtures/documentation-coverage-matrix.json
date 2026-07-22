@@ -146,19 +146,19 @@
     {
       "id": "combat_resolution",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/mechanics/combat-defenses-and-turns.md"],
-        "reason": "The confirmed Order 2 rules cover combat math, bounded hit execution, authored probability rejection, complete-action outcomes, explicit ordered dependencies, current life-state gating, secondary contact modes, and Action Token integration."
+        "reason": "Confirmed combat rules exist, but charge participation wording awaits reconciliation with O2-R36 through O2-R39."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/combat-resolution-policies.md"],
-        "reason": "The guide documents authored policy composition, bounded hit configuration, percentage diagnostics, host evidence, complete-action pricing, and ordered secondary-effect integration against current public contracts."
+        "reason": "The guide requires revision so disabled charge composition and participating-charge consumption match the corrected public contracts."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/combat-resolution-pipeline.md"],
-        "reason": "The source-traced pipeline covers authored numeric safety, dependency, life-state, condition, dispatch, secondary contact, action aggregation, transaction, and turn-economy boundaries."
+        "reason": "The pipeline charge diagram currently describes damage-category finalization and must be updated to participating charge receipts."
       }
     },
     {

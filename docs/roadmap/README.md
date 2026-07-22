@@ -16,6 +16,7 @@ records. It does not define individual mechanics.
 - [Order 2 Closure Corrections Roadmap](combat-resolution-order-2-closure-corrections-roadmap.md)
 - [Order 2 Pre-Closure Audit Corrections Roadmap](combat-resolution-order-2-pre-closure-audit-corrections-roadmap.md)
 - [Order 2 Post-Closure Corrections Roadmap](combat-resolution-order-2-post-closure-corrections-roadmap.md)
+- [Order 2 Charge Closure Corrections Roadmap](combat-resolution-order-2-charge-closure-roadmap.md)
 - [Documentation Completion Roadmap](documentation-completion-roadmap.md)
 - [Framework Capability Matrix](framework-capability-matrix.md)
 - [Production-Readiness Completion Record](production-readiness-roadmap.md)
@@ -27,8 +28,8 @@ requires owner review. The Documentation Completion Roadmap governs the ordered
 collaborative review of those outstanding entries.
 
 Order 1's mechanics, audience documentation, and typed execution capability
-remain owner-confirmed and complete. Order 2, `combat_resolution`, is also
-verified: O2-R30 through O2-R34 corrected direct-action registration preflight,
-instant-defeat terminology, and current documentation drift, then completed a
-fresh source and release-gate recheck. Order 3 is the next collaborative
-documentation subject.
+remain owner-confirmed and complete. Order 2, `combat_resolution`, is reopened
+as `partial`: the 22 July closure-readiness review found a reachable
+charge-ordering defect and an optional-composition mismatch. O2-R35 through
+O2-R39 own those corrections and the required independent recheck. Order 3 does
+not begin until that gate is green.

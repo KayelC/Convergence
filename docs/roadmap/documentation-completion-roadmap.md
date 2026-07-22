@@ -139,10 +139,10 @@ the [final Order 1 closure review](../reviews/order-1-final-closure-review-2026-
 All three `typed_action_and_effect_execution` audience entries are now
 `reviewed`. Order 2 then completed its source review, correction cycles,
 ordered-secondary-effect design, and audience reconciliation. The executable
-matrix now records 17 reviewed, 34 `existing_unreviewed`, 17 missing, and 7
+matrix now records 14 reviewed, 37 `existing_unreviewed`, 17 missing, and 7
 `not_applicable` entries.
 
-## Closed Order 2 Implementation Gate
+## Reopened Order 2 Implementation Gate
 
 The source-based
 [Combat Resolution Order 2 Review](../reviews/combat-resolution-order-2-source-review-2026-07-19.md)
@@ -189,12 +189,18 @@ skill/item registration preflight. O2-R30 through O2-R34 established one shared
 validator, corrected current terminology and schema labels, documented the
 preflight for all three audiences, and independently verified the result in the
 [Registration-Parity Corrections Review](../reviews/combat-resolution-order-2-registration-parity-corrections-review-2026-07-22.md).
+The later
+[Closure-Readiness Review](../reviews/combat-resolution-order-2-closure-readiness-review-2026-07-22.md)
+found a reachable charge-ordering defect and an optional-composition mismatch.
+The active
+[Charge Closure Corrections Roadmap](combat-resolution-order-2-charge-closure-roadmap.md)
+owns O2-R35 through O2-R39.
 
 Current checkpoints:
 
 | Checkpoint | State | Required outcome |
 |---|---|---|
-| O2-H1 | `verified` | Split and Unified policies use authored charge multipliers, reject occupied slots, consume once per committed matching action, and persist policy identity in save v11. |
+| O2-H1 | `correction_required` | Split and Unified policies must consume only charge state that actually participated; disabled composition must be supplied explicitly. |
 | O2-M1 | `verified` | Inert standard chance defaults are removed; typed content remains authoritative. |
 | O2-M2 | `verified` | Authored Accuracy, Evasion, and Critical Chance modifiers reach their typed policy boundaries. |
 | O2-M3 | `verified` | Authored combat binding returns a coherent neutral aggregate whose exposed authorities are the executing authorities. |
@@ -204,7 +210,7 @@ Current checkpoints:
 | O2-D4 | `confirmed` | Configurable instant-defeat resistance multipliers and one explicit roll. |
 | O2-D5 | `confirmed` | Sequential staged multi-hit mutation and immutable hit/target evidence. |
 | O2-D6 | `confirmed` | Configurable probability bounds with neutral supplied defaults of `0..100`. |
-| O2-DOC | `verified` | Mechanics, developer, and technical documents agree with corrected O2-R24 through O2-R34 source and tests. |
+| O2-DOC | `correction_required` | Mechanics, developer, and technical charge documentation must be reconciled through O2-R38 and independently checked by O2-R39. |
 
 The table records the first implementation cycle; O2-R7 through O2-R16 record
 the complete-action and ordered-secondary-effect correction cycle. O2-R18
@@ -214,9 +220,9 @@ correction and its revision-specific source closure. O2-R24 through O2-R29
 record the final pre-closure audit, custom-result correction, and independent
 source verification. O2-R30 through O2-R34 record registration-parity,
 terminology, active-contract, audience-documentation, and final source
-verification corrections. The three `combat_resolution` audience entries
-remain `reviewed`, and formal Order 2 implementation/documentation closure is
-green.
+verification corrections. The three `combat_resolution` audience entries are
+temporarily `existing_unreviewed`, and formal Order 2
+implementation/documentation closure is pending O2-R36 through O2-R39.
 
 ## Deferred Documentation
 

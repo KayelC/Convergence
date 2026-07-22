@@ -78,7 +78,7 @@
     },
     {
       "id": "combat_resolution",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "ChargePolicyTests",
         "HitResolutionPolicyTests",
@@ -97,7 +97,10 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": false,
-      "knownGaps": []
+      "knownGaps": [
+        "Charge finalization currently infers consumption from damage elements and can remove a charge granted after an uncharged damage attempt.",
+        "The supplied combat composition requires a charge policy but does not yet provide an explicit disabled selection."
+      ]
     },
     {
       "id": "turn_economy",
