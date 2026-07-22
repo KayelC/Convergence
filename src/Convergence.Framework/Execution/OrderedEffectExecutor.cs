@@ -68,10 +68,10 @@ internal sealed class OrderedEffectExecutor
             {
                 try
                 {
-                    foreach ((RuntimeActorState actor, IReadOnlyList<DamageElement> elements) in
-                             scope.ResolvedDamageElements)
+                    foreach ((RuntimeActorState actor, IReadOnlyList<ChargeDamageModifier> charges) in
+                             scope.ParticipatingCharges)
                     {
-                        _services.Charges.CompleteAction(actor, elements);
+                        _services.Charges.CompleteAction(actor, charges);
                     }
 
                     DurationLifecycle.ProcessActionEnd(
@@ -188,10 +188,11 @@ internal sealed class OrderedEffectExecutor
                     DependencyEvaluation = dependencyEvaluation
                 };
                 results.Add(result);
-                if (effect is DamageEffectDefinition damageEffect &&
-                    result.Outcome != EffectExecutionOutcome.Skipped)
+                if (result.ParticipatingCharge is ChargeDamageModifier participatingCharge)
                 {
-                    CurrentExecutionScope.Value!.TrackResolvedDamage(request.Actor, damageEffect.Element);
+                    CurrentExecutionScope.Value!.TrackParticipatingCharge(
+                        request.Actor,
+                        participatingCharge);
                 }
 
                 if (result.Outcome == EffectExecutionOutcome.Interrupted)
@@ -388,14 +389,14 @@ internal sealed class OrderedEffectExecutor
     {
         private readonly List<RuntimeActorState> _actors = [];
         private readonly HashSet<RuntimeInstanceId> _knownActorIds = [];
-        private readonly Dictionary<RuntimeActorState, HashSet<DamageElement>> _resolvedDamageElements = [];
+        private readonly Dictionary<RuntimeActorState, List<ChargeDamageModifier>> _participatingCharges = [];
 
         public IReadOnlyList<RuntimeActorState> Actors => _actors;
-        public IReadOnlyDictionary<RuntimeActorState, IReadOnlyList<DamageElement>> ResolvedDamageElements =>
-            new System.Collections.ObjectModel.ReadOnlyDictionary<RuntimeActorState, IReadOnlyList<DamageElement>>(
-                _resolvedDamageElements.ToDictionary(
+        public IReadOnlyDictionary<RuntimeActorState, IReadOnlyList<ChargeDamageModifier>> ParticipatingCharges =>
+            new System.Collections.ObjectModel.ReadOnlyDictionary<RuntimeActorState, IReadOnlyList<ChargeDamageModifier>>(
+                _participatingCharges.ToDictionary(
                     pair => pair.Key,
-                    pair => (IReadOnlyList<DamageElement>)Array.AsReadOnly(pair.Value.Order().ToArray())));
+                    pair => (IReadOnlyList<ChargeDamageModifier>)Array.AsReadOnly(pair.Value.ToArray())));
 
         public void Track(RuntimeActorState actor)
         {
@@ -413,16 +414,18 @@ internal sealed class OrderedEffectExecutor
             }
         }
 
-        public void TrackResolvedDamage(RuntimeActorState actor, DamageElement element)
+        public void TrackParticipatingCharge(
+            RuntimeActorState actor,
+            ChargeDamageModifier participatingCharge)
         {
             Track(actor);
-            if (!_resolvedDamageElements.TryGetValue(actor, out HashSet<DamageElement>? elements))
+            if (!_participatingCharges.TryGetValue(actor, out List<ChargeDamageModifier>? charges))
             {
-                elements = [];
-                _resolvedDamageElements.Add(actor, elements);
+                charges = [];
+                _participatingCharges.Add(actor, charges);
             }
 
-            elements.Add(element);
+            charges.Add(participatingCharge);
         }
     }
 }

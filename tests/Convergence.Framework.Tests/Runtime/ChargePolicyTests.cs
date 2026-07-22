@@ -114,9 +114,11 @@ public sealed class ChargePolicyTests
 
         Assert.Equal(2.25m, policy.ResolveDamageModifier(actor, DamageElement.Physical).Multiplier);
         Assert.Equal(2.25m, policy.ResolveDamageModifier(actor, DamageElement.Ice).Multiplier);
+        ChargeDamageModifier physical = policy.ResolveDamageModifier(actor, DamageElement.Physical);
+        ChargeDamageModifier magical = policy.ResolveDamageModifier(actor, DamageElement.Ice);
         ChargeConsumptionResult consumed = policy.CompleteAction(
             actor,
-            [DamageElement.Physical, DamageElement.Ice]);
+            [physical, magical]);
         Assert.Equal([ChargeKind.General], consumed.ConsumedChargeKinds);
         Assert.Empty(actor.Charges);
     }
@@ -169,9 +171,11 @@ public sealed class ChargePolicyTests
         Assert.Equal(ChargeKind.General, Assert.Single(actor.Charges).Key);
         Assert.Equal(2.25m, policy.ResolveDamageModifier(actor, DamageElement.Physical).Multiplier);
         Assert.Equal(2.25m, policy.ResolveDamageModifier(actor, DamageElement.Ice).Multiplier);
+        ChargeDamageModifier physical = policy.ResolveDamageModifier(actor, DamageElement.Physical);
+        ChargeDamageModifier magical = policy.ResolveDamageModifier(actor, DamageElement.Ice);
         Assert.Equal(
             [ChargeKind.General],
-            policy.CompleteAction(actor, [DamageElement.Physical, DamageElement.Ice]).ConsumedChargeKinds);
+            policy.CompleteAction(actor, [physical, magical]).ConsumedChargeKinds);
         Assert.Empty(actor.Charges);
     }
 
@@ -182,7 +186,7 @@ public sealed class ChargePolicyTests
         var split = new SplitChargePolicy();
         var unified = new UnifiedChargePolicy();
         split.Apply(new ChargeApplicationRequest(actor, ChargeKind.Physical, 2m));
-        split.CompleteAction(actor, [DamageElement.Physical]);
+        split.CompleteAction(actor, [split.ResolveDamageModifier(actor, DamageElement.Physical)]);
 
         ChargeApplicationAssessment assessment = unified.Assess(
             new ChargeApplicationRequest(actor, ChargeKind.General, 2m));
@@ -286,7 +290,115 @@ public sealed class ChargePolicyTests
             Request(DamageSkill(PhysicalDamage()), actor, [actor, target], [target.InstanceId]));
 
         Assert.NotEqual(SkillExecutionStatus.Rejected, result.Status);
+        ChargeDamageModifier participation = Assert.IsType<ChargeDamageModifier>(
+            Assert.Single(result.Effects).ParticipatingCharge);
+        Assert.Equal(ChargeKind.Physical, participation.ChargeKind);
+        Assert.Equal(2m, participation.Multiplier);
         Assert.Empty(actor.Charges);
+    }
+
+    [Fact]
+    public void DamageThenChargeGrant_RetainsChargeThatDidNotParticipate()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        var charges = new SplitChargePolicy();
+        var damage = new RecordingDamagePolicy();
+        SkillDefinition skill = SelfSkill(
+            "damage_then_charge",
+            PhysicalDamage(),
+            new GrantChargeEffectDefinition(ChargeKind.Physical, 2m));
+
+        SkillExecutionResult result = new SkillExecutor(Services(damage, charges)).Execute(
+            Request(skill, actor, [actor], [actor.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, result.Status);
+        Assert.Null(Assert.Single(damage.Requests).ChargeKind);
+        Assert.Equal(ChargeKind.Physical, Assert.Single(actor.Charges).Key);
+        Assert.Equal(2m, Assert.Single(actor.Charges).Value.Multiplier);
+    }
+
+    [Fact]
+    public void ChargeGrantThenDamage_ConsumesChargeThatParticipated()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        var charges = new SplitChargePolicy();
+        var damage = new RecordingDamagePolicy();
+        SkillDefinition skill = SelfSkill(
+            "charge_then_damage",
+            new GrantChargeEffectDefinition(ChargeKind.Physical, 2m),
+            PhysicalDamage());
+
+        SkillExecutionResult result = new SkillExecutor(Services(damage, charges)).Execute(
+            Request(skill, actor, [actor], [actor.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, result.Status);
+        DamagePolicyRequest request = Assert.Single(damage.Requests);
+        Assert.Equal(ChargeKind.Physical, request.ChargeKind);
+        Assert.Equal(2m, request.ChargeMultiplier);
+        Assert.Empty(actor.Charges);
+    }
+
+    [Fact]
+    public void ParticipatingChargeClearedAndReplacedLater_IsNotMistakenForReplacement()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        var charges = new SplitChargePolicy();
+        charges.Apply(new ChargeApplicationRequest(actor, ChargeKind.Physical, 2m));
+        var damage = new RecordingDamagePolicy();
+        SkillDefinition skill = SelfSkill(
+            "replace_participating_charge",
+            PhysicalDamage(),
+            new RemoveStatusEffectDefinition([StatusEffectKind.Charge]),
+            new GrantChargeEffectDefinition(ChargeKind.Physical, 3m));
+
+        SkillExecutionResult result = new SkillExecutor(Services(damage, charges)).Execute(
+            Request(skill, actor, [actor], [actor.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, result.Status);
+        Assert.Equal(2m, Assert.Single(damage.Requests).ChargeMultiplier);
+        Assert.Equal(ChargeKind.Physical, Assert.Single(actor.Charges).Key);
+        Assert.Equal(3m, Assert.Single(actor.Charges).Value.Multiplier);
+    }
+
+    [Fact]
+    public void NestedDefeatPreventionGrantAfterUnchargedDamage_RemainsAvailable()
+    {
+        SkillDefinition response = new(
+            ContentId.Parse("emergency_focus"),
+            "Emergency Focus",
+            "Grants charge when its owner would be defeated.",
+            SkillActivation.Passive,
+            null,
+            InheritanceGroup.Passive,
+            new SkillInheritanceDefinition(true),
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    ContentId.Parse("owner_would_be_defeated"),
+                    [new GrantChargeEffectDefinition(ChargeKind.Physical, 2m)])
+            ]);
+        RuntimeActorState actor = Actor(
+            "actor",
+            PlayerTeam,
+            hp: 10m,
+            passiveSkills: [response]);
+        var charges = new SplitChargePolicy();
+        var damage = new RecordingDamagePolicy(request =>
+            new DamagePolicyResolution(
+                [new DamageHitResolution(true, 20m)],
+                request.Affinity));
+
+        SkillExecutionResult result = new SkillExecutor(Services(damage, charges)).Execute(
+            Request(
+                SelfSkill("self_strike", PhysicalDamage()),
+                actor,
+                [actor],
+                [actor.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, result.Status);
+        Assert.True(actor.IsDefeated);
+        Assert.Equal(PassiveTriggerOutcome.Executed, Assert.Single(result.PassiveActivations).Outcome);
+        Assert.Equal(ChargeKind.Physical, Assert.Single(actor.Charges).Key);
     }
 
     [Fact]
@@ -395,16 +507,19 @@ public sealed class ChargePolicyTests
     private static RuntimeActorState Actor(
         string id,
         ContentId team,
-        CombatDefenseProfile? defense = null) =>
+        CombatDefenseProfile? defense = null,
+        decimal hp = 100m,
+        IEnumerable<SkillDefinition>? passiveSkills = null) =>
         new(
             RuntimeInstanceId.Parse(id),
             ContentId.Parse($"{id}_entity"),
             team,
             Hp,
             defense ?? CombatDefenseProfile.Empty,
-            [new BattleResourceState(Hp, 100, 100)],
+            [new BattleResourceState(Hp, hp, 100)],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
-            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_controller"), team));
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_controller"), team),
+            passiveSkills: passiveSkills);
 
     private static BattleExecutionServices Services(
         IDamageExecutionPolicy damage,
@@ -445,6 +560,25 @@ public sealed class ChargePolicyTests
                 TargetLifeState.Alive,
                 false),
             effects: [effect],
+            availability: new SkillAvailabilityDefinition([Battle]));
+
+    private static SkillDefinition SelfSkill(
+        string id,
+        params EffectDefinition[] effects) =>
+        new(
+            ContentId.Parse(id),
+            id,
+            "Executes an ordered self-targeted effect sequence.",
+            SkillActivation.Active,
+            SkillMenuGroup.Utility,
+            InheritanceGroup.Physical,
+            new SkillInheritanceDefinition(true),
+            targeting: new TargetingDefinition(
+                TargetRelation.Self,
+                TargetSelection.Single,
+                TargetLifeState.Alive,
+                true),
+            effects: effects,
             availability: new SkillAvailabilityDefinition([Battle]));
 
     private static DamageEffectDefinition PhysicalDamage() =>

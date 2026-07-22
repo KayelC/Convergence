@@ -319,6 +319,7 @@ public sealed record EffectExecutionResult
     private TargetLifeState? _requiredTargetLifeState;
     private EffectLocalId? _effectId;
     private ElementalAffinity? _resolvedAffinity;
+    private ChargeDamageModifier? _participatingCharge;
     private readonly IReadOnlyList<PassiveTriggerExecutionResult> _passiveActivations =
         Array.Empty<PassiveTriggerExecutionResult>();
     private readonly IReadOnlyList<ContentId> _hostActionRequestIds = Array.Empty<ContentId>();
@@ -487,6 +488,24 @@ public sealed record EffectExecutionResult
             }
 
             _resolvedAffinity = value;
+        }
+    }
+    /// <summary>
+    /// Gets the charge modifier that participated in this effect's damage resolution, when any.
+    /// </summary>
+    public ChargeDamageModifier? ParticipatingCharge
+    {
+        get => _participatingCharge;
+        init
+        {
+            if (value is { IsCharged: false })
+            {
+                throw new ArgumentException(
+                    "A participating charge modifier must identify a charge kind.",
+                    nameof(value));
+            }
+
+            _participatingCharge = value;
         }
     }
     public IReadOnlyList<ContentId> HostActionRequestIds

@@ -155,54 +155,57 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
                     attackModifierContext)));
         affinity = resolution.ResolvedAffinity;
         DamageHitResolution[] hits = resolution.Hits.ToArray();
+        EffectExecutionResult result;
         if (hits.All(hit => !hit.Hit))
         {
             DamageHitExecutionEvidence[] misses = hits
                 .Select(hit => Evidence(context, target, hit, affinity))
                 .ToArray();
-            return Failure(
+            result = Failure(
                 context,
                 TurnEconomyOutcome.Miss,
                 "All damage hits missed.",
                 resolvedAffinity: affinity,
                 damageHits: misses);
         }
-
-        switch (affinity)
+        else
         {
-            case ElementalAffinity.Null:
-                return Failure(
+            result = affinity switch
+            {
+                ElementalAffinity.Null => Failure(
                     context,
                     TurnEconomyOutcome.Null,
                     "The damage was nullified.",
                     resolvedAffinity: affinity,
-                    damageHits: hits.Select(hit => Evidence(context, target, hit, affinity)).ToArray());
-            case ElementalAffinity.Repel:
-                return ResolveReflectedHits(
+                    damageHits: hits.Select(hit => Evidence(context, target, hit, affinity)).ToArray()),
+                ElementalAffinity.Repel => ResolveReflectedHits(
                     context,
                     target,
                     hits,
                     affinity,
                     attackModifierContext,
-                    defenseModifierContext);
-            case ElementalAffinity.Absorb:
-                return ResolveAbsorbedHits(
+                    defenseModifierContext),
+                ElementalAffinity.Absorb => ResolveAbsorbedHits(
                     context,
                     target,
                     hits,
                     affinity,
                     attackModifierContext,
-                    defenseModifierContext);
-            default:
-                return ResolveLandedHits(
+                    defenseModifierContext),
+                _ => ResolveLandedHits(
                     context,
                     definition,
                     target,
                     hits,
                     affinity,
                     attackModifierContext,
-                    defenseModifierContext);
+                    defenseModifierContext)
+            };
         }
+
+        return charge.IsCharged
+            ? result with { ParticipatingCharge = charge }
+            : result;
     }
 
     private static EffectExecutionResult ResolveLandedHits(

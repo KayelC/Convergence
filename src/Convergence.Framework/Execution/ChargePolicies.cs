@@ -149,6 +149,14 @@ public sealed record ChargeApplicationResult
 public sealed record ChargeDamageModifier
 {
     public ChargeDamageModifier(decimal multiplier, ChargeKind? chargeKind = null)
+        : this(multiplier, chargeKind, sourceState: null)
+    {
+    }
+
+    internal ChargeDamageModifier(
+        decimal multiplier,
+        ChargeKind? chargeKind,
+        BattleChargeState? sourceState)
     {
         if (multiplier <= 0)
         {
@@ -161,11 +169,14 @@ public sealed record ChargeDamageModifier
 
         Multiplier = multiplier;
         ChargeKind = chargeKind;
+        SourceState = sourceState;
     }
 
     public decimal Multiplier { get; }
     public ChargeKind? ChargeKind { get; }
     public bool IsCharged => ChargeKind.HasValue;
+
+    internal BattleChargeState? SourceState { get; }
 }
 
 public sealed record ChargeConsumptionResult
@@ -218,7 +229,7 @@ public interface IChargePolicyService
     ChargeDamageModifier ResolveDamageModifier(RuntimeActorState actor, DamageElement element);
     ChargeConsumptionResult CompleteAction(
         RuntimeActorState actor,
-        IEnumerable<DamageElement> resolvedDamageElements);
+        IEnumerable<ChargeDamageModifier> participatingCharges);
     ChargePolicyValidationResult ValidateState(RuntimeChargeStateSnapshot state);
 }
 
@@ -373,32 +384,42 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
         RequireCompatible(actor);
         ChargeKind? kind = Match(element);
         return kind is ChargeKind matched && actor.Charges.TryGetValue(matched, out BattleChargeState? state)
-            ? new ChargeDamageModifier(state.Multiplier, matched)
+            ? new ChargeDamageModifier(state.Multiplier, matched, state)
             : new ChargeDamageModifier(1m);
     }
 
     public ChargeConsumptionResult CompleteAction(
         RuntimeActorState actor,
-        IEnumerable<DamageElement> resolvedDamageElements)
+        IEnumerable<ChargeDamageModifier> participatingCharges)
     {
         ArgumentNullException.ThrowIfNull(actor);
-        DamageElement[] elements =
-            (resolvedDamageElements ?? throw new ArgumentNullException(nameof(resolvedDamageElements)))
-            .Distinct()
+        ChargeDamageModifier[] participation =
+            (participatingCharges ?? throw new ArgumentNullException(nameof(participatingCharges)))
             .ToArray();
-        if (elements.Any(element => !Enum.IsDefined(element)))
+        if (participation.Any(modifier => modifier is null))
         {
-            throw new ArgumentOutOfRangeException(nameof(resolvedDamageElements));
+            throw new ArgumentException(
+                "Participating charge modifiers cannot contain null entries.",
+                nameof(participatingCharges));
+        }
+        if (participation.Any(modifier =>
+                modifier.ChargeKind is ChargeKind kind && Normalize(kind) != kind))
+        {
+            throw new ArgumentException(
+                $"Participating charge modifiers must use kinds supported by policy '{PolicyId}'.",
+                nameof(participatingCharges));
         }
 
         RequireCompatible(actor);
         RuntimeChargeStateSnapshot? before = actor.CaptureChargeState();
-        ChargeKind[] consumed = elements
-            .Select(Match)
-            .Where(kind => kind.HasValue)
-            .Select(kind => kind!.Value)
-            .Distinct()
-            .Where(actor.Charges.ContainsKey)
+        ChargeKind[] consumed = participation
+            .Where(modifier => modifier.ChargeKind.HasValue)
+            .GroupBy(modifier => modifier.ChargeKind!.Value)
+            .Where(group =>
+                actor.Charges.TryGetValue(group.Key, out BattleChargeState? current) &&
+                group.Any(modifier =>
+                    modifier.SourceState is null || ReferenceEquals(modifier.SourceState, current)))
+            .Select(group => group.Key)
             .Order()
             .ToArray();
         foreach (ChargeKind kind in consumed)

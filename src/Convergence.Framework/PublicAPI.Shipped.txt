@@ -10032,7 +10032,7 @@ Convergence.Execution.ChargePolicyServiceBase
 Convergence.Execution.ChargePolicyServiceBase.Apply(Convergence.Execution.ChargeApplicationRequest! request) -> Convergence.Execution.ChargeApplicationResult!
 Convergence.Execution.ChargePolicyServiceBase.Assess(Convergence.Execution.ChargeApplicationRequest! request) -> Convergence.Execution.ChargeApplicationAssessment!
 Convergence.Execution.ChargePolicyServiceBase.ChargePolicyServiceBase(Convergence.Content.ContentId policyId) -> void
-Convergence.Execution.ChargePolicyServiceBase.CompleteAction(Convergence.Execution.RuntimeActorState! actor, System.Collections.Generic.IEnumerable<Convergence.Content.DamageElement>! resolvedDamageElements) -> Convergence.Execution.ChargeConsumptionResult!
+Convergence.Execution.ChargePolicyServiceBase.CompleteAction(Convergence.Execution.RuntimeActorState! actor, System.Collections.Generic.IEnumerable<Convergence.Execution.ChargeDamageModifier!>! participatingCharges) -> Convergence.Execution.ChargeConsumptionResult!
 Convergence.Execution.ChargePolicyServiceBase.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Execution.ChargePolicyServiceBase.ResolveDamageModifier(Convergence.Execution.RuntimeActorState! actor, Convergence.Content.DamageElement element) -> Convergence.Execution.ChargeDamageModifier!
 Convergence.Execution.ChargePolicyServiceBase.ValidateState(Convergence.Runtime.RuntimeChargeStateSnapshot! state) -> Convergence.Execution.ChargePolicyValidationResult!
@@ -10047,7 +10047,7 @@ Convergence.Execution.IChargePolicyResolver.TryResolve(Convergence.Content.Conte
 Convergence.Execution.IChargePolicyService
 Convergence.Execution.IChargePolicyService.Apply(Convergence.Execution.ChargeApplicationRequest! request) -> Convergence.Execution.ChargeApplicationResult!
 Convergence.Execution.IChargePolicyService.Assess(Convergence.Execution.ChargeApplicationRequest! request) -> Convergence.Execution.ChargeApplicationAssessment!
-Convergence.Execution.IChargePolicyService.CompleteAction(Convergence.Execution.RuntimeActorState! actor, System.Collections.Generic.IEnumerable<Convergence.Content.DamageElement>! resolvedDamageElements) -> Convergence.Execution.ChargeConsumptionResult!
+Convergence.Execution.IChargePolicyService.CompleteAction(Convergence.Execution.RuntimeActorState! actor, System.Collections.Generic.IEnumerable<Convergence.Execution.ChargeDamageModifier!>! participatingCharges) -> Convergence.Execution.ChargeConsumptionResult!
 Convergence.Execution.IChargePolicyService.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Execution.IChargePolicyService.ResolveDamageModifier(Convergence.Execution.RuntimeActorState! actor, Convergence.Content.DamageElement element) -> Convergence.Execution.ChargeDamageModifier!
 Convergence.Execution.IChargePolicyService.ValidateState(Convergence.Runtime.RuntimeChargeStateSnapshot! state) -> Convergence.Execution.ChargePolicyValidationResult!
@@ -10481,6 +10481,8 @@ Convergence.Execution.DamageHitResolution.HitIndex.get -> int
 Convergence.Execution.DamageHitResolution.ResolvedAffinity.get -> Convergence.Content.ElementalAffinity
 Convergence.Execution.EffectExecutionResult.DamageHits.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.DamageHitExecutionEvidence!>!
 Convergence.Execution.EffectExecutionResult.DamageHits.init -> void
+Convergence.Execution.EffectExecutionResult.ParticipatingCharge.get -> Convergence.Execution.ChargeDamageModifier?
+Convergence.Execution.EffectExecutionResult.ParticipatingCharge.init -> void
 Convergence.Execution.EffectExecutionResult.EffectExecutionResult(int EffectIndex, Convergence.Runtime.RuntimeInstanceId? TargetId, Convergence.Execution.EffectExecutionOutcome Outcome, Convergence.Execution.TurnEconomyOutcome TurnEconomyOutcome = Convergence.Execution.TurnEconomyOutcome.Normal, bool IsCritical = false, decimal? Value = null, Convergence.Content.ContentId? RelatedId = null, string? Detail = null, bool EscapeRequested = false, System.Collections.Generic.IReadOnlyList<Convergence.Execution.PassiveTriggerExecutionResult!>? PassiveActivations = null, Convergence.Content.ElementalAffinity? ResolvedAffinity = null, System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>? HostActionRequestIds = null, System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierTransitionResult!>? StatModifierTransitions = null, System.Collections.Generic.IReadOnlyList<Convergence.Execution.DamageHitExecutionEvidence!>? DamageHits = null) -> void
 Convergence.Execution.IActionOutcomeAggregationPolicy
 Convergence.Execution.IActionOutcomeAggregationPolicy.Aggregate(System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>! effects) -> Convergence.Execution.TurnEconomyResolution!
