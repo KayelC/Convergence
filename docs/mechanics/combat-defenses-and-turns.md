@@ -270,6 +270,11 @@ action spends none, and explicit phase termination removes every remaining
 action. Weakness, Critical, Miss, Null, Repel, and Absorb do not receive special
 pricing under this neutral economy.
 
+Explicit phase termination is stronger than policy-specific pricing. Every
+turn economy, including a game-supplied replacement, must end with no action
+opportunities when it receives that command. The encounter faults instead of
+granting another command if a replacement policy claims otherwise.
+
 ### Action Token
 
 | Result | Token change |

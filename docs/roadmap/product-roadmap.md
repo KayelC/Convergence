@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -28,10 +28,11 @@ O3-R12 then completed a fresh post-correction source and documentation review
 without finding another realistic reachable defect.
 
 A later fresh closure audit found that the two supplied economies correctly
-honor explicit phase termination, while a custom economy can leave actions
-remaining and still pass encounter transition validation. Order 3 is reopened
-for the focused O3-R16 runtime guard and O3-R17 source/document reconciliation;
-Order 4 has not started.
+honored explicit phase termination, while a custom economy could leave actions
+remaining and still pass encounter transition validation. O3-R16 now enforces
+the universal termination command before lifecycle and event commitment, and
+O3-R17 reconciled the corrected source with all three documentation audiences.
+Order 3 is complete; Order 4 has not started.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in
@@ -117,8 +118,9 @@ independent source and release-gate verification at that revision. A later
 recheck found and O3-R8 through O3-R11 corrected three command-boundary
 integration defects before returning the capability and all three audience
 documents to complete/reviewed. O3-R12 independently confirmed that closure
-from current code. Order 4, status and passive lifecycle, is the next
-collaborative documentation subject.
+from current code. O3-R15 later found the custom explicit-termination gap;
+O3-R16 and O3-R17 corrected and independently reconciled it. Order 4, status
+and passive lifecycle, is the next collaborative documentation subject.
 
 ## Priority 2: Persistence Evolution
 

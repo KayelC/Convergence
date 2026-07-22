@@ -110,7 +110,9 @@ changed snapshot only when:
 
 - economy IDs match;
 - concrete snapshot types match;
-- `HasTurnsRemaining()` agrees with `RemainingActions > 0`; and
+- `HasTurnsRemaining()` agrees with `RemainingActions > 0`;
+- `TerminatePhase` leaves zero remaining actions and reports no turns remaining;
+  and
 - a non-`None` consumption did not leave state unchanged.
 
 The resulting snapshot becomes the next authority. The phase-end capture must
@@ -156,13 +158,19 @@ sequenceDiagram
         Runner->>Economy: Apply(consumption)
         Runner->>Economy: CaptureSnapshot()
         Runner->>Economy: HasTurnsRemaining()
-        Runner->>Runner: validate and accept transition
-        opt consumption is not None
-            Runner->>Lifecycle: ProcessTurnEndAsync(staged actors)
-            Runner->>Runner: require authority; commit staged turn-end
+        Runner->>Runner: validate identity, state, and explicit termination
+        alt TerminatePhase retained actions
+            Runner->>Sink: typed TurnEconomyTransitionInvalid fault
+            Note over Runner,Sink: encounter exits through the faulted branch
+        else accepted transition
+            Runner->>Runner: accept next economy authority
+            opt consumption is not None
+                Runner->>Lifecycle: ProcessTurnEndAsync(staged actors)
+                Runner->>Runner: require authority; commit staged turn-end
+            end
+            Runner->>Sink: TurnEconomyChanged(actor, before, after, consumption)
+            Runner->>Runner: synchronize actors and require authority
         end
-        Runner->>Sink: TurnEconomyChanged(actor, before, after, consumption)
-        Runner->>Runner: synchronize actors and require authority
     end
 
     Runner->>Economy: CaptureSnapshot() + HasTurnsRemaining()
@@ -319,12 +327,22 @@ A replacement economy and factory are valid only when:
 - one phase retains one economy ID and one concrete snapshot type;
 - `RemainingActions` and `HasTurnsRemaining()` agree;
 - state changes only through the runner-owned `Apply` call;
+- `TerminatePhase` produces zero remaining actions and false liveness;
 - ports return only their explicitly allowed command, effect, lifecycle, and
   deployment event kinds;
 - invalid `ActionTurnConsumption` is rejected rather than repaired;
 - factory parameters are either recognized or reported as unknown;
 - finite liveness limits are supplied; and
 - focused tests include malformed initial, transition, and phase-end behavior.
+
+`TerminatePhase` is the one economy-independent transition semantic in this
+contract. It is not a policy hint: a replacement economy that retains an
+action receives `TurnEconomyTransitionInvalid` before owner-turn-end lifecycle
+or `TurnEconomyChanged` is accepted. By contrast, the `TerminatesPhase` flag
+inside an effect-derived `TurnEconomyResolution` remains an input interpreted
+by the selected economy. The neutral Standard Actions policy prices that
+effect-derived result as one action, while Action Token honors its terminating
+outcomes.
 
 ## Persistence
 

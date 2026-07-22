@@ -248,8 +248,22 @@ supplied policies. A valid implementation must:
 3. keep one valid `EconomyId` and one concrete snapshot type for the phase;
 4. make `HasTurnsRemaining()` agree with `RemainingActions > 0`;
 5. change state only when the encounter runner calls `Apply`;
-6. validate every `ActionTurnConsumption` it uses; and
-7. remain finite under the host's phase-progress limits.
+6. clear all remaining actions when `Apply` receives `TerminatePhase`;
+7. validate every `ActionTurnConsumption` it uses; and
+8. remain finite under the host's phase-progress limits.
+
+The runner enforces item 6 for every implementation. A terminating transition
+must capture `RemainingActions == 0` and return `false` from
+`HasTurnsRemaining()`. Otherwise the encounter returns
+`TurnEconomyTransitionInvalid` before owner-turn-end lifecycle or an accepted
+transition event. Do not treat explicit termination as an economy-specific
+price.
+
+This rule does not make every effect-derived `TurnEconomyResolution` universal.
+Its nested `TerminatesPhase` value is interpreted by the selected economy:
+Action Token honors its terminating outcomes, while Standard Actions spends
+one ordinary action. Return `ActionTurnConsumption.TerminatePhase` when a host
+command must end the phase regardless of the selected policy.
 
 For content-authored selection, also implement
 `IRuntimeTurnEconomyRulesetPolicyFactory` and register it in the turn-economy
@@ -287,6 +301,7 @@ The runner converts supported economy failures into typed encounter faults:
 |---|---|
 | Snapshot and liveness disagree | `TurnEconomyTransitionInvalid` |
 | ID, type, or state changes outside `Apply` | `TurnEconomyTransitionInvalid` |
+| Explicit phase termination retains actions | `TurnEconomyTransitionInvalid` |
 | `Apply`, snapshot, or liveness method throws | `TurnEconomyExecutionFailed` |
 | Too many unchanged free commands | `ConsecutiveFreeActionLimitExceeded` |
 | Too many commands in one phase | `PhaseCommandLimitExceeded` |

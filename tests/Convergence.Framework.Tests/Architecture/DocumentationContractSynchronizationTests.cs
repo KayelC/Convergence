@@ -52,6 +52,26 @@ public sealed class DocumentationContractSynchronizationTests
     }
 
     [Fact]
+    public void TurnEconomyGuidance_PreservesExplicitTerminationBoundary()
+    {
+        string mechanics = File.ReadAllText(
+            RepositoryPath("docs", "mechanics", "combat-defenses-and-turns.md"));
+        string developer = File.ReadAllText(
+            RepositoryPath("docs", "developer-guide", "turn-economy-policies.md"));
+        string technical = File.ReadAllText(
+            RepositoryPath("docs", "technical", "turn-economy-runtime.md"));
+        string decision = File.ReadAllText(
+            RepositoryPath("docs", "decisions", "turn-economy-policy-family.md"));
+
+        Assert.Contains("including a game-supplied replacement", mechanics, StringComparison.Ordinal);
+        Assert.Contains("RemainingActions == 0", developer, StringComparison.Ordinal);
+        Assert.Contains("ActionTurnConsumption.TerminatePhase", developer, StringComparison.Ordinal);
+        Assert.Contains("the one economy-independent transition semantic", technical, StringComparison.Ordinal);
+        Assert.Contains("before owner-turn-end lifecycle", technical, StringComparison.Ordinal);
+        Assert.Contains("explicit `TerminatePhase` consumption must leave zero", decision, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void CurrentContentGuidance_UsesActiveSchemaAndOrderTwoCorrectionChain()
     {
         int expectedVersion = Directory

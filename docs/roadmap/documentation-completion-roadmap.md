@@ -287,11 +287,11 @@ The later
 [fresh closure audit](../reviews/turn-economy-order-3-fresh-closure-audit-2026-07-22.md)
 reopened Order 3 at `6e1169b5`. Explicit `TerminatePhase` consumption is
 absolute in the public guidance and both supplied economies, but a custom
-economy may leave positive remaining actions and pass current runner
-validation. O3-R16 corrects that supported extension boundary; O3-R17 then
-reconciles source, owner confirmation, and all three audience entries. The
-documentation matrix temporarily records 18 reviewed, 34
-`existing_unreviewed`, 16 missing, and 7 `not_applicable` entries.
+economy could leave positive remaining actions and pass runner validation.
+O3-R16 now rejects that supported extension violation before downstream
+lifecycle or event commitment. O3-R17 re-read the corrected source and
+owner-confirmed guidance, then promoted all three audience entries together.
+Order 3 is formally complete.
 
 Order 4 follows that closure. It reviews
 status, ailment, passive, and duration lifecycle from current source before any

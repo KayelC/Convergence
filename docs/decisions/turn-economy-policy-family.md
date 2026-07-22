@@ -98,7 +98,9 @@ it rather than trusting contradictory state:
 - phase-start snapshot and liveness must agree before a command is requested;
 - economy ID and concrete snapshot type remain stable for the phase;
 - state may change only through the accepted `Apply` transition;
-- post-transition liveness must agree with remaining actions; and
+- post-transition liveness must agree with remaining actions;
+- explicit `TerminatePhase` consumption must leave zero remaining actions and
+  false liveness; and
 - public event payloads reject invalid IDs, null state, and mixed snapshot
   contracts.
 
@@ -145,6 +147,8 @@ authored parameters.
 - Action Token remains an optional supplied mechanic.
 - Neutral standard actions and Action Token use the same authored binding path.
 - Custom economies have a strict snapshot and liveness contract.
+- Explicit phase termination is enforced before owner-turn-end lifecycle or
+  accepted transition publication.
 - Typed encounter events are the presentation boundary.
 - Runner-owned structural events are provenance-protected; command and
   lifecycle ports use a fail-closed allow-list of detail event kinds.

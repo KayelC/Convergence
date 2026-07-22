@@ -1,6 +1,6 @@
 # Turn Economy Order 3 Roadmap
 
-**Status:** reopened after O3-R15; O3-R16 and O3-R17 pending
+**Status:** complete through O3-R17
 
 **Capability:** `turn_economy`
 
@@ -15,6 +15,8 @@
 **Owner-closure audit:** [Turn Economy Order 3 Owner-Closure Audit](../reviews/turn-economy-order-3-owner-closure-audit-2026-07-22.md)
 
 **Fresh closure audit:** [Turn Economy Order 3 Fresh Closure Audit](../reviews/turn-economy-order-3-fresh-closure-audit-2026-07-22.md)
+
+**Termination-contract closure:** [Turn Economy Order 3 Termination Contract Closure Review](../reviews/turn-economy-order-3-termination-contract-closure-review-2026-07-22.md)
 
 ## Goal
 
@@ -62,8 +64,8 @@ actor order.
 | O3-R13 | `verified` | Prevent command and lifecycle ports from publishing runner-owned structural encounter events; retain one canonical source for phase, economy, fault, and battle-end evidence. | `battle: enforce encounter event provenance` |
 | O3-R14 | `verified` | Reconcile audience guidance and independently re-run the Order 3 source, focused, and release gates. | `docs: close turn economy event authority` |
 | O3-R15 | `verified` | Re-read current source, consumers, tests, and all audience documents; identify the unsupported explicit-termination transition and the executable documentation-state mismatch. | `docs: reopen turn economy termination contract` |
-| O3-R16 | `open` | Require custom economies to end the phase for `TerminatePhase`, return a typed transition fault on violation, and add direct encounter regression coverage. | `battle: enforce explicit phase termination` |
-| O3-R17 | `open` | Re-read the corrected source and all three audience documents, reconcile executable matrices, and close only after owner confirmation. | `docs: close turn economy termination contract` |
+| O3-R16 | `verified` | Require custom economies to end the phase for `TerminatePhase`, return a typed transition fault on violation, and add direct encounter regression coverage. | `battle: enforce explicit phase termination` |
+| O3-R17 | `verified` | Re-read the corrected source and all three audience documents, reconcile executable matrices, and close only after owner confirmation. | `docs: close turn economy termination contract` |
 
 Each checkpoint is an isolated green commit. A later checkpoint may append its
 commit and verification evidence here, but it must not rewrite an earlier
@@ -108,9 +110,11 @@ Order 3 closes only when:
 3. malformed public turn-economy events are rejected deterministically;
 4. both supplied economies are available through explicit composition;
 5. every supplied transition and liveness boundary has direct tests;
-6. mechanics, developer, and technical documents agree with source;
-7. the scheduling boundary and future extension work are explicit; and
-8. a fresh review finds no realistic reachable defect in this scope.
+6. explicit phase termination is enforced for every supplied or replacement
+   economy;
+7. mechanics, developer, and technical documents agree with source;
+8. the scheduling boundary and future extension work are explicit; and
+9. a fresh review finds no realistic reachable defect in this scope.
 
 ## Completion Record
 
@@ -307,7 +311,28 @@ audiences are reviewed. Developer and technical entries are reopened as well
 because their absolute-termination guidance is not yet enforced for custom
 economies.
 
-O3-R16 and O3-R17 are required before formal closure. The audit passed 368
+O3-R16 and O3-R17 were required before formal closure. The audit passed 368
 focused tests, the complete 1,529-test solution with no failures or skips, and
 a strict nonincremental Release build with zero warnings. Those tests do not
 currently exercise the violating custom-termination shape.
+
+## Termination Contract Closure
+
+O3-R16 added the economy-independent transition guard at the encounter
+runner's accepted `Apply` boundary. A replacement economy that receives
+`ActionTurnConsumption.TerminatePhase` must now capture zero remaining actions
+and report false liveness. A violation returns
+`TurnEconomyTransitionInvalid` before owner-turn-end lifecycle, transition
+publication, or another command window. Both supplied transition tables remain
+unchanged. The direct adversarial regression uses the previously accepted
+subtract-one policy shape and proves only one command is requested.
+
+O3-R17 independently re-read command construction, both supplied economies,
+the complete runner authority chain, event ownership, authored binding, host
+composition, focused tests, and all three audience documents. It confirmed
+that nested `TurnEconomyResolution.TerminatesPhase` remains policy-specific,
+while explicit `ActionTurnConsumption.TerminatePhase` is universal. Mechanics,
+developer, and technical guidance now state that distinction, and executable
+matrices return `turn_economy` to `complete` with all three audiences
+`reviewed`. No realistic reachable Order 3 defect remains in the reviewed
+scope. Order 4 is next.

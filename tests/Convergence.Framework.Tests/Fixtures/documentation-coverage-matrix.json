@@ -164,19 +164,19 @@
     {
       "id": "turn_economy",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/combat-defenses-and-turns.md"],
-        "reason": "The reviewed mechanics define neutral standard actions, every Action Token transition, exact pass precedence, finite liveness, scheduling separation, and runner-owned structural evidence."
+        "reason": "The owner-confirmed mechanics define neutral standard actions, every Action Token transition, exact pass precedence, policy-independent explicit termination, finite liveness, scheduling separation, and runner-owned structural evidence."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/turn-economy-policies.md"],
-        "reason": "The guide describes explicit phase termination as absolute, but runtime enforcement for custom economies awaits O3-R16 and a fresh source recheck."
+        "reason": "The guide covers authored binding, supplied and custom policies, absolute explicit phase termination, typed faults, event presentation, and the separate scheduling boundary."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/turn-economy-runtime.md"],
-        "reason": "The runtime reference describes explicit phase termination, but custom transition enforcement awaits O3-R16 and a fresh source recheck."
+        "reason": "The source-traced runtime reference covers phase authority, immutable snapshots, transition validation, explicit termination enforcement, liveness, lifecycle atomicity, event provenance, and persistence scope."
       }
     },
     {
