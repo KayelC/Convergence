@@ -934,6 +934,28 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_ContainsContradictoryCommandConstructionAsAPortFaultWithoutSpendingATurn()
+    {
+        var lifecycle = new RecordingLifecycle();
+
+        BattleEncounterResult result = Run(
+            [Participant("invalid_command_player", PlayerTeam), Participant("invalid_command_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => new BattleEncounterCommandResult(
+                BattleEncounterCommandStatus.Executed,
+                ActionTurnConsumption.Normal,
+                requestedOutcome: BattleEncounterOutcome.Cancelled)),
+            new CompleteAfterTurnsPolicy(99));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnHandlerExecutionFailed, result.FaultCode);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Fact]
     public async Task Runner_PreCancelledTokenTouchesNoEncounterPortOrActorState()
     {
         BattleEncounterParticipant player = Participant("cancelled_player", PlayerTeam);

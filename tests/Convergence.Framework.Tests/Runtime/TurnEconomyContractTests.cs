@@ -65,6 +65,88 @@ public sealed class TurnEconomyContractTests
     }
 
     [Fact]
+    public void EncounterCommandResult_AcceptsOnlyCoherentStatusAndOutcomeShapes()
+    {
+        ContentId winningTeam = ContentId.Parse("winning_team");
+
+        BattleEncounterCommandResult[] valid =
+        [
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal),
+            BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.None,
+                requestedOutcome: BattleEncounterOutcome.Escape),
+            BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                requestedOutcome: BattleEncounterOutcome.Draw),
+            BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                requestedOutcome: BattleEncounterOutcome.Victory,
+                winningTeamId: winningTeam),
+            BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                requestedOutcome: BattleEncounterOutcome.Defeat,
+                winningTeamId: winningTeam),
+            BattleEncounterCommandResult.Cancelled(),
+            BattleEncounterCommandResult.Rejected("Selection became invalid."),
+            BattleEncounterCommandResult.Faulted("Host action failed.")
+        ];
+
+        Assert.Equal(8, valid.Length);
+        Assert.All(valid, result => Assert.NotNull(result.TurnConsumption));
+
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Executed,
+            ActionTurnConsumption.Normal,
+            requestedOutcome: BattleEncounterOutcome.Cancelled));
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Executed,
+            ActionTurnConsumption.Normal,
+            requestedOutcome: BattleEncounterOutcome.Faulted));
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Executed,
+            ActionTurnConsumption.Normal,
+            faultMessage: "Not an executed-command field."));
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Executed,
+            ActionTurnConsumption.Normal,
+            winningTeamId: winningTeam));
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Executed,
+            ActionTurnConsumption.None,
+            requestedOutcome: BattleEncounterOutcome.Escape,
+            winningTeamId: winningTeam));
+
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Cancelled,
+            ActionTurnConsumption.Normal,
+            requestedOutcome: BattleEncounterOutcome.Cancelled));
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Cancelled,
+            ActionTurnConsumption.None));
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Cancelled,
+            ActionTurnConsumption.None,
+            requestedOutcome: BattleEncounterOutcome.Cancelled,
+            faultMessage: "Cancellation is not a fault."));
+
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Rejected,
+            ActionTurnConsumption.None,
+            requestedOutcome: BattleEncounterOutcome.Faulted));
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Faulted,
+            ActionTurnConsumption.Normal,
+            requestedOutcome: BattleEncounterOutcome.Faulted,
+            faultMessage: "Priced fault."));
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Faulted,
+            ActionTurnConsumption.None,
+            requestedOutcome: BattleEncounterOutcome.Faulted,
+            winningTeamId: winningTeam,
+            faultMessage: "Fault with winner."));
+    }
+
+    [Fact]
     public void TurnEconomySnapshots_RejectDefaultEconomyIdentity()
     {
         Assert.Throws<ArgumentException>(() => new TestTurnEconomySnapshot(default, 1));

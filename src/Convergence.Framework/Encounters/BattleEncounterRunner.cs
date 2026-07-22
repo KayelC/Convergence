@@ -350,6 +350,8 @@ public sealed record BattleEncounterCommandResult
             throw new ArgumentException("Winning team ID must be valid when supplied.", nameof(winningTeamId));
         }
 
+        ValidateCommandShape(status, turnConsumption, requestedOutcome, winningTeamId, faultMessage);
+
         BattleEncounterEvent[] eventSnapshot = events?.ToArray() ?? [];
         if (eventSnapshot.Any(battleEvent => battleEvent is null))
         {
@@ -386,6 +388,114 @@ public sealed record BattleEncounterCommandResult
 
     public static BattleEncounterCommandResult Cancelled(IEnumerable<BattleEncounterEvent>? events = null) =>
         new(BattleEncounterCommandStatus.Cancelled, ActionTurnConsumption.None, events, BattleEncounterOutcome.Cancelled);
+
+    private static void ValidateCommandShape(
+        BattleEncounterCommandStatus status,
+        ActionTurnConsumption turnConsumption,
+        BattleEncounterOutcome? requestedOutcome,
+        ContentId? winningTeamId,
+        string? faultMessage)
+    {
+        bool hasNoTurnCost = turnConsumption.Kind == ActionTurnConsumptionKind.None;
+        switch (status)
+        {
+            case BattleEncounterCommandStatus.Executed:
+                if (requestedOutcome is BattleEncounterOutcome.Faulted or BattleEncounterOutcome.Cancelled)
+                {
+                    throw new ArgumentException(
+                        "An executed command cannot request a fault or cancellation outcome.",
+                        nameof(requestedOutcome));
+                }
+
+                if (faultMessage is not null)
+                {
+                    throw new ArgumentException(
+                        "An executed command cannot carry a fault message.",
+                        nameof(faultMessage));
+                }
+
+                break;
+
+            case BattleEncounterCommandStatus.Cancelled:
+                RequireNonExecutedShape(
+                    status,
+                    hasNoTurnCost,
+                    requestedOutcome,
+                    BattleEncounterOutcome.Cancelled,
+                    winningTeamId,
+                    faultMessage,
+                    requiresFaultMessage: false);
+                break;
+
+            case BattleEncounterCommandStatus.Rejected:
+            case BattleEncounterCommandStatus.Faulted:
+                RequireNonExecutedShape(
+                    status,
+                    hasNoTurnCost,
+                    requestedOutcome,
+                    BattleEncounterOutcome.Faulted,
+                    winningTeamId,
+                    faultMessage,
+                    requiresFaultMessage: true);
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(status));
+        }
+
+        if (winningTeamId is not null &&
+            requestedOutcome is not BattleEncounterOutcome.Victory and not BattleEncounterOutcome.Defeat)
+        {
+            throw new ArgumentException(
+                "A winning team ID is valid only for victory or defeat outcomes.",
+                nameof(winningTeamId));
+        }
+    }
+
+    private static void RequireNonExecutedShape(
+        BattleEncounterCommandStatus status,
+        bool hasNoTurnCost,
+        BattleEncounterOutcome? requestedOutcome,
+        BattleEncounterOutcome requiredOutcome,
+        ContentId? winningTeamId,
+        string? faultMessage,
+        bool requiresFaultMessage)
+    {
+        if (!hasNoTurnCost)
+        {
+            throw new ArgumentException(
+                $"A {status} command cannot consume a turn.",
+                nameof(TurnConsumption));
+        }
+
+        if (requestedOutcome != requiredOutcome)
+        {
+            throw new ArgumentException(
+                $"A {status} command must request the {requiredOutcome} outcome.",
+                nameof(requestedOutcome));
+        }
+
+        if (winningTeamId is not null)
+        {
+            throw new ArgumentException(
+                $"A {status} command cannot identify a winning team.",
+                nameof(winningTeamId));
+        }
+
+        if (requiresFaultMessage && string.IsNullOrWhiteSpace(faultMessage))
+        {
+            throw new ArgumentException(
+                $"A {status} command requires a fault message.",
+                nameof(faultMessage));
+        }
+
+        if (!requiresFaultMessage && faultMessage is not null)
+        {
+            throw new ArgumentException(
+                $"A {status} command cannot carry a fault message.",
+                nameof(faultMessage));
+        }
+    }
 }
 
 public interface IBattleEncounterTurnHandler

@@ -49,7 +49,7 @@ actor order.
 | O3-R6 | `verified` | Add the policy decision, developer guide, technical state machine, worked mechanics examples, indexes, and coverage evidence. | `docs: document turn economy policy family` |
 | O3-R7 | `verified` | Re-read corrected source and documents independently, correct the accepted API baseline, run the complete release gate, and close with no unresolved reachable defect. | `docs: verify turn economy order 3` |
 | O3-R8 | `verified` | Reject economy mutation across lifecycle, handler, event, synchronization, and terminal command boundaries. Make `Apply` the supplied Action Token policy's only public consumption mutation. | `battle: guard command window economy authority` |
-| O3-R9 | `pending` | Enforce coherent command status, requested outcome, winning-team, fault, and turn-consumption combinations. | `battle: validate encounter command outcomes` |
+| O3-R9 | `verified` | Enforce coherent command status, requested outcome, winning-team, fault, and turn-consumption combinations at public construction. | `battle: validate encounter command outcomes` |
 | O3-R10 | `pending` | Prevent public record cloning from replacing Framework-calculated turn consumption or introducing null command costs. | `battle: seal turn consumption results` |
 | O3-R11 | `pending` | Reconcile the technical sequence, developer guidance, reference content wording, executable matrices, API baseline, and fresh verification evidence. | `docs: reverify turn economy order 3` |
 
@@ -149,3 +149,20 @@ including rollback of staged lifecycle state and protection against a hidden
 second spend. The checkpoint gate recorded 177 focused tests and 1,502 full
 solution tests passing with none skipped, a strict Release build with zero
 warnings, and clean format and diff checks.
+
+### O3-R9 Completion
+
+`BattleEncounterCommandResult` now validates each complete command shape, not
+only its individual enum and ID values. Executed commands may continue the
+encounter or request the gameplay outcomes `Victory`, `Defeat`, `Escape`, or
+`Draw`; they cannot masquerade as cancellation or faults. Cancelled, rejected,
+and faulted commands carry no turn cost and require their matching outcome.
+Faulted and rejected commands require a nonblank diagnostic, cancellation
+cannot carry one, and winning-team IDs are accepted only for victory or defeat.
+
+Construction failures raised inside a host turn handler remain within the
+runner's typed port-fault boundary. Regression coverage proves that an
+`Executed + Normal + Cancelled` contradiction cannot spend an action or run
+owner-turn-end lifecycle. The checkpoint gate recorded 94 focused tests and
+1,504 full solution tests passing with none skipped, a strict Release build
+with zero warnings, and clean format and diff checks.
