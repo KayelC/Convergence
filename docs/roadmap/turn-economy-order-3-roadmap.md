@@ -39,7 +39,7 @@ actor order.
 | Checkpoint | State | Work | Commit |
 |---|---|---|---|
 | O3-R0 | `verified` | Establish this source review and roadmap; reopen the capability honestly. | `docs: begin turn economy order 3` |
-| O3-R1 | `pending` | Validate phase-start snapshot/liveness agreement before command selection and use the accepted liveness state throughout the loop. | `battle: validate phase turn economy authority` |
+| O3-R1 | `verified` | Validate phase-start snapshot/liveness agreement before command selection and use the accepted liveness state throughout the loop. | `battle: validate phase turn economy authority` |
 | O3-R2 | `pending` | Require one valid economy ID, concrete snapshot type, and accepted state chain through phase start, every command, and phase end. | `battle: enforce stable turn economy snapshots` |
 | O3-R3 | `pending` | Reject malformed turn-economy snapshots and typed event payloads at public construction boundaries. | `battle: validate turn economy event payloads` |
 | O3-R4 | `pending` | Register the supplied `standard_actions` economy through authored ruleset binding with explicit liveness parameters. | `runtime: bind standard action economy` |

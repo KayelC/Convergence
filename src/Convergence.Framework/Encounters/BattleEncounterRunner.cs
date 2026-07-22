@@ -836,6 +836,16 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     "turn-economy-start",
                     () => turnEconomy.StartPhase(phaseActors.Length));
                 BattleTurnEconomySnapshot phaseStartState = CaptureTurnEconomySnapshot(turnEconomy);
+                bool hasTurnsRemaining = HasTurnsRemaining(turnEconomy);
+                string? phaseStartFault = ValidateEconomyState(phaseStartState, hasTurnsRemaining);
+                if (phaseStartFault is not null)
+                {
+                    return await FaultDuringBattleAsync(
+                            phaseStartFault,
+                            faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                        .ConfigureAwait(false);
+                }
+
                 await AddAsync(
                         BattleEncounterEventKind.PhaseStarted,
                         new BattlePhaseStartedEventPayload(teamId, phaseStartState),
@@ -846,7 +856,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 int actorIndex = 0;
                 int commandCount = 0;
                 int consecutiveFreeActions = 0;
-                while (HasTurnsRemaining(turnEconomy))
+                while (hasTurnsRemaining)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (commandCount >= services.PhaseProgress.MaximumCommands)
@@ -1003,7 +1013,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     BattleTurnEconomySnapshot afterEconomy = CaptureTurnEconomySnapshot(
                         turnEconomy,
                         actor.InstanceId);
-                    bool hasTurnsRemaining = HasTurnsRemaining(turnEconomy, actor.InstanceId);
+                    hasTurnsRemaining = HasTurnsRemaining(turnEconomy, actor.InstanceId);
                     string? economyFault = ValidateEconomyTransition(
                         beforeEconomy,
                         afterEconomy,
@@ -1452,9 +1462,10 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             return $"Turn economy changed identity from {before.EconomyId} to {after.EconomyId} during a phase.";
         }
 
-        if (hasTurnsRemaining != (after.RemainingActions > 0))
+        string? stateFault = ValidateEconomyState(after, hasTurnsRemaining);
+        if (stateFault is not null)
         {
-            return $"Turn economy {after.EconomyId} reported inconsistent remaining-action state.";
+            return stateFault;
         }
 
         if (consumption.Kind != ActionTurnConsumptionKind.None && Equals(before, after))
@@ -1464,6 +1475,13 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         return null;
     }
+
+    private static string? ValidateEconomyState(
+        BattleTurnEconomySnapshot snapshot,
+        bool hasTurnsRemaining) =>
+        hasTurnsRemaining != (snapshot.RemainingActions > 0)
+            ? $"Turn economy {snapshot.EconomyId} reported inconsistent remaining-action state."
+            : null;
 
     private static IReadOnlyList<BattleEncounterEvent> MapStatusEvents(
         IEnumerable<BattleStatusLifecycleEvent> events) =>

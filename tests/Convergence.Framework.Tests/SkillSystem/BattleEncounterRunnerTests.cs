@@ -1116,6 +1116,39 @@ public sealed class BattleEncounterRunnerTests
         Assert.Contains("consecutive free-action limit of 2", result.FaultMessage);
     }
 
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    public void Runner_RejectsInconsistentInitialEconomyStateBeforeAnyCommand(
+        int reportedRemainingActions,
+        bool reportsTurnsRemaining)
+    {
+        BattleEncounterParticipant player = Participant("invalid_economy_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(request =>
+        {
+            request.Actor.State.SetResource(Hp, 0);
+            return BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal);
+        });
+
+        BattleEncounterResult result = Run(
+            [player, Participant("invalid_economy_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            () => new InitialStateMismatchTurnEconomy(reportedRemainingActions, reportsTurnsRemaining));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
+        Assert.Contains("inconsistent remaining-action state", result.FaultMessage);
+        Assert.Empty(handler.Requests);
+        Assert.Equal(0, lifecycle.TurnStartCalls);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.PhaseStarted);
+    }
+
     [Fact]
     public void Runner_CommandLimitBoundsAnEconomyThatContinuouslyAddsTurns()
     {
@@ -1826,6 +1859,23 @@ public sealed class BattleEncounterRunnerTests
             {
             }
         }
+    }
+
+    private sealed class InitialStateMismatchTurnEconomy(
+        int remainingActions,
+        bool hasTurnsRemaining) : IBattleTurnEconomy
+    {
+        public void StartPhase(int activeActorCount)
+        {
+        }
+
+        public bool HasTurnsRemaining() => hasTurnsRemaining;
+
+        public BattleTurnEconomySnapshot CaptureSnapshot() =>
+            new StandardActionTurnEconomySnapshot(remainingActions);
+
+        public void Apply(ActionTurnConsumption consumption) =>
+            throw new InvalidOperationException("An inconsistent initial economy must never receive a command.");
     }
 
     private sealed class RecordingTurnEconomy : IBattleTurnEconomy
