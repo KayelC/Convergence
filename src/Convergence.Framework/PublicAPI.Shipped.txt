@@ -2681,7 +2681,6 @@ Convergence.Execution.BattleActionAssessment.PartyRosterTransition.get -> Conver
 Convergence.Execution.BattleActionAssessment.SkillAssessment.get -> Convergence.Execution.SkillExecutionAssessment?
 Convergence.Execution.BattleActionAssessment.TargetIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeInstanceId>!
 Convergence.Execution.BattleActionAssessment.TurnConsumption.get -> Convergence.Execution.ActionTurnConsumption!
-Convergence.Execution.BattleActionAssessment.TurnConsumption.init -> void
 Convergence.Execution.BattleActionCommand
 Convergence.Execution.BattleActionCommand.BattleActionCommand(Convergence.Execution.BattleActionCommand! original) -> void
 Convergence.Execution.BattleActionCommand.Kind.get -> Convergence.Execution.BattleActionKind
@@ -2772,7 +2771,6 @@ Convergence.Execution.BattleActionExecutionResult.Kind.get -> Convergence.Execut
 Convergence.Execution.BattleActionExecutionResult.PartyRosterTransition.get -> Convergence.Runtime.PartyRosterTransitionResult?
 Convergence.Execution.BattleActionExecutionResult.Status.get -> Convergence.Execution.BattleActionExecutionStatus
 Convergence.Execution.BattleActionExecutionResult.TurnConsumption.get -> Convergence.Execution.ActionTurnConsumption!
-Convergence.Execution.BattleActionExecutionResult.TurnConsumption.init -> void
 Convergence.Execution.BattleActionExecutionStatus
 Convergence.Execution.BattleActionExecutionStatus.Executed = 0 -> Convergence.Execution.BattleActionExecutionStatus
 Convergence.Execution.BattleActionExecutionStatus.Interrupted = 2 -> Convergence.Execution.BattleActionExecutionStatus

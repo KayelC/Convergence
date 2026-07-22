@@ -1683,6 +1683,36 @@ public sealed class BattleActionExecutorTests
         Assert.True(deploy.PartyRosterTransition.Applied);
     }
 
+    [Fact]
+    public async Task TurnConsumption_IsValidatedForHostCommandsAndSealedForFrameworkResults()
+    {
+        var command = new HostMediatedBattleActionCommand(
+            BattleActionKind.HostSpecial,
+            Id("host_special"));
+
+        Assert.Throws<ArgumentNullException>(() => command with { TurnConsumption = null! });
+
+        HostMediatedBattleActionCommand passCommand = command with
+        {
+            TurnConsumption = ActionTurnConsumption.Pass
+        };
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("host_actor", TeamA);
+        BattleActionExecutionRequest request = Request(passCommand, actor, [actor]);
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal(ActionTurnConsumption.Pass, passCommand.TurnConsumption);
+        Assert.Equal(ActionTurnConsumption.Pass, assessment.TurnConsumption);
+        Assert.Equal(ActionTurnConsumption.Pass, result.TurnConsumption);
+        Assert.Null(typeof(BattleActionAssessment)
+            .GetProperty(nameof(BattleActionAssessment.TurnConsumption))!
+            .SetMethod);
+        Assert.Null(typeof(BattleActionExecutionResult)
+            .GetProperty(nameof(BattleActionExecutionResult.TurnConsumption))!
+            .SetMethod);
+    }
+
     private static BattleActionExecutionRequest Request(
         BattleActionCommand command,
         RuntimeActorState actor,

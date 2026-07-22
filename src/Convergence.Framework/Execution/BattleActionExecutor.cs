@@ -282,6 +282,8 @@ public sealed record CompanionSwapBattleActionCommand : PartyRosterBattleActionC
 
 public sealed record HostMediatedBattleActionCommand : BattleActionCommand
 {
+    private ActionTurnConsumption _turnConsumption = ActionTurnConsumption.Normal;
+
     public HostMediatedBattleActionCommand(
         BattleActionKind kind,
         ContentId hostActionId,
@@ -295,7 +297,11 @@ public sealed record HostMediatedBattleActionCommand : BattleActionCommand
     }
 
     public ContentId HostActionId { get; }
-    public ActionTurnConsumption TurnConsumption { get; init; }
+    public ActionTurnConsumption TurnConsumption
+    {
+        get => _turnConsumption;
+        init => _turnConsumption = value ?? throw new ArgumentNullException(nameof(value));
+    }
     public IReadOnlyDictionary<string, object?> Parameters { get; }
 
     private static BattleActionKind ValidateKind(BattleActionKind kind) =>
@@ -359,7 +365,7 @@ public sealed record BattleActionAssessment
     public bool CanExecute => Diagnostics.Count == 0;
     public IReadOnlyList<BattleActionDiagnostic> Diagnostics { get; }
     public IReadOnlyList<RuntimeInstanceId> TargetIds { get; }
-    public ActionTurnConsumption TurnConsumption { get; init; }
+    public ActionTurnConsumption TurnConsumption { get; }
     public SkillExecutionAssessment? SkillAssessment { get; }
     public ItemExecutionAssessment? ItemAssessment { get; }
     public PartyRosterTransitionResult? PartyRosterTransition { get; }
@@ -384,6 +390,7 @@ public sealed record BattleActionExecutionResult
         IEnumerable<ContentId>? hostActionRequestIds = null,
         IEnumerable<ExecutionResourceChange>? committedCostChanges = null)
     {
+        ArgumentNullException.ThrowIfNull(turnConsumption);
         Status = status;
         Kind = kind;
         TurnConsumption = turnConsumption;
@@ -401,7 +408,7 @@ public sealed record BattleActionExecutionResult
 
     public BattleActionExecutionStatus Status { get; }
     public BattleActionKind Kind { get; }
-    public ActionTurnConsumption TurnConsumption { get; init; }
+    public ActionTurnConsumption TurnConsumption { get; }
     public IReadOnlyList<EffectExecutionResult> Effects { get; }
     public IReadOnlyList<BattleActionDiagnostic> Diagnostics { get; }
     public IReadOnlyList<BattleActionEvent> Events { get; }
@@ -412,6 +419,21 @@ public sealed record BattleActionExecutionResult
     public IReadOnlyList<ContentId> HostActionRequestIds { get; }
     /// <summary>Gets resource mutations committed as action costs before effect execution.</summary>
     public IReadOnlyList<ExecutionResourceChange> CommittedCostChanges { get; }
+
+    internal BattleActionExecutionResult WithTurnConsumption(ActionTurnConsumption turnConsumption) =>
+        new(
+            Status,
+            Kind,
+            turnConsumption,
+            Effects,
+            Diagnostics,
+            Events,
+            ItemConsumption,
+            ItemConsumptionCommitted,
+            EscapeRequested,
+            PartyRosterTransition,
+            HostActionRequestIds,
+            CommittedCostChanges);
 }
 
 public interface IItemActionReservation
@@ -1231,8 +1253,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             ActionOutcomeSourceKind.Other,
             assessment);
         return result.EscapeRequested
-            ? result with { TurnConsumption = ActionTurnConsumption.None }
-            : result with { TurnConsumption = ActionTurnConsumption.Normal };
+            ? result.WithTurnConsumption(ActionTurnConsumption.None)
+            : result.WithTurnConsumption(ActionTurnConsumption.Normal);
     }
 
     private static BattleActionExecutionResult ExecuteGuard(BattleActionExecutionRequest request)

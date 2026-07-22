@@ -50,7 +50,7 @@ actor order.
 | O3-R7 | `verified` | Re-read corrected source and documents independently, correct the accepted API baseline, run the complete release gate, and close with no unresolved reachable defect. | `docs: verify turn economy order 3` |
 | O3-R8 | `verified` | Reject economy mutation across lifecycle, handler, event, synchronization, and terminal command boundaries. Make `Apply` the supplied Action Token policy's only public consumption mutation. | `battle: guard command window economy authority` |
 | O3-R9 | `verified` | Enforce coherent command status, requested outcome, winning-team, fault, and turn-consumption combinations at public construction. | `battle: validate encounter command outcomes` |
-| O3-R10 | `pending` | Prevent public record cloning from replacing Framework-calculated turn consumption or introducing null command costs. | `battle: seal turn consumption results` |
+| O3-R10 | `verified` | Prevent public record cloning from replacing Framework-calculated turn consumption or introducing null command costs. | `battle: seal turn consumption results` |
 | O3-R11 | `pending` | Reconcile the technical sequence, developer guidance, reference content wording, executable matrices, API baseline, and fresh verification evidence. | `docs: reverify turn economy order 3` |
 
 Each checkpoint is an isolated green commit. A later checkpoint may append its
@@ -165,4 +165,16 @@ runner's typed port-fault boundary. Regression coverage proves that an
 `Executed + Normal + Cancelled` contradiction cannot spend an action or run
 owner-turn-end lifecycle. The checkpoint gate recorded 94 focused tests and
 1,504 full solution tests passing with none skipped, a strict Release build
+with zero warnings, and clean format and diff checks.
+
+### O3-R10 Completion
+
+Host-mediated commands retain a public `init` setter because hosts may clone a
+command to another valid cost, but that setter now rejects null. Assessment and
+execution-result turn costs are Framework-calculated facts and are getter-only,
+so record cloning cannot rewrite them. Escape execution now creates a complete
+validated result with its final cost instead of using a mutable `with`
+assignment. The accepted pre-release API baseline records this intentional
+removal of two result setters. The checkpoint gate recorded 83 focused tests
+and 1,505 full solution tests passing with none skipped, a strict Release build
 with zero warnings, and clean format and diff checks.
