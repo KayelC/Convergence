@@ -27,8 +27,8 @@ requires owner review. The Documentation Completion Roadmap governs the ordered
 collaborative review of those outstanding entries.
 
 Order 1's mechanics, audience documentation, and typed execution capability
-remain owner-confirmed and complete. Order 2, `combat_resolution`, retains its
-confirmed mechanics but is temporarily reopened by O2-R30 through O2-R34 after
-a fresh source review found a direct-action registration-preflight defect and
-active documentation drift. Order 3 must not begin until the correction roadmap
-returns Order 2 to a source-verified state.
+remain owner-confirmed and complete. Order 2, `combat_resolution`, is also
+verified: O2-R30 through O2-R34 corrected direct-action registration preflight,
+instant-defeat terminology, and current documentation drift, then completed a
+fresh source and release-gate recheck. Order 3 is the next collaborative
+documentation subject.

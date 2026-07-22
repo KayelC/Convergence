@@ -47,6 +47,14 @@ state. Do not manufacture profiles from display text.
 registrations, including random-target selectors. Convergence does not silently
 replace a missing random policy with first-candidate selection.
 
+Skill, item, and direct effect-backed action assessment share one recursive
+configuration preflight. Before target selection or skill-cost evaluation, it
+requires every referenced ailment, formula handler, escape rule, custom effect
+handler, and nested custom-condition handler to be available. Skills and items
+retain their specific diagnostic codes; basic attacks and direct escape actions
+report `EffectConfigurationInvalid`. A rejected preflight exposes no targets,
+uses no random draw, commits no cost or inventory, and consumes no turn.
+
 ## Build Only Authorized Commands
 
 A skill command must carry the same canonical definition returned by the

@@ -76,6 +76,26 @@ cannot assess one random target and silently execute another. Removed,
 duplicated, defeated, or otherwise ineligible prepared targets reject as stale
 state rather than causing a reroll.
 
+## Effect Composition Preflight
+
+`EffectConfigurationValidator` is the single internal registration preflight
+used by `SkillExecutor`, `ItemExecutor`, and direct effect-backed
+`BattleActionExecutor` commands. It recursively checks:
+
+- ailment definitions used by ailment application;
+- formula handlers used by resource amount definitions;
+- escape-rule handlers;
+- custom-effect handlers; and
+- custom-condition handlers nested under `all`, `any`, or `not`.
+
+Assessment first validates authored percentages, supported effect executors,
+these registrations, and the ordered-effect graph. Only a configuration-clean
+action may resolve targets. Skills then resolve their cost quote. This ordering
+prevents a missing host registration from consuming target randomness, running
+amount policies, reserving inventory, mutating actor state, or acquiring turn
+cost. Skills and items preserve their granular diagnostics; direct effect
+commands use `EffectConfigurationInvalid` with the affected effect index.
+
 Skill amount formulas and `ResourceCost` modifiers likewise run during
 assessment only. The prepared assessment stores one resolved cost per distinct
 resource ID. Execution compares those prepared entries with the authored cost
@@ -281,6 +301,7 @@ Primary source:
 - [`BattleActionExecutor.cs`](../../src/Convergence.Framework/Execution/BattleActionExecutor.cs)
 - [`SkillExecutor.cs`](../../src/Convergence.Framework/Execution/SkillExecutor.cs)
 - [`ItemExecutor.cs`](../../src/Convergence.Framework/Execution/ItemExecutor.cs)
+- [`EffectConfigurationValidator.cs`](../../src/Convergence.Framework/Execution/EffectConfigurationValidator.cs)
 - [`OrderedEffectExecutor.cs`](../../src/Convergence.Framework/Execution/OrderedEffectExecutor.cs)
 - [`RuntimeActorExecutionTransaction.cs`](../../src/Convergence.Framework/Execution/RuntimeActorExecutionTransaction.cs)
 

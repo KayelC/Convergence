@@ -38,6 +38,10 @@ for three narrower cross-contract corrections. O2-R24 through O2-R27 corrected
 those paths, O2-R28 closed the final custom-effect result boundary found by the
 post-R27 source trace, and O2-R29 completed independent source and release-gate
 verification. The confirmed audience entries remain reviewed and reconciled.
+O2-R30 through O2-R34 subsequently unified runtime-registration preflight for
+skills, items, and direct effect-backed actions, corrected current terminology
+and version labels, documented that boundary for all three audiences, and
+completed another independent source and release-gate verification.
 
 The documentation matrix currently records 75 audience entries: 17 reviewed,
 34 existing_unreviewed, 17 missing, and 7 not_applicable.

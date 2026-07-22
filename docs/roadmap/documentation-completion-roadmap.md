@@ -184,6 +184,11 @@ custom-effect result boundary; O2-R28 now rejects it before commit, and O2-R29
 found no remaining reachable defect in the supported scope. Exact closure
 evidence is in the
 [Final Pre-Closure Corrections Review](../reviews/combat-resolution-order-2-final-pre-closure-corrections-review-2026-07-21.md).
+The 22 July source review later found direct effect-backed actions did not share
+skill/item registration preflight. O2-R30 through O2-R34 established one shared
+validator, corrected current terminology and schema labels, documented the
+preflight for all three audiences, and independently verified the result in the
+[Registration-Parity Corrections Review](../reviews/combat-resolution-order-2-registration-parity-corrections-review-2026-07-22.md).
 
 Current checkpoints:
 
@@ -199,7 +204,7 @@ Current checkpoints:
 | O2-D4 | `confirmed` | Configurable instant-defeat resistance multipliers and one explicit roll. |
 | O2-D5 | `confirmed` | Sequential staged multi-hit mutation and immutable hit/target evidence. |
 | O2-D6 | `confirmed` | Configurable probability bounds with neutral supplied defaults of `0..100`. |
-| O2-DOC | `verified` | Mechanics, developer, and technical documents agree with corrected O2-R24 through O2-R29 source and tests. |
+| O2-DOC | `verified` | Mechanics, developer, and technical documents agree with corrected O2-R24 through O2-R34 source and tests. |
 
 The table records the first implementation cycle; O2-R7 through O2-R16 record
 the complete-action and ordered-secondary-effect correction cycle. O2-R18
@@ -207,8 +212,11 @@ through O2-R20 add bounded hit execution, authored-percentage parity, and the
 resulting audience reconciliation. O2-R22 and O2-R23 record the schema parity
 correction and its revision-specific source closure. O2-R24 through O2-R29
 record the final pre-closure audit, custom-result correction, and independent
-source verification. The three `combat_resolution` audience entries remain
-`reviewed`, and formal Order 2 implementation/documentation closure is green.
+source verification. O2-R30 through O2-R34 record registration-parity,
+terminology, active-contract, audience-documentation, and final source
+verification corrections. The three `combat_resolution` audience entries
+remain `reviewed`, and formal Order 2 implementation/documentation closure is
+green.
 
 ## Deferred Documentation
 

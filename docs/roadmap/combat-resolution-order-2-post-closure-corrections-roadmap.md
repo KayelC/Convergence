@@ -1,6 +1,6 @@
 # Order 2 Post-Closure Corrections Roadmap
 
-**Status:** active; O2-R33 complete, independent source re-evaluation pending
+**Status:** complete; O2-R30 through O2-R34 verified
 
 **Started:** 22 July 2026
 
@@ -110,7 +110,7 @@ failures or skips.
 
 ### O2-R34: Independently re-evaluate Order 2
 
-**State:** pending
+**State:** complete
 
 - Re-read the corrected action-assessment and effect-configuration paths without
   treating this roadmap or earlier reports as proof.
@@ -124,6 +124,17 @@ failures or skips.
   remains in the reviewed paths.
 
 **Commit:** `docs: verify order 2 registration parity corrections`
+
+The independent
+[Registration-Parity Corrections Review](../reviews/combat-resolution-order-2-registration-parity-corrections-review-2026-07-22.md)
+traced the corrected source from public assessment through staged execution and
+turn consumption. It found no unresolved reachable runtime defect. The review
+also completed the missing three-audience explanation and reconciled all current
+Order 2 status surfaces. The final gate passed 274 focused combat/action tests,
+16 focused correction/documentation tests, 53 architecture tests, and the full
+1,458-test Release suite with zero failures or skips. The strict build reported
+zero warnings or errors; formatting, content validation, all four
+noninteractive demos, and `git diff --check` passed.
 
 ## Review Standard
 

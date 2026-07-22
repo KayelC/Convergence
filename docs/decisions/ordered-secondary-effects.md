@@ -4,7 +4,7 @@
 
 **Decision date:** 21 July 2026
 
-**Implementation state:** implemented through O2-R31; verification pending O2-R34
+**Implementation state:** verified through O2-R34
 
 ## Context
 

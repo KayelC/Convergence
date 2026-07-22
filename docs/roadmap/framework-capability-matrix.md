@@ -73,6 +73,9 @@ the ordered pipeline. O2-R28 now rejects malformed result construction and
 record cloning inside the staged execution boundary. O2-R29's current-source
 recheck found no remaining reachable defect in the reviewed paths, so typed
 action execution, combat resolution, and host contracts return to `complete`.
+O2-R30 through O2-R34 later unified registration preflight across skills, items,
+basic attacks, and escape; corrected current documentation drift; and completed
+a fresh source review with no unresolved reachable defect.
 
 ## Authority
 

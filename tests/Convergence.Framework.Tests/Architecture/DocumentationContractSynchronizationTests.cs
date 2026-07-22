@@ -8,6 +8,28 @@ namespace Convergence.Framework.Tests.Architecture;
 public sealed class DocumentationContractSynchronizationTests
 {
     [Fact]
+    public void EffectConfigurationGuidance_PreservesSharedPreflightBoundary()
+    {
+        string mechanics = File.ReadAllText(
+            RepositoryPath("docs", "mechanics", "actions-targeting-and-effects.md"))
+            .ReplaceLineEndings(" ");
+        string developer = File.ReadAllText(
+            RepositoryPath("docs", "developer-guide", "typed-actions-and-effects.md"))
+            .ReplaceLineEndings(" ");
+        string technical = File.ReadAllText(
+            RepositoryPath("docs", "technical", "typed-action-and-effect-execution.md"))
+            .ReplaceLineEndings(" ");
+
+        Assert.Contains("before targets are selected", mechanics, StringComparison.Ordinal);
+        Assert.Contains("consumes no turn", mechanics, StringComparison.Ordinal);
+        Assert.Contains("share one recursive", developer, StringComparison.Ordinal);
+        Assert.Contains("EffectConfigurationInvalid", developer, StringComparison.Ordinal);
+        Assert.Contains("## Effect Composition Preflight", technical, StringComparison.Ordinal);
+        Assert.Contains("Only a configuration-clean action may resolve targets", technical, StringComparison.Ordinal);
+        Assert.Contains("EffectConfigurationValidator.cs", technical, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void CurrentContentGuidance_UsesActiveSchemaAndOrderTwoCorrectionChain()
     {
         int expectedVersion = Directory

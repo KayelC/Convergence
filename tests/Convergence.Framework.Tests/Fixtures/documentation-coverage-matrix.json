@@ -132,7 +132,7 @@
           "docs/developer-guide/typed-actions-and-effects.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "The source-reviewed guides cover canonical composition, assessment and execution, inventory reservations, policy selection, lifecycle boundaries, host presentation, and persistence."
+        "reason": "The source-reviewed guides cover canonical composition, shared registration preflight, assessment and execution, inventory reservations, policy selection, lifecycle boundaries, host presentation, and persistence."
       },
       "technical": {
         "state": "reviewed",
@@ -140,7 +140,7 @@
           "docs/technical/typed-action-and-effect-execution.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "The source-reviewed references document authorization, single-use preparation, transaction boundaries, modifier authority, lifecycle integration, and restoration invariants."
+        "reason": "The source-reviewed references document authorization, shared registration preflight, single-use preparation, transaction boundaries, modifier authority, lifecycle integration, and restoration invariants."
       }
     },
     {

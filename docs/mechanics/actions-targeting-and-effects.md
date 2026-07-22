@@ -180,6 +180,12 @@ Formula, custom-condition, custom-effect, and escape handlers are available
 only through explicit registered IDs. No rule examines an action name,
 description, category label, or free-form effect text.
 
+The complete action is checked for those registrations before targets are
+selected. This includes custom conditions nested inside logical conditions and
+ailment definitions referenced by an application effect. If required runtime
+composition is missing, the action is rejected as unavailable: it spends no
+resource or item, changes no actor, rolls no target, and consumes no turn.
+
 A custom effect must return a valid typed effect result. Invalid execution or
 turn outcomes, invalid IDs, and malformed result collections reject the whole
 action before staged actor changes or turn use are published; they are not

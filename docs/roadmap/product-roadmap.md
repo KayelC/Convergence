@@ -85,13 +85,11 @@ Complete the active
 capability at a time. Source and tests establish current behavior; the project
 owner confirms intended mechanics and extension boundaries before an audience
 entry becomes `reviewed`. Existing prose must not be bulk-promoted. Orders 1
-and the confirmed Order 2 mechanics remain implemented. A fresh source review
-temporarily reopened Order 2 under O2-R30 through O2-R34 to correct direct-action
-registration preflight and current documentation drift. The capability matrix
-still records no partial implementation capability, but Order 3 remains blocked
-until the
-[Post-Closure Corrections Roadmap](combat-resolution-order-2-post-closure-corrections-roadmap.md)
-returns Order 2 to a source-verified state.
+and 2 are complete and owner-confirmed. O2-R30 through O2-R34 corrected
+direct-action registration preflight, instant-defeat terminology, and current
+documentation drift, then independently rechecked the corrected source. The
+capability matrix records no partial implementation capability; Order 3 is the
+next collaborative documentation subject.
 
 ## Priority 2: Persistence Evolution
 
