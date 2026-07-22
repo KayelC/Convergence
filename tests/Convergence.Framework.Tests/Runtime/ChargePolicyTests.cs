@@ -124,6 +124,54 @@ public sealed class ChargePolicyTests
     }
 
     [Fact]
+    public void DisabledPolicy_RejectsApplicationAndKeepsDamageNeutral()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        var policy = new DisabledChargePolicy();
+
+        ChargeApplicationResult application = policy.Apply(
+            new ChargeApplicationRequest(actor, ChargeKind.Physical, 2m));
+        ChargeDamageModifier modifier = policy.ResolveDamageModifier(
+            actor,
+            DamageElement.Physical);
+        ChargeConsumptionResult completion = policy.CompleteAction(actor, []);
+
+        Assert.False(application.Applied);
+        Assert.Same(application.Before, application.After);
+        Assert.Null(application.Before);
+        Assert.Equal(
+            ChargePolicyDiagnosticCode.UnsupportedChargeKind,
+            Assert.Single(application.Diagnostics).Code);
+        Assert.Equal(1m, modifier.Multiplier);
+        Assert.Null(modifier.ChargeKind);
+        Assert.False(completion.StateChanged);
+        Assert.Empty(completion.ConsumedChargeKinds);
+        Assert.Null(actor.ChargePolicyId);
+        Assert.Empty(actor.Charges);
+    }
+
+    [Fact]
+    public void DisabledPolicy_ValidatesOnlyEmptyMatchingStateAndIsRegistered()
+    {
+        var policy = new DisabledChargePolicy();
+        var empty = new RuntimeChargeStateSnapshot(StandardChargePolicyIds.Disabled);
+        var retained = new RuntimeChargeStateSnapshot(
+            StandardChargePolicyIds.Disabled,
+            [new RuntimeChargeSnapshot(ChargeKind.Physical, 2m)]);
+        var mismatched = new RuntimeChargeStateSnapshot(StandardChargePolicyIds.Split);
+
+        Assert.True(policy.ValidateState(empty).IsValid);
+        Assert.Contains(policy.ValidateState(retained).Diagnostics, diagnostic =>
+            diagnostic.Code == ChargePolicyDiagnosticCode.UnsupportedChargeKind);
+        Assert.Contains(policy.ValidateState(mismatched).Diagnostics, diagnostic =>
+            diagnostic.Code == ChargePolicyDiagnosticCode.PolicyMismatch);
+
+        ChargePolicyRegistry registry = ChargePolicyRegistry.CreateStandard();
+        Assert.True(registry.TryResolve(StandardChargePolicyIds.Disabled, out IChargePolicyService? resolved));
+        Assert.IsType<DisabledChargePolicy>(resolved);
+    }
+
+    [Fact]
     public void AuthoredGeneralCharge_DeserializesAndExecutesThroughUnifiedPolicy()
     {
         const string json =

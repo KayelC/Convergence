@@ -209,6 +209,8 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
         var diagnostics = new List<RulesetBindingDiagnostic>();
         var config = new ProductionCombatRulesetConfig();
         var actionOutcomeConfig = new StandardActionOutcomeAggregationPolicyConfig();
+        IChargePolicyService chargePolicy = new SplitChargePolicy();
+        string chargePolicyName = "split";
         foreach ((string key, object? value) in definition.Parameters)
         {
             switch (key)
@@ -327,6 +329,37 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
                     actionOutcomeConfig = new StandardActionOutcomeAggregationPolicyConfig(
                         itemBehavior.Value);
                     break;
+                case "chargePolicy":
+                    if (value is not string selectedChargePolicy)
+                    {
+                        RulesetPolicyFactoryDiagnostics.InvalidType(
+                            definition,
+                            key,
+                            "a string",
+                            diagnostics);
+                        break;
+                    }
+
+                    (IChargePolicyService Service, string Name)? selected = selectedChargePolicy switch
+                    {
+                        "split" => (new SplitChargePolicy(), "split"),
+                        "unified" => (new UnifiedChargePolicy(), "unified"),
+                        "disabled" => (new DisabledChargePolicy(), "disabled"),
+                        _ => null
+                    };
+                    if (selected is null)
+                    {
+                        RulesetPolicyFactoryDiagnostics.InvalidConfiguration(
+                            definition,
+                            $"Parameter '{key}' must be 'split', 'unified', or 'disabled'.",
+                            diagnostics,
+                            key);
+                        break;
+                    }
+
+                    chargePolicy = selected.Value.Service;
+                    chargePolicyName = selected.Value.Name;
+                    break;
                 default:
                     RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
                     break;
@@ -355,14 +388,14 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
                     definition.Id,
                     definition.PolicyId,
                     combat,
-                    new SplitChargePolicy(),
+                    chargePolicy,
                     combat,
                     combat,
                     combat,
                     combat,
                     new StandardActionOutcomeAggregationPolicy(actionOutcomeConfig),
                     definition.Parameters,
-                    EffectiveConfiguration(config, actionOutcomeConfig)));
+                    EffectiveConfiguration(config, actionOutcomeConfig, chargePolicyName)));
         }
         catch (ArgumentException exception)
         {
@@ -373,7 +406,8 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
 
     private static IEnumerable<KeyValuePair<string, object?>> EffectiveConfiguration(
         ProductionCombatRulesetConfig config,
-        StandardActionOutcomeAggregationPolicyConfig actionOutcomeConfig) =>
+        StandardActionOutcomeAggregationPolicyConfig actionOutcomeConfig,
+        string chargePolicyName) =>
     [
         KeyValuePair.Create<string, object?>(
             "maximumHitsPerDamageEffect",
@@ -415,7 +449,8 @@ internal sealed class StandardCombatRulesetPolicyFactory : IRuntimeCombatRuleset
             "itemActionOutcomeBehavior",
             actionOutcomeConfig.ItemBehavior == ItemActionOutcomeBehavior.Normal
                 ? "normal"
-                : "effect_driven")
+                : "effect_driven"),
+        KeyValuePair.Create<string, object?>("chargePolicy", chargePolicyName)
     ];
 
     private static ProductionCombatRulesetConfig ReadDecimal(

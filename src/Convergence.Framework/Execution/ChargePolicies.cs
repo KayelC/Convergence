@@ -5,6 +5,7 @@ namespace Convergence.Execution;
 
 public static class StandardChargePolicyIds
 {
+    public static ContentId Disabled { get; } = ContentId.Parse("disabled_charge");
     public static ContentId Split { get; } = ContentId.Parse("split_charge");
     public static ContentId Unified { get; } = ContentId.Parse("unified_charge");
 }
@@ -267,10 +268,25 @@ public sealed class ChargePolicyRegistry : IChargePolicyResolver
     }
 
     public static ChargePolicyRegistry CreateStandard() => new(
-        [new SplitChargePolicy(), new UnifiedChargePolicy()]);
+        [new DisabledChargePolicy(), new SplitChargePolicy(), new UnifiedChargePolicy()]);
 
     public bool TryResolve(ContentId policyId, out IChargePolicyService? service) =>
         _services.TryGetValue(policyId, out service);
+}
+
+/// <summary>
+/// Supplied explicit composition for games that do not use charge gameplay.
+/// </summary>
+public sealed class DisabledChargePolicy : ChargePolicyServiceBase
+{
+    public DisabledChargePolicy(ContentId? policyId = null)
+        : base(policyId ?? StandardChargePolicyIds.Disabled)
+    {
+    }
+
+    protected override ChargeKind? Normalize(ChargeKind requested) => null;
+
+    protected override ChargeKind? Match(DamageElement element) => null;
 }
 
 public sealed class SplitChargePolicy : ChargePolicyServiceBase

@@ -433,6 +433,32 @@ public sealed class RuntimePersistenceSnapshotTests
             chargedActor.Identity.InstanceId];
         Assert.Equal(StandardChargePolicyIds.Split, restoredActor.State.ChargePolicyId);
         Assert.Equal(2m, restoredActor.State.Charges[ChargeKind.Physical].Multiplier);
+
+        RuntimeActorSnapshot disabledActor = CopyActor(
+            baseline.Actors[0],
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                chargeState: new RuntimeChargeStateSnapshot(StandardChargePolicyIds.Disabled)));
+        RuntimeSaveGameSnapshot disabledSnapshot = Copy(
+            baseline,
+            actors: [disabledActor, baseline.Actors[1]]);
+        RuntimeSaveValidationResult disabledValidation = validator.Validate(disabledSnapshot, catalog);
+        Assert.True(disabledValidation.IsValid, string.Join(
+            Environment.NewLine,
+            disabledValidation.Diagnostics.Select(diagnostic => diagnostic.Message)));
+
+        RuntimeSessionRestoreResult disabledRestore = new RuntimeSessionRestoreService(
+                validator,
+                actorFactory,
+                profiles,
+                chargePolicies: policies)
+            .Restore(disabledSnapshot, catalog);
+        Assert.True(disabledRestore.IsSuccess, string.Join(
+            Environment.NewLine,
+            disabledRestore.Diagnostics.Select(diagnostic => diagnostic.Message)));
+        CatalogBattleActor disabledRestoredActor = disabledRestore.RequireSession().ActorsByInstanceId[
+            disabledActor.Identity.InstanceId];
+        Assert.Equal(StandardChargePolicyIds.Disabled, disabledRestoredActor.State.ChargePolicyId);
+        Assert.Empty(disabledRestoredActor.State.Charges);
     }
 
     [Fact]

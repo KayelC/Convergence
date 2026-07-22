@@ -10036,6 +10036,8 @@ Convergence.Execution.ChargePolicyServiceBase.CompleteAction(Convergence.Executi
 Convergence.Execution.ChargePolicyServiceBase.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Execution.ChargePolicyServiceBase.ResolveDamageModifier(Convergence.Execution.RuntimeActorState! actor, Convergence.Content.DamageElement element) -> Convergence.Execution.ChargeDamageModifier!
 Convergence.Execution.ChargePolicyServiceBase.ValidateState(Convergence.Runtime.RuntimeChargeStateSnapshot! state) -> Convergence.Execution.ChargePolicyValidationResult!
+Convergence.Execution.DisabledChargePolicy
+Convergence.Execution.DisabledChargePolicy.DisabledChargePolicy(Convergence.Content.ContentId? policyId = null) -> void
 Convergence.Execution.ChargePolicyValidationResult
 Convergence.Execution.ChargePolicyValidationResult.<Clone>$() -> Convergence.Execution.ChargePolicyValidationResult!
 Convergence.Execution.ChargePolicyValidationResult.ChargePolicyValidationResult(System.Collections.Generic.IEnumerable<Convergence.Execution.ChargePolicyDiagnostic!>? diagnostics = null) -> void
@@ -10117,6 +10119,7 @@ static Convergence.Execution.ChargePolicyValidationResult.operator !=(Convergenc
 static Convergence.Execution.ChargePolicyValidationResult.operator ==(Convergence.Execution.ChargePolicyValidationResult? left, Convergence.Execution.ChargePolicyValidationResult? right) -> bool
 static Convergence.Execution.ChargePolicyValidationResult.Valid.get -> Convergence.Execution.ChargePolicyValidationResult!
 static Convergence.Execution.StandardChargePolicyIds.Split.get -> Convergence.Content.ContentId
+static Convergence.Execution.StandardChargePolicyIds.Disabled.get -> Convergence.Content.ContentId
 static Convergence.Execution.StandardChargePolicyIds.Unified.get -> Convergence.Content.ContentId
 static Convergence.Runtime.RuntimeChargeStateSnapshot.operator !=(Convergence.Runtime.RuntimeChargeStateSnapshot? left, Convergence.Runtime.RuntimeChargeStateSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeChargeStateSnapshot.operator ==(Convergence.Runtime.RuntimeChargeStateSnapshot? left, Convergence.Runtime.RuntimeChargeStateSnapshot? right) -> bool

@@ -44,6 +44,7 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Same(damage.CriticalEligibilityPolicy, combat.CriticalEligibility);
         Assert.Same(damage.CriticalChancePolicy, combat.CriticalChance);
         Assert.IsType<SplitChargePolicy>(combat.Charges);
+        Assert.Equal("split", combat.EffectiveConfiguration["chargePolicy"]);
         Assert.Same(damage, combat.InstantDefeat);
         Assert.Same(damage.InstantDefeatPolicy, combat.InstantDefeatResolution);
         Assert.Same(damage, combat.Ailments);
@@ -559,6 +560,57 @@ public sealed class RuntimeRulesetBindingTests
             Assert.Equal(expectedCode, diagnostic.Code);
             Assert.Equal("itemActionOutcomeBehavior", diagnostic.ParameterName);
         }
+    }
+
+    [Theory]
+    [InlineData("split", typeof(SplitChargePolicy))]
+    [InlineData("unified", typeof(UnifiedChargePolicy))]
+    [InlineData("disabled", typeof(DisabledChargePolicy))]
+    public void DamageBinding_SelectsAuthoredChargeComposition(
+        string authoredValue,
+        Type expectedPolicyType)
+    {
+        ContentId rulesetId = Id($"test.pack:{authoredValue}_charges");
+        GameDataCatalog catalog = Catalog(new RulesetDefinition(
+            rulesetId,
+            "Charge Composition",
+            "Selects one supplied charge policy.",
+            RulesetCategory.Damage,
+            StandardRulesetPolicyIds.StandardDamage,
+            Parameters(("chargePolicy", authoredValue))));
+
+        CombatExecutionPolicySet policies = CreateResolver()
+            .BindCombatPolicies(catalog, rulesetId, new SequenceRandomSource(), StagePolicy())
+            .RequireService();
+
+        Assert.IsType(expectedPolicyType, policies.Charges);
+        Assert.Equal(authoredValue, policies.EffectiveConfiguration["chargePolicy"]);
+    }
+
+    [Theory]
+    [InlineData(42, RulesetBindingDiagnosticCode.InvalidParameterType)]
+    [InlineData("unknown", RulesetBindingDiagnosticCode.InvalidParameterValue)]
+    public void DamageBinding_RejectsInvalidChargeComposition(
+        object authoredValue,
+        RulesetBindingDiagnosticCode expectedCode)
+    {
+        ContentId rulesetId = Id($"test.pack:invalid_charge_{expectedCode}");
+        RulesetBindingResult<CombatExecutionPolicySet> result = CreateResolver().BindCombatPolicies(
+            Catalog(new RulesetDefinition(
+                rulesetId,
+                "Invalid Charge Composition",
+                "Rejects an unsupported charge policy selection.",
+                RulesetCategory.Damage,
+                StandardRulesetPolicyIds.StandardDamage,
+                Parameters(("chargePolicy", authoredValue)))),
+            rulesetId,
+            new SequenceRandomSource(),
+            StagePolicy());
+
+        RulesetBindingDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(expectedCode, diagnostic.Code);
+        Assert.Equal("chargePolicy", diagnostic.ParameterName);
+        Assert.Null(result.Service);
     }
 
     [Theory]
