@@ -213,10 +213,12 @@ public sealed class DocumentationFoundationTests
             "SplitChargePolicy",
             "UnifiedChargePolicy",
             "40` resolves to `60`, `40`, `20`, and `0",
+            "Null, Repel, and Absorb are elemental damage affinities, not",
             "mixed Critical and evasion: normal cost",
             "Passing remains owned by the Action Token economy itself"
         ];
         Assert.All(designTokens, token => Assert.Contains(token, decision, StringComparison.Ordinal));
+        Assert.DoesNotContain("Null or Absorb channel defenses", decision, StringComparison.Ordinal);
 
         string[] mechanicsTokens =
         [

@@ -1,6 +1,6 @@
 # Order 2 Post-Closure Corrections Roadmap
 
-**Status:** active; O2-R31 complete, documentation corrections pending
+**Status:** active; O2-R32 complete, contract-label reconciliation pending
 
 **Started:** 22 July 2026
 
@@ -66,7 +66,7 @@ warnings or errors, formatting verification, and `git diff --check`.
 
 ### O2-R32: Correct instant-defeat defense terminology
 
-**State:** pending
+**State:** complete
 
 - Keep instant-defeat resistance distinct from elemental damage affinity.
 - Replace the incorrect Null/Absorb statement in the confirmed decision record
@@ -77,6 +77,12 @@ warnings or errors, formatting verification, and `git diff --check`.
   cannot silently merge again.
 
 **Commit:** `docs: clarify instant defeat resistance`
+
+The confirmed decision now names only the implemented instant-defeat resistance
+states and explicitly separates them from elemental Null, Repel, and Absorb.
+It also distinguishes the supplied zero Immune multiplier from a host-selected
+replacement configuration and preserves authored-chance behavior under bypass.
+A documentation-contract assertion guards that vocabulary boundary.
 
 ### O2-R33: Reconcile active contract and milestone labels
 

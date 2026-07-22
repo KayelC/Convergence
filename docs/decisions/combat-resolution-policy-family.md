@@ -186,8 +186,11 @@ these configurable defaults:
 
 The result is clamped to the configured probability range, `0..100` by default,
 and rolled once. An explicit bypass ignores the resistance multiplier but still
-rolls the authored chance. Null or Absorb channel defenses block the effect;
-they do not convert an instant-defeat attempt into healing.
+rolls the authored chance. The supplied `Immune` multiplier is zero, so Immune
+blocks the effect without a roll. A replacement configuration may choose a
+different non-negative Immune multiplier, in which case that selected policy is
+authoritative. Null, Repel, and Absorb are elemental damage affinities, not
+instant-defeat resistance states; they are never inferred for this channel.
 
 Example: an authored chance of `40` resolves to `60`, `40`, `20`, and `0`
 against Vulnerable, Normal, Resistant, and Immune respectively.
