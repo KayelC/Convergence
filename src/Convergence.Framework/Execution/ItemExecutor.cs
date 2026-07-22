@@ -217,6 +217,16 @@ public sealed class ItemExecutor : IItemExecutor
                 request: request);
         }
 
+        ValidateEffects(usage.Effects, diagnostics);
+        if (diagnostics.Any(IsEffectConfigurationDiagnostic))
+        {
+            return new ItemExecutionAssessment(
+                diagnostics,
+                targets: null,
+                authority: _assessmentAuthority,
+                request: request);
+        }
+
         EffectActionExecutionRequest actionRequest = CreateActionRequest(request, usage);
         if (!RuntimeTargetResolver.TryResolve(
                 actionRequest,
@@ -229,7 +239,6 @@ public sealed class ItemExecutor : IItemExecutor
                 targetingDiagnostic ?? "Item targeting could not be resolved."));
         }
 
-        ValidateEffects(usage.Effects, diagnostics);
         if (targets is not null &&
             !usage.Effects.Any(effect => IsApplicable(
                 effect,
@@ -402,81 +411,35 @@ public sealed class ItemExecutor : IItemExecutor
                 continue;
             }
 
-            ValidateEffectConfiguration(effect, index, diagnostics);
-            ValidateConditionConfiguration(effect.When, index, diagnostics);
-        }
-    }
-
-    private void ValidateEffectConfiguration(
-        EffectDefinition effect,
-        int effectIndex,
-        ICollection<ItemExecutionDiagnostic> diagnostics)
-    {
-        switch (effect)
-        {
-            case ApplyAilmentEffectDefinition ailment when !_services.Ailments.TryGetAilment(ailment.AilmentId, out _):
-                Add(ItemExecutionDiagnosticCode.AilmentMissing, $"Ailment '{ailment.AilmentId}' is unavailable at runtime.");
-                break;
-            case RestoreResourceEffectDefinition restore:
-                ValidateAmount(restore.Amount);
-                break;
-            case ReviveEffectDefinition revive:
-                ValidateAmount(revive.Amount);
-                break;
-            case ReduceResourceEffectDefinition reduce:
-                ValidateAmount(reduce.Amount);
-                break;
-            case SetResourceEffectDefinition set:
-                ValidateAmount(set.Amount);
-                break;
-            case EscapeEffectDefinition escape when !_services.EscapeRuleHandlers.ContainsKey(escape.EligibilityRuleId):
-                Add(ItemExecutionDiagnosticCode.EscapeRuleHandlerMissing, $"No escape rule handler is registered for '{escape.EligibilityRuleId}'.");
-                break;
-            case CustomEffectDefinition custom when !_services.CustomEffectHandlers.ContainsKey(custom.HandlerId):
-                Add(ItemExecutionDiagnosticCode.CustomEffectHandlerMissing, $"No custom effect handler is registered for '{custom.HandlerId}'.");
-                break;
-        }
-
-        return;
-
-        void ValidateAmount(AmountDefinition amount)
-        {
-            if (amount is FormulaAmountDefinition formula && !_services.FormulaHandlers.ContainsKey(formula.FormulaId))
+            foreach (EffectConfigurationIssue issue in EffectConfigurationValidator.Validate(effect, _services))
             {
-                Add(ItemExecutionDiagnosticCode.FormulaHandlerMissing, $"No formula handler is registered for '{formula.FormulaId}'.");
+                diagnostics.Add(new ItemExecutionDiagnostic(
+                    ToItemDiagnosticCode(issue.Code),
+                    issue.Message,
+                    index));
             }
         }
-
-        void Add(ItemExecutionDiagnosticCode code, string message) =>
-            diagnostics.Add(new ItemExecutionDiagnostic(code, message, effectIndex));
     }
 
-    private void ValidateConditionConfiguration(
-        ConditionDefinition? condition,
-        int effectIndex,
-        ICollection<ItemExecutionDiagnostic> diagnostics)
-    {
-        switch (condition)
+    private static ItemExecutionDiagnosticCode ToItemDiagnosticCode(
+        EffectConfigurationIssueCode code) => code switch
         {
-            case null:
-                return;
-            case AllConditionDefinition all:
-                foreach (ConditionDefinition child in all.Conditions) ValidateConditionConfiguration(child, effectIndex, diagnostics);
-                return;
-            case AnyConditionDefinition any:
-                foreach (ConditionDefinition child in any.Conditions) ValidateConditionConfiguration(child, effectIndex, diagnostics);
-                return;
-            case NotConditionDefinition not:
-                ValidateConditionConfiguration(not.Condition, effectIndex, diagnostics);
-                return;
-            case CustomConditionDefinition custom when !_services.CustomConditionHandlers.ContainsKey(custom.HandlerId):
-                diagnostics.Add(new ItemExecutionDiagnostic(
-                    ItemExecutionDiagnosticCode.CustomConditionHandlerMissing,
-                    $"No custom condition handler is registered for '{custom.HandlerId}'.",
-                    effectIndex));
-                return;
-        }
-    }
+            EffectConfigurationIssueCode.AilmentMissing => ItemExecutionDiagnosticCode.AilmentMissing,
+            EffectConfigurationIssueCode.FormulaHandlerMissing => ItemExecutionDiagnosticCode.FormulaHandlerMissing,
+            EffectConfigurationIssueCode.EscapeRuleHandlerMissing => ItemExecutionDiagnosticCode.EscapeRuleHandlerMissing,
+            EffectConfigurationIssueCode.CustomEffectHandlerMissing => ItemExecutionDiagnosticCode.CustomEffectHandlerMissing,
+            EffectConfigurationIssueCode.CustomConditionHandlerMissing => ItemExecutionDiagnosticCode.CustomConditionHandlerMissing,
+            _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Effect configuration issue must be defined.")
+        };
+
+    private static bool IsEffectConfigurationDiagnostic(ItemExecutionDiagnostic diagnostic) =>
+        diagnostic.Code is
+            ItemExecutionDiagnosticCode.EffectExecutorMissing or
+            ItemExecutionDiagnosticCode.AilmentMissing or
+            ItemExecutionDiagnosticCode.FormulaHandlerMissing or
+            ItemExecutionDiagnosticCode.EscapeRuleHandlerMissing or
+            ItemExecutionDiagnosticCode.CustomEffectHandlerMissing or
+            ItemExecutionDiagnosticCode.CustomConditionHandlerMissing;
 
     private bool IsApplicable(
         EffectDefinition effect,

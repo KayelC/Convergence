@@ -244,13 +244,6 @@ public sealed class SkillExecutor : ISkillExecutor
             return diagnostics;
         }
 
-        if (!BattleTargetResolver.TryResolve(request, _services, out targets, out SkillExecutionDiagnostic? targetingDiagnostic) &&
-            targetingDiagnostic is not null)
-        {
-            diagnostics.Add(targetingDiagnostic);
-        }
-
-        costs = ValidateCosts(request, diagnostics);
         for (int effectIndex = 0; effectIndex < skill.Effects.Count; effectIndex++)
         {
             EffectDefinition effect = skill.Effects[effectIndex];
@@ -263,8 +256,30 @@ public sealed class SkillExecutor : ISkillExecutor
                 continue;
             }
 
-            ValidateEffectConfiguration(effect, effectIndex, diagnostics);
-            ValidateConditionConfiguration(effect.When, effectIndex, diagnostics);
+            foreach (EffectConfigurationIssue issue in EffectConfigurationValidator.Validate(effect, _services))
+            {
+                diagnostics.Add(new SkillExecutionDiagnostic(
+                    ToSkillDiagnosticCode(issue.Code),
+                    issue.Message,
+                    effectIndex));
+            }
+        }
+
+        if (diagnostics.Any(IsEffectConfigurationDiagnostic))
+        {
+            return diagnostics;
+        }
+
+        if (!BattleTargetResolver.TryResolve(request, _services, out targets, out SkillExecutionDiagnostic? targetingDiagnostic) &&
+            targetingDiagnostic is not null)
+        {
+            diagnostics.Add(targetingDiagnostic);
+        }
+
+        costs = ValidateCosts(request, diagnostics);
+        for (int effectIndex = 0; effectIndex < skill.Effects.Count; effectIndex++)
+        {
+            EffectDefinition effect = skill.Effects[effectIndex];
 
             if (targets?.IsUntargeted == true && RequiresTarget(effect))
             {
@@ -516,46 +531,6 @@ public sealed class SkillExecutor : ISkillExecutor
     private static bool RequiresTarget(EffectDefinition effect) =>
         effect is not EscapeEffectDefinition and not CustomEffectDefinition;
 
-    private void ValidateEffectConfiguration(
-        EffectDefinition effect,
-        int effectIndex,
-        ICollection<SkillExecutionDiagnostic> diagnostics)
-    {
-        switch (effect)
-        {
-            case ApplyAilmentEffectDefinition ailment when !_services.Ailments.TryGetAilment(ailment.AilmentId, out _):
-                diagnostics.Add(new SkillExecutionDiagnostic(
-                    SkillExecutionDiagnosticCode.AilmentMissing,
-                    $"Ailment '{ailment.AilmentId}' is unavailable at runtime.",
-                    effectIndex));
-                break;
-            case RestoreResourceEffectDefinition restore:
-                ValidateAmountConfiguration(restore.Amount, effectIndex, diagnostics);
-                break;
-            case ReviveEffectDefinition revive:
-                ValidateAmountConfiguration(revive.Amount, effectIndex, diagnostics);
-                break;
-            case ReduceResourceEffectDefinition reduce:
-                ValidateAmountConfiguration(reduce.Amount, effectIndex, diagnostics);
-                break;
-            case SetResourceEffectDefinition set:
-                ValidateAmountConfiguration(set.Amount, effectIndex, diagnostics);
-                break;
-            case EscapeEffectDefinition escape when !_services.EscapeRuleHandlers.ContainsKey(escape.EligibilityRuleId):
-                diagnostics.Add(new SkillExecutionDiagnostic(
-                    SkillExecutionDiagnosticCode.EscapeRuleHandlerMissing,
-                    $"No escape rule handler is registered for '{escape.EligibilityRuleId}'.",
-                    effectIndex));
-                break;
-            case CustomEffectDefinition custom when !_services.CustomEffectHandlers.ContainsKey(custom.HandlerId):
-                diagnostics.Add(new SkillExecutionDiagnostic(
-                    SkillExecutionDiagnosticCode.CustomEffectHandlerMissing,
-                    $"No custom effect handler is registered for '{custom.HandlerId}'.",
-                    effectIndex));
-                break;
-        }
-    }
-
     private bool ValidateAmountConfiguration(
         AmountDefinition amount,
         int? effectIndex,
@@ -573,37 +548,24 @@ public sealed class SkillExecutor : ISkillExecutor
         return false;
     }
 
-    private void ValidateConditionConfiguration(
-        ConditionDefinition? condition,
-        int effectIndex,
-        ICollection<SkillExecutionDiagnostic> diagnostics)
-    {
-        switch (condition)
+    private static SkillExecutionDiagnosticCode ToSkillDiagnosticCode(
+        EffectConfigurationIssueCode code) => code switch
         {
-            case null:
-                return;
-            case AllConditionDefinition all:
-                foreach (ConditionDefinition child in all.Conditions)
-                {
-                    ValidateConditionConfiguration(child, effectIndex, diagnostics);
-                }
-                return;
-            case AnyConditionDefinition any:
-                foreach (ConditionDefinition child in any.Conditions)
-                {
-                    ValidateConditionConfiguration(child, effectIndex, diagnostics);
-                }
-                return;
-            case NotConditionDefinition not:
-                ValidateConditionConfiguration(not.Condition, effectIndex, diagnostics);
-                return;
-            case CustomConditionDefinition custom when !_services.CustomConditionHandlers.ContainsKey(custom.HandlerId):
-                diagnostics.Add(new SkillExecutionDiagnostic(
-                    SkillExecutionDiagnosticCode.CustomConditionHandlerMissing,
-                    $"No custom condition handler is registered for '{custom.HandlerId}'.",
-                    effectIndex));
-                return;
-        }
-    }
+            EffectConfigurationIssueCode.AilmentMissing => SkillExecutionDiagnosticCode.AilmentMissing,
+            EffectConfigurationIssueCode.FormulaHandlerMissing => SkillExecutionDiagnosticCode.FormulaHandlerMissing,
+            EffectConfigurationIssueCode.EscapeRuleHandlerMissing => SkillExecutionDiagnosticCode.EscapeRuleHandlerMissing,
+            EffectConfigurationIssueCode.CustomEffectHandlerMissing => SkillExecutionDiagnosticCode.CustomEffectHandlerMissing,
+            EffectConfigurationIssueCode.CustomConditionHandlerMissing => SkillExecutionDiagnosticCode.CustomConditionHandlerMissing,
+            _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Effect configuration issue must be defined.")
+        };
+
+    private static bool IsEffectConfigurationDiagnostic(SkillExecutionDiagnostic diagnostic) =>
+        diagnostic.Code is
+            SkillExecutionDiagnosticCode.EffectExecutorMissing or
+            SkillExecutionDiagnosticCode.AilmentMissing or
+            SkillExecutionDiagnosticCode.FormulaHandlerMissing or
+            SkillExecutionDiagnosticCode.EscapeRuleHandlerMissing or
+            SkillExecutionDiagnosticCode.CustomEffectHandlerMissing or
+            SkillExecutionDiagnosticCode.CustomConditionHandlerMissing;
 
 }

@@ -55,7 +55,8 @@ public enum BattleActionDiagnosticCode
     ItemReservationInvalid,
     ItemInventoryRequired,
     ActionNotAuthorized,
-    AuthoredPercentageOutOfRange
+    AuthoredPercentageOutOfRange,
+    EffectConfigurationInvalid
 }
 
 public enum BattleActionEventKind
@@ -772,25 +773,24 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 turnConsumption: ActionTurnConsumption.None);
         }
 
-        bool resolved = RuntimeTargetResolver.TryResolve(
-            action,
-            _services,
-            out ResolvedRuntimeTargetSet? targets,
-            out string? diagnostic);
-        if (!resolved || targets is null)
+        for (int effectIndex = 0; effectIndex < effects.Count; effectIndex++)
         {
-            diagnostics.Add(new BattleActionDiagnostic(
-                BattleActionDiagnosticCode.TargetSelectionInvalid,
-                diagnostic ?? "Action target selection failed."));
-        }
-
-        foreach (EffectDefinition effect in effects)
-        {
+            EffectDefinition effect = effects[effectIndex];
             if (!_services.EffectExecutors.Supports(effect.GetType()))
             {
                 diagnostics.Add(new BattleActionDiagnostic(
                     BattleActionDiagnosticCode.EffectExecutorMissing,
-                    $"No executor is registered for '{effect.GetType().Name}'."));
+                    $"No executor is registered for '{effect.GetType().Name}'.",
+                    effectIndex));
+                continue;
+            }
+
+            foreach (EffectConfigurationIssue issue in EffectConfigurationValidator.Validate(effect, _services))
+            {
+                diagnostics.Add(new BattleActionDiagnostic(
+                    BattleActionDiagnosticCode.EffectConfigurationInvalid,
+                    issue.Message,
+                    effectIndex));
             }
         }
 
@@ -803,6 +803,27 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             diagnostics.Add(new BattleActionDiagnostic(
                 BattleActionDiagnosticCode.ExecutionFailed,
                 $"The action has an invalid effect sequence: {exception.Message}"));
+        }
+
+        if (diagnostics.Count > 0)
+        {
+            return CreateAssessment(
+                request,
+                kind,
+                diagnostics,
+                turnConsumption: ActionTurnConsumption.None);
+        }
+
+        bool resolved = RuntimeTargetResolver.TryResolve(
+            action,
+            _services,
+            out ResolvedRuntimeTargetSet? targets,
+            out string? diagnostic);
+        if (!resolved || targets is null)
+        {
+            diagnostics.Add(new BattleActionDiagnostic(
+                BattleActionDiagnosticCode.TargetSelectionInvalid,
+                diagnostic ?? "Action target selection failed."));
         }
 
         return diagnostics.Count == 0

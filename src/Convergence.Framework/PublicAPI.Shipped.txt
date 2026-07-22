@@ -2702,6 +2702,7 @@ Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.ActionNotAuthorized = 15 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.AuthoredPercentageOutOfRange = 16 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.AssessmentInvalid = 8 -> Convergence.Execution.BattleActionDiagnosticCode
+Convergence.Execution.BattleActionDiagnosticCode.EffectConfigurationInvalid = 17 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.EffectExecutorMissing = 4 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.ExecutionFailed = 9 -> Convergence.Execution.BattleActionDiagnosticCode
 Convergence.Execution.BattleActionDiagnosticCode.HostActionRequired = 7 -> Convergence.Execution.BattleActionDiagnosticCode

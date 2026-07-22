@@ -1,6 +1,6 @@
 # Order 2 Post-Closure Corrections Roadmap
 
-**Status:** active; O2-R30 in progress
+**Status:** active; O2-R31 complete, documentation corrections pending
 
 **Started:** 22 July 2026
 
@@ -23,7 +23,7 @@ Action Token mechanics.
 
 ### O2-R30: Preserve review evidence and correction authority
 
-**State:** in progress
+**State:** complete
 
 - Preserve the 22 July fresh source and documentation review.
 - Record every finding, correction boundary, required test, and commit order in
@@ -34,9 +34,11 @@ Action Token mechanics.
 
 **Commit:** `docs: reopen order 2 registration parity gate`
 
+Implemented by `6f8cb31` after 22 focused documentation and boundary tests.
+
 ### O2-R31: Unify effect-configuration preflight
 
-**State:** pending
+**State:** complete
 
 - Extract one internal recursive validator for runtime effect configuration.
 - Use it from `SkillExecutor`, `ItemExecutor`, and
@@ -52,6 +54,15 @@ Action Token mechanics.
   would otherwise consume a normal turn.
 
 **Commit:** `execution: unify effect configuration preflight`
+
+`EffectConfigurationValidator` now supplies one recursive internal authority for
+ailment, formula, escape, custom-effect, and nested custom-condition
+registrations. Skill and item assessment preserve their specific diagnostics;
+direct effect-backed actions return `EffectConfigurationInvalid`. All three
+reject before random target selection when required composition is missing.
+Focused action coverage passed 163 tests. The complete Release gate passed
+1,456 tests with zero failures or skips, a strict nonincremental build with zero
+warnings or errors, formatting verification, and `git diff --check`.
 
 ### O2-R32: Correct instant-defeat defense terminology
 

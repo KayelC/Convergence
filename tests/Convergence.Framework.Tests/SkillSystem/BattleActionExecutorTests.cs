@@ -1085,6 +1085,146 @@ public sealed class BattleActionExecutorTests
         Assert.False(result.EscapeRequested);
     }
 
+    [Theory]
+    [InlineData(MissingEffectConfiguration.Ailment, "Ailment")]
+    [InlineData(MissingEffectConfiguration.Formula, "formula handler")]
+    [InlineData(MissingEffectConfiguration.CustomCondition, "custom condition handler")]
+    [InlineData(MissingEffectConfiguration.CustomEffect, "custom effect handler")]
+    public async Task BasicAttackRejectsMissingEffectConfigurationBeforeRandomTargeting(
+        MissingEffectConfiguration missing,
+        string expectedMessage)
+    {
+        var randomTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleActionExecutor executor = Executor(runtimeRandomTargetPolicy: randomTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        EffectDefinition secondary = missing switch
+        {
+            MissingEffectConfiguration.Ailment =>
+                new ApplyAilmentEffectDefinition(Id("missing_ailment"), 100),
+            MissingEffectConfiguration.Formula =>
+                new ReduceResourceEffectDefinition(
+                    Hp,
+                    new FormulaAmountDefinition(Id("missing_formula")),
+                    true),
+            MissingEffectConfiguration.CustomCondition =>
+                new ReduceResourceEffectDefinition(
+                    Hp,
+                    new FlatAmountDefinition(1),
+                    true,
+                    new AllConditionDefinition(
+                    [
+                        new NotConditionDefinition(
+                            new CustomConditionDefinition(Id("missing_condition")))
+                    ])),
+            MissingEffectConfiguration.CustomEffect =>
+                new CustomEffectDefinition(Id("missing_effect")),
+            _ => throw new ArgumentOutOfRangeException(nameof(missing))
+        };
+        var basicAttack = new EquipmentBasicAttackDefinition(
+            DamageElement.Physical,
+            15,
+            100,
+            new NeverCriticalDefinition(),
+            false)
+        {
+            SecondaryEffects = [secondary]
+        };
+        var request = Request(
+            new BasicAttackBattleActionCommand(basicAttack, RandomEnemy()),
+            actor,
+            [actor, target]);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.False(assessment.CanExecute);
+        Assert.Equal(ActionTurnConsumptionKind.None, assessment.TurnConsumption.Kind);
+        BattleActionDiagnostic diagnostic = Assert.Single(assessment.Diagnostics);
+        Assert.Equal(BattleActionDiagnosticCode.EffectConfigurationInvalid, diagnostic.Code);
+        Assert.Equal(1, diagnostic.EffectIndex);
+        Assert.Contains(expectedMessage, diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, randomTargets.CallCount);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(ActionTurnConsumptionKind.None, result.TurnConsumption.Kind);
+        Assert.Empty(result.Effects);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task EscapeRejectsMissingRuleDuringAssessmentWithoutTurnConsumption()
+    {
+        BattleActionExecutor executor = Executor();
+        RuntimeActorState actor = Actor("actor", TeamA);
+        var request = Request(
+            new EscapeAttemptBattleActionCommand(Id("missing_escape_rule"), 100),
+            actor,
+            [actor]);
+
+        BattleActionAssessment assessment = executor.Assess(request);
+        BattleActionExecutionResult result = await executor.ExecuteAsync(request, assessment);
+
+        Assert.False(assessment.CanExecute);
+        Assert.Equal(ActionTurnConsumptionKind.None, assessment.TurnConsumption.Kind);
+        BattleActionDiagnostic diagnostic = Assert.Single(assessment.Diagnostics);
+        Assert.Equal(BattleActionDiagnosticCode.EffectConfigurationInvalid, diagnostic.Code);
+        Assert.Equal(0, diagnostic.EffectIndex);
+        Assert.Contains("escape rule handler", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, result.Status);
+        Assert.Equal(ActionTurnConsumptionKind.None, result.TurnConsumption.Kind);
+        Assert.Empty(result.Effects);
+        Assert.False(result.EscapeRequested);
+    }
+
+    [Fact]
+    public void SkillAndItemRejectMissingFormulaBeforeRandomTargeting()
+    {
+        var skillTargets = new AlternatingSkillRandomTargetPolicy();
+        var itemTargets = new AlternatingRuntimeRandomTargetPolicy();
+        BattleExecutionServices services = ExecutionServices(
+            randomTargetPolicy: skillTargets,
+            runtimeRandomTargetPolicy: itemTargets);
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        var formulaEffect = new ReduceResourceEffectDefinition(
+            Hp,
+            new FormulaAmountDefinition(Id("missing_formula")),
+            true);
+        SkillDefinition skill = ActiveSkill(
+            "formula_skill",
+            [],
+            [formulaEffect],
+            RandomEnemy());
+        ItemDefinition item = ConsumableItem(
+            "formula_item",
+            [formulaEffect],
+            RandomEnemy());
+
+        SkillExecutionAssessment skillAssessment = new SkillExecutor(services).Assess(
+            new SkillExecutionRequest(
+                skill,
+                actor,
+                [actor, target],
+                new EffectExecutionEnvironment(Battle)));
+        ItemExecutionAssessment itemAssessment = new ItemExecutor(services).Assess(
+            new ItemExecutionRequest(
+                item,
+                actor,
+                [actor, target],
+                new EffectExecutionEnvironment(Battle)));
+
+        Assert.False(skillAssessment.CanExecute);
+        Assert.Equal(
+            SkillExecutionDiagnosticCode.FormulaHandlerMissing,
+            Assert.Single(skillAssessment.Diagnostics).Code);
+        Assert.False(itemAssessment.CanExecute);
+        Assert.Equal(
+            ItemExecutionDiagnosticCode.FormulaHandlerMissing,
+            Assert.Single(itemAssessment.Diagnostics).Code);
+        Assert.Equal(0, skillTargets.CallCount);
+        Assert.Equal(0, itemTargets.CallCount);
+    }
+
     [Fact]
     public async Task Analyze_PreparedAssessmentExecutesItsDisplayedTargetWithoutRandomSelection()
     {
@@ -1708,6 +1848,14 @@ public sealed class BattleActionExecutorTests
             ]);
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    public enum MissingEffectConfiguration
+    {
+        Ailment,
+        Formula,
+        CustomCondition,
+        CustomEffect
+    }
 
     private sealed class EmptyAilments : IAilmentDefinitionRepository
     {

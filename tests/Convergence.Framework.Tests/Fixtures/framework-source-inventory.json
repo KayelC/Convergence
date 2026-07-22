@@ -358,6 +358,11 @@
       "publicSurface": "internal_only"
     },
     {
+      "path": "Execution/EffectConfigurationValidator.cs",
+      "owner": "effect_execution",
+      "publicSurface": "internal_only"
+    },
+    {
       "path": "Execution/EffectExecutors.cs",
       "owner": "effect_execution",
       "publicSurface": "internal_only"
