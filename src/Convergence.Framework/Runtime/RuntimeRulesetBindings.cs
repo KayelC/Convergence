@@ -17,6 +17,7 @@ public static class StandardRulesetPolicyIds
     public static ContentId PersistentStagedStatModifier { get; } = ContentId.Parse("persistent_staged");
     public static ContentId TimedExclusiveStatModifier { get; } = ContentId.Parse("timed_exclusive");
     public static ContentId TimedContributionStatModifier { get; } = ContentId.Parse("timed_contribution");
+    public static ContentId StandardActions { get; } = ContentId.Parse("standard_actions");
     public static ContentId StandardActionToken { get; } = ContentId.Parse("standard_action_token");
     public static ContentId StandardRosterCapacity { get; } = ContentId.Parse("standard_roster_capacity");
     public static ContentId StandardEconomy { get; } = ContentId.Parse("standard_economy");

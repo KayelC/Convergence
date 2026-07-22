@@ -148,7 +148,9 @@ public sealed class RuntimeRulesetBindingTests
             .Concat(registry.TurnEconomyPolicyIds)
             .ToArray();
 
-        Assert.Equal(10, policyIds.Length);
+        Assert.Equal(11, policyIds.Length);
+        Assert.Contains(StandardRulesetPolicyIds.StandardActions, policyIds);
+        Assert.Contains(StandardRulesetPolicyIds.StandardActionToken, policyIds);
         Assert.DoesNotContain(policyIds, id => id.Value.Contains("moon_phase", StringComparison.Ordinal));
     }
 
@@ -863,10 +865,39 @@ public sealed class RuntimeRulesetBindingTests
     }
 
     [Fact]
-    public void ActionTokenBinding_RequiresAuthoredFiniteLivenessLimits()
+    public void StandardActionBinding_ConstructsNeutralEconomyWithAuthoredLivenessLimits()
+    {
+        ContentId rulesetId = Id("test.pack:standard_actions");
+        RulesetBindingResult<BattleTurnEconomyRuleset> result = CreateResolver().BindTurnEconomy(
+            Catalog(new RulesetDefinition(
+                rulesetId,
+                "Standard Actions",
+                "One action per phase-start actor.",
+                RulesetCategory.TurnEconomy,
+                StandardRulesetPolicyIds.StandardActions,
+                Parameters(
+                    ("maximumCommands", 64),
+                    ("maximumConsecutiveFreeActions", 8)))),
+            rulesetId);
+
+        BattleTurnEconomyRuleset ruleset = result.RequireService();
+        var economy = Assert.IsType<StandardActionTurnEconomy>(ruleset.CreateEconomy());
+        economy.StartPhase(2);
+        economy.Apply(ActionTurnConsumption.Normal);
+
+        Assert.Equal(1, economy.CaptureSnapshot().RemainingActions);
+        Assert.Equal(64, ruleset.PhaseProgress.MaximumCommands);
+        Assert.Equal(8, ruleset.PhaseProgress.MaximumConsecutiveFreeActions);
+    }
+
+    [Theory]
+    [InlineData("standard_actions")]
+    [InlineData("standard_action_token")]
+    public void StandardTurnEconomyBindings_RequireAuthoredFiniteLivenessLimits(string policyId)
     {
         ContentId missingId = Id("test.pack:missing_action_limits");
         ContentId invalidId = Id("test.pack:invalid_action_limits");
+        ContentId policy = Id(policyId);
         RuntimeRulesetBindingResolver resolver = CreateResolver();
 
         RulesetBindingResult<BattleTurnEconomyRuleset> missing = resolver.BindTurnEconomy(
@@ -875,7 +906,7 @@ public sealed class RuntimeRulesetBindingTests
                 "Missing Limits",
                 "No hidden liveness defaults.",
                 RulesetCategory.TurnEconomy,
-                StandardRulesetPolicyIds.StandardActionToken)),
+                policy)),
             missingId);
         RulesetBindingResult<BattleTurnEconomyRuleset> invalid = resolver.BindTurnEconomy(
             Catalog(new RulesetDefinition(
@@ -883,7 +914,7 @@ public sealed class RuntimeRulesetBindingTests
                 "Invalid Limits",
                 "The free-action limit cannot consume the entire command budget.",
                 RulesetCategory.TurnEconomy,
-                StandardRulesetPolicyIds.StandardActionToken,
+                policy,
                 Parameters(
                     ("maximumCommands", 8),
                     ("maximumConsecutiveFreeActions", 8)))),

@@ -127,7 +127,11 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
             growth: [new StandardGrowthRulesetPolicyFactory()],
             rosterCapacity: [new StandardRosterCapacityRulesetPolicyFactory()],
             economy: [new StandardEconomyRulesetPolicyFactory()],
-            turnEconomy: [new StandardActionTokenRulesetPolicyFactory()]);
+            turnEconomy:
+            [
+                new StandardActionRulesetPolicyFactory(),
+                new StandardActionTokenRulesetPolicyFactory()
+            ]);
 
     internal IRuntimeCombatRulesetPolicyFactory? FindCombat(ContentId policyId) =>
         Find(_combat, policyId);
@@ -968,12 +972,35 @@ internal sealed class StandardEconomyRulesetPolicyFactory : IRuntimeEconomyRules
     }
 }
 
+internal sealed class StandardActionRulesetPolicyFactory : IRuntimeTurnEconomyRulesetPolicyFactory
+{
+    public ContentId PolicyId => StandardRulesetPolicyIds.StandardActions;
+
+    public RulesetBindingResult<BattleTurnEconomyRuleset> Create(RulesetDefinition definition) =>
+        StandardTurnEconomyRulesetPolicyFactory.Create(
+            definition,
+            () => new StandardActionTurnEconomy());
+}
+
 internal sealed class StandardActionTokenRulesetPolicyFactory : IRuntimeTurnEconomyRulesetPolicyFactory
 {
     public ContentId PolicyId => StandardRulesetPolicyIds.StandardActionToken;
 
-    public RulesetBindingResult<BattleTurnEconomyRuleset> Create(RulesetDefinition definition)
+    public RulesetBindingResult<BattleTurnEconomyRuleset> Create(RulesetDefinition definition) =>
+        StandardTurnEconomyRulesetPolicyFactory.Create(
+            definition,
+            () => new ActionTokenTurnEconomy());
+}
+
+internal static class StandardTurnEconomyRulesetPolicyFactory
+{
+    public static RulesetBindingResult<BattleTurnEconomyRuleset> Create(
+        RulesetDefinition definition,
+        Func<IBattleTurnEconomy> createEconomy)
     {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(createEconomy);
+
         var diagnostics = new List<RulesetBindingDiagnostic>();
         foreach (string key in definition.Parameters.Keys.Where(
                      key => key is not ("maximumCommands" or "maximumConsecutiveFreeActions")))
@@ -999,7 +1026,7 @@ internal sealed class StandardActionTokenRulesetPolicyFactory : IRuntimeTurnEcon
         try
         {
             return new RulesetBindingResult<BattleTurnEconomyRuleset>(new BattleTurnEconomyRuleset(
-                () => new ActionTokenTurnEconomy(),
+                createEconomy,
                 new BattlePhaseProgressPolicy(maximumCommands, maximumConsecutiveFreeActions)));
         }
         catch (ArgumentException exception)
