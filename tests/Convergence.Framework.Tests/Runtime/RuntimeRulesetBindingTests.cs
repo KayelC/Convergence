@@ -127,7 +127,8 @@ public sealed class RuntimeRulesetBindingTests
         var turnEconomy = Assert.IsType<Convergence.TurnEconomy.ActionTokenTurnEconomy>(
             turnEconomyRuleset.CreateEconomy());
         turnEconomy.StartPhase(2);
-        turnEconomy.ConsumeAction(new TurnEconomyResolution(TurnEconomyOutcome.Weakness, false, false));
+        turnEconomy.Apply(ActionTurnConsumption.FromTurnEconomy(
+            new TurnEconomyResolution(TurnEconomyOutcome.Weakness, false, false)));
         Assert.Equal(1, turnEconomy.FullTokens);
         Assert.Equal(1, turnEconomy.PartialTokens);
         Assert.Equal(256, turnEconomyRuleset.PhaseProgress.MaximumCommands);

@@ -87,7 +87,7 @@ public sealed class ActionTokenTurnEconomy : IBattleTurnEconomy
         }
     }
 
-    public void ConsumeAction(TurnEconomyResolution resolution)
+    private void ConsumeAction(TurnEconomyResolution resolution)
     {
         ArgumentNullException.ThrowIfNull(resolution);
         if (!HasTurnsRemaining())
@@ -144,7 +144,7 @@ public sealed class ActionTokenTurnEconomy : IBattleTurnEconomy
         }
     }
 
-    public void Pass()
+    private void Pass()
     {
         if (_partialTokens > 0)
         {
@@ -157,7 +157,7 @@ public sealed class ActionTokenTurnEconomy : IBattleTurnEconomy
         }
     }
 
-    public void TerminatePhase()
+    private void TerminatePhase()
     {
         _fullTokens = 0;
         _partialTokens = 0;

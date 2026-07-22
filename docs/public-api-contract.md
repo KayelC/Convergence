@@ -62,6 +62,14 @@ same resource ID before target randomness or amount resolution.
 consumption, and event values. This is a deliberate guarded-`0.1.0` baseline
 correction: no stable Convergence release used the former clone-mutable shape.
 
+`ActionTokenTurnEconomy` exposes `Apply(ActionTurnConsumption)` as its only
+public consumption mutation. The former policy-specific `ConsumeAction`,
+`Pass`, and `TerminatePhase` methods are removed from the guarded pre-release
+surface. Direct policy users express every transition through the same generic
+protocol used by `BattleEncounterRunner`; this preserves one auditable economy
+authority and prevents a retained policy instance from spending a command both
+inside a host port and again when the runner applies its returned cost.
+
 `EffectExecutionResult` retains its public record shape for custom effect
 composition, but its scalar and collection `init` assignments now enforce the
 same legal boundary during construction and record cloning. Undefined effect

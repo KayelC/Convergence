@@ -6701,14 +6701,11 @@ Convergence.TurnEconomy.ActionTokenTurnEconomy
 Convergence.TurnEconomy.ActionTokenTurnEconomy.ActionTokenTurnEconomy() -> void
 Convergence.TurnEconomy.ActionTokenTurnEconomy.Apply(Convergence.Execution.ActionTurnConsumption! consumption) -> void
 Convergence.TurnEconomy.ActionTokenTurnEconomy.CaptureSnapshot() -> Convergence.Execution.BattleTurnEconomySnapshot!
-Convergence.TurnEconomy.ActionTokenTurnEconomy.ConsumeAction(Convergence.Execution.TurnEconomyResolution! resolution) -> void
 Convergence.TurnEconomy.ActionTokenTurnEconomy.FullTokens.get -> int
 Convergence.TurnEconomy.ActionTokenTurnEconomy.GetTotalTokenCount() -> int
 Convergence.TurnEconomy.ActionTokenTurnEconomy.HasTurnsRemaining() -> bool
 Convergence.TurnEconomy.ActionTokenTurnEconomy.PartialTokens.get -> int
-Convergence.TurnEconomy.ActionTokenTurnEconomy.Pass() -> void
 Convergence.TurnEconomy.ActionTokenTurnEconomy.StartPhase(int activeActorCount) -> void
-Convergence.TurnEconomy.ActionTokenTurnEconomy.TerminatePhase() -> void
 Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot
 Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot.ActionTokenTurnEconomySnapshot(int fullTokens, int partialTokens) -> void
 Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot.Equals(Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot? other) -> bool

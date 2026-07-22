@@ -1249,9 +1249,15 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
-    public void Runner_RejectsSnapshotStateDriftBeforePhaseEndLifecycle()
+    public void Runner_RejectsSnapshotStateDriftDuringTurnEconomyEventPublication()
     {
         var lifecycle = new RecordingLifecycle();
+        var economy = new SnapshotDriftTurnEconomy(
+            SnapshotDriftStage.ExternallyArmed,
+            SnapshotDriftKind.State);
+        var sink = new MutatingEventSink(
+            BattleEncounterEventKind.TurnEconomyChanged,
+            economy.ActivateDrift);
 
         BattleEncounterResult result = Run(
             [Participant("phase_drift_player", PlayerTeam), Participant("phase_drift_enemy", EnemyTeam)],
@@ -1259,13 +1265,166 @@ public sealed class BattleEncounterRunnerTests
             lifecycle,
             new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
             new CompleteAfterTurnsPolicy(99),
-            () => new SnapshotDriftTurnEconomy(SnapshotDriftStage.PhaseEnd, SnapshotDriftKind.State));
+            () => economy,
+            events: sink);
 
         Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
         Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
         Assert.Contains("changed state outside an accepted transition", result.FaultMessage);
         Assert.Equal(1, lifecycle.TurnEndCalls);
         Assert.Equal(0, lifecycle.PhaseEndCalls);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.PhaseEnded);
+    }
+
+    [Fact]
+    public void Runner_RejectsRetainedEconomyMutationBeforeCommittingTurnStartLifecycle()
+    {
+        var economy = new ActionTokenTurnEconomy();
+        BattleEncounterParticipant player = Participant("turn_start_authority_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            TurnStartAction = request =>
+            {
+                request.Actor.State.SetResource(Hp, 1);
+                economy.Apply(ActionTurnConsumption.Pass);
+            }
+        };
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Pass));
+
+        BattleEncounterResult result = Run(
+            [player, Participant("turn_start_authority_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            () => economy);
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
+        Assert.Contains("outside an accepted transition", result.FaultMessage);
+        Assert.Empty(handler.Requests);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(new ActionTokenTurnEconomySnapshot(0, 1), economy.CaptureSnapshot());
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Fact]
+    public void Runner_RejectsRetainedEconomyMutationBeforeApplyingHandlerConsumption()
+    {
+        var economy = new ActionTokenTurnEconomy();
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+        {
+            economy.Apply(ActionTurnConsumption.Pass);
+            return BattleEncounterCommandResult.Executed(ActionTurnConsumption.Pass);
+        });
+
+        BattleEncounterResult result = Run(
+            [Participant("handler_authority_player", PlayerTeam),
+                Participant("handler_authority_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            () => economy);
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
+        Assert.Single(handler.Requests);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.Equal(new ActionTokenTurnEconomySnapshot(0, 1), economy.CaptureSnapshot());
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Fact]
+    public void Runner_RejectsEconomyMutationDuringCommandEventPublicationBeforeApply()
+    {
+        var economy = new ActionTokenTurnEconomy();
+        BattleEncounterParticipant player = Participant("event_authority_player", PlayerTeam);
+        var sink = new MutatingEventSink(
+            BattleEncounterEventKind.CommandPassed,
+            () => economy.Apply(ActionTurnConsumption.Pass));
+        var handler = new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+            ActionTurnConsumption.Pass,
+            [new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.CommandPassed,
+                new BattleCommandPassedEventPayload(player.InstanceId))]));
+
+        BattleEncounterResult result = Run(
+            [player, Participant("event_authority_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            () => economy,
+            events: sink);
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
+        Assert.Equal(new ActionTokenTurnEconomySnapshot(0, 1), economy.CaptureSnapshot());
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Fact]
+    public void Runner_RejectsRetainedEconomyMutationBeforeCommittingTurnEndLifecycle()
+    {
+        var economy = new ActionTokenTurnEconomy();
+        BattleEncounterParticipant player = Participant("turn_end_authority_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            TurnEndAction = request =>
+            {
+                request.Actor.State.SetResource(Hp, 1);
+                economy.StartPhase(1);
+            }
+        };
+
+        BattleEncounterResult result = Run(
+            [player, Participant("turn_end_authority_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(99),
+            () => economy);
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Fact]
+    public void Runner_RejectsRetainedEconomyMutationBeforeCommittingPhaseEndLifecycle()
+    {
+        var economy = new ActionTokenTurnEconomy();
+        BattleEncounterParticipant player = Participant("phase_end_authority_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            PhaseEndAction = request =>
+            {
+                request.Participants[0].State.SetResource(Hp, 1);
+                economy.StartPhase(1);
+            }
+        };
+
+        BattleEncounterResult result = Run(
+            [player, Participant("phase_end_authority_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(99),
+            () => economy);
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
         Assert.DoesNotContain(result.Events, battleEvent =>
             battleEvent.Kind == BattleEncounterEventKind.PhaseEnded);
     }
@@ -1610,6 +1769,9 @@ public sealed class BattleEncounterRunnerTests
         public IReadOnlyList<ContentId> BattleStartTeamOrder { get; private set; } = [];
         public BattleTurnStartOutcome TurnStartOutcome { get; init; } = BattleTurnStartOutcome.CanAct;
         public BattleTurnStartRestriction? Restriction { get; init; }
+        public Action<BattleEncounterTurnLifecycleRequest>? TurnStartAction { get; init; }
+        public Action<BattleEncounterTurnLifecycleRequest>? TurnEndAction { get; init; }
+        public Action<BattleEncounterLifecycleRequest>? PhaseEndAction { get; init; }
         public Action<BattleEncounterLifecycleRequest>? BattleEndAction { get; init; }
         public IReadOnlyList<BattleEncounterEvent> BattleEndEvents { get; init; } = [];
         public int BattleStartCalls { get; private set; }
@@ -1632,6 +1794,7 @@ public sealed class BattleEncounterRunnerTests
             CancellationToken cancellationToken = default)
         {
             TurnStartCalls++;
+            TurnStartAction?.Invoke(request);
             return new ValueTask<BattleTurnStartLifecycleResult>(
                 Restriction is null
                     ? new BattleTurnStartLifecycleResult(TurnStartOutcome, [])
@@ -1643,6 +1806,7 @@ public sealed class BattleEncounterRunnerTests
             CancellationToken cancellationToken = default)
         {
             TurnEndCalls++;
+            TurnEndAction?.Invoke(request);
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(Array.Empty<BattleEncounterEvent>());
         }
 
@@ -1652,6 +1816,7 @@ public sealed class BattleEncounterRunnerTests
             CancellationToken cancellationToken = default)
         {
             PhaseEndCalls++;
+            PhaseEndAction?.Invoke(request);
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
                 Array.Empty<BattleEncounterEvent>());
         }
@@ -1860,6 +2025,27 @@ public sealed class BattleEncounterRunnerTests
         }
     }
 
+    private sealed class MutatingEventSink(
+        BattleEncounterEventKind trigger,
+        Action mutation) : IBattleEncounterEventSink
+    {
+        private bool _mutated;
+
+        public ValueTask PublishAsync(
+            BattleEncounterEvent battleEvent,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_mutated && battleEvent.Kind == trigger)
+            {
+                _mutated = true;
+                mutation();
+            }
+
+            return ValueTask.CompletedTask;
+        }
+    }
+
     private sealed class CancellingEventSink(
         CancellationTokenSource cancellation,
         BattleEncounterEventKind cancelAfter) : IBattleEncounterEventSink
@@ -2008,7 +2194,7 @@ public sealed class BattleEncounterRunnerTests
     {
         BeforeCommand,
         AfterApply,
-        PhaseEnd
+        ExternallyArmed
     }
 
     public enum SnapshotDriftKind
@@ -2024,7 +2210,9 @@ public sealed class BattleEncounterRunnerTests
     {
         private static readonly ContentId StableEconomyId = Id("stable_scripted_economy");
         private static readonly ContentId DriftedEconomyId = Id("drifted_scripted_economy");
-        private int _captureCount;
+        private bool _capturedInitialSnapshot;
+        private bool _applied;
+        private bool _externalDriftActive;
         private int _remaining;
 
         public void StartPhase(int activeActorCount) => _remaining = 1;
@@ -2033,14 +2221,14 @@ public sealed class BattleEncounterRunnerTests
 
         public BattleTurnEconomySnapshot CaptureSnapshot()
         {
-            _captureCount++;
             bool shouldDrift = driftStage switch
             {
-                SnapshotDriftStage.BeforeCommand => _captureCount == 2,
-                SnapshotDriftStage.AfterApply => _captureCount == 3,
-                SnapshotDriftStage.PhaseEnd => _captureCount == 4,
+                SnapshotDriftStage.BeforeCommand => _capturedInitialSnapshot,
+                SnapshotDriftStage.AfterApply => _applied,
+                SnapshotDriftStage.ExternallyArmed => _externalDriftActive,
                 _ => false
             };
+            _capturedInitialSnapshot = true;
 
             if (!shouldDrift)
             {
@@ -2063,7 +2251,10 @@ public sealed class BattleEncounterRunnerTests
         {
             ArgumentNullException.ThrowIfNull(consumption);
             _remaining = 0;
+            _applied = true;
         }
+
+        public void ActivateDrift() => _externalDriftActive = true;
     }
 
     private sealed record ScriptedTurnEconomySnapshot : BattleTurnEconomySnapshot

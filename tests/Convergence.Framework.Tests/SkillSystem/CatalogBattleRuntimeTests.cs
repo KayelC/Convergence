@@ -1680,7 +1680,8 @@ public sealed class CatalogBattleRuntimeTests
         var engine = new ActionTokenTurnEconomy();
         engine.StartPhase(2);
 
-        engine.ConsumeAction(new TurnEconomyResolution(outcome, critical, terminates));
+        engine.Apply(ActionTurnConsumption.FromTurnEconomy(
+            new TurnEconomyResolution(outcome, critical, terminates)));
 
         Assert.Equal(expectedFull, engine.FullTokens);
         Assert.Equal(expectedBlinking, engine.PartialTokens);
@@ -1691,15 +1692,15 @@ public sealed class CatalogBattleRuntimeTests
     {
         var engine = new ActionTokenTurnEconomy();
         engine.StartPhase(2);
-        engine.ConsumeAction(new TurnEconomyResolution(
+        engine.Apply(ActionTurnConsumption.FromTurnEconomy(new TurnEconomyResolution(
             TurnEconomyOutcome.Weakness,
             AnyCritical: false,
-            TerminatesPhase: false));
+            TerminatesPhase: false)));
 
         Assert.Equal(1, engine.FullTokens);
         Assert.Equal(1, engine.PartialTokens);
 
-        engine.Pass();
+        engine.Apply(ActionTurnConsumption.Pass);
 
         Assert.Equal(1, engine.FullTokens);
         Assert.Equal(0, engine.PartialTokens);

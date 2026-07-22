@@ -75,7 +75,7 @@ public sealed class ActionOutcomeAggregationPolicyTests
         var economy = new ActionTokenTurnEconomy();
         economy.StartPhase(1);
 
-        economy.ConsumeAction(aggregate);
+        economy.Apply(ActionTurnConsumption.FromTurnEconomy(aggregate));
 
         Assert.Equal(TurnEconomyOutcome.Normal, aggregate.Outcome);
         Assert.True(aggregate.AnyCritical);

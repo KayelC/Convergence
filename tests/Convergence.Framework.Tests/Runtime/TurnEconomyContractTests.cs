@@ -280,6 +280,17 @@ public sealed class TurnEconomyContractTests
             new ActionTokenTurnEconomySnapshot(int.MaxValue, 1));
     }
 
+    [Fact]
+    public void ActionToken_ExposesApplyAsItsOnlyPublicConsumptionMutation()
+    {
+        Type type = typeof(ActionTokenTurnEconomy);
+
+        Assert.Null(type.GetMethod("ConsumeAction"));
+        Assert.Null(type.GetMethod("Pass"));
+        Assert.Null(type.GetMethod("TerminatePhase"));
+        Assert.NotNull(type.GetMethod(nameof(IBattleTurnEconomy.Apply)));
+    }
+
     private static ActionTurnConsumption Outcome(TurnEconomyOutcome outcome) =>
         ActionTurnConsumption.FromTurnEconomy(new TurnEconomyResolution(outcome, false, false));
 
