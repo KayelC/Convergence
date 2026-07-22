@@ -16,7 +16,7 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial
@@ -38,6 +38,13 @@ O3-R8 through O3-R10 corrected those boundaries with isolated regression
 coverage. O3-R11 reconciled the public guidance, accepted API baseline, content
 wording, and executable evidence, so `turn_economy` has returned to `complete`.
 The supplied transition table itself was unchanged.
+
+The owner-closure audit at `7aa3467e` reopened `turn_economy` for one shared
+event-boundary defect. Command and lifecycle ports can publish structural
+encounter kinds that look identical to runner-owned phase, turn-economy,
+fault, and battle-end events. The runtime state remains correct, but event
+sinks cannot prove provenance. The capability is `partial` until O3-R13
+enforces event ownership and O3-R14 rechecks the source and audience guidance.
 
 The actor composition correction established the intended source and ownership
 model, stage scaling, live skill choices, and save v11 restoration. Its

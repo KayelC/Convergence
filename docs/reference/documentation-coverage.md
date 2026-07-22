@@ -30,10 +30,12 @@ remain unreviewed until they complete the same process.
 O3-R7 independently verified the source and audience documents at that
 revision. A later source-first recheck reopened the developer and technical
 entries while three command-boundary defects were corrected. O3-R8 through
-O3-R11 now reconcile those boundaries and return all three Order 3 audiences to
-`reviewed`. O3-R12 independently re-read the corrected implementation and
-documents and found no remaining realistic reachable defect; Order 4 is the
-next review rather than a bulk status promotion.
+O3-R11 returned all three Order 3 audiences to `reviewed`, and O3-R12 closed
+that revision. The owner-closure audit at `7aa3467e` then found that
+port-provided events can impersonate the runner-owned structural events those
+documents tell hosts to trust. All three audiences are reopened until event
+provenance is enforced and the guidance is reverified. Order 4 remains the
+next full capability review rather than a bulk status promotion.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
@@ -61,8 +63,8 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 20 reviewed,
-32 existing_unreviewed, 16 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 17 reviewed,
+35 existing_unreviewed, 16 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|

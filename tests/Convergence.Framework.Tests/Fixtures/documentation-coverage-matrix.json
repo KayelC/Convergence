@@ -164,19 +164,19 @@
     {
       "id": "turn_economy",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/mechanics/combat-defenses-and-turns.md"],
-        "reason": "The reviewed mechanics define neutral standard actions, every Action Token transition, exact pass precedence, finite liveness, and the scheduling boundary."
+        "reason": "The confirmed mechanics define the intended Action Token rules, but the typed event-authority explanation must be reverified after port-event provenance is enforced."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/turn-economy-policies.md"],
-        "reason": "The reviewed guide covers authored binding, replacement, presentation, command-result coherence, retained economy authority, diagnostics, and scheduling."
+        "reason": "The integration guidance is implemented except that port-provided events can currently impersonate the structural events hosts are told to trust."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/turn-economy-runtime.md"],
-        "reason": "The reviewed runtime reference traces initial, intra-command, post-transition, and phase-end authority checks plus staged lifecycle commit behavior."
+        "reason": "The runtime trace correctly describes state transitions, but its typed-event authority claim is pending event-provenance enforcement and source recheck."
       }
     },
     {

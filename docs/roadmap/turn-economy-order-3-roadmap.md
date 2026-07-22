@@ -1,6 +1,6 @@
 # Turn Economy Order 3 Roadmap
 
-**Status:** complete; independently re-reviewed at `4c6dde7`
+**Status:** reopened at `7aa3467e`; event-provenance correction required
 
 **Capability:** `turn_economy`
 
@@ -11,6 +11,8 @@
 **Independent recheck:** [Turn Economy Order 3 Independent Recheck](../reviews/turn-economy-order-3-independent-recheck-2026-07-22.md)
 
 **Post-correction closure:** [Turn Economy Order 3 Post-Correction Closure Review](../reviews/turn-economy-order-3-post-correction-closure-review-2026-07-22.md)
+
+**Owner-closure audit:** [Turn Economy Order 3 Owner-Closure Audit](../reviews/turn-economy-order-3-owner-closure-audit-2026-07-22.md)
 
 ## Goal
 
@@ -55,6 +57,8 @@ actor order.
 | O3-R10 | `verified` | Prevent public record cloning from replacing Framework-calculated turn consumption or introducing null command costs. | `battle: seal turn consumption results` |
 | O3-R11 | `verified` | Reconcile the technical sequence, developer guidance, reference content wording, executable matrices, API baseline, and fresh verification evidence. | `docs: reverify turn economy order 3` |
 | O3-R12 | `verified` | Re-read the post-correction source, tests, host composition, and audience documents without treating earlier reports as authority; close only if no realistic reachable defect remains. | `docs: close turn economy order 3` |
+| O3-R13 | `pending` | Prevent command and lifecycle ports from publishing runner-owned structural encounter events; retain one canonical source for phase, economy, fault, and battle-end evidence. | `battle: enforce encounter event provenance` |
+| O3-R14 | `pending` | Reconcile audience guidance and independently re-run the Order 3 source, focused, and release gates. | `docs: close turn economy event authority` |
 
 Each checkpoint is an isolated green commit. A later checkpoint may append its
 commit and verification evidence here, but it must not rewrite an earlier
@@ -221,3 +225,17 @@ release evidence retained as its executable gate.
 O3-R12 reran 156 focused tests and the complete 1,505-test solution with no
 failures or skips. The warning-as-error Release build completed with zero
 warnings, and format and diff verification passed.
+
+## Owner-Closure Audit Reopening
+
+The source-first owner-closure audit at `7aa3467e` did not find a defect in the
+supplied Action Token or neutral transition tables, authored binding, or
+liveness guards. It did find that command and lifecycle ports can return the
+same structural event kinds that the runner uses for accepted phase,
+turn-economy, fault, and battle-end state. Those events are resequenced and
+published without provenance validation, so an event sink can receive a false
+`TurnEconomyChanged` or `BattleEnded` event before the canonical runner event.
+
+O3-R13 and O3-R14 are therefore required before formal closure. The correction
+is shared with Order 6's broader event-contract review, but no scheduler or
+Action Token balance redesign is part of this reopening.

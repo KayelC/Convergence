@@ -271,6 +271,12 @@ then re-read the current implementation, tests, host composition, and audience
 documents without using earlier conclusions as authority. It found no
 unresolved realistic reachable defect, so O3-R12 formally closes Order 3.
 
+The later [owner-closure audit](../reviews/turn-economy-order-3-owner-closure-audit-2026-07-22.md)
+reopened that conclusion at `7aa3467e`. Port-provided command and lifecycle
+events can currently impersonate runner-owned structural encounter events,
+including `TurnEconomyChanged` and `BattleEnded`. O3-R13 must enforce event
+provenance, and O3-R14 must reverify all three audiences before Order 3 closes.
+
 Order 4 is next. It reviews
 status, ailment, passive, and duration lifecycle from current source before any
 audience entry is promoted.
