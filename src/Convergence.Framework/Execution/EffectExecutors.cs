@@ -504,7 +504,7 @@ internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffe
                 target,
                 ailment,
                 definition.Chance,
-                definition.Duration,
+                definition.Lifetime ?? ailment.DefaultLifetime,
                 participants: context.Request.Participants,
                 battleKindId: context.Request.BattleKindId,
                 moonPhaseId: context.Request.MoonPhaseId,
@@ -571,10 +571,12 @@ internal sealed class RemoveAilmentEffectExecutor : TargetedEffectExecutor, IEff
         RuntimeActorState target = Target(context);
         HashSet<ContentId> ailmentIds = new(definition.AilmentIds);
         HashSet<ContentId> groupIds = new(definition.AilmentGroupIds);
-        IReadOnlyList<ContentId> removed = target.RemoveAilments(active =>
-            definition.Scope == AilmentRemovalScope.AllRemovable ||
-            ailmentIds.Contains(active.Definition.Id) ||
-            active.Definition.GroupIds.Any(groupIds.Contains));
+        IReadOnlyList<ContentId> removed = target.RemoveAilments(
+            StatusRemovalCause.CureEffect,
+            active =>
+                definition.Scope == AilmentRemovalScope.AllRemovable ||
+                ailmentIds.Contains(active.Definition.Id) ||
+                active.Definition.GroupIds.Any(groupIds.Contains));
         return Success(context, removed.Count, detail: string.Join(",", removed));
     }
 }
@@ -663,7 +665,7 @@ internal sealed class GrantChargeEffectExecutor : TargetedEffectExecutor, IEffec
             Target(context),
             definition.Charge,
             definition.Multiplier,
-            definition.Duration));
+            definition.Lifetime ?? StandardStatusLifetimes.DeploymentTransient));
         return result.Applied
             ? Success(context, definition.Multiplier, detail: definition.Charge.ToString())
             : Failure(
@@ -677,7 +679,9 @@ internal sealed class GrantShieldEffectExecutor : TargetedEffectExecutor, IEffec
 {
     public EffectExecutionResult Execute(GrantShieldEffectDefinition definition, EffectExecutionContext context)
     {
-        Target(context).GrantShield(definition.Shield, definition.Duration);
+        Target(context).GrantShield(
+            definition.Shield,
+            definition.Lifetime ?? StandardStatusLifetimes.DeploymentTransient);
         return Success(context, detail: definition.Shield.ToString());
     }
 }
@@ -689,7 +693,7 @@ internal sealed class BreakAffinityEffectExecutor : TargetedEffectExecutor, IEff
         RuntimeActorState target = Target(context);
         foreach (DamageElement element in definition.Elements)
         {
-            target.BreakAffinity(element, definition.Duration);
+            target.BreakAffinity(element, definition.Lifetime);
         }
 
         return Success(context, detail: string.Join(",", definition.Elements));
@@ -703,7 +707,7 @@ internal sealed class OverrideAffinityEffectExecutor : TargetedEffectExecutor, I
         RuntimeActorState target = Target(context);
         foreach (DamageElement element in definition.Elements)
         {
-            target.OverrideAffinity(element, definition.Affinity, definition.Duration);
+            target.OverrideAffinity(element, definition.Affinity, definition.Lifetime);
         }
         return Success(context, detail: definition.Affinity.ToString());
     }
@@ -727,7 +731,10 @@ internal sealed class RemoveStatusEffectExecutor : TargetedEffectExecutor, IEffe
                 statModifierTransitions: [modifierTransition]);
         }
 
-        int removed = target.RemoveNonModifierStatuses(kinds, definition.StatusIds);
+        int removed = target.RemoveNonModifierStatuses(
+            kinds,
+            definition.StatusIds,
+            StatusRemovalCause.DispelEffect);
         int modifierChanges = modifierTransition?.Events.Count(@event =>
             @event.Kind is StatModifierEventKind.ContributionRemoved or StatModifierEventKind.TrackRemoved) ?? 0;
         int total = removed + modifierChanges;

@@ -170,7 +170,7 @@ public sealed record InstantKillEffectDefinition(
 public sealed record ApplyAilmentEffectDefinition(
     ContentId AilmentId,
     int Chance,
-    DurationDefinition? Duration = null,
+    StatusLifetimeDefinition? Lifetime = null,
     ConditionDefinition? When = null,
     EffectFailurePolicy OnFailure = EffectFailurePolicy.Continue)
     : EffectDefinition(When, OnFailure);
@@ -232,14 +232,14 @@ public sealed record ModifyStatStageEffectDefinition : EffectDefinition
 public sealed record GrantChargeEffectDefinition(
     ChargeKind Charge,
     decimal Multiplier,
-    DurationDefinition? Duration = null,
+    StatusLifetimeDefinition? Lifetime = null,
     ConditionDefinition? When = null,
     EffectFailurePolicy OnFailure = EffectFailurePolicy.Continue)
     : EffectDefinition(When, OnFailure);
 
 public sealed record GrantShieldEffectDefinition(
     ShieldKind Shield,
-    DurationDefinition? Duration = null,
+    StatusLifetimeDefinition? Lifetime = null,
     ConditionDefinition? When = null,
     EffectFailurePolicy OnFailure = EffectFailurePolicy.Continue)
     : EffectDefinition(When, OnFailure);
@@ -248,17 +248,17 @@ public sealed record BreakAffinityEffectDefinition : EffectDefinition
 {
     public BreakAffinityEffectDefinition(
         IEnumerable<DamageElement> elements,
-        DurationDefinition duration,
+        StatusLifetimeDefinition lifetime,
         ConditionDefinition? when = null,
         EffectFailurePolicy onFailure = EffectFailurePolicy.Continue)
         : base(when, onFailure)
     {
         Elements = DefinitionCollections.Snapshot(elements);
-        Duration = duration ?? throw new ArgumentNullException(nameof(duration));
+        Lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
     }
 
     public IReadOnlyList<DamageElement> Elements { get; }
-    public DurationDefinition Duration { get; }
+    public StatusLifetimeDefinition Lifetime { get; }
 }
 
 public sealed record OverrideAffinityEffectDefinition : EffectDefinition
@@ -266,19 +266,19 @@ public sealed record OverrideAffinityEffectDefinition : EffectDefinition
     public OverrideAffinityEffectDefinition(
         IEnumerable<DamageElement> elements,
         ElementalAffinity affinity,
-        DurationDefinition duration,
+        StatusLifetimeDefinition lifetime,
         ConditionDefinition? when = null,
         EffectFailurePolicy onFailure = EffectFailurePolicy.Continue)
         : base(when, onFailure)
     {
         Elements = DefinitionCollections.Snapshot(elements);
         Affinity = affinity;
-        Duration = duration;
+        Lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
     }
 
     public IReadOnlyList<DamageElement> Elements { get; }
     public ElementalAffinity Affinity { get; }
-    public DurationDefinition Duration { get; }
+    public StatusLifetimeDefinition Lifetime { get; }
 }
 
 public sealed record RemoveStatusEffectDefinition : EffectDefinition

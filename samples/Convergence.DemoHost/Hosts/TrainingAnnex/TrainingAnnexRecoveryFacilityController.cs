@@ -162,9 +162,9 @@ internal sealed class TrainingAnnexRecoveryFacilityController
     {
         actor.SetResource(StandardProgressionIds.Hp, after.CurrentHp);
         actor.SetResource(StandardProgressionIds.Sp, after.CurrentSp);
-        actor.RemoveAilments(_ => true);
+        actor.RemoveAilments(StatusRemovalCause.CureEffect, _ => true);
         new BattleStatusLifecycleService(new TrainingAnnexMinimumRandomSource()).Cleanup(
-            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.FieldTransition),
+            new BattleStatusCleanupRequest(actor, BattleStatusDepartureReason.FieldTransition),
             statModifiers);
     }
 

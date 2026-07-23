@@ -495,7 +495,7 @@ public sealed class SkillExecutor : ISkillExecutor
                 target,
                 effect.Charge,
                 effect.Multiplier,
-                effect.Duration)).CanApply));
+                effect.Lifetime ?? StandardStatusLifetimes.DeploymentTransient)).CanApply));
         if (!applicable)
         {
             diagnostics.Add(new SkillExecutionDiagnostic(

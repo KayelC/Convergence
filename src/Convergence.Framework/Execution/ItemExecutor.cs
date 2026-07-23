@@ -465,7 +465,7 @@ public sealed class ItemExecutor : IItemExecutor
                 target.TryGetResource(restore.ResourceId, out BattleResourceState? resource) &&
                 resource is not null && resource.Current < resource.Maximum,
             RemoveAilmentEffectDefinition remove => target.Ailments.Values.Any(active =>
-                active.IsRemovable &&
+                active.Lifetime.Allows(StatusRemovalCause.CureEffect) &&
                 (remove.Scope == AilmentRemovalScope.AllRemovable ||
                  remove.AilmentIds.Contains(active.Definition.Id) ||
                  active.Definition.GroupIds.Any(remove.AilmentGroupIds.Contains))),
@@ -485,7 +485,7 @@ public sealed class ItemExecutor : IItemExecutor
                     target,
                     charge.Charge,
                     charge.Multiplier,
-                    charge.Duration)).CanApply,
+                    charge.Lifetime ?? StandardStatusLifetimes.DeploymentTransient)).CanApply,
             RemoveStatusEffectDefinition remove => HasRemovableStatus(remove, target),
             _ => true
         };

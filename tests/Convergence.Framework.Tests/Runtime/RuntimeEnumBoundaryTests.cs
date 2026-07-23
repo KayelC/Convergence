@@ -15,7 +15,7 @@ public sealed class RuntimeEnumBoundaryTests
     [Fact]
     public void ActorSnapshotConstructors_RejectUndefinedEnumValues()
     {
-        var duration = new PermanentDurationDefinition();
+        StatusLifetimeDefinition duration = StandardStatusLifetimes.Persistent;
 
         AssertUndefined("equippedItemIds", () => new RuntimeEquipmentSnapshot(
         [
@@ -91,7 +91,7 @@ public sealed class RuntimeEnumBoundaryTests
                 RuntimeInstanceId.Parse("actor"),
                 Id("convergence.clean_battle_demo:frost_duelist_demo")),
             CombatDefenseProfile.Empty);
-        var duration = new PermanentDurationDefinition();
+        StatusLifetimeDefinition duration = StandardStatusLifetimes.Persistent;
         AssertUndefined("chargeKind", () => new ChargeApplicationRequest(
             actor,
             Undefined<ChargeKind>(),
@@ -160,7 +160,7 @@ public sealed class RuntimeEnumBoundaryTests
     {
         RuntimeSaveGameSnapshot baseline = RuntimePersistenceSnapshotTests.CreateSaveSnapshot();
         RuntimeActorSnapshot source = baseline.Actors[0];
-        var duration = new PermanentDurationDefinition();
+        StatusLifetimeDefinition duration = StandardStatusLifetimes.Persistent;
         RuntimeAnalysisSnapshot malformedAnalysis = CloneWithProperty(
             new RuntimeAnalysisSnapshot(RuntimeInstanceId.Parse("target"), [AnalysisLayer.Stats]),
             nameof(RuntimeAnalysisSnapshot.Layers),

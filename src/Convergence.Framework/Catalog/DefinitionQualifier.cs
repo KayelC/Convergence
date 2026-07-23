@@ -74,7 +74,7 @@ internal static class DefinitionQualifier
             ContentReference(packId, definition.Id),
             definition.DisplayName,
             definition.Description,
-            Duration(definition.DefaultDuration),
+            Lifetime(definition.DefaultLifetime),
             AilmentBehavior(definition.TurnBehavior),
             definition.Modifiers,
             new AilmentRecoveryDefinition(
@@ -232,7 +232,7 @@ internal static class DefinitionQualifier
                 effect.Chance, effect.ResistanceCheck, OptionalCondition(packId, effect.When), effect.OnFailure),
             ApplyAilmentEffectDefinition effect => new ApplyAilmentEffectDefinition(
                 ContentReference(packId, effect.AilmentId), effect.Chance,
-                effect.Duration is null ? null : Duration(effect.Duration),
+                effect.Lifetime is null ? null : Lifetime(effect.Lifetime),
                 OptionalCondition(packId, effect.When), effect.OnFailure),
             RestoreResourceEffectDefinition effect => new RestoreResourceEffectDefinition(
                 effect.ResourceId, Amount(effect.Amount), OptionalCondition(packId, effect.When), effect.OnFailure),
@@ -250,17 +250,17 @@ internal static class DefinitionQualifier
                 OptionalCondition(packId, effect.When), effect.OnFailure),
             GrantChargeEffectDefinition effect => new GrantChargeEffectDefinition(
                 effect.Charge, effect.Multiplier,
-                effect.Duration is null ? null : Duration(effect.Duration),
+                effect.Lifetime is null ? null : Lifetime(effect.Lifetime),
                 OptionalCondition(packId, effect.When), effect.OnFailure),
             GrantShieldEffectDefinition effect => new GrantShieldEffectDefinition(
                 effect.Shield,
-                effect.Duration is null ? null : Duration(effect.Duration),
+                effect.Lifetime is null ? null : Lifetime(effect.Lifetime),
                 OptionalCondition(packId, effect.When), effect.OnFailure),
             BreakAffinityEffectDefinition effect => new BreakAffinityEffectDefinition(
-                effect.Elements, Duration(effect.Duration),
+                effect.Elements, Lifetime(effect.Lifetime),
                 OptionalCondition(packId, effect.When), effect.OnFailure),
             OverrideAffinityEffectDefinition effect => new OverrideAffinityEffectDefinition(
-                effect.Elements, effect.Affinity, Duration(effect.Duration),
+                effect.Elements, effect.Affinity, Lifetime(effect.Lifetime),
                 OptionalCondition(packId, effect.When), effect.OnFailure),
             RemoveStatusEffectDefinition effect => new RemoveStatusEffectDefinition(
                 effect.StatusKinds, effect.StatusIds, OptionalCondition(packId, effect.When), effect.OnFailure),
@@ -347,6 +347,9 @@ internal static class DefinitionQualifier
         PermanentDurationDefinition duration => duration,
         _ => throw new InvalidOperationException($"Unsupported duration definition '{definition.GetType().Name}'.")
     };
+
+    private static StatusLifetimeDefinition Lifetime(StatusLifetimeDefinition definition) =>
+        new(Duration(definition.Expiration), definition.RemovalProfile);
 
     private static CriticalDefinition Critical(CriticalDefinition definition) => definition switch
     {

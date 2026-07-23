@@ -53,8 +53,10 @@ public sealed class BattleResourceState
 }
 public sealed record ActiveAilmentState(
     AilmentDefinition Definition,
-    DurationDefinition Duration,
-    bool IsRemovable = true);
+    StatusLifetimeDefinition Lifetime)
+{
+    public DurationDefinition Duration => Lifetime.Expiration;
+}
 
 public sealed record BattleStatStageState(int Stage, DurationDefinition? Duration);
 
@@ -77,11 +79,30 @@ public static class BattleStatStageRange
         };
     }
 }
-public sealed record BattleChargeState(decimal Multiplier, DurationDefinition? Duration);
-public sealed record BattleShieldState(DurationDefinition? Duration);
-public sealed record BattleAffinityBreakState(DurationDefinition Duration);
-public sealed record BattleAffinityOverrideState(ElementalAffinity Affinity, DurationDefinition Duration);
-public sealed record BattleOtherStatusState(DurationDefinition Duration, bool IsRemovable = true);
+public sealed record BattleChargeState(decimal Multiplier, StatusLifetimeDefinition Lifetime)
+{
+    public DurationDefinition Duration => Lifetime.Expiration;
+}
+
+public sealed record BattleShieldState(StatusLifetimeDefinition Lifetime)
+{
+    public DurationDefinition Duration => Lifetime.Expiration;
+}
+
+public sealed record BattleAffinityBreakState(StatusLifetimeDefinition Lifetime)
+{
+    public DurationDefinition Duration => Lifetime.Expiration;
+}
+
+public sealed record BattleAffinityOverrideState(ElementalAffinity Affinity, StatusLifetimeDefinition Lifetime)
+{
+    public DurationDefinition Duration => Lifetime.Expiration;
+}
+
+public sealed record BattleOtherStatusState(StatusLifetimeDefinition Lifetime)
+{
+    public DurationDefinition Duration => Lifetime.Expiration;
+}
 
 public enum BattleDurationStateKind
 {
@@ -100,6 +121,11 @@ public sealed record BattleDurationTickResult(
     DurationDefinition? CurrentDuration,
     bool Expired,
     BattleDurationStateKind StateKind);
+
+public sealed record BattleStatusRemovalResult(
+    ContentId Id,
+    BattleDurationStateKind StateKind,
+    StatusRemovalCause Cause);
 
 public sealed class RuntimeActorState
 {
@@ -374,32 +400,45 @@ public sealed class RuntimeActorState
         Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
     }
 
-    public void ApplyAilment(AilmentDefinition definition, DurationDefinition duration)
+    public void ApplyAilment(AilmentDefinition definition, StatusLifetimeDefinition lifetime)
     {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(lifetime);
         if (definition.ExclusivityGroupId is ContentId exclusivityGroup)
         {
-            foreach (ContentId existingId in _ailments
-                         .Where(pair => pair.Value.Definition.ExclusivityGroupId == exclusivityGroup)
-                         .Select(pair => pair.Key)
-                         .ToArray())
+            ActiveAilmentState[] existing = _ailments.Values
+                .Where(active => active.Definition.ExclusivityGroupId == exclusivityGroup)
+                .ToArray();
+            if (existing.Any(active =>
+                    active.Definition.Id != definition.Id &&
+                    !active.Lifetime.Allows(StatusRemovalCause.ExclusivityReplacement)))
+            {
+                throw new InvalidOperationException(
+                    $"A protected ailment in exclusivity group '{exclusivityGroup}' cannot be replaced.");
+            }
+
+            foreach (ContentId existingId in existing
+                         .Where(active => active.Definition.Id != definition.Id)
+                         .Select(active => active.Definition.Id))
             {
                 _ailments.Remove(existingId);
             }
         }
 
-        _ailments[definition.Id] = new ActiveAilmentState(definition, duration);
+        _ailments[definition.Id] = new ActiveAilmentState(definition, lifetime);
     }
 
-    public void ApplyAilment(AilmentDefinition definition, DurationDefinition duration, bool isRemovable)
+    public IReadOnlyList<ContentId> RemoveAilments(
+        StatusRemovalCause cause,
+        Func<ActiveAilmentState, bool> predicate)
     {
-        ApplyAilment(definition, duration);
-        _ailments[definition.Id] = _ailments[definition.Id] with { IsRemovable = isRemovable };
-    }
-
-    public IReadOnlyList<ContentId> RemoveAilments(Func<ActiveAilmentState, bool> predicate)
-    {
+        if (!Enum.IsDefined(cause))
+        {
+            throw new ArgumentOutOfRangeException(nameof(cause));
+        }
+        ArgumentNullException.ThrowIfNull(predicate);
         ContentId[] removed = _ailments
-            .Where(pair => pair.Value.IsRemovable && predicate(pair.Value))
+            .Where(pair => pair.Value.Lifetime.Allows(cause) && predicate(pair.Value))
             .Select(pair => pair.Key)
             .ToArray();
         foreach (ContentId id in removed)
@@ -450,10 +489,10 @@ public sealed class RuntimeActorState
         return _chargePolicyId is ContentId policyId
             ? new RuntimeChargeStateSnapshot(
             policyId,
-            _charges.Select(pair => new RuntimeChargeSnapshot(
-                pair.Key,
-                pair.Value.Multiplier,
-                pair.Value.Duration)))
+             _charges.Select(pair => new RuntimeChargeSnapshot(
+                 pair.Key,
+                 pair.Value.Multiplier,
+                 pair.Value.Lifetime)))
             : null;
     }
 
@@ -479,7 +518,10 @@ public sealed class RuntimeActorState
         _charges.Add(kind, state);
     }
 
-    internal void RemoveCharge(ContentId policyId, ChargeKind kind)
+    internal bool RemoveCharge(
+        ContentId policyId,
+        ChargeKind kind,
+        StatusRemovalCause cause)
     {
         if (_chargePolicyId is ContentId active && active != policyId)
         {
@@ -487,16 +529,24 @@ public sealed class RuntimeActorState
                 $"Actor '{InstanceId}' charge state belongs to policy '{active}', not '{policyId}'.");
         }
 
-        _charges.Remove(kind);
+        if (!Enum.IsDefined(cause))
+        {
+            throw new ArgumentOutOfRangeException(nameof(cause));
+        }
+
+        return _charges.TryGetValue(kind, out BattleChargeState? state) &&
+            state.Lifetime.Allows(cause) &&
+            _charges.Remove(kind);
     }
 
-    public void GrantShield(ShieldKind kind, DurationDefinition? duration)
+    public void GrantShield(ShieldKind kind, StatusLifetimeDefinition lifetime)
     {
         EnumDomain.RequireDefined(kind, nameof(kind));
-        _shields[kind] = new BattleShieldState(duration);
+        _shields[kind] = new BattleShieldState(
+            lifetime ?? throw new ArgumentNullException(nameof(lifetime)));
     }
 
-    public void BreakAffinity(DamageElement element, DurationDefinition duration)
+    public void BreakAffinity(DamageElement element, StatusLifetimeDefinition lifetime)
     {
         EnumDomain.RequireDefined(element, nameof(element));
         if (element == DamageElement.Almighty)
@@ -505,28 +555,31 @@ public sealed class RuntimeActorState
         }
 
         _affinityBreaks[element] = new BattleAffinityBreakState(
-            duration ?? throw new ArgumentNullException(nameof(duration)));
+            lifetime ?? throw new ArgumentNullException(nameof(lifetime)));
     }
 
     public void SetGuarding(bool isGuarding) => IsGuarding = isGuarding;
 
-    public void OverrideAffinity(DamageElement element, ElementalAffinity affinity, DurationDefinition duration)
+    public void OverrideAffinity(
+        DamageElement element,
+        ElementalAffinity affinity,
+        StatusLifetimeDefinition lifetime)
     {
         EnumDomain.RequireDefined(element, nameof(element));
         EnumDomain.RequireDefined(affinity, nameof(affinity));
-        _affinityOverrides[element] = new BattleAffinityOverrideState(affinity, duration);
+        _affinityOverrides[element] = new BattleAffinityOverrideState(
+            affinity,
+            lifetime ?? throw new ArgumentNullException(nameof(lifetime)));
     }
 
     public void AddOtherStatus(ContentId statusId) =>
-        AddOtherStatus(statusId, new PermanentDurationDefinition());
+        AddOtherStatus(statusId, StandardStatusLifetimes.Persistent);
 
     public void AddOtherStatus(
         ContentId statusId,
-        DurationDefinition duration,
-        bool isRemovable = true) =>
+        StatusLifetimeDefinition lifetime) =>
         _otherStatuses[statusId] = new BattleOtherStatusState(
-            duration ?? throw new ArgumentNullException(nameof(duration)),
-            isRemovable);
+            lifetime ?? throw new ArgumentNullException(nameof(lifetime)));
 
     public IReadOnlyList<BattleDurationTickResult> TickAilmentDurations(ContentId eventId)
     {
@@ -550,7 +603,10 @@ public sealed class RuntimeActorState
             }
             else if (current is not null)
             {
-                _ailments[id] = state with { Duration = current };
+                _ailments[id] = state with
+                {
+                    Lifetime = state.Lifetime.WithExpiration(current!)
+                };
             }
         }
 
@@ -563,8 +619,7 @@ public sealed class RuntimeActorState
 
         foreach ((ChargeKind kind, BattleChargeState state) in _charges.ToArray())
         {
-            if (state.Duration is null ||
-                !TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -582,14 +637,16 @@ public sealed class RuntimeActorState
             }
             else
             {
-                _charges[kind] = state with { Duration = current };
+                _charges[kind] = state with
+                {
+                    Lifetime = state.Lifetime.WithExpiration(current!)
+                };
             }
         }
 
         foreach ((ShieldKind kind, BattleShieldState state) in _shields.ToArray())
         {
-            if (state.Duration is null ||
-                !TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -607,7 +664,10 @@ public sealed class RuntimeActorState
             }
             else
             {
-                _shields[kind] = state with { Duration = current };
+                _shields[kind] = state with
+                {
+                    Lifetime = state.Lifetime.WithExpiration(current!)
+                };
             }
         }
 
@@ -631,7 +691,10 @@ public sealed class RuntimeActorState
             }
             else if (current is not null)
             {
-                _affinityOverrides[element] = state with { Duration = current };
+                _affinityOverrides[element] = state with
+                {
+                    Lifetime = new StatusLifetimeDefinition(current, state.Lifetime.RemovalProfile)
+                };
             }
         }
 
@@ -655,7 +718,10 @@ public sealed class RuntimeActorState
             }
             else if (current is not null)
             {
-                _affinityBreaks[element] = state with { Duration = current };
+                _affinityBreaks[element] = state with
+                {
+                    Lifetime = new StatusLifetimeDefinition(current, state.Lifetime.RemovalProfile)
+                };
             }
         }
 
@@ -678,7 +744,10 @@ public sealed class RuntimeActorState
             }
             else if (current is not null)
             {
-                _otherStatuses[id] = state with { Duration = current };
+                _otherStatuses[id] = state with
+                {
+                    Lifetime = new StatusLifetimeDefinition(current, state.Lifetime.RemovalProfile)
+                };
             }
         }
 
@@ -692,105 +761,143 @@ public sealed class RuntimeActorState
         ExpireDurations(duration =>
             duration is PhaseDurationDefinition phase && phase.PhaseId == phaseId);
 
-    public void ClearTransientStatuses()
+    public IReadOnlyList<BattleDurationTickResult> ExpireBattleDurations() =>
+        ExpireDurations(duration => duration is BattleDurationDefinition);
+
+    internal IReadOnlyList<BattleStatusRemovalResult> RemoveStatuses(StatusRemovalCause cause)
     {
-        IsGuarding = false;
-        foreach (ChargeKind kind in _charges
-                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
-                     .Select(pair => pair.Key)
-                     .ToArray())
+        if (!Enum.IsDefined(cause))
         {
-            _charges.Remove(kind);
+            throw new ArgumentOutOfRangeException(nameof(cause));
         }
 
-        foreach (ShieldKind kind in _shields
-                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
-                     .Select(pair => pair.Key)
-                     .ToArray())
-        {
-            _shields.Remove(kind);
-        }
-    }
-
-    public void ClearEncounterStatuses()
-    {
+        var removed = new List<BattleStatusRemovalResult>();
         foreach (ContentId id in _ailments
-                     .Where(pair => pair.Value.Duration is
-                         InstantDurationDefinition or PhaseDurationDefinition or BattleDurationDefinition)
+                     .Where(pair => pair.Value.Lifetime.Allows(cause))
                      .Select(pair => pair.Key)
                      .ToArray())
         {
             _ailments.Remove(id);
+            removed.Add(new BattleStatusRemovalResult(id, BattleDurationStateKind.Ailment, cause));
         }
 
         foreach (ChargeKind kind in _charges
-                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Where(pair => pair.Value.Lifetime.Allows(cause))
                      .Select(pair => pair.Key)
                      .ToArray())
         {
             _charges.Remove(kind);
+            removed.Add(new BattleStatusRemovalResult(
+                ContentId.Parse("charge_" + kind.ToString().ToLowerInvariant()),
+                BattleDurationStateKind.Charge,
+                cause));
         }
 
         foreach (ShieldKind kind in _shields
-                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Where(pair => pair.Value.Lifetime.Allows(cause))
                      .Select(pair => pair.Key)
                      .ToArray())
         {
             _shields.Remove(kind);
+            removed.Add(new BattleStatusRemovalResult(
+                ContentId.Parse("shield_" + kind.ToString().ToLowerInvariant()),
+                BattleDurationStateKind.Shield,
+                cause));
         }
 
         foreach (DamageElement element in _affinityOverrides
-                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Where(pair => pair.Value.Lifetime.Allows(cause))
                      .Select(pair => pair.Key)
                      .ToArray())
         {
             _affinityOverrides.Remove(element);
+            removed.Add(new BattleStatusRemovalResult(
+                ContentId.Parse("affinity_override_" + element.ToString().ToLowerInvariant()),
+                BattleDurationStateKind.AffinityOverride,
+                cause));
         }
 
         foreach (DamageElement element in _affinityBreaks
-                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Where(pair => pair.Value.Lifetime.Allows(cause))
                      .Select(pair => pair.Key)
                      .ToArray())
         {
             _affinityBreaks.Remove(element);
+            removed.Add(new BattleStatusRemovalResult(
+                ContentId.Parse("affinity_break_" + element.ToString().ToLowerInvariant()),
+                BattleDurationStateKind.AffinityBreak,
+                cause));
         }
 
         foreach (ContentId id in _otherStatuses
-                     .Where(pair => pair.Value.Duration is not PermanentDurationDefinition)
+                     .Where(pair => pair.Value.Lifetime.Allows(cause))
                      .Select(pair => pair.Key)
                      .ToArray())
         {
             _otherStatuses.Remove(id);
+            removed.Add(new BattleStatusRemovalResult(id, BattleDurationStateKind.OtherStatus, cause));
         }
+
+        return Array.AsReadOnly(removed.ToArray());
     }
 
     internal int RemoveNonModifierStatuses(
         IReadOnlySet<StatusEffectKind> kinds,
-        IEnumerable<ContentId> statusIds)
+        IEnumerable<ContentId> statusIds,
+        StatusRemovalCause cause)
     {
+        if (!Enum.IsDefined(cause))
+        {
+            throw new ArgumentOutOfRangeException(nameof(cause));
+        }
         int before = _charges.Count + _shields.Count + _affinityBreaks.Count +
             _affinityOverrides.Count + _otherStatuses.Count;
         if (kinds.Contains(StatusEffectKind.Charge))
         {
-            _charges.Clear();
+            foreach (ChargeKind kind in _charges
+                         .Where(pair => pair.Value.Lifetime.Allows(cause))
+                         .Select(pair => pair.Key)
+                         .ToArray())
+            {
+                _charges.Remove(kind);
+            }
         }
         if (kinds.Contains(StatusEffectKind.Shield))
         {
-            _shields.Clear();
+            foreach (ShieldKind kind in _shields
+                         .Where(pair => pair.Value.Lifetime.Allows(cause))
+                         .Select(pair => pair.Key)
+                         .ToArray())
+            {
+                _shields.Remove(kind);
+            }
         }
         if (kinds.Contains(StatusEffectKind.AffinityBreak))
         {
-            _affinityBreaks.Clear();
+            foreach (DamageElement element in _affinityBreaks
+                         .Where(pair => pair.Value.Lifetime.Allows(cause))
+                         .Select(pair => pair.Key)
+                         .ToArray())
+            {
+                _affinityBreaks.Remove(element);
+            }
         }
         if (kinds.Contains(StatusEffectKind.AffinityOverride))
         {
-            _affinityOverrides.Clear();
+            foreach (DamageElement element in _affinityOverrides
+                         .Where(pair => pair.Value.Lifetime.Allows(cause))
+                         .Select(pair => pair.Key)
+                         .ToArray())
+            {
+                _affinityOverrides.Remove(element);
+            }
         }
         if (kinds.Contains(StatusEffectKind.Other))
         {
             foreach (ContentId statusId in statusIds)
             {
-                if (_otherStatuses.TryGetValue(statusId, out BattleOtherStatusState? state) && state.IsRemovable)
+                if (_otherStatuses.TryGetValue(statusId, out BattleOtherStatusState? state) &&
+                    state.Lifetime.Allows(cause))
                 {
                     _otherStatuses.Remove(statusId);
                 }
@@ -1143,14 +1250,13 @@ public sealed class RuntimeActorState
                 ailment.Id,
                 new ActiveAilmentState(
                     ailments[ailment.Id],
-                    ailment.Duration,
-                    ailment.IsRemovable));
+                    ailment.Lifetime));
         }
 
         _otherStatuses.Clear();
         foreach (RuntimeTimedStateSnapshot other in status.Statuses)
         {
-            _otherStatuses.Add(other.Id, new BattleOtherStatusState(other.Duration, other.IsRemovable));
+            _otherStatuses.Add(other.Id, new BattleOtherStatusState(other.Lifetime));
         }
 
         if (status.StatModifiers is RuntimeStatModifierStateSnapshot modifiers)
@@ -1196,13 +1302,13 @@ public sealed class RuntimeActorState
         _chargePolicyId = status.ChargeState?.PolicyId;
         foreach (RuntimeChargeSnapshot charge in status.Charges)
         {
-            _charges.Add(charge.Kind, new BattleChargeState(charge.Multiplier, charge.Duration));
+            _charges.Add(charge.Kind, new BattleChargeState(charge.Multiplier, charge.Lifetime));
         }
 
         _shields.Clear();
         foreach (RuntimeShieldSnapshot shield in status.Shields)
         {
-            _shields.Add(shield.Kind, new BattleShieldState(shield.Duration));
+            _shields.Add(shield.Kind, new BattleShieldState(shield.Lifetime));
         }
 
         _affinityBreaks.Clear();
@@ -1210,7 +1316,7 @@ public sealed class RuntimeActorState
         {
             _affinityBreaks.Add(
                 affinityBreak.Element,
-                new BattleAffinityBreakState(affinityBreak.Duration));
+                new BattleAffinityBreakState(affinityBreak.Lifetime));
         }
 
         _affinityOverrides.Clear();
@@ -1218,7 +1324,7 @@ public sealed class RuntimeActorState
         {
             _affinityOverrides.Add(
                 affinity.Element,
-                new BattleAffinityOverrideState(affinity.Affinity, affinity.Duration));
+                new BattleAffinityOverrideState(affinity.Affinity, affinity.Lifetime));
         }
 
         IsGuarding = status.IsGuarding;
@@ -1240,12 +1346,10 @@ public sealed class RuntimeActorState
         new(
             _ailments.Select(pair => new RuntimeTimedStateSnapshot(
                 pair.Key,
-                pair.Value.Duration,
-                pair.Value.IsRemovable)),
+                pair.Value.Lifetime)),
             _otherStatuses.Select(pair => new RuntimeTimedStateSnapshot(
                 pair.Key,
-                pair.Value.Duration,
-                pair.Value.IsRemovable)),
+                pair.Value.Lifetime)),
             _statModifierState,
             _chargePolicyId is ContentId chargePolicyId
                 ? new RuntimeChargeStateSnapshot(
@@ -1253,18 +1357,18 @@ public sealed class RuntimeActorState
                     _charges.Select(pair => new RuntimeChargeSnapshot(
                         pair.Key,
                         pair.Value.Multiplier,
-                        pair.Value.Duration)))
+                        pair.Value.Lifetime)))
                 : null,
-            _shields.Select(pair => new RuntimeShieldSnapshot(pair.Key, pair.Value.Duration)),
+            _shields.Select(pair => new RuntimeShieldSnapshot(pair.Key, pair.Value.Lifetime)),
             _affinityOverrides.Select(pair => new RuntimeAffinityOverrideSnapshot(
                 pair.Key,
                 pair.Value.Affinity,
-                pair.Value.Duration)),
+                pair.Value.Lifetime)),
             IsGuarding,
             _analysis.Select(pair => new RuntimeAnalysisSnapshot(pair.Key, pair.Value)),
             _affinityBreaks.Select(pair => new RuntimeAffinityBreakSnapshot(
                 pair.Key,
-                pair.Value.Duration)));
+                pair.Value.Lifetime)));
 
     private Dictionary<ContentId, BattleStatStageState> ProjectStatStages()
     {
@@ -1302,7 +1406,7 @@ public sealed class RuntimeActorState
 
         foreach ((ContentId id, ActiveAilmentState state) in _ailments.ToArray())
         {
-            if (!predicate(state.Duration))
+            if (!predicate(state.Duration) || !state.Lifetime.Allows(StatusRemovalCause.DurationExpired))
             {
                 continue;
             }
@@ -1313,7 +1417,7 @@ public sealed class RuntimeActorState
 
         foreach ((ChargeKind kind, BattleChargeState state) in _charges.ToArray())
         {
-            if (state.Duration is null || !predicate(state.Duration))
+            if (!predicate(state.Duration) || !state.Lifetime.Allows(StatusRemovalCause.DurationExpired))
             {
                 continue;
             }
@@ -1327,7 +1431,7 @@ public sealed class RuntimeActorState
 
         foreach ((ShieldKind kind, BattleShieldState state) in _shields.ToArray())
         {
-            if (state.Duration is null || !predicate(state.Duration))
+            if (!predicate(state.Duration) || !state.Lifetime.Allows(StatusRemovalCause.DurationExpired))
             {
                 continue;
             }
@@ -1341,7 +1445,7 @@ public sealed class RuntimeActorState
 
         foreach ((DamageElement element, BattleAffinityOverrideState state) in _affinityOverrides.ToArray())
         {
-            if (!predicate(state.Duration))
+            if (!predicate(state.Duration) || !state.Lifetime.Allows(StatusRemovalCause.DurationExpired))
             {
                 continue;
             }
@@ -1355,7 +1459,7 @@ public sealed class RuntimeActorState
 
         foreach ((DamageElement element, BattleAffinityBreakState state) in _affinityBreaks.ToArray())
         {
-            if (!predicate(state.Duration))
+            if (!predicate(state.Duration) || !state.Lifetime.Allows(StatusRemovalCause.DurationExpired))
             {
                 continue;
             }
@@ -1369,7 +1473,7 @@ public sealed class RuntimeActorState
 
         foreach ((ContentId id, BattleOtherStatusState state) in _otherStatuses.ToArray())
         {
-            if (!predicate(state.Duration))
+            if (!predicate(state.Duration) || !state.Lifetime.Allows(StatusRemovalCause.DurationExpired))
             {
                 continue;
             }

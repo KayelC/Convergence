@@ -116,7 +116,7 @@ public sealed class CleanSaveDemoHostTests
                 [
                     new RuntimeTimedStateSnapshot(
                         ContentId.Parse("focused"),
-                        new PermanentDurationDefinition())
+                        StandardStatusLifetimes.Persistent)
                 ],
                 statModifiers: new RuntimeStatModifierStateSnapshot(
                     ContentId.Parse("test.pack:timed_contribution"),
@@ -139,22 +139,26 @@ public sealed class CleanSaveDemoHostTests
                     ]),
                 chargeState: new RuntimeChargeStateSnapshot(
                     StandardChargePolicyIds.Split,
-                    [new RuntimeChargeSnapshot(ChargeKind.Magical, 2.5m)]),
+                    [new RuntimeChargeSnapshot(
+                        ChargeKind.Magical,
+                        2.5m,
+                        StandardStatusLifetimes.DeploymentTransient)]),
                 affinityOverrides:
                 [
                     new RuntimeAffinityOverrideSnapshot(
                         DamageElement.Ice,
                         ElementalAffinity.Resist,
-                        new BattleDurationDefinition())
+                        StandardStatusLifetimes.Encounter(new BattleDurationDefinition()))
                 ],
                 affinityBreaks:
                 [
                     new RuntimeAffinityBreakSnapshot(
                         DamageElement.Fire,
-                        new TurnDurationDefinition(
-                            2,
-                            ContentId.Parse("owner_turn_end"),
-                            true))
+                        StandardStatusLifetimes.Encounter(
+                            new TurnDurationDefinition(
+                                2,
+                                ContentId.Parse("owner_turn_end"),
+                                true)))
                 ],
                 isGuarding: true,
                 analysis:
@@ -179,7 +183,10 @@ public sealed class CleanSaveDemoHostTests
         RuntimeActorSnapshot restoredActor = Assert.Single(restored.Actors);
 
         Assert.Equal(original.VitalResourceId, restoredActor.VitalResourceId);
-        Assert.IsType<PermanentDurationDefinition>(Assert.Single(restoredActor.BattleStatus.Statuses).Duration);
+        RuntimeTimedStateSnapshot restoredStatus = Assert.Single(restoredActor.BattleStatus.Statuses);
+        Assert.IsType<PermanentDurationDefinition>(restoredStatus.Duration);
+        Assert.True(restoredStatus.Lifetime.Allows(StatusRemovalCause.DispelEffect));
+        Assert.False(restoredStatus.Lifetime.Allows(StatusRemovalCause.BattleEnd));
         RuntimeStatModifierStateSnapshot modifiers = Assert.IsType<RuntimeStatModifierStateSnapshot>(
             restoredActor.BattleStatus.StatModifiers);
         RuntimeStatModifierContributionSnapshot contribution = Assert.Single(
@@ -189,9 +196,13 @@ public sealed class CleanSaveDemoHostTests
         RuntimeChargeStateSnapshot charges = Assert.IsType<RuntimeChargeStateSnapshot>(
             restoredActor.BattleStatus.ChargeState);
         Assert.Equal(StandardChargePolicyIds.Split, charges.PolicyId);
-        Assert.Equal(2.5m, Assert.Single(charges.Charges).Multiplier);
-        Assert.IsType<TurnDurationDefinition>(Assert.Single(restoredActor.BattleStatus.AffinityBreaks).Duration);
-        Assert.Equal(DamageElement.Fire, Assert.Single(restoredActor.BattleStatus.AffinityBreaks).Element);
+        RuntimeChargeSnapshot restoredCharge = Assert.Single(charges.Charges);
+        Assert.Equal(2.5m, restoredCharge.Multiplier);
+        Assert.True(restoredCharge.Lifetime.Allows(StatusRemovalCause.DeploymentSwap));
+        RuntimeAffinityBreakSnapshot restoredBreak = Assert.Single(restoredActor.BattleStatus.AffinityBreaks);
+        Assert.IsType<TurnDurationDefinition>(restoredBreak.Duration);
+        Assert.Equal(DamageElement.Fire, restoredBreak.Element);
+        Assert.False(restoredBreak.Lifetime.Allows(StatusRemovalCause.DeploymentSwap));
         Assert.IsType<BattleDurationDefinition>(Assert.Single(restoredActor.BattleStatus.AffinityOverrides).Duration);
         Assert.True(restoredActor.BattleStatus.IsGuarding);
         Assert.Equal(RuntimeInstanceId.Parse("enemy_1"), Assert.Single(restoredActor.BattleStatus.Analysis).TargetInstanceId);

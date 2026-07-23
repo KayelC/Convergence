@@ -157,7 +157,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
             statusEvents.AddRange(_lifecycle.Cleanup(
                 new BattleStatusCleanupRequest(
                     participant.State,
-                    BattleStatusCleanupScope.BattleEnd),
+                    BattleStatusDepartureReason.BattleEnd),
                 _executionServices.StatModifiers).Events);
         }
 

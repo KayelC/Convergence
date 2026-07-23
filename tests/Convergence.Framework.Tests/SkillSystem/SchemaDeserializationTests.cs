@@ -122,7 +122,7 @@ public sealed class SchemaDeserializationTests
             Assert.IsType<InstantKillEffectDefinition>(skill.Effects[1]).ResistanceCheck);
         BreakAffinityEffectDefinition affinityBreak = Assert.IsType<BreakAffinityEffectDefinition>(skill.Effects[9]);
         Assert.Equal([DamageElement.Fire, DamageElement.Ice], affinityBreak.Elements);
-        Assert.IsType<BattleDurationDefinition>(affinityBreak.Duration);
+        Assert.IsType<BattleDurationDefinition>(affinityBreak.Lifetime.Expiration);
         Assert.IsType<FormulaAmountDefinition>(Assert.IsType<SetResourceEffectDefinition>(skill.Effects[13]).Amount);
     }
 

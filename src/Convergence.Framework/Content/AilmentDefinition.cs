@@ -81,7 +81,7 @@ public sealed record AilmentDefinition
         ContentId id,
         string displayName,
         string description,
-        DurationDefinition defaultDuration,
+        StatusLifetimeDefinition defaultLifetime,
         AilmentTurnBehaviorDefinition turnBehavior,
         AilmentModifiersDefinition modifiers,
         AilmentRecoveryDefinition recovery,
@@ -94,7 +94,7 @@ public sealed record AilmentDefinition
         Description = description;
         GroupIds = DefinitionCollections.Snapshot(groupIds);
         ExclusivityGroupId = exclusivityGroupId;
-        DefaultDuration = defaultDuration;
+        DefaultLifetime = defaultLifetime ?? throw new ArgumentNullException(nameof(defaultLifetime));
         TurnBehavior = turnBehavior;
         Modifiers = modifiers;
         Triggers = DefinitionCollections.Snapshot(triggers);
@@ -106,7 +106,7 @@ public sealed record AilmentDefinition
     public string Description { get; }
     public IReadOnlyList<ContentId> GroupIds { get; }
     public ContentId? ExclusivityGroupId { get; }
-    public DurationDefinition DefaultDuration { get; }
+    public StatusLifetimeDefinition DefaultLifetime { get; }
     public AilmentTurnBehaviorDefinition TurnBehavior { get; }
     public AilmentModifiersDefinition Modifiers { get; }
     public IReadOnlyList<PassiveTriggerDefinition> Triggers { get; }

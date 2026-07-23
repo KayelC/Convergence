@@ -267,7 +267,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 11;
+    public const int CurrentContractVersion = 12;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,

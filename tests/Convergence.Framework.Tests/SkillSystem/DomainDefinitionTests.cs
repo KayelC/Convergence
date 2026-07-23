@@ -392,7 +392,7 @@ public sealed class DomainDefinitionTests
             ContentId.Parse("poison"),
             "Poison",
             "Deals damage at the end of the afflicted combatant's turn.",
-            new TurnDurationDefinition(3, ContentId.Parse("owner_turn_end"), true),
+            FieldLifetime(new TurnDurationDefinition(3, ContentId.Parse("owner_turn_end"), true)),
             new NormalAilmentTurnBehaviorDefinition(),
             new AilmentModifiersDefinition(1, 0, 1, 1, false),
             new AilmentRecoveryDefinition(
@@ -414,6 +414,40 @@ public sealed class DomainDefinitionTests
         Assert.Equal(ContentId.Parse("major_ailment"), poison.ExclusivityGroupId);
         Assert.IsType<NormalAilmentTurnBehaviorDefinition>(poison.TurnBehavior);
         Assert.IsType<ReduceResourceEffectDefinition>(Assert.Single(Assert.Single(poison.Triggers).Effects));
+    }
+
+    [Fact]
+    public void StatusLifetimes_DefensivelySeparateExpirationFromRemovalPermissions()
+    {
+        var causes = new List<StatusRemovalCause>
+        {
+            StatusRemovalCause.DurationExpired,
+            StatusRemovalCause.DispelEffect
+        };
+        var profile = new StatusRemovalProfileDefinition(causes);
+        var expiration = new TurnDurationDefinition(
+            3,
+            ContentId.Parse("owner_turn_end"),
+            true);
+        var lifetime = new StatusLifetimeDefinition(expiration, profile);
+        causes.Clear();
+
+        Assert.Equal(
+            [StatusRemovalCause.DispelEffect, StatusRemovalCause.DurationExpired],
+            lifetime.RemovalProfile.AllowedCauses);
+        Assert.True(lifetime.Allows(StatusRemovalCause.DispelEffect));
+        Assert.False(lifetime.Allows(StatusRemovalCause.BattleEnd));
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<StatusRemovalCause>)lifetime.RemovalProfile.AllowedCauses).Clear());
+        Assert.Throws<ArgumentException>(() => new StatusLifetimeDefinition(
+            expiration,
+            new StatusRemovalProfileDefinition([])));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new StatusRemovalProfileDefinition(
+            [(StatusRemovalCause)999]));
+
+        Assert.True(StandardStatusLifetimes.Persistent.Allows(StatusRemovalCause.DispelEffect));
+        Assert.False(StandardStatusLifetimes.Persistent.Allows(StatusRemovalCause.BattleEnd));
+        Assert.False(StandardStatusLifetimes.ProtectedPersistent.Allows(StatusRemovalCause.DispelEffect));
     }
 
     [Fact]
@@ -526,7 +560,7 @@ public sealed class DomainDefinitionTests
         var elements = new List<DamageElement> { DamageElement.Fire };
         var definition = new BreakAffinityEffectDefinition(
             elements,
-            new BattleDurationDefinition());
+            EncounterLifetime(new BattleDurationDefinition()));
 
         elements.Clear();
 

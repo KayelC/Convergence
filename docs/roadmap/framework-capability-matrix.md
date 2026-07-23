@@ -59,7 +59,7 @@ unchanged. O3-R17 re-read the corrected source and all three audience
 documents. `turn_economy` is complete again with no named gap.
 
 The actor composition correction established the intended source and ownership
-model, stage scaling, live skill choices, and save v11 restoration. Its
+model, stage scaling, live skill choices, and save v12 restoration. Its
 independent completion review found six reachable integration gaps; all are
 corrected with isolated regression coverage. The only deferred capabilities
 remain save-version migration between released contracts and full

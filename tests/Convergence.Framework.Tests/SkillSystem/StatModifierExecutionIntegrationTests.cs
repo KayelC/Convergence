@@ -241,7 +241,7 @@ public sealed class StatModifierExecutionIntegrationTests
         }
 
         lifecycle.Cleanup(
-            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.BattleEnd),
+            new BattleStatusCleanupRequest(actor, BattleStatusDepartureReason.BattleEnd),
             policy);
         Assert.Empty(actor.StatStages);
     }
@@ -545,11 +545,11 @@ public sealed class StatModifierExecutionIntegrationTests
 
         var lifecycle = new BattleStatusLifecycleService(new MinimumRandomSource());
         lifecycle.Cleanup(
-            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.Swap),
+            new BattleStatusCleanupRequest(actor, BattleStatusDepartureReason.DeploymentSwap),
             policy);
         Assert.Equal(-1, actor.StatStages[Defense].Stage);
         lifecycle.Cleanup(
-            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.BattleEnd),
+            new BattleStatusCleanupRequest(actor, BattleStatusDepartureReason.BattleEnd),
             policy);
         Assert.Empty(actor.StatStages);
     }

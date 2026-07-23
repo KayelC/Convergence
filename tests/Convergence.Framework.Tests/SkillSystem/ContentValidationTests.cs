@@ -291,7 +291,8 @@ public sealed class ContentValidationTests
                     DamageElement.Fire, -1, 101, new ChanceCriticalDefinition(-1),
                     new HitCountDefinition(2, 1, HitDistribution.Fixed)),
                 new ApplyAilmentEffectDefinition(
-                    Id("poison"), 101, new TurnDurationDefinition(0, Id("owner_turn_end"), false)),
+                    Id("poison"), 101,
+                    FieldLifetime(new TurnDurationDefinition(0, Id("owner_turn_end"), false))),
                 new ModifyStatStageEffectDefinition([], 0),
                 new GrantChargeEffectDefinition(ChargeKind.Magical, 0)
             ],
@@ -638,9 +639,10 @@ public sealed class ContentValidationTests
                     When: new AllConditionDefinition([])),
                 new RemoveAilmentEffectDefinition(AilmentRemovalScope.Selected),
                 new BreakAffinityEffectDefinition(
-                    [DamageElement.Almighty], new InstantDurationDefinition()),
+                    [DamageElement.Almighty], EncounterLifetime(new InstantDurationDefinition())),
                 new OverrideAffinityEffectDefinition(
-                    [DamageElement.Almighty], ElementalAffinity.Resist, new InstantDurationDefinition()),
+                    [DamageElement.Almighty], ElementalAffinity.Resist,
+                    EncounterLifetime(new InstantDurationDefinition())),
                 new RemoveStatusEffectDefinition([]),
                 new AnalyzeEffectDefinition([])
             ]);
@@ -680,10 +682,10 @@ public sealed class ContentValidationTests
         SkillDefinition skill = ActiveSkill(
             "invalid_breaks",
             [
-                new BreakAffinityEffectDefinition([], new InstantDurationDefinition()),
+                new BreakAffinityEffectDefinition([], EncounterLifetime(new InstantDurationDefinition())),
                 new BreakAffinityEffectDefinition(
                     [DamageElement.Fire, DamageElement.Fire, DamageElement.Almighty],
-                    new TurnDurationDefinition(0, Id("owner_turn_end"), false))
+                    EncounterLifetime(new TurnDurationDefinition(0, Id("owner_turn_end"), false)))
             ]);
 
         ContentValidationResult result = _validator.Validate(Request(
@@ -783,7 +785,7 @@ public sealed class ContentValidationTests
     {
         AilmentDefinition ailment = new(
             Id("fear"), "Fear", "Invalid fear.",
-            new TurnDurationDefinition(0, Id("owner_turn_end"), false),
+            FieldLifetime(new TurnDurationDefinition(0, Id("owner_turn_end"), false)),
             new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(70, 50, CompanionFleeOutcome.RecallToRoster),
             new AilmentModifiersDefinition(0, 0, 0, 0, false),
             new AilmentRecoveryDefinition(
@@ -796,7 +798,7 @@ public sealed class ContentValidationTests
 
         Assert.Contains(result.Errors, error => error.JsonPath == "$.ailments[0].turnBehavior" &&
             error.Code == ContentValidationErrorCode.ValueOutOfRange);
-        Assert.Equal(4, result.Errors.Count(error => error.Code == ContentValidationErrorCode.ValueMustBePositive));
+        Assert.Equal(3, result.Errors.Count(error => error.Code == ContentValidationErrorCode.ValueMustBePositive));
         Assert.Contains(result.Errors, error => error.JsonPath == "$.ailments[0].recovery.natural.baseChance" &&
             error.Code == ContentValidationErrorCode.ValueOutOfRange);
         Assert.True(result.Errors.Count(error => error.Code == ContentValidationErrorCode.ListDuplicateValue) >= 2);
@@ -1027,7 +1029,7 @@ public sealed class ContentValidationTests
         string id,
         AilmentTurnBehaviorDefinition? behavior = null) =>
         new(
-            Id(id), id, id, new BattleDurationDefinition(),
+            Id(id), id, id, EncounterLifetime(new BattleDurationDefinition()),
             behavior ?? new NormalAilmentTurnBehaviorDefinition(),
             new AilmentModifiersDefinition(1, 0, 1, 1, false),
             new AilmentRecoveryDefinition());

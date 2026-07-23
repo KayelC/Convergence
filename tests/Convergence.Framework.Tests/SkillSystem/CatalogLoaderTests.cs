@@ -342,7 +342,7 @@ public sealed class CatalogLoaderTests
         BreakAffinityEffectDefinition effect = Assert.IsType<BreakAffinityEffectDefinition>(
             Assert.Single(skill.Effects));
         Assert.Equal([DamageElement.Fire], effect.Elements);
-        Assert.Equal(3, Assert.IsType<TurnDurationDefinition>(effect.Duration).Value);
+        Assert.Equal(3, Assert.IsType<TurnDurationDefinition>(effect.Lifetime.Expiration).Value);
     }
 
     [Fact]

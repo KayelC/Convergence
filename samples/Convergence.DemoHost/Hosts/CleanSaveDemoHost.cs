@@ -466,12 +466,15 @@ internal static class CleanSaveJsonCodec
             actor.BattleStatus.Statuses.Select(ToDto).ToArray(),
             ToDto(actor.BattleStatus.StatModifiers),
             actor.BattleStatus.ChargeState?.PolicyId.ToString(),
-            actor.BattleStatus.Charges.Select(charge => new HostChargeDto(charge.Kind.ToString(), charge.Multiplier, ToDto(charge.Duration))).ToArray(),
-            actor.BattleStatus.Shields.Select(shield => new HostShieldDto(shield.Kind.ToString(), ToDto(shield.Duration))).ToArray(),
+            actor.BattleStatus.Charges.Select(charge => new HostChargeDto(
+                charge.Kind.ToString(), charge.Multiplier, ToLifetimeDto(charge.Lifetime))).ToArray(),
+            actor.BattleStatus.Shields.Select(shield => new HostShieldDto(
+                shield.Kind.ToString(), ToLifetimeDto(shield.Lifetime))).ToArray(),
             actor.BattleStatus.AffinityBreaks.Select(affinityBreak => new HostAffinityBreakDto(
                 affinityBreak.Element.ToString(),
-                ToDto(affinityBreak.Duration)!)).ToArray(),
-            actor.BattleStatus.AffinityOverrides.Select(affinity => new HostAffinityOverrideDto(affinity.Element.ToString(), affinity.Affinity.ToString(), ToDto(affinity.Duration)!)).ToArray(),
+                ToLifetimeDto(affinityBreak.Lifetime))).ToArray(),
+            actor.BattleStatus.AffinityOverrides.Select(affinity => new HostAffinityOverrideDto(
+                affinity.Element.ToString(), affinity.Affinity.ToString(), ToLifetimeDto(affinity.Lifetime))).ToArray(),
             actor.BattleStatus.IsGuarding,
             actor.BattleStatus.Analysis.Select(analysis => new HostAnalysisDto(analysis.TargetInstanceId.ToString(), analysis.Layers.Select(layer => layer.ToString()).ToArray())).ToArray(),
             actor.BattleActivations.PassiveSkillStates.Select(passive => new HostPassiveSkillStateDto(
@@ -506,19 +509,19 @@ internal static class CleanSaveJsonCodec
                 dto.Statuses.Select(FromDto),
                 FromDto(dto.StatModifiers),
                 FromDto(dto.ChargePolicyId, dto.Charges),
-                dto.Shields.Select(shield => new RuntimeShieldSnapshot(Enum.Parse<ShieldKind>(shield.Kind), FromDto(shield.Duration))),
+                dto.Shields.Select(shield => new RuntimeShieldSnapshot(
+                    Enum.Parse<ShieldKind>(shield.Kind), FromLifetimeDto(shield.Lifetime))),
                 dto.AffinityOverrides.Select(affinity => new RuntimeAffinityOverrideSnapshot(
                     Enum.Parse<DamageElement>(affinity.Element),
                     Enum.Parse<ElementalAffinity>(affinity.Affinity),
-                    FromDto(affinity.Duration) ?? throw new InvalidOperationException("Affinity override duration is required."))),
+                    FromLifetimeDto(affinity.Lifetime))),
                 dto.IsGuarding,
                 dto.Analysis.Select(analysis => new RuntimeAnalysisSnapshot(
                     Instance(analysis.TargetInstanceId),
                     analysis.Layers.Select(layer => Enum.Parse<AnalysisLayer>(layer)))),
                 (dto.AffinityBreaks ?? []).Select(affinityBreak => new RuntimeAffinityBreakSnapshot(
                     Enum.Parse<DamageElement>(affinityBreak.Element),
-                    FromDto(affinityBreak.Duration) ??
-                        throw new InvalidOperationException("Affinity Break duration is required.")))),
+                    FromLifetimeDto(affinityBreak.Lifetime)))),
             new RuntimeBattleActivationSnapshot(
                 (dto.PassiveActivations ?? []).Select(passive => new RuntimePassiveActivationSnapshot(
                     Id(passive.SkillId),
@@ -539,10 +542,10 @@ internal static class CleanSaveJsonCodec
         new(Instance(dto.InstanceId), Id(dto.EntityDefinitionId), dto.DisplayName);
 
     private static HostTimedStateDto ToDto(RuntimeTimedStateSnapshot timed) =>
-        new(timed.Id.ToString(), ToDto(timed.Duration)!, timed.IsRemovable);
+        new(timed.Id.ToString(), ToLifetimeDto(timed.Lifetime));
 
     private static RuntimeTimedStateSnapshot FromDto(HostTimedStateDto dto) =>
-        new(Id(dto.Id), FromDto(dto.Duration) ?? throw new InvalidOperationException("Timed status duration is required."), dto.IsRemovable);
+        new(Id(dto.Id), FromLifetimeDto(dto.Lifetime));
 
     private static HostStatModifierStateDto? ToDto(RuntimeStatModifierStateSnapshot? state) =>
         state is null
@@ -601,8 +604,20 @@ internal static class CleanSaveJsonCodec
             charges.Select(charge => new RuntimeChargeSnapshot(
                 Enum.Parse<ChargeKind>(charge.Kind),
                 charge.Multiplier,
-                FromDto(charge.Duration))));
+                FromLifetimeDto(charge.Lifetime))));
     }
+
+    private static HostStatusLifetimeDto ToLifetimeDto(StatusLifetimeDefinition lifetime) =>
+        new(
+            ToDto(lifetime.Expiration)!,
+            lifetime.RemovalProfile.AllowedCauses.Select(cause => cause.ToString()).ToArray());
+
+    private static StatusLifetimeDefinition FromLifetimeDto(HostStatusLifetimeDto lifetime) =>
+        new(
+            FromDto(lifetime.Expiration) ??
+                throw new InvalidOperationException("Status lifetime expiration is required."),
+            new StatusRemovalProfileDefinition(
+                lifetime.AllowedRemovalCauses.Select(Enum.Parse<StatusRemovalCause>)));
 
     private static HostDurationDto? ToDto(DurationDefinition? duration) => duration switch
     {
@@ -841,7 +856,7 @@ internal static class CleanSaveJsonCodec
     private sealed record HostResourceDto(string ResourceId, decimal Current, decimal Maximum);
     private sealed record HostPendingSkillChoiceDto(long Token, int UnlockLevel, string SkillId);
     private sealed record HostReferenceDto(string InstanceId, string EntityDefinitionId, string DisplayName);
-    private sealed record HostTimedStateDto(string Id, HostDurationDto Duration, bool IsRemovable);
+    private sealed record HostTimedStateDto(string Id, HostStatusLifetimeDto Lifetime);
     private sealed record HostStatModifierStateDto(
         string PolicyId,
         HostStatModifierTrackDto[] Tracks);
@@ -855,10 +870,13 @@ internal static class CleanSaveJsonCodec
         HostDurationDto? Duration,
         HostStatModifierBoundaryDto? LastLifecycleBoundary);
     private sealed record HostStatModifierBoundaryDto(string EventId, long Sequence);
-    private sealed record HostChargeDto(string Kind, decimal Multiplier, HostDurationDto? Duration);
-    private sealed record HostShieldDto(string Kind, HostDurationDto? Duration);
-    private sealed record HostAffinityBreakDto(string Element, HostDurationDto Duration);
-    private sealed record HostAffinityOverrideDto(string Element, string Affinity, HostDurationDto Duration);
+    private sealed record HostChargeDto(string Kind, decimal Multiplier, HostStatusLifetimeDto Lifetime);
+    private sealed record HostShieldDto(string Kind, HostStatusLifetimeDto Lifetime);
+    private sealed record HostAffinityBreakDto(string Element, HostStatusLifetimeDto Lifetime);
+    private sealed record HostAffinityOverrideDto(string Element, string Affinity, HostStatusLifetimeDto Lifetime);
+    private sealed record HostStatusLifetimeDto(
+        HostDurationDto Expiration,
+        string[] AllowedRemovalCauses);
     private sealed record HostDurationDto(
         string Kind,
         int? Value = null,

@@ -585,10 +585,16 @@ public sealed class PassiveSkillRuntimeTests
             new RuleModifierContext(conditionContext));
 
         Assert.Equal(ElementalAffinity.Null, owner.GetElementalAffinity(DamageElement.Fire, replacements));
-        owner.GrantShield(ShieldKind.Magical, null);
+        owner.GrantShield(ShieldKind.Magical, StandardStatusLifetimes.DeploymentTransient);
         Assert.Equal(ElementalAffinity.Repel, owner.GetElementalAffinity(DamageElement.Fire, replacements));
-        owner.RemoveNonModifierStatuses(new HashSet<StatusEffectKind> { StatusEffectKind.Shield }, []);
-        owner.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Resist, new BattleDurationDefinition());
+        owner.RemoveNonModifierStatuses(
+            new HashSet<StatusEffectKind> { StatusEffectKind.Shield },
+            [],
+            StatusRemovalCause.DispelEffect);
+        owner.OverrideAffinity(
+            DamageElement.Fire,
+            ElementalAffinity.Resist,
+            EncounterLifetime(new BattleDurationDefinition()));
         Assert.Equal(ElementalAffinity.Resist, owner.GetElementalAffinity(DamageElement.Fire, replacements));
         Assert.Equal(
             ElementalAffinity.Normal,
@@ -814,7 +820,7 @@ public sealed class PassiveSkillRuntimeTests
             Poison,
             "Poison",
             "Test poison.",
-            new TurnDurationDefinition(3, ContentId.Parse("owner_turn_end"), false),
+            FieldLifetime(new TurnDurationDefinition(3, ContentId.Parse("owner_turn_end"), false)),
             new NormalAilmentTurnBehaviorDefinition(),
             new AilmentModifiersDefinition(1, 0, 1, 1, false),
             new AilmentRecoveryDefinition());

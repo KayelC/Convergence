@@ -333,6 +333,55 @@ public sealed class BattleStatusLifecycleTests
         Assert.Equal(100m, recovered.Value);
     }
 
+    [Fact]
+    public void TurnEnd_ZeroNaturalRecoveryMultiplierUsesOnlyTheFixedBaseChance()
+    {
+        RuntimeActorState actor = Actor("fixed_recovery", luck: 40);
+        ContentId ailmentId = ContentId.Parse("fixed_recovery_ailment");
+        actor.ApplyAilment(
+            Ailment(
+                ailmentId.ToString(),
+                new NormalAilmentTurnBehaviorDefinition(),
+                recovery: new AilmentRecoveryDefinition(
+                    new NaturalAilmentRecoveryDefinition(25, Luck, 0m))),
+            Turns(3));
+
+        BattleTurnEndLifecycleResult result = new BattleStatusLifecycleService(
+            new SequenceRandomSource(24)).ProcessTurnEnd(
+                new(actor, [actor], Battle, OwnerTurnEnd),
+                Services());
+
+        Assert.False(actor.HasAilment(ailmentId));
+        Assert.Equal(
+            25m,
+            Assert.Single(result.Events, item =>
+                item.Kind == BattleStatusLifecycleEventKind.AilmentRecovered).Value);
+    }
+
+    [Fact]
+    public void TurnEnd_NegativeNaturalRecoveryMultiplierRejectsWithoutMutation()
+    {
+        RuntimeActorState actor = Actor("negative_recovery", hp: 50, luck: 40);
+        ContentId ailmentId = ContentId.Parse("negative_recovery_ailment");
+        actor.ApplyAilment(
+            Ailment(
+                ailmentId.ToString(),
+                new NormalAilmentTurnBehaviorDefinition(),
+                recovery: new AilmentRecoveryDefinition(
+                    new NaturalAilmentRecoveryDefinition(25, Luck, -0.5m))),
+            Turns(3));
+
+        Assert.Throws<InvalidOperationException>(() =>
+            new BattleStatusLifecycleService(new ThrowingRandomSource()).ProcessTurnEnd(
+                new(actor, [actor], Battle, OwnerTurnEnd),
+                Services()));
+
+        Assert.True(actor.HasAilment(ailmentId));
+        Assert.Equal(50, actor.GetRequiredResource(Hp).Current);
+        Assert.Equal(3, Assert.IsType<TurnDurationDefinition>(
+            Assert.Single(actor.Ailments).Value.Duration).Value);
+    }
+
     [Theory]
     [InlineData(-1)]
     [InlineData(101)]
@@ -586,20 +635,20 @@ public sealed class BattleStatusLifecycleTests
         IStatModifierPolicyService statModifiers = TestStatModifierPolicy.CreatePersistent();
         RuntimeActorState actor = Actor("actor");
         actor.SetGuarding(true);
-        actor.GrantShield(ShieldKind.Physical, Turns(1));
+        actor.GrantShield(ShieldKind.Physical, DeploymentTurns(1));
         Assert.True(new SplitChargePolicy().Apply(new ChargeApplicationRequest(
             actor,
             ChargeKind.Physical,
             2,
-            Turns(1))).Applied);
+            DeploymentTurns(1))).Applied);
         TestStatModifierPolicy.ApplyPersistent(actor, ContentId.Parse("attack"), 1);
-        actor.BreakAffinity(DamageElement.Fire, Turns(1));
-        actor.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Null, Turns(1));
-        actor.AddOtherStatus(ContentId.Parse("marked"), Turns(1));
+        actor.BreakAffinity(DamageElement.Fire, EncounterTurns(1));
+        actor.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Null, EncounterTurns(1));
+        actor.AddOtherStatus(ContentId.Parse("marked"), EncounterTurns(1));
         actor.ApplyAilment(PoisonAilment(), Turns(3));
 
         service.Cleanup(
-            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.Swap),
+            new BattleStatusCleanupRequest(actor, BattleStatusDepartureReason.DeploymentSwap),
             statModifiers);
 
         Assert.False(actor.IsGuarding);
@@ -612,7 +661,7 @@ public sealed class BattleStatusLifecycleTests
         Assert.True(actor.HasAilment(Poison));
 
         service.Cleanup(
-            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.BattleEnd),
+            new BattleStatusCleanupRequest(actor, BattleStatusDepartureReason.BattleEnd),
             statModifiers);
 
         Assert.Empty(actor.StatStages);
@@ -707,15 +756,109 @@ public sealed class BattleStatusLifecycleTests
 
         IStatModifierPolicyService statModifiers = TestStatModifierPolicy.CreatePersistent();
         service.Cleanup(
-            new BattleStatusCleanupRequest(battle, BattleStatusCleanupScope.BattleEnd),
+            new BattleStatusCleanupRequest(battle, BattleStatusDepartureReason.BattleEnd),
             statModifiers);
         service.Cleanup(
-            new BattleStatusCleanupRequest(permanent, BattleStatusCleanupScope.BattleEnd),
+            new BattleStatusCleanupRequest(permanent, BattleStatusDepartureReason.BattleEnd),
             statModifiers);
 
         AssertNoDurationStates(battle, "battle");
         AssertAllDurationStatesPresent(permanent, "permanent");
         Assert.True(permanent.HasAilment(turnAilment.Id));
+    }
+
+    [Fact]
+    public void EncounterLifetime_ExpiresAfterItsClockOrBattleEndWhicheverComesFirst()
+    {
+        var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState clockExpired = Actor("clock_expired");
+        RuntimeActorState encounterEnded = Actor("encounter_ended");
+        ContentId clockId = ContentId.Parse("clock_status");
+        ContentId encounterId = ContentId.Parse("encounter_status");
+        clockExpired.AddOtherStatus(clockId, EncounterTurns(1));
+        encounterEnded.AddOtherStatus(encounterId, EncounterTurns(3));
+
+        BattleDurationTickResult clockTick = Assert.Single(
+            clockExpired.TickTimedStatuses(OwnerTurnEnd));
+        service.Cleanup(
+            new BattleStatusCleanupRequest(encounterEnded, BattleStatusDepartureReason.BattleEnd),
+            TestStatModifierPolicy.CreatePersistent());
+
+        Assert.True(clockTick.Expired);
+        Assert.DoesNotContain(clockId, clockExpired.OtherStatuses);
+        Assert.DoesNotContain(encounterId, encounterEnded.OtherStatuses);
+    }
+
+    [Fact]
+    public void BattleExpiration_RemainsIndependentFromCleanupRemovalPermissions()
+    {
+        var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState actor = Actor("protected_battle_expiration");
+        ContentId statusId = ContentId.Parse("protected_battle_status");
+        actor.AddOtherStatus(
+            statusId,
+            new StatusLifetimeDefinition(
+                new BattleDurationDefinition(),
+                StatusRemovalProfiles.Protected));
+
+        service.Cleanup(
+            new BattleStatusCleanupRequest(actor, BattleStatusDepartureReason.BattleEnd),
+            TestStatModifierPolicy.CreatePersistent());
+
+        Assert.DoesNotContain(statusId, actor.OtherStatuses);
+    }
+
+    [Fact]
+    public void UncurableRemovalProfile_BlocksRecoveryButStillAllowsScriptedRemoval()
+    {
+        RuntimeActorState actor = Actor("uncurable");
+        AilmentDefinition ailment = IndependentAilment(
+            "uncurable_ailment",
+            new NormalAilmentTurnBehaviorDefinition());
+        actor.ApplyAilment(
+            ailment,
+            new StatusLifetimeDefinition(TurnClock(3), StatusRemovalProfiles.Uncurable));
+
+        Assert.Empty(actor.RemoveAilments(StatusRemovalCause.CureEffect, _ => true));
+        Assert.Empty(actor.RemoveAilments(StatusRemovalCause.NaturalRecovery, _ => true));
+        Assert.Empty(actor.RemoveAilments(StatusRemovalCause.RecoveryEvent, _ => true));
+        Assert.True(actor.HasAilment(ailment.Id));
+
+        Assert.Equal(
+            [ailment.Id],
+            actor.RemoveAilments(StatusRemovalCause.ScriptedRemoval, _ => true));
+        Assert.False(actor.HasAilment(ailment.Id));
+    }
+
+    [Theory]
+    [InlineData(BattleStatusDepartureReason.DeploymentSwap, true)]
+    [InlineData(BattleStatusDepartureReason.RosterRecall, true)]
+    [InlineData(BattleStatusDepartureReason.Defeat, false)]
+    [InlineData(BattleStatusDepartureReason.Flee, false)]
+    [InlineData(BattleStatusDepartureReason.BattleEnd, false)]
+    [InlineData(BattleStatusDepartureReason.FieldTransition, false)]
+    public void Cleanup_UsesTypedDepartureReasonsAndNeverTurnsRecallIntoAFreeCure(
+        BattleStatusDepartureReason reason,
+        bool encounterStateSurvives)
+    {
+        var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState actor = Actor("departure_actor");
+        ContentId encounterStatusId = ContentId.Parse("encounter_mark");
+        actor.SetGuarding(true);
+        actor.ApplyAilment(PoisonAilment(), Turns(3));
+        actor.GrantShield(ShieldKind.Physical, StandardStatusLifetimes.DeploymentTransient);
+        actor.AddOtherStatus(
+            encounterStatusId,
+            StandardStatusLifetimes.Encounter(new PermanentDurationDefinition()));
+
+        service.Cleanup(
+            new BattleStatusCleanupRequest(actor, reason),
+            TestStatModifierPolicy.CreatePersistent());
+
+        Assert.False(actor.IsGuarding);
+        Assert.Empty(actor.Shields);
+        Assert.True(actor.HasAilment(Poison));
+        Assert.Equal(encounterStateSurvives, actor.OtherStatuses.Contains(encounterStatusId));
     }
 
     [Fact]
@@ -728,11 +871,11 @@ public sealed class BattleStatusLifecycleTests
             actor,
             ChargeKind.Physical,
             2m,
-            new PermanentDurationDefinition())).Applied);
-        actor.GrantShield(ShieldKind.Physical, new PermanentDurationDefinition());
+            StandardStatusLifetimes.Persistent)).Applied);
+        actor.GrantShield(ShieldKind.Physical, StandardStatusLifetimes.Persistent);
 
         service.Cleanup(
-            new BattleStatusCleanupRequest(actor, BattleStatusCleanupScope.Swap),
+            new BattleStatusCleanupRequest(actor, BattleStatusDepartureReason.DeploymentSwap),
             TestStatModifierPolicy.CreatePersistent());
 
         Assert.False(actor.IsGuarding);
@@ -815,29 +958,61 @@ public sealed class BattleStatusLifecycleTests
             new SkillInheritanceDefinition(true),
             triggers: triggers);
 
-    private static TurnDurationDefinition Turns(int value) =>
+    private static StatusLifetimeDefinition Turns(int value) =>
+        StandardStatusLifetimes.Field(TurnClock(value));
+
+    private static StatusLifetimeDefinition DeploymentTurns(int value) =>
+        StandardStatusLifetimes.Deployment(TurnClock(value));
+
+    private static StatusLifetimeDefinition EncounterTurns(int value) =>
+        StandardStatusLifetimes.Encounter(TurnClock(value));
+
+    private static TurnDurationDefinition TurnClock(int value) =>
         new(value, OwnerTurnEnd, true);
 
     private static void SeedDurationStates(
         RuntimeActorState actor,
-        DurationDefinition duration,
+        DurationDefinition expiration,
         string suffix)
     {
+        StatusLifetimeDefinition ailmentLifetime = expiration switch
+        {
+            InstantDurationDefinition or PhaseDurationDefinition or BattleDurationDefinition =>
+                StandardStatusLifetimes.Encounter(expiration),
+            TurnDurationDefinition => StandardStatusLifetimes.Field(expiration),
+            PermanentDurationDefinition => StandardStatusLifetimes.Persistent,
+            _ => throw new InvalidOperationException()
+        };
         actor.ApplyAilment(
             IndependentAilment(
                 $"ailment_{suffix}",
                 new NormalAilmentTurnBehaviorDefinition()),
-            duration);
+            ailmentLifetime);
         Assert.True(new SplitChargePolicy().Apply(new ChargeApplicationRequest(
             actor,
             ChargeKind.Physical,
             2m,
-            duration)).Applied);
-        actor.GrantShield(ShieldKind.Physical, duration);
-        actor.OverrideAffinity(DamageElement.Ice, ElementalAffinity.Resist, duration);
-        actor.BreakAffinity(DamageElement.Fire, duration);
-        actor.AddOtherStatus(ContentId.Parse($"status_{suffix}"), duration);
+            DeploymentOrPersistent(expiration))).Applied);
+        actor.GrantShield(ShieldKind.Physical, DeploymentOrPersistent(expiration));
+        actor.OverrideAffinity(
+            DamageElement.Ice,
+            ElementalAffinity.Resist,
+            EncounterOrPersistent(expiration));
+        actor.BreakAffinity(DamageElement.Fire, EncounterOrPersistent(expiration));
+        actor.AddOtherStatus(
+            ContentId.Parse($"status_{suffix}"),
+            EncounterOrPersistent(expiration));
     }
+
+    private static StatusLifetimeDefinition DeploymentOrPersistent(DurationDefinition expiration) =>
+        expiration is PermanentDurationDefinition
+            ? StandardStatusLifetimes.Persistent
+            : StandardStatusLifetimes.Deployment(expiration);
+
+    private static StatusLifetimeDefinition EncounterOrPersistent(DurationDefinition expiration) =>
+        expiration is PermanentDurationDefinition
+            ? StandardStatusLifetimes.Persistent
+            : StandardStatusLifetimes.Encounter(expiration);
 
     private static void AssertAllDurationStatesPresent(RuntimeActorState actor, string suffix)
     {

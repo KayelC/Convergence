@@ -174,7 +174,7 @@ internal sealed class CleanFieldDemoHost
 
         AilmentDefinition poison = catalog.GetRequiredAilment(
             ContentId.Parse("convergence.shared_effects_demo:poison_demo"));
-        ally.State.ApplyAilment(poison, poison.DefaultDuration);
+        ally.State.ApplyAilment(poison, poison.DefaultLifetime);
         sequence = await ExecuteItemAsync(
             "dis_poison_demo", Field, ally.State.InstanceId, actionExecutor, catalog, participants, inventory, sequence,
             cancellationToken: cancellationToken);

@@ -206,7 +206,8 @@ public sealed class SharedEffectsRuntimeTests
         RuntimeActorState target = Actor("target", 100, 100, 20, 20);
         target.ApplyAilment(
             catalog.GetRequiredAilment(Id("convergence.shared_effects_demo:poison_demo")),
-            new TurnDurationDefinition(3, Id("owner_turn_end"), false));
+            StandardStatusLifetimes.Field(
+                new TurnDurationDefinition(3, Id("owner_turn_end"), false)));
         var executor = new ItemExecutor(Services(catalog));
 
         ItemExecutionResult cure = Execute(executor, catalog, "dis_poison_demo", Field, actor, target);

@@ -382,8 +382,6 @@ Convergence.Catalog.SkillSystemCatalogLoadRequest.Registrations.get -> Convergen
 Convergence.Catalog.SkillSystemCatalogLoadRequest.SkillSystemCatalogLoadRequest(Convergence.Validation.SkillSystemRegistrationSnapshot! registrations, System.Collections.Generic.IEnumerable<Convergence.Catalog.ContentPackTextBundle!>! bundles) -> void
 Convergence.Content.AilmentDefinition
 Convergence.Content.AilmentDefinition.<Clone>$() -> Convergence.Content.AilmentDefinition!
-Convergence.Content.AilmentDefinition.AilmentDefinition(Convergence.Content.ContentId id, string! displayName, string! description, Convergence.Content.DurationDefinition! defaultDuration, Convergence.Content.AilmentTurnBehaviorDefinition! turnBehavior, Convergence.Content.AilmentModifiersDefinition! modifiers, Convergence.Content.AilmentRecoveryDefinition! recovery, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? groupIds = null, Convergence.Content.ContentId? exclusivityGroupId = null, System.Collections.Generic.IEnumerable<Convergence.Content.PassiveTriggerDefinition!>? triggers = null) -> void
-Convergence.Content.AilmentDefinition.DefaultDuration.get -> Convergence.Content.DurationDefinition!
 Convergence.Content.AilmentDefinition.Description.get -> string!
 Convergence.Content.AilmentDefinition.DisplayName.get -> string!
 Convergence.Content.AilmentDefinition.Equals(Convergence.Content.AilmentDefinition? other) -> bool
@@ -475,12 +473,8 @@ Convergence.Content.AnyConditionDefinition.Equals(Convergence.Content.AnyConditi
 Convergence.Content.ApplyAilmentEffectDefinition
 Convergence.Content.ApplyAilmentEffectDefinition.AilmentId.get -> Convergence.Content.ContentId
 Convergence.Content.ApplyAilmentEffectDefinition.AilmentId.init -> void
-Convergence.Content.ApplyAilmentEffectDefinition.ApplyAilmentEffectDefinition(Convergence.Content.ContentId AilmentId, int Chance, Convergence.Content.DurationDefinition? Duration = null, Convergence.Content.ConditionDefinition? When = null, Convergence.Content.EffectFailurePolicy OnFailure = Convergence.Content.EffectFailurePolicy.Continue) -> void
 Convergence.Content.ApplyAilmentEffectDefinition.Chance.get -> int
 Convergence.Content.ApplyAilmentEffectDefinition.Chance.init -> void
-Convergence.Content.ApplyAilmentEffectDefinition.Deconstruct(out Convergence.Content.ContentId AilmentId, out int Chance, out Convergence.Content.DurationDefinition? Duration, out Convergence.Content.ConditionDefinition? When, out Convergence.Content.EffectFailurePolicy OnFailure) -> void
-Convergence.Content.ApplyAilmentEffectDefinition.Duration.get -> Convergence.Content.DurationDefinition?
-Convergence.Content.ApplyAilmentEffectDefinition.Duration.init -> void
 Convergence.Content.ApplyAilmentEffectDefinition.Equals(Convergence.Content.ApplyAilmentEffectDefinition? other) -> bool
 Convergence.Content.BasicAttackRuleModifierDefinition
 Convergence.Content.BasicAttackRuleModifierDefinition.BasicAttackRuleModifierDefinition(Convergence.Content.DamageElement? Element = null, Convergence.Content.TargetingDefinition? Targeting = null, Convergence.Content.DamageDrainMode? Drain = null, Convergence.Content.ConditionDefinition? When = null) -> void
@@ -500,8 +494,6 @@ Convergence.Content.BattleKindConditionDefinition.AllowedBattleKindIds.get -> Sy
 Convergence.Content.BattleKindConditionDefinition.BattleKindConditionDefinition(System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>! allowedBattleKindIds) -> void
 Convergence.Content.BattleKindConditionDefinition.Equals(Convergence.Content.BattleKindConditionDefinition? other) -> bool
 Convergence.Content.BreakAffinityEffectDefinition
-Convergence.Content.BreakAffinityEffectDefinition.BreakAffinityEffectDefinition(System.Collections.Generic.IEnumerable<Convergence.Content.DamageElement>! elements, Convergence.Content.DurationDefinition! duration, Convergence.Content.ConditionDefinition? when = null, Convergence.Content.EffectFailurePolicy onFailure = Convergence.Content.EffectFailurePolicy.Continue) -> void
-Convergence.Content.BreakAffinityEffectDefinition.Duration.get -> Convergence.Content.DurationDefinition!
 Convergence.Content.BreakAffinityEffectDefinition.Elements.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.DamageElement>!
 Convergence.Content.BreakAffinityEffectDefinition.Equals(Convergence.Content.BreakAffinityEffectDefinition? other) -> bool
 Convergence.Content.ChanceConditionDefinition
@@ -949,19 +941,11 @@ Convergence.Content.FusionResultOperationKind.StatBoost = 2 -> Convergence.Conte
 Convergence.Content.GrantChargeEffectDefinition
 Convergence.Content.GrantChargeEffectDefinition.Charge.get -> Convergence.Content.ChargeKind
 Convergence.Content.GrantChargeEffectDefinition.Charge.init -> void
-Convergence.Content.GrantChargeEffectDefinition.Deconstruct(out Convergence.Content.ChargeKind Charge, out decimal Multiplier, out Convergence.Content.DurationDefinition? Duration, out Convergence.Content.ConditionDefinition? When, out Convergence.Content.EffectFailurePolicy OnFailure) -> void
-Convergence.Content.GrantChargeEffectDefinition.Duration.get -> Convergence.Content.DurationDefinition?
-Convergence.Content.GrantChargeEffectDefinition.Duration.init -> void
 Convergence.Content.GrantChargeEffectDefinition.Equals(Convergence.Content.GrantChargeEffectDefinition? other) -> bool
-Convergence.Content.GrantChargeEffectDefinition.GrantChargeEffectDefinition(Convergence.Content.ChargeKind Charge, decimal Multiplier, Convergence.Content.DurationDefinition? Duration = null, Convergence.Content.ConditionDefinition? When = null, Convergence.Content.EffectFailurePolicy OnFailure = Convergence.Content.EffectFailurePolicy.Continue) -> void
 Convergence.Content.GrantChargeEffectDefinition.Multiplier.get -> decimal
 Convergence.Content.GrantChargeEffectDefinition.Multiplier.init -> void
 Convergence.Content.GrantShieldEffectDefinition
-Convergence.Content.GrantShieldEffectDefinition.Deconstruct(out Convergence.Content.ShieldKind Shield, out Convergence.Content.DurationDefinition? Duration, out Convergence.Content.ConditionDefinition? When, out Convergence.Content.EffectFailurePolicy OnFailure) -> void
-Convergence.Content.GrantShieldEffectDefinition.Duration.get -> Convergence.Content.DurationDefinition?
-Convergence.Content.GrantShieldEffectDefinition.Duration.init -> void
 Convergence.Content.GrantShieldEffectDefinition.Equals(Convergence.Content.GrantShieldEffectDefinition? other) -> bool
-Convergence.Content.GrantShieldEffectDefinition.GrantShieldEffectDefinition(Convergence.Content.ShieldKind Shield, Convergence.Content.DurationDefinition? Duration = null, Convergence.Content.ConditionDefinition? When = null, Convergence.Content.EffectFailurePolicy OnFailure = Convergence.Content.EffectFailurePolicy.Continue) -> void
 Convergence.Content.GrantShieldEffectDefinition.Shield.get -> Convergence.Content.ShieldKind
 Convergence.Content.GrantShieldEffectDefinition.Shield.init -> void
 Convergence.Content.HasAffinityConditionDefinition
@@ -1226,10 +1210,8 @@ Convergence.Content.NumericRuleModifierType.MaximumResource = 9 -> Convergence.C
 Convergence.Content.NumericRuleModifierType.ResourceCost = 8 -> Convergence.Content.NumericRuleModifierType
 Convergence.Content.OverrideAffinityEffectDefinition
 Convergence.Content.OverrideAffinityEffectDefinition.Affinity.get -> Convergence.Content.ElementalAffinity
-Convergence.Content.OverrideAffinityEffectDefinition.Duration.get -> Convergence.Content.DurationDefinition!
 Convergence.Content.OverrideAffinityEffectDefinition.Elements.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.DamageElement>!
 Convergence.Content.OverrideAffinityEffectDefinition.Equals(Convergence.Content.OverrideAffinityEffectDefinition? other) -> bool
-Convergence.Content.OverrideAffinityEffectDefinition.OverrideAffinityEffectDefinition(System.Collections.Generic.IEnumerable<Convergence.Content.DamageElement>! elements, Convergence.Content.ElementalAffinity affinity, Convergence.Content.DurationDefinition! duration, Convergence.Content.ConditionDefinition? when = null, Convergence.Content.EffectFailurePolicy onFailure = Convergence.Content.EffectFailurePolicy.Continue) -> void
 Convergence.Content.PartySizeConditionDefinition
 Convergence.Content.PartySizeConditionDefinition.Comparison.get -> Convergence.Content.NumericComparison
 Convergence.Content.PartySizeConditionDefinition.Comparison.init -> void
@@ -2600,15 +2582,10 @@ Convergence.Execution.ActionTurnConsumptionKind.TerminatePhase = 4 -> Convergenc
 Convergence.Execution.ActionTurnConsumptionKind.TurnEconomy = 3 -> Convergence.Execution.ActionTurnConsumptionKind
 Convergence.Execution.ActiveAilmentState
 Convergence.Execution.ActiveAilmentState.<Clone>$() -> Convergence.Execution.ActiveAilmentState!
-Convergence.Execution.ActiveAilmentState.ActiveAilmentState(Convergence.Content.AilmentDefinition! Definition, Convergence.Content.DurationDefinition! Duration, bool IsRemovable = true) -> void
-Convergence.Execution.ActiveAilmentState.Deconstruct(out Convergence.Content.AilmentDefinition! Definition, out Convergence.Content.DurationDefinition! Duration, out bool IsRemovable) -> void
 Convergence.Execution.ActiveAilmentState.Definition.get -> Convergence.Content.AilmentDefinition!
 Convergence.Execution.ActiveAilmentState.Definition.init -> void
 Convergence.Execution.ActiveAilmentState.Duration.get -> Convergence.Content.DurationDefinition!
-Convergence.Execution.ActiveAilmentState.Duration.init -> void
 Convergence.Execution.ActiveAilmentState.Equals(Convergence.Execution.ActiveAilmentState? other) -> bool
-Convergence.Execution.ActiveAilmentState.IsRemovable.get -> bool
-Convergence.Execution.ActiveAilmentState.IsRemovable.init -> void
 Convergence.Execution.AddThenMultiplyStackingPolicy
 Convergence.Execution.AddThenMultiplyStackingPolicy.AddThenMultiplyStackingPolicy() -> void
 Convergence.Execution.AddThenMultiplyStackingPolicy.Resolve(decimal baseValue, System.Collections.Generic.IReadOnlyList<Convergence.Content.NumericRuleModifierDefinition!>! modifiers) -> decimal
@@ -2810,30 +2787,21 @@ Convergence.Execution.NoBattleBasicAttackProfileSource
 Convergence.Execution.NoBattleBasicAttackProfileSource.Resolve(Convergence.Execution.RuntimeActorState! actor) -> Convergence.Execution.BattleBasicAttackProfile?
 Convergence.Execution.BattleAffinityBreakState
 Convergence.Execution.BattleAffinityBreakState.<Clone>$() -> Convergence.Execution.BattleAffinityBreakState!
-Convergence.Execution.BattleAffinityBreakState.BattleAffinityBreakState(Convergence.Content.DurationDefinition! Duration) -> void
-Convergence.Execution.BattleAffinityBreakState.Deconstruct(out Convergence.Content.DurationDefinition! Duration) -> void
 Convergence.Execution.BattleAffinityBreakState.Duration.get -> Convergence.Content.DurationDefinition!
-Convergence.Execution.BattleAffinityBreakState.Duration.init -> void
 Convergence.Execution.BattleAffinityBreakState.Equals(Convergence.Execution.BattleAffinityBreakState? other) -> bool
 Convergence.Execution.BattleAffinityOverrideState
 Convergence.Execution.BattleAffinityOverrideState.<Clone>$() -> Convergence.Execution.BattleAffinityOverrideState!
 Convergence.Execution.BattleAffinityOverrideState.Affinity.get -> Convergence.Content.ElementalAffinity
 Convergence.Execution.BattleAffinityOverrideState.Affinity.init -> void
-Convergence.Execution.BattleAffinityOverrideState.BattleAffinityOverrideState(Convergence.Content.ElementalAffinity Affinity, Convergence.Content.DurationDefinition! Duration) -> void
-Convergence.Execution.BattleAffinityOverrideState.Deconstruct(out Convergence.Content.ElementalAffinity Affinity, out Convergence.Content.DurationDefinition! Duration) -> void
 Convergence.Execution.BattleAffinityOverrideState.Duration.get -> Convergence.Content.DurationDefinition!
-Convergence.Execution.BattleAffinityOverrideState.Duration.init -> void
 Convergence.Execution.BattleAffinityOverrideState.Equals(Convergence.Execution.BattleAffinityOverrideState? other) -> bool
 Convergence.Execution.BattleAilmentApplicationRequest
 Convergence.Execution.BattleAilmentApplicationRequest.<Clone>$() -> Convergence.Execution.BattleAilmentApplicationRequest!
 Convergence.Execution.BattleAilmentApplicationRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
 Convergence.Execution.BattleAilmentApplicationRequest.Ailment.get -> Convergence.Content.AilmentDefinition!
-Convergence.Execution.BattleAilmentApplicationRequest.BattleAilmentApplicationRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Execution.RuntimeActorState! target, Convergence.Content.AilmentDefinition! ailment, int chance, Convergence.Content.DurationDefinition? duration = null, bool isRemovable = true, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? participants = null, Convergence.Content.ContentId? battleKindId = null, Convergence.Content.ContentId? moonPhaseId = null, Convergence.Content.SkillDefinition? skill = null) -> void
 Convergence.Execution.BattleAilmentApplicationRequest.BattleKindId.get -> Convergence.Content.ContentId?
 Convergence.Execution.BattleAilmentApplicationRequest.Chance.get -> int
-Convergence.Execution.BattleAilmentApplicationRequest.Duration.get -> Convergence.Content.DurationDefinition?
 Convergence.Execution.BattleAilmentApplicationRequest.Equals(Convergence.Execution.BattleAilmentApplicationRequest? other) -> bool
-Convergence.Execution.BattleAilmentApplicationRequest.IsRemovable.get -> bool
 Convergence.Execution.BattleAilmentApplicationRequest.MoonPhaseId.get -> Convergence.Content.ContentId?
 Convergence.Execution.BattleAilmentApplicationRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
 Convergence.Execution.BattleAilmentApplicationRequest.Skill.get -> Convergence.Content.SkillDefinition?
@@ -2859,10 +2827,6 @@ Convergence.Execution.BattleAilmentApplicationStatus.Missed = 4 -> Convergence.E
 Convergence.Execution.BattleAilmentApplicationStatus.TargetDefeated = 1 -> Convergence.Execution.BattleAilmentApplicationStatus
 Convergence.Execution.BattleChargeState
 Convergence.Execution.BattleChargeState.<Clone>$() -> Convergence.Execution.BattleChargeState!
-Convergence.Execution.BattleChargeState.BattleChargeState(decimal Multiplier, Convergence.Content.DurationDefinition? Duration) -> void
-Convergence.Execution.BattleChargeState.Deconstruct(out decimal Multiplier, out Convergence.Content.DurationDefinition? Duration) -> void
-Convergence.Execution.BattleChargeState.Duration.get -> Convergence.Content.DurationDefinition?
-Convergence.Execution.BattleChargeState.Duration.init -> void
 Convergence.Execution.BattleChargeState.Equals(Convergence.Execution.BattleChargeState? other) -> bool
 Convergence.Execution.BattleChargeState.Multiplier.get -> decimal
 Convergence.Execution.BattleChargeState.Multiplier.init -> void
@@ -2925,13 +2889,8 @@ Convergence.Execution.BattleExecutionServices.RuntimeRandomTargetPolicy.get -> C
 Convergence.Execution.BattleExecutionServices.SpResourceId.get -> Convergence.Content.ContentId
 Convergence.Execution.BattleOtherStatusState
 Convergence.Execution.BattleOtherStatusState.<Clone>$() -> Convergence.Execution.BattleOtherStatusState!
-Convergence.Execution.BattleOtherStatusState.BattleOtherStatusState(Convergence.Content.DurationDefinition! Duration, bool IsRemovable = true) -> void
-Convergence.Execution.BattleOtherStatusState.Deconstruct(out Convergence.Content.DurationDefinition! Duration, out bool IsRemovable) -> void
 Convergence.Execution.BattleOtherStatusState.Duration.get -> Convergence.Content.DurationDefinition!
-Convergence.Execution.BattleOtherStatusState.Duration.init -> void
 Convergence.Execution.BattleOtherStatusState.Equals(Convergence.Execution.BattleOtherStatusState? other) -> bool
-Convergence.Execution.BattleOtherStatusState.IsRemovable.get -> bool
-Convergence.Execution.BattleOtherStatusState.IsRemovable.init -> void
 Convergence.Execution.BattlePassiveCollection
 Convergence.Execution.BattlePassiveCollection.Add(Convergence.Content.SkillDefinition! skill, bool enabled = true) -> void
 Convergence.Execution.BattlePassiveCollection.BattlePassiveCollection(System.Collections.Generic.IEnumerable<Convergence.Content.SkillDefinition!>? skills = null) -> void
@@ -2967,10 +2926,6 @@ Convergence.Execution.BattleResourceState.Id.get -> Convergence.Content.ContentI
 Convergence.Execution.BattleResourceState.Maximum.get -> decimal
 Convergence.Execution.BattleShieldState
 Convergence.Execution.BattleShieldState.<Clone>$() -> Convergence.Execution.BattleShieldState!
-Convergence.Execution.BattleShieldState.BattleShieldState(Convergence.Content.DurationDefinition? Duration) -> void
-Convergence.Execution.BattleShieldState.Deconstruct(out Convergence.Content.DurationDefinition? Duration) -> void
-Convergence.Execution.BattleShieldState.Duration.get -> Convergence.Content.DurationDefinition?
-Convergence.Execution.BattleShieldState.Duration.init -> void
 Convergence.Execution.BattleShieldState.Equals(Convergence.Execution.BattleShieldState? other) -> bool
 Convergence.Execution.BattleStatStageRange
 Convergence.Execution.BattleStatStageState
@@ -2986,15 +2941,7 @@ Convergence.Execution.BattleStatusCleanupRequest
 Convergence.Execution.BattleStatusCleanupRequest.<Clone>$() -> Convergence.Execution.BattleStatusCleanupRequest!
 Convergence.Execution.BattleStatusCleanupRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
 Convergence.Execution.BattleStatusCleanupRequest.Actor.init -> void
-Convergence.Execution.BattleStatusCleanupRequest.BattleStatusCleanupRequest(Convergence.Execution.RuntimeActorState! Actor, Convergence.Execution.BattleStatusCleanupScope Scope) -> void
-Convergence.Execution.BattleStatusCleanupRequest.Deconstruct(out Convergence.Execution.RuntimeActorState! Actor, out Convergence.Execution.BattleStatusCleanupScope Scope) -> void
 Convergence.Execution.BattleStatusCleanupRequest.Equals(Convergence.Execution.BattleStatusCleanupRequest? other) -> bool
-Convergence.Execution.BattleStatusCleanupRequest.Scope.get -> Convergence.Execution.BattleStatusCleanupScope
-Convergence.Execution.BattleStatusCleanupRequest.Scope.init -> void
-Convergence.Execution.BattleStatusCleanupScope
-Convergence.Execution.BattleStatusCleanupScope.BattleEnd = 1 -> Convergence.Execution.BattleStatusCleanupScope
-Convergence.Execution.BattleStatusCleanupScope.FieldTransition = 2 -> Convergence.Execution.BattleStatusCleanupScope
-Convergence.Execution.BattleStatusCleanupScope.Swap = 0 -> Convergence.Execution.BattleStatusCleanupScope
 Convergence.Execution.BattleStatusLifecycleEvent
 Convergence.Execution.BattleStatusLifecycleEvent.<Clone>$() -> Convergence.Execution.BattleStatusLifecycleEvent!
 Convergence.Execution.BattleStatusLifecycleEvent.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
@@ -3496,21 +3443,15 @@ Convergence.Execution.RuleModifierResolver.ResolveNumeric(Convergence.Execution.
 Convergence.Execution.RuleModifierResolver.RuleModifierResolver(Convergence.Execution.RuleModifierRegistry? modifierRegistry = null, Convergence.Execution.StackingPolicyRegistry? stackingPolicies = null) -> void
 Convergence.Execution.RuntimeActorState
 Convergence.Execution.RuntimeActorState.AddOtherStatus(Convergence.Content.ContentId statusId) -> void
-Convergence.Execution.RuntimeActorState.AddOtherStatus(Convergence.Content.ContentId statusId, Convergence.Content.DurationDefinition! duration, bool isRemovable = true) -> void
 Convergence.Execution.RuntimeActorState.AddResource(Convergence.Content.ContentId id, decimal value) -> decimal
 Convergence.Execution.RuntimeActorState.Affiliation.get -> Convergence.Runtime.RuntimeActorAffiliationSnapshot!
 Convergence.Execution.RuntimeActorState.AffinityBreaks.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.DamageElement, Convergence.Execution.BattleAffinityBreakState!>!
 Convergence.Execution.RuntimeActorState.AffinityOverrides.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.DamageElement, Convergence.Execution.BattleAffinityOverrideState!>!
 Convergence.Execution.RuntimeActorState.Ailments.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Execution.ActiveAilmentState!>!
-Convergence.Execution.RuntimeActorState.ApplyAilment(Convergence.Content.AilmentDefinition! definition, Convergence.Content.DurationDefinition! duration) -> void
-Convergence.Execution.RuntimeActorState.ApplyAilment(Convergence.Content.AilmentDefinition! definition, Convergence.Content.DurationDefinition! duration, bool isRemovable) -> void
 Convergence.Execution.RuntimeActorState.BaseResourceValues.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Execution.RuntimeActorState.BaseStats.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
-Convergence.Execution.RuntimeActorState.BreakAffinity(Convergence.Content.DamageElement element, Convergence.Content.DurationDefinition! duration) -> void
 Convergence.Execution.RuntimeActorState.CapabilityIds.get -> System.Collections.Generic.IReadOnlySet<Convergence.Content.ContentId>!
 Convergence.Execution.RuntimeActorState.Charges.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ChargeKind, Convergence.Execution.BattleChargeState!>!
-Convergence.Execution.RuntimeActorState.ClearEncounterStatuses() -> void
-Convergence.Execution.RuntimeActorState.ClearTransientStatuses() -> void
 Convergence.Execution.RuntimeActorState.DefenseProfile.get -> Convergence.Battle.CombatDefenseProfile!
 Convergence.Execution.RuntimeActorState.EncounterPresence.get -> Convergence.Runtime.RuntimeEncounterPresenceSnapshot!
 Convergence.Execution.RuntimeActorState.EntityId.get -> Convergence.Content.ContentId
@@ -3520,7 +3461,6 @@ Convergence.Execution.RuntimeActorState.ExpirePhaseDurations(Convergence.Content
 Convergence.Execution.RuntimeActorState.GetAnalysis(Convergence.Runtime.RuntimeInstanceId targetInstanceId) -> System.Collections.Generic.IReadOnlySet<Convergence.Content.AnalysisLayer>!
 Convergence.Execution.RuntimeActorState.GetElementalAffinity(Convergence.Content.DamageElement element, System.Collections.Generic.IEnumerable<Convergence.Content.ElementalAffinity>? passiveReplacements = null) -> Convergence.Content.ElementalAffinity
 Convergence.Execution.RuntimeActorState.GetRequiredResource(Convergence.Content.ContentId id) -> Convergence.Execution.BattleResourceState!
-Convergence.Execution.RuntimeActorState.GrantShield(Convergence.Content.ShieldKind kind, Convergence.Content.DurationDefinition? duration) -> void
 Convergence.Execution.RuntimeActorState.HasAilment(Convergence.Content.ContentId id) -> bool
 Convergence.Execution.RuntimeActorState.HasBuff(Convergence.Content.ContentId modifierTrackId) -> bool
 Convergence.Execution.RuntimeActorState.HasCapability(Convergence.Content.ContentId id) -> bool
@@ -3531,10 +3471,8 @@ Convergence.Execution.RuntimeActorState.IsDefeated.get -> bool
 Convergence.Execution.RuntimeActorState.IsDeployed.get -> bool
 Convergence.Execution.RuntimeActorState.IsGuarding.get -> bool
 Convergence.Execution.RuntimeActorState.OtherStatuses.get -> System.Collections.Generic.IReadOnlySet<Convergence.Content.ContentId>!
-Convergence.Execution.RuntimeActorState.OverrideAffinity(Convergence.Content.DamageElement element, Convergence.Content.ElementalAffinity affinity, Convergence.Content.DurationDefinition! duration) -> void
 Convergence.Execution.RuntimeActorState.Passives.get -> Convergence.Execution.BattlePassiveCollection!
 Convergence.Execution.RuntimeActorState.Progression.get -> Convergence.Runtime.RuntimeProgressionSnapshot!
-Convergence.Execution.RuntimeActorState.RemoveAilments(System.Func<Convergence.Execution.ActiveAilmentState!, bool>! predicate) -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
 Convergence.Execution.RuntimeActorState.ReplaceEquipment(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment) -> void
 Convergence.Execution.RuntimeActorState.Resources.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Execution.BattleResourceState!>!
 Convergence.Execution.RuntimeActorState.Reveal(Convergence.Runtime.RuntimeInstanceId targetInstanceId, System.Collections.Generic.IEnumerable<Convergence.Content.AnalysisLayer>! layers) -> void
@@ -5457,14 +5395,12 @@ Convergence.Runtime.RuntimeAffinityBreakSnapshot.<Clone>$() -> Convergence.Runti
 Convergence.Runtime.RuntimeAffinityBreakSnapshot.Duration.get -> Convergence.Content.DurationDefinition!
 Convergence.Runtime.RuntimeAffinityBreakSnapshot.Element.get -> Convergence.Content.DamageElement
 Convergence.Runtime.RuntimeAffinityBreakSnapshot.Equals(Convergence.Runtime.RuntimeAffinityBreakSnapshot? other) -> bool
-Convergence.Runtime.RuntimeAffinityBreakSnapshot.RuntimeAffinityBreakSnapshot(Convergence.Content.DamageElement element, Convergence.Content.DurationDefinition! duration) -> void
 Convergence.Runtime.RuntimeAffinityOverrideSnapshot
 Convergence.Runtime.RuntimeAffinityOverrideSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeAffinityOverrideSnapshot!
 Convergence.Runtime.RuntimeAffinityOverrideSnapshot.Affinity.get -> Convergence.Content.ElementalAffinity
 Convergence.Runtime.RuntimeAffinityOverrideSnapshot.Duration.get -> Convergence.Content.DurationDefinition!
 Convergence.Runtime.RuntimeAffinityOverrideSnapshot.Element.get -> Convergence.Content.DamageElement
 Convergence.Runtime.RuntimeAffinityOverrideSnapshot.Equals(Convergence.Runtime.RuntimeAffinityOverrideSnapshot? other) -> bool
-Convergence.Runtime.RuntimeAffinityOverrideSnapshot.RuntimeAffinityOverrideSnapshot(Convergence.Content.DamageElement element, Convergence.Content.ElementalAffinity affinity, Convergence.Content.DurationDefinition! duration) -> void
 Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot
 Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot!
 Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot.AilmentId.get -> Convergence.Content.ContentId
@@ -5511,11 +5447,9 @@ Convergence.Runtime.RuntimeBattleStatusSnapshot.StatModifiers.get -> Convergence
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Statuses.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeTimedStateSnapshot!>!
 Convergence.Runtime.RuntimeChargeSnapshot
 Convergence.Runtime.RuntimeChargeSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeChargeSnapshot!
-Convergence.Runtime.RuntimeChargeSnapshot.Duration.get -> Convergence.Content.DurationDefinition?
 Convergence.Runtime.RuntimeChargeSnapshot.Equals(Convergence.Runtime.RuntimeChargeSnapshot? other) -> bool
 Convergence.Runtime.RuntimeChargeSnapshot.Kind.get -> Convergence.Content.ChargeKind
 Convergence.Runtime.RuntimeChargeSnapshot.Multiplier.get -> decimal
-Convergence.Runtime.RuntimeChargeSnapshot.RuntimeChargeSnapshot(Convergence.Content.ChargeKind kind, decimal multiplier, Convergence.Content.DurationDefinition? duration = null) -> void
 Convergence.Runtime.RuntimeCheckpointEntrySnapshot
 Convergence.Runtime.RuntimeCheckpointEntrySnapshot.<Clone>$() -> Convergence.Runtime.RuntimeCheckpointEntrySnapshot!
 Convergence.Runtime.RuntimeCheckpointEntrySnapshot.ActorId.get -> Convergence.Runtime.RuntimeInstanceId?
@@ -6272,10 +6206,8 @@ Convergence.Runtime.RuntimeSessionRestoreService
 Convergence.Runtime.RuntimeSessionRestoreService.Restore(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, Convergence.Catalog.GameDataCatalog! catalog) -> Convergence.Runtime.RuntimeSessionRestoreResult!
 Convergence.Runtime.RuntimeShieldSnapshot
 Convergence.Runtime.RuntimeShieldSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeShieldSnapshot!
-Convergence.Runtime.RuntimeShieldSnapshot.Duration.get -> Convergence.Content.DurationDefinition?
 Convergence.Runtime.RuntimeShieldSnapshot.Equals(Convergence.Runtime.RuntimeShieldSnapshot? other) -> bool
 Convergence.Runtime.RuntimeShieldSnapshot.Kind.get -> Convergence.Content.ShieldKind
-Convergence.Runtime.RuntimeShieldSnapshot.RuntimeShieldSnapshot(Convergence.Content.ShieldKind kind, Convergence.Content.DurationDefinition? duration = null) -> void
 Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.Applied = 0 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidFixedPrice = 4 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
@@ -6493,8 +6425,6 @@ Convergence.Runtime.RuntimeTimedStateSnapshot.<Clone>$() -> Convergence.Runtime.
 Convergence.Runtime.RuntimeTimedStateSnapshot.Duration.get -> Convergence.Content.DurationDefinition!
 Convergence.Runtime.RuntimeTimedStateSnapshot.Equals(Convergence.Runtime.RuntimeTimedStateSnapshot? other) -> bool
 Convergence.Runtime.RuntimeTimedStateSnapshot.Id.get -> Convergence.Content.ContentId
-Convergence.Runtime.RuntimeTimedStateSnapshot.IsRemovable.get -> bool
-Convergence.Runtime.RuntimeTimedStateSnapshot.RuntimeTimedStateSnapshot(Convergence.Content.ContentId id, Convergence.Content.DurationDefinition! duration, bool isRemovable = true) -> void
 Convergence.Runtime.RuntimeWalletSnapshot
 Convergence.Runtime.RuntimeWalletSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Runtime.RuntimeWalletSnapshot.Balance.get -> int
@@ -9966,7 +9896,6 @@ Convergence.Execution.SkillExecutionDiagnosticCode.ExecutionFailed = 15 -> Conve
 Convergence.Execution.SkillExecutionDiagnosticCode.NoApplicableEffect = 13 -> Convergence.Execution.SkillExecutionDiagnosticCode
 abstract Convergence.Execution.ChargePolicyServiceBase.Match(Convergence.Content.DamageElement element) -> Convergence.Content.ChargeKind?
 abstract Convergence.Execution.ChargePolicyServiceBase.Normalize(Convergence.Content.ChargeKind requested) -> Convergence.Content.ChargeKind?
-const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 11 -> int
 Convergence.Battle.ProductionCombatStatus.Deconstruct(out bool IsGuarding, out bool IsRigidBody) -> void
 Convergence.Battle.ProductionCombatStatus.ProductionCombatStatus(bool IsGuarding = false, bool IsRigidBody = false) -> void
 Convergence.Content.ChargeKind.General = 2 -> Convergence.Content.ChargeKind
@@ -9982,9 +9911,7 @@ Convergence.Execution.ChargeApplicationAssessment.Equals(Convergence.Execution.C
 Convergence.Execution.ChargeApplicationAssessment.StoredChargeKind.get -> Convergence.Content.ChargeKind?
 Convergence.Execution.ChargeApplicationRequest
 Convergence.Execution.ChargeApplicationRequest.<Clone>$() -> Convergence.Execution.ChargeApplicationRequest!
-Convergence.Execution.ChargeApplicationRequest.ChargeApplicationRequest(Convergence.Execution.RuntimeActorState! target, Convergence.Content.ChargeKind chargeKind, decimal multiplier, Convergence.Content.DurationDefinition? duration = null) -> void
 Convergence.Execution.ChargeApplicationRequest.ChargeKind.get -> Convergence.Content.ChargeKind
-Convergence.Execution.ChargeApplicationRequest.Duration.get -> Convergence.Content.DurationDefinition?
 Convergence.Execution.ChargeApplicationRequest.Equals(Convergence.Execution.ChargeApplicationRequest? other) -> bool
 Convergence.Execution.ChargeApplicationRequest.Multiplier.get -> decimal
 Convergence.Execution.ChargeApplicationRequest.Target.get -> Convergence.Execution.RuntimeActorState!
@@ -10063,7 +9990,6 @@ Convergence.Runtime.RuntimeChargeStateSnapshot.Charges.get -> System.Collections
 Convergence.Runtime.RuntimeChargeStateSnapshot.Equals(Convergence.Runtime.RuntimeChargeStateSnapshot? other) -> bool
 Convergence.Runtime.RuntimeChargeStateSnapshot.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Runtime.RuntimeChargeStateSnapshot.RuntimeChargeStateSnapshot(Convergence.Content.ContentId policyId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeChargeSnapshot!>? charges = null) -> void
-Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 11) -> void
 Convergence.Runtime.RuntimeSaveValidationCode.ActorChargePolicyBindingRejected = 79 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorChargePolicyResolverMissing = 78 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ActorChargeStateInvalid = 80 -> Convergence.Runtime.RuntimeSaveValidationCode
@@ -10687,3 +10613,150 @@ Convergence.Content.EquipmentBasicAttackDefinition.PrimaryEffectId.init -> void
 Convergence.Content.EquipmentBasicAttackDefinition.SecondaryEffects.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.EffectDefinition!>!
 Convergence.Content.EquipmentBasicAttackDefinition.SecondaryEffects.init -> void
 Convergence.Execution.SkillExecutionDiagnosticCode.DuplicateResourceCost = 17 -> Convergence.Execution.SkillExecutionDiagnosticCode
+const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 12 -> int
+Convergence.Content.AilmentDefinition.AilmentDefinition(Convergence.Content.ContentId id, string! displayName, string! description, Convergence.Content.StatusLifetimeDefinition! defaultLifetime, Convergence.Content.AilmentTurnBehaviorDefinition! turnBehavior, Convergence.Content.AilmentModifiersDefinition! modifiers, Convergence.Content.AilmentRecoveryDefinition! recovery, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? groupIds = null, Convergence.Content.ContentId? exclusivityGroupId = null, System.Collections.Generic.IEnumerable<Convergence.Content.PassiveTriggerDefinition!>? triggers = null) -> void
+Convergence.Content.AilmentDefinition.DefaultLifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Content.ApplyAilmentEffectDefinition.ApplyAilmentEffectDefinition(Convergence.Content.ContentId AilmentId, int Chance, Convergence.Content.StatusLifetimeDefinition? Lifetime = null, Convergence.Content.ConditionDefinition? When = null, Convergence.Content.EffectFailurePolicy OnFailure = Convergence.Content.EffectFailurePolicy.Continue) -> void
+Convergence.Content.ApplyAilmentEffectDefinition.Deconstruct(out Convergence.Content.ContentId AilmentId, out int Chance, out Convergence.Content.StatusLifetimeDefinition? Lifetime, out Convergence.Content.ConditionDefinition? When, out Convergence.Content.EffectFailurePolicy OnFailure) -> void
+Convergence.Content.ApplyAilmentEffectDefinition.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition?
+Convergence.Content.ApplyAilmentEffectDefinition.Lifetime.init -> void
+Convergence.Content.BreakAffinityEffectDefinition.BreakAffinityEffectDefinition(System.Collections.Generic.IEnumerable<Convergence.Content.DamageElement>! elements, Convergence.Content.StatusLifetimeDefinition! lifetime, Convergence.Content.ConditionDefinition? when = null, Convergence.Content.EffectFailurePolicy onFailure = Convergence.Content.EffectFailurePolicy.Continue) -> void
+Convergence.Content.BreakAffinityEffectDefinition.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Content.GrantChargeEffectDefinition.Deconstruct(out Convergence.Content.ChargeKind Charge, out decimal Multiplier, out Convergence.Content.StatusLifetimeDefinition? Lifetime, out Convergence.Content.ConditionDefinition? When, out Convergence.Content.EffectFailurePolicy OnFailure) -> void
+Convergence.Content.GrantChargeEffectDefinition.GrantChargeEffectDefinition(Convergence.Content.ChargeKind Charge, decimal Multiplier, Convergence.Content.StatusLifetimeDefinition? Lifetime = null, Convergence.Content.ConditionDefinition? When = null, Convergence.Content.EffectFailurePolicy OnFailure = Convergence.Content.EffectFailurePolicy.Continue) -> void
+Convergence.Content.GrantChargeEffectDefinition.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition?
+Convergence.Content.GrantChargeEffectDefinition.Lifetime.init -> void
+Convergence.Content.GrantShieldEffectDefinition.Deconstruct(out Convergence.Content.ShieldKind Shield, out Convergence.Content.StatusLifetimeDefinition? Lifetime, out Convergence.Content.ConditionDefinition? When, out Convergence.Content.EffectFailurePolicy OnFailure) -> void
+Convergence.Content.GrantShieldEffectDefinition.GrantShieldEffectDefinition(Convergence.Content.ShieldKind Shield, Convergence.Content.StatusLifetimeDefinition? Lifetime = null, Convergence.Content.ConditionDefinition? When = null, Convergence.Content.EffectFailurePolicy OnFailure = Convergence.Content.EffectFailurePolicy.Continue) -> void
+Convergence.Content.GrantShieldEffectDefinition.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition?
+Convergence.Content.GrantShieldEffectDefinition.Lifetime.init -> void
+Convergence.Content.OverrideAffinityEffectDefinition.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Content.OverrideAffinityEffectDefinition.OverrideAffinityEffectDefinition(System.Collections.Generic.IEnumerable<Convergence.Content.DamageElement>! elements, Convergence.Content.ElementalAffinity affinity, Convergence.Content.StatusLifetimeDefinition! lifetime, Convergence.Content.ConditionDefinition? when = null, Convergence.Content.EffectFailurePolicy onFailure = Convergence.Content.EffectFailurePolicy.Continue) -> void
+Convergence.Content.StandardStatusLifetimes
+Convergence.Content.StatusLifetimeDefinition
+Convergence.Content.StatusLifetimeDefinition.<Clone>$() -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Content.StatusLifetimeDefinition.Allows(Convergence.Content.StatusRemovalCause cause) -> bool
+Convergence.Content.StatusLifetimeDefinition.Equals(Convergence.Content.StatusLifetimeDefinition? other) -> bool
+Convergence.Content.StatusLifetimeDefinition.Expiration.get -> Convergence.Content.DurationDefinition!
+Convergence.Content.StatusLifetimeDefinition.RemovalProfile.get -> Convergence.Content.StatusRemovalProfileDefinition!
+Convergence.Content.StatusLifetimeDefinition.StatusLifetimeDefinition(Convergence.Content.DurationDefinition! expiration, Convergence.Content.StatusRemovalProfileDefinition! removalProfile) -> void
+Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.BattleEnd = 10 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.Consumed = 12 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.CureEffect = 0 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.Defeat = 7 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.DeploymentSwap = 6 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.DispelEffect = 1 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.DurationExpired = 4 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.ExclusivityReplacement = 5 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.FieldTransition = 11 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.Flee = 8 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.NaturalRecovery = 2 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.RecoveryEvent = 3 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.RosterRecall = 9 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalCause.ScriptedRemoval = 13 -> Convergence.Content.StatusRemovalCause
+Convergence.Content.StatusRemovalProfileDefinition
+Convergence.Content.StatusRemovalProfileDefinition.<Clone>$() -> Convergence.Content.StatusRemovalProfileDefinition!
+Convergence.Content.StatusRemovalProfileDefinition.AllowedCauses.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.StatusRemovalCause>!
+Convergence.Content.StatusRemovalProfileDefinition.Allows(Convergence.Content.StatusRemovalCause cause) -> bool
+Convergence.Content.StatusRemovalProfileDefinition.Equals(Convergence.Content.StatusRemovalProfileDefinition? other) -> bool
+Convergence.Content.StatusRemovalProfileDefinition.StatusRemovalProfileDefinition(System.Collections.Generic.IEnumerable<Convergence.Content.StatusRemovalCause>! allowedCauses) -> void
+Convergence.Content.StatusRemovalProfileDefinition.Without(params Convergence.Content.StatusRemovalCause[]! causes) -> Convergence.Content.StatusRemovalProfileDefinition!
+Convergence.Content.StatusRemovalProfiles
+Convergence.Execution.ActiveAilmentState.ActiveAilmentState(Convergence.Content.AilmentDefinition! Definition, Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.ActiveAilmentState.Deconstruct(out Convergence.Content.AilmentDefinition! Definition, out Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.ActiveAilmentState.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Execution.ActiveAilmentState.Lifetime.init -> void
+Convergence.Execution.BattleAffinityBreakState.BattleAffinityBreakState(Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.BattleAffinityBreakState.Deconstruct(out Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.BattleAffinityBreakState.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Execution.BattleAffinityBreakState.Lifetime.init -> void
+Convergence.Execution.BattleAffinityOverrideState.BattleAffinityOverrideState(Convergence.Content.ElementalAffinity Affinity, Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.BattleAffinityOverrideState.Deconstruct(out Convergence.Content.ElementalAffinity Affinity, out Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.BattleAffinityOverrideState.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Execution.BattleAffinityOverrideState.Lifetime.init -> void
+Convergence.Execution.BattleAilmentApplicationRequest.BattleAilmentApplicationRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Execution.RuntimeActorState! target, Convergence.Content.AilmentDefinition! ailment, int chance, Convergence.Content.StatusLifetimeDefinition? lifetime = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? participants = null, Convergence.Content.ContentId? battleKindId = null, Convergence.Content.ContentId? moonPhaseId = null, Convergence.Content.SkillDefinition? skill = null) -> void
+Convergence.Execution.BattleAilmentApplicationRequest.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition?
+Convergence.Execution.BattleChargeState.BattleChargeState(decimal Multiplier, Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.BattleChargeState.Deconstruct(out decimal Multiplier, out Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.BattleChargeState.Duration.get -> Convergence.Content.DurationDefinition!
+Convergence.Execution.BattleChargeState.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Execution.BattleChargeState.Lifetime.init -> void
+Convergence.Execution.BattleOtherStatusState.BattleOtherStatusState(Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.BattleOtherStatusState.Deconstruct(out Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.BattleOtherStatusState.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Execution.BattleOtherStatusState.Lifetime.init -> void
+Convergence.Execution.BattleShieldState.BattleShieldState(Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.BattleShieldState.Deconstruct(out Convergence.Content.StatusLifetimeDefinition! Lifetime) -> void
+Convergence.Execution.BattleShieldState.Duration.get -> Convergence.Content.DurationDefinition!
+Convergence.Execution.BattleShieldState.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Execution.BattleShieldState.Lifetime.init -> void
+Convergence.Execution.BattleStatusCleanupRequest.BattleStatusCleanupRequest(Convergence.Execution.RuntimeActorState! Actor, Convergence.Execution.BattleStatusDepartureReason Reason) -> void
+Convergence.Execution.BattleStatusCleanupRequest.Deconstruct(out Convergence.Execution.RuntimeActorState! Actor, out Convergence.Execution.BattleStatusDepartureReason Reason) -> void
+Convergence.Execution.BattleStatusCleanupRequest.Reason.get -> Convergence.Execution.BattleStatusDepartureReason
+Convergence.Execution.BattleStatusCleanupRequest.Reason.init -> void
+Convergence.Execution.BattleStatusDepartureReason
+Convergence.Execution.BattleStatusDepartureReason.BattleEnd = 4 -> Convergence.Execution.BattleStatusDepartureReason
+Convergence.Execution.BattleStatusDepartureReason.Defeat = 1 -> Convergence.Execution.BattleStatusDepartureReason
+Convergence.Execution.BattleStatusDepartureReason.DeploymentSwap = 0 -> Convergence.Execution.BattleStatusDepartureReason
+Convergence.Execution.BattleStatusDepartureReason.FieldTransition = 5 -> Convergence.Execution.BattleStatusDepartureReason
+Convergence.Execution.BattleStatusDepartureReason.Flee = 2 -> Convergence.Execution.BattleStatusDepartureReason
+Convergence.Execution.BattleStatusDepartureReason.RosterRecall = 3 -> Convergence.Execution.BattleStatusDepartureReason
+Convergence.Execution.BattleStatusRemovalResult
+Convergence.Execution.BattleStatusRemovalResult.<Clone>$() -> Convergence.Execution.BattleStatusRemovalResult!
+Convergence.Execution.BattleStatusRemovalResult.BattleStatusRemovalResult(Convergence.Content.ContentId Id, Convergence.Execution.BattleDurationStateKind StateKind, Convergence.Content.StatusRemovalCause Cause) -> void
+Convergence.Execution.BattleStatusRemovalResult.Cause.get -> Convergence.Content.StatusRemovalCause
+Convergence.Execution.BattleStatusRemovalResult.Cause.init -> void
+Convergence.Execution.BattleStatusRemovalResult.Deconstruct(out Convergence.Content.ContentId Id, out Convergence.Execution.BattleDurationStateKind StateKind, out Convergence.Content.StatusRemovalCause Cause) -> void
+Convergence.Execution.BattleStatusRemovalResult.Equals(Convergence.Execution.BattleStatusRemovalResult? other) -> bool
+Convergence.Execution.BattleStatusRemovalResult.Id.get -> Convergence.Content.ContentId
+Convergence.Execution.BattleStatusRemovalResult.Id.init -> void
+Convergence.Execution.BattleStatusRemovalResult.StateKind.get -> Convergence.Execution.BattleDurationStateKind
+Convergence.Execution.BattleStatusRemovalResult.StateKind.init -> void
+Convergence.Execution.ChargeApplicationRequest.ChargeApplicationRequest(Convergence.Execution.RuntimeActorState! target, Convergence.Content.ChargeKind chargeKind, decimal multiplier, Convergence.Content.StatusLifetimeDefinition? lifetime = null) -> void
+Convergence.Execution.ChargeApplicationRequest.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Execution.RuntimeActorState.AddOtherStatus(Convergence.Content.ContentId statusId, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
+Convergence.Execution.RuntimeActorState.ApplyAilment(Convergence.Content.AilmentDefinition! definition, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
+Convergence.Execution.RuntimeActorState.BreakAffinity(Convergence.Content.DamageElement element, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
+Convergence.Execution.RuntimeActorState.ExpireBattleDurations() -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleDurationTickResult!>!
+Convergence.Execution.RuntimeActorState.GrantShield(Convergence.Content.ShieldKind kind, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
+Convergence.Execution.RuntimeActorState.OverrideAffinity(Convergence.Content.DamageElement element, Convergence.Content.ElementalAffinity affinity, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
+Convergence.Execution.RuntimeActorState.RemoveAilments(Convergence.Content.StatusRemovalCause cause, System.Func<Convergence.Execution.ActiveAilmentState!, bool>! predicate) -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+Convergence.Runtime.RuntimeAffinityBreakSnapshot.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Runtime.RuntimeAffinityBreakSnapshot.RuntimeAffinityBreakSnapshot(Convergence.Content.DamageElement element, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
+Convergence.Runtime.RuntimeAffinityOverrideSnapshot.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Runtime.RuntimeAffinityOverrideSnapshot.RuntimeAffinityOverrideSnapshot(Convergence.Content.DamageElement element, Convergence.Content.ElementalAffinity affinity, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
+Convergence.Runtime.RuntimeChargeSnapshot.Duration.get -> Convergence.Content.DurationDefinition!
+Convergence.Runtime.RuntimeChargeSnapshot.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Runtime.RuntimeChargeSnapshot.RuntimeChargeSnapshot(Convergence.Content.ChargeKind kind, decimal multiplier, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
+Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 12) -> void
+Convergence.Runtime.RuntimeShieldSnapshot.Duration.get -> Convergence.Content.DurationDefinition!
+Convergence.Runtime.RuntimeShieldSnapshot.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Runtime.RuntimeShieldSnapshot.RuntimeShieldSnapshot(Convergence.Content.ShieldKind kind, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
+Convergence.Runtime.RuntimeTimedStateSnapshot.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Runtime.RuntimeTimedStateSnapshot.RuntimeTimedStateSnapshot(Convergence.Content.ContentId id, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
+override Convergence.Content.StatusLifetimeDefinition.Equals(object? obj) -> bool
+override Convergence.Content.StatusLifetimeDefinition.GetHashCode() -> int
+override Convergence.Content.StatusLifetimeDefinition.ToString() -> string!
+override Convergence.Content.StatusRemovalProfileDefinition.Equals(object? obj) -> bool
+override Convergence.Content.StatusRemovalProfileDefinition.GetHashCode() -> int
+override Convergence.Content.StatusRemovalProfileDefinition.ToString() -> string!
+override Convergence.Execution.BattleStatusRemovalResult.Equals(object? obj) -> bool
+override Convergence.Execution.BattleStatusRemovalResult.GetHashCode() -> int
+override Convergence.Execution.BattleStatusRemovalResult.ToString() -> string!
+static Convergence.Content.StandardStatusLifetimes.Deployment(Convergence.Content.DurationDefinition! expiration) -> Convergence.Content.StatusLifetimeDefinition!
+static Convergence.Content.StandardStatusLifetimes.DeploymentTransient.get -> Convergence.Content.StatusLifetimeDefinition!
+static Convergence.Content.StandardStatusLifetimes.Encounter(Convergence.Content.DurationDefinition! expiration) -> Convergence.Content.StatusLifetimeDefinition!
+static Convergence.Content.StandardStatusLifetimes.Field(Convergence.Content.DurationDefinition! expiration) -> Convergence.Content.StatusLifetimeDefinition!
+static Convergence.Content.StandardStatusLifetimes.Persistent.get -> Convergence.Content.StatusLifetimeDefinition!
+static Convergence.Content.StandardStatusLifetimes.PersistentAilment(Convergence.Content.DurationDefinition! expiration) -> Convergence.Content.StatusLifetimeDefinition!
+static Convergence.Content.StandardStatusLifetimes.ProtectedPersistent.get -> Convergence.Content.StatusLifetimeDefinition!
+static Convergence.Content.StatusLifetimeDefinition.operator !=(Convergence.Content.StatusLifetimeDefinition? left, Convergence.Content.StatusLifetimeDefinition? right) -> bool
+static Convergence.Content.StatusLifetimeDefinition.operator ==(Convergence.Content.StatusLifetimeDefinition? left, Convergence.Content.StatusLifetimeDefinition? right) -> bool
+static Convergence.Content.StatusRemovalProfileDefinition.operator !=(Convergence.Content.StatusRemovalProfileDefinition? left, Convergence.Content.StatusRemovalProfileDefinition? right) -> bool
+static Convergence.Content.StatusRemovalProfileDefinition.operator ==(Convergence.Content.StatusRemovalProfileDefinition? left, Convergence.Content.StatusRemovalProfileDefinition? right) -> bool
+static Convergence.Content.StatusRemovalProfiles.Protected.get -> Convergence.Content.StatusRemovalProfileDefinition!
+static Convergence.Content.StatusRemovalProfiles.Standard.get -> Convergence.Content.StatusRemovalProfileDefinition!
+static Convergence.Content.StatusRemovalProfiles.Uncurable.get -> Convergence.Content.StatusRemovalProfileDefinition!
+static Convergence.Execution.BattleStatusRemovalResult.operator !=(Convergence.Execution.BattleStatusRemovalResult? left, Convergence.Execution.BattleStatusRemovalResult? right) -> bool
+static Convergence.Execution.BattleStatusRemovalResult.operator ==(Convergence.Execution.BattleStatusRemovalResult? left, Convergence.Execution.BattleStatusRemovalResult? right) -> bool

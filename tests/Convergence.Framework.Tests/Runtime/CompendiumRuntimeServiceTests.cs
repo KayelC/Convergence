@@ -755,7 +755,7 @@ public sealed class CompendiumRuntimeServiceTests
             ailmentId,
             "Poison",
             "Test ailment.",
-            new PermanentDurationDefinition(),
+            StandardStatusLifetimes.Persistent,
             new NormalAilmentTurnBehaviorDefinition(),
             new AilmentModifiersDefinition(1m, 0, 1m, 1m, false),
             new AilmentRecoveryDefinition());

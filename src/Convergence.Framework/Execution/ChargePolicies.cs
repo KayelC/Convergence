@@ -55,7 +55,7 @@ public sealed record ChargeApplicationRequest
         RuntimeActorState target,
         ChargeKind chargeKind,
         decimal multiplier,
-        DurationDefinition? duration = null)
+        StatusLifetimeDefinition? lifetime = null)
     {
         Target = target ?? throw new ArgumentNullException(nameof(target));
         if (!Enum.IsDefined(chargeKind))
@@ -69,13 +69,13 @@ public sealed record ChargeApplicationRequest
 
         ChargeKind = chargeKind;
         Multiplier = multiplier;
-        Duration = duration;
+        Lifetime = lifetime ?? StandardStatusLifetimes.DeploymentTransient;
     }
 
     public RuntimeActorState Target { get; }
     public ChargeKind ChargeKind { get; }
     public decimal Multiplier { get; }
-    public DurationDefinition? Duration { get; }
+    public StatusLifetimeDefinition Lifetime { get; }
 }
 
 public sealed record ChargeApplicationAssessment
@@ -342,7 +342,7 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
         {
             return RejectedAssessment(compatibility);
         }
-        if (!IsValidLiveDuration(request.Duration))
+        if (!IsValidLiveDuration(request.Lifetime.Expiration))
         {
             return RejectedAssessment(new ChargePolicyDiagnostic(
                 ChargePolicyDiagnosticCode.InvalidDuration,
@@ -382,7 +382,7 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
         request.Target.AddCharge(
             PolicyId,
             assessment.StoredChargeKind!.Value,
-            new BattleChargeState(request.Multiplier, request.Duration));
+            new BattleChargeState(request.Multiplier, request.Lifetime));
         return new ChargeApplicationResult(
             true,
             before,
@@ -434,7 +434,7 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
 
         RequireCompatible(actor);
         RuntimeChargeStateSnapshot? before = actor.CaptureChargeState();
-        ChargeKind[] consumed = participation
+        ChargeKind[] candidates = participation
             .Where(modifier => modifier.ChargeKind.HasValue)
             .GroupBy(modifier => modifier.ChargeKind!.Value)
             .Where(group =>
@@ -443,9 +443,13 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
             .Select(group => group.Key)
             .Order()
             .ToArray();
-        foreach (ChargeKind kind in consumed)
+        var consumed = new List<ChargeKind>();
+        foreach (ChargeKind kind in candidates)
         {
-            actor.RemoveCharge(PolicyId, kind);
+            if (actor.RemoveCharge(PolicyId, kind, StatusRemovalCause.Consumed))
+            {
+                consumed.Add(kind);
+            }
         }
 
         return new ChargeConsumptionResult(
@@ -474,7 +478,7 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
                     $"Charge kind '{charge.Kind}' is incompatible with policy '{PolicyId}'.",
                     charge.Kind));
             }
-            if (!IsValidLiveDuration(charge.Duration))
+            if (!IsValidLiveDuration(charge.Lifetime.Expiration))
             {
                 diagnostics.Add(new ChargePolicyDiagnostic(
                     ChargePolicyDiagnosticCode.InvalidDuration,
@@ -517,9 +521,8 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
     private static ChargeApplicationAssessment RejectedAssessment(ChargePolicyDiagnostic diagnostic) =>
         new(false, diagnostics: [diagnostic]);
 
-    private static bool IsValidLiveDuration(DurationDefinition? duration) => duration switch
+    private static bool IsValidLiveDuration(DurationDefinition duration) => duration switch
     {
-        null => true,
         InstantDurationDefinition => true,
         TurnDurationDefinition turns => turns.Value > 0 && turns.TickEventId.IsValid,
         PhaseDurationDefinition phase => phase.PhaseId.IsValid,

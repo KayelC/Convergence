@@ -3154,17 +3154,24 @@ public sealed class CleanTrainingAnnexPlayHostTests
             .Player;
         RuntimeActorState state = player.Actor.State;
         state.SetResource(StandardProgressionIds.Hp, 70);
-        state.ApplyAilment(catalog.GetRequiredAilment(Qualified("sample_poison")), Turns(3));
+        state.ApplyAilment(
+            catalog.GetRequiredAilment(Qualified("sample_poison")),
+            StandardStatusLifetimes.Field(Turns(3)));
         state.SetGuarding(true);
         DemoHostTestStatModifierPolicy.Apply(state, statModifiers, ContentId.Parse("attack"), 1);
         Assert.True(new SplitChargePolicy().Apply(new ChargeApplicationRequest(
             state,
             ChargeKind.Physical,
             2m,
-            Turns(1))).Applied);
-        state.GrantShield(ShieldKind.Physical, Turns(1));
-        state.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Null, Turns(1));
-        state.AddOtherStatus(ContentId.Parse("training_annex_recovery_mark"), Turns(1));
+            StandardStatusLifetimes.Deployment(Turns(1)))).Applied);
+        state.GrantShield(ShieldKind.Physical, StandardStatusLifetimes.Deployment(Turns(1)));
+        state.OverrideAffinity(
+            DamageElement.Fire,
+            ElementalAffinity.Null,
+            StandardStatusLifetimes.Encounter(Turns(1)));
+        state.AddOtherStatus(
+            ContentId.Parse("training_annex_recovery_mark"),
+            StandardStatusLifetimes.Encounter(Turns(1)));
         var commands = new List<CleanTrainingAnnexPlayCommand>();
         var io = new ScriptedGameIO().QueueMenu(0);
         using var output = new StringWriter();

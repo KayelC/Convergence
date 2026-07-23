@@ -618,7 +618,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
         private void ValidateAilment(RecordSource<AilmentDefinition> source)
         {
             AilmentDefinition ailment = source.Definition;
-            ValidateDuration(source, ailment.DefaultDuration, source.Path + ".defaultDuration");
+            ValidateDuration(source, ailment.DefaultLifetime.Expiration, source.Path + ".defaultDuration");
             ValidateAilmentBehavior(source, ailment.TurnBehavior, source.Path + ".turnBehavior");
 
             ValidateDuplicates(source, ailment.GroupIds, source.Path + ".groupIds");
@@ -649,7 +649,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     "Natural recovery chance");
                 RequireRegistration(source, natural.StatId, source.Path + ".recovery.natural.statId",
                     _registrations.StatIds, "stat");
-                RequirePositive(source, natural.StatMultiplier, source.Path + ".recovery.natural.statMultiplier",
+                RequireNonNegative(source, natural.StatMultiplier, source.Path + ".recovery.natural.statMultiplier",
                     "Natural recovery stat multiplier");
             }
 
@@ -1458,9 +1458,9 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 case ApplyAilmentEffectDefinition apply:
                     RequirePercentage(source, apply.Chance, path + ".chance", "Ailment application chance");
                     ValidateContentReference(source, apply.AilmentId, path + ".ailmentId", _ailmentIndex, "ailment");
-                    if (apply.Duration is not null)
+                    if (apply.Lifetime is not null)
                     {
-                        ValidateDuration(source, apply.Duration, path + ".duration");
+                        ValidateDuration(source, apply.Lifetime.Expiration, path + ".duration");
                     }
                     break;
                 case RestoreResourceEffectDefinition restore:
@@ -1501,13 +1501,13 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 case GrantChargeEffectDefinition charge:
                     RequireDefinedEnum(source, charge.Charge, path + ".charge", "Charge kind");
                     RequirePositive(source, charge.Multiplier, path + ".multiplier", "Charge multiplier");
-                    if (charge.Duration is not null)
+                    if (charge.Lifetime is not null)
                     {
-                        ValidateDuration(source, charge.Duration, path + ".duration");
+                        ValidateDuration(source, charge.Lifetime.Expiration, path + ".duration");
                     }
                     break;
-                case GrantShieldEffectDefinition shield when shield.Duration is not null:
-                    ValidateDuration(source, shield.Duration, path + ".duration");
+                case GrantShieldEffectDefinition shield when shield.Lifetime is not null:
+                    ValidateDuration(source, shield.Lifetime.Expiration, path + ".duration");
                     break;
                 case BreakAffinityEffectDefinition affinityBreak:
                     ValidateAffinityElements(
@@ -1515,7 +1515,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         affinityBreak.Elements,
                         path + ".elementIds",
                         "Affinity Break effects");
-                    ValidateDuration(source, affinityBreak.Duration, path + ".duration");
+                    ValidateDuration(source, affinityBreak.Lifetime.Expiration, path + ".duration");
                     break;
                 case OverrideAffinityEffectDefinition affinity:
                     ValidateAffinityElements(
@@ -1523,7 +1523,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         affinity.Elements,
                         path + ".elementIds",
                         "Affinity overrides");
-                    ValidateDuration(source, affinity.Duration, path + ".duration");
+                    ValidateDuration(source, affinity.Lifetime.Expiration, path + ".duration");
                     break;
                 case RemoveStatusEffectDefinition removeStatus:
                     if (removeStatus.StatusKinds.Count == 0 && removeStatus.StatusIds.Count == 0)

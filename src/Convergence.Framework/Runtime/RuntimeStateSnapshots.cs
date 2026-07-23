@@ -275,17 +275,15 @@ public sealed record RuntimeTimedStateSnapshot
 {
     public RuntimeTimedStateSnapshot(
         ContentId id,
-        DurationDefinition duration,
-        bool isRemovable = true)
+        StatusLifetimeDefinition lifetime)
     {
         Id = id;
-        Duration = duration ?? throw new ArgumentNullException(nameof(duration));
-        IsRemovable = isRemovable;
+        Lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
     }
 
     public ContentId Id { get; }
-    public DurationDefinition Duration { get; }
-    public bool IsRemovable { get; }
+    public StatusLifetimeDefinition Lifetime { get; }
+    public DurationDefinition Duration => Lifetime.Expiration;
 }
 
 public sealed record RuntimeStatStageSnapshot
@@ -310,7 +308,7 @@ public sealed record RuntimeChargeSnapshot
     public RuntimeChargeSnapshot(
         ChargeKind kind,
         decimal multiplier,
-        DurationDefinition? duration = null)
+        StatusLifetimeDefinition lifetime)
     {
         EnumDomain.RequireDefined(kind, nameof(kind));
         if (multiplier <= 0)
@@ -320,12 +318,13 @@ public sealed record RuntimeChargeSnapshot
 
         Kind = kind;
         Multiplier = multiplier;
-        Duration = duration;
+        Lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
     }
 
     public ChargeKind Kind { get; }
     public decimal Multiplier { get; }
-    public DurationDefinition? Duration { get; }
+    public StatusLifetimeDefinition Lifetime { get; }
+    public DurationDefinition Duration => Lifetime.Expiration;
 }
 
 public sealed record RuntimeChargeStateSnapshot
@@ -350,15 +349,16 @@ public sealed record RuntimeChargeStateSnapshot
 
 public sealed record RuntimeShieldSnapshot
 {
-    public RuntimeShieldSnapshot(ShieldKind kind, DurationDefinition? duration = null)
+    public RuntimeShieldSnapshot(ShieldKind kind, StatusLifetimeDefinition lifetime)
     {
         EnumDomain.RequireDefined(kind, nameof(kind));
         Kind = kind;
-        Duration = duration;
+        Lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
     }
 
     public ShieldKind Kind { get; }
-    public DurationDefinition? Duration { get; }
+    public StatusLifetimeDefinition Lifetime { get; }
+    public DurationDefinition Duration => Lifetime.Expiration;
 }
 
 public sealed record RuntimeAffinityOverrideSnapshot
@@ -366,31 +366,33 @@ public sealed record RuntimeAffinityOverrideSnapshot
     public RuntimeAffinityOverrideSnapshot(
         DamageElement element,
         ElementalAffinity affinity,
-        DurationDefinition duration)
+        StatusLifetimeDefinition lifetime)
     {
         EnumDomain.RequireDefined(element, nameof(element));
         EnumDomain.RequireDefined(affinity, nameof(affinity));
         Element = element;
         Affinity = affinity;
-        Duration = duration ?? throw new ArgumentNullException(nameof(duration));
+        Lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
     }
 
     public DamageElement Element { get; }
     public ElementalAffinity Affinity { get; }
-    public DurationDefinition Duration { get; }
+    public StatusLifetimeDefinition Lifetime { get; }
+    public DurationDefinition Duration => Lifetime.Expiration;
 }
 
 public sealed record RuntimeAffinityBreakSnapshot
 {
-    public RuntimeAffinityBreakSnapshot(DamageElement element, DurationDefinition duration)
+    public RuntimeAffinityBreakSnapshot(DamageElement element, StatusLifetimeDefinition lifetime)
     {
         EnumDomain.RequireDefined(element, nameof(element));
         Element = element;
-        Duration = duration ?? throw new ArgumentNullException(nameof(duration));
+        Lifetime = lifetime ?? throw new ArgumentNullException(nameof(lifetime));
     }
 
     public DamageElement Element { get; }
-    public DurationDefinition Duration { get; }
+    public StatusLifetimeDefinition Lifetime { get; }
+    public DurationDefinition Duration => Lifetime.Expiration;
 }
 
 public sealed record RuntimeAnalysisSnapshot

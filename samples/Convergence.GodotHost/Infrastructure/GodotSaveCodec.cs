@@ -18,8 +18,7 @@ internal sealed record GodotSavePendingSkillChoice(
 
 internal sealed record GodotSaveTimedState(
     string Id,
-    GodotSaveDuration Duration,
-    bool IsRemovable);
+    GodotSaveStatusLifetime Lifetime);
 
 internal sealed record GodotSaveStatModifierBoundary(string EventId, long Sequence);
 
@@ -41,18 +40,22 @@ internal sealed record GodotSaveStatModifierState(
 internal sealed record GodotSaveCharge(
     string Kind,
     decimal Multiplier,
-    GodotSaveDuration? Duration);
+    GodotSaveStatusLifetime Lifetime);
 
-internal sealed record GodotSaveShield(string Kind, GodotSaveDuration? Duration);
+internal sealed record GodotSaveShield(string Kind, GodotSaveStatusLifetime Lifetime);
 
 internal sealed record GodotSaveAffinityBreak(
     string Element,
-    GodotSaveDuration Duration);
+    GodotSaveStatusLifetime Lifetime);
 
 internal sealed record GodotSaveAffinityOverride(
     string Element,
     string Affinity,
-    GodotSaveDuration Duration);
+    GodotSaveStatusLifetime Lifetime);
+
+internal sealed record GodotSaveStatusLifetime(
+    GodotSaveDuration Expiration,
+    IReadOnlyList<string> AllowedRemovalCauses);
 
 internal sealed record GodotSaveDuration(
     string Kind,
@@ -287,19 +290,19 @@ internal static class GodotSaveCodec
             actor.BattleStatus.Charges.Select(charge => new GodotSaveCharge(
                 charge.Kind.ToString(),
                 charge.Multiplier,
-                ToDto(charge.Duration))).ToArray(),
+                ToLifetimeDto(charge.Lifetime))).ToArray(),
             actor.BattleStatus.Shields.Select(shield => new GodotSaveShield(
                 shield.Kind.ToString(),
-                ToDto(shield.Duration))).ToArray(),
+                ToLifetimeDto(shield.Lifetime))).ToArray(),
             actor.BattleStatus.AffinityBreaks.Select(affinityBreak =>
                 new GodotSaveAffinityBreak(
                     affinityBreak.Element.ToString(),
-                    ToDto(affinityBreak.Duration)!)).ToArray(),
+                    ToLifetimeDto(affinityBreak.Lifetime))).ToArray(),
             actor.BattleStatus.AffinityOverrides.Select(affinity =>
                 new GodotSaveAffinityOverride(
                     affinity.Element.ToString(),
                     affinity.Affinity.ToString(),
-                    ToDto(affinity.Duration)!)).ToArray(),
+                    ToLifetimeDto(affinity.Lifetime))).ToArray(),
             actor.BattleStatus.IsGuarding,
             actor.BattleStatus.Analysis.Select(analysis => new GodotSaveAnalysis(
                 analysis.TargetInstanceId.ToString(),
@@ -361,20 +364,18 @@ internal static class GodotSaveCodec
                 FromDto(actor.ChargePolicyId, actor.Charges),
                 actor.Shields.Select(shield => new RuntimeShieldSnapshot(
                     Enum.Parse<ShieldKind>(shield.Kind),
-                    FromDto(shield.Duration))),
+                    FromLifetimeDto(shield.Lifetime))),
                 actor.AffinityOverrides.Select(affinity => new RuntimeAffinityOverrideSnapshot(
                     Enum.Parse<DamageElement>(affinity.Element),
                     Enum.Parse<ElementalAffinity>(affinity.Affinity),
-                    FromDto(affinity.Duration) ??
-                        throw new InvalidDataException("Affinity override duration is required."))),
+                    FromLifetimeDto(affinity.Lifetime))),
                 actor.IsGuarding,
                 actor.Analysis.Select(analysis => new RuntimeAnalysisSnapshot(
                     Instance(analysis.TargetInstanceId),
                     analysis.Layers.Select(layer => Enum.Parse<AnalysisLayer>(layer)))),
                 actor.AffinityBreaks.Select(affinityBreak => new RuntimeAffinityBreakSnapshot(
                     Enum.Parse<DamageElement>(affinityBreak.Element),
-                    FromDto(affinityBreak.Duration) ??
-                        throw new InvalidDataException("Affinity Break duration is required.")))),
+                    FromLifetimeDto(affinityBreak.Lifetime)))),
             new RuntimeBattleActivationSnapshot(
                 actor.PassiveActivations.Select(passive =>
                     new RuntimePassiveActivationSnapshot(
@@ -448,7 +449,7 @@ internal static class GodotSaveCodec
             charges.Select(charge => new RuntimeChargeSnapshot(
                 Enum.Parse<ChargeKind>(charge.Kind),
                 charge.Multiplier,
-                FromDto(charge.Duration))));
+                FromLifetimeDto(charge.Lifetime))));
     }
 
     private static GodotSavePartyRoster ToDto(RuntimePartyRosterSnapshot roster) =>
@@ -481,14 +482,24 @@ internal static class GodotSaveCodec
         new(Instance(actor.InstanceId), Id(actor.EntityId), actor.DisplayName);
 
     private static GodotSaveTimedState ToDto(RuntimeTimedStateSnapshot timed) =>
-        new(timed.Id.ToString(), ToDto(timed.Duration)!, timed.IsRemovable);
+        new(timed.Id.ToString(), ToLifetimeDto(timed.Lifetime));
 
     private static RuntimeTimedStateSnapshot FromDto(GodotSaveTimedState timed) =>
         new(
             Id(timed.Id),
-            FromDto(timed.Duration) ??
-                throw new InvalidDataException("Timed status duration is required."),
-            timed.IsRemovable);
+            FromLifetimeDto(timed.Lifetime));
+
+    private static GodotSaveStatusLifetime ToLifetimeDto(StatusLifetimeDefinition lifetime) =>
+        new(
+            ToDto(lifetime.Expiration)!,
+            lifetime.RemovalProfile.AllowedCauses.Select(cause => cause.ToString()).ToArray());
+
+    private static StatusLifetimeDefinition FromLifetimeDto(GodotSaveStatusLifetime lifetime) =>
+        new(
+            FromDto(lifetime.Expiration) ??
+                throw new InvalidDataException("Status lifetime expiration is required."),
+            new StatusRemovalProfileDefinition(
+                lifetime.AllowedRemovalCauses.Select(Enum.Parse<StatusRemovalCause>)));
 
     private static GodotSaveDuration? ToDto(DurationDefinition? duration) => duration switch
     {

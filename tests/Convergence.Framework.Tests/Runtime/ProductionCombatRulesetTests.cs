@@ -763,8 +763,8 @@ public sealed class ProductionCombatRulesetTests
                     StandardProgressionIds.Luck,
                     RuntimeActorNumericDomain.MaximumStatValue)
             ]);
-        actor.ApplyAilment(ExtremeAilment("extreme_one"), new BattleDurationDefinition());
-        actor.ApplyAilment(ExtremeAilment("extreme_two"), new BattleDurationDefinition());
+        actor.ApplyAilment(ExtremeAilment("extreme_one"), EncounterLifetime(new BattleDurationDefinition()));
+        actor.ApplyAilment(ExtremeAilment("extreme_two"), EncounterLifetime(new BattleDurationDefinition()));
 
         ProductionCombatantProfile profile = Rules().CreateCombatantProfile(actor);
 
@@ -809,7 +809,7 @@ public sealed class ProductionCombatRulesetTests
             ContentId.Parse(id),
             id,
             "Test ailment.",
-            new BattleDurationDefinition(),
+            EncounterLifetime(new BattleDurationDefinition()),
             new NormalAilmentTurnBehaviorDefinition(),
             new AilmentModifiersDefinition(1m, 0, 1m, 1m, false),
             new AilmentRecoveryDefinition());
@@ -819,7 +819,7 @@ public sealed class ProductionCombatRulesetTests
             ContentId.Parse(id),
             id,
             "Exercises saturating combat modifiers.",
-            new BattleDurationDefinition(),
+            EncounterLifetime(new BattleDurationDefinition()),
             new NormalAilmentTurnBehaviorDefinition(),
             new AilmentModifiersDefinition(
                 decimal.MaxValue,

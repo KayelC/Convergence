@@ -143,7 +143,7 @@ public sealed class BattleActionExecutorTests
             burnId,
             "Burn",
             "Test ailment.",
-            new BattleDurationDefinition(),
+            EncounterLifetime(new BattleDurationDefinition()),
             new NormalAilmentTurnBehaviorDefinition(),
             new AilmentModifiersDefinition(1m, 0, 1m, 1m, false),
             new AilmentRecoveryDefinition());

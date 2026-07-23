@@ -413,7 +413,7 @@ public sealed class CatalogBattleRuntimeTests
                     new RuntimeAffinityOverrideSnapshot(
                         DamageElement.Ice,
                         ElementalAffinity.Resist,
-                        new BattleDurationDefinition())
+                        EncounterLifetime(new BattleDurationDefinition()))
                 ],
                 isGuarding: true),
             new RuntimeBattleActivationSnapshot(),
@@ -456,7 +456,9 @@ public sealed class CatalogBattleRuntimeTests
             new RuntimeSkillStateSnapshot([default], [default]),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(
-                ailments: [new RuntimeTimedStateSnapshot(default, new BattleDurationDefinition())]),
+                ailments: [new RuntimeTimedStateSnapshot(
+                    default,
+                    EncounterLifetime(new BattleDurationDefinition()))]),
             new RuntimeBattleActivationSnapshot(),
             baseResourceValues: null,
             Id("hp"));
@@ -925,9 +927,9 @@ public sealed class CatalogBattleRuntimeTests
         ContentId phaseStatus = Id("phase_status");
         ContentId battleStatus = Id("battle_status");
         ContentId permanentStatus = Id("permanent_status");
-        frost.State.AddOtherStatus(phaseStatus, new PhaseDurationDefinition(PlayerTeam));
-        frost.State.AddOtherStatus(battleStatus, new BattleDurationDefinition());
-        frost.State.AddOtherStatus(permanentStatus, new PermanentDurationDefinition());
+        frost.State.AddOtherStatus(phaseStatus, EncounterLifetime(new PhaseDurationDefinition(PlayerTeam)));
+        frost.State.AddOtherStatus(battleStatus, EncounterLifetime(new BattleDurationDefinition()));
+        frost.State.AddOtherStatus(permanentStatus, StandardStatusLifetimes.Persistent);
         BattleExecutionServices services = Services(catalog);
         var executor = new SkillExecutor(services);
 
@@ -1883,7 +1885,8 @@ public sealed class CatalogBattleRuntimeTests
             EnemyTeam);
         ContentId ailmentId = Id($"test.pack:{prefix}_fatigue");
         ContentId battleStatusId = Id($"test.pack:{prefix}_battle_status");
-        var duration = new TurnDurationDefinition(2, Id("owner_turn_end"), false);
+        StatusLifetimeDefinition duration =
+            FieldLifetime(new TurnDurationDefinition(2, Id("owner_turn_end"), false));
         var ailment = new AilmentDefinition(
             ailmentId,
             "Fatigue",
@@ -1900,7 +1903,7 @@ public sealed class CatalogBattleRuntimeTests
             ]);
         player.State.SetGuarding(true);
         player.State.ApplyAilment(ailment, duration);
-        player.State.AddOtherStatus(battleStatusId, new BattleDurationDefinition());
+        player.State.AddOtherStatus(battleStatusId, EncounterLifetime(new BattleDurationDefinition()));
 
         BattleExecutionServices services = Services(catalog);
         var lifecycle = new BattleStatusEncounterLifecyclePort(

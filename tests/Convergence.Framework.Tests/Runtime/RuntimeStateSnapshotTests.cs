@@ -529,8 +529,13 @@ public sealed class RuntimeStateSnapshotTests
                 new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Armor, Id("convergence.demo:kevlar_vest"))
             ]),
             new RuntimeBattleStatusSnapshot(
-                ailments: [new RuntimeTimedStateSnapshot(Id("poison"), Turns(3))],
-                statuses: [new RuntimeTimedStateSnapshot(Id("downed"), Turns(1), isRemovable: false)],
+                ailments: [new RuntimeTimedStateSnapshot(Id("poison"), FieldLifetime(Turns(3)))],
+                statuses:
+                [
+                    new RuntimeTimedStateSnapshot(
+                        Id("downed"),
+                        new StatusLifetimeDefinition(Turns(1), StatusRemovalProfiles.Uncurable))
+                ],
                 statModifiers: new RuntimeStatModifierStateSnapshot(
                     Id("test.pack:timed_contribution"),
                     [
@@ -541,10 +546,19 @@ public sealed class RuntimeStateSnapshotTests
                     ]),
                 chargeState: new RuntimeChargeStateSnapshot(
                     StandardChargePolicyIds.Split,
-                    [new RuntimeChargeSnapshot(ChargeKind.Magical, 2.5m, Turns(1))]),
-                shields: [new RuntimeShieldSnapshot(ShieldKind.Magical, Turns(1))],
-                affinityOverrides: [new RuntimeAffinityOverrideSnapshot(DamageElement.Fire, ElementalAffinity.Normal, Turns(2))],
-                affinityBreaks: [new RuntimeAffinityBreakSnapshot(DamageElement.Ice, Turns(2))],
+                    [new RuntimeChargeSnapshot(ChargeKind.Magical, 2.5m, DeploymentLifetime(Turns(1)))]),
+                shields: [new RuntimeShieldSnapshot(ShieldKind.Magical, DeploymentLifetime(Turns(1)))],
+                affinityOverrides:
+                [
+                    new RuntimeAffinityOverrideSnapshot(
+                        DamageElement.Fire,
+                        ElementalAffinity.Normal,
+                        EncounterLifetime(Turns(2)))
+                ],
+                affinityBreaks:
+                [
+                    new RuntimeAffinityBreakSnapshot(DamageElement.Ice, EncounterLifetime(Turns(2)))
+                ],
                 isGuarding: true,
                 analysis:
                 [
@@ -578,7 +592,7 @@ public sealed class RuntimeStateSnapshotTests
                 Id("poison"),
                 "Poison",
                 "Test ailment.",
-                Turns(3),
+                FieldLifetime(Turns(3)),
                 new NormalAilmentTurnBehaviorDefinition(),
                 new AilmentModifiersDefinition(1, 0, 1, 1, false),
                 new AilmentRecoveryDefinition())],

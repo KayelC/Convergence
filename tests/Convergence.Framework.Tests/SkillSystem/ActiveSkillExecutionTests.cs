@@ -1737,11 +1737,11 @@ public sealed class ActiveSkillExecutionTests
             new GrantShieldEffectDefinition(ShieldKind.Magical),
             new BreakAffinityEffectDefinition(
                 [DamageElement.Fire],
-                new BattleDurationDefinition()),
+                EncounterLifetime(new BattleDurationDefinition())),
             new OverrideAffinityEffectDefinition(
                 [DamageElement.Fire],
                 ElementalAffinity.Null,
-                new BattleDurationDefinition()),
+                EncounterLifetime(new BattleDurationDefinition())),
             new AnalyzeEffectDefinition([AnalysisLayer.Stats]),
             new CustomEffectDefinition(handlerId)
         ],
@@ -1884,7 +1884,7 @@ public sealed class ActiveSkillExecutionTests
             "target",
             EnemyTeam,
             defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]));
-        target.ApplyAilment(Ailment(Poison), new BattleDurationDefinition());
+        target.ApplyAilment(Ailment(Poison), EncounterLifetime(new BattleDurationDefinition()));
         TestStatModifierPolicy.ApplyPersistent(target, attack, 1);
         ConditionDefinition[] conditions =
         [
@@ -2064,7 +2064,7 @@ public sealed class ActiveSkillExecutionTests
             new OverrideAffinityEffectDefinition(
                 [DamageElement.Fire],
                 ElementalAffinity.Null,
-                new BattleDurationDefinition()),
+                EncounterLifetime(new BattleDurationDefinition())),
             actor,
             target);
         target.AddOtherStatus(mark);
@@ -2113,7 +2113,8 @@ public sealed class ActiveSkillExecutionTests
     public void AffinityBreak_ExecutesAsTimedElementSpecificStateAndDrivesDamageResolution()
     {
         ContentId ownerTurnEnd = ContentId.Parse("owner_turn_end");
-        var duration = new TurnDurationDefinition(2, ownerTurnEnd, false);
+        var expiration = new TurnDurationDefinition(2, ownerTurnEnd, false);
+        StatusLifetimeDefinition lifetime = EncounterLifetime(expiration);
         var profile = new CombatDefenseProfile(
         [
             new KeyValuePair<DamageElement, ElementalAffinity>(DamageElement.Fire, ElementalAffinity.Absorb),
@@ -2121,28 +2122,34 @@ public sealed class ActiveSkillExecutionTests
         ]);
         RuntimeActorState actor = Actor("actor", PlayerTeam);
         RuntimeActorState target = Actor("target", EnemyTeam, defense: profile);
-        target.OverrideAffinity(DamageElement.Fire, ElementalAffinity.Resist, new BattleDurationDefinition());
+        target.OverrideAffinity(
+            DamageElement.Fire,
+            ElementalAffinity.Resist,
+            EncounterLifetime(new BattleDurationDefinition()));
         var executor = new SkillExecutor(Services());
 
         SkillExecutionResult applied = ExecuteEffect(
             executor,
-            new BreakAffinityEffectDefinition([DamageElement.Fire], duration),
+            new BreakAffinityEffectDefinition([DamageElement.Fire], lifetime),
             actor,
             target);
 
         Assert.Equal(SkillExecutionStatus.Executed, applied.Status);
-        Assert.Equal(duration, target.AffinityBreaks[DamageElement.Fire].Duration);
+        Assert.Equal(expiration, target.AffinityBreaks[DamageElement.Fire].Duration);
         Assert.Equal(ElementalAffinity.Normal, target.GetElementalAffinity(DamageElement.Fire));
         Assert.Equal(
             ElementalAffinity.Normal,
             target.GetElementalAffinity(DamageElement.Fire, [ElementalAffinity.Absorb]));
         Assert.Equal(ElementalAffinity.Null, target.GetElementalAffinity(DamageElement.Ice));
         Assert.Throws<ArgumentException>(() =>
-            target.BreakAffinity(DamageElement.Almighty, duration));
+            target.BreakAffinity(DamageElement.Almighty, lifetime));
 
-        target.GrantShield(ShieldKind.Magical, null);
+        target.GrantShield(ShieldKind.Magical, StandardStatusLifetimes.DeploymentTransient);
         Assert.Equal(ElementalAffinity.Repel, target.GetElementalAffinity(DamageElement.Fire));
-        target.RemoveNonModifierStatuses(new HashSet<StatusEffectKind> { StatusEffectKind.Shield }, []);
+        target.RemoveNonModifierStatuses(
+            new HashSet<StatusEffectKind> { StatusEffectKind.Shield },
+            [],
+            StatusRemovalCause.DispelEffect);
 
         SkillExecutionResult damage = ExecuteEffect(
             executor,
@@ -2165,7 +2172,7 @@ public sealed class ActiveSkillExecutionTests
         Assert.Empty(target.AffinityBreaks);
         Assert.Equal(ElementalAffinity.Resist, target.GetElementalAffinity(DamageElement.Fire));
 
-        target.BreakAffinity(DamageElement.Fire, duration);
+        target.BreakAffinity(DamageElement.Fire, lifetime);
         ExecuteEffect(
             executor,
             new RemoveStatusEffectDefinition([StatusEffectKind.AffinityBreak]),
@@ -2191,7 +2198,7 @@ public sealed class ActiveSkillExecutionTests
         [
             new BreakAffinityEffectDefinition(
                 [DamageElement.Fire],
-                new InstantDurationDefinition()),
+                EncounterLifetime(new InstantDurationDefinition())),
             new DamageEffectDefinition(
                 DamageElement.Fire,
                 10,
@@ -2232,7 +2239,7 @@ public sealed class ActiveSkillExecutionTests
         [
             new BreakAffinityEffectDefinition(
                 [DamageElement.Fire],
-                new InstantDurationDefinition()),
+                EncounterLifetime(new InstantDurationDefinition())),
             new CustomEffectDefinition(nestedHandlerId),
             new DamageEffectDefinition(
                 DamageElement.Fire,
@@ -2708,7 +2715,7 @@ public sealed class ActiveSkillExecutionTests
             id,
             id.ToString(),
             "Test ailment.",
-            new TurnDurationDefinition(3, ContentId.Parse("owner_turn_end"), false),
+            FieldLifetime(new TurnDurationDefinition(3, ContentId.Parse("owner_turn_end"), false)),
             new NormalAilmentTurnBehaviorDefinition(),
             new AilmentModifiersDefinition(1, 0, 1, 1, false),
             new AilmentRecoveryDefinition(),

@@ -72,7 +72,7 @@ public sealed class ChargePolicyTests
             actor,
             ChargeKind.Physical,
             2m,
-            new TurnDurationDefinition(0, default, false)));
+            DeploymentLifetime(new TurnDurationDefinition(0, default, false))));
 
         Assert.False(result.Applied);
         Assert.Null(result.Before);
@@ -92,7 +92,7 @@ public sealed class ChargePolicyTests
             actor,
             ChargeKind.Physical,
             2m,
-            new InstantDurationDefinition()));
+            DeploymentLifetime(new InstantDurationDefinition())));
 
         Assert.True(result.Applied);
         Assert.IsType<InstantDurationDefinition>(
@@ -121,6 +121,31 @@ public sealed class ChargePolicyTests
             [physical, magical]);
         Assert.Equal([ChargeKind.General], consumed.ConsumedChargeKinds);
         Assert.Empty(actor.Charges);
+    }
+
+    [Fact]
+    public void ProtectedCharge_CanParticipateWithoutBeingConsumed()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        var policy = new SplitChargePolicy();
+        var protectedCharge = new StatusLifetimeDefinition(
+            new PermanentDurationDefinition(),
+            StatusRemovalProfiles.Protected);
+        Assert.True(policy.Apply(new ChargeApplicationRequest(
+            actor,
+            ChargeKind.Physical,
+            2m,
+            protectedCharge)).Applied);
+
+        ChargeDamageModifier modifier = policy.ResolveDamageModifier(
+            actor,
+            DamageElement.Physical);
+        ChargeConsumptionResult completion = policy.CompleteAction(actor, [modifier]);
+
+        Assert.Equal(2m, modifier.Multiplier);
+        Assert.False(completion.StateChanged);
+        Assert.Empty(completion.ConsumedChargeKinds);
+        Assert.Contains(ChargeKind.Physical, actor.Charges.Keys);
     }
 
     [Fact]
@@ -174,7 +199,10 @@ public sealed class ChargePolicyTests
         var empty = new RuntimeChargeStateSnapshot(StandardChargePolicyIds.Disabled);
         var retained = new RuntimeChargeStateSnapshot(
             StandardChargePolicyIds.Disabled,
-            [new RuntimeChargeSnapshot(ChargeKind.Physical, 2m)]);
+            [new RuntimeChargeSnapshot(
+                ChargeKind.Physical,
+                2m,
+                StandardStatusLifetimes.DeploymentTransient)]);
         var mismatched = new RuntimeChargeStateSnapshot(StandardChargePolicyIds.Split);
 
         Assert.True(policy.ValidateState(empty).IsValid);
@@ -230,7 +258,7 @@ public sealed class ChargePolicyTests
             actor,
             effect.Charge,
             effect.Multiplier,
-            effect.Duration));
+            effect.Lifetime));
 
         Assert.True(application.Applied);
         Assert.Equal(ChargeKind.General, Assert.Single(actor.Charges).Key);
@@ -289,7 +317,7 @@ public sealed class ChargePolicyTests
                 [new RuntimeChargeSnapshot(
                     ChargeKind.Physical,
                     2m,
-                    new PhaseDurationDefinition(default))]));
+                    DeploymentLifetime(new PhaseDurationDefinition(default)))]));
         Assert.Contains(malformed.Diagnostics, diagnostic =>
             diagnostic.Code == ChargePolicyDiagnosticCode.InvalidDuration);
     }

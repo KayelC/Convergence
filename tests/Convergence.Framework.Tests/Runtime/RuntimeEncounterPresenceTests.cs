@@ -69,7 +69,7 @@ public sealed class RuntimeEncounterPresenceTests
         RuntimeActorState actor = Actor("reserve", isDeployed: false);
         actor.AddOtherStatus(
             ContentId.Parse("focus"),
-            new TurnDurationDefinition(1, eventId, SuspendWhileReserve: true));
+            EncounterLifetime(new TurnDurationDefinition(1, eventId, SuspendWhileReserve: true)));
 
         Assert.Empty(actor.TickTimedStatuses(eventId));
 

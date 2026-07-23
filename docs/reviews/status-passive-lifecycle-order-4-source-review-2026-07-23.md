@@ -7,7 +7,8 @@
 **Capability:** `status_and_passive_lifecycle`
 
 **Conclusion:** implemented foundation with substantial test coverage; owner
-decisions are approved and the correction sequence in this document is now the
+decisions are approved, O4-R2 is implemented pending the final independent
+review, and the remaining correction sequence in this document is the
 authoritative Order 4 implementation roadmap
 
 ## Purpose
@@ -78,6 +79,8 @@ and well supported:
 ### O4-H1: Duration expiry and encounter persistence cannot be expressed independently
 
 **Kind:** architecture/design blocker, not a hidden regression
+
+**Correction status:** implemented pending independent review in O4-R2
 
 `TurnDurationDefinition` expresses a counted event clock. However,
 `RuntimeActorState.ClearEncounterStatuses` removes ailments only when their
@@ -282,10 +285,10 @@ implemented.
 |---|---|---|
 | O4-D1 | Approved, pending implementation | Injected ailment transition policy with typed new, refresh, reject, and replacement outcomes. |
 | O4-D2 | Approved, pending implementation | Injected ailment application-gate policy; guarding against ailments remains one supplied policy rather than an unconditional rule. |
-| O4-D3 | Approved, pending implementation | Replace the ambiguous removal Boolean with typed removal causes and supplied removal profiles shared across status families. |
+| O4-D3 | Implemented, pending independent review | Replaced the ambiguous removal Boolean with typed removal causes and supplied removal profiles shared across status families. |
 | O4-D4 | Approved, pending implementation | Typed passive targeting plus an explicit activation-counting scope. |
-| O4-D5 | Approved, pending implementation | Use typed departure reasons plus lifetime/removal policy; preserve field-persistent state and prevent recall or swapping from becoming a free cure. |
-| O4-D6 | Approved, pending implementation | Permit zero stat multiplier for fixed natural-recovery chance and continue rejecting negative multipliers. |
+| O4-D5 | Implemented, pending independent review | Typed departure reasons and independent lifetime/removal policy preserve field state and prevent recall or swapping from becoming a free cure. |
+| O4-D6 | Implemented, pending independent review | Zero stat multiplier provides fixed natural-recovery chance; negative multipliers reject atomically. |
 
 ### O4-D1: Ailment reapplication and exclusivity
 
@@ -435,9 +438,12 @@ change runtime behavior.
 
 1. **O4-R1 - Record owner decisions. Complete.** This review defines D1-D6,
    reserve-clock behavior, and the supplied cleanup defaults.
-2. **O4-R2 - Separate expiry clocks from persistence.** Resolve H1, D3, D5,
-   and D6 with a runtime-valid lifetime contract, typed removal causes, cleanup
-   policy, and fixed natural recovery.
+2. **O4-R2 - Separate expiry clocks from persistence. Implemented, pending
+   independent review.** H1, D3, D5, and D6 now use a runtime lifetime contract
+   that combines an expiration clock with independent typed removal
+   permissions. Supplied deployment, encounter, field, persistent, uncurable,
+   and protected compositions cover typed departure cleanup, consumption, and
+   fixed natural recovery without treating persistence as cure resistance.
 3. **O4-R3 - Add canonical lifecycle clock dispatch.** Resolve M1 and M2 by
    supporting actor, team-phase, round, action, and host-defined boundaries
    without team-ID inference, including both reserve policies.
@@ -494,15 +500,29 @@ checked against the current executable baseline:
 - strict nonincremental Release solution build: 0 warnings, 0 errors; and
 - `git diff --check`: passed.
 
-Green tests do not invalidate the findings above. Some questionable behavior is
-the current asserted contract: battle cleanup deliberately preserves a
-turn-counted ailment, low-level reserve ticking is tested separately from the
-canonical lifecycle, and phase tests use matching phase/team IDs. Those tests
-show implementation consistency while leaving the product decisions unresolved.
+Those original green tests did not invalidate the findings above. At review
+time, battle cleanup preserved every turn-counted ailment, low-level reserve
+ticking was tested separately from the canonical lifecycle, and phase tests
+used matching phase/team IDs. The O4-R2 record below supersedes the first of
+those observations; O4-R3 still owns the clock-dispatch findings.
+
+### O4-R2 implementation gate
+
+The first correction checkpoint was verified after implementation:
+
+- focused lifetime, cleanup, charge, persistence, and host-codec coverage passed;
+- complete solution: 1,544 passed, 0 failed, 0 skipped;
+- strict nonincremental Release solution build: 0 warnings, 0 errors;
+- clean battle, field, save, and Training Annex demos exited successfully;
+- formatting verification, Framework forbidden-reference search, content-tree
+  status, and `git diff --check` passed; and
+- runtime save contract v12 round-trips expiration and allowed removal causes
+  through both host-owned save codecs.
 
 ## Current Closure Decision
 
-Order 4 is **design-approved and open for implementation**. The existing
+Order 4 is **design-approved and implementation is in progress**. O4-R2 is
+implemented pending the fresh O4-R10 review. The existing
 implementation is useful and largely transactional, but the capability
 matrix's `complete` label currently overstates lifecycle-clock completeness. No
 code should be removed, and the documentation coverage entries should remain

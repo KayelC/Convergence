@@ -27,9 +27,12 @@ public enum BattleAilmentApplicationStatus
     Missed
 }
 
-public enum BattleStatusCleanupScope
+public enum BattleStatusDepartureReason
 {
-    Swap,
+    DeploymentSwap,
+    Defeat,
+    Flee,
+    RosterRecall,
     BattleEnd,
     FieldTransition
 }
@@ -296,8 +299,7 @@ public sealed record BattleAilmentApplicationRequest
         RuntimeActorState target,
         AilmentDefinition ailment,
         int chance,
-        DurationDefinition? duration = null,
-        bool isRemovable = true,
+        StatusLifetimeDefinition? lifetime = null,
         IEnumerable<RuntimeActorState>? participants = null,
         ContentId? battleKindId = null,
         ContentId? moonPhaseId = null,
@@ -311,8 +313,7 @@ public sealed record BattleAilmentApplicationRequest
             nameof(chance),
             "Authored ailment chance");
         Chance = chance;
-        Duration = duration;
-        IsRemovable = isRemovable;
+        Lifetime = lifetime;
         Participants = Array.AsReadOnly((participants ?? [actor, target])
             .DistinctBy(participant => participant.InstanceId)
             .ToArray());
@@ -325,8 +326,7 @@ public sealed record BattleAilmentApplicationRequest
     public RuntimeActorState Target { get; }
     public AilmentDefinition Ailment { get; }
     public int Chance { get; }
-    public DurationDefinition? Duration { get; }
-    public bool IsRemovable { get; }
+    public StatusLifetimeDefinition? Lifetime { get; }
     public IReadOnlyList<RuntimeActorState> Participants { get; }
     public ContentId? BattleKindId { get; }
     public ContentId? MoonPhaseId { get; }
@@ -432,8 +432,7 @@ public sealed class BattleAilmentApplicationService : IBattleAilmentApplicationS
 
         target.ApplyAilment(
             ailment,
-            request.Duration ?? ailment.DefaultDuration,
-            request.IsRemovable);
+            request.Lifetime ?? ailment.DefaultLifetime);
         return new BattleAilmentApplicationResult(
             BattleAilmentApplicationStatus.Applied,
             [
@@ -461,7 +460,7 @@ public sealed class BattleAilmentApplicationService : IBattleAilmentApplicationS
 
 public sealed record BattleStatusCleanupRequest(
     RuntimeActorState Actor,
-    BattleStatusCleanupScope Scope);
+    BattleStatusDepartureReason Reason);
 
 public sealed record BattleActionEndLifecycleRequest
 {
@@ -618,15 +617,17 @@ public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleSer
         RuntimeActorState actor = request.Actor ?? throw new ArgumentNullException(nameof(request.Actor));
         var transaction = new RuntimeActorExecutionTransaction(actor, [actor]);
         RuntimeActorState staged = transaction.Actor;
-        staged.ClearTransientStatuses();
-        if (request.Scope is BattleStatusCleanupScope.BattleEnd or BattleStatusCleanupScope.FieldTransition)
+        staged.SetGuarding(false);
+        if (request.Reason == BattleStatusDepartureReason.BattleEnd)
         {
-            staged.ClearEncounterStatuses();
+            staged.ExpireBattleDurations();
         }
+        StatusRemovalCause removalCause = MapRemovalCause(request.Reason);
+        staged.RemoveStatuses(removalCause);
 
         RuntimeStatModifierStateSnapshot state = staged.ResolveStatModifierState(statModifiers);
         StatModifierTransitionResult modifierResult = statModifiers.Cleanup(
-            new StatModifierCleanupRequest(state, MapCleanupScope(request.Scope)));
+            new StatModifierCleanupRequest(state, MapCleanupScope(request.Reason)));
         RequireAccepted(modifierResult);
         if (modifierResult.StateChanged)
         {
@@ -638,7 +639,7 @@ public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleSer
         events.Add(new BattleStatusLifecycleEvent(
             BattleStatusLifecycleEventKind.CleanupApplied,
             staged.InstanceId,
-            Detail: request.Scope.ToString()));
+            Detail: request.Reason.ToString()));
         transaction.Commit();
 
         return new BattleStatusLifecycleResult(events);
@@ -729,13 +730,28 @@ public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleSer
             @event.Kind.ToString(),
             @event)).ToArray());
 
-    private static StatModifierCleanupScope MapCleanupScope(BattleStatusCleanupScope scope) =>
-        scope switch
+    private static StatModifierCleanupScope MapCleanupScope(BattleStatusDepartureReason reason) =>
+        reason switch
         {
-            BattleStatusCleanupScope.Swap => StatModifierCleanupScope.Swap,
-            BattleStatusCleanupScope.BattleEnd => StatModifierCleanupScope.EncounterEnd,
-            BattleStatusCleanupScope.FieldTransition => StatModifierCleanupScope.FieldTransition,
-            _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, null)
+            BattleStatusDepartureReason.DeploymentSwap or BattleStatusDepartureReason.RosterRecall =>
+                StatModifierCleanupScope.Swap,
+            BattleStatusDepartureReason.Defeat or BattleStatusDepartureReason.Flee =>
+                StatModifierCleanupScope.ActorDeparture,
+            BattleStatusDepartureReason.BattleEnd => StatModifierCleanupScope.EncounterEnd,
+            BattleStatusDepartureReason.FieldTransition => StatModifierCleanupScope.FieldTransition,
+            _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null)
+        };
+
+    private static StatusRemovalCause MapRemovalCause(BattleStatusDepartureReason reason) =>
+        reason switch
+        {
+            BattleStatusDepartureReason.DeploymentSwap => StatusRemovalCause.DeploymentSwap,
+            BattleStatusDepartureReason.Defeat => StatusRemovalCause.Defeat,
+            BattleStatusDepartureReason.Flee => StatusRemovalCause.Flee,
+            BattleStatusDepartureReason.RosterRecall => StatusRemovalCause.RosterRecall,
+            BattleStatusDepartureReason.BattleEnd => StatusRemovalCause.BattleEnd,
+            BattleStatusDepartureReason.FieldTransition => StatusRemovalCause.FieldTransition,
+            _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null)
         };
 
     private static void RequireAccepted(StatModifierTransitionResult result)
@@ -1124,8 +1140,9 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         {
             if (active.Definition.Recovery.RemoveOnEventIds.Contains(eventId))
             {
-                IReadOnlyList<ContentId> removed = actor.RemoveAilments(candidate =>
-                    candidate.Definition.Id == active.Definition.Id);
+                IReadOnlyList<ContentId> removed = actor.RemoveAilments(
+                    StatusRemovalCause.RecoveryEvent,
+                    candidate => candidate.Definition.Id == active.Definition.Id);
                 if (removed.Count > 0)
                 {
                     events.Add(new BattleStatusLifecycleEvent(
@@ -1151,8 +1168,9 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                 continue;
             }
 
-            IReadOnlyList<ContentId> naturallyRemoved = actor.RemoveAilments(candidate =>
-                candidate.Definition.Id == active.Definition.Id);
+            IReadOnlyList<ContentId> naturallyRemoved = actor.RemoveAilments(
+                StatusRemovalCause.NaturalRecovery,
+                candidate => candidate.Definition.Id == active.Definition.Id);
             if (naturallyRemoved.Count > 0)
             {
                 events.Add(new BattleStatusLifecycleEvent(
@@ -1174,7 +1192,11 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
             nameof(recovery),
             "Authored natural-recovery chance");
         decimal baseChance = recovery.BaseChance;
-        if (baseChance >= 100m || stat <= 0m || recovery.StatMultiplier <= 0m)
+        if (recovery.StatMultiplier < 0m)
+        {
+            throw new InvalidOperationException("Natural-recovery stat multiplier cannot be negative.");
+        }
+        if (baseChance >= 100m || stat <= 0m || recovery.StatMultiplier == 0m)
         {
             return decimal.ToInt32(Math.Floor(baseChance));
         }

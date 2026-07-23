@@ -462,7 +462,8 @@ internal static class SkillSystemDtoMapper
                 ((ApplyAilmentEffectDto)dto).Chance,
                 ((ApplyAilmentEffectDto)dto).Duration is null
                     ? null
-                    : MapDuration(((ApplyAilmentEffectDto)dto).Duration!),
+                    : MapAilmentLifetimeFromDuration(
+                        MapDuration(((ApplyAilmentEffectDto)dto).Duration!)),
                 when,
                 dto.OnFailure),
             "restore_resource" => MapRestore((ResourceAmountEffectDto)dto, when),
@@ -522,18 +523,32 @@ internal static class SkillSystemDtoMapper
             dto.Duration is null ? null : MapDuration(dto.Duration), when, dto.OnFailure);
 
     private static GrantChargeEffectDefinition MapCharge(GrantChargeEffectDto dto, ConditionDefinition? when) =>
-        new(dto.Charge, dto.Multiplier, dto.Duration is null ? null : MapDuration(dto.Duration), when, dto.OnFailure);
+        new(
+            dto.Charge,
+            dto.Multiplier,
+            dto.Duration is null ? null : StandardStatusLifetimes.Deployment(MapDuration(dto.Duration)),
+            when,
+            dto.OnFailure);
 
     private static GrantShieldEffectDefinition MapShield(GrantShieldEffectDto dto, ConditionDefinition? when) =>
-        new(dto.Shield, dto.Duration is null ? null : MapDuration(dto.Duration), when, dto.OnFailure);
+        new(
+            dto.Shield,
+            dto.Duration is null ? null : StandardStatusLifetimes.Deployment(MapDuration(dto.Duration)),
+            when,
+            dto.OnFailure);
 
     private static BreakAffinityEffectDefinition MapBreakAffinity(
         BreakAffinityEffectDto dto, ConditionDefinition? when) =>
-        new(dto.ElementIds, MapDuration(dto.Duration), when, dto.OnFailure);
+        new(dto.ElementIds, StandardStatusLifetimes.Encounter(MapDuration(dto.Duration)), when, dto.OnFailure);
 
     private static OverrideAffinityEffectDefinition MapAffinity(
         OverrideAffinityEffectDto dto, ConditionDefinition? when) =>
-        new(dto.ElementIds, dto.AffinityId, MapDuration(dto.Duration), when, dto.OnFailure);
+        new(
+            dto.ElementIds,
+            dto.AffinityId,
+            StandardStatusLifetimes.Encounter(MapDuration(dto.Duration)),
+            when,
+            dto.OnFailure);
 
     private static RemoveStatusEffectDefinition MapRemoveStatus(
         RemoveStatusEffectDto dto, ConditionDefinition? when) =>
@@ -608,7 +623,8 @@ internal static class SkillSystemDtoMapper
 
     private static AilmentDefinition MapAilment(AilmentDto dto) =>
         new(
-            Id(dto.Id), dto.DisplayName, dto.Description, MapDuration(dto.DefaultDuration),
+            Id(dto.Id), dto.DisplayName, dto.Description,
+            MapAilmentLifetimeFromDuration(MapDuration(dto.DefaultDuration)),
             MapTurnBehavior(dto.TurnBehavior),
             new AilmentModifiersDefinition(
                 dto.Modifiers.EvasionMultiplier,
@@ -627,6 +643,17 @@ internal static class SkillSystemDtoMapper
             (dto.GroupIds ?? []).Select(Id),
             dto.ExclusivityGroupId is null ? null : Id(dto.ExclusivityGroupId),
             (dto.Triggers ?? []).Select(MapTrigger));
+
+    private static StatusLifetimeDefinition MapAilmentLifetimeFromDuration(DurationDefinition duration) =>
+        duration switch
+        {
+            InstantDurationDefinition or PhaseDurationDefinition or BattleDurationDefinition =>
+                StandardStatusLifetimes.Encounter(duration),
+            TurnDurationDefinition => StandardStatusLifetimes.Field(duration),
+            PermanentDurationDefinition => StandardStatusLifetimes.Persistent,
+            _ => throw new InvalidOperationException(
+                $"Unsupported ailment duration type '{duration.GetType().Name}'.")
+        };
 
     private static AilmentTurnBehaviorDefinition MapTurnBehavior(AilmentTurnBehaviorDto dto) => dto.Type switch
     {

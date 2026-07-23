@@ -378,7 +378,10 @@ public sealed class RuntimePersistenceSnapshotTests
             battleStatus: new RuntimeBattleStatusSnapshot(
                 chargeState: new RuntimeChargeStateSnapshot(
                     StandardChargePolicyIds.Split,
-                    [new RuntimeChargeSnapshot(ChargeKind.Physical, 2m)])));
+                    [new RuntimeChargeSnapshot(
+                        ChargeKind.Physical,
+                        2m,
+                        StandardStatusLifetimes.DeploymentTransient)])));
         RuntimeSaveGameSnapshot snapshot = Copy(
             baseline,
             actors: [chargedActor, baseline.Actors[1]]);
@@ -395,7 +398,10 @@ public sealed class RuntimePersistenceSnapshotTests
             battleStatus: new RuntimeBattleStatusSnapshot(
                 chargeState: new RuntimeChargeStateSnapshot(
                     StandardChargePolicyIds.Split,
-                    [new RuntimeChargeSnapshot(ChargeKind.General, 2m)])));
+                    [new RuntimeChargeSnapshot(
+                        ChargeKind.General,
+                        2m,
+                        StandardStatusLifetimes.DeploymentTransient)])));
         RuntimeSaveValidationResult incompatible = new RuntimeSaveValidator(chargePolicies: policies)
             .Validate(Copy(baseline, actors: [incompatibleActor, baseline.Actors[1]]), catalog);
         Assert.Contains(incompatible.Diagnostics, diagnostic =>
@@ -613,7 +619,8 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeActorSnapshot frost = baseline.Actors[0];
         ContentId iceBoost = Id("convergence.skill_system_redesign_sample:ice_boost_sample");
         ContentId poison = Id("convergence.shared_effects_demo:poison_demo");
-        var duration = new TurnDurationDefinition(2, Id("owner_turn_end"), false);
+        StatusLifetimeDefinition duration =
+            EncounterLifetime(new TurnDurationDefinition(2, Id("owner_turn_end"), false));
         var activation = new RuntimePassiveActivationSnapshot(
             iceBoost,
             Id("owner_turn_end"),
@@ -1005,16 +1012,16 @@ public sealed class RuntimePersistenceSnapshotTests
                 [
                     new RuntimeTimedStateSnapshot(
                         Id("turn_state"),
-                        new TurnDurationDefinition(2, Id("owner_turn_end"), false)),
+                        FieldLifetime(new TurnDurationDefinition(2, Id("owner_turn_end"), false))),
                     new RuntimeTimedStateSnapshot(
                         Id("phase_state"),
-                        new PhaseDurationDefinition(Id("player_phase"))),
+                        EncounterLifetime(new PhaseDurationDefinition(Id("player_phase")))),
                     new RuntimeTimedStateSnapshot(
                         Id("battle_state"),
-                        new BattleDurationDefinition()),
+                        EncounterLifetime(new BattleDurationDefinition())),
                     new RuntimeTimedStateSnapshot(
                         Id("permanent_state"),
-                        new PermanentDurationDefinition())
+                        StandardStatusLifetimes.Persistent)
                 ]));
 
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
@@ -1052,13 +1059,13 @@ public sealed class RuntimePersistenceSnapshotTests
                 [
                     new RuntimeTimedStateSnapshot(
                         poison,
-                        new TurnDurationDefinition(0, Id("owner_turn_end"), false))
+                        FieldLifetime(new TurnDurationDefinition(0, Id("owner_turn_end"), false)))
                 ],
                 statuses:
                 [
                     new RuntimeTimedStateSnapshot(
                         Id("instant_state"),
-                        new InstantDurationDefinition())
+                        EncounterLifetime(new InstantDurationDefinition()))
                 ],
                 statModifiers: new RuntimeStatModifierStateSnapshot(
                     TimedContributionModifierRuleset,
@@ -1079,26 +1086,26 @@ public sealed class RuntimePersistenceSnapshotTests
                         new RuntimeChargeSnapshot(
                             ChargeKind.Physical,
                             2m,
-                            new PhaseDurationDefinition(default))
+                            DeploymentLifetime(new PhaseDurationDefinition(default)))
                     ]),
                 shields:
                 [
                     new RuntimeShieldSnapshot(
                         ShieldKind.Magical,
-                        new TurnDurationDefinition(-1, Id("unregistered_event"), false))
+                        DeploymentLifetime(new TurnDurationDefinition(-1, Id("unregistered_event"), false)))
                 ],
                 affinityBreaks:
                 [
                     new RuntimeAffinityBreakSnapshot(
                         DamageElement.Ice,
-                        new InstantDurationDefinition())
+                        EncounterLifetime(new InstantDurationDefinition()))
                 ],
                 affinityOverrides:
                 [
                     new RuntimeAffinityOverrideSnapshot(
                         DamageElement.Fire,
                         ElementalAffinity.Resist,
-                        new PhaseDurationDefinition(Id("unregistered_phase")))
+                        EncounterLifetime(new PhaseDurationDefinition(Id("unregistered_phase"))))
                 ]));
 
         RuntimeSaveValidationResult validation = CreateModifierAwareValidator().Validate(
@@ -1154,7 +1161,7 @@ public sealed class RuntimePersistenceSnapshotTests
                 [
                     new RuntimeTimedStateSnapshot(
                         Id("unknown_tick_state"),
-                        new TurnDurationDefinition(1, Id("unregistered_event"), false))
+                        EncounterLifetime(new TurnDurationDefinition(1, Id("unregistered_event"), false)))
                 ]));
         ArgumentException directRestore = Assert.Throws<ArgumentException>(() => RuntimeActorState.Restore(
             unregisteredOnly,
@@ -1451,7 +1458,7 @@ public sealed class RuntimePersistenceSnapshotTests
             learnedSkills: [Id("missing.pack:missing_skill")],
             ailments: [new RuntimeTimedStateSnapshot(
                 Id("missing.pack:missing_ailment"),
-                new TurnDurationDefinition(1, Id("owner_turn_end"), false))]);
+                FieldLifetime(new TurnDurationDefinition(1, Id("owner_turn_end"), false)))]);
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
             actors: [frost, frost],
             partyRoster: new RuntimePartyRosterSnapshot(

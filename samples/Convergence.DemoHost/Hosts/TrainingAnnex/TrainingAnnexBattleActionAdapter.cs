@@ -1553,7 +1553,7 @@ internal sealed class TrainingAnnexBattleLifecyclePort :
             BattleStatusLifecycleResult result = _lifecycle.Cleanup(
                 new BattleStatusCleanupRequest(
                     participant.State,
-                    BattleStatusCleanupScope.BattleEnd),
+                    BattleStatusDepartureReason.BattleEnd),
                 _services.StatModifiers);
             statusEvents.AddRange(result.Events);
         }
