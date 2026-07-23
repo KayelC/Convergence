@@ -860,7 +860,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         teamOrder = Array.AsReadOnly(proposedTeamOrder!.ToArray());
         Synchronize();
-        foreach (BattleEncounterParticipant participant in request.Participants)
+        var battleStartTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
+        foreach (BattleEncounterParticipant participant in battleStartTransaction.Participants)
         {
             cancellationToken.ThrowIfCancellationRequested();
             participant.State.Passives.ResetBattleActivations();
@@ -895,16 +896,16 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         IReadOnlyList<BattleEncounterEvent> battleStartEvents;
         try
         {
-            var lifecycleTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
             IReadOnlyList<BattleEncounterEvent> returnedEvents = await services.Lifecycle.ProcessBattleStartAsync(
                     new BattleEncounterLifecycleRequest(
-                        lifecycleTransaction.CreateEncounter(request),
-                        lifecycleTransaction.Participants,
+                        battleStartTransaction.CreateEncounter(request),
+                        battleStartTransaction.Participants,
                         teamOrder),
                     cancellationToken)
                 .ConfigureAwait(false);
             battleStartEvents = SnapshotLifecycleEvents(returnedEvents, "battle-start");
-            lifecycleTransaction.Commit();
+            cancellationToken.ThrowIfCancellationRequested();
+            battleStartTransaction.Commit();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

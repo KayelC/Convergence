@@ -178,7 +178,7 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
                     recallToRoster: true,
                     cancellationToken),
                 BattleTurnStartOutcome.LimitedAction or
-                    BattleTurnStartOutcome.ForcedPhysical or
+                    BattleTurnStartOutcome.ForcedBasicAttack or
                     BattleTurnStartOutcome.ForcedConfusion =>
                     await ExecuteRestrictedActionAsync(request, cancellationToken).ConfigureAwait(false),
                 BattleTurnStartOutcome.CanAct => Fault(
@@ -376,10 +376,10 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
         }
 
         BattleTurnStartRestriction restriction = request.Turn.TurnStartRestriction;
-        if (restriction.Outcome == BattleTurnStartOutcome.ForcedPhysical &&
+        if (restriction.Outcome == BattleTurnStartOutcome.ForcedBasicAttack &&
             command.Kind != BattleActionKind.BasicAttack)
         {
-            return "A forced-physical restriction requires a typed basic-attack command.";
+            return "A forced-basic-attack restriction requires a typed basic-attack command.";
         }
 
         if (restriction.Outcome == BattleTurnStartOutcome.LimitedAction &&

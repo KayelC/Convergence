@@ -12,7 +12,7 @@ public enum BattleTurnStartOutcome
     CanAct,
     Skip,
     LimitedAction,
-    ForcedPhysical,
+    ForcedBasicAttack,
     ForcedConfusion,
     FleeBattle,
     RecallToRoster
@@ -232,7 +232,7 @@ public sealed class MostRestrictiveBattleTurnPolicy : IBattleTurnRestrictionPoli
         BattleTurnStartOutcome.FleeBattle => 6,
         BattleTurnStartOutcome.Skip => 5,
         BattleTurnStartOutcome.ForcedConfusion => 4,
-        BattleTurnStartOutcome.ForcedPhysical => 3,
+        BattleTurnStartOutcome.ForcedBasicAttack => 3,
         BattleTurnStartOutcome.LimitedAction => 2,
         BattleTurnStartOutcome.CanAct => 1,
         _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null)
@@ -1499,7 +1499,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
             NormalAilmentTurnBehaviorDefinition => BattleTurnStartOutcome.CanAct,
             SkipAilmentTurnBehaviorDefinition => BattleTurnStartOutcome.Skip,
             LimitedActionsAilmentTurnBehaviorDefinition => BattleTurnStartOutcome.LimitedAction,
-            ForcedBasicAttackAilmentTurnBehaviorDefinition => BattleTurnStartOutcome.ForcedPhysical,
+            ForcedBasicAttackAilmentTurnBehaviorDefinition => BattleTurnStartOutcome.ForcedBasicAttack,
             ConfusedActionAilmentTurnBehaviorDefinition => BattleTurnStartOutcome.ForcedConfusion,
             ChanceSkipAilmentTurnBehaviorDefinition chanceSkip =>
                 Roll(chanceSkip.SkipChance) ? BattleTurnStartOutcome.Skip : BattleTurnStartOutcome.CanAct,

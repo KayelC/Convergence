@@ -43,7 +43,7 @@ public sealed class BattleStatusLifecycleTests
         Assert.Equal(BattleTurnStartOutcome.Skip, service.ProcessTurnStart(new(skip)).Outcome);
         Assert.False(skip.IsGuarding);
         Assert.Equal(BattleTurnStartOutcome.LimitedAction, service.ProcessTurnStart(new(limited)).Outcome);
-        Assert.Equal(BattleTurnStartOutcome.ForcedPhysical, service.ProcessTurnStart(new(forced)).Outcome);
+        Assert.Equal(BattleTurnStartOutcome.ForcedBasicAttack, service.ProcessTurnStart(new(forced)).Outcome);
         Assert.Equal(BattleTurnStartOutcome.ForcedConfusion, service.ProcessTurnStart(new(confused)).Outcome);
     }
 

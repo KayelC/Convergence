@@ -470,9 +470,12 @@ change runtime behavior.
    typed trigger target scopes shared by skill and ailment triggers, and
    explicit per-dispatch or per-target activation counting. The supplied
    standard counts a successful fan-out once, independent of target order.
-7. **O4-R7 - Integrate encounter startup and public terminology.** Resolve M6
-   atomically with Order 6 boundaries and replace `ForcedPhysical` with the
-   accurate `ForcedBasicAttack` contract from L2.
+7. **O4-R7 - Integrate encounter startup and public terminology. Implemented,
+   pending independent review.** M6 now resets every participant's passive
+   activations on the same staged transaction used by battle-start lifecycle;
+   cancellation or event failure before that boundary commits nothing. L2 now
+   uses `ForcedBasicAttack` consistently across lifecycle and automated action
+   resolution.
 8. **O4-R8 - Reconcile schema, clean content, persistence, DemoHost, and Godot
    proof.** Change schema/save versions only when the implemented wire shape
    requires it, with no hidden fallback.
@@ -626,12 +629,33 @@ The checkpoint gate passed with:
 - formatting verification, public API baseline, content-tree status, and
   `git diff --check`: passed.
 
+### O4-R7 implementation gate
+
+Encounter startup now creates one staged participant graph before publishing
+actor/startup events. Passive activation resets and battle-start lifecycle both
+operate on that graph and commit together only after lifecycle output validates.
+Cancellation or event-publication failure during actor creation therefore
+preserves every participant's prior bookkeeping. The public turn restriction
+now says `ForcedBasicAttack`, matching the authored behavior and the resolver's
+requirement for a typed basic-attack command.
+
+The checkpoint gate passed with:
+
+- focused encounter-runner, automated-battle, and lifecycle coverage:
+  217 passed, 0 failed, 0 skipped;
+- complete solution: 1,580 passed, 0 failed, 0 skipped;
+- strict nonincremental Release solution build: 0 warnings, 0 errors;
+- all four noninteractive DemoHost modes and scripted Training Annex coverage:
+  successful; and
+- formatting verification, public API baseline, active-content status,
+  forbidden-reference search, and `git diff --check`: passed.
+
 ## Current Closure Decision
 
 Order 4 is **design-approved and implementation is in progress**. O4-R2 through
-O4-R6 are implemented pending the fresh O4-R10 review. The existing
+O4-R7 are implemented pending the fresh O4-R10 review. The existing
 implementation is useful and largely transactional, but the capability
-matrix correctly remains `partial` until R7-R10 close encounter startup,
-persistence, and audience-documentation work. No code should
+matrix correctly remains `partial` until R8-R10 close persistence and
+audience-documentation work. No code should
 be removed, and the documentation coverage entries should remain
 `existing_unreviewed` until R2-R10 and the audience review are complete.

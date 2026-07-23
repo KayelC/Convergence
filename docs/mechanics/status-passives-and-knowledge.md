@@ -22,7 +22,7 @@ The lifecycle can return these typed turn-start outcomes:
 - can act normally;
 - skip the turn;
 - use a limited action set;
-- use a forced physical action;
+- use the actor's typed basic attack;
 - use a forced confusion action;
 - flee the battle;
 - recall to roster.

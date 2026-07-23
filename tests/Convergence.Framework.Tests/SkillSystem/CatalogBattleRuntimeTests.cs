@@ -1149,7 +1149,7 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
-    public void Runner_ForcedPhysicalExecutesTheTypedBasicAttackSelectedByTheHostPolicy()
+    public void Runner_ForcedBasicAttackExecutesTheTypedBasicAttackSelectedByTheHostPolicy()
     {
         GameDataCatalog catalog = LoadDemoCatalog();
         CatalogBattleActor player = RuntimeCatalogActor("forced_player", "forced_player", PlayerTeam);
@@ -1169,7 +1169,7 @@ public sealed class CatalogBattleRuntimeTests
                     [request.Participants.Single(actor => actor.State.TeamId == EnemyTeam).State.InstanceId])));
         var lifecycle = new FixedTurnRestrictionLifecyclePort(
             player.State.InstanceId,
-            new BattleTurnStartRestriction(BattleTurnStartOutcome.ForcedPhysical));
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.ForcedBasicAttack));
 
         AutomatedBattleResult result = CreateAutomatedRunner(
             skillExecutor,
@@ -1273,7 +1273,7 @@ public sealed class CatalogBattleRuntimeTests
         var skillExecutor = new SkillExecutor(services);
         var lifecycle = new FixedTurnRestrictionLifecyclePort(
             player.State.InstanceId,
-            new BattleTurnStartRestriction(BattleTurnStartOutcome.ForcedPhysical));
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.ForcedBasicAttack));
 
         AutomatedBattleResult result = CreateAutomatedRunner(
             skillExecutor,

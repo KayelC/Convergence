@@ -116,7 +116,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Order 4 encounter startup, schema and persistence reconciliation, and audience closure remain in progress; passive targeting, liveness, and activation scope are implemented."
+        "Order 4 schema and persistence reconciliation plus audience closure remain in progress; passive policy semantics and atomic encounter startup are implemented."
       ]
     },
     {

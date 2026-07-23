@@ -1121,6 +1121,109 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public async Task Runner_CancellationDuringActorCreationPreservesEveryPassiveActivationCount()
+    {
+        ContentId eventId = Id("prior_battle_event");
+        SkillDefinition passive = new(
+            Id("prior_battle_passive"),
+            "Prior Battle Passive",
+            "Seeds activation bookkeeping before a cancelled encounter startup.",
+            SkillActivation.Passive,
+            null,
+            InheritanceGroup.Passive,
+            new SkillInheritanceDefinition(true),
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
+            ]);
+        BattleEncounterParticipant player = Participant("reset_cancel_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("reset_cancel_enemy", EnemyTeam);
+        foreach (BattleEncounterParticipant participant in new[] { player, enemy })
+        {
+            participant.State.Passives.Add(passive);
+            participant.State.Passives.RecordActivation(
+                passive.Id,
+                triggerIndex: 0,
+                eventId,
+                targetInstanceId: null);
+        }
+
+        using var cancellation = new CancellationTokenSource();
+        var eventSink = new CancellingEventSink(cancellation, BattleEncounterEventKind.ActorCreated);
+        ValueTask<BattleEncounterResult> run = new BattleEncounterRunner().RunAsync(
+            new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
+            new BattleEncounterServices(
+                new FixedInitiative(PlayerTeam, EnemyTeam),
+                new RecordingLifecycle(),
+                new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+                new CompleteAfterTurnsPolicy(1),
+                () => new StandardActionTurnEconomy(),
+                new BattlePhaseProgressPolicy(8, 1),
+                events: eventSink),
+            cancellation.Token);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
+        Assert.All(new[] { player, enemy }, participant =>
+        {
+            RuntimePassiveActivationSnapshot activation = Assert.Single(
+                participant.State.ToSnapshot().BattleActivations.PassiveActivations);
+            Assert.Equal(1, activation.ActivationCount);
+        });
+    }
+
+    [Fact]
+    public void Runner_EventFaultDuringActorCreationPreservesEveryPassiveActivationCount()
+    {
+        ContentId eventId = Id("prior_fault_event");
+        SkillDefinition passive = new(
+            Id("prior_fault_passive"),
+            "Prior Fault Passive",
+            "Seeds activation bookkeeping before a faulted encounter startup.",
+            SkillActivation.Passive,
+            null,
+            InheritanceGroup.Passive,
+            new SkillInheritanceDefinition(true),
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
+            ]);
+        BattleEncounterParticipant player = Participant("reset_fault_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("reset_fault_enemy", EnemyTeam);
+        foreach (BattleEncounterParticipant participant in new[] { player, enemy })
+        {
+            participant.State.Passives.Add(passive);
+            participant.State.Passives.RecordActivation(
+                passive.Id,
+                triggerIndex: 0,
+                eventId,
+                targetInstanceId: null);
+        }
+
+        BattleEncounterResult result = new BattleEncounterRunner().Run(
+            new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
+            new BattleEncounterServices(
+                new FixedInitiative(PlayerTeam, EnemyTeam),
+                new RecordingLifecycle(),
+                new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+                new CompleteAfterTurnsPolicy(1),
+                () => new StandardActionTurnEconomy(),
+                new BattlePhaseProgressPolicy(8, 1),
+                events: new ThrowingEventSink(BattleEncounterEventKind.ActorCreated)));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.EventPublicationFailed, result.FaultCode);
+        Assert.All(new[] { player, enemy }, participant =>
+            Assert.Equal(
+                1,
+                Assert.Single(participant.State.ToSnapshot().BattleActivations.PassiveActivations)
+                    .ActivationCount));
+    }
+
+    [Fact]
     public async Task Runner_CancellationFromTurnEconomyFactoryPreventsEconomyInitialization()
     {
         BattleEncounterParticipant player = Participant("factory_cancel_player", PlayerTeam);

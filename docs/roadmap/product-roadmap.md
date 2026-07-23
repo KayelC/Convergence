@@ -17,8 +17,10 @@ checkpoints now include independent lifetime/removal policy, explicit clocks,
 and complete typed transition evidence. O4-R5 rejects malformed live timed
 state, stages public ailment application, and exposes guard blocking as a
 replaceable application-gate policy. O4-R6 completes passive liveness, typed
-targeting, and per-dispatch/per-target activation semantics. Encounter startup,
-wire reconciliation, and audience closure remain in the focused sequence.
+targeting, and per-dispatch/per-target activation semantics. Encounter startup
+is atomic in O4-R7, and forced-turn terminology now identifies the typed basic
+attack it requires. Wire reconciliation and audience closure remain in the
+focused sequence.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -44,7 +46,7 @@ the universal termination command before lifecycle and event commitment, and
 O3-R17 reconciled the corrected source with all three documentation audiences.
 The project owner confirmed the final contract on 23 July 2026. Order 3 is
 complete; Order 4 is in progress under its approved source-review roadmap.
-O4-R2 through O4-R6 are implemented pending the final independent review.
+O4-R2 through O4-R7 are implemented pending the final independent review.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in
