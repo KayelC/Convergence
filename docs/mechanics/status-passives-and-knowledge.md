@@ -8,6 +8,13 @@ Ailments are content records identified by `ContentId`. Their behavior is author
 
 An exclusivity group can enforce that only one major ailment in that group is active. Other groups may coexist if content and policy allow it.
 
+Reapplication and exclusivity are selected by an ailment-transition policy.
+The supplied standard refreshes the same ailment and replaces a different
+ailment in the same exclusivity group. Supplied alternatives may reject
+reapplication or refresh the same ailment while rejecting a different
+exclusive ailment. Results distinguish first application, refresh,
+replacement, and rejection and identify every affected ailment.
+
 ## Turn Restrictions
 
 The lifecycle can return these typed turn-start outcomes:
@@ -43,6 +50,10 @@ dispatches a lifecycle clock. Typed departure reasons let a host request
 battle-end, deployment-swap, defeat, flee, roster-recall, or field-transition
 cleanup without parsing status names.
 
+Lifecycle results preserve typed before/after duration evidence and one typed
+removal cause for each removed state. Action results carry action-end expiry;
+hosts do not need to diff the actor or infer a change from effect display text.
+
 ## Passive Skills
 
 Passive skills are ordered catalog definitions attached to an actor's `BattlePassiveCollection`. Active skills cannot enter this collection, and duplicate passive IDs are rejected.
@@ -50,6 +61,11 @@ Passive skills are ordered catalog definitions attached to an actor's `BattlePas
 Passives may provide triggers and rule modifiers. Trigger execution order is loadout, trigger, target, then effect order. The passive owner is the condition actor; event-selected actors are targets.
 
 Recursive activation of the same trigger is suppressed unless the registered event policy permits re-entry. Per-battle activation limits are tracked by actor, passive skill, and trigger. Enabling, disabling, adding, or removing a passive takes effect immediately.
+
+Lifecycle events report both executed and rejected passive evaluations with
+their trigger index, event ID, typed outcome, and complete effect results.
+Resource recovery is therefore not the only passive effect visible to an
+event-driven host.
 
 Numeric rule modifiers resolve as:
 

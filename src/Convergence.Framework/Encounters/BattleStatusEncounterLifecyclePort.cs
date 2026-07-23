@@ -65,7 +65,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
                     request.Encounter.BattleKindId,
                     request.Encounter.MoonPhaseId),
                 _executionServices);
-            AddPassiveEvents(statusEvents, actor.InstanceId, dispatch);
+            BattleStatusLifecycleService.AddPassiveEvents(statusEvents, actor.InstanceId, dispatch);
         }
 
         IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(statusEvents);
@@ -232,36 +232,14 @@ public sealed class BattleStatusEncounterLifecyclePort :
                 $"Lifecycle ailment removed: {statusEvent.RelatedId}.",
             BattleStatusLifecycleEventKind.PassiveTriggered =>
                 $"Lifecycle passive triggered: {statusEvent.RelatedId}.",
+            BattleStatusLifecycleEventKind.PassiveEvaluated =>
+                $"Lifecycle passive evaluated: {statusEvent.RelatedId}.",
+            BattleStatusLifecycleEventKind.PassiveEffectResolved =>
+                $"Lifecycle passive effect resolved: {statusEvent.RelatedId}.",
+            BattleStatusLifecycleEventKind.DurationAdvanced =>
+                $"Lifecycle duration advanced: {statusEvent.RelatedId}.",
             BattleStatusLifecycleEventKind.StatusExpired =>
                 $"Lifecycle status expired: {statusEvent.RelatedId}.",
             _ => statusEvent.Detail ?? $"Lifecycle status changed: {statusEvent.Kind}."
         };
-
-    private static void AddPassiveEvents(
-        List<BattleStatusLifecycleEvent> events,
-        RuntimeInstanceId actorId,
-        PassiveTriggerDispatchResult dispatch)
-    {
-        foreach (PassiveTriggerExecutionResult activation in dispatch.Activations
-                     .Where(activation => activation.Outcome == PassiveTriggerOutcome.Executed))
-        {
-            events.Add(new BattleStatusLifecycleEvent(
-                BattleStatusLifecycleEventKind.PassiveTriggered,
-                actorId,
-                activation.SkillId,
-                Detail: activation.EventId.ToString()));
-            foreach (EffectExecutionResult effect in activation.Effects)
-            {
-                foreach (ExecutionResourceChange change in effect.ResourceChanges)
-                {
-                    events.Add(new BattleStatusLifecycleEvent(
-                        BattleStatusLifecycleEventKind.ResourceChanged,
-                        change.ActorId,
-                        change.ResourceId,
-                        change.Delta,
-                        effect.Detail));
-                }
-            }
-        }
-    }
 }

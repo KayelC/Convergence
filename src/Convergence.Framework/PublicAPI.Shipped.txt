@@ -10902,3 +10902,144 @@ virtual Convergence.Execution.BattleLifecycleClockBoundary.EqualityContract.get 
 virtual Convergence.Execution.BattleLifecycleClockBoundary.Equals(Convergence.Execution.BattleLifecycleClockBoundary? other) -> bool
 virtual Convergence.Execution.BattleLifecycleClockBoundary.EventId.get -> Convergence.Content.ContentId?
 virtual Convergence.Execution.BattleLifecycleClockBoundary.PrintMembers(System.Text.StringBuilder! builder) -> bool
+Convergence.Encounters.BattlePassiveActivatedEventPayload.Result.get -> Convergence.Execution.PassiveTriggerExecutionResult?
+Convergence.Encounters.BattlePassiveActivatedEventPayload.Result.init -> void
+Convergence.Encounters.BattleStatusLifecycleEventMapper
+Convergence.Execution.BattleActionExecutionResult.LifecycleEvents.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleStatusLifecycleEvent!>!
+Convergence.Execution.BattleAilmentApplicationRequest.SourceId.get -> Convergence.Content.ContentId?
+Convergence.Execution.BattleAilmentApplicationRequest.SourceId.init -> void
+Convergence.Execution.BattleAilmentApplicationResult.BattleAilmentApplicationResult(Convergence.Execution.BattleAilmentApplicationStatus Status, System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleStatusLifecycleEvent!>! Events, Convergence.Execution.BattleAilmentTransitionResult? transition) -> void
+Convergence.Execution.BattleAilmentApplicationResult.Transition.get -> Convergence.Execution.BattleAilmentTransitionResult?
+Convergence.Execution.BattleAilmentApplicationStatus.TransitionRejected = 5 -> Convergence.Execution.BattleAilmentApplicationStatus
+Convergence.Execution.BattleAilmentStateChange
+Convergence.Execution.BattleAilmentStateChange.<Clone>$() -> Convergence.Execution.BattleAilmentStateChange!
+Convergence.Execution.BattleAilmentStateChange.After.get -> Convergence.Content.StatusLifetimeDefinition?
+Convergence.Execution.BattleAilmentStateChange.AilmentId.get -> Convergence.Content.ContentId
+Convergence.Execution.BattleAilmentStateChange.BattleAilmentStateChange(Convergence.Execution.BattleAilmentStateChangeKind kind, Convergence.Content.ContentId ailmentId, Convergence.Content.StatusLifetimeDefinition? before, Convergence.Content.StatusLifetimeDefinition? after, Convergence.Content.StatusRemovalCause? removalCause = null) -> void
+Convergence.Execution.BattleAilmentStateChange.Before.get -> Convergence.Content.StatusLifetimeDefinition?
+Convergence.Execution.BattleAilmentStateChange.Equals(Convergence.Execution.BattleAilmentStateChange? other) -> bool
+Convergence.Execution.BattleAilmentStateChange.Kind.get -> Convergence.Execution.BattleAilmentStateChangeKind
+Convergence.Execution.BattleAilmentStateChange.RemovalCause.get -> Convergence.Content.StatusRemovalCause?
+Convergence.Execution.BattleAilmentStateChangeKind
+Convergence.Execution.BattleAilmentStateChangeKind.Added = 0 -> Convergence.Execution.BattleAilmentStateChangeKind
+Convergence.Execution.BattleAilmentStateChangeKind.Refreshed = 1 -> Convergence.Execution.BattleAilmentStateChangeKind
+Convergence.Execution.BattleAilmentStateChangeKind.Removed = 2 -> Convergence.Execution.BattleAilmentStateChangeKind
+Convergence.Execution.BattleAilmentStateSnapshot
+Convergence.Execution.BattleAilmentStateSnapshot.<Clone>$() -> Convergence.Execution.BattleAilmentStateSnapshot!
+Convergence.Execution.BattleAilmentStateSnapshot.AilmentId.get -> Convergence.Content.ContentId
+Convergence.Execution.BattleAilmentStateSnapshot.BattleAilmentStateSnapshot(Convergence.Content.ContentId ailmentId, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
+Convergence.Execution.BattleAilmentStateSnapshot.Equals(Convergence.Execution.BattleAilmentStateSnapshot? other) -> bool
+Convergence.Execution.BattleAilmentStateSnapshot.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Execution.BattleAilmentTransitionDecision
+Convergence.Execution.BattleAilmentTransitionDecision.<Clone>$() -> Convergence.Execution.BattleAilmentTransitionDecision!
+Convergence.Execution.BattleAilmentTransitionDecision.BattleAilmentTransitionDecision(Convergence.Execution.BattleAilmentTransitionOperation operation, Convergence.Execution.BattleAilmentTransitionRejectionReason rejectionReason = Convergence.Execution.BattleAilmentTransitionRejectionReason.None) -> void
+Convergence.Execution.BattleAilmentTransitionDecision.Equals(Convergence.Execution.BattleAilmentTransitionDecision? other) -> bool
+Convergence.Execution.BattleAilmentTransitionDecision.Operation.get -> Convergence.Execution.BattleAilmentTransitionOperation
+Convergence.Execution.BattleAilmentTransitionDecision.RejectionReason.get -> Convergence.Execution.BattleAilmentTransitionRejectionReason
+Convergence.Execution.BattleAilmentTransitionOperation
+Convergence.Execution.BattleAilmentTransitionOperation.ApplyNew = 0 -> Convergence.Execution.BattleAilmentTransitionOperation
+Convergence.Execution.BattleAilmentTransitionOperation.RefreshExisting = 1 -> Convergence.Execution.BattleAilmentTransitionOperation
+Convergence.Execution.BattleAilmentTransitionOperation.Reject = 3 -> Convergence.Execution.BattleAilmentTransitionOperation
+Convergence.Execution.BattleAilmentTransitionOperation.ReplaceExclusive = 2 -> Convergence.Execution.BattleAilmentTransitionOperation
+Convergence.Execution.BattleAilmentTransitionOutcome
+Convergence.Execution.BattleAilmentTransitionOutcome.Applied = 0 -> Convergence.Execution.BattleAilmentTransitionOutcome
+Convergence.Execution.BattleAilmentTransitionOutcome.Refreshed = 1 -> Convergence.Execution.BattleAilmentTransitionOutcome
+Convergence.Execution.BattleAilmentTransitionOutcome.Rejected = 3 -> Convergence.Execution.BattleAilmentTransitionOutcome
+Convergence.Execution.BattleAilmentTransitionOutcome.Replaced = 2 -> Convergence.Execution.BattleAilmentTransitionOutcome
+Convergence.Execution.BattleAilmentTransitionPolicyRequest
+Convergence.Execution.BattleAilmentTransitionPolicyRequest.<Clone>$() -> Convergence.Execution.BattleAilmentTransitionPolicyRequest!
+Convergence.Execution.BattleAilmentTransitionPolicyRequest.AilmentId.get -> Convergence.Content.ContentId
+Convergence.Execution.BattleAilmentTransitionPolicyRequest.BattleAilmentTransitionPolicyRequest(Convergence.Content.ContentId ailmentId, Convergence.Content.StatusLifetimeDefinition! candidateLifetime, Convergence.Execution.BattleAilmentStateSnapshot? existingSameAilment, System.Collections.Generic.IEnumerable<Convergence.Execution.BattleAilmentStateSnapshot!>? exclusiveConflicts = null) -> void
+Convergence.Execution.BattleAilmentTransitionPolicyRequest.CandidateLifetime.get -> Convergence.Content.StatusLifetimeDefinition!
+Convergence.Execution.BattleAilmentTransitionPolicyRequest.Equals(Convergence.Execution.BattleAilmentTransitionPolicyRequest? other) -> bool
+Convergence.Execution.BattleAilmentTransitionPolicyRequest.ExclusiveConflicts.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleAilmentStateSnapshot!>!
+Convergence.Execution.BattleAilmentTransitionPolicyRequest.ExistingSameAilment.get -> Convergence.Execution.BattleAilmentStateSnapshot?
+Convergence.Execution.BattleAilmentTransitionRejectionReason
+Convergence.Execution.BattleAilmentTransitionRejectionReason.ExclusiveAilmentActive = 2 -> Convergence.Execution.BattleAilmentTransitionRejectionReason
+Convergence.Execution.BattleAilmentTransitionRejectionReason.InvalidPolicyDecision = 5 -> Convergence.Execution.BattleAilmentTransitionRejectionReason
+Convergence.Execution.BattleAilmentTransitionRejectionReason.None = 0 -> Convergence.Execution.BattleAilmentTransitionRejectionReason
+Convergence.Execution.BattleAilmentTransitionRejectionReason.PolicyRejected = 4 -> Convergence.Execution.BattleAilmentTransitionRejectionReason
+Convergence.Execution.BattleAilmentTransitionRejectionReason.ReplacementProtected = 3 -> Convergence.Execution.BattleAilmentTransitionRejectionReason
+Convergence.Execution.BattleAilmentTransitionRejectionReason.SameAilmentAlreadyActive = 1 -> Convergence.Execution.BattleAilmentTransitionRejectionReason
+Convergence.Execution.BattleAilmentTransitionResult
+Convergence.Execution.BattleAilmentTransitionResult.<Clone>$() -> Convergence.Execution.BattleAilmentTransitionResult!
+Convergence.Execution.BattleAilmentTransitionResult.AffectedAilmentIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+Convergence.Execution.BattleAilmentTransitionResult.AilmentId.get -> Convergence.Content.ContentId
+Convergence.Execution.BattleAilmentTransitionResult.Applied.get -> bool
+Convergence.Execution.BattleAilmentTransitionResult.BattleAilmentTransitionResult(Convergence.Execution.BattleAilmentTransitionOutcome outcome, Convergence.Content.ContentId ailmentId, System.Collections.Generic.IEnumerable<Convergence.Execution.BattleAilmentStateChange!>? stateChanges = null, Convergence.Execution.BattleAilmentTransitionRejectionReason rejectionReason = Convergence.Execution.BattleAilmentTransitionRejectionReason.None) -> void
+Convergence.Execution.BattleAilmentTransitionResult.Equals(Convergence.Execution.BattleAilmentTransitionResult? other) -> bool
+Convergence.Execution.BattleAilmentTransitionResult.Outcome.get -> Convergence.Execution.BattleAilmentTransitionOutcome
+Convergence.Execution.BattleAilmentTransitionResult.RejectionReason.get -> Convergence.Execution.BattleAilmentTransitionRejectionReason
+Convergence.Execution.BattleAilmentTransitionResult.StateChanges.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleAilmentStateChange!>!
+Convergence.Execution.BattleExecutionServices.AilmentTransitions.get -> Convergence.Execution.IBattleAilmentTransitionPolicy!
+Convergence.Execution.BattleExecutionServices.AilmentTransitions.init -> void
+Convergence.Execution.BattleStatusLifecycleEvent.AilmentTransition.get -> Convergence.Execution.BattleAilmentTransitionResult?
+Convergence.Execution.BattleStatusLifecycleEvent.AilmentTransition.init -> void
+Convergence.Execution.BattleStatusLifecycleEvent.DepartureReason.get -> Convergence.Execution.BattleStatusDepartureReason?
+Convergence.Execution.BattleStatusLifecycleEvent.DepartureReason.init -> void
+Convergence.Execution.BattleStatusLifecycleEvent.DurationTransition.get -> Convergence.Execution.BattleDurationTickResult?
+Convergence.Execution.BattleStatusLifecycleEvent.DurationTransition.init -> void
+Convergence.Execution.BattleStatusLifecycleEvent.EffectResult.get -> Convergence.Execution.EffectExecutionResult?
+Convergence.Execution.BattleStatusLifecycleEvent.EffectResult.init -> void
+Convergence.Execution.BattleStatusLifecycleEvent.PassiveActivation.get -> Convergence.Execution.PassiveTriggerExecutionResult?
+Convergence.Execution.BattleStatusLifecycleEvent.PassiveActivation.init -> void
+Convergence.Execution.BattleStatusLifecycleEvent.RemovalTransition.get -> Convergence.Execution.BattleStatusRemovalResult?
+Convergence.Execution.BattleStatusLifecycleEvent.RemovalTransition.init -> void
+Convergence.Execution.BattleStatusLifecycleEvent.SourceActorId.get -> Convergence.Runtime.RuntimeInstanceId?
+Convergence.Execution.BattleStatusLifecycleEvent.SourceActorId.init -> void
+Convergence.Execution.BattleStatusLifecycleEvent.SourceId.get -> Convergence.Content.ContentId?
+Convergence.Execution.BattleStatusLifecycleEvent.SourceId.init -> void
+Convergence.Execution.BattleStatusLifecycleEventKind.AilmentRefreshed = 14 -> Convergence.Execution.BattleStatusLifecycleEventKind
+Convergence.Execution.BattleStatusLifecycleEventKind.AilmentReplaced = 15 -> Convergence.Execution.BattleStatusLifecycleEventKind
+Convergence.Execution.BattleStatusLifecycleEventKind.DurationAdvanced = 16 -> Convergence.Execution.BattleStatusLifecycleEventKind
+Convergence.Execution.BattleStatusLifecycleEventKind.PassiveEffectResolved = 19 -> Convergence.Execution.BattleStatusLifecycleEventKind
+Convergence.Execution.BattleStatusLifecycleEventKind.PassiveEvaluated = 18 -> Convergence.Execution.BattleStatusLifecycleEventKind
+Convergence.Execution.BattleStatusLifecycleEventKind.StatusRemoved = 17 -> Convergence.Execution.BattleStatusLifecycleEventKind
+Convergence.Execution.EffectExecutionResult.LifecycleEvents.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleStatusLifecycleEvent!>!
+Convergence.Execution.EffectExecutionResult.LifecycleEvents.init -> void
+Convergence.Execution.IBattleAilmentTransitionPolicy
+Convergence.Execution.IBattleAilmentTransitionPolicy.Resolve(Convergence.Execution.BattleAilmentTransitionPolicyRequest! request) -> Convergence.Execution.BattleAilmentTransitionDecision!
+Convergence.Execution.ItemExecutionResult.LifecycleEvents.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleStatusLifecycleEvent!>!
+Convergence.Execution.RefreshExistingAilmentTransitionPolicy
+Convergence.Execution.RefreshExistingAilmentTransitionPolicy.RefreshExistingAilmentTransitionPolicy() -> void
+Convergence.Execution.RefreshExistingAilmentTransitionPolicy.Resolve(Convergence.Execution.BattleAilmentTransitionPolicyRequest! request) -> Convergence.Execution.BattleAilmentTransitionDecision!
+Convergence.Execution.RejectExistingAilmentTransitionPolicy
+Convergence.Execution.RejectExistingAilmentTransitionPolicy.RejectExistingAilmentTransitionPolicy() -> void
+Convergence.Execution.RejectExistingAilmentTransitionPolicy.Resolve(Convergence.Execution.BattleAilmentTransitionPolicyRequest! request) -> Convergence.Execution.BattleAilmentTransitionDecision!
+Convergence.Execution.ReplaceExclusiveAilmentTransitionPolicy
+Convergence.Execution.ReplaceExclusiveAilmentTransitionPolicy.ReplaceExclusiveAilmentTransitionPolicy() -> void
+Convergence.Execution.ReplaceExclusiveAilmentTransitionPolicy.Resolve(Convergence.Execution.BattleAilmentTransitionPolicyRequest! request) -> Convergence.Execution.BattleAilmentTransitionDecision!
+Convergence.Execution.SkillExecutionResult.LifecycleEvents.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleStatusLifecycleEvent!>!
+Convergence.Execution.StandardBattleAilmentTransitionPolicy
+Convergence.Execution.StandardBattleAilmentTransitionPolicy.Resolve(Convergence.Execution.BattleAilmentTransitionPolicyRequest! request) -> Convergence.Execution.BattleAilmentTransitionDecision!
+Convergence.Execution.StandardBattleAilmentTransitionPolicy.StandardBattleAilmentTransitionPolicy() -> void
+override Convergence.Execution.BattleAilmentStateChange.Equals(object? obj) -> bool
+override Convergence.Execution.BattleAilmentStateChange.GetHashCode() -> int
+override Convergence.Execution.BattleAilmentStateChange.ToString() -> string!
+override Convergence.Execution.BattleAilmentStateSnapshot.Equals(object? obj) -> bool
+override Convergence.Execution.BattleAilmentStateSnapshot.GetHashCode() -> int
+override Convergence.Execution.BattleAilmentStateSnapshot.ToString() -> string!
+override Convergence.Execution.BattleAilmentTransitionDecision.Equals(object? obj) -> bool
+override Convergence.Execution.BattleAilmentTransitionDecision.GetHashCode() -> int
+override Convergence.Execution.BattleAilmentTransitionDecision.ToString() -> string!
+override Convergence.Execution.BattleAilmentTransitionPolicyRequest.Equals(object? obj) -> bool
+override Convergence.Execution.BattleAilmentTransitionPolicyRequest.GetHashCode() -> int
+override Convergence.Execution.BattleAilmentTransitionPolicyRequest.ToString() -> string!
+override Convergence.Execution.BattleAilmentTransitionResult.Equals(object? obj) -> bool
+override Convergence.Execution.BattleAilmentTransitionResult.GetHashCode() -> int
+override Convergence.Execution.BattleAilmentTransitionResult.ToString() -> string!
+static Convergence.Encounters.BattleStatusLifecycleEventMapper.MapAll(System.Collections.Generic.IEnumerable<Convergence.Execution.BattleStatusLifecycleEvent!>! events, System.Func<Convergence.Execution.BattleStatusLifecycleEvent!, string?>! debugText) -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterEvent!>!
+static Convergence.Execution.BattleAilmentStateChange.operator !=(Convergence.Execution.BattleAilmentStateChange? left, Convergence.Execution.BattleAilmentStateChange? right) -> bool
+static Convergence.Execution.BattleAilmentStateChange.operator ==(Convergence.Execution.BattleAilmentStateChange? left, Convergence.Execution.BattleAilmentStateChange? right) -> bool
+static Convergence.Execution.BattleAilmentStateSnapshot.operator !=(Convergence.Execution.BattleAilmentStateSnapshot? left, Convergence.Execution.BattleAilmentStateSnapshot? right) -> bool
+static Convergence.Execution.BattleAilmentStateSnapshot.operator ==(Convergence.Execution.BattleAilmentStateSnapshot? left, Convergence.Execution.BattleAilmentStateSnapshot? right) -> bool
+static Convergence.Execution.BattleAilmentTransitionDecision.operator !=(Convergence.Execution.BattleAilmentTransitionDecision? left, Convergence.Execution.BattleAilmentTransitionDecision? right) -> bool
+static Convergence.Execution.BattleAilmentTransitionDecision.operator ==(Convergence.Execution.BattleAilmentTransitionDecision? left, Convergence.Execution.BattleAilmentTransitionDecision? right) -> bool
+static Convergence.Execution.BattleAilmentTransitionPolicyRequest.operator !=(Convergence.Execution.BattleAilmentTransitionPolicyRequest? left, Convergence.Execution.BattleAilmentTransitionPolicyRequest? right) -> bool
+static Convergence.Execution.BattleAilmentTransitionPolicyRequest.operator ==(Convergence.Execution.BattleAilmentTransitionPolicyRequest? left, Convergence.Execution.BattleAilmentTransitionPolicyRequest? right) -> bool
+static Convergence.Execution.BattleAilmentTransitionResult.operator !=(Convergence.Execution.BattleAilmentTransitionResult? left, Convergence.Execution.BattleAilmentTransitionResult? right) -> bool
+static Convergence.Execution.BattleAilmentTransitionResult.operator ==(Convergence.Execution.BattleAilmentTransitionResult? left, Convergence.Execution.BattleAilmentTransitionResult? right) -> bool
+static Convergence.Execution.RefreshExistingAilmentTransitionPolicy.Instance.get -> Convergence.Execution.RefreshExistingAilmentTransitionPolicy!
+static Convergence.Execution.RejectExistingAilmentTransitionPolicy.Instance.get -> Convergence.Execution.RejectExistingAilmentTransitionPolicy!
+static Convergence.Execution.ReplaceExclusiveAilmentTransitionPolicy.Instance.get -> Convergence.Execution.ReplaceExclusiveAilmentTransitionPolicy!
+static Convergence.Execution.StandardBattleAilmentTransitionPolicy.Instance.get -> Convergence.Execution.StandardBattleAilmentTransitionPolicy!

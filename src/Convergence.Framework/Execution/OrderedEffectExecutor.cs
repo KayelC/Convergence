@@ -13,7 +13,8 @@ internal enum OrderedEffectStopReason
 
 internal sealed record OrderedEffectExecution(
     IReadOnlyList<EffectExecutionResult> Effects,
-    OrderedEffectStopReason StopReason)
+    OrderedEffectStopReason StopReason,
+    IReadOnlyList<BattleStatusLifecycleEvent> LifecycleEvents)
 {
     public bool Interrupted => StopReason == OrderedEffectStopReason.Interrupted;
     public bool StopsAction => StopReason is OrderedEffectStopReason.Action or OrderedEffectStopReason.Interrupted;
@@ -58,9 +59,11 @@ internal sealed class OrderedEffectExecutor
         scope.Track(request.Participants);
         scope.Track(targets.Targets);
 
+        OrderedEffectExecution execution;
+        IReadOnlyList<BattleStatusLifecycleEvent> actionEndEvents = [];
         try
         {
-            return ExecuteCore(request, effects, targets, effectIndexes);
+            execution = ExecuteCore(request, effects, targets, effectIndexes);
         }
         finally
         {
@@ -74,9 +77,9 @@ internal sealed class OrderedEffectExecutor
                         _services.Charges.CompleteAction(actor, charges);
                     }
 
-                    DurationLifecycle.ProcessActionEnd(
+                    actionEndEvents = DurationLifecycle.ProcessActionEnd(
                         new BattleActionEndLifecycleRequest(scope.Actors),
-                        _services.StatModifiers);
+                        _services.StatModifiers).Events;
                 }
                 finally
                 {
@@ -84,6 +87,14 @@ internal sealed class OrderedEffectExecutor
                 }
             }
         }
+
+        return ownsScope
+            ? execution with
+            {
+                LifecycleEvents = Array.AsReadOnly(
+                    execution.LifecycleEvents.Concat(actionEndEvents).ToArray())
+            }
+            : execution;
     }
 
     private OrderedEffectExecution ExecuteCore(
@@ -199,7 +210,8 @@ internal sealed class OrderedEffectExecutor
                 {
                     return new OrderedEffectExecution(
                         Array.AsReadOnly(results.ToArray()),
-                        OrderedEffectStopReason.Interrupted);
+                        OrderedEffectStopReason.Interrupted,
+                        LifecycleEvents(results));
                 }
 
                 if (result.Outcome != EffectExecutionOutcome.Failure)
@@ -211,7 +223,8 @@ internal sealed class OrderedEffectExecutor
                 {
                     return new OrderedEffectExecution(
                         Array.AsReadOnly(results.ToArray()),
-                        OrderedEffectStopReason.Action);
+                        OrderedEffectStopReason.Action,
+                        LifecycleEvents(results));
                 }
 
                 if (effect.OnFailure == EffectFailurePolicy.StopTarget)
@@ -220,7 +233,8 @@ internal sealed class OrderedEffectExecutor
                     {
                         return new OrderedEffectExecution(
                             Array.AsReadOnly(results.ToArray()),
-                            OrderedEffectStopReason.Target);
+                            OrderedEffectStopReason.Target,
+                            LifecycleEvents(results));
                     }
 
                     stoppedTargets.Add(target.InstanceId);
@@ -231,8 +245,13 @@ internal sealed class OrderedEffectExecutor
 
         return new OrderedEffectExecution(
             Array.AsReadOnly(results.ToArray()),
-            targetStopped ? OrderedEffectStopReason.Target : OrderedEffectStopReason.None);
+            targetStopped ? OrderedEffectStopReason.Target : OrderedEffectStopReason.None,
+            LifecycleEvents(results));
     }
+
+    private static IReadOnlyList<BattleStatusLifecycleEvent> LifecycleEvents(
+        IEnumerable<EffectExecutionResult> results) =>
+        Array.AsReadOnly(results.SelectMany(result => result.LifecycleEvents).ToArray());
 
     internal static IReadOnlyDictionary<EffectLocalId, int> ValidateSequence(
         IReadOnlyList<EffectDefinition> effects)

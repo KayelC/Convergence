@@ -388,7 +388,8 @@ public sealed record BattleActionExecutionResult
         bool escapeRequested = false,
         PartyRosterTransitionResult? partyRosterTransition = null,
         IEnumerable<ContentId>? hostActionRequestIds = null,
-        IEnumerable<ExecutionResourceChange>? committedCostChanges = null)
+        IEnumerable<ExecutionResourceChange>? committedCostChanges = null,
+        IEnumerable<BattleStatusLifecycleEvent>? lifecycleEvents = null)
     {
         ArgumentNullException.ThrowIfNull(turnConsumption);
         Status = status;
@@ -404,6 +405,7 @@ public sealed record BattleActionExecutionResult
         HostActionRequestIds = Array.AsReadOnly(
             (hostActionRequestIds ?? Effects.SelectMany(effect => effect.HostActionRequestIds)).ToArray());
         CommittedCostChanges = Array.AsReadOnly(committedCostChanges?.ToArray() ?? []);
+        LifecycleEvents = Array.AsReadOnly(lifecycleEvents?.ToArray() ?? []);
     }
 
     public BattleActionExecutionStatus Status { get; }
@@ -419,6 +421,8 @@ public sealed record BattleActionExecutionResult
     public IReadOnlyList<ContentId> HostActionRequestIds { get; }
     /// <summary>Gets resource mutations committed as action costs before effect execution.</summary>
     public IReadOnlyList<ExecutionResourceChange> CommittedCostChanges { get; }
+    /// <summary>Gets lifecycle transitions committed at the enclosing action boundary.</summary>
+    public IReadOnlyList<BattleStatusLifecycleEvent> LifecycleEvents { get; }
 
     internal BattleActionExecutionResult WithTurnConsumption(ActionTurnConsumption turnConsumption) =>
         new(
@@ -433,7 +437,8 @@ public sealed record BattleActionExecutionResult
             EscapeRequested,
             PartyRosterTransition,
             HostActionRequestIds,
-            CommittedCostChanges);
+            CommittedCostChanges,
+            LifecycleEvents);
 }
 
 public interface IItemActionReservation
@@ -907,7 +912,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             events: EffectEvents(request.Actor.InstanceId, command.Skill.Id, skill.Effects),
             escapeRequested: skill.EscapeRequested,
             hostActionRequestIds: skill.HostActionRequestIds,
-            committedCostChanges: skill.CommittedCostChanges);
+            committedCostChanges: skill.CommittedCostChanges,
+            lifecycleEvents: skill.LifecycleEvents);
     }
 
     private BattleActionExecutionResult ExecuteItem(
@@ -1120,7 +1126,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                 itemConsumption: item.Consumption,
                 itemConsumptionCommitted: committed,
                 escapeRequested: item.EscapeRequested,
-                hostActionRequestIds: item.HostActionRequestIds);
+                hostActionRequestIds: item.HostActionRequestIds,
+                lifecycleEvents: item.LifecycleEvents);
         }
         catch (OperationCanceledException)
         {
@@ -1234,7 +1241,8 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
             turn,
             execution.Effects,
             events: EffectEvents(request.Actor.InstanceId, sourceId, execution.Effects),
-            escapeRequested: execution.Effects.Any(effect => effect.EscapeRequested));
+            escapeRequested: execution.Effects.Any(effect => effect.EscapeRequested),
+            lifecycleEvents: execution.LifecycleEvents);
     }
 
     private BattleActionExecutionResult ExecuteEscape(

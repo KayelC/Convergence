@@ -131,7 +131,8 @@ public sealed class SkillExecutor : ISkillExecutor
             execution.Effects,
             costsCommitted: assessment.Costs.Count > 0,
             committedCostChanges: committedCostChanges,
-            turnEconomy: turnEconomy);
+            turnEconomy: turnEconomy,
+            lifecycleEvents: execution.LifecycleEvents);
     }
 
     public SkillExecutionAssessment Assess(SkillExecutionRequest request)

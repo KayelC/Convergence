@@ -320,7 +320,7 @@
     {
       "path": "Encounters/BattleStatusLifecycleEventMapper.cs",
       "owner": "encounter_runtime",
-      "publicSurface": "internal_only"
+      "publicSurface": "exported"
     },
     {
       "path": "Encounters/CatalogBattleActorFactory.cs",
@@ -336,6 +336,11 @@
       "path": "Execution/AuthoredEffectPercentageValidator.cs",
       "owner": "effect_execution",
       "publicSurface": "internal_only"
+    },
+    {
+      "path": "Execution/BattleAilmentTransitions.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
     },
     {
       "path": "Execution/BattleActionAuthorization.cs",

@@ -438,10 +438,17 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
                         passive.SkillId,
                         passive.Outcome,
                         passive.TriggerIndex,
-                        passive.EventId),
+                        passive.EventId)
+                    {
+                        Result = passive
+                    },
                     $"Passive {passive.SkillId} resolved as {passive.Outcome}."));
             }
         }
+
+        events.AddRange(BattleStatusLifecycleEventMapper.MapAll(
+            execution.LifecycleEvents,
+            statusEvent => $"Action lifecycle transition: {statusEvent.Kind}."));
 
         foreach (ContentId hostActionId in execution.HostActionRequestIds)
         {

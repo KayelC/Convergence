@@ -13,8 +13,10 @@ Phase 8 established the clean product boundary. Framework, DemoHost, tests, and 
 `status_and_passive_lifecycle` is temporarily `partial` while Order 4 replaces
 the remaining lifecycle assumptions with explicit clocks, application
 transitions, passive contracts, and restored-state validation. Completed
-checkpoints remain independently tested while that focused correction sequence
-continues.
+checkpoints now include independent lifetime/removal policy, explicit clocks,
+and complete typed transition evidence. Live application hardening, passive
+policy semantics, encounter startup, wire reconciliation, and audience closure
+remain in the focused sequence.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -39,7 +41,8 @@ remaining and still pass encounter transition validation. O3-R16 now enforces
 the universal termination command before lifecycle and event commitment, and
 O3-R17 reconciled the corrected source with all three documentation audiences.
 The project owner confirmed the final contract on 23 July 2026. Order 3 is
-complete; Order 4 has not started.
+complete; Order 4 is in progress under its approved source-review roadmap.
+O4-R2 through O4-R4 are implemented pending the final independent review.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in

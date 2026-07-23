@@ -452,9 +452,13 @@ change runtime behavior.
    suspends by default; the supplied advancing policy accepts only an exact
    owning-team phase or round event and still honors status-level
    `SuspendWhileReserve`.
-4. **O4-R4 - Complete typed lifecycle transitions and events.** Resolve M3 and
-   D1 by surfacing new application, refresh, replacement, passive effects,
-   expiry, and cleanup with complete typed evidence.
+4. **O4-R4 - Complete typed lifecycle transitions and events. Implemented,
+   pending independent review.** M3 and D1 now surface first application,
+   refresh, exclusive replacement, typed rejection, passive evaluation and
+   effects, duration advancement/expiry, and cleanup removals as ordered,
+   immutable evidence. Skill, item, basic-attack, automated-battle, and
+   encounter adapters carry the same committed lifecycle events without
+   re-inferring effects from content definitions or parsing debug text.
 5. **O4-R5 - Harden live mutation and ailment application.** Resolve M4, M5,
    and D2 through shared duration validation, staged public application, and
    the injected application gate.
@@ -542,12 +546,38 @@ passed with:
 - public API baseline, formatting verification, source inventory, Framework
   architecture tests, content-tree status, and `git diff --check`: passed.
 
+### O4-R4 implementation gate
+
+The typed-transition checkpoint adds an injected ailment transition policy
+with supplied reject, refresh, replace, and standard strategies. The standard
+strategy retains refresh-same and replace-exclusive behavior. Accepted and
+rejected transitions carry affected ailment IDs and ordered before/after
+changes. Action-end expiration, selected cleanup, passive evaluation, full
+passive effects, and source identity now survive through action and encounter
+results. Malformed passive events fail before an incomplete encounter payload
+is published.
+
+The implementation gate passed with:
+
+- focused lifecycle, action, and mapper coverage: 154 passed; the broader
+  lifecycle/encounter integration filter passed 149 (0 failed, 0 skipped in
+  either run);
+- complete solution: 1,565 passed, 0 failed, 0 skipped;
+- strict nonincremental Release solution build: 0 warnings, 0 errors;
+- all four noninteractive DemoHost modes and scripted Training Annex exit:
+  successful;
+- active content validation: 6 packs, 36 documents, and 98 qualified
+  definitions passed schema, semantic, dependency, registration, and catalog
+  checks; and
+- formatting verification, 55 architecture/boundary tests, source inventory,
+  content-tree status, and `git diff --check`: passed.
+
 ## Current Closure Decision
 
-Order 4 is **design-approved and implementation is in progress**. O4-R2 and
-O4-R3 are implemented pending the fresh O4-R10 review. The existing
+Order 4 is **design-approved and implementation is in progress**. O4-R2 through
+O4-R4 are implemented pending the fresh O4-R10 review. The existing
 implementation is useful and largely transactional, but the capability
-matrix correctly remains `partial` until R4-R10 close the remaining application,
+matrix correctly remains `partial` until R5-R10 close the remaining application,
 passive, startup, persistence, and audience-documentation work. No code should
 be removed, and the documentation coverage entries should remain
 `existing_unreviewed` until R2-R10 and the audience review are complete.

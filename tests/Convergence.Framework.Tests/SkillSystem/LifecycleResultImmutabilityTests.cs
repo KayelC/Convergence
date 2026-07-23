@@ -134,6 +134,71 @@ public sealed class LifecycleResultImmutabilityTests
     }
 
     [Fact]
+    public void AilmentTransitionContractsSnapshotPolicyInputAndCommittedChanges()
+    {
+        ContentId candidate = ContentId.Parse("candidate");
+        ContentId existing = ContentId.Parse("existing");
+        StatusLifetimeDefinition candidateLifetime = Lifetime(3);
+        StatusLifetimeDefinition existingLifetime = Lifetime(2);
+        var conflicts = new List<BattleAilmentStateSnapshot>
+        {
+            new(existing, existingLifetime)
+        };
+        var request = new BattleAilmentTransitionPolicyRequest(
+            candidate,
+            candidateLifetime,
+            existingSameAilment: null,
+            conflicts);
+        conflicts.Clear();
+        var changes = new List<BattleAilmentStateChange>
+        {
+            new(
+                BattleAilmentStateChangeKind.Removed,
+                existing,
+                existingLifetime,
+                after: null,
+                StatusRemovalCause.ExclusivityReplacement),
+            new(
+                BattleAilmentStateChangeKind.Added,
+                candidate,
+                before: null,
+                candidateLifetime)
+        };
+        var result = new BattleAilmentTransitionResult(
+            BattleAilmentTransitionOutcome.Replaced,
+            candidate,
+            changes);
+        changes.Clear();
+
+        Assert.Equal(existing, Assert.Single(request.ExclusiveConflicts).AilmentId);
+        Assert.Equal([existing, candidate], result.AffectedAilmentIds);
+        Assert.Equal(2, result.StateChanges.Count);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<BattleAilmentStateSnapshot>)request.ExclusiveConflicts).Clear());
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<BattleAilmentStateChange>)result.StateChanges).Clear());
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<ContentId>)result.AffectedAilmentIds).Clear());
+
+        Assert.Throws<ArgumentException>(() => new BattleAilmentTransitionResult(
+            BattleAilmentTransitionOutcome.Applied,
+            candidate,
+            [new BattleAilmentStateChange(
+                BattleAilmentStateChangeKind.Refreshed,
+                candidate,
+                existingLifetime,
+                candidateLifetime)]));
+        Assert.Throws<ArgumentException>(() => new BattleAilmentTransitionResult(
+            BattleAilmentTransitionOutcome.Replaced,
+            candidate,
+            [new BattleAilmentStateChange(
+                BattleAilmentStateChangeKind.Added,
+                candidate,
+                before: null,
+                candidateLifetime)]));
+    }
+
+    [Fact]
     public void LifecycleResultRecordClones_NormalizeNullCollectionsToImmutableEmptySnapshots()
     {
         PassiveTriggerExecutionResult activation = Activation("null", []) with { Effects = null! };
@@ -179,6 +244,10 @@ public sealed class LifecycleResultImmutabilityTests
             BattleStatusLifecycleEventKind.StatusExpired,
             RuntimeInstanceId.Parse($"{id}_actor"),
             ContentId.Parse($"{id}_status"));
+
+    private static StatusLifetimeDefinition Lifetime(int turns) =>
+        StandardStatusLifetimes.Field(
+            new TurnDurationDefinition(turns, ContentId.Parse("owner_turn_end"), false));
 
     private static void AssertReadOnly<T>(IReadOnlyList<T> values, T forged) =>
         Assert.Throws<NotSupportedException>(() => ((IList<T>)values).Add(forged));

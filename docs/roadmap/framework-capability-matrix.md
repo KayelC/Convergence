@@ -21,10 +21,12 @@ The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 defe
 `status_and_passive_lifecycle` is temporarily `partial` while Documentation
 Order 4 completes its approved correction sequence. O4-R2 separates expiration
 from typed removal/persistence, and O4-R3 supplies explicit lifecycle clocks,
-team-to-phase mapping, round dispatch, and both reserve policies. Typed
-transition evidence, live application hardening, passive targeting/liveness,
-wire reconciliation, and audience closure remain tracked by the active Order 4
-roadmap rather than being hidden behind the former `complete` label.
+team-to-phase mapping, round dispatch, and both reserve policies. O4-R4 adds
+typed application, refresh, replacement, rejection, expiry, cleanup, and
+passive-effect evidence through action and encounter results. Live application
+hardening, passive targeting/liveness, wire reconciliation, and audience
+closure remain tracked by the active Order 4 roadmap rather than being hidden
+behind the former `complete` label.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

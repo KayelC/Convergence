@@ -93,7 +93,8 @@ public sealed record ItemExecutionResult
         ItemExecutionStatus status,
         IEnumerable<EffectExecutionResult> effects,
         ItemConsumptionDecision consumption,
-        IEnumerable<ItemExecutionDiagnostic>? diagnostics = null)
+        IEnumerable<ItemExecutionDiagnostic>? diagnostics = null,
+        IEnumerable<BattleStatusLifecycleEvent>? lifecycleEvents = null)
     {
         Status = status;
         Effects = Array.AsReadOnly(effects.ToArray());
@@ -102,6 +103,7 @@ public sealed record ItemExecutionResult
         EscapeRequested = Effects.Any(effect => effect.EscapeRequested);
         HostActionRequestIds = Array.AsReadOnly(
             Effects.SelectMany(effect => effect.HostActionRequestIds ?? []).ToArray());
+        LifecycleEvents = Array.AsReadOnly(lifecycleEvents?.ToArray() ?? []);
     }
 
     public ItemExecutionStatus Status { get; }
@@ -110,6 +112,8 @@ public sealed record ItemExecutionResult
     public IReadOnlyList<ItemExecutionDiagnostic> Diagnostics { get; }
     public bool EscapeRequested { get; }
     public IReadOnlyList<ContentId> HostActionRequestIds { get; }
+    /// <summary>Gets lifecycle transitions committed at the enclosing action boundary.</summary>
+    public IReadOnlyList<BattleStatusLifecycleEvent> LifecycleEvents { get; }
 
     internal static ItemExecutionResult Rejected(IEnumerable<ItemExecutionDiagnostic> diagnostics) =>
         new(ItemExecutionStatus.Rejected, [], ItemConsumptionDecision.None, diagnostics);
@@ -357,7 +361,8 @@ public sealed class ItemExecutor : IItemExecutor
         return new ItemExecutionResult(
             execution.Interrupted ? ItemExecutionStatus.Interrupted : ItemExecutionStatus.Executed,
             execution.Effects,
-            consumption);
+            consumption,
+            lifecycleEvents: execution.LifecycleEvents);
     }
 
     private static bool RequestsAreEquivalent(

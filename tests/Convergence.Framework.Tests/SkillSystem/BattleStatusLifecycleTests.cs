@@ -260,6 +260,150 @@ public sealed class BattleStatusLifecycleTests
         Assert.True(target.HasAilment(Poison));
     }
 
+    [Fact]
+    public void AilmentApplication_DefaultPolicyReportsNewRefreshAndExclusiveReplacement()
+    {
+        var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        BattleExecutionServices services = Services();
+        RuntimeActorState attacker = Actor("transition_attacker");
+        RuntimeActorState target = Actor("transition_target");
+        AilmentDefinition poison = Ailment("poison", new NormalAilmentTurnBehaviorDefinition());
+        AilmentDefinition sleep = Ailment("sleep", new SkipAilmentTurnBehaviorDefinition());
+        ContentId sourceId = ContentId.Parse("status_skill");
+
+        BattleAilmentApplicationResult applied = service.TryApplyAilment(
+            new(attacker, target, poison, 100, Turns(2)) { SourceId = sourceId },
+            services);
+        BattleAilmentApplicationResult refreshed = service.TryApplyAilment(
+            new(attacker, target, poison, 100, Turns(4)) { SourceId = sourceId },
+            services);
+        BattleAilmentApplicationResult replaced = service.TryApplyAilment(
+            new(attacker, target, sleep, 100, Turns(3)) { SourceId = sourceId },
+            services);
+
+        Assert.Equal(BattleAilmentTransitionOutcome.Applied, applied.Transition!.Outcome);
+        BattleAilmentStateChange added = Assert.Single(applied.Transition.StateChanges);
+        Assert.Equal(BattleAilmentStateChangeKind.Added, added.Kind);
+        Assert.Null(added.Before);
+        Assert.Equal(Turns(2), added.After);
+        BattleStatusLifecycleEvent appliedEvent = Assert.Single(applied.Events);
+        Assert.Equal(BattleStatusLifecycleEventKind.AilmentApplied, appliedEvent.Kind);
+        Assert.Equal(attacker.InstanceId, appliedEvent.SourceActorId);
+        Assert.Equal(sourceId, appliedEvent.SourceId);
+
+        Assert.Equal(BattleAilmentTransitionOutcome.Refreshed, refreshed.Transition!.Outcome);
+        BattleAilmentStateChange refresh = Assert.Single(refreshed.Transition.StateChanges);
+        Assert.Equal(BattleAilmentStateChangeKind.Refreshed, refresh.Kind);
+        Assert.Equal(Turns(2), refresh.Before);
+        Assert.Equal(Turns(4), refresh.After);
+        Assert.Equal(
+            BattleStatusLifecycleEventKind.AilmentRefreshed,
+            Assert.Single(refreshed.Events).Kind);
+
+        Assert.Equal(BattleAilmentTransitionOutcome.Replaced, replaced.Transition!.Outcome);
+        Assert.Equal([Poison, Sleep], replaced.Transition.AffectedAilmentIds);
+        Assert.Equal(
+            [BattleAilmentStateChangeKind.Removed, BattleAilmentStateChangeKind.Added],
+            replaced.Transition.StateChanges.Select(change => change.Kind));
+        Assert.Equal(
+            [BattleStatusLifecycleEventKind.AilmentRemoved, BattleStatusLifecycleEventKind.AilmentReplaced],
+            replaced.Events.Select(statusEvent => statusEvent.Kind));
+        Assert.Equal(
+            StatusRemovalCause.ExclusivityReplacement,
+            replaced.Events[0].RemovalTransition!.Cause);
+        Assert.All(replaced.Events, statusEvent =>
+        {
+            Assert.Same(replaced.Transition, statusEvent.AilmentTransition);
+            Assert.Equal(attacker.InstanceId, statusEvent.SourceActorId);
+            Assert.Equal(sourceId, statusEvent.SourceId);
+        });
+        Assert.False(target.HasAilment(Poison));
+        Assert.True(target.HasAilment(Sleep));
+    }
+
+    [Fact]
+    public void AilmentApplication_SuppliedPoliciesRejectWithoutMutationAndProtectReplacement()
+    {
+        var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState attacker = Actor("policy_attacker");
+        AilmentDefinition poison = Ailment("poison", new NormalAilmentTurnBehaviorDefinition());
+        AilmentDefinition sleep = Ailment("sleep", new SkipAilmentTurnBehaviorDefinition());
+
+        RuntimeActorState rejectSame = Actor("reject_same");
+        rejectSame.ApplyAilment(poison, Turns(2));
+        BattleAilmentApplicationResult sameResult = service.TryApplyAilment(
+            new(attacker, rejectSame, poison, 100, Turns(5)),
+            Services(ailmentTransitions: RejectExistingAilmentTransitionPolicy.Instance));
+
+        RuntimeActorState rejectExclusive = Actor("reject_exclusive");
+        rejectExclusive.ApplyAilment(poison, Turns(2));
+        BattleAilmentApplicationResult exclusiveResult = service.TryApplyAilment(
+            new(attacker, rejectExclusive, sleep, 100, Turns(5)),
+            Services(ailmentTransitions: RefreshExistingAilmentTransitionPolicy.Instance));
+
+        RuntimeActorState protectedTarget = Actor("protected_replacement");
+        protectedTarget.ApplyAilment(
+            poison,
+            new StatusLifetimeDefinition(TurnClock(2), StatusRemovalProfiles.Protected));
+        BattleAilmentApplicationResult protectedResult = service.TryApplyAilment(
+            new(attacker, protectedTarget, sleep, 100, Turns(5)),
+            Services(ailmentTransitions: ReplaceExclusiveAilmentTransitionPolicy.Instance));
+
+        AssertRejected(
+            sameResult,
+            BattleAilmentTransitionRejectionReason.SameAilmentAlreadyActive,
+            rejectSame,
+            Poison,
+            Turns(2));
+        AssertRejected(
+            exclusiveResult,
+            BattleAilmentTransitionRejectionReason.ExclusiveAilmentActive,
+            rejectExclusive,
+            Poison,
+            Turns(2));
+        AssertRejected(
+            protectedResult,
+            BattleAilmentTransitionRejectionReason.ReplacementProtected,
+            protectedTarget,
+            Poison,
+            new StatusLifetimeDefinition(TurnClock(2), StatusRemovalProfiles.Protected));
+
+        static void AssertRejected(
+            BattleAilmentApplicationResult result,
+            BattleAilmentTransitionRejectionReason reason,
+            RuntimeActorState target,
+            ContentId retainedId,
+            StatusLifetimeDefinition retainedLifetime)
+        {
+            Assert.Equal(BattleAilmentApplicationStatus.TransitionRejected, result.Status);
+            Assert.Equal(BattleAilmentTransitionOutcome.Rejected, result.Transition!.Outcome);
+            Assert.Equal(reason, result.Transition.RejectionReason);
+            Assert.Empty(result.Transition.StateChanges);
+            Assert.Equal(retainedLifetime, target.Ailments[retainedId].Lifetime);
+            Assert.Single(target.Ailments);
+        }
+    }
+
+    [Fact]
+    public void AilmentApplication_InvalidPolicyDecisionIsTypedAndLeavesStateUnchanged()
+    {
+        var service = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState attacker = Actor("invalid_policy_attacker");
+        RuntimeActorState target = Actor("invalid_policy_target");
+        AilmentDefinition poison = Ailment("poison", new NormalAilmentTurnBehaviorDefinition());
+        target.ApplyAilment(poison, Turns(2));
+
+        BattleAilmentApplicationResult result = service.TryApplyAilment(
+            new(attacker, target, poison, 100, Turns(5)),
+            Services(ailmentTransitions: new AlwaysApplyNewTransitionPolicy()));
+
+        Assert.Equal(BattleAilmentApplicationStatus.TransitionRejected, result.Status);
+        Assert.Equal(
+            BattleAilmentTransitionRejectionReason.InvalidPolicyDecision,
+            result.Transition!.RejectionReason);
+        Assert.Equal(Turns(2), target.Ailments[Poison].Lifetime);
+    }
+
     [Theory]
     [InlineData(-1)]
     [InlineData(101)]
@@ -464,6 +608,64 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void TurnEnd_PassiveEventsPreserveTriggerOutcomeIndexEventAndEffects()
+    {
+        SkillDefinition passive = PassiveSkill(
+            "turn_end_passive",
+            [
+                new PassiveTriggerDefinition(
+                    OwnerTurnEnd,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(30))],
+                    new ResourcePercentageConditionDefinition(
+                        ConditionSubject.Actor,
+                        Hp,
+                        NumericComparison.GreaterThan,
+                        80)),
+                new PassiveTriggerDefinition(
+                    OwnerTurnEnd,
+                    [
+                        new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(15)),
+                        new GrantShieldEffectDefinition(ShieldKind.Magical)
+                    ],
+                    new ResourcePercentageConditionDefinition(
+                        ConditionSubject.Actor,
+                        Hp,
+                        NumericComparison.LessThan,
+                        80))
+            ]);
+        RuntimeActorState actor = Actor("passive_event_actor", hp: 50, passiveSkills: [passive]);
+
+        BattleTurnEndLifecycleResult result = new BattleStatusLifecycleService(new SequenceRandomSource())
+            .ProcessTurnEnd(new(actor, [actor], Battle, OwnerTurnEnd), Services());
+
+        Assert.Equal(65, actor.GetRequiredResource(Hp).Current);
+        BattleStatusLifecycleEvent evaluated = Assert.Single(result.Events, item =>
+            item.Kind == BattleStatusLifecycleEventKind.PassiveEvaluated);
+        Assert.Equal(PassiveTriggerOutcome.ConditionNotMet, evaluated.PassiveActivation!.Outcome);
+        Assert.Equal(0, evaluated.PassiveActivation.TriggerIndex);
+        Assert.Equal(OwnerTurnEnd, evaluated.PassiveActivation.EventId);
+        BattleStatusLifecycleEvent triggered = Assert.Single(result.Events, item =>
+            item.Kind == BattleStatusLifecycleEventKind.PassiveTriggered);
+        Assert.Equal(PassiveTriggerOutcome.Executed, triggered.PassiveActivation!.Outcome);
+        Assert.Equal(1, triggered.PassiveActivation.TriggerIndex);
+        Assert.Equal(OwnerTurnEnd, triggered.PassiveActivation.EventId);
+        BattleStatusLifecycleEvent[] effects = result.Events
+            .Where(item => item.Kind == BattleStatusLifecycleEventKind.PassiveEffectResolved)
+            .ToArray();
+        Assert.Equal(2, effects.Length);
+        Assert.Equal(15, effects[0].EffectResult!.Value);
+        EffectExecutionResult shieldEffect = Assert.IsType<EffectExecutionResult>(effects[1].EffectResult);
+        Assert.Equal(1, shieldEffect.EffectIndex);
+        Assert.Equal(nameof(ShieldKind.Magical), shieldEffect.Detail);
+        Assert.Contains(ShieldKind.Magical, actor.Shields.Keys);
+        Assert.All(effects, effect =>
+        {
+            Assert.Equal(passive.Id, effect.SourceId);
+            Assert.Equal(actor.InstanceId, effect.SourceActorId);
+        });
+    }
+
+    [Fact]
     public void TurnEnd_UsesSharedStopTargetAndStopActionSemantics()
     {
         ContentId failingHandlerId = ContentId.Parse("always_fail");
@@ -652,7 +854,7 @@ public sealed class BattleStatusLifecycleTests
         actor.AddOtherStatus(ContentId.Parse("marked"), EncounterTurns(1));
         actor.ApplyAilment(PoisonAilment(), Turns(3));
 
-        service.Cleanup(
+        BattleStatusLifecycleResult deploymentCleanup = service.Cleanup(
             new BattleStatusCleanupRequest(actor, BattleStatusDepartureReason.DeploymentSwap),
             statModifiers);
 
@@ -664,8 +866,15 @@ public sealed class BattleStatusLifecycleTests
         Assert.NotEmpty(actor.AffinityOverrides);
         Assert.NotEmpty(actor.OtherStatuses);
         Assert.True(actor.HasAilment(Poison));
+        Assert.Equal(BattleStatusDepartureReason.DeploymentSwap, deploymentCleanup.Events[^1].DepartureReason);
+        Assert.Equal(
+            [BattleDurationStateKind.Charge, BattleDurationStateKind.Shield],
+            deploymentCleanup.Events
+                .Where(statusEvent => statusEvent.RemovalTransition is not null)
+                .Select(statusEvent => statusEvent.RemovalTransition!.StateKind)
+                .Order());
 
-        service.Cleanup(
+        BattleStatusLifecycleResult battleCleanup = service.Cleanup(
             new BattleStatusCleanupRequest(actor, BattleStatusDepartureReason.BattleEnd),
             statModifiers);
 
@@ -674,6 +883,13 @@ public sealed class BattleStatusLifecycleTests
         Assert.Empty(actor.AffinityOverrides);
         Assert.Empty(actor.OtherStatuses);
         Assert.True(actor.HasAilment(Poison));
+        Assert.Equal(BattleStatusDepartureReason.BattleEnd, battleCleanup.Events[^1].DepartureReason);
+        Assert.Equal(
+            [BattleDurationStateKind.AffinityOverride, BattleDurationStateKind.AffinityBreak, BattleDurationStateKind.OtherStatus],
+            battleCleanup.Events
+                .Where(statusEvent => statusEvent.RemovalTransition is not null)
+                .Select(statusEvent => statusEvent.RemovalTransition!.StateKind)
+                .Order());
     }
 
     [Fact]
@@ -700,6 +916,11 @@ public sealed class BattleStatusLifecycleTests
         Assert.Equal(5, result.Events.Count(status =>
             status.Kind == BattleStatusLifecycleEventKind.StatusExpired));
         Assert.All(result.Events, status => Assert.Contains("Instant", status.Detail));
+        Assert.All(result.Events, status =>
+        {
+            Assert.True(status.DurationTransition!.Expired);
+            Assert.Null(status.DurationTransition.CurrentDuration);
+        });
     }
 
     [Fact]
@@ -1097,7 +1318,8 @@ public sealed class BattleStatusLifecycleTests
 
     private static BattleExecutionServices Services(
         IAilmentApplicationPolicy? ailmentPolicy = null,
-        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffectHandlers = null) =>
+        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffectHandlers = null,
+        IBattleAilmentTransitionPolicy? ailmentTransitions = null) =>
         new(
             new EmptyAilments(),
             new NoDamagePolicy(),
@@ -1115,7 +1337,10 @@ public sealed class BattleStatusLifecycleTests
                     PoisonFormula,
                     new PoisonFormulaHandler())
             ],
-            customEffectHandlers: customEffectHandlers);
+            customEffectHandlers: customEffectHandlers)
+        {
+            AilmentTransitions = ailmentTransitions ?? StandardBattleAilmentTransitionPolicy.Instance
+        };
 
     private static SkillSystemRegistrationSnapshot Registrations() =>
         new SkillSystemRegistrationBuilder()
@@ -1208,6 +1433,12 @@ public sealed class BattleStatusLifecycleTests
 
         public bool ShouldApply(AilmentApplicationPolicyRequest request) =>
             _results.Count > 0 && _results.Dequeue();
+    }
+
+    private sealed class AlwaysApplyNewTransitionPolicy : IBattleAilmentTransitionPolicy
+    {
+        public BattleAilmentTransitionDecision Resolve(BattleAilmentTransitionPolicyRequest request) =>
+            new(BattleAilmentTransitionOperation.ApplyNew);
     }
 
     private sealed class FixedCustomTurnBehaviorHandler(CustomAilmentTurnBehaviorResult result)

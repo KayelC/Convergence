@@ -154,7 +154,10 @@ public sealed record BattlePassiveActivatedEventPayload(
     ContentId SkillId,
     PassiveTriggerOutcome? Outcome = null,
     int? TriggerIndex = null,
-    ContentId? EventId = null) : BattleEncounterEventPayload;
+    ContentId? EventId = null) : BattleEncounterEventPayload
+{
+    public PassiveTriggerExecutionResult? Result { get; init; }
+}
 
 public sealed record BattleStatusChangedEventPayload(
     BattleStatusLifecycleEvent StatusEvent) : BattleEncounterEventPayload;

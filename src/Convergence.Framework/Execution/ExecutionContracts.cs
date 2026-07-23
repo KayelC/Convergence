@@ -329,6 +329,8 @@ public sealed record EffectExecutionResult
         Array.Empty<StatModifierTransitionResult>();
     private readonly IReadOnlyList<DamageHitExecutionEvidence> _damageHits =
         Array.Empty<DamageHitExecutionEvidence>();
+    private readonly IReadOnlyList<BattleStatusLifecycleEvent> _lifecycleEvents =
+        Array.Empty<BattleStatusLifecycleEvent>();
 
     public EffectExecutionResult(
         int EffectIndex,
@@ -540,6 +542,12 @@ public sealed record EffectExecutionResult
         get => _damageHits;
         init => _damageHits = SnapshotReferences(value, nameof(DamageHits));
     }
+    /// <summary>Gets ordered status-lifecycle evidence committed by this effect.</summary>
+    public IReadOnlyList<BattleStatusLifecycleEvent> LifecycleEvents
+    {
+        get => _lifecycleEvents;
+        init => _lifecycleEvents = SnapshotReferences(value, nameof(LifecycleEvents));
+    }
 
     private static IReadOnlyList<T> SnapshotReferences<T>(
         IEnumerable<T>? values,
@@ -731,7 +739,8 @@ public sealed record SkillExecutionResult
         IEnumerable<SkillExecutionDiagnostic>? diagnostics = null,
         bool costsCommitted = false,
         IEnumerable<ExecutionResourceChange>? committedCostChanges = null,
-        TurnEconomyResolution? turnEconomy = null)
+        TurnEconomyResolution? turnEconomy = null,
+        IEnumerable<BattleStatusLifecycleEvent>? lifecycleEvents = null)
     {
         Status = status;
         Effects = Array.AsReadOnly(effects.ToArray());
@@ -744,6 +753,7 @@ public sealed record SkillExecutionResult
         HostActionRequestIds = Array.AsReadOnly(
             Effects.SelectMany(effect => effect.HostActionRequestIds ?? []).ToArray());
         TurnEconomy = turnEconomy ?? new TurnEconomyResolution(TurnEconomyOutcome.Normal, false, false);
+        LifecycleEvents = Array.AsReadOnly(lifecycleEvents?.ToArray() ?? []);
     }
 
     public SkillExecutionStatus Status { get; }
@@ -756,6 +766,8 @@ public sealed record SkillExecutionResult
     public IReadOnlyList<PassiveTriggerExecutionResult> PassiveActivations { get; }
     public IReadOnlyList<ContentId> HostActionRequestIds { get; }
     public TurnEconomyResolution TurnEconomy { get; }
+    /// <summary>Gets lifecycle transitions committed at the enclosing action boundary.</summary>
+    public IReadOnlyList<BattleStatusLifecycleEvent> LifecycleEvents { get; }
 
     public static SkillExecutionResult Rejected(IEnumerable<SkillExecutionDiagnostic> diagnostics) =>
         new(SkillExecutionStatus.Rejected, [], diagnostics);

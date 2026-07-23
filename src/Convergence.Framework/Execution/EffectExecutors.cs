@@ -22,7 +22,8 @@ internal abstract class TargetedEffectExecutor
         ElementalAffinity? resolvedAffinity = null,
         IReadOnlyList<ExecutionResourceChange>? resourceChanges = null,
         IReadOnlyList<StatModifierTransitionResult>? statModifierTransitions = null,
-        IReadOnlyList<DamageHitExecutionEvidence>? damageHits = null) =>
+        IReadOnlyList<DamageHitExecutionEvidence>? damageHits = null,
+        IReadOnlyList<BattleStatusLifecycleEvent>? lifecycleEvents = null) =>
         new EffectExecutionResult(
             context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Success,
             turnEconomy, critical, value, relatedId, detail, escape, passiveActivations, resolvedAffinity,
@@ -30,7 +31,8 @@ internal abstract class TargetedEffectExecutor
             StatModifierTransitions: statModifierTransitions,
             DamageHits: damageHits)
         {
-            ResourceChanges = resourceChanges ?? []
+            ResourceChanges = resourceChanges ?? [],
+            LifecycleEvents = AggregateLifecycleEvents(passiveActivations, lifecycleEvents)
         };
 
     protected static EffectExecutionResult Failure(
@@ -40,10 +42,14 @@ internal abstract class TargetedEffectExecutor
         ContentId? relatedId = null,
         ElementalAffinity? resolvedAffinity = null,
         IReadOnlyList<StatModifierTransitionResult>? statModifierTransitions = null,
-        IReadOnlyList<DamageHitExecutionEvidence>? damageHits = null) =>
+        IReadOnlyList<DamageHitExecutionEvidence>? damageHits = null,
+        IReadOnlyList<BattleStatusLifecycleEvent>? lifecycleEvents = null) =>
         new(context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Failure,
             turnEconomy, Detail: detail, RelatedId: relatedId, ResolvedAffinity: resolvedAffinity,
-            StatModifierTransitions: statModifierTransitions, DamageHits: damageHits);
+            StatModifierTransitions: statModifierTransitions, DamageHits: damageHits)
+        {
+            LifecycleEvents = lifecycleEvents ?? []
+        };
 
     protected static EffectExecutionResult Interrupted(
         EffectExecutionContext context,
@@ -60,7 +66,8 @@ internal abstract class TargetedEffectExecutor
             ResolvedAffinity: resolvedAffinity,
             DamageHits: damageHits)
         {
-            ResourceChanges = resourceChanges ?? []
+            ResourceChanges = resourceChanges ?? [],
+            LifecycleEvents = AggregateLifecycleEvents(passiveActivations, lifecycleEvents: null)
         };
 
     protected static IReadOnlyList<ExecutionResourceChange> ResourceChanges(
@@ -75,6 +82,15 @@ internal abstract class TargetedEffectExecutor
         IEnumerable<PassiveTriggerExecutionResult> activations) =>
         activations.SelectMany(activation => activation.Effects)
             .SelectMany(effect => effect.ResourceChanges);
+
+    private static IReadOnlyList<BattleStatusLifecycleEvent> AggregateLifecycleEvents(
+        IEnumerable<PassiveTriggerExecutionResult>? activations,
+        IEnumerable<BattleStatusLifecycleEvent>? lifecycleEvents) =>
+        Array.AsReadOnly((lifecycleEvents ?? [])
+            .Concat((activations ?? [])
+                .SelectMany(activation => activation.Effects)
+                .SelectMany(effect => effect.LifecycleEvents))
+            .ToArray());
 
     protected static IReadOnlyList<PassiveTriggerExecutionResult> DispatchDefeatPrevention(
         EffectExecutionContext context,
@@ -508,7 +524,10 @@ internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffe
                 participants: context.Request.Participants,
                 battleKindId: context.Request.BattleKindId,
                 moonPhaseId: context.Request.MoonPhaseId,
-                skill: context.Request.Skill),
+                skill: context.Request.Skill)
+            {
+                SourceId = context.Request.SourceId
+            },
             context.Services);
         if (!application.Applied)
         {
@@ -516,10 +535,14 @@ internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffe
                 context,
                 TurnEconomyOutcome.Normal,
                 detail: $"The ailment application was {application.Status}.",
-                relatedId: definition.AilmentId);
+                relatedId: definition.AilmentId,
+                lifecycleEvents: application.Events);
         }
 
-        return Success(context, relatedId: definition.AilmentId);
+        return Success(
+            context,
+            relatedId: definition.AilmentId,
+            lifecycleEvents: application.Events);
     }
 }
 
@@ -577,7 +600,26 @@ internal sealed class RemoveAilmentEffectExecutor : TargetedEffectExecutor, IEff
                 definition.Scope == AilmentRemovalScope.AllRemovable ||
                 ailmentIds.Contains(active.Definition.Id) ||
                 active.Definition.GroupIds.Any(groupIds.Contains));
-        return Success(context, removed.Count, detail: string.Join(",", removed));
+        BattleStatusLifecycleEvent[] events = removed
+            .Select(ailmentId => new BattleStatusLifecycleEvent(
+                BattleStatusLifecycleEventKind.AilmentRemoved,
+                target.InstanceId,
+                ailmentId,
+                Detail: StatusRemovalCause.CureEffect.ToString())
+            {
+                SourceActorId = context.Actor.InstanceId,
+                SourceId = context.Request.SourceId,
+                RemovalTransition = new BattleStatusRemovalResult(
+                    ailmentId,
+                    BattleDurationStateKind.Ailment,
+                    StatusRemovalCause.CureEffect)
+            })
+            .ToArray();
+        return Success(
+            context,
+            removed.Count,
+            detail: string.Join(",", removed),
+            lifecycleEvents: events);
     }
 }
 

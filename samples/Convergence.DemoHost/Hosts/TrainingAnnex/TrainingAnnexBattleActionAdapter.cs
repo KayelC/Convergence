@@ -951,7 +951,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             {
                 _encounterAiKnowledgeEvidence.AddRange(learned);
             }
-            _lifecycle.RecordActionEffects(actor.State.InstanceId, actionId, command, execution);
+            _lifecycle.RecordActionEffects(actionId, execution);
             ActionTokenTurnEconomySnapshot turnEconomy = TurnEconomyState(request);
             _turnEconomys.RecordBefore(
                 actor.State.InstanceId,
@@ -1341,6 +1341,10 @@ internal sealed class TrainingAnnexBattleActionAdapter
                     actionEvent.Message));
             }
 
+            events.AddRange(BattleStatusLifecycleEventMapper.MapAll(
+                execution.LifecycleEvents,
+                statusEvent => $"Action lifecycle transition: {statusEvent.Kind}."));
+
             return events;
         }
 
@@ -1370,7 +1374,8 @@ internal sealed class TrainingAnnexLifecycleTracker
 
     public void RecordStatusEvents(
         IEnumerable<BattleStatusLifecycleEvent> events,
-        BattleTurnStartOutcome? turnStartOutcome = null)
+        BattleTurnStartOutcome? turnStartOutcome = null,
+        ContentId? sourceActionId = null)
     {
         foreach (BattleStatusLifecycleEvent statusEvent in events)
         {
@@ -1380,54 +1385,15 @@ internal sealed class TrainingAnnexLifecycleTracker
                 statusEvent.RelatedId,
                 statusEvent.Value,
                 statusEvent.Detail,
-                turnStartOutcome));
+                turnStartOutcome,
+                sourceActionId ?? statusEvent.SourceId));
         }
     }
 
     public void RecordActionEffects(
-        RuntimeInstanceId actorId,
         ContentId actionId,
-        BattleActionCommand command,
-        BattleActionExecutionResult execution)
-    {
-        foreach (EffectExecutionResult result in execution.Effects
-                     .Where(result => result.Outcome == EffectExecutionOutcome.Success))
-        {
-            EffectDefinition? definition = EffectDefinition(command, result.EffectIndex);
-            if (definition is ApplyAilmentEffectDefinition apply)
-            {
-                _evidence.Add(new TrainingAnnexLifecycleEvidence(
-                    result.TargetId ?? actorId,
-                    BattleStatusLifecycleEventKind.AilmentApplied,
-                    apply.AilmentId,
-                    SourceActionId: actionId));
-            }
-            else if (definition is RemoveAilmentEffectDefinition remove &&
-                     result.Value is decimal removedCount &&
-                     removedCount > 0)
-            {
-                _evidence.Add(new TrainingAnnexLifecycleEvidence(
-                    result.TargetId ?? actorId,
-                    BattleStatusLifecycleEventKind.AilmentRemoved,
-                    remove.AilmentIds.FirstOrDefault(),
-                    removedCount,
-                    result.Detail,
-                    SourceActionId: actionId));
-            }
-        }
-    }
-
-    private static EffectDefinition? EffectDefinition(BattleActionCommand command, int effectIndex) =>
-        command switch
-        {
-            SkillBattleActionCommand skill when effectIndex >= 0 && effectIndex < skill.Skill.Effects.Count =>
-                skill.Skill.Effects[effectIndex],
-            ItemBattleActionCommand item when item.Item.Usage is not null &&
-                effectIndex >= 0 &&
-                effectIndex < item.Item.Usage.Effects.Count =>
-                item.Item.Usage.Effects[effectIndex],
-            _ => null
-        };
+        BattleActionExecutionResult execution) =>
+        RecordStatusEvents(execution.LifecycleEvents, sourceActionId: actionId);
 }
 
 internal sealed class TrainingAnnexBattleLifecyclePort :

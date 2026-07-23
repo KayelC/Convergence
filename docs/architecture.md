@@ -74,7 +74,7 @@ recomposition, and aggregate restoration share that authority model. See
 [Actors And Runtime State](developer-guide/actors-and-runtime-state.md) and
 [Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md).
 
-Action execution reuses typed targeting, conditions, effects, lifecycle rules, and turn economy. Encounter orchestration accepts host command and event ports. Every encounter event carries a kind-specific immutable payload for initiative, rounds, teams, actors, commands, effects, turn economy, deployment, faults, or outcomes. Optional debug text is diagnostic only; hosts localize and present the typed payload rather than parsing prose. Hosts remain responsible for selecting when an encounter begins and how resulting events are presented.
+Action execution reuses typed targeting, conditions, effects, lifecycle rules, and turn economy. Encounter orchestration accepts host command and event ports. Every encounter event carries a kind-specific immutable payload for initiative, rounds, teams, actors, commands, effects, turn economy, deployment, faults, or outcomes. Status application, refresh, replacement, rejection, duration advancement, expiry, cleanup, and passive effects retain typed transition evidence through action and encounter results. Optional debug text is diagnostic only; hosts localize and present the typed payload rather than parsing prose. Hosts remain responsible for selecting when an encounter begins and how resulting events are presented.
 
 Status lifetime uses typed actor-turn, action, team-phase, round, and custom
 clock boundaries. Encounter composition maps team IDs to separate authored

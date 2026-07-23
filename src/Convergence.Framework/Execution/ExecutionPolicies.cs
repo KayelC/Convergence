@@ -516,6 +516,9 @@ public sealed class CombatExecutionPolicySet
 
 public sealed class BattleExecutionServices
 {
+    private IBattleAilmentTransitionPolicy _ailmentTransitions =
+        StandardBattleAilmentTransitionPolicy.Instance;
+
     public BattleExecutionServices(
         IAilmentDefinitionRepository ailments,
         IDamageExecutionPolicy damagePolicy,
@@ -588,6 +591,11 @@ public sealed class BattleExecutionServices
     public EffectExecutorRegistry EffectExecutors { get; }
     public RuleModifierResolver RuleModifiers { get; }
     public IBattleAilmentApplicationService AilmentApplications { get; }
+    public IBattleAilmentTransitionPolicy AilmentTransitions
+    {
+        get => _ailmentTransitions;
+        init => _ailmentTransitions = value ?? throw new ArgumentNullException(nameof(value));
+    }
     public PassiveEventPolicyRegistry PassiveEventPolicies { get; }
     public IPassiveTriggerDispatcher PassiveTriggers { get; }
     public ContentId OwnerWouldBeDefeatedEventId { get; }

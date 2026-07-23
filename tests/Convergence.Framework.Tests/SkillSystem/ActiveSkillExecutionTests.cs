@@ -657,8 +657,44 @@ public sealed class ActiveSkillExecutionTests
         Assert.Equal(TurnEconomyOutcome.Normal, effect.TurnEconomyOutcome);
         Assert.Equal(TurnEconomyOutcome.Normal, result.TurnEconomy.Outcome);
         Assert.Contains(nameof(BattleAilmentApplicationStatus.GuardBlocked), effect.Detail, StringComparison.Ordinal);
+        BattleStatusLifecycleEvent blocked = Assert.Single(effect.LifecycleEvents);
+        Assert.Equal(BattleStatusLifecycleEventKind.AilmentBlocked, blocked.Kind);
+        Assert.Equal(actor.InstanceId, blocked.SourceActorId);
+        Assert.Equal(skill.Id, blocked.SourceId);
+        Assert.Equal(effect.LifecycleEvents, result.LifecycleEvents);
         Assert.False(target.HasAilment(Poison));
         Assert.True(target.IsGuarding);
+    }
+
+    [Fact]
+    public void Execute_AilmentEventsPrecedeActionEndExpiryAndCarryTypedEvidence()
+    {
+        RuntimeActorState actor = Actor("lifecycle_actor", PlayerTeam);
+        RuntimeActorState target = Actor("lifecycle_target", EnemyTeam);
+        SkillDefinition skill = ActiveSkill(
+        [
+            new ApplyAilmentEffectDefinition(
+                Poison,
+                100,
+                EncounterLifetime(new InstantDurationDefinition()))
+        ]);
+
+        SkillExecutionResult result = new SkillExecutor(Services()).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        BattleStatusLifecycleEvent applied = Assert.Single(effect.LifecycleEvents);
+        Assert.Equal(BattleStatusLifecycleEventKind.AilmentApplied, applied.Kind);
+        Assert.Equal(BattleAilmentTransitionOutcome.Applied, applied.AilmentTransition!.Outcome);
+        Assert.Equal(actor.InstanceId, applied.SourceActorId);
+        Assert.Equal(skill.Id, applied.SourceId);
+        Assert.Equal(
+            [BattleStatusLifecycleEventKind.AilmentApplied, BattleStatusLifecycleEventKind.AilmentExpired],
+            result.LifecycleEvents.Select(statusEvent => statusEvent.Kind));
+        BattleStatusLifecycleEvent expired = result.LifecycleEvents[1];
+        Assert.Equal(Poison, expired.RelatedId);
+        Assert.True(expired.DurationTransition!.Expired);
+        Assert.False(target.HasAilment(Poison));
     }
 
     [Fact]
@@ -2402,6 +2438,20 @@ public sealed class ActiveSkillExecutionTests
                 new DamageHitResolution(true, 7),
                 ElementalAffinity.Weak)
         };
+        var originalLifecycleEvents = new List<BattleStatusLifecycleEvent>
+        {
+            new(
+                BattleStatusLifecycleEventKind.AilmentApplied,
+                RuntimeInstanceId.Parse("original_target"),
+                ContentId.Parse("original_ailment"))
+        };
+        var replacementLifecycleEvents = new List<BattleStatusLifecycleEvent>
+        {
+            new(
+                BattleStatusLifecycleEventKind.AilmentRemoved,
+                RuntimeInstanceId.Parse("replacement_target"),
+                ContentId.Parse("replacement_ailment"))
+        };
         var original = new EffectExecutionResult(
             0,
             RuntimeInstanceId.Parse("target"),
@@ -2410,7 +2460,8 @@ public sealed class ActiveSkillExecutionTests
             HostActionRequestIds: originalHostRequests,
             DamageHits: originalDamageHits)
         {
-            ResourceChanges = originalResourceChanges
+            ResourceChanges = originalResourceChanges,
+            LifecycleEvents = originalLifecycleEvents
         };
 
         EffectExecutionResult clone = original with
@@ -2419,7 +2470,8 @@ public sealed class ActiveSkillExecutionTests
             PassiveActivations = replacementActivations,
             HostActionRequestIds = replacementHostRequests,
             ResourceChanges = replacementResourceChanges,
-            DamageHits = replacementDamageHits
+            DamageHits = replacementDamageHits,
+            LifecycleEvents = replacementLifecycleEvents
         };
 
         originalActivations.Clear();
@@ -2430,6 +2482,8 @@ public sealed class ActiveSkillExecutionTests
         replacementResourceChanges.Clear();
         originalDamageHits.Clear();
         replacementDamageHits.Clear();
+        originalLifecycleEvents.Clear();
+        replacementLifecycleEvents.Clear();
 
         Assert.Equal("cloned", clone.Detail);
         Assert.Equal(originalActivation, Assert.Single(original.PassiveActivations));
@@ -2440,6 +2494,12 @@ public sealed class ActiveSkillExecutionTests
         Assert.Equal(4, Assert.Single(clone.ResourceChanges).Delta);
         Assert.Equal(5, Assert.Single(original.DamageHits).ResolvedDamage);
         Assert.Equal(7, Assert.Single(clone.DamageHits).ResolvedDamage);
+        Assert.Equal(
+            BattleStatusLifecycleEventKind.AilmentApplied,
+            Assert.Single(original.LifecycleEvents).Kind);
+        Assert.Equal(
+            BattleStatusLifecycleEventKind.AilmentRemoved,
+            Assert.Single(clone.LifecycleEvents).Kind);
         Assert.NotSame(replacementActivations, clone.PassiveActivations);
         Assert.NotSame(replacementHostRequests, clone.HostActionRequestIds);
         Assert.Throws<NotSupportedException>(() =>
@@ -2451,6 +2511,9 @@ public sealed class ActiveSkillExecutionTests
                 new ExecutionResourceChange(RuntimeInstanceId.Parse("forged_target"), Hp, 1)));
         Assert.Throws<NotSupportedException>(() =>
             ((IList<DamageHitExecutionEvidence>)clone.DamageHits).Add(Assert.Single(original.DamageHits)));
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<BattleStatusLifecycleEvent>)clone.LifecycleEvents).Add(
+                Assert.Single(original.LifecycleEvents)));
     }
 
     [Fact]
@@ -2487,6 +2550,8 @@ public sealed class ActiveSkillExecutionTests
             valid with { StatModifierTransitions = [null!] });
         Assert.Throws<ArgumentException>(() =>
             valid with { DamageHits = [null!] });
+        Assert.Throws<ArgumentException>(() =>
+            valid with { LifecycleEvents = [null!] });
     }
 
     [Fact]

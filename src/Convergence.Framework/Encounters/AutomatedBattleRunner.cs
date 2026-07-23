@@ -725,10 +725,17 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                         passive.SkillId,
                         passive.Outcome,
                         passive.TriggerIndex,
-                        passive.EventId),
+                        passive.EventId)
+                    {
+                        Result = passive
+                    },
                     $"Passive {passive.SkillId} resolved as {passive.Outcome}."));
             }
         }
+
+        events.AddRange(BattleStatusLifecycleEventMapper.MapAll(
+            execution.LifecycleEvents,
+            statusEvent => $"Action lifecycle transition: {statusEvent.Kind}."));
     }
 
     private static void RecordResourceChange(

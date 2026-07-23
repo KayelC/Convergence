@@ -24,7 +24,8 @@ public enum BattleAilmentApplicationStatus
     TargetDefeated,
     GuardBlocked,
     Immune,
-    Missed
+    Missed,
+    TransitionRejected
 }
 
 public enum BattleStatusDepartureReason
@@ -52,7 +53,13 @@ public enum BattleStatusLifecycleEventKind
     StatStageChanged,
     PassiveTriggered,
     CleanupApplied,
-    StatModifierChanged
+    StatModifierChanged,
+    AilmentRefreshed,
+    AilmentReplaced,
+    DurationAdvanced,
+    StatusRemoved,
+    PassiveEvaluated,
+    PassiveEffectResolved
 }
 
 public sealed record BattleStatusLifecycleEvent(
@@ -61,7 +68,17 @@ public sealed record BattleStatusLifecycleEvent(
     ContentId? RelatedId = null,
     decimal? Value = null,
     string? Detail = null,
-    StatModifierEvent? ModifierEvent = null);
+    StatModifierEvent? ModifierEvent = null)
+{
+    public RuntimeInstanceId? SourceActorId { get; init; }
+    public ContentId? SourceId { get; init; }
+    public BattleAilmentTransitionResult? AilmentTransition { get; init; }
+    public BattleDurationTickResult? DurationTransition { get; init; }
+    public BattleStatusRemovalResult? RemovalTransition { get; init; }
+    public PassiveTriggerExecutionResult? PassiveActivation { get; init; }
+    public EffectExecutionResult? EffectResult { get; init; }
+    public BattleStatusDepartureReason? DepartureReason { get; init; }
+}
 
 public sealed record BattleTurnStartLifecycleRequest(
     RuntimeActorState Actor,
@@ -320,6 +337,7 @@ public sealed record BattleAilmentApplicationRequest
         BattleKindId = battleKindId;
         MoonPhaseId = moonPhaseId;
         Skill = skill;
+        SourceId = skill?.Id;
     }
 
     public RuntimeActorState Actor { get; }
@@ -331,6 +349,20 @@ public sealed record BattleAilmentApplicationRequest
     public ContentId? BattleKindId { get; }
     public ContentId? MoonPhaseId { get; }
     public SkillDefinition? Skill { get; }
+    private ContentId? _sourceId;
+    public ContentId? SourceId
+    {
+        get => _sourceId;
+        init
+        {
+            if (value is ContentId sourceId && !sourceId.IsValid)
+            {
+                throw new ArgumentException("Source ID must be valid when supplied.", nameof(value));
+            }
+
+            _sourceId = value;
+        }
+    }
 }
 
 public sealed record BattleAilmentApplicationResult
@@ -341,9 +373,18 @@ public sealed record BattleAilmentApplicationResult
     public BattleAilmentApplicationResult(
         BattleAilmentApplicationStatus Status,
         IReadOnlyList<BattleStatusLifecycleEvent> Events)
+        : this(Status, Events, transition: null)
+    {
+    }
+
+    public BattleAilmentApplicationResult(
+        BattleAilmentApplicationStatus Status,
+        IReadOnlyList<BattleStatusLifecycleEvent> Events,
+        BattleAilmentTransitionResult? transition)
     {
         this.Status = Status;
         this.Events = Events;
+        Transition = transition;
     }
 
     public BattleAilmentApplicationStatus Status { get; init; }
@@ -354,6 +395,7 @@ public sealed record BattleAilmentApplicationResult
     }
 
     public bool Applied => Status == BattleAilmentApplicationStatus.Applied;
+    public BattleAilmentTransitionResult? Transition { get; }
 
     public void Deconstruct(
         out BattleAilmentApplicationStatus Status,
@@ -427,20 +469,197 @@ public sealed class BattleAilmentApplicationService : IBattleAilmentApplicationS
                         target.InstanceId,
                         ailment.Id,
                         Detail: chance.ToString())
+                    {
+                        SourceActorId = request.Actor.InstanceId,
+                        SourceId = request.SourceId
+                    }
                 ]);
         }
 
-        target.ApplyAilment(
+        StatusLifetimeDefinition lifetime = request.Lifetime ?? ailment.DefaultLifetime;
+        BattleAilmentTransitionResult transition = ResolveTransition(
+            target,
             ailment,
-            request.Lifetime ?? ailment.DefaultLifetime);
+            lifetime,
+            services.AilmentTransitions);
+        if (!transition.Applied)
+        {
+            return new BattleAilmentApplicationResult(
+                BattleAilmentApplicationStatus.TransitionRejected,
+                [new BattleStatusLifecycleEvent(
+                    BattleStatusLifecycleEventKind.AilmentBlocked,
+                    target.InstanceId,
+                    ailment.Id,
+                    Detail: transition.RejectionReason.ToString())
+                {
+                    SourceActorId = request.Actor.InstanceId,
+                    SourceId = request.SourceId,
+                    AilmentTransition = transition
+                }],
+                transition);
+        }
+
         return new BattleAilmentApplicationResult(
             BattleAilmentApplicationStatus.Applied,
-            [
-                new BattleStatusLifecycleEvent(
-                    BattleStatusLifecycleEventKind.AilmentApplied,
-                    target.InstanceId,
-                    ailment.Id)
-            ]);
+            TransitionEvents(request, transition),
+            transition);
+    }
+
+    private static BattleAilmentTransitionResult ResolveTransition(
+        RuntimeActorState target,
+        AilmentDefinition ailment,
+        StatusLifetimeDefinition lifetime,
+        IBattleAilmentTransitionPolicy policy)
+    {
+        target.Ailments.TryGetValue(ailment.Id, out ActiveAilmentState? existingSame);
+        ActiveAilmentState[] exclusiveConflicts = ailment.ExclusivityGroupId is ContentId groupId
+            ? target.Ailments.Values
+                .Where(active => active.Definition.Id != ailment.Id &&
+                                 active.Definition.ExclusivityGroupId == groupId)
+                .OrderBy(active => active.Definition.Id.ToString(), StringComparer.Ordinal)
+                .ToArray()
+            : [];
+        var policyRequest = new BattleAilmentTransitionPolicyRequest(
+            ailment.Id,
+            lifetime,
+            existingSame is null
+                ? null
+                : new BattleAilmentStateSnapshot(existingSame.Definition.Id, existingSame.Lifetime),
+            exclusiveConflicts.Select(active =>
+                new BattleAilmentStateSnapshot(active.Definition.Id, active.Lifetime)));
+        BattleAilmentTransitionDecision? decision = policy.Resolve(policyRequest);
+        if (decision is null || !DecisionMatchesState(decision.Operation, existingSame, exclusiveConflicts))
+        {
+            return RejectedTransition(
+                ailment.Id,
+                BattleAilmentTransitionRejectionReason.InvalidPolicyDecision);
+        }
+        if (decision.Operation == BattleAilmentTransitionOperation.Reject)
+        {
+            return RejectedTransition(ailment.Id, decision.RejectionReason);
+        }
+        if (decision.Operation == BattleAilmentTransitionOperation.ReplaceExclusive &&
+            exclusiveConflicts.Any(active =>
+                !active.Lifetime.Allows(StatusRemovalCause.ExclusivityReplacement)))
+        {
+            return RejectedTransition(
+                ailment.Id,
+                BattleAilmentTransitionRejectionReason.ReplacementProtected);
+        }
+
+        var changes = new List<BattleAilmentStateChange>();
+        if (decision.Operation == BattleAilmentTransitionOperation.ReplaceExclusive)
+        {
+            foreach (ActiveAilmentState conflict in exclusiveConflicts)
+            {
+                IReadOnlyList<ContentId> removed = target.RemoveAilments(
+                    StatusRemovalCause.ExclusivityReplacement,
+                    active => active.Definition.Id == conflict.Definition.Id);
+                if (removed.Count != 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Exclusive ailment '{conflict.Definition.Id}' could not be removed after validation.");
+                }
+
+                changes.Add(new BattleAilmentStateChange(
+                    BattleAilmentStateChangeKind.Removed,
+                    conflict.Definition.Id,
+                    conflict.Lifetime,
+                    after: null,
+                    removalCause: StatusRemovalCause.ExclusivityReplacement));
+            }
+        }
+
+        if (existingSame is null)
+        {
+            target.ApplyAilment(ailment, lifetime);
+            changes.Add(new BattleAilmentStateChange(
+                BattleAilmentStateChangeKind.Added,
+                ailment.Id,
+                before: null,
+                after: lifetime));
+        }
+        else
+        {
+            target.ApplyAilment(ailment, lifetime);
+            changes.Add(new BattleAilmentStateChange(
+                BattleAilmentStateChangeKind.Refreshed,
+                ailment.Id,
+                existingSame.Lifetime,
+                lifetime));
+        }
+
+        BattleAilmentTransitionOutcome outcome = decision.Operation switch
+        {
+            BattleAilmentTransitionOperation.ApplyNew => BattleAilmentTransitionOutcome.Applied,
+            BattleAilmentTransitionOperation.RefreshExisting => BattleAilmentTransitionOutcome.Refreshed,
+            BattleAilmentTransitionOperation.ReplaceExclusive => BattleAilmentTransitionOutcome.Replaced,
+            _ => throw new InvalidOperationException("Rejected ailment transitions cannot reach mutation.")
+        };
+        return new BattleAilmentTransitionResult(outcome, ailment.Id, changes);
+    }
+
+    private static bool DecisionMatchesState(
+        BattleAilmentTransitionOperation operation,
+        ActiveAilmentState? existingSame,
+        IReadOnlyList<ActiveAilmentState> exclusiveConflicts) =>
+        operation switch
+        {
+            BattleAilmentTransitionOperation.ApplyNew =>
+                existingSame is null && exclusiveConflicts.Count == 0,
+            BattleAilmentTransitionOperation.RefreshExisting =>
+                existingSame is not null && exclusiveConflicts.Count == 0,
+            BattleAilmentTransitionOperation.ReplaceExclusive => exclusiveConflicts.Count > 0,
+            BattleAilmentTransitionOperation.Reject => true,
+            _ => false
+        };
+
+    private static BattleAilmentTransitionResult RejectedTransition(
+        ContentId ailmentId,
+        BattleAilmentTransitionRejectionReason reason) =>
+        new(BattleAilmentTransitionOutcome.Rejected, ailmentId, rejectionReason: reason);
+
+    private static IReadOnlyList<BattleStatusLifecycleEvent> TransitionEvents(
+        BattleAilmentApplicationRequest request,
+        BattleAilmentTransitionResult transition)
+    {
+        var events = new List<BattleStatusLifecycleEvent>();
+        foreach (BattleAilmentStateChange change in transition.StateChanges
+                     .Where(change => change.Kind == BattleAilmentStateChangeKind.Removed))
+        {
+            events.Add(new BattleStatusLifecycleEvent(
+                BattleStatusLifecycleEventKind.AilmentRemoved,
+                request.Target.InstanceId,
+                change.AilmentId,
+                Detail: StatusRemovalCause.ExclusivityReplacement.ToString())
+            {
+                SourceActorId = request.Actor.InstanceId,
+                SourceId = request.SourceId,
+                AilmentTransition = transition,
+                RemovalTransition = new BattleStatusRemovalResult(
+                    change.AilmentId,
+                    BattleDurationStateKind.Ailment,
+                    StatusRemovalCause.ExclusivityReplacement)
+            });
+        }
+
+        BattleStatusLifecycleEventKind appliedKind = transition.Outcome switch
+        {
+            BattleAilmentTransitionOutcome.Applied => BattleStatusLifecycleEventKind.AilmentApplied,
+            BattleAilmentTransitionOutcome.Refreshed => BattleStatusLifecycleEventKind.AilmentRefreshed,
+            BattleAilmentTransitionOutcome.Replaced => BattleStatusLifecycleEventKind.AilmentReplaced,
+            _ => throw new InvalidOperationException("A rejected transition has no application event.")
+        };
+        events.Add(new BattleStatusLifecycleEvent(
+            appliedKind,
+            request.Target.InstanceId,
+            transition.AilmentId)
+        {
+            SourceActorId = request.Actor.InstanceId,
+            SourceId = request.SourceId,
+            AilmentTransition = transition
+        });
+        return Array.AsReadOnly(events.ToArray());
     }
 
     private static BattleAilmentApplicationResult Blocked(
@@ -455,6 +674,10 @@ public sealed class BattleAilmentApplicationService : IBattleAilmentApplicationS
                     request.Target.InstanceId,
                     request.Ailment.Id,
                     Detail: detail)
+                {
+                    SourceActorId = request.Actor.InstanceId,
+                    SourceId = request.SourceId
+                }
             ]);
 }
 
@@ -700,13 +923,15 @@ public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleSer
         RuntimeActorState actor = request.Actor ?? throw new ArgumentNullException(nameof(request.Actor));
         var transaction = new RuntimeActorExecutionTransaction(actor, [actor]);
         RuntimeActorState staged = transaction.Actor;
+        bool guardWasActive = staged.IsGuarding;
         staged.SetGuarding(false);
+        IReadOnlyList<BattleDurationTickResult> battleExpirations = [];
         if (request.Reason == BattleStatusDepartureReason.BattleEnd)
         {
-            staged.ExpireBattleDurations();
+            battleExpirations = staged.ExpireBattleDurations();
         }
         StatusRemovalCause removalCause = MapRemovalCause(request.Reason);
-        staged.RemoveStatuses(removalCause);
+        IReadOnlyList<BattleStatusRemovalResult> removals = staged.RemoveStatuses(removalCause);
 
         RuntimeStatModifierStateSnapshot state = staged.ResolveStatModifierState(statModifiers);
         StatModifierTransitionResult modifierResult = statModifiers.Cleanup(
@@ -718,11 +943,22 @@ public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleSer
         }
 
         var events = new List<BattleStatusLifecycleEvent>();
+        if (guardWasActive)
+        {
+            events.Add(new BattleStatusLifecycleEvent(
+                BattleStatusLifecycleEventKind.GuardCleared,
+                staged.InstanceId));
+        }
+        events.AddRange(battleExpirations.Select(expiration => DurationEvent(staged.InstanceId, expiration)));
+        events.AddRange(removals.Select(removal => RemovalEvent(staged.InstanceId, removal)));
         events.AddRange(MapModifierEvents(staged.InstanceId, modifierResult));
         events.Add(new BattleStatusLifecycleEvent(
             BattleStatusLifecycleEventKind.CleanupApplied,
             staged.InstanceId,
-            Detail: request.Reason.ToString()));
+            Detail: request.Reason.ToString())
+        {
+            DepartureReason = request.Reason
+        });
         transaction.Commit();
 
         return new BattleStatusLifecycleResult(events);
@@ -763,7 +999,10 @@ public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleSer
                         : BattleStatusLifecycleEventKind.StatusExpired,
                     actor.InstanceId,
                     duration.Id,
-                    Detail: $"{duration.StateKind}:{duration.PreviousDuration.Kind}"));
+                    Detail: $"{duration.StateKind}:{duration.PreviousDuration.Kind}")
+                {
+                    DurationTransition = duration
+                });
             }
         }
 
@@ -830,26 +1069,44 @@ public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleSer
     {
         foreach (BattleDurationTickResult tick in actor.TickAilmentDurations(eventId, advanceReserveState))
         {
-            if (tick.Expired)
-            {
-                events.Add(new BattleStatusLifecycleEvent(
-                    BattleStatusLifecycleEventKind.AilmentExpired,
-                    actor.InstanceId,
-                    tick.Id));
-            }
+            events.Add(DurationEvent(actor.InstanceId, tick));
         }
 
         foreach (BattleDurationTickResult tick in actor.TickTimedStatuses(eventId, advanceReserveState))
         {
-            if (tick.Expired)
-            {
-                events.Add(new BattleStatusLifecycleEvent(
-                    BattleStatusLifecycleEventKind.StatusExpired,
-                    actor.InstanceId,
-                    tick.Id));
-            }
+            events.Add(DurationEvent(actor.InstanceId, tick));
         }
     }
+
+    internal static BattleStatusLifecycleEvent DurationEvent(
+        RuntimeInstanceId actorId,
+        BattleDurationTickResult transition) =>
+        new(
+            transition.Expired
+                ? transition.StateKind == BattleDurationStateKind.Ailment
+                    ? BattleStatusLifecycleEventKind.AilmentExpired
+                    : BattleStatusLifecycleEventKind.StatusExpired
+                : BattleStatusLifecycleEventKind.DurationAdvanced,
+            actorId,
+            transition.Id,
+            Detail: transition.StateKind.ToString())
+        {
+            DurationTransition = transition
+        };
+
+    internal static BattleStatusLifecycleEvent RemovalEvent(
+        RuntimeInstanceId actorId,
+        BattleStatusRemovalResult transition) =>
+        new(
+            transition.StateKind == BattleDurationStateKind.Ailment
+                ? BattleStatusLifecycleEventKind.AilmentRemoved
+                : BattleStatusLifecycleEventKind.StatusRemoved,
+            actorId,
+            transition.Id,
+            Detail: transition.Cause.ToString())
+        {
+            RemovalTransition = transition
+        };
 
     internal static IReadOnlyList<BattleStatusLifecycleEvent> MapModifierEvents(
         RuntimeInstanceId actorId,
@@ -1039,16 +1296,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                 request.StatModifierBoundary is null ? [] : [request.StatModifierBoundary]),
             services);
         passiveActivations.AddRange(dispatch.Activations);
-        foreach (PassiveTriggerExecutionResult activation in dispatch.Activations
-                     .Where(activation => activation.Outcome == PassiveTriggerOutcome.Executed))
-        {
-            events.Add(new BattleStatusLifecycleEvent(
-                BattleStatusLifecycleEventKind.PassiveTriggered,
-                actor.InstanceId,
-                activation.SkillId,
-                Detail: activation.EventId.ToString()));
-            AddEffectEvents(events, activation.Effects);
-        }
+        AddPassiveEvents(events, actor.InstanceId, dispatch);
 
         ExecuteAilmentTriggers(request, services, participants, events);
         ProcessAilmentRecovery(actor, request.EventId, events);
@@ -1276,7 +1524,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                         actionRequest,
                         trigger.Effects,
                         new ResolvedRuntimeTargetSet([actor]));
-                AddEffectEvents(events, execution.Effects);
+                AddEffectEvents(events, actor.InstanceId, active.Definition.Id, execution.Effects);
 
                 if (execution.StopsAction)
                 {
@@ -1304,7 +1552,13 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                         BattleStatusLifecycleEventKind.AilmentRemoved,
                         actor.InstanceId,
                         active.Definition.Id,
-                        Detail: "event"));
+                        Detail: "event")
+                    {
+                        RemovalTransition = new BattleStatusRemovalResult(
+                            active.Definition.Id,
+                            BattleDurationStateKind.Ailment,
+                            StatusRemovalCause.RecoveryEvent)
+                    });
                 }
 
                 continue;
@@ -1333,7 +1587,13 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                     actor.InstanceId,
                     active.Definition.Id,
                     chance,
-                    "natural"));
+                    "natural")
+                {
+                    RemovalTransition = new BattleStatusRemovalResult(
+                        active.Definition.Id,
+                        BattleDurationStateKind.Ailment,
+                        StatusRemovalCause.NaturalRecovery)
+                });
             }
         }
     }
@@ -1376,24 +1636,12 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
     {
         foreach (BattleDurationTickResult tick in actor.TickAilmentDurations(eventId))
         {
-            if (tick.Expired)
-            {
-                events.Add(new BattleStatusLifecycleEvent(
-                    BattleStatusLifecycleEventKind.AilmentExpired,
-                    actor.InstanceId,
-                    tick.Id));
-            }
+            events.Add(BattleDurationLifecycleService.DurationEvent(actor.InstanceId, tick));
         }
 
         foreach (BattleDurationTickResult tick in actor.TickTimedStatuses(eventId))
         {
-            if (tick.Expired)
-            {
-                events.Add(new BattleStatusLifecycleEvent(
-                    BattleStatusLifecycleEventKind.StatusExpired,
-                    actor.InstanceId,
-                    tick.Id));
-            }
+            events.Add(BattleDurationLifecycleService.DurationEvent(actor.InstanceId, tick));
         }
 
         if (statModifierBoundary is not null)
@@ -1405,12 +1653,51 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         }
     }
 
+    internal static void AddPassiveEvents(
+        List<BattleStatusLifecycleEvent> events,
+        RuntimeInstanceId ownerId,
+        PassiveTriggerDispatchResult dispatch)
+    {
+        foreach (PassiveTriggerExecutionResult activation in dispatch.Activations)
+        {
+            events.Add(new BattleStatusLifecycleEvent(
+                activation.Outcome == PassiveTriggerOutcome.Executed
+                    ? BattleStatusLifecycleEventKind.PassiveTriggered
+                    : BattleStatusLifecycleEventKind.PassiveEvaluated,
+                activation.TargetId,
+                activation.SkillId,
+                Detail: activation.EventId.ToString())
+            {
+                SourceActorId = ownerId,
+                SourceId = activation.SkillId,
+                PassiveActivation = activation
+            });
+            if (activation.Outcome == PassiveTriggerOutcome.Executed)
+            {
+                AddEffectEvents(events, ownerId, activation.SkillId, activation.Effects);
+            }
+        }
+    }
+
     private static void AddEffectEvents(
         List<BattleStatusLifecycleEvent> events,
+        RuntimeInstanceId sourceActorId,
+        ContentId sourceId,
         IReadOnlyList<EffectExecutionResult> effects)
     {
         foreach (EffectExecutionResult effect in effects)
         {
+            events.Add(new BattleStatusLifecycleEvent(
+                BattleStatusLifecycleEventKind.PassiveEffectResolved,
+                effect.TargetId ?? sourceActorId,
+                sourceId,
+                effect.Value,
+                effect.Detail)
+            {
+                SourceActorId = sourceActorId,
+                SourceId = sourceId,
+                EffectResult = effect
+            });
             foreach (ExecutionResourceChange change in effect.ResourceChanges)
             {
                 events.Add(new BattleStatusLifecycleEvent(
@@ -1418,8 +1705,14 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                     change.ActorId,
                     change.ResourceId,
                     change.Delta,
-                    effect.Detail));
+                    effect.Detail)
+                {
+                    SourceActorId = sourceActorId,
+                    SourceId = sourceId,
+                    EffectResult = effect
+                });
             }
+            events.AddRange(effect.LifecycleEvents);
         }
     }
 }
