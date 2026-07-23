@@ -62,6 +62,8 @@ public sealed class DocumentationContractSynchronizationTests
             RepositoryPath("docs", "technical", "turn-economy-runtime.md"));
         string decision = File.ReadAllText(
             RepositoryPath("docs", "decisions", "turn-economy-policy-family.md"));
+        string roadmap = File.ReadAllText(
+            RepositoryPath("docs", "roadmap", "turn-economy-order-3-roadmap.md"));
 
         Assert.Contains("including a game-supplied replacement", mechanics, StringComparison.Ordinal);
         Assert.Contains("RemainingActions == 0", developer, StringComparison.Ordinal);
@@ -69,6 +71,7 @@ public sealed class DocumentationContractSynchronizationTests
         Assert.Contains("the one economy-independent transition semantic", technical, StringComparison.Ordinal);
         Assert.Contains("before owner-turn-end lifecycle", technical, StringComparison.Ordinal);
         Assert.Contains("explicit `TerminatePhase` consumption must leave zero", decision, StringComparison.Ordinal);
+        Assert.Contains("Owner confirmation:** 23 July 2026", roadmap, StringComparison.Ordinal);
     }
 
     [Fact]

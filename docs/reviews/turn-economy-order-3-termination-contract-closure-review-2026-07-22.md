@@ -4,6 +4,7 @@
 **Implementation revision reviewed:** `b16da99`
 **Capability:** `turn_economy`
 **Verdict:** ready for formal closure
+**Owner confirmation:** received 23 July 2026
 
 ## Review Method
 
@@ -132,5 +133,6 @@ and all three documentation entries are `reviewed`.
 ## Closure Decision
 
 O3-R16 and O3-R17 satisfy the reopened correction cycle. Order 3 is formally
-complete. Order 4, status and passive lifecycle, is the next collaborative
-documentation order.
+complete following the project owner's explicit confirmation on 23 July 2026.
+Order 4, status and passive lifecycle, is the next collaborative documentation
+order.

@@ -291,7 +291,8 @@ economy could leave positive remaining actions and pass runner validation.
 O3-R16 now rejects that supported extension violation before downstream
 lifecycle or event commitment. O3-R17 re-read the corrected source and
 owner-confirmed guidance, then promoted all three audience entries together.
-Order 3 is formally complete.
+The project owner explicitly confirmed the final six-rule contract on 23 July
+2026. Order 3 is formally complete.
 
 Order 4 follows that closure. It reviews
 status, ailment, passive, and duration lifecycle from current source before any

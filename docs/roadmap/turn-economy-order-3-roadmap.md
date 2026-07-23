@@ -1,6 +1,6 @@
 # Turn Economy Order 3 Roadmap
 
-**Status:** complete through O3-R17
+**Status:** formally closed and owner-confirmed on 23 July 2026
 
 **Capability:** `turn_economy`
 
@@ -17,6 +17,11 @@
 **Fresh closure audit:** [Turn Economy Order 3 Fresh Closure Audit](../reviews/turn-economy-order-3-fresh-closure-audit-2026-07-22.md)
 
 **Termination-contract closure:** [Turn Economy Order 3 Termination Contract Closure Review](../reviews/turn-economy-order-3-termination-contract-closure-review-2026-07-22.md)
+
+**Owner confirmation:** 23 July 2026; the project owner approved all six
+documented rules covering optional policy selection, universal explicit
+termination, policy-specific effect outcomes, pass precedence, scheduling
+separation, and the current mid-battle persistence boundary.
 
 ## Goal
 
@@ -335,4 +340,5 @@ while explicit `ActionTurnConsumption.TerminatePhase` is universal. Mechanics,
 developer, and technical guidance now state that distinction, and executable
 matrices return `turn_economy` to `complete` with all three audiences
 `reviewed`. No realistic reachable Order 3 defect remains in the reviewed
-scope. Order 4 is next.
+scope. The project owner explicitly confirmed the resulting six-rule contract
+on 23 July 2026. Order 4 is next.

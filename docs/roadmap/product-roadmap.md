@@ -32,7 +32,8 @@ honored explicit phase termination, while a custom economy could leave actions
 remaining and still pass encounter transition validation. O3-R16 now enforces
 the universal termination command before lifecycle and event commitment, and
 O3-R17 reconciled the corrected source with all three documentation audiences.
-Order 3 is complete; Order 4 has not started.
+The project owner confirmed the final contract on 23 July 2026. Order 3 is
+complete; Order 4 has not started.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in

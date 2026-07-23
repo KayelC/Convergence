@@ -41,6 +41,8 @@ could ignore explicit phase termination while still passing transition
 validation. O3-R16 now rejects that transition before owner-turn-end lifecycle
 or accepted event publication. O3-R17 re-read the corrected source and
 owner-confirmed guidance, so all three Order 3 entries are reviewed again.
+The project owner explicitly confirmed the final Order 3 contract on 23 July
+2026.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
