@@ -26,9 +26,12 @@ typed application, refresh, replacement, rejection, expiry, cleanup, and
 passive-effect evidence through action and encounter results. Live application
 hardening is complete in O4-R5: malformed timed state is rejected before live
 mutation, public ailment application is transactional, and the supplied guard
-rule is an injected application gate. Passive targeting/liveness, encounter
-startup, wire reconciliation, and audience closure remain tracked by the active
-Order 4 roadmap rather than being hidden behind the former `complete` label.
+rule is an injected application gate. O4-R6 adds typed owner, event-target,
+team, opponent, and all-participant passive targeting; validates passive
+re-entry liveness; and makes activation limits explicitly per-dispatch or
+per-target. Encounter startup, wire reconciliation, and audience closure remain
+tracked by the active Order 4 roadmap rather than being hidden behind the
+former `complete` label.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

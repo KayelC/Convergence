@@ -1,4 +1,35 @@
 #nullable enable
+Convergence.Content.PassiveTriggerDefinition.PassiveTriggerDefinition(Convergence.Content.ContentId eventId, System.Collections.Generic.IEnumerable<Convergence.Content.EffectDefinition!>! effects, Convergence.Content.PassiveTriggerTargetingDefinition! targeting, Convergence.Content.ConditionDefinition? when = null) -> void
+Convergence.Content.PassiveTriggerDefinition.Targeting.get -> Convergence.Content.PassiveTriggerTargetingDefinition!
+Convergence.Content.PassiveTriggerTargetingDefinition
+Convergence.Content.PassiveTriggerTargetingDefinition.<Clone>$() -> Convergence.Content.PassiveTriggerTargetingDefinition!
+Convergence.Content.PassiveTriggerTargetingDefinition.Equals(Convergence.Content.PassiveTriggerTargetingDefinition? other) -> bool
+Convergence.Content.PassiveTriggerTargetingDefinition.IncludeReserveActors.get -> bool
+Convergence.Content.PassiveTriggerTargetingDefinition.LifeState.get -> Convergence.Content.TargetLifeState
+Convergence.Content.PassiveTriggerTargetingDefinition.PassiveTriggerTargetingDefinition(Convergence.Content.PassiveTriggerTargetScope scope, Convergence.Content.TargetLifeState lifeState, bool includeReserveActors) -> void
+Convergence.Content.PassiveTriggerTargetingDefinition.Scope.get -> Convergence.Content.PassiveTriggerTargetScope
+Convergence.Content.PassiveTriggerTargetScope
+Convergence.Content.PassiveTriggerTargetScope.AllParticipants = 4 -> Convergence.Content.PassiveTriggerTargetScope
+Convergence.Content.PassiveTriggerTargetScope.EventTargets = 1 -> Convergence.Content.PassiveTriggerTargetScope
+Convergence.Content.PassiveTriggerTargetScope.OpposingTeams = 3 -> Convergence.Content.PassiveTriggerTargetScope
+Convergence.Content.PassiveTriggerTargetScope.Owner = 0 -> Convergence.Content.PassiveTriggerTargetScope
+Convergence.Content.PassiveTriggerTargetScope.OwnerTeam = 2 -> Convergence.Content.PassiveTriggerTargetScope
+Convergence.Content.StandardPassiveTriggerTargeting
+Convergence.Execution.PassiveActivationCountingScope
+Convergence.Execution.PassiveActivationCountingScope.PerDispatch = 0 -> Convergence.Execution.PassiveActivationCountingScope
+Convergence.Execution.PassiveActivationCountingScope.PerTarget = 1 -> Convergence.Execution.PassiveActivationCountingScope
+Convergence.Execution.PassiveEventPolicy.ActivationCountingScope.get -> Convergence.Execution.PassiveActivationCountingScope
+Convergence.Execution.PassiveEventPolicy.PassiveEventPolicy(bool AllowReentry, int? ActivationLimitPerBattle, Convergence.Execution.PassiveActivationCountingScope ActivationCountingScope) -> void
+Convergence.Runtime.RuntimePassiveActivationSnapshot.RuntimePassiveActivationSnapshot(Convergence.Content.ContentId skillId, Convergence.Content.ContentId eventId, int triggerIndex, int activationCount, Convergence.Runtime.RuntimeInstanceId? targetInstanceId) -> void
+Convergence.Runtime.RuntimePassiveActivationSnapshot.TargetInstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
+override Convergence.Content.PassiveTriggerTargetingDefinition.Equals(object? obj) -> bool
+override Convergence.Content.PassiveTriggerTargetingDefinition.GetHashCode() -> int
+override Convergence.Content.PassiveTriggerTargetingDefinition.ToString() -> string!
+static Convergence.Content.PassiveTriggerTargetingDefinition.operator !=(Convergence.Content.PassiveTriggerTargetingDefinition? left, Convergence.Content.PassiveTriggerTargetingDefinition? right) -> bool
+static Convergence.Content.PassiveTriggerTargetingDefinition.operator ==(Convergence.Content.PassiveTriggerTargetingDefinition? left, Convergence.Content.PassiveTriggerTargetingDefinition? right) -> bool
+static Convergence.Content.StandardPassiveTriggerTargeting.EventTargets.get -> Convergence.Content.PassiveTriggerTargetingDefinition!
+static Convergence.Content.StandardPassiveTriggerTargeting.LivingOwnerTeam.get -> Convergence.Content.PassiveTriggerTargetingDefinition!
+static Convergence.Content.StandardPassiveTriggerTargeting.Owner.get -> Convergence.Content.PassiveTriggerTargetingDefinition!
 Convergence.Execution.AllowAilmentsApplicationGatePolicy
 Convergence.Execution.AllowAilmentsApplicationGatePolicy.Evaluate(Convergence.Execution.BattleAilmentApplicationGateRequest! request) -> Convergence.Execution.BattleAilmentApplicationGateDecision!
 Convergence.Execution.BattleAilmentApplicationGateDecision
@@ -3412,9 +3443,7 @@ Convergence.Execution.PassBattleActionCommand.PassBattleActionCommand() -> void
 Convergence.Execution.PassiveEventPolicy
 Convergence.Execution.PassiveEventPolicy.<Clone>$() -> Convergence.Execution.PassiveEventPolicy!
 Convergence.Execution.PassiveEventPolicy.ActivationLimitPerBattle.get -> int?
-Convergence.Execution.PassiveEventPolicy.ActivationLimitPerBattle.init -> void
 Convergence.Execution.PassiveEventPolicy.AllowReentry.get -> bool
-Convergence.Execution.PassiveEventPolicy.AllowReentry.init -> void
 Convergence.Execution.PassiveEventPolicy.Deconstruct(out bool AllowReentry, out int? ActivationLimitPerBattle) -> void
 Convergence.Execution.PassiveEventPolicy.Equals(Convergence.Execution.PassiveEventPolicy? other) -> bool
 Convergence.Execution.PassiveEventPolicy.PassiveEventPolicy(bool AllowReentry = false, int? ActivationLimitPerBattle = null) -> void

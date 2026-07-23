@@ -74,11 +74,13 @@ public sealed class BattlePassiveCollection
             .OrderBy(pair => pair.Key.SkillId.ToString(), StringComparer.Ordinal)
             .ThenBy(pair => pair.Key.EventId.ToString(), StringComparer.Ordinal)
             .ThenBy(pair => pair.Key.TriggerIndex)
+            .ThenBy(pair => pair.Key.TargetInstanceId?.ToString(), StringComparer.Ordinal)
             .Select(pair => new RuntimePassiveActivationSnapshot(
                 pair.Key.SkillId,
                 pair.Key.EventId,
                 pair.Key.TriggerIndex,
-                pair.Value))
+                pair.Value,
+                pair.Key.TargetInstanceId))
             .ToArray());
 
     internal void RestoreStates(IEnumerable<RuntimePassiveSkillStateSnapshot> states)
@@ -120,7 +122,8 @@ public sealed class BattlePassiveCollection
                 new PassiveActivationKey(
                     activation.SkillId,
                     activation.TriggerIndex,
-                    activation.EventId),
+                    activation.EventId,
+                    activation.TargetInstanceId),
                 activation.ActivationCount);
         }
     }
@@ -145,12 +148,21 @@ public sealed class BattlePassiveCollection
     internal IEnumerable<SkillDefinition> EnabledSkills =>
         _entries.Where(entry => entry.IsEnabled).Select(entry => entry.Skill);
 
-    internal int GetActivationCount(ContentId skillId, int triggerIndex, ContentId eventId) =>
-        _activationCounts.GetValueOrDefault(new PassiveActivationKey(skillId, triggerIndex, eventId));
+    internal int GetActivationCount(
+        ContentId skillId,
+        int triggerIndex,
+        ContentId eventId,
+        RuntimeInstanceId? targetInstanceId) =>
+        _activationCounts.GetValueOrDefault(
+            new PassiveActivationKey(skillId, triggerIndex, eventId, targetInstanceId));
 
-    internal void RecordActivation(ContentId skillId, int triggerIndex, ContentId eventId)
+    internal void RecordActivation(
+        ContentId skillId,
+        int triggerIndex,
+        ContentId eventId,
+        RuntimeInstanceId? targetInstanceId)
     {
-        var key = new PassiveActivationKey(skillId, triggerIndex, eventId);
+        var key = new PassiveActivationKey(skillId, triggerIndex, eventId, targetInstanceId);
         _activationCounts[key] = _activationCounts.GetValueOrDefault(key) + 1;
     }
 
@@ -166,7 +178,11 @@ public sealed class BattlePassiveCollection
         return true;
     }
 
-    private readonly record struct PassiveActivationKey(ContentId SkillId, int TriggerIndex, ContentId EventId);
+    private readonly record struct PassiveActivationKey(
+        ContentId SkillId,
+        int TriggerIndex,
+        ContentId EventId,
+        RuntimeInstanceId? TargetInstanceId);
 }
 
 public sealed record BattleConditionContext
@@ -428,7 +444,60 @@ public sealed class RuleModifierResolver
     }
 }
 
-public sealed record PassiveEventPolicy(bool AllowReentry = false, int? ActivationLimitPerBattle = null);
+public enum PassiveActivationCountingScope
+{
+    PerDispatch,
+    PerTarget
+}
+
+public sealed record PassiveEventPolicy
+{
+    public PassiveEventPolicy(
+        bool AllowReentry = false,
+        int? ActivationLimitPerBattle = null)
+        : this(AllowReentry, ActivationLimitPerBattle, PassiveActivationCountingScope.PerDispatch)
+    {
+    }
+
+    public PassiveEventPolicy(
+        bool AllowReentry,
+        int? ActivationLimitPerBattle,
+        PassiveActivationCountingScope ActivationCountingScope)
+    {
+        if (ActivationLimitPerBattle is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(ActivationLimitPerBattle),
+                "A passive activation limit must be positive when supplied.");
+        }
+        if (AllowReentry && ActivationLimitPerBattle is null)
+        {
+            throw new ArgumentException(
+                "A reentrant passive event requires a finite activation limit.",
+                nameof(ActivationLimitPerBattle));
+        }
+        if (!Enum.IsDefined(ActivationCountingScope))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(ActivationCountingScope),
+                "Passive activation counting scope is not supported.");
+        }
+
+        this.AllowReentry = AllowReentry;
+        this.ActivationLimitPerBattle = ActivationLimitPerBattle;
+        this.ActivationCountingScope = ActivationCountingScope;
+    }
+
+    public bool AllowReentry { get; }
+    public int? ActivationLimitPerBattle { get; }
+    public PassiveActivationCountingScope ActivationCountingScope { get; }
+
+    public void Deconstruct(out bool AllowReentry, out int? ActivationLimitPerBattle)
+    {
+        AllowReentry = this.AllowReentry;
+        ActivationLimitPerBattle = this.ActivationLimitPerBattle;
+    }
+}
 
 public sealed class PassiveEventPolicyRegistry
 {
@@ -647,9 +716,14 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
                     skill.Id,
                     triggerIndex,
                     request.EventId);
-                foreach (RuntimeActorState target in request.Targets)
+                IReadOnlyList<RuntimeActorState> targets = PassiveTriggerTargetResolver.Resolve(
+                    trigger.Targeting,
+                    request.Owner,
+                    request.Participants,
+                    request.Targets);
+                if (!policy.AllowReentry && activeTriggers.Contains(activeKey))
                 {
-                    if (!policy.AllowReentry && activeTriggers.Contains(activeKey))
+                    foreach (RuntimeActorState target in targets)
                     {
                         results.Add(NonExecuting(
                             skill.Id,
@@ -657,11 +731,46 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
                             request.EventId,
                             target.InstanceId,
                             PassiveTriggerOutcome.RecursionSuppressed));
-                        continue;
                     }
+                    continue;
+                }
 
-                    if (policy.ActivationLimitPerBattle is int limit &&
-                        request.Owner.Passives.GetActivationCount(skill.Id, triggerIndex, request.EventId) >= limit)
+                if (policy.ActivationCountingScope == PassiveActivationCountingScope.PerDispatch &&
+                    HasReachedActivationLimit(
+                        request.Owner.Passives,
+                        skill.Id,
+                        triggerIndex,
+                        request.EventId,
+                        targetInstanceId: null,
+                        policy.ActivationLimitPerBattle))
+                {
+                    foreach (RuntimeActorState target in targets)
+                    {
+                        results.Add(NonExecuting(
+                            skill.Id,
+                            triggerIndex,
+                            request.EventId,
+                            target.InstanceId,
+                            PassiveTriggerOutcome.ActivationLimitReached));
+                    }
+                    continue;
+                }
+
+                bool dispatchActivationRecorded = false;
+                foreach (RuntimeActorState target in targets)
+                {
+                    RuntimeInstanceId? activationTargetId =
+                        policy.ActivationCountingScope == PassiveActivationCountingScope.PerTarget
+                            ? target.InstanceId
+                            : null;
+                    if (policy.ActivationCountingScope == PassiveActivationCountingScope.PerTarget &&
+                        HasReachedActivationLimit(
+                            request.Owner.Passives,
+                            skill.Id,
+                            triggerIndex,
+                            request.EventId,
+                            activationTargetId,
+                            policy.ActivationLimitPerBattle))
                     {
                         results.Add(NonExecuting(
                             skill.Id,
@@ -690,7 +799,16 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
                         continue;
                     }
 
-                    request.Owner.Passives.RecordActivation(skill.Id, triggerIndex, request.EventId);
+                    if (policy.ActivationCountingScope == PassiveActivationCountingScope.PerTarget ||
+                        !dispatchActivationRecorded)
+                    {
+                        request.Owner.Passives.RecordActivation(
+                            skill.Id,
+                            triggerIndex,
+                            request.EventId,
+                            activationTargetId);
+                        dispatchActivationRecorded = true;
+                    }
                     activeTriggers.Add(activeKey);
                     TriggerEffectExecution execution;
                     try
@@ -734,6 +852,16 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
 
         return new PassiveTriggerDispatchResult(Array.AsReadOnly(results.ToArray()));
     }
+
+    private static bool HasReachedActivationLimit(
+        BattlePassiveCollection passives,
+        ContentId skillId,
+        int triggerIndex,
+        ContentId eventId,
+        RuntimeInstanceId? targetInstanceId,
+        int? activationLimit) =>
+        activationLimit is int limit &&
+        passives.GetActivationCount(skillId, triggerIndex, eventId, targetInstanceId) >= limit;
 
     private static TriggerEffectExecution ExecuteEffects(
         SkillDefinition skill,
@@ -785,6 +913,49 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
     private sealed record TriggerEffectExecution(
         IReadOnlyList<EffectExecutionResult> Effects,
         bool StopsDispatch);
+}
+
+internal static class PassiveTriggerTargetResolver
+{
+    public static IReadOnlyList<RuntimeActorState> Resolve(
+        PassiveTriggerTargetingDefinition targeting,
+        RuntimeActorState owner,
+        IEnumerable<RuntimeActorState> participants,
+        IEnumerable<RuntimeActorState> eventTargets)
+    {
+        ArgumentNullException.ThrowIfNull(targeting);
+        ArgumentNullException.ThrowIfNull(owner);
+        RuntimeActorState[] participantSnapshot =
+            participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants));
+        RuntimeActorState[] eventTargetSnapshot =
+            eventTargets?.ToArray() ?? throw new ArgumentNullException(nameof(eventTargets));
+
+        IEnumerable<RuntimeActorState> candidates = targeting.Scope switch
+        {
+            PassiveTriggerTargetScope.Owner => [owner],
+            PassiveTriggerTargetScope.EventTargets => eventTargetSnapshot,
+            PassiveTriggerTargetScope.OwnerTeam =>
+                participantSnapshot.Where(candidate => candidate.TeamId == owner.TeamId),
+            PassiveTriggerTargetScope.OpposingTeams =>
+                participantSnapshot.Where(candidate => candidate.TeamId != owner.TeamId),
+            PassiveTriggerTargetScope.AllParticipants => participantSnapshot,
+            _ => throw new InvalidOperationException(
+                $"Passive trigger target scope '{targeting.Scope}' is not supported.")
+        };
+
+        RuntimeActorState[] targets = candidates
+            .Where(candidate => targeting.IncludeReserveActors || candidate.IsDeployed)
+            .Where(candidate => targeting.LifeState switch
+            {
+                TargetLifeState.Alive => !candidate.IsDefeated,
+                TargetLifeState.Dead => candidate.IsDefeated,
+                TargetLifeState.Any => true,
+                _ => false
+            })
+            .DistinctBy(candidate => candidate.InstanceId)
+            .ToArray();
+        return Array.AsReadOnly(targets);
+    }
 }
 
 internal sealed class ReadOnlySet<T>(IEnumerable<T> values) : IReadOnlySet<T>

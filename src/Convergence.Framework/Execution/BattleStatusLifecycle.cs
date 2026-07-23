@@ -1610,41 +1610,53 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         {
             foreach (PassiveTriggerDefinition trigger in active.Definition.Triggers.Where(trigger => trigger.EventId == request.EventId))
             {
-                var conditionContext = new BattleConditionContext(
-                    actor,
+                IReadOnlyList<RuntimeActorState> targets = PassiveTriggerTargetResolver.Resolve(
+                    trigger.Targeting,
                     actor,
                     participants,
-                    request.BattleKindId,
-                    request.MoonPhaseId,
-                    services);
-                if (!BattleConditionEvaluator.Evaluate(trigger.When, conditionContext))
+                    [actor]);
+                foreach (RuntimeActorState target in targets)
                 {
-                    continue;
-                }
-
-                var actionRequest = new EffectActionExecutionRequest(
-                    active.Definition.Id,
-                    actor,
-                    participants,
-                    new EffectExecutionEnvironment(
-                        request.ContextId,
+                    var conditionContext = new BattleConditionContext(
+                        actor,
+                        target,
+                        participants,
                         request.BattleKindId,
                         request.MoonPhaseId,
-                        request.StatModifierBoundary is null ? [] : [request.StatModifierBoundary]),
-                    new TargetingDefinition(TargetRelation.Self, TargetSelection.Single, TargetLifeState.Any, true),
-                    [actor.InstanceId]);
+                        services);
+                    if (!BattleConditionEvaluator.Evaluate(trigger.When, conditionContext))
+                    {
+                        continue;
+                    }
 
-                OrderedEffectExecution execution = new OrderedEffectExecutor(
-                    services,
-                    services.EffectExecutors).Execute(
+                    var actionRequest = new EffectActionExecutionRequest(
+                        active.Definition.Id,
+                        actor,
+                        participants,
+                        new EffectExecutionEnvironment(
+                            request.ContextId,
+                            request.BattleKindId,
+                            request.MoonPhaseId,
+                            request.StatModifierBoundary is null ? [] : [request.StatModifierBoundary]),
+                        new TargetingDefinition(
+                            TargetRelation.Any,
+                            TargetSelection.Single,
+                            TargetLifeState.Any,
+                            AllowSelf: true),
+                        [target.InstanceId]);
+
+                    OrderedEffectExecution execution = new OrderedEffectExecutor(
+                        services,
+                        services.EffectExecutors).Execute(
                         actionRequest,
                         trigger.Effects,
-                        new ResolvedRuntimeTargetSet([actor]));
-                AddEffectEvents(events, actor.InstanceId, active.Definition.Id, execution.Effects);
+                        new ResolvedRuntimeTargetSet([target]));
+                    AddEffectEvents(events, actor.InstanceId, active.Definition.Id, execution.Effects);
 
-                if (execution.StopsAction)
-                {
-                    return;
+                    if (execution.StopsAction)
+                    {
+                        return;
+                    }
                 }
             }
         }

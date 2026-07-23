@@ -422,6 +422,11 @@ internal static class RuntimeActorSnapshotIntegrity
                 $"$.battleActivations.passiveActivations[{index}].skillId", diagnostics);
             ValidateContentId(activation.EventId,
                 $"$.battleActivations.passiveActivations[{index}].eventId", diagnostics);
+            if (activation.TargetInstanceId is RuntimeInstanceId targetInstanceId)
+            {
+                ValidateRuntimeInstanceId(targetInstanceId,
+                    $"$.battleActivations.passiveActivations[{index}].targetInstanceId", diagnostics);
+            }
         }
     }
 
@@ -798,11 +803,19 @@ internal static class RuntimeActorSnapshotIntegrity
             }
         }
 
-        var seenActivations = new HashSet<(ContentId SkillId, ContentId EventId, int TriggerIndex)>();
+        var seenActivations = new HashSet<(
+            ContentId SkillId,
+            ContentId EventId,
+            int TriggerIndex,
+            RuntimeInstanceId? TargetInstanceId)>();
         for (int index = 0; index < battleActivations.PassiveActivations.Count; index++)
         {
             RuntimePassiveActivationSnapshot activation = battleActivations.PassiveActivations[index];
-            var key = (activation.SkillId, activation.EventId, activation.TriggerIndex);
+            var key = (
+                activation.SkillId,
+                activation.EventId,
+                activation.TriggerIndex,
+                activation.TargetInstanceId);
             if (!seenActivations.Add(key))
             {
                 diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(

@@ -116,7 +116,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Order 4 passive targeting/liveness, encounter startup, schema reconciliation, and audience closure remain in progress; live timed-state and ailment application boundaries are hardened."
+        "Order 4 encounter startup, schema and persistence reconciliation, and audience closure remain in progress; passive targeting, liveness, and activation scope are implemented."
       ]
     },
     {

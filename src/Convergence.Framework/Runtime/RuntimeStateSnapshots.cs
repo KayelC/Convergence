@@ -452,7 +452,21 @@ public sealed record RuntimeBattleStatusSnapshot
 
 public sealed record RuntimePassiveActivationSnapshot
 {
-    public RuntimePassiveActivationSnapshot(ContentId skillId, ContentId eventId, int triggerIndex, int activationCount)
+    public RuntimePassiveActivationSnapshot(
+        ContentId skillId,
+        ContentId eventId,
+        int triggerIndex,
+        int activationCount)
+        : this(skillId, eventId, triggerIndex, activationCount, targetInstanceId: null)
+    {
+    }
+
+    public RuntimePassiveActivationSnapshot(
+        ContentId skillId,
+        ContentId eventId,
+        int triggerIndex,
+        int activationCount,
+        RuntimeInstanceId? targetInstanceId)
     {
         if (triggerIndex < 0)
         {
@@ -467,12 +481,14 @@ public sealed record RuntimePassiveActivationSnapshot
         EventId = eventId;
         TriggerIndex = triggerIndex;
         ActivationCount = activationCount;
+        TargetInstanceId = targetInstanceId;
     }
 
     public ContentId SkillId { get; }
     public ContentId EventId { get; }
     public int TriggerIndex { get; }
     public int ActivationCount { get; }
+    public RuntimeInstanceId? TargetInstanceId { get; }
 }
 
 public sealed record RuntimePassiveSkillStateSnapshot(ContentId SkillId, bool IsEnabled);

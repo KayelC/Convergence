@@ -327,6 +327,150 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void PartyWideTrigger_CountsOneSuccessfulDispatchWithoutFavoringTargetOrder()
+    {
+        ContentId eventId = ContentId.Parse("party_opening");
+        SkillDefinition passive = PassiveSkill(
+            "party_recovery",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))],
+                    targeting: StandardPassiveTriggerTargeting.LivingOwnerTeam)
+            ]);
+        RuntimeActorState owner = Actor("owner", PlayerTeam, hp: 50, passiveSkills: [passive]);
+        RuntimeActorState ally = Actor("ally", PlayerTeam, hp: 50);
+        RuntimeActorState enemy = Actor("enemy", EnemyTeam, hp: 50);
+        var policies = new PassiveEventPolicyRegistry().Register(
+            eventId,
+            new PassiveEventPolicy(ActivationLimitPerBattle: 1));
+        BattleExecutionServices services = Services(passiveEventPolicies: policies);
+
+        PassiveTriggerDispatchResult first = Dispatch(
+            eventId,
+            owner,
+            [owner, ally, enemy],
+            [enemy],
+            services);
+        PassiveTriggerDispatchResult second = Dispatch(
+            eventId,
+            owner,
+            [enemy, ally, owner],
+            [enemy],
+            services);
+
+        Assert.Equal(
+            [owner.InstanceId, ally.InstanceId],
+            first.Activations.Select(activation => activation.TargetId));
+        Assert.All(first.Activations, activation =>
+            Assert.Equal(PassiveTriggerOutcome.Executed, activation.Outcome));
+        Assert.Equal(60, owner.GetRequiredResource(Hp).Current);
+        Assert.Equal(60, ally.GetRequiredResource(Hp).Current);
+        Assert.Equal(50, enemy.GetRequiredResource(Hp).Current);
+        Assert.Equal(
+            [ally.InstanceId, owner.InstanceId],
+            second.Activations.Select(activation => activation.TargetId));
+        Assert.All(second.Activations, activation =>
+            Assert.Equal(PassiveTriggerOutcome.ActivationLimitReached, activation.Outcome));
+
+        RuntimePassiveActivationSnapshot activation = Assert.Single(
+            owner.ToSnapshot().BattleActivations.PassiveActivations);
+        Assert.Null(activation.TargetInstanceId);
+        Assert.Equal(1, activation.ActivationCount);
+    }
+
+    [Fact]
+    public void PerTargetActivationScope_TracksAndRestoresEachTargetIndependently()
+    {
+        ContentId eventId = ContentId.Parse("limited_support");
+        SkillDefinition passive = PassiveSkill(
+            "targeted_recovery",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))])
+            ]);
+        RuntimeActorState owner = Actor("owner", PlayerTeam, passiveSkills: [passive]);
+        RuntimeActorState firstTarget = Actor("first_target", PlayerTeam, hp: 50);
+        RuntimeActorState secondTarget = Actor("second_target", PlayerTeam, hp: 50);
+        var policies = new PassiveEventPolicyRegistry().Register(
+            eventId,
+            new PassiveEventPolicy(
+                AllowReentry: false,
+                ActivationLimitPerBattle: 1,
+                ActivationCountingScope: PassiveActivationCountingScope.PerTarget));
+        BattleExecutionServices services = Services(passiveEventPolicies: policies);
+
+        Assert.Equal(
+            PassiveTriggerOutcome.Executed,
+            Assert.Single(Dispatch(
+                eventId,
+                owner,
+                [owner, firstTarget, secondTarget],
+                [firstTarget],
+                services).Activations).Outcome);
+        Assert.Equal(
+            PassiveTriggerOutcome.Executed,
+            Assert.Single(Dispatch(
+                eventId,
+                owner,
+                [owner, firstTarget, secondTarget],
+                [secondTarget],
+                services).Activations).Outcome);
+
+        RuntimeActorSnapshot captured = owner.ToSnapshot();
+        RuntimePassiveActivationSnapshot[] activations = captured.BattleActivations.PassiveActivations.ToArray();
+        Assert.Equal(2, activations.Length);
+        Assert.Equal(
+            [firstTarget.InstanceId, secondTarget.InstanceId],
+            activations.Select(activation => activation.TargetInstanceId));
+
+        RuntimeActorState restored = RuntimeActorState.Restore(
+            captured,
+            owner.DefenseProfile,
+            [passive]);
+        PassiveTriggerDispatchResult rejected = Dispatch(
+            eventId,
+            restored,
+            [restored, secondTarget, firstTarget],
+            [secondTarget, firstTarget],
+            services);
+
+        Assert.All(rejected.Activations, activation =>
+            Assert.Equal(PassiveTriggerOutcome.ActivationLimitReached, activation.Outcome));
+        Assert.Equal(60, firstTarget.GetRequiredResource(Hp).Current);
+        Assert.Equal(60, secondTarget.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public void PassiveEventPolicy_RejectsContradictoryLivenessConfiguration()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new PassiveEventPolicy(ActivationLimitPerBattle: 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new PassiveEventPolicy(ActivationLimitPerBattle: -1));
+        Assert.Throws<ArgumentException>(() =>
+            new PassiveEventPolicy(AllowReentry: true));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new PassiveEventPolicy(
+                AllowReentry: false,
+                ActivationLimitPerBattle: null,
+                ActivationCountingScope: (PassiveActivationCountingScope)999));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new PassiveTriggerTargetingDefinition(
+                (PassiveTriggerTargetScope)999,
+                TargetLifeState.Any,
+                includeReserveActors: true));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new PassiveTriggerTargetingDefinition(
+                PassiveTriggerTargetScope.Owner,
+                (TargetLifeState)999,
+                includeReserveActors: true));
+    }
+
+    [Fact]
     public void DisabledOrRemovedPassive_DoesNotDispatchOrMutateState()
     {
         ContentId eventId = ContentId.Parse("owner_turn_end");
@@ -368,6 +512,45 @@ public sealed class PassiveSkillRuntimeTests
         Assert.Equal(PassiveTriggerOutcome.Executed, activation.Outcome);
         PassiveTriggerExecutionResult nested = Assert.Single(Assert.Single(activation.Effects).PassiveActivations!);
         Assert.Equal(PassiveTriggerOutcome.RecursionSuppressed, nested.Outcome);
+    }
+
+    [Fact]
+    public void ReentrantTrigger_RequiresAndHonorsItsFiniteActivationLimit()
+    {
+        ContentId eventId = ContentId.Parse("bounded_recursive_event");
+        ContentId handlerId = ContentId.Parse("bounded_redispatch");
+        SkillDefinition passive = PassiveSkill(
+            "bounded_recursive_passive",
+            triggers: [new PassiveTriggerDefinition(eventId, [new CustomEffectDefinition(handlerId)])]);
+        RuntimeActorState owner = Actor("owner", PlayerTeam, passiveSkills: [passive]);
+        var policies = new PassiveEventPolicyRegistry().Register(
+            eventId,
+            new PassiveEventPolicy(
+                AllowReentry: true,
+                ActivationLimitPerBattle: 2,
+                ActivationCountingScope: PassiveActivationCountingScope.PerDispatch));
+        BattleExecutionServices services = Services(
+            customEffects:
+            [
+                new KeyValuePair<ContentId, ICustomEffectHandler>(
+                    handlerId,
+                    new RedispatchingEffectHandler(eventId))
+            ],
+            passiveEventPolicies: policies);
+
+        PassiveTriggerExecutionResult outer = Assert.Single(
+            Dispatch(eventId, owner, [owner], [owner], services).Activations);
+        PassiveTriggerExecutionResult nested = Assert.Single(
+            Assert.Single(outer.Effects).PassiveActivations!);
+        PassiveTriggerExecutionResult stopped = Assert.Single(
+            Assert.Single(nested.Effects).PassiveActivations!);
+
+        Assert.Equal(PassiveTriggerOutcome.Executed, outer.Outcome);
+        Assert.Equal(PassiveTriggerOutcome.Executed, nested.Outcome);
+        Assert.Equal(PassiveTriggerOutcome.ActivationLimitReached, stopped.Outcome);
+        Assert.Equal(
+            2,
+            Assert.Single(owner.ToSnapshot().BattleActivations.PassiveActivations).ActivationCount);
     }
 
     [Fact]
@@ -828,7 +1011,8 @@ public sealed class PassiveSkillRuntimeTests
     private static BattleExecutionServices Services(
         Func<DamagePolicyRequest, IReadOnlyList<DamageHitResolution>>? damage = null,
         IAilmentApplicationPolicy? ailmentPolicy = null,
-        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null) =>
+        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
+        PassiveEventPolicyRegistry? passiveEventPolicies = null) =>
         new(
             new TestAilmentRepository([PoisonDefinition()]),
             new DelegateDamagePolicy(damage ?? (_ => [new DamageHitResolution(true, 10)])),
@@ -840,7 +1024,8 @@ public sealed class PassiveSkillRuntimeTests
             new OrderedRuntimeTargetSelectionPolicy(),
             TestStatModifierPolicy.CreatePersistent(),
             new SplitChargePolicy(),
-            customEffectHandlers: customEffects);
+            customEffectHandlers: customEffects,
+            passiveEventPolicies: passiveEventPolicies);
 
     private sealed class TestAilmentRepository(IEnumerable<AilmentDefinition> ailments)
         : IAilmentDefinitionRepository

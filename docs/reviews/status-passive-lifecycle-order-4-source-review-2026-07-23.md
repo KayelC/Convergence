@@ -465,8 +465,11 @@ change runtime behavior.
    services, and an injected application gate. The supplied default blocks
    ailments while guarding; the supplied allow policy leaves guard relevant to
    other mechanics without making it an ailment rule.
-6. **O4-R6 - Complete passive policy semantics.** Resolve L1 and D4 by
-   validating liveness and implementing typed targeting and activation scope.
+6. **O4-R6 - Complete passive policy semantics. Implemented, pending
+   independent review.** L1 and D4 now use validated passive event policies,
+   typed trigger target scopes shared by skill and ailment triggers, and
+   explicit per-dispatch or per-target activation counting. The supplied
+   standard counts a successful fan-out once, independent of target order.
 7. **O4-R7 - Integrate encounter startup and public terminology.** Resolve M6
    atomically with Order 6 boundaries and replace `ForcedPhysical` with the
    accurate `ForcedBasicAttack` contract from L2.
@@ -600,12 +603,35 @@ events. The checkpoint gate passed with:
   definitions passed; and
 - formatting verification, content-tree status, and `git diff --check` passed.
 
+### O4-R6 implementation gate
+
+Passive event policies now reject non-positive limits, unknown activation
+scopes, and unbounded re-entry. Trigger targeting explicitly distinguishes the
+owner, event targets, the owner's team, opposing teams, and all participants,
+with authored life-state and reserve inclusion. Skill passives and ailment
+triggers consume the same target resolver. The supplied event policy counts one
+successful fan-out as one activation; an opt-in per-target policy persists each
+target identity so restoration preserves independent limits.
+
+The checkpoint gate passed with:
+
+- focused passive, lifecycle, actor-snapshot, and persistence coverage:
+  152 passed, 0 failed, 0 skipped;
+- complete solution: 1,578 passed, 0 failed, 0 skipped;
+- strict nonincremental Release solution build: 0 warnings, 0 errors;
+- all four noninteractive DemoHost modes and scripted Training Annex coverage:
+  successful;
+- active content validation: 6 packs, 36 documents, and 98 qualified
+  definitions passed; and
+- formatting verification, public API baseline, content-tree status, and
+  `git diff --check`: passed.
+
 ## Current Closure Decision
 
 Order 4 is **design-approved and implementation is in progress**. O4-R2 through
-O4-R5 are implemented pending the fresh O4-R10 review. The existing
+O4-R6 are implemented pending the fresh O4-R10 review. The existing
 implementation is useful and largely transactional, but the capability
-matrix correctly remains `partial` until R6-R10 close the remaining passive,
-startup, persistence, and audience-documentation work. No code should
+matrix correctly remains `partial` until R7-R10 close encounter startup,
+persistence, and audience-documentation work. No code should
 be removed, and the documentation coverage entries should remain
 `existing_unreviewed` until R2-R10 and the audience review are complete.

@@ -792,6 +792,37 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void TurnEnd_AilmentTriggerUsesTheSameTypedPartyTargetingAsPassives()
+    {
+        RuntimeActorState owner = Actor("ailment_owner", hp: 50);
+        RuntimeActorState ally = Actor("ailment_ally", hp: 50);
+        RuntimeActorState reserve = Actor("ailment_reserve", hp: 50, isDeployed: false);
+        owner.ApplyAilment(
+            IndependentAilment(
+                "party_recovery_ailment",
+                new NormalAilmentTurnBehaviorDefinition(),
+                [new PassiveTriggerDefinition(
+                    OwnerTurnEnd,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))],
+                    targeting: StandardPassiveTriggerTargeting.LivingOwnerTeam)]),
+            Turns(3));
+
+        BattleTurnEndLifecycleResult result = new BattleStatusLifecycleService(new SequenceRandomSource())
+            .ProcessTurnEnd(
+                new(owner, [owner, ally, reserve], Battle, OwnerTurnEnd),
+                Services());
+
+        Assert.Equal(60, owner.GetRequiredResource(Hp).Current);
+        Assert.Equal(60, ally.GetRequiredResource(Hp).Current);
+        Assert.Equal(50, reserve.GetRequiredResource(Hp).Current);
+        Assert.Equal(
+            [owner.InstanceId, ally.InstanceId],
+            result.Events
+                .Where(item => item.Kind == BattleStatusLifecycleEventKind.ResourceChanged)
+                .Select(item => item.ActorId));
+    }
+
+    [Fact]
     public void TurnEnd_PassiveEventsPreserveTriggerOutcomeIndexEventAndEffects()
     {
         SkillDefinition passive = PassiveSkill(
