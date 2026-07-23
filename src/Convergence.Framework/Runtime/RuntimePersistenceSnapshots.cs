@@ -267,7 +267,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 12;
+    public const int CurrentContractVersion = 13;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -400,6 +400,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         }
 
         ValidatePartyReferences(snapshot.PartyRoster, actors, _rosterCapacityPolicy, diagnostics);
+        ValidatePassiveActivationReferences(snapshot.Actors, actors, diagnostics);
         ValidateInventory(snapshot.Inventory, catalog, diagnostics);
         ValidateEquipment(
             snapshot.Equipment,
@@ -418,6 +419,35 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         ValidateCheckpoints(snapshot.Checkpoints, actors, diagnostics);
 
         return new RuntimeSaveValidationResult(snapshot, diagnostics);
+    }
+
+    private static void ValidatePassiveActivationReferences(
+        IReadOnlyList<RuntimeActorSnapshot> actorSnapshots,
+        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        for (int actorIndex = 0; actorIndex < actorSnapshots.Count; actorIndex++)
+        {
+            RuntimeActorSnapshot actor = actorSnapshots[actorIndex];
+            for (int activationIndex = 0;
+                 activationIndex < actor.BattleActivations.PassiveActivations.Count;
+                 activationIndex++)
+            {
+                RuntimeInstanceId? targetId =
+                    actor.BattleActivations.PassiveActivations[activationIndex].TargetInstanceId;
+                if (targetId is not RuntimeInstanceId target || !target.IsValid || actors.ContainsKey(target))
+                {
+                    continue;
+                }
+
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.MissingActorReference,
+                    $"Passive activation target '{target}' is not present in actors.",
+                    target,
+                    Path: $"$.actors[{actorIndex}].battleActivations.passiveActivations" +
+                          $"[{activationIndex}].targetInstanceId"));
+            }
+        }
     }
 
     private static void ValidateAggregateIdentifiers(

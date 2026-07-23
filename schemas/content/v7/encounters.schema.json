@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v7:encounters",
+  "title": "Convergence Content v7 Encounter Document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "encounters"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v7:encounters" },
+    "schemaVersion": { "const": 7 },
+    "encounters": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/encounter" }
+    }
+  },
+  "$defs": {
+    "encounter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "description", "formations"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v7:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v7:shared#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "environmentId": { "$ref": "urn:convergence:schema:content:v7:shared#/$defs/localId" },
+        "formations": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/formation" }
+        }
+      }
+    },
+    "formation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["weight", "isBoss", "members"],
+      "properties": {
+        "weight": { "type": "integer", "minimum": 1 },
+        "isBoss": { "type": "boolean" },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/member" }
+        },
+        "rewardPolicyId": { "$ref": "urn:convergence:schema:content:v7:shared#/$defs/localId" },
+        "rewardParameters": { "$ref": "urn:convergence:schema:content:v7:shared#/$defs/parameters" }
+      }
+    },
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entityId", "level"],
+      "properties": {
+        "entityId": { "$ref": "urn:convergence:schema:content:v7:shared#/$defs/contentReference" },
+        "level": { "type": "integer", "minimum": 1 },
+        "count": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

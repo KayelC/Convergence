@@ -561,7 +561,14 @@ internal static class SkillSystemDtoMapper
         new(Id(dto.ResourceId), MapAmount(dto.Amount), when, dto.OnFailure);
 
     private static PassiveTriggerDefinition MapTrigger(PassiveTriggerDto dto) =>
-        new(Id(dto.EventId), dto.Effects.Select(MapEffect), dto.When is null ? null : MapCondition(dto.When));
+        new(
+            Id(dto.EventId),
+            dto.Effects.Select(MapEffect),
+            new PassiveTriggerTargetingDefinition(
+                dto.Targeting.Scope,
+                dto.Targeting.LifeState,
+                dto.Targeting.IncludeReserveActors),
+            dto.When is null ? null : MapCondition(dto.When));
 
     private static RuleModifierDefinition MapModifier(RuleModifierDto dto)
     {

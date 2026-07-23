@@ -682,8 +682,16 @@ internal sealed class PassiveTriggerDto
 {
     [JsonPropertyName("event")]
     public required string EventId { get; init; }
+    public required PassiveTriggerTargetingDto Targeting { get; init; }
     public ConditionDto? When { get; init; }
     public required List<EffectDto> Effects { get; init; }
+}
+
+internal sealed class PassiveTriggerTargetingDto
+{
+    public required PassiveTriggerTargetScope Scope { get; init; }
+    public required TargetLifeState LifeState { get; init; }
+    public required bool IncludeReserveActors { get; init; }
 }
 
 internal abstract class RuleModifierDto

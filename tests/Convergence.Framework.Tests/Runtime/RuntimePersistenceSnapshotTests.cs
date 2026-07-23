@@ -65,7 +65,7 @@ public sealed class RuntimePersistenceSnapshotTests
     [Fact]
     public void PersistenceSnapshots_RejectInvalidPackIdentityAndNullDictionaryValues()
     {
-        SemanticVersion version = SemanticVersion.Parse("0.6.0");
+        SemanticVersion version = SemanticVersion.Parse("0.7.0");
         Assert.Throws<ArgumentException>(() => new ContentPackIdentity(null!, version));
         Assert.Throws<ArgumentException>(() => new ContentPackIdentity(" ", version));
 
@@ -1366,6 +1366,34 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_RejectsMissingPerTargetPassiveActivationActor()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot frost = baseline.Actors[0];
+        ContentId passiveSkill = Id("convergence.skill_system_redesign_sample:ice_boost_sample");
+        RuntimeActorSnapshot malformed = CopyActor(
+            frost,
+            battleActivations: new RuntimeBattleActivationSnapshot(
+                [new RuntimePassiveActivationSnapshot(
+                    passiveSkill,
+                    Id("owner_turn_end"),
+                    triggerIndex: 0,
+                    activationCount: 1,
+                    targetInstanceId: RuntimeInstanceId.Parse("missing_passive_target"))],
+                [new RuntimePassiveSkillStateSnapshot(passiveSkill, true)]));
+
+        RuntimeSaveValidationResult validation = CreateModifierAwareValidator().Validate(
+            Copy(baseline, actors: [malformed, baseline.Actors[1]]),
+            catalog);
+
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.MissingActorReference,
+            "$.actors[0].battleActivations.passiveActivations[0].targetInstanceId");
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_RejectsMalformedCanonicalRosterAndEquipmentOwnership()
     {
         GameDataCatalog catalog = LoadCatalog();
@@ -2129,10 +2157,10 @@ public sealed class RuntimePersistenceSnapshotTests
             CreateSaveSnapshot(),
             contentPacks:
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.6.0")),
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.7.0")),
                 new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("9.9.9")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.6.0")),
-                new ContentPackIdentity("missing.pack", SemanticVersion.Parse("0.6.0"))
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.7.0")),
+                new ContentPackIdentity("missing.pack", SemanticVersion.Parse("0.7.0"))
             ]);
 
         RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, catalog);
@@ -2156,6 +2184,9 @@ public sealed class RuntimePersistenceSnapshotTests
     [InlineData(7)]
     [InlineData(8)]
     [InlineData(9)]
+    [InlineData(10)]
+    [InlineData(11)]
+    [InlineData(12)]
     public void RuntimeSaveValidator_RejectsUnsupportedContractVersion(int unsupportedVersion)
     {
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
@@ -2361,10 +2392,10 @@ public sealed class RuntimePersistenceSnapshotTests
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.6.0")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.6.0")),
-                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.6.0")),
-                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.6.0"))
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.7.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.7.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.7.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.7.0"))
             ],
             actors ?? [frost, ember],
             partyRoster ?? new RuntimePartyRosterSnapshot(

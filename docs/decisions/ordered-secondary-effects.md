@@ -128,11 +128,11 @@ poison_rider:
 - Existing effects remain independent because dependency metadata is optional.
 - Content received additive local effect IDs, dependencies, and secondary
   damage mode fields under schema v5; the same contract remains present in
-  active schema v6.
+  active schema v7.
 - Execution results expose typed skipped/dependency evidence for engine hosts.
 - Complete-action aggregation and Action Token pricing must use committed facts
   from the whole action rather than effect-local shortcuts.
-- Save contract v11 is unchanged because definitions and transient execution
+- Save contract v13 remains unaffected because definitions and transient execution
   evidence are not persisted runtime state.
 
 ## Evidence And Affected Documentation

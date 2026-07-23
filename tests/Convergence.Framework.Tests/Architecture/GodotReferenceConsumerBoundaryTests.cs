@@ -85,6 +85,7 @@ public sealed class GodotReferenceConsumerBoundaryTests
             "BindStatModifierPolicy",
             "Qualified(\"standard_stat_modifiers\")",
             "GODOT_MODIFIER_OK",
+            "GODOT_PASSIVE_STATE_OK",
             "GODOT_SAVE_REJECTION_OK",
             "CONVERGENCE_GODOT_SMOKE_OK"
         ];

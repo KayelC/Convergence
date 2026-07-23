@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "id": "validation.invalid_pack",
   "version": "0.2.0",
   "displayName": "Invalid Validation Pack",

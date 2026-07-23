@@ -74,7 +74,8 @@ internal sealed record GodotSavePassiveActivation(
     string SkillId,
     string EventId,
     int TriggerIndex,
-    int ActivationCount);
+    int ActivationCount,
+    string? TargetInstanceId);
 
 internal sealed record GodotSaveActor(
     string InstanceId,
@@ -316,7 +317,8 @@ internal static class GodotSaveCodec
                     passive.SkillId.ToString(),
                     passive.EventId.ToString(),
                     passive.TriggerIndex,
-                    passive.ActivationCount)).ToArray());
+                    passive.ActivationCount,
+                    passive.TargetInstanceId?.ToString())).ToArray());
 
     private static RuntimeActorSnapshot FromDto(GodotSaveActor actor) =>
         new(
@@ -382,7 +384,8 @@ internal static class GodotSaveCodec
                         Id(passive.SkillId),
                         Id(passive.EventId),
                         passive.TriggerIndex,
-                        passive.ActivationCount)),
+                        passive.ActivationCount,
+                        passive.TargetInstanceId is null ? null : Instance(passive.TargetInstanceId))),
                 actor.PassiveSkillStates.Select(passive =>
                     new RuntimePassiveSkillStateSnapshot(
                         Id(passive.SkillId),

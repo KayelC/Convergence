@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v6:skills",
-  "schemaVersion": 6,
+  "$schema": "urn:convergence:schema:content:v7:skills",
+  "schemaVersion": 7,
   "skills": [
     {
       "id": "frost_lance_demo",
@@ -108,6 +108,11 @@
       "triggers": [
         {
           "event": "owner_turn_end",
+          "targeting": {
+            "scope": "owner",
+            "lifeState": "any",
+            "includeReserveActors": true
+          },
           "effects": [
             {
               "type": "restore_resource",

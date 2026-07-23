@@ -29,7 +29,7 @@ public sealed class SchemaDeserializationTests
             File.ReadAllText(TestContentPath.Resolve(jsonRoot, "skill_system_redesign.races.sample.json")),
             "races.sample.json");
 
-        Assert.Equal(6, manifest.SchemaVersion);
+        Assert.Equal(7, manifest.SchemaVersion);
         Assert.Equal(3, manifest.Documents.Count);
         SkillDefinition iceBoost = Assert.Single(skills.Records);
         EntityDefinition cinder = Assert.Single(entities.Records);
@@ -215,7 +215,7 @@ public sealed class SchemaDeserializationTests
     {
         const string valid = """
         {
-          "schemaVersion": 6,
+          "schemaVersion": 7,
           "equipment": [{
             "id": "blade", "displayName": "Blade", "description": "",
             "slot": "weapon", "baseValue": 1,
@@ -239,7 +239,7 @@ public sealed class SchemaDeserializationTests
         """;
         const string oldShape = """
         {
-          "schemaVersion": 6,
+          "schemaVersion": 7,
           "equipment": [{
             "id": "blade", "displayName": "Blade", "description": "",
             "slot": "weapon", "baseValue": 1,
@@ -280,6 +280,9 @@ public sealed class SchemaDeserializationTests
               "triggers": [
                 {
                   "event": "owner_turn_end",
+                  "targeting": {
+                    "scope": "owner_team", "lifeState": "alive", "includeReserveActors": false
+                  },
                   "when": { "type": "chance", "chance": 100 },
                   "effects": [
                     { "type": "restore_resource", "resourceId": "hp", "amount": { "type": "percent_max", "value": 2 } }
@@ -300,13 +303,47 @@ public sealed class SchemaDeserializationTests
 
         SkillDefinition skill = Assert.Single(_deserializer.DeserializeSkills(json, "passive.json").Records);
 
-        Assert.IsType<RestoreResourceEffectDefinition>(Assert.Single(Assert.Single(skill.Triggers).Effects));
+        PassiveTriggerDefinition trigger = Assert.Single(skill.Triggers);
+        Assert.IsType<RestoreResourceEffectDefinition>(Assert.Single(trigger.Effects));
+        Assert.Equal(PassiveTriggerTargetScope.OwnerTeam, trigger.Targeting.Scope);
+        Assert.Equal(TargetLifeState.Alive, trigger.Targeting.LifeState);
+        Assert.False(trigger.Targeting.IncludeReserveActors);
         Assert.Collection(
             skill.Modifiers,
             modifier => Assert.IsType<NumericRuleModifierDefinition>(modifier),
             modifier => Assert.IsType<ElementalAffinityRuleModifierDefinition>(modifier),
             modifier => Assert.IsType<AilmentResistanceRuleModifierDefinition>(modifier),
             modifier => Assert.IsType<BasicAttackRuleModifierDefinition>(modifier));
+    }
+
+    [Fact]
+    public void PassiveTrigger_RequiresExplicitTargeting()
+    {
+        string json = WrapSkill(
+            """
+            {
+              "id": "missing_targeting",
+              "displayName": "Missing Targeting",
+              "description": "Invalid passive trigger.",
+              "activation": "passive",
+              "inheritanceGroupId": "passive",
+              "inheritance": { "isInheritable": true },
+              "triggers": [
+                {
+                  "event": "owner_turn_end",
+                  "effects": [
+                    { "type": "restore_resource", "resourceId": "hp", "amount": { "type": "flat", "value": 1 } }
+                  ]
+                }
+              ]
+            }
+            """);
+
+        ContentDeserializationException exception = Assert.Throws<ContentDeserializationException>(
+            () => _deserializer.DeserializeSkills(json, "missing-trigger-targeting.json"));
+
+        Assert.Contains("targeting", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("triggers", exception.JsonPath ?? string.Empty, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -322,7 +359,7 @@ public sealed class SchemaDeserializationTests
     {
         string json = $$"""
         {
-          "schemaVersion": 6,
+          "schemaVersion": 7,
           "ailments": [
             {
               "id": "test_ailment", "displayName": "Test", "description": "Test ailment.",
@@ -377,7 +414,7 @@ public sealed class SchemaDeserializationTests
             """));
         string activeWithTrigger = WrapSkill(MinimalActiveRecord(
             "[{ \"type\": \"analyze\", \"layers\": [\"stats\"] }]",
-            ", \"triggers\": [{ \"event\": \"battle_start\", \"effects\": [] }]"));
+            ", \"triggers\": [{ \"event\": \"battle_start\", \"targeting\": { \"scope\": \"owner\", \"lifeState\": \"any\", \"includeReserveActors\": true }, \"effects\": [] }]"));
         string passiveWithTargeting = WrapSkill(MinimalPassiveRecord().Replace(
             "\"inheritance\": { \"isInheritable\": true }",
             "\"inheritance\": { \"isInheritable\": true }, \"targeting\": { \"relation\": \"self\", \"selection\": \"single\", \"lifeState\": \"alive\", \"allowSelf\": true }",
@@ -414,7 +451,7 @@ public sealed class SchemaDeserializationTests
             "\"inheritance\": null",
             StringComparison.Ordinal));
         const string nullRecord = """
-            { "schemaVersion": 6, "skills": [null] }
+            { "schemaVersion": 7, "skills": [null] }
             """;
         string nullEffect = WrapSkill(MinimalActiveRecord("[null]"));
 
@@ -593,7 +630,7 @@ public sealed class SchemaDeserializationTests
     }
 
     private static string WrapSkill(string record) => $$"""
-    { "schemaVersion": 6, "skills": [ {{record}} ] }
+    { "schemaVersion": 7, "skills": [ {{record}} ] }
     """;
 
     private static string MinimalPassiveRecord() =>

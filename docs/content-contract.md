@@ -14,11 +14,12 @@ Every active manifest lists its documents in authored order. DemoHost preserves 
 
 ## Validation Layers
 
-The active pre-release authoring contract is schema version `6`. Versions `1`
-through `5` are intentionally unsupported after the Action Token,
-catalyst-role, stat-modifier, explicit weapon-critical, and bounded-hit-count migrations. The validator reports an
+The active pre-release authoring contract is schema version `7`. Versions `1`
+through `6` are intentionally unsupported after the Action Token,
+catalyst-role, stat-modifier, explicit weapon-critical, bounded-hit-count, and
+explicit passive-targeting migrations. The validator reports an
 unsupported-schema diagnostic instead of translating old documents. Active
-example packs are version `0.6.0`; exact dependency versions advance with the
+example packs are version `0.7.0`; exact dependency versions advance with the
 contract.
 
 1. Draft 2020-12 schemas validate document structure independently of Framework code.
@@ -26,33 +27,33 @@ contract.
 3. Semantic validation checks IDs, ranges, references, supported types, and explicit host registrations.
 4. Catalog loading checks paths, dependencies, versions, direct visibility, external references, and canonical qualification.
 
-## Schema v6
+## Schema v7
 
-The authored schemas live under [`../schemas/content/v6`](../schemas/content/v6).
-They use stable `urn:convergence:schema:content:v6:*` identifiers and reject
+The authored schemas live under [`../schemas/content/v7`](../schemas/content/v7).
+They use stable `urn:convergence:schema:content:v7:*` identifiers and reject
 unknown properties. Every active document must declare the schema matching its
 manifest document type:
 
 | Manifest type | `$schema` |
 |---|---|
-| `skills` | `urn:convergence:schema:content:v6:skills` |
-| `entities` | `urn:convergence:schema:content:v6:entities` |
-| `races` | `urn:convergence:schema:content:v6:races` |
-| `ailments` | `urn:convergence:schema:content:v6:ailments` |
-| `items` | `urn:convergence:schema:content:v6:items` |
-| `equipment` | `urn:convergence:schema:content:v6:equipment` |
-| `shops` | `urn:convergence:schema:content:v6:shops` |
-| `negotiations` | `urn:convergence:schema:content:v6:negotiations` |
-| `encounters` | `urn:convergence:schema:content:v6:encounters` |
-| `dungeons` | `urn:convergence:schema:content:v6:dungeons` |
-| `fusion` | `urn:convergence:schema:content:v6:fusion` |
-| `rulesets` | `urn:convergence:schema:content:v6:rulesets` |
+| `skills` | `urn:convergence:schema:content:v7:skills` |
+| `entities` | `urn:convergence:schema:content:v7:entities` |
+| `races` | `urn:convergence:schema:content:v7:races` |
+| `ailments` | `urn:convergence:schema:content:v7:ailments` |
+| `items` | `urn:convergence:schema:content:v7:items` |
+| `equipment` | `urn:convergence:schema:content:v7:equipment` |
+| `shops` | `urn:convergence:schema:content:v7:shops` |
+| `negotiations` | `urn:convergence:schema:content:v7:negotiations` |
+| `encounters` | `urn:convergence:schema:content:v7:encounters` |
+| `dungeons` | `urn:convergence:schema:content:v7:dungeons` |
+| `fusion` | `urn:convergence:schema:content:v7:fusion` |
+| `rulesets` | `urn:convergence:schema:content:v7:rulesets` |
 
-Manifests use `urn:convergence:schema:content:v6:manifest`. Shared definitions
-use `urn:convergence:schema:content:v6:shared` and are not content documents.
+Manifests use `urn:convergence:schema:content:v7:manifest`. Shared definitions
+use `urn:convergence:schema:content:v7:shared` and are not content documents.
 
 Every weapon basic attack must explicitly author its critical behavior with the
-same `never` or `chance` definition used by typed damage effects. Schema v6
+same `never` or `chance` definition used by typed damage effects. Schema v7
 rejects the pre-release shape that omitted this decision; the runtime never
 invents a weapon critical chance. A basic attack may additionally expose a
 local `primaryEffectId` and append `secondaryEffects`; those secondary records
@@ -96,6 +97,13 @@ The schema contract is independently exercised with `JsonSchema.Net` 9.2.2.
 All active documents must pass both the schema and Framework deserialization,
 validation, and catalog construction paths.
 
+Every passive trigger explicitly authors a `targeting` object. Its `scope`
+selects the owner, event-supplied targets, owner team, opposing teams, or all
+participants; `lifeState` filters alive, defeated, or any actors; and
+`includeReserveActors` decides whether undeployed actors may be selected.
+Catalog qualification preserves this targeting unchanged. Schema v7 rejects
+the earlier trigger shape instead of silently treating it as event-targeted.
+
 The checked-in [Content Authoring Validator](content-authoring-validator.md)
 executes those layers as one host-side command without adding filesystem or
 JSON Schema dependencies to Framework.
@@ -114,7 +122,7 @@ how signed stat changes accumulate, expire, and clear; it does not select the
 and parameters are normatively listed in
 [Ruleset Policy Contracts](ruleset-policy-contracts.md).
 
-Schema v6 accepts the neutral `general` value for `grant_charge` so a custom
+Schema v7 accepts the neutral `general` value for `grant_charge` so a custom
 combat composition can select `UnifiedChargePolicy`; the supplied split policy
 continues to accept only `physical` and `magical`. The optional standard-damage
 parameter `itemActionOutcomeBehavior` selects `normal` or `effect_driven`

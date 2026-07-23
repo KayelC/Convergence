@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v6:equipment",
-  "schemaVersion": 6,
+  "$schema": "urn:convergence:schema:content:v7:equipment",
+  "schemaVersion": 7,
   "equipment": [
     {
       "id": "shortsword_sample",

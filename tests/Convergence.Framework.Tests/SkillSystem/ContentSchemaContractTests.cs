@@ -7,7 +7,7 @@ namespace Convergence.Framework.Tests.SkillSystem;
 
 public sealed class ContentSchemaContractTests
 {
-    private const string SchemaPrefix = "urn:convergence:schema:content:v6:";
+    private const string SchemaPrefix = "urn:convergence:schema:content:v7:";
 
     [Fact]
     public void ActiveContentDocuments_ValidateAgainstTheirDeclaredDraft202012Schemas()
@@ -127,6 +127,12 @@ public sealed class ContentSchemaContractTests
         JsonObject malformedActive = skill.DeepClone().AsObject();
         malformedActive["skills"]![0]!.AsObject().Remove("targeting");
 
+        JsonObject missingPassiveTriggerTargeting = skill.DeepClone().AsObject();
+        JsonObject passiveSkill = missingPassiveTriggerTargeting["skills"]!.AsArray()
+            .Select(node => node!.AsObject())
+            .Single(record => record["activation"]!.GetValue<string>() == "passive");
+        passiveSkill["triggers"]![0]!.AsObject().Remove("targeting");
+
         JsonObject invalidItemUsage = item.DeepClone().AsObject();
         invalidItemUsage["items"]![0]!["itemKind"] = "valuable";
 
@@ -161,6 +167,7 @@ public sealed class ContentSchemaContractTests
             { "skills", wrongVersion.ToJsonString() },
             { "skills", wrongSchema.ToJsonString() },
             { "skills", malformedActive.ToJsonString() },
+            { "skills", missingPassiveTriggerTargeting.ToJsonString() },
             { "items", invalidItemUsage.ToJsonString() },
             { "equipment", missingBasicAttackCritical.ToJsonString() },
             { "skills", ambiguousCondition.ToJsonString() },
@@ -189,6 +196,12 @@ public sealed class ContentSchemaContractTests
         Add(variants, "critical",
             """{"mode":"never"}""",
             """{"mode":"chance","chance":20}""");
+        Add(variants, "passiveTriggerTargeting",
+            """{"scope":"owner","lifeState":"any","includeReserveActors":true}""",
+            """{"scope":"event_targets","lifeState":"alive","includeReserveActors":false}""",
+            """{"scope":"owner_team","lifeState":"alive","includeReserveActors":false}""",
+            """{"scope":"opposing_teams","lifeState":"dead","includeReserveActors":true}""",
+            """{"scope":"all_participants","lifeState":"any","includeReserveActors":true}""");
         Add(variants, "instantDeathResistanceCheck",
             """{"mode":"none"}""",
             """{"mode":"channel","channelId":"light"}""");
@@ -315,7 +328,7 @@ public sealed class ContentSchemaContractTests
             """{"id":"valuable","displayName":"Valuable","description":"","itemKind":"valuable","stackLimit":1,"baseValue":50}""");
         Add(variants, SchemaPrefix + "skills#/$defs/skill",
             $"{{\"id\":\"active_skill\",\"displayName\":\"Active\",\"description\":\"\",\"activation\":\"active\",\"menuGroup\":\"offense\",\"inheritanceGroupId\":\"physical\",\"inheritance\":{{\"isInheritable\":true}},\"targeting\":{sharedTargeting},\"effects\":[{damage}],\"availability\":{{\"contexts\":[\"battle\"]}}}}",
-            """{"id":"passive_skill","displayName":"Passive","description":"","activation":"passive","inheritanceGroupId":"passive","inheritance":{"isInheritable":true},"triggers":[{"event":"owner_turn_end","effects":[{"type":"restore_resource","resourceId":"hp","amount":{"type":"flat","value":1}}]}]}""");
+            """{"id":"passive_skill","displayName":"Passive","description":"","activation":"passive","inheritanceGroupId":"passive","inheritance":{"isInheritable":true},"triggers":[{"event":"owner_turn_end","targeting":{"scope":"owner","lifeState":"any","includeReserveActors":true},"effects":[{"type":"restore_resource","resourceId":"hp","amount":{"type":"flat","value":1}}]}]}""");
         Add(variants, SchemaPrefix + "equipment#/$defs/equipmentRecord",
             """{"id":"weapon","displayName":"Weapon","description":"","slot":"weapon","baseValue":1,"weapon":{"basicAttack":{"element":"physical","power":10,"accuracy":100,"critical":{"mode":"chance","chance":10},"isLongRange":false}}}""",
             """{"id":"composite_weapon","displayName":"Composite Weapon","description":"","slot":"weapon","baseValue":1,"weapon":{"basicAttack":{"element":"physical","power":10,"accuracy":100,"critical":{"mode":"never"},"isLongRange":false,"primaryEffectId":"weapon_contact","secondaryEffects":[{"type":"damage","elementId":"fire","power":5,"accuracy":25,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1},"contactMode":"shared_contact","dependency":{"sourceEffectId":"weapon_contact","requirement":"positive_damage","scope":"same_target"}}]}}}""",
@@ -339,7 +352,7 @@ public sealed class ContentSchemaContractTests
 
     private static string ContentRoot() => Path.Combine(AppContext.BaseDirectory, "Content");
 
-    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v6");
+    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v7");
 
     private static string Describe(EvaluationResults result)
     {

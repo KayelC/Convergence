@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "races": [
     {
       "id": "validation.invalid_pack:qualified_race",

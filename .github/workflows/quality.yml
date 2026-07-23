@@ -109,7 +109,7 @@ jobs:
           --no-restore
           --
           --content-root content
-          --schema-root schemas/content/v6
+          --schema-root schemas/content/v7
           --registrations config/content-validator/active-samples.registrations.json
 
       - name: Smoke-test noninteractive DemoHost modes

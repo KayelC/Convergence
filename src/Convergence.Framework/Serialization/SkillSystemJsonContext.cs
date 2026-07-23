@@ -59,6 +59,7 @@ namespace Convergence.Serialization;
 [JsonSerializable(typeof(AnalyzeEffectDto))]
 [JsonSerializable(typeof(EscapeEffectDto))]
 [JsonSerializable(typeof(CustomEffectDto))]
+[JsonSerializable(typeof(PassiveTriggerTargetingDto))]
 [JsonSerializable(typeof(NumericRuleModifierDto))]
 [JsonSerializable(typeof(ElementalAffinityRuleModifierDto))]
 [JsonSerializable(typeof(AilmentResistanceRuleModifierDto))]

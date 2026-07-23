@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v6:ailments",
-  "schemaVersion": 6,
+  "$schema": "urn:convergence:schema:content:v7:ailments",
+  "schemaVersion": 7,
   "ailments": [
     {
       "id": "sample_poison",
@@ -27,6 +27,11 @@
       "triggers": [
         {
           "event": "owner_turn_end",
+          "targeting": {
+            "scope": "owner",
+            "lifeState": "any",
+            "includeReserveActors": true
+          },
           "effects": [
             {
               "type": "reduce_resource",
@@ -74,6 +79,11 @@
       "triggers": [
         {
           "event": "owner_turn_end",
+          "targeting": {
+            "scope": "owner",
+            "lifeState": "any",
+            "includeReserveActors": true
+          },
           "effects": [
             {
               "type": "restore_resource",

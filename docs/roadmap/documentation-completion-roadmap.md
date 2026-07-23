@@ -86,7 +86,7 @@ social/fusion systems, authoring infrastructure, and host integration.
 | 15 | `portable_deserialization` | Host-supplied text, strict conversion, diagnostics, serializer boundary | Review developer guide; add technical reference |
 | 16 | `content_validation` | Structural versus semantic authority, registrations, dependency visibility | Review developer guide; add technical reference |
 | 17 | `catalog_loading` | Qualification, dependency order, repository lookup, collision handling | Review developer guide; add technical reference |
-| 18 | `authored_schema_contracts` | Schema v6 authoring workflow, discriminator coverage, semantic limits | Review developer guide; add technical reference |
+| 18 | `authored_schema_contracts` | Schema v7 authoring workflow, discriminator coverage, semantic limits | Review developer guide; add technical reference |
 | 19 | `host_contracts` | Commands, events, cancellation, content sources, randomness, application ownership | Review developer and technical references |
 | 20 | `godot_adapter` | `res://` loading, Node mapping, signals, save envelope, headless proof | Review developer and technical references |
 

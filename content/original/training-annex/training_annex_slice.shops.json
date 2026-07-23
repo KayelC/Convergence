@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v6:shops",
-  "schemaVersion": 6,
+  "$schema": "urn:convergence:schema:content:v7:shops",
+  "schemaVersion": 7,
   "shops": [
     {
       "id": "training_supply",

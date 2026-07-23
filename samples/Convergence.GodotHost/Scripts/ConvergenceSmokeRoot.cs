@@ -258,10 +258,38 @@ public partial class ConvergenceSmokeRoot : Node
 
         GD.Print($"GODOT_ENCOUNTER_OK outcome={encounter.Outcome} events={eventSink.Events.Count}");
 
+        ContentId ownerTurnEnd = ContentId.Parse("owner_turn_end");
+        executionServices.PassiveEventPolicies.Register(
+            ownerTurnEnd,
+            new PassiveEventPolicy(
+                AllowReentry: false,
+                ActivationLimitPerBattle: 1,
+                PassiveActivationCountingScope.PerTarget));
+        PassiveTriggerDispatchResult passiveDispatch = executionServices.PassiveTriggers.Dispatch(
+            new PassiveTriggerDispatchRequest(
+                ownerTurnEnd,
+                player.State,
+                [player.State, enemy.State, hostedEntity.State],
+                [player.State],
+                Battle,
+                NormalBattle,
+                moonPhaseId: null),
+            executionServices);
+        RuntimePassiveActivationSnapshot savedPassiveActivation = player.State.ToSnapshot()
+            .BattleActivations.PassiveActivations.Single();
+        if (!passiveDispatch.Activations.Any(result => result.Outcome == PassiveTriggerOutcome.Executed) ||
+            savedPassiveActivation.TargetInstanceId != player.State.InstanceId)
+        {
+            throw new InvalidOperationException(
+                "The Godot passive proof did not retain its per-target activation key.");
+        }
+
+        GD.Print($"GODOT_PASSIVE_STATE_OK target={savedPassiveActivation.TargetInstanceId}");
+
         string saveJson = GodotSaveCodec.Serialize(
             [player, enemy, hostedEntity],
             partyRoster,
-            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.6.0")),
+            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.7.0")),
             sceneInstances);
         ChargePolicyRegistry chargePolicies = ChargePolicyRegistry.CreateStandard();
         var restoreService = new RuntimeSessionRestoreService(
@@ -294,6 +322,8 @@ public partial class ConvergenceSmokeRoot : Node
             restoredPlayer.State.Skills.Revision != player.State.Skills.Revision ||
             !restoredPlayer.State.Skills.PendingChoices.SequenceEqual(
                 player.State.Skills.PendingChoices) ||
+            restoredPlayer.State.ToSnapshot().BattleActivations.PassiveActivations
+                .Single().TargetInstanceId != savedPassiveActivation.TargetInstanceId ||
             restoredPlayer.State.Stats[StandardProgressionIds.Strength] !=
             restoredHostedEntity.State.Stats[StandardProgressionIds.Strength] ||
             !EquivalentModifierState(savedModifierState, restoredModifierState) ||

@@ -99,9 +99,16 @@ public sealed class CleanSaveDemoHostTests
     [Fact]
     public void HostOwnedJsonRoundTrip_PreservesCanonicalActorBattleStateAndDurationKinds()
     {
+        ContentId passiveSkillId =
+            ContentId.Parse("convergence.skill_system_redesign_sample:ice_boost_sample");
         RuntimeActorSnapshot original = CleanSaveTestFixture.CreateActor(
             RuntimeInstanceId.Parse("frost"),
-            ContentId.Parse("convergence.clean_battle_demo:frost_duelist_demo"));
+            ContentId.Parse("convergence.clean_battle_demo:frost_duelist_demo"),
+            learnedSkills:
+            [
+                ContentId.Parse("convergence.clean_battle_demo:frost_lance_demo"),
+                passiveSkillId
+            ]);
         var actor = new RuntimeActorSnapshot(
             original.Identity,
             original.Affiliation,
@@ -168,10 +175,19 @@ public sealed class CleanSaveDemoHostTests
                         [AnalysisLayer.Affinities])
                 ]),
             new RuntimeBattleActivationSnapshot(
+                passiveActivations:
+                [
+                    new RuntimePassiveActivationSnapshot(
+                        passiveSkillId,
+                        ContentId.Parse("owner_turn_end"),
+                        triggerIndex: 0,
+                        activationCount: 1,
+                        targetInstanceId: RuntimeInstanceId.Parse("frost"))
+                ],
                 passiveSkillStates:
                 [
                     new RuntimePassiveSkillStateSnapshot(
-                        ContentId.Parse("convergence.skill_system_redesign_sample:ice_boost_sample"),
+                        passiveSkillId,
                         IsEnabled: false)
                 ]),
             original.BaseResourceValues,
@@ -210,6 +226,9 @@ public sealed class CleanSaveDemoHostTests
             [ContentId.Parse("analyze"), ContentId.Parse("swap_hosted_entity")],
             restoredActor.CapabilityIds);
         Assert.False(Assert.Single(restoredActor.BattleActivations.PassiveSkillStates).IsEnabled);
+        RuntimePassiveActivationSnapshot passiveActivation =
+            Assert.Single(restoredActor.BattleActivations.PassiveActivations);
+        Assert.Equal(RuntimeInstanceId.Parse("frost"), passiveActivation.TargetInstanceId);
     }
 
     [Fact]

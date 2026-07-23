@@ -13,7 +13,7 @@ separate choice for numeric combat impact.
 
 ## Author A Ruleset
 
-Schema-v6 content selects a factory with the unqualified `policyId` field. A
+Schema-v7 content selects a factory with the unqualified `policyId` field. A
 bounded persistent or timed-contribution policy also requires both bounds:
 
 ```json

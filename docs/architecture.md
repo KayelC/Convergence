@@ -24,7 +24,7 @@ Session restore is aggregate and framework-owned. Hosts decode their save envelo
 ## Content Flow
 
 Host-supplied JSON is checked against the strict Draft 2020-12 contracts in
-`schemas/content/v6` before Framework deserialization and semantic catalog
+`schemas/content/v7` before Framework deserialization and semantic catalog
 validation. JSON Schema owns document shape; Framework validation owns graph,
 dependency-visibility, registration, and host-capability rules. This keeps the
 reusable assembly free of schema-evaluation and filesystem dependencies while
@@ -95,7 +95,7 @@ orchestration policy rather than a disguised economy implementation. See
 
 Navigation, dungeon traversal, Action Token, ailments/passives, party and rosters, economy, negotiation, fusion, Compendium, and persistence are independently composable. A developer does not need to register or instantiate a module that their game does not use.
 
-Runtime save contract v11 is a deliberately broad interoperability aggregate,
+Runtime save contract v13 is a deliberately broad interoperability aggregate,
 not the module activation mechanism. When a host chooses to use it, required
 but unused components are represented by neutral snapshots. The minimal party
 roster still identifies the session owner while its placement and ownership
@@ -110,7 +110,7 @@ The supported distribution is a Git checkout, submodule, subtree, or copied sour
 
 ## Pre-Release Contract Boundary
 
-The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `6` and runtime save contract version `12` are deliberate pre-release breaks with no compatibility aliases. Save v12 retains the actor, move-list, canonical-roster, stat-modifier, and charge-policy state established by v11 while replacing the ambiguous removable-status flag with independent expiration and typed removal permissions. Save validation and aggregate restoration must bind retained stat-modifier and charge policies explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
+The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `7` and runtime save contract version `13` are deliberate pre-release breaks with no compatibility aliases. Save v13 retains the actor, move-list, canonical-roster, stat-modifier, charge-policy, and typed status-lifetime state established by v12 while adding the optional target runtime ID required by per-target passive activation limits. Save validation rejects a retained passive target that is absent from the aggregate actor set. Save validation and aggregate restoration must bind retained stat-modifier and charge policies explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
 
 Assembly version `0.1.0` is guarded by a checked-in textual API baseline. The
 [Public API Contract](public-api-contract.md) identifies the supported

@@ -146,6 +146,7 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
         options.Converters.Add(new StrictSnakeCaseEnumConverter<TargetRelation>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<TargetSelection>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<TargetLifeState>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<PassiveTriggerTargetScope>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<HitDistribution>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<DamageDrainMode>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<DamageContactMode>());

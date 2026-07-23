@@ -1,8 +1,8 @@
 {
-  "$schema": "urn:convergence:schema:content:v6:manifest",
-  "schemaVersion": 6,
+  "$schema": "urn:convergence:schema:content:v7:manifest",
+  "schemaVersion": 7,
   "id": "convergence.status_lifecycle_demo",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "displayName": "Status Lifecycle Demo",
   "description": "Clean reference pack covering eleven ailment lifecycle profiles.",
   "dependencies": [],

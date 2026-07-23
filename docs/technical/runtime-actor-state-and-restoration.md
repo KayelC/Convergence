@@ -18,7 +18,7 @@ The source-based
 confirmed the composition, skill-choice, stage, and original save-v8
 transaction design. Subsequent corrections advanced actor restoration through
 save v9, and the stat-modifier policy migration advances the current contract
-to save v12.
+to save v13.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives
@@ -290,12 +290,13 @@ Key invariants:
 Transition services do not mutate `RuntimeActorState.IsDeployed`. Encounter
 orchestration owns presence changes.
 
-## Save Contract V10
+## Save Contract V13
 
-`RuntimeSaveGameSnapshot.CurrentContractVersion` is `10`. Version 10 retains
-the owner-derived roster capacity and pending move-list state established by
-version 9. It replaces the lossy one-stage save projection with complete
-policy-owned stat-modifier state.
+`RuntimeSaveGameSnapshot.CurrentContractVersion` is `13`. Version 13 retains
+the canonical roster, complete move-list state, policy-owned stat modifiers,
+charge-policy identity, and typed status lifetimes established by earlier
+pre-release contracts. It additionally preserves the optional target runtime
+ID used when a passive event counts activations per target.
 
 The save aggregate contains:
 
@@ -323,6 +324,7 @@ revision. Roster ownership is not copied into actor snapshots.
 - roster capacities;
 - active Hosted Entity ownership and identity;
 - pending skill tokens, IDs, levels, and revisions;
+- passive activation target references when per-target counting is retained;
 - inventory, equipment, field, Compendium, and knowledge references.
 
 ## Aggregate Restoration

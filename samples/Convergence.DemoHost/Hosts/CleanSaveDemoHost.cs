@@ -188,10 +188,10 @@ internal sealed class CleanSaveDemoHost
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.6.0")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.6.0")),
-                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.6.0")),
-                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.6.0"))
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.7.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.7.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.7.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.7.0"))
             ],
             [frost, ember],
             new RuntimePartyRosterSnapshot(
@@ -484,7 +484,8 @@ internal static class CleanSaveJsonCodec
                 passive.SkillId.ToString(),
                 passive.EventId.ToString(),
                 passive.TriggerIndex,
-                passive.ActivationCount)).ToArray());
+                passive.ActivationCount,
+                passive.TargetInstanceId?.ToString())).ToArray());
 
     private static RuntimeActorSnapshot FromDto(HostActorDto dto) =>
         new(
@@ -527,7 +528,8 @@ internal static class CleanSaveJsonCodec
                     Id(passive.SkillId),
                     Id(passive.EventId),
                     passive.TriggerIndex,
-                    passive.ActivationCount)),
+                    passive.ActivationCount,
+                    passive.TargetInstanceId is null ? null : Instance(passive.TargetInstanceId))),
                 (dto.PassiveSkillStates ?? []).Select(passive => new RuntimePassiveSkillStateSnapshot(
                     Id(passive.SkillId),
                     passive.IsEnabled))),
@@ -885,7 +887,12 @@ internal static class CleanSaveJsonCodec
         string? PhaseId = null);
     private sealed record HostAnalysisDto(string TargetInstanceId, string[] Layers);
     private sealed record HostPassiveSkillStateDto(string SkillId, bool IsEnabled);
-    private sealed record HostPassiveActivationDto(string SkillId, string EventId, int TriggerIndex, int ActivationCount);
+    private sealed record HostPassiveActivationDto(
+        string SkillId,
+        string EventId,
+        int TriggerIndex,
+        int ActivationCount,
+        string? TargetInstanceId);
     private sealed record HostPartyRosterDto(HostReferenceDto Owner, HostReferenceDto[] ActiveParty, HostReferenceDto[] ReserveMembers, HostReferenceDto? ActiveHostedEntity, HostReferenceDto[] HostedEntityRoster, HostReferenceDto[] CompanionRoster, int MaxActivePartySize);
     private sealed record HostInventoryDto(Dictionary<string, int> ItemQuantities, Dictionary<string, string[]> OwnedEquipmentIds);
     private sealed record HostEquipmentDto(Dictionary<string, string> EquippedItemIds);

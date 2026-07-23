@@ -477,8 +477,12 @@ change runtime behavior.
    uses `ForcedBasicAttack` consistently across lifecycle and automated action
    resolution.
 8. **O4-R8 - Reconcile schema, clean content, persistence, DemoHost, and Godot
-   proof.** Change schema/save versions only when the implemented wire shape
-   requires it, with no hidden fallback.
+   proof. Implemented, pending independent review.** Schema v7 requires typed
+   passive targeting and all active packs author it explicitly. Save v13
+   preserves optional per-target passive activation IDs through DemoHost and
+   Godot codecs, and aggregate validation rejects missing target actors.
+   Catalog qualification now preserves authored targeting instead of silently
+   reverting it to event targets. No compatibility fallback was added.
 9. **O4-R9 - Write and collaboratively review all three audience documents.**
    Produce the technical lifecycle/state-machine reference, developer
    composition guide, and player-facing mechanics page.
@@ -650,12 +654,38 @@ The checkpoint gate passed with:
 - formatting verification, public API baseline, active-content status,
   forbidden-reference search, and `git diff --check`: passed.
 
+### O4-R8 implementation gate
+
+Schema v7 now requires every passive trigger to author its target scope,
+life-state filter, and reserve inclusion explicitly. DTO mapping and catalog
+qualification preserve that contract, while active content pack version
+`0.7.0` supplies it without a compatibility fallback. Runtime save contract
+v13 carries optional per-target passive activation identities through both
+sample host codecs, and aggregate validation rejects an identity that does not
+refer to a saved actor.
+
+The checkpoint gate passed with:
+
+- focused schema, catalog, persistence, DemoHost, and Godot-boundary coverage:
+  278 passed, 0 failed, 0 skipped;
+- complete solution: 1,591 passed, 0 failed, 0 skipped;
+- strict nonincremental Release Framework and solution builds: 0 warnings,
+  0 errors;
+- all four noninteractive DemoHost modes and scripted Training Annex exit:
+  successful;
+- active content validation: 6 packs, 36 documents, and 98 qualified
+  definitions passed;
+- Godot 4.7.1 headless smoke: `GODOT_PASSIVE_STATE_OK`, save contract 13, and
+  `CONVERGENCE_GODOT_SMOKE_OK` emitted with exit code 0; and
+- formatting verification, public API baseline, active-content status, and
+  `git diff --check`: passed.
+
 ## Current Closure Decision
 
 Order 4 is **design-approved and implementation is in progress**. O4-R2 through
-O4-R7 are implemented pending the fresh O4-R10 review. The existing
+O4-R8 are implemented pending the fresh O4-R10 review. The existing
 implementation is useful and largely transactional, but the capability
-matrix correctly remains `partial` until R8-R10 close persistence and
-audience-documentation work. No code should
+matrix correctly remains `partial` until R9-R10 close the audience
+documentation and final review. No code should
 be removed, and the documentation coverage entries should remain
 `existing_unreviewed` until R2-R10 and the audience review are complete.

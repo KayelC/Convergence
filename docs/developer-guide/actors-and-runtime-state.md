@@ -343,7 +343,7 @@ equipment stat modifiers.
 
 ```mermaid
 flowchart TD
-    Save["Host-deserialized save v12"] --> Validate["Validate complete aggregate"]
+    Save["Host-deserialized save v13"] --> Validate["Validate complete aggregate"]
     Validate --> Modifiers["Bind retained modifier policies"]
     Modifiers --> Profiles["Resolve actor restore profiles"]
     Profiles --> Sources["Restore owned source actors"]

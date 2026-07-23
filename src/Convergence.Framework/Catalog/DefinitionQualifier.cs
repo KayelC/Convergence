@@ -216,6 +216,7 @@ internal static class DefinitionQualifier
         new(
             definition.EventId,
             definition.Effects.Select(effect => Effect(packId, effect)),
+            definition.Targeting,
             definition.When is null ? null : Condition(packId, definition.When));
 
     private static EffectDefinition Effect(string packId, EffectDefinition definition)

@@ -1,0 +1,627 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v7:shared",
+  "title": "Convergence content v7 shared definitions",
+  "$defs": {
+    "localId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+    },
+    "packId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*(?:\\.[a-z0-9]+(?:_[a-z0-9]+)*)*$"
+    },
+    "contentId": {
+      "type": "string",
+      "pattern": "^(?:[a-z0-9]+(?:_[a-z0-9]+)*(?:\\.[a-z0-9]+(?:_[a-z0-9]+)*)*:)?[a-z0-9]+(?:_[a-z0-9]+)*$"
+    },
+    "contentReference": { "$ref": "#/$defs/contentId" },
+    "semanticVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "documentPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![/\\\\])(?![A-Za-z]:)(?!.*(?:^|[/\\\\])\\.\\.(?:[/\\\\]|$)).+\\.json$"
+    },
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "parameters": { "type": "object" },
+    "damageElement": {
+      "enum": ["physical", "fire", "ice", "electric", "wind", "light", "dark", "almighty"]
+    },
+    "elementalAffinity": {
+      "enum": ["weak", "normal", "resist", "null", "repel", "absorb"]
+    },
+    "resistanceLevel": {
+      "enum": ["vulnerable", "normal", "resistant", "immune"]
+    },
+    "inheritanceGroup": {
+      "enum": ["physical", "fire", "ice", "electric", "wind", "light", "dark", "almighty", "recovery", "ailment", "support", "utility", "passive"]
+    },
+    "targeting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relation", "selection", "lifeState", "allowSelf"],
+      "properties": {
+        "relation": { "enum": ["none", "self", "ally", "enemy", "any"] },
+        "selection": { "enum": ["none", "single", "all", "random"] },
+        "lifeState": { "enum": ["alive", "dead", "any"] },
+        "allowSelf": { "type": "boolean" },
+        "count": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minimum", "maximum"],
+          "properties": {
+            "minimum": { "type": "integer", "minimum": 1 },
+            "maximum": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "passiveTriggerTargeting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "lifeState", "includeReserveActors"],
+      "properties": {
+        "scope": {
+          "enum": ["owner", "event_targets", "owner_team", "opposing_teams", "all_participants"]
+        },
+        "lifeState": { "enum": ["alive", "dead", "any"] },
+        "includeReserveActors": { "type": "boolean" }
+      }
+    },
+    "amount": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "value"],
+          "properties": {
+            "type": { "enum": ["flat", "percent_max", "percent_current"] },
+            "value": { "type": "number", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "full" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "power"],
+          "properties": {
+            "type": { "const": "power" },
+            "power": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "formulaId"],
+          "properties": {
+            "type": { "const": "formula" },
+            "formulaId": { "$ref": "#/$defs/contentId" },
+            "parameters": { "$ref": "#/$defs/parameters" }
+          }
+        }
+      ]
+    },
+    "duration": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "enum": ["instant", "battle", "permanent"] } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "value", "tick", "suspendWhileReserve"],
+          "properties": {
+            "type": { "const": "turns" },
+            "value": { "type": "integer", "minimum": 1 },
+            "tick": { "$ref": "#/$defs/contentId" },
+            "suspendWhileReserve": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "phaseId"],
+          "properties": {
+            "type": { "const": "phase" },
+            "phaseId": { "$ref": "#/$defs/contentId" }
+          }
+        }
+      ]
+    },
+    "critical": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": { "mode": { "const": "never" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "chance"],
+          "properties": {
+            "mode": { "const": "chance" },
+            "chance": { "type": "integer", "minimum": 0, "maximum": 100 }
+          }
+        }
+      ]
+    },
+    "instantDeathResistanceCheck": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": { "mode": { "const": "none" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "channelId"],
+          "properties": {
+            "mode": { "const": "channel" },
+            "channelId": { "enum": ["light", "dark"] }
+          }
+        }
+      ]
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["all"],
+          "properties": { "all": { "type": "array", "items": { "$ref": "#/$defs/condition" } } }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["any"],
+          "properties": { "any": { "type": "array", "items": { "$ref": "#/$defs/condition" } } }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["not"],
+          "properties": { "not": { "$ref": "#/$defs/condition" } }
+        },
+        { "$ref": "#/$defs/resourcePercentageCondition" },
+        { "$ref": "#/$defs/hasAilmentCondition" },
+        { "$ref": "#/$defs/hasSkillCondition" },
+        { "$ref": "#/$defs/hasBuffCondition" },
+        { "$ref": "#/$defs/hasAffinityCondition" },
+        { "$ref": "#/$defs/hasCapabilityCondition" },
+        { "$ref": "#/$defs/lifeStateCondition" },
+        { "$ref": "#/$defs/allowedIdsCondition" },
+        { "$ref": "#/$defs/partySizeCondition" },
+        { "$ref": "#/$defs/chanceCondition" },
+        { "$ref": "#/$defs/effectElementCondition" },
+        { "$ref": "#/$defs/customCondition" }
+      ]
+    },
+    "resourcePercentageCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "resourceId", "comparison", "value"],
+      "properties": {
+        "type": { "enum": ["actor_resource_percentage", "target_resource_percentage"] },
+        "resourceId": { "$ref": "#/$defs/contentId" },
+        "comparison": { "enum": ["less_than", "less_than_or_equal", "equal", "greater_than_or_equal", "greater_than"] },
+        "value": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "hasAilmentCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "ailmentIds"],
+      "properties": {
+        "type": { "enum": ["actor_has_ailment", "target_has_ailment"] },
+        "ailmentIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/contentId" } }
+      }
+    },
+    "hasSkillCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "skillId"],
+      "properties": {
+        "type": { "enum": ["actor_has_skill", "target_has_skill"] },
+        "skillId": { "$ref": "#/$defs/contentId" }
+      }
+    },
+    "hasBuffCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "modifierTrackId"],
+      "properties": {
+        "type": { "enum": ["actor_has_buff", "target_has_buff"] },
+        "modifierTrackId": { "$ref": "#/$defs/contentId" }
+      }
+    },
+    "hasAffinityCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "elementId", "affinityId"],
+      "properties": {
+        "type": { "enum": ["actor_has_affinity", "target_has_affinity"] },
+        "elementId": { "$ref": "#/$defs/damageElement" },
+        "affinityId": { "$ref": "#/$defs/elementalAffinity" }
+      }
+    },
+    "hasCapabilityCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "capabilityId"],
+      "properties": {
+        "type": { "enum": ["actor_has_capability", "target_has_capability"] },
+        "capabilityId": { "$ref": "#/$defs/contentId" }
+      }
+    },
+    "lifeStateCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "lifeState"],
+      "properties": {
+        "type": { "enum": ["actor_life_state", "target_life_state"] },
+        "lifeState": { "enum": ["alive", "dead", "any"] }
+      }
+    },
+    "allowedIdsCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "allowed"],
+      "properties": {
+        "type": { "enum": ["battle_kind", "moon_phase"] },
+        "allowed": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/contentId" } }
+      }
+    },
+    "partySizeCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "comparison", "value"],
+      "properties": {
+        "type": { "const": "party_size" },
+        "comparison": { "enum": ["less_than", "less_than_or_equal", "equal", "greater_than_or_equal", "greater_than"] },
+        "value": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "chanceCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "chance"],
+      "properties": {
+        "type": { "const": "chance" },
+        "chance": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "effectElementCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "elementId"],
+      "properties": {
+        "type": { "const": "effect_element_is" },
+        "elementId": { "$ref": "#/$defs/damageElement" }
+      }
+    },
+    "customCondition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "handlerId"],
+      "properties": {
+        "type": { "const": "custom" },
+        "handlerId": { "$ref": "#/$defs/contentId" },
+        "parameters": { "$ref": "#/$defs/parameters" }
+      }
+    },
+    "effectDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceEffectId", "requirement", "scope"],
+      "properties": {
+        "sourceEffectId": { "$ref": "#/$defs/localId" },
+        "requirement": { "enum": ["succeeded", "positive_damage"] },
+        "scope": { "enum": ["same_target", "any_target"] }
+      }
+    },
+    "effectBase": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string" },
+        "effectId": { "$ref": "#/$defs/localId" },
+        "dependency": { "$ref": "#/$defs/effectDependency" },
+        "when": { "$ref": "#/$defs/condition" },
+        "onFailure": { "enum": ["continue", "stop_target", "stop_action"] }
+      }
+    },
+    "effect": {
+      "oneOf": [
+        { "$ref": "#/$defs/damageEffect" },
+        { "$ref": "#/$defs/instantKillEffect" },
+        { "$ref": "#/$defs/applyAilmentEffect" },
+        { "$ref": "#/$defs/resourceAmountEffect" },
+        { "$ref": "#/$defs/removeAilmentEffect" },
+        { "$ref": "#/$defs/modifyStatStageEffect" },
+        { "$ref": "#/$defs/grantChargeEffect" },
+        { "$ref": "#/$defs/grantShieldEffect" },
+        { "$ref": "#/$defs/breakAffinityEffect" },
+        { "$ref": "#/$defs/overrideAffinityEffect" },
+        { "$ref": "#/$defs/removeStatusEffect" },
+        { "$ref": "#/$defs/analyzeEffect" },
+        { "$ref": "#/$defs/escapeEffect" },
+        { "$ref": "#/$defs/customEffect" }
+      ]
+    },
+    "damageEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object",
+          "required": ["elementId", "power", "accuracy", "critical", "hits"],
+          "properties": {
+            "type": { "const": "damage" },
+            "elementId": { "$ref": "#/$defs/damageElement" },
+            "power": { "type": "integer", "minimum": 0 },
+            "accuracy": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "critical": { "$ref": "#/$defs/critical" },
+            "hits": {
+              "type": "object", "additionalProperties": false,
+              "required": ["minimum", "maximum"],
+              "properties": {
+                  "minimum": { "type": "integer", "minimum": 1, "maximum": 1024 },
+                  "maximum": { "type": "integer", "minimum": 1, "maximum": 1024 },
+                "distribution": { "enum": ["fixed", "uniform"] }
+              }
+            },
+            "drain": { "enum": ["none", "hp", "sp"] },
+            "contactMode": { "enum": ["independent", "shared_contact"] }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "instantKillEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object",
+          "required": ["chance", "resistanceCheck"],
+          "properties": {
+            "type": { "const": "instant_kill" },
+            "chance": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "resistanceCheck": { "$ref": "#/$defs/instantDeathResistanceCheck" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "applyAilmentEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object",
+          "required": ["ailmentId", "chance"],
+          "properties": {
+            "type": { "const": "apply_ailment" },
+            "ailmentId": { "$ref": "#/$defs/contentId" },
+            "chance": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "resourceAmountEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object",
+          "required": ["resourceId", "amount"],
+          "properties": {
+            "type": { "enum": ["restore_resource", "revive", "reduce_resource", "set_resource"] },
+            "resourceId": { "$ref": "#/$defs/contentId" },
+            "amount": { "$ref": "#/$defs/amount" },
+            "canReduceToZero": { "type": "boolean" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "removeAilmentEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object",
+          "required": ["scope"],
+          "properties": {
+            "type": { "const": "remove_ailment" },
+            "scope": { "enum": ["selected", "all_removable"] },
+            "ailmentIds": { "type": "array", "items": { "$ref": "#/$defs/contentId" } },
+            "ailmentGroupIds": { "type": "array", "items": { "$ref": "#/$defs/contentId" } }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "modifyStatStageEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object",
+          "required": ["modifierTrackIds", "stageDelta"],
+          "properties": {
+            "type": { "const": "modify_stat_stage" },
+            "modifierTrackIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/contentId" } },
+            "stageDelta": { "type": "integer", "not": { "const": 0 } },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "grantChargeEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object", "required": ["charge", "multiplier"],
+          "properties": {
+            "type": { "const": "grant_charge" },
+            "charge": { "enum": ["physical", "magical", "general"] },
+            "multiplier": { "type": "number", "exclusiveMinimum": 0 },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "grantShieldEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object", "required": ["shield"],
+          "properties": {
+            "type": { "const": "grant_shield" },
+            "shield": { "enum": ["physical", "magical"] },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "breakAffinityEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object", "required": ["elementIds", "duration"],
+          "properties": {
+            "type": { "const": "break_affinity" },
+            "elementIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/damageElement" } },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "overrideAffinityEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object", "required": ["elementIds", "affinityId", "duration"],
+          "properties": {
+            "type": { "const": "override_affinity" },
+            "elementIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/damageElement" } },
+            "affinityId": { "$ref": "#/$defs/elementalAffinity" },
+            "duration": { "$ref": "#/$defs/duration" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "removeStatusEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object", "required": ["statusKinds"],
+          "properties": {
+            "type": { "const": "remove_status_effect" },
+            "statusKinds": { "type": "array", "minItems": 1, "items": { "enum": ["buff", "debuff", "charge", "shield", "affinity_break", "affinity_override", "other"] } },
+            "statusIds": { "type": "array", "items": { "$ref": "#/$defs/contentId" } }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "analyzeEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object", "required": ["layers"],
+          "properties": {
+            "type": { "const": "analyze" },
+            "layers": { "type": "array", "minItems": 1, "items": { "enum": ["stats", "affinities", "skills", "ailments", "full"] } }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "escapeEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object", "required": ["eligibilityRuleId"],
+          "properties": {
+            "type": { "const": "escape" },
+            "eligibilityRuleId": { "$ref": "#/$defs/contentId" },
+            "chance": { "type": "integer", "minimum": 0, "maximum": 100 }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "customEffect": {
+      "allOf": [
+        { "$ref": "#/$defs/effectBase" },
+        {
+          "type": "object", "required": ["handlerId"],
+          "properties": {
+            "type": { "const": "custom" },
+            "handlerId": { "$ref": "#/$defs/contentId" },
+            "parameters": { "$ref": "#/$defs/parameters" }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "passiveTrigger": {
+      "type": "object", "additionalProperties": false,
+      "required": ["event", "targeting", "effects"],
+      "properties": {
+        "event": { "$ref": "#/$defs/contentId" },
+        "targeting": { "$ref": "#/$defs/passiveTriggerTargeting" },
+        "when": { "$ref": "#/$defs/condition" },
+        "effects": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/effect" } }
+      }
+    },
+    "ruleModifier": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type", "operation", "value"],
+          "properties": {
+            "type": { "enum": ["damage_dealt", "damage_taken", "accuracy", "evasion", "critical_chance", "ailment_infliction", "healing_received", "healing_given", "resource_cost", "maximum_resource", "experience_gain"] },
+            "operation": { "enum": ["add", "multiply"] },
+            "value": { "type": "number" },
+            "when": { "$ref": "#/$defs/condition" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type", "elementId", "affinityId"],
+          "properties": {
+            "type": { "const": "elemental_affinity" },
+            "elementId": { "$ref": "#/$defs/damageElement" },
+            "affinityId": { "$ref": "#/$defs/elementalAffinity" },
+            "when": { "$ref": "#/$defs/condition" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type", "ailmentId", "resistance"],
+          "properties": {
+            "type": { "const": "ailment_resistance" },
+            "ailmentId": { "$ref": "#/$defs/contentId" },
+            "resistance": { "$ref": "#/$defs/resistanceLevel" },
+            "when": { "$ref": "#/$defs/condition" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "basic_attack" },
+            "elementId": { "$ref": "#/$defs/damageElement" },
+            "targeting": { "$ref": "#/$defs/targeting" },
+            "drain": { "enum": ["none", "hp", "sp"] },
+            "when": { "$ref": "#/$defs/condition" }
+          }
+        }
+      ]
+    }
+  }
+}

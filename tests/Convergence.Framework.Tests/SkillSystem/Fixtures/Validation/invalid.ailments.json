@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "ailments": [
     {
       "id": "invalid_ailment",
@@ -32,6 +32,11 @@
       "triggers": [
         {
           "event": "missing_event",
+          "targeting": {
+            "scope": "owner",
+            "lifeState": "any",
+            "includeReserveActors": true
+          },
           "effects": []
         }
       ],

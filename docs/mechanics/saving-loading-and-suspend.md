@@ -8,7 +8,7 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 
 ## Save Contents
 
-The current runtime save contract is version `12`.
+The current runtime save contract is version `13`.
 
 `RuntimeSaveGameSnapshot` contains:
 
@@ -25,7 +25,7 @@ The current runtime save contract is version `12`.
 - checkpoint breadcrumbs;
 - optional host context.
 
-These fields describe the shape of save contract v11; they do not activate every
+These fields describe the current aggregate shape; they do not activate every
 listed mechanic. Hosts that use Framework persistence provide neutral snapshots
 for required modules they do not use:
 
@@ -52,6 +52,11 @@ being silently reinterpreted as one unified General charge, or vice versa.
 
 The party roster is the one ownership and placement authority. Actor snapshots
 do not contain duplicate owned rosters or active/reserve placement.
+
+Passive activation limits are retained with the passive skill ID, event ID,
+trigger index, count, and an optional target runtime ID. The target is present
+only for per-target counting. If present, save validation requires that target
+to exist in the aggregate actor list.
 
 ## Validation Before Restore
 

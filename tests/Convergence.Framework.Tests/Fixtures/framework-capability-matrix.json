@@ -111,12 +111,12 @@
     {
       "id": "status_and_passive_lifecycle",
       "implementationState": "partial",
-      "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests"],
+      "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "ContentSchemaContractTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Order 4 schema and persistence reconciliation plus audience closure remain in progress; passive policy semantics and atomic encounter startup are implemented."
+        "Order 4 audience documentation and closure review remain in progress; schema-v7 targeting, save-v13 passive activation state, passive policy semantics, and atomic encounter startup are implemented."
       ]
     },
     {

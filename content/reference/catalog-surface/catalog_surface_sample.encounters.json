@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v6:encounters",
-  "schemaVersion": 6,
+  "$schema": "urn:convergence:schema:content:v7:encounters",
+  "schemaVersion": 7,
   "encounters": [
     {
       "id": "entry_block_training_sample",

@@ -5,7 +5,7 @@ namespace Convergence.Validation;
 
 public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 {
-    private const int SupportedSchemaVersion = 6;
+    private const int SupportedSchemaVersion = 7;
 
     public ContentValidationResult Validate(SkillSystemValidationRequest request)
     {
@@ -1006,7 +1006,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             if (recipe.Parents.Count != 2)
             {
                 Add(source, source.Path + ".parents", ContentValidationErrorCode.ShapeInvalid,
-                    "Schema v6 fusion recipes require exactly two parents.");
+                    "Schema v7 fusion recipes require exactly two parents.");
             }
 
             var seenParents = new HashSet<(FusionParentSelectorKind Kind, ContentId Id)>();
@@ -1082,7 +1082,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         recipe.Path + ".parents",
                         ContentValidationErrorCode.FusionRecipeAmbiguous,
                         $"Fusion recipe '{recipe.Id}' overlaps equal-specificity recipe '{previous.Id}'.",
-                        "Make the parent selectors non-overlapping; schema v6 has no recipe-priority field.");
+                        "Make the parent selectors non-overlapping; schema v7 has no recipe-priority field.");
                     break;
                 }
             }

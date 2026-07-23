@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "skills": [
     {
       "id": "unstable_blast",
@@ -117,6 +117,11 @@
       "triggers": [
         {
           "event": "missing_event",
+          "targeting": {
+            "scope": "owner",
+            "lifeState": "any",
+            "includeReserveActors": true
+          },
           "effects": []
         }
       ],
