@@ -1,4 +1,5 @@
 using Convergence.Content;
+using Convergence.Battle;
 using Convergence.Execution;
 using Convergence.Runtime;
 using Xunit;
@@ -199,6 +200,35 @@ public sealed class LifecycleResultImmutabilityTests
     }
 
     [Fact]
+    public void AilmentApplicationGateContractsSnapshotInputAndRejectContradictoryDecisions()
+    {
+        RuntimeActorState actor = Actor("gate_actor");
+        RuntimeActorState target = Actor("gate_target");
+        var participants = new List<RuntimeActorState> { actor, target };
+        var request = new BattleAilmentApplicationGateRequest(
+            actor,
+            target,
+            Ailment("gate_ailment"),
+            participants,
+            ContentId.Parse("gate_source"));
+        participants.Clear();
+
+        Assert.Equal([actor, target], request.Participants);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<RuntimeActorState>)request.Participants).Clear());
+        Assert.Throws<ArgumentException>(() => new BattleAilmentApplicationGateDecision(
+            BattleAilmentApplicationGateOutcome.Allowed,
+            BattleAilmentApplicationGateReason.Guarding));
+        Assert.Throws<ArgumentException>(() => new BattleAilmentApplicationGateDecision(
+            BattleAilmentApplicationGateOutcome.Blocked));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BattleAilmentApplicationGateDecision(
+            (BattleAilmentApplicationGateOutcome)int.MaxValue));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BattleAilmentApplicationGateDecision(
+            BattleAilmentApplicationGateOutcome.Blocked,
+            (BattleAilmentApplicationGateReason)int.MaxValue));
+    }
+
+    [Fact]
     public void LifecycleResultRecordClones_NormalizeNullCollectionsToImmutableEmptySnapshots()
     {
         PassiveTriggerExecutionResult activation = Activation("null", []) with { Effects = null! };
@@ -244,6 +274,32 @@ public sealed class LifecycleResultImmutabilityTests
             BattleStatusLifecycleEventKind.StatusExpired,
             RuntimeInstanceId.Parse($"{id}_actor"),
             ContentId.Parse($"{id}_status"));
+
+    private static RuntimeActorState Actor(string id)
+    {
+        ContentId hp = ContentId.Parse("hp");
+        ContentId team = ContentId.Parse("team");
+        return new RuntimeActorState(
+            RuntimeInstanceId.Parse(id),
+            ContentId.Parse($"{id}_entity"),
+            team,
+            hp,
+            CombatDefenseProfile.Empty,
+            [new BattleResourceState(hp, 10, 10)],
+            new RuntimeEncounterPresenceSnapshot(true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("owner"), team),
+            []);
+    }
+
+    private static AilmentDefinition Ailment(string id) =>
+        new(
+            ContentId.Parse(id),
+            id,
+            "Gate test ailment.",
+            Lifetime(1),
+            new NormalAilmentTurnBehaviorDefinition(),
+            new AilmentModifiersDefinition(1, 0, 1, 1, false),
+            new AilmentRecoveryDefinition());
 
     private static StatusLifetimeDefinition Lifetime(int turns) =>
         StandardStatusLifetimes.Field(

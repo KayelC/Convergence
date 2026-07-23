@@ -459,9 +459,12 @@ change runtime behavior.
    immutable evidence. Skill, item, basic-attack, automated-battle, and
    encounter adapters carry the same committed lifecycle events without
    re-inferring effects from content definitions or parsing debug text.
-5. **O4-R5 - Harden live mutation and ailment application.** Resolve M4, M5,
-   and D2 through shared duration validation, staged public application, and
-   the injected application gate.
+5. **O4-R5 - Harden live mutation and ailment application. Implemented,
+   pending independent review.** M4, M5, and D2 now use one shared live-duration
+   domain, staged ailment application around both supplied and injected
+   services, and an injected application gate. The supplied default blocks
+   ailments while guarding; the supplied allow policy leaves guard relevant to
+   other mechanics without making it an ailment rule.
 6. **O4-R6 - Complete passive policy semantics.** Resolve L1 and D4 by
    validating liveness and implementing typed targeting and activation scope.
 7. **O4-R7 - Integrate encounter startup and public terminology.** Resolve M6
@@ -572,12 +575,37 @@ The implementation gate passed with:
 - formatting verification, 55 architecture/boundary tests, source inventory,
   content-tree status, and `git diff --check`: passed.
 
+### O4-R5 implementation gate
+
+The live-boundary checkpoint validates turn counts, tick IDs, phase IDs,
+supported duration kinds, status IDs, and ailment IDs before mutating actor
+state. Charge validation consumes the same duration-domain authority rather
+than maintaining a second rule. Direct lifecycle application and action-effect
+application stage every involved actor around supplied or injected application
+services; rejection, malformed results, and exceptions commit nothing.
+
+Guard behavior is now selected through `IBattleAilmentApplicationGatePolicy`.
+`GuardBlocksAilmentsApplicationGatePolicy` preserves the supplied standard,
+while `AllowAilmentsApplicationGatePolicy` supports games where guarding does
+not block ailments. Typed gate decisions survive in lifecycle results and
+events. The checkpoint gate passed with:
+
+- focused lifecycle, action, charge, enum-boundary, immutability, API, source
+  inventory, and capability-matrix coverage: 207 passed, 0 failed, 0 skipped;
+- complete solution: 1,573 passed, 0 failed, 0 skipped;
+- strict nonincremental Release solution build: 0 warnings, 0 errors;
+- all four noninteractive DemoHost modes and scripted Training Annex exit:
+  successful;
+- active content validation: 6 packs, 36 documents, and 98 qualified
+  definitions passed; and
+- formatting verification, content-tree status, and `git diff --check` passed.
+
 ## Current Closure Decision
 
 Order 4 is **design-approved and implementation is in progress**. O4-R2 through
-O4-R4 are implemented pending the fresh O4-R10 review. The existing
+O4-R5 are implemented pending the fresh O4-R10 review. The existing
 implementation is useful and largely transactional, but the capability
-matrix correctly remains `partial` until R5-R10 close the remaining application,
-passive, startup, persistence, and audience-documentation work. No code should
+matrix correctly remains `partial` until R6-R10 close the remaining passive,
+startup, persistence, and audience-documentation work. No code should
 be removed, and the documentation coverage entries should remain
 `existing_unreviewed` until R2-R10 and the audience review are complete.

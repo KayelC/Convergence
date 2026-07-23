@@ -342,7 +342,7 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
         {
             return RejectedAssessment(compatibility);
         }
-        if (!IsValidLiveDuration(request.Lifetime.Expiration))
+        if (!RuntimeStatusLifetimeDomain.IsValid(request.Lifetime))
         {
             return RejectedAssessment(new ChargePolicyDiagnostic(
                 ChargePolicyDiagnosticCode.InvalidDuration,
@@ -478,7 +478,7 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
                     $"Charge kind '{charge.Kind}' is incompatible with policy '{PolicyId}'.",
                     charge.Kind));
             }
-            if (!IsValidLiveDuration(charge.Lifetime.Expiration))
+            if (!RuntimeStatusLifetimeDomain.IsValid(charge.Lifetime))
             {
                 diagnostics.Add(new ChargePolicyDiagnostic(
                     ChargePolicyDiagnosticCode.InvalidDuration,
@@ -521,13 +521,4 @@ public abstract class ChargePolicyServiceBase : IChargePolicyService
     private static ChargeApplicationAssessment RejectedAssessment(ChargePolicyDiagnostic diagnostic) =>
         new(false, diagnostics: [diagnostic]);
 
-    private static bool IsValidLiveDuration(DurationDefinition duration) => duration switch
-    {
-        InstantDurationDefinition => true,
-        TurnDurationDefinition turns => turns.Value > 0 && turns.TickEventId.IsValid,
-        PhaseDurationDefinition phase => phase.PhaseId.IsValid,
-        BattleDurationDefinition => true,
-        PermanentDurationDefinition => true,
-        _ => false
-    };
 }

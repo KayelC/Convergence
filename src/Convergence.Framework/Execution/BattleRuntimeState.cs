@@ -104,6 +104,46 @@ public sealed record BattleOtherStatusState(StatusLifetimeDefinition Lifetime)
     public DurationDefinition Duration => Lifetime.Expiration;
 }
 
+internal static class RuntimeStatusLifetimeDomain
+{
+    public static void RequireValid(StatusLifetimeDefinition lifetime, string parameterName)
+    {
+        ArgumentNullException.ThrowIfNull(lifetime, parameterName);
+        string? error = lifetime.Expiration switch
+        {
+            InstantDurationDefinition => null,
+            TurnDurationDefinition turns when turns.Value <= 0 =>
+                "Turn duration must contain at least one remaining tick.",
+            TurnDurationDefinition turns when !turns.TickEventId.IsValid =>
+                "Turn duration tick event ID cannot be empty.",
+            TurnDurationDefinition => null,
+            PhaseDurationDefinition phase when !phase.PhaseId.IsValid =>
+                "Phase duration ID cannot be empty.",
+            PhaseDurationDefinition => null,
+            BattleDurationDefinition => null,
+            PermanentDurationDefinition => null,
+            _ => "Duration kind is not supported by the runtime."
+        };
+        if (error is not null)
+        {
+            throw new ArgumentException(error, parameterName);
+        }
+    }
+
+    public static bool IsValid(StatusLifetimeDefinition lifetime)
+    {
+        try
+        {
+            RequireValid(lifetime, nameof(lifetime));
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
+}
+
 public enum BattleDurationStateKind
 {
     Ailment,
@@ -403,7 +443,15 @@ public sealed class RuntimeActorState
     public void ApplyAilment(AilmentDefinition definition, StatusLifetimeDefinition lifetime)
     {
         ArgumentNullException.ThrowIfNull(definition);
-        ArgumentNullException.ThrowIfNull(lifetime);
+        if (!definition.Id.IsValid)
+        {
+            throw new ArgumentException("Ailment ID cannot be empty.", nameof(definition));
+        }
+        if (definition.ExclusivityGroupId is ContentId groupId && !groupId.IsValid)
+        {
+            throw new ArgumentException("Ailment exclusivity-group ID cannot be empty.", nameof(definition));
+        }
+        RuntimeStatusLifetimeDomain.RequireValid(lifetime, nameof(lifetime));
         if (definition.ExclusivityGroupId is ContentId exclusivityGroup)
         {
             ActiveAilmentState[] existing = _ailments.Values
@@ -542,20 +590,20 @@ public sealed class RuntimeActorState
     public void GrantShield(ShieldKind kind, StatusLifetimeDefinition lifetime)
     {
         EnumDomain.RequireDefined(kind, nameof(kind));
-        _shields[kind] = new BattleShieldState(
-            lifetime ?? throw new ArgumentNullException(nameof(lifetime)));
+        RuntimeStatusLifetimeDomain.RequireValid(lifetime, nameof(lifetime));
+        _shields[kind] = new BattleShieldState(lifetime);
     }
 
     public void BreakAffinity(DamageElement element, StatusLifetimeDefinition lifetime)
     {
         EnumDomain.RequireDefined(element, nameof(element));
+        RuntimeStatusLifetimeDomain.RequireValid(lifetime, nameof(lifetime));
         if (element == DamageElement.Almighty)
         {
             throw new ArgumentException("Almighty cannot receive an affinity Break.", nameof(element));
         }
 
-        _affinityBreaks[element] = new BattleAffinityBreakState(
-            lifetime ?? throw new ArgumentNullException(nameof(lifetime)));
+        _affinityBreaks[element] = new BattleAffinityBreakState(lifetime);
     }
 
     public void SetGuarding(bool isGuarding) => IsGuarding = isGuarding;
@@ -567,9 +615,10 @@ public sealed class RuntimeActorState
     {
         EnumDomain.RequireDefined(element, nameof(element));
         EnumDomain.RequireDefined(affinity, nameof(affinity));
+        RuntimeStatusLifetimeDomain.RequireValid(lifetime, nameof(lifetime));
         _affinityOverrides[element] = new BattleAffinityOverrideState(
             affinity,
-            lifetime ?? throw new ArgumentNullException(nameof(lifetime)));
+            lifetime);
     }
 
     public void AddOtherStatus(ContentId statusId) =>
@@ -577,9 +626,15 @@ public sealed class RuntimeActorState
 
     public void AddOtherStatus(
         ContentId statusId,
-        StatusLifetimeDefinition lifetime) =>
-        _otherStatuses[statusId] = new BattleOtherStatusState(
-            lifetime ?? throw new ArgumentNullException(nameof(lifetime)));
+        StatusLifetimeDefinition lifetime)
+    {
+        if (!statusId.IsValid)
+        {
+            throw new ArgumentException("Other-status ID cannot be empty.", nameof(statusId));
+        }
+        RuntimeStatusLifetimeDomain.RequireValid(lifetime, nameof(lifetime));
+        _otherStatuses[statusId] = new BattleOtherStatusState(lifetime);
+    }
 
     public IReadOnlyList<BattleDurationTickResult> TickAilmentDurations(ContentId eventId) =>
         TickAilmentDurations(eventId, advanceReserveState: false);

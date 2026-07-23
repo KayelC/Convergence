@@ -661,6 +661,7 @@ public sealed class ActiveSkillExecutionTests
         Assert.Equal(BattleStatusLifecycleEventKind.AilmentBlocked, blocked.Kind);
         Assert.Equal(actor.InstanceId, blocked.SourceActorId);
         Assert.Equal(skill.Id, blocked.SourceId);
+        Assert.Equal(BattleAilmentApplicationGateReason.Guarding, blocked.AilmentGateDecision!.Reason);
         Assert.Equal(effect.LifecycleEvents, result.LifecycleEvents);
         Assert.False(target.HasAilment(Poison));
         Assert.True(target.IsGuarding);
@@ -1290,6 +1291,25 @@ public sealed class ActiveSkillExecutionTests
             : TurnEconomyOutcome.Absorb, result.TurnEconomy.Outcome);
         Assert.Equal(0, ailmentPolicy.CallCount);
         Assert.False(target.HasAilment(Poison));
+    }
+
+    [Fact]
+    public void Execute_InjectedAilmentServiceRejectionCannotLeakMutationThroughCommittedAction()
+    {
+        RuntimeActorState actor = Actor("atomic_actor", PlayerTeam, hp: 80);
+        RuntimeActorState target = Actor("atomic_target", EnemyTeam, hp: 70);
+        var authority = new MutatingRejectingAilmentApplicationService();
+        SkillDefinition skill = ActiveSkill([new ApplyAilmentEffectDefinition(Poison, 100)]);
+
+        SkillExecutionResult result = new SkillExecutor(Services(ailmentApplications: authority)).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, result.Status);
+        Assert.Equal(EffectExecutionOutcome.Failure, Assert.Single(result.Effects).Outcome);
+        Assert.Equal(80, actor.GetRequiredResource(Hp).Current);
+        Assert.Equal(70, target.GetRequiredResource(Hp).Current);
+        Assert.NotSame(actor, authority.ReceivedActor);
+        Assert.NotSame(target, authority.ReceivedTarget);
     }
 
     [Theory]
@@ -2928,6 +2948,23 @@ public sealed class ActiveSkillExecutionTests
     private sealed class AlwaysChancePolicy : IChanceExecutionPolicy
     {
         public bool Roll(ChancePolicyRequest request) => true;
+    }
+
+    private sealed class MutatingRejectingAilmentApplicationService : IBattleAilmentApplicationService
+    {
+        public RuntimeActorState? ReceivedActor { get; private set; }
+        public RuntimeActorState? ReceivedTarget { get; private set; }
+
+        public BattleAilmentApplicationResult Apply(
+            BattleAilmentApplicationRequest request,
+            BattleExecutionServices services)
+        {
+            ReceivedActor = request.Actor;
+            ReceivedTarget = request.Target;
+            request.Actor.SetResource(Hp, 1);
+            request.Target.SetResource(Hp, 1);
+            return new BattleAilmentApplicationResult(BattleAilmentApplicationStatus.Missed, []);
+        }
     }
 
     private sealed class RecordingChancePolicy(bool result) : IChanceExecutionPolicy

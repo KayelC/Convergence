@@ -404,6 +404,190 @@ public sealed class BattleStatusLifecycleTests
         Assert.Equal(Turns(2), target.Ailments[Poison].Lifetime);
     }
 
+    [Fact]
+    public void TimedStateMutations_RejectInvalidLifetimesBeforeChangingLiveState()
+    {
+        StatusLifetimeDefinition valid = Turns(2);
+        AilmentDefinition poison = Ailment("poison", new NormalAilmentTurnBehaviorDefinition());
+        RuntimeActorState actor = Actor("duration_boundary");
+        actor.ApplyAilment(poison, valid);
+        actor.GrantShield(ShieldKind.Physical, valid);
+        actor.BreakAffinity(DamageElement.Fire, valid);
+        actor.OverrideAffinity(DamageElement.Ice, ElementalAffinity.Resist, valid);
+        ContentId statusId = ContentId.Parse("marked");
+        actor.AddOtherStatus(statusId, valid);
+
+        StatusLifetimeDefinition[] invalidLifetimes =
+        [
+            new(new TurnDurationDefinition(0, OwnerTurnEnd, true), StatusRemovalProfiles.Standard),
+            new(new TurnDurationDefinition(1, default, true), StatusRemovalProfiles.Standard),
+            new(new PhaseDurationDefinition(default), StatusRemovalProfiles.Standard),
+            new(new UnsupportedDurationDefinition(), StatusRemovalProfiles.Standard)
+        ];
+
+        foreach (StatusLifetimeDefinition invalid in invalidLifetimes)
+        {
+            Assert.Throws<ArgumentException>(() => actor.ApplyAilment(poison, invalid));
+            Assert.Throws<ArgumentException>(() => actor.GrantShield(ShieldKind.Physical, invalid));
+            Assert.Throws<ArgumentException>(() => actor.BreakAffinity(DamageElement.Fire, invalid));
+            Assert.Throws<ArgumentException>(() => actor.OverrideAffinity(
+                DamageElement.Ice,
+                ElementalAffinity.Null,
+                invalid));
+            Assert.Throws<ArgumentException>(() => actor.AddOtherStatus(statusId, invalid));
+            Assert.False(new SplitChargePolicy().Assess(new ChargeApplicationRequest(
+                actor,
+                ChargeKind.Physical,
+                2m,
+                invalid)).CanApply);
+
+            Assert.Equal(valid, actor.Ailments[Poison].Lifetime);
+            Assert.Equal(valid, actor.Shields[ShieldKind.Physical].Lifetime);
+            Assert.Equal(valid, actor.AffinityBreaks[DamageElement.Fire].Lifetime);
+            Assert.Equal(ElementalAffinity.Resist, actor.AffinityOverrides[DamageElement.Ice].Affinity);
+            Assert.Equal(valid, actor.AffinityOverrides[DamageElement.Ice].Lifetime);
+            Assert.Equal(
+                valid,
+                Assert.Single(actor.ToSnapshot().BattleStatus.Statuses, status => status.Id == statusId).Lifetime);
+            Assert.Empty(actor.Charges);
+        }
+
+        Assert.Throws<ArgumentException>(() => actor.AddOtherStatus(default, valid));
+        Assert.DoesNotContain(default(ContentId), actor.OtherStatuses);
+    }
+
+    [Fact]
+    public void AilmentApplication_GuardBehaviorIsSelectedByAnInjectedGatePolicy()
+    {
+        var lifecycle = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState attacker = Actor("gate_attacker");
+        RuntimeActorState target = Actor("gate_target");
+        target.SetGuarding(true);
+        AilmentDefinition poison = Ailment("poison", new NormalAilmentTurnBehaviorDefinition());
+
+        BattleAilmentApplicationResult blocked = lifecycle.TryApplyAilment(
+            new(attacker, target, poison, 100),
+            Services());
+        BattleAilmentApplicationResult allowed = lifecycle.TryApplyAilment(
+            new(attacker, target, poison, 100),
+            Services(ailmentGate: AllowAilmentsApplicationGatePolicy.Instance));
+
+        Assert.Equal(BattleAilmentApplicationStatus.GuardBlocked, blocked.Status);
+        Assert.Equal(BattleAilmentApplicationGateReason.Guarding, blocked.GateDecision!.Reason);
+        Assert.Same(blocked.GateDecision, Assert.Single(blocked.Events).AilmentGateDecision);
+        Assert.True(allowed.Applied);
+        Assert.True(target.IsGuarding);
+        Assert.True(target.HasAilment(Poison));
+    }
+
+    [Fact]
+    public void AilmentApplication_CustomGateRejectionIsTypedAndRollsBackPolicyMutation()
+    {
+        var lifecycle = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState attacker = Actor("rejecting_gate_attacker", hp: 80);
+        RuntimeActorState target = Actor("rejecting_gate_target", hp: 70);
+        RuntimeActorState observer = Actor("rejecting_gate_observer", hp: 60);
+        var gate = new MutatingRejectingAilmentGate();
+        var chance = new CountingAilmentPolicy();
+
+        BattleAilmentApplicationResult result = lifecycle.TryApplyAilment(
+            new(
+                attacker,
+                target,
+                Ailment("poison", new NormalAilmentTurnBehaviorDefinition()),
+                100,
+                participants: [attacker, target, observer]),
+            Services(chance, ailmentGate: gate));
+
+        Assert.Equal(BattleAilmentApplicationStatus.ApplicationGateRejected, result.Status);
+        Assert.Equal(BattleAilmentApplicationGateReason.PolicyRejected, result.GateDecision!.Reason);
+        Assert.Equal(0, chance.CallCount);
+        Assert.Equal(80, attacker.GetRequiredResource(Hp).Current);
+        Assert.Equal(70, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(60, observer.GetRequiredResource(Hp).Current);
+        Assert.NotSame(attacker, gate.ReceivedActor);
+        Assert.NotSame(target, gate.ReceivedTarget);
+    }
+
+    [Fact]
+    public void AilmentApplication_RejectedAndThrowingChancePoliciesCannotLeakMutations()
+    {
+        var lifecycle = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState attacker = Actor("atomic_ailment_attacker", hp: 80);
+        RuntimeActorState target = Actor("atomic_ailment_target", hp: 70);
+        AilmentDefinition poison = Ailment("poison", new NormalAilmentTurnBehaviorDefinition());
+
+        var rejectedPolicy = new MutatingAilmentPolicy(applies: false, throws: false);
+        BattleAilmentApplicationResult rejected = lifecycle.TryApplyAilment(
+            new(attacker, target, poison, 100),
+            Services(rejectedPolicy));
+
+        Assert.Equal(BattleAilmentApplicationStatus.Missed, rejected.Status);
+        Assert.Equal(80, attacker.GetRequiredResource(Hp).Current);
+        Assert.Equal(70, target.GetRequiredResource(Hp).Current);
+        Assert.False(target.HasAilment(Poison));
+        Assert.NotSame(attacker, rejectedPolicy.ReceivedActor);
+
+        var throwingPolicy = new MutatingAilmentPolicy(applies: true, throws: true);
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            lifecycle.TryApplyAilment(
+                new(attacker, target, poison, 100),
+                Services(throwingPolicy)));
+
+        Assert.Equal("Deliberate ailment-policy failure.", exception.Message);
+        Assert.Equal(80, attacker.GetRequiredResource(Hp).Current);
+        Assert.Equal(70, target.GetRequiredResource(Hp).Current);
+        Assert.False(target.HasAilment(Poison));
+    }
+
+    [Fact]
+    public void AilmentApplication_AcceptedPolicyCommitsStagedMutationsAndTransitionTogether()
+    {
+        var lifecycle = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState attacker = Actor("accepted_ailment_attacker", hp: 80);
+        RuntimeActorState target = Actor("accepted_ailment_target", hp: 70);
+        var policy = new MutatingAilmentPolicy(applies: true, throws: false);
+
+        BattleAilmentApplicationResult result = lifecycle.TryApplyAilment(
+            new(
+                attacker,
+                target,
+                Ailment("poison", new NormalAilmentTurnBehaviorDefinition()),
+                100),
+            Services(policy));
+
+        Assert.True(result.Applied);
+        Assert.Equal(1, attacker.GetRequiredResource(Hp).Current);
+        Assert.Equal(2, target.GetRequiredResource(Hp).Current);
+        Assert.True(target.HasAilment(Poison));
+    }
+
+    [Fact]
+    public void AilmentApplication_InjectedServiceCannotMutateParticipantsOnRejection()
+    {
+        var lifecycle = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState attacker = Actor("custom_service_attacker", hp: 80);
+        RuntimeActorState target = Actor("custom_service_target", hp: 70);
+        RuntimeActorState observer = Actor("custom_service_observer", hp: 60);
+        var applicationService = new MutatingRejectingAilmentApplicationService();
+
+        BattleAilmentApplicationResult result = lifecycle.TryApplyAilment(
+            new(
+                attacker,
+                target,
+                Ailment("poison", new NormalAilmentTurnBehaviorDefinition()),
+                100,
+                participants: [attacker, target, observer]),
+            Services(ailmentApplications: applicationService));
+
+        Assert.Equal(BattleAilmentApplicationStatus.Missed, result.Status);
+        Assert.Equal(80, attacker.GetRequiredResource(Hp).Current);
+        Assert.Equal(70, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(60, observer.GetRequiredResource(Hp).Current);
+        Assert.All(applicationService.ReceivedParticipants, participant =>
+            Assert.DoesNotContain(participant, new[] { attacker, target, observer }));
+    }
+
     [Theory]
     [InlineData(-1)]
     [InlineData(101)]
@@ -1319,7 +1503,9 @@ public sealed class BattleStatusLifecycleTests
     private static BattleExecutionServices Services(
         IAilmentApplicationPolicy? ailmentPolicy = null,
         IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffectHandlers = null,
-        IBattleAilmentTransitionPolicy? ailmentTransitions = null) =>
+        IBattleAilmentTransitionPolicy? ailmentTransitions = null,
+        IBattleAilmentApplicationGatePolicy? ailmentGate = null,
+        IBattleAilmentApplicationService? ailmentApplications = null) =>
         new(
             new EmptyAilments(),
             new NoDamagePolicy(),
@@ -1337,8 +1523,10 @@ public sealed class BattleStatusLifecycleTests
                     PoisonFormula,
                     new PoisonFormulaHandler())
             ],
-            customEffectHandlers: customEffectHandlers)
+            customEffectHandlers: customEffectHandlers,
+            ailmentApplications: ailmentApplications)
         {
+            AilmentApplicationGate = ailmentGate ?? GuardBlocksAilmentsApplicationGatePolicy.Instance,
             AilmentTransitions = ailmentTransitions ?? StandardBattleAilmentTransitionPolicy.Instance
         };
 
@@ -1434,6 +1622,76 @@ public sealed class BattleStatusLifecycleTests
         public bool ShouldApply(AilmentApplicationPolicyRequest request) =>
             _results.Count > 0 && _results.Dequeue();
     }
+
+    private sealed class CountingAilmentPolicy : IAilmentApplicationPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public bool ShouldApply(AilmentApplicationPolicyRequest request)
+        {
+            CallCount++;
+            return true;
+        }
+    }
+
+    private sealed class MutatingAilmentPolicy(bool applies, bool throws) : IAilmentApplicationPolicy
+    {
+        public RuntimeActorState? ReceivedActor { get; private set; }
+
+        public bool ShouldApply(AilmentApplicationPolicyRequest request)
+        {
+            ReceivedActor = request.Actor;
+            request.Actor.SetResource(Hp, 1);
+            request.Target.SetResource(Hp, 2);
+            if (throws)
+            {
+                throw new InvalidOperationException("Deliberate ailment-policy failure.");
+            }
+
+            return applies;
+        }
+    }
+
+    private sealed class MutatingRejectingAilmentGate : IBattleAilmentApplicationGatePolicy
+    {
+        public RuntimeActorState? ReceivedActor { get; private set; }
+        public RuntimeActorState? ReceivedTarget { get; private set; }
+
+        public BattleAilmentApplicationGateDecision Evaluate(BattleAilmentApplicationGateRequest request)
+        {
+            ReceivedActor = request.Actor;
+            ReceivedTarget = request.Target;
+            foreach (RuntimeActorState participant in request.Participants)
+            {
+                participant.SetResource(Hp, 1);
+            }
+
+            return new BattleAilmentApplicationGateDecision(
+                BattleAilmentApplicationGateOutcome.Blocked,
+                BattleAilmentApplicationGateReason.PolicyRejected);
+        }
+    }
+
+    private sealed class MutatingRejectingAilmentApplicationService : IBattleAilmentApplicationService
+    {
+        public IReadOnlyList<RuntimeActorState> ReceivedParticipants { get; private set; } = [];
+
+        public BattleAilmentApplicationResult Apply(
+            BattleAilmentApplicationRequest request,
+            BattleExecutionServices services)
+        {
+            ReceivedParticipants = request.Participants;
+            foreach (RuntimeActorState participant in request.Participants)
+            {
+                participant.SetResource(Hp, 1);
+            }
+
+            return new BattleAilmentApplicationResult(BattleAilmentApplicationStatus.Missed, []);
+        }
+    }
+
+    private sealed record UnsupportedDurationDefinition()
+        : DurationDefinition((DurationKind)int.MaxValue);
 
     private sealed class AlwaysApplyNewTransitionPolicy : IBattleAilmentTransitionPolicy
     {

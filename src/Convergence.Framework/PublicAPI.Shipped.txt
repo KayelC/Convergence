@@ -1,4 +1,54 @@
 #nullable enable
+Convergence.Execution.AllowAilmentsApplicationGatePolicy
+Convergence.Execution.AllowAilmentsApplicationGatePolicy.Evaluate(Convergence.Execution.BattleAilmentApplicationGateRequest! request) -> Convergence.Execution.BattleAilmentApplicationGateDecision!
+Convergence.Execution.BattleAilmentApplicationGateDecision
+Convergence.Execution.BattleAilmentApplicationGateDecision.<Clone>$() -> Convergence.Execution.BattleAilmentApplicationGateDecision!
+Convergence.Execution.BattleAilmentApplicationGateDecision.Allowed.get -> bool
+Convergence.Execution.BattleAilmentApplicationGateDecision.BattleAilmentApplicationGateDecision(Convergence.Execution.BattleAilmentApplicationGateOutcome outcome, Convergence.Execution.BattleAilmentApplicationGateReason reason = Convergence.Execution.BattleAilmentApplicationGateReason.None) -> void
+Convergence.Execution.BattleAilmentApplicationGateDecision.Equals(Convergence.Execution.BattleAilmentApplicationGateDecision? other) -> bool
+Convergence.Execution.BattleAilmentApplicationGateDecision.Outcome.get -> Convergence.Execution.BattleAilmentApplicationGateOutcome
+Convergence.Execution.BattleAilmentApplicationGateDecision.Reason.get -> Convergence.Execution.BattleAilmentApplicationGateReason
+Convergence.Execution.BattleAilmentApplicationGateOutcome
+Convergence.Execution.BattleAilmentApplicationGateOutcome.Allowed = 0 -> Convergence.Execution.BattleAilmentApplicationGateOutcome
+Convergence.Execution.BattleAilmentApplicationGateOutcome.Blocked = 1 -> Convergence.Execution.BattleAilmentApplicationGateOutcome
+Convergence.Execution.BattleAilmentApplicationGateReason
+Convergence.Execution.BattleAilmentApplicationGateReason.Guarding = 1 -> Convergence.Execution.BattleAilmentApplicationGateReason
+Convergence.Execution.BattleAilmentApplicationGateReason.None = 0 -> Convergence.Execution.BattleAilmentApplicationGateReason
+Convergence.Execution.BattleAilmentApplicationGateReason.PolicyRejected = 2 -> Convergence.Execution.BattleAilmentApplicationGateReason
+Convergence.Execution.BattleAilmentApplicationGateRequest
+Convergence.Execution.BattleAilmentApplicationGateRequest.<Clone>$() -> Convergence.Execution.BattleAilmentApplicationGateRequest!
+Convergence.Execution.BattleAilmentApplicationGateRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
+Convergence.Execution.BattleAilmentApplicationGateRequest.Ailment.get -> Convergence.Content.AilmentDefinition!
+Convergence.Execution.BattleAilmentApplicationGateRequest.BattleAilmentApplicationGateRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Execution.RuntimeActorState! target, Convergence.Content.AilmentDefinition! ailment, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, Convergence.Content.ContentId? sourceId = null) -> void
+Convergence.Execution.BattleAilmentApplicationGateRequest.Equals(Convergence.Execution.BattleAilmentApplicationGateRequest? other) -> bool
+Convergence.Execution.BattleAilmentApplicationGateRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
+Convergence.Execution.BattleAilmentApplicationGateRequest.SourceId.get -> Convergence.Content.ContentId?
+Convergence.Execution.BattleAilmentApplicationGateRequest.Target.get -> Convergence.Execution.RuntimeActorState!
+Convergence.Execution.BattleAilmentApplicationResult.GateDecision.get -> Convergence.Execution.BattleAilmentApplicationGateDecision?
+Convergence.Execution.BattleAilmentApplicationResult.GateDecision.init -> void
+Convergence.Execution.BattleAilmentApplicationStatus.ApplicationGateRejected = 6 -> Convergence.Execution.BattleAilmentApplicationStatus
+Convergence.Execution.BattleExecutionServices.AilmentApplicationGate.get -> Convergence.Execution.IBattleAilmentApplicationGatePolicy!
+Convergence.Execution.BattleExecutionServices.AilmentApplicationGate.init -> void
+Convergence.Execution.BattleStatusLifecycleEvent.AilmentGateDecision.get -> Convergence.Execution.BattleAilmentApplicationGateDecision?
+Convergence.Execution.BattleStatusLifecycleEvent.AilmentGateDecision.init -> void
+Convergence.Execution.GuardBlocksAilmentsApplicationGatePolicy
+Convergence.Execution.GuardBlocksAilmentsApplicationGatePolicy.Evaluate(Convergence.Execution.BattleAilmentApplicationGateRequest! request) -> Convergence.Execution.BattleAilmentApplicationGateDecision!
+Convergence.Execution.IBattleAilmentApplicationGatePolicy
+Convergence.Execution.IBattleAilmentApplicationGatePolicy.Evaluate(Convergence.Execution.BattleAilmentApplicationGateRequest! request) -> Convergence.Execution.BattleAilmentApplicationGateDecision!
+override Convergence.Execution.BattleAilmentApplicationGateDecision.Equals(object? obj) -> bool
+override Convergence.Execution.BattleAilmentApplicationGateDecision.GetHashCode() -> int
+override Convergence.Execution.BattleAilmentApplicationGateDecision.ToString() -> string!
+override Convergence.Execution.BattleAilmentApplicationGateRequest.Equals(object? obj) -> bool
+override Convergence.Execution.BattleAilmentApplicationGateRequest.GetHashCode() -> int
+override Convergence.Execution.BattleAilmentApplicationGateRequest.ToString() -> string!
+static Convergence.Execution.AllowAilmentsApplicationGatePolicy.Instance.get -> Convergence.Execution.AllowAilmentsApplicationGatePolicy!
+static Convergence.Execution.BattleAilmentApplicationGateDecision.Allow.get -> Convergence.Execution.BattleAilmentApplicationGateDecision!
+static Convergence.Execution.BattleAilmentApplicationGateDecision.GuardBlocked.get -> Convergence.Execution.BattleAilmentApplicationGateDecision!
+static Convergence.Execution.BattleAilmentApplicationGateDecision.operator !=(Convergence.Execution.BattleAilmentApplicationGateDecision? left, Convergence.Execution.BattleAilmentApplicationGateDecision? right) -> bool
+static Convergence.Execution.BattleAilmentApplicationGateDecision.operator ==(Convergence.Execution.BattleAilmentApplicationGateDecision? left, Convergence.Execution.BattleAilmentApplicationGateDecision? right) -> bool
+static Convergence.Execution.BattleAilmentApplicationGateRequest.operator !=(Convergence.Execution.BattleAilmentApplicationGateRequest? left, Convergence.Execution.BattleAilmentApplicationGateRequest? right) -> bool
+static Convergence.Execution.BattleAilmentApplicationGateRequest.operator ==(Convergence.Execution.BattleAilmentApplicationGateRequest? left, Convergence.Execution.BattleAilmentApplicationGateRequest? right) -> bool
+static Convergence.Execution.GuardBlocksAilmentsApplicationGatePolicy.Instance.get -> Convergence.Execution.GuardBlocksAilmentsApplicationGatePolicy!
 ~Convergence.Runtime.RulesetBindingResult<TService>.<Clone>$() -> Convergence.Runtime.RulesetBindingResult<TService>!
 ~Convergence.Runtime.RulesetBindingResult<TService>.Equals(Convergence.Runtime.RulesetBindingResult<TService>? other) -> bool
 ~override Convergence.Content.ContentId.Equals(object obj) -> bool

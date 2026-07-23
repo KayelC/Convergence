@@ -514,7 +514,7 @@ internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffe
             return Failure(context, detail: "The ailment target or definition is unavailable.", relatedId: definition.AilmentId);
         }
 
-        BattleAilmentApplicationResult application = context.Services.AilmentApplications.Apply(
+        BattleAilmentApplicationResult application = BattleAilmentApplicationTransaction.Execute(
             new BattleAilmentApplicationRequest(
                 context.Actor,
                 target,

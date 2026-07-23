@@ -516,6 +516,8 @@ public sealed class CombatExecutionPolicySet
 
 public sealed class BattleExecutionServices
 {
+    private IBattleAilmentApplicationGatePolicy _ailmentApplicationGate =
+        GuardBlocksAilmentsApplicationGatePolicy.Instance;
     private IBattleAilmentTransitionPolicy _ailmentTransitions =
         StandardBattleAilmentTransitionPolicy.Instance;
 
@@ -591,6 +593,11 @@ public sealed class BattleExecutionServices
     public EffectExecutorRegistry EffectExecutors { get; }
     public RuleModifierResolver RuleModifiers { get; }
     public IBattleAilmentApplicationService AilmentApplications { get; }
+    public IBattleAilmentApplicationGatePolicy AilmentApplicationGate
+    {
+        get => _ailmentApplicationGate;
+        init => _ailmentApplicationGate = value ?? throw new ArgumentNullException(nameof(value));
+    }
     public IBattleAilmentTransitionPolicy AilmentTransitions
     {
         get => _ailmentTransitions;

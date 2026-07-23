@@ -14,9 +14,11 @@ Phase 8 established the clean product boundary. Framework, DemoHost, tests, and 
 the remaining lifecycle assumptions with explicit clocks, application
 transitions, passive contracts, and restored-state validation. Completed
 checkpoints now include independent lifetime/removal policy, explicit clocks,
-and complete typed transition evidence. Live application hardening, passive
-policy semantics, encounter startup, wire reconciliation, and audience closure
-remain in the focused sequence.
+and complete typed transition evidence. O4-R5 rejects malformed live timed
+state, stages public ailment application, and exposes guard blocking as a
+replaceable application-gate policy. Passive policy semantics, encounter
+startup, wire reconciliation, and audience closure remain in the focused
+sequence.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience

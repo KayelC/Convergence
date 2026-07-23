@@ -20,12 +20,13 @@ public enum BattleTurnStartOutcome
 
 public enum BattleAilmentApplicationStatus
 {
-    Applied,
-    TargetDefeated,
-    GuardBlocked,
-    Immune,
-    Missed,
-    TransitionRejected
+    Applied = 0,
+    TargetDefeated = 1,
+    GuardBlocked = 2,
+    Immune = 3,
+    Missed = 4,
+    TransitionRejected = 5,
+    ApplicationGateRejected = 6
 }
 
 public enum BattleStatusDepartureReason
@@ -72,6 +73,7 @@ public sealed record BattleStatusLifecycleEvent(
 {
     public RuntimeInstanceId? SourceActorId { get; init; }
     public ContentId? SourceId { get; init; }
+    public BattleAilmentApplicationGateDecision? AilmentGateDecision { get; init; }
     public BattleAilmentTransitionResult? AilmentTransition { get; init; }
     public BattleDurationTickResult? DurationTransition { get; init; }
     public BattleStatusRemovalResult? RemovalTransition { get; init; }
@@ -396,6 +398,7 @@ public sealed record BattleAilmentApplicationResult
 
     public bool Applied => Status == BattleAilmentApplicationStatus.Applied;
     public BattleAilmentTransitionResult? Transition { get; }
+    public BattleAilmentApplicationGateDecision? GateDecision { get; init; }
 
     public void Deconstruct(
         out BattleAilmentApplicationStatus Status,
@@ -417,6 +420,14 @@ public sealed class BattleAilmentApplicationService : IBattleAilmentApplicationS
 {
     public BattleAilmentApplicationResult Apply(
         BattleAilmentApplicationRequest request,
+        BattleExecutionServices services) =>
+        BattleAilmentApplicationTransaction.Execute(
+            request,
+            services,
+            ApplyStaged);
+
+    internal BattleAilmentApplicationResult ApplyStaged(
+        BattleAilmentApplicationRequest request,
         BattleExecutionServices services)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -424,14 +435,35 @@ public sealed class BattleAilmentApplicationService : IBattleAilmentApplicationS
 
         RuntimeActorState target = request.Target;
         AilmentDefinition ailment = request.Ailment;
+        StatusLifetimeDefinition lifetime = request.Lifetime ?? ailment.DefaultLifetime;
+        RuntimeStatusLifetimeDomain.RequireValid(lifetime, nameof(request));
         if (target.IsDefeated)
         {
             return Blocked(request, BattleAilmentApplicationStatus.TargetDefeated, "target_defeated");
         }
 
-        if (target.IsGuarding)
+        BattleAilmentApplicationGateDecision? gateDecision = services.AilmentApplicationGate.Evaluate(
+            new BattleAilmentApplicationGateRequest(
+                request.Actor,
+                target,
+                ailment,
+                request.Participants,
+                request.SourceId));
+        if (gateDecision is null)
         {
-            return Blocked(request, BattleAilmentApplicationStatus.GuardBlocked, "guard");
+            throw new InvalidOperationException("The ailment application gate returned no decision.");
+        }
+        if (!gateDecision.Allowed)
+        {
+            BattleAilmentApplicationStatus status = gateDecision.Reason switch
+            {
+                BattleAilmentApplicationGateReason.Guarding => BattleAilmentApplicationStatus.GuardBlocked,
+                BattleAilmentApplicationGateReason.PolicyRejected =>
+                    BattleAilmentApplicationStatus.ApplicationGateRejected,
+                _ => throw new InvalidOperationException(
+                    "The ailment application gate returned an invalid blocked decision.")
+            };
+            return Blocked(request, status, gateDecision.Reason.ToString(), gateDecision);
         }
 
         ResistanceLevel resistance = AilmentResistanceResolver.Resolve(target.DefenseProfile, ailment.Id);
@@ -476,7 +508,6 @@ public sealed class BattleAilmentApplicationService : IBattleAilmentApplicationS
                 ]);
         }
 
-        StatusLifetimeDefinition lifetime = request.Lifetime ?? ailment.DefaultLifetime;
         BattleAilmentTransitionResult transition = ResolveTransition(
             target,
             ailment,
@@ -665,7 +696,8 @@ public sealed class BattleAilmentApplicationService : IBattleAilmentApplicationS
     private static BattleAilmentApplicationResult Blocked(
         BattleAilmentApplicationRequest request,
         BattleAilmentApplicationStatus status,
-        string detail) =>
+        string detail,
+        BattleAilmentApplicationGateDecision? gateDecision = null) =>
         new(
             status,
             [
@@ -676,9 +708,94 @@ public sealed class BattleAilmentApplicationService : IBattleAilmentApplicationS
                     Detail: detail)
                 {
                     SourceActorId = request.Actor.InstanceId,
-                    SourceId = request.SourceId
+                    SourceId = request.SourceId,
+                    AilmentGateDecision = gateDecision
                 }
-            ]);
+            ])
+        {
+            GateDecision = gateDecision
+        };
+}
+
+internal static class BattleAilmentApplicationTransaction
+{
+    public static BattleAilmentApplicationResult Execute(
+        BattleAilmentApplicationRequest request,
+        BattleExecutionServices services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        return services.AilmentApplications is BattleAilmentApplicationService standard
+            ? Execute(request, services, standard.ApplyStaged)
+            : Execute(request, services, services.AilmentApplications.Apply);
+    }
+
+    public static BattleAilmentApplicationResult Execute(
+        BattleAilmentApplicationRequest request,
+        BattleExecutionServices services,
+        Func<BattleAilmentApplicationRequest, BattleExecutionServices, BattleAilmentApplicationResult> apply)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(apply);
+
+        RuntimeActorState[] transactionParticipants = request.Participants
+            .Append(request.Actor)
+            .Append(request.Target)
+            .ToArray();
+        var transaction = new RuntimeActorExecutionTransaction(request.Actor, transactionParticipants);
+        var stagedRequest = new BattleAilmentApplicationRequest(
+            transaction.Actor,
+            transaction.GetStaged(request.Target),
+            request.Ailment,
+            request.Chance,
+            request.Lifetime,
+            request.Participants.Select(transaction.GetStaged),
+            request.BattleKindId,
+            request.MoonPhaseId,
+            request.Skill)
+        {
+            SourceId = request.SourceId
+        };
+        BattleAilmentApplicationResult result = apply(stagedRequest, services)
+            ?? throw new InvalidOperationException("The ailment application service returned no result.");
+        ValidateResult(stagedRequest, result);
+        if (result.Applied)
+        {
+            transaction.Commit();
+        }
+
+        return result;
+    }
+
+    private static void ValidateResult(
+        BattleAilmentApplicationRequest request,
+        BattleAilmentApplicationResult result)
+    {
+        if (!Enum.IsDefined(result.Status))
+        {
+            throw new InvalidOperationException(
+                $"The ailment application service returned undefined status '{result.Status}'.");
+        }
+        if (result.Events.Any(statusEvent => statusEvent is null))
+        {
+            throw new InvalidOperationException("The ailment application service returned a null event.");
+        }
+        if (result.Applied)
+        {
+            if (result.Transition is not { Applied: true } transition ||
+                transition.AilmentId != request.Ailment.Id ||
+                !request.Target.Ailments.ContainsKey(request.Ailment.Id))
+            {
+                throw new InvalidOperationException(
+                    "An applied ailment result must contain a matching accepted transition and staged target state.");
+            }
+        }
+        else if (result.Transition is { Applied: true })
+        {
+            throw new InvalidOperationException(
+                "A rejected ailment result cannot contain an accepted transition.");
+        }
+    }
 }
 
 public sealed record BattleStatusCleanupRequest(
@@ -1313,8 +1430,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
     public BattleAilmentApplicationResult TryApplyAilment(
         BattleAilmentApplicationRequest request,
         BattleExecutionServices services) =>
-        (services ?? throw new ArgumentNullException(nameof(services)))
-            .AilmentApplications.Apply(request, services);
+        BattleAilmentApplicationTransaction.Execute(request, services);
 
     public BattleStatusLifecycleResult ProcessActionEnd(
         BattleActionEndLifecycleRequest request,

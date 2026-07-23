@@ -338,6 +338,11 @@
       "publicSurface": "internal_only"
     },
     {
+      "path": "Execution/BattleAilmentApplicationGates.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Execution/BattleAilmentTransitions.cs",
       "owner": "effect_execution",
       "publicSurface": "exported"
