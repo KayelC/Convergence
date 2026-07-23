@@ -2148,7 +2148,6 @@ Convergence.Encounters.BattleStatusChangedEventPayload.Equals(Convergence.Encoun
 Convergence.Encounters.BattleStatusChangedEventPayload.StatusEvent.get -> Convergence.Execution.BattleStatusLifecycleEvent!
 Convergence.Encounters.BattleStatusChangedEventPayload.StatusEvent.init -> void
 Convergence.Encounters.BattleStatusEncounterLifecyclePort
-Convergence.Encounters.BattleStatusEncounterLifecyclePort.BattleStatusEncounterLifecyclePort(Convergence.Execution.IBattleStatusLifecycleService! lifecycle, Convergence.Execution.BattleExecutionServices! executionServices, Convergence.Content.ContentId battleStartEventId, Convergence.Content.ContentId ownerTurnEndEventId) -> void
 Convergence.Encounters.BattleStatusEncounterLifecyclePort.GetActiveStatModifierBoundaries(Convergence.Encounters.BattleEncounterTurnLifecycleRequest! request) -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
 Convergence.Encounters.BattleStatusEncounterLifecyclePort.ProcessBattleEndAsync(Convergence.Encounters.BattleEncounterLifecycleRequest! request, Convergence.Encounters.BattleEncounterOutcome outcome, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterEvent!>!>
 Convergence.Encounters.BattleStatusEncounterLifecyclePort.ProcessBattleStartAsync(Convergence.Encounters.BattleEncounterLifecycleRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterEvent!>!>
@@ -10760,3 +10759,146 @@ static Convergence.Content.StatusRemovalProfiles.Standard.get -> Convergence.Con
 static Convergence.Content.StatusRemovalProfiles.Uncurable.get -> Convergence.Content.StatusRemovalProfileDefinition!
 static Convergence.Execution.BattleStatusRemovalResult.operator !=(Convergence.Execution.BattleStatusRemovalResult? left, Convergence.Execution.BattleStatusRemovalResult? right) -> bool
 static Convergence.Execution.BattleStatusRemovalResult.operator ==(Convergence.Execution.BattleStatusRemovalResult? left, Convergence.Execution.BattleStatusRemovalResult? right) -> bool
+abstract Convergence.Execution.BattleLifecycleClockBoundary.<Clone>$() -> Convergence.Execution.BattleLifecycleClockBoundary!
+Convergence.Encounters.BattleStatusEncounterLifecyclePort.BattleStatusEncounterLifecyclePort(Convergence.Execution.IBattleStatusLifecycleService! lifecycle, Convergence.Execution.BattleExecutionServices! executionServices, Convergence.Content.ContentId battleStartEventId, Convergence.Content.ContentId ownerTurnEndEventId, Convergence.Encounters.IBattleEncounterLifecycleClockPolicy! clockPolicy) -> void
+Convergence.Encounters.BattleStatusEncounterLifecyclePort.ProcessRoundEndAsync(Convergence.Encounters.BattleEncounterLifecycleRequest! request, int roundNumber, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterEvent!>!>
+Convergence.Encounters.BattleTeamPhaseClockDefinition
+Convergence.Encounters.BattleTeamPhaseClockDefinition.<Clone>$() -> Convergence.Encounters.BattleTeamPhaseClockDefinition!
+Convergence.Encounters.BattleTeamPhaseClockDefinition.BattleTeamPhaseClockDefinition(Convergence.Content.ContentId teamId, Convergence.Content.ContentId phaseId, Convergence.Content.ContentId eventId) -> void
+Convergence.Encounters.BattleTeamPhaseClockDefinition.Equals(Convergence.Encounters.BattleTeamPhaseClockDefinition? other) -> bool
+Convergence.Encounters.BattleTeamPhaseClockDefinition.EventId.get -> Convergence.Content.ContentId
+Convergence.Encounters.BattleTeamPhaseClockDefinition.PhaseId.get -> Convergence.Content.ContentId
+Convergence.Encounters.BattleTeamPhaseClockDefinition.TeamId.get -> Convergence.Content.ContentId
+Convergence.Encounters.ExplicitBattleEncounterLifecycleClockPolicy
+Convergence.Encounters.ExplicitBattleEncounterLifecycleClockPolicy.ExplicitBattleEncounterLifecycleClockPolicy(System.Collections.Generic.IEnumerable<Convergence.Encounters.BattleTeamPhaseClockDefinition!>! teamPhases, Convergence.Content.ContentId roundEndEventId) -> void
+Convergence.Encounters.ExplicitBattleEncounterLifecycleClockPolicy.ResolveTeamPhase(Convergence.Content.ContentId teamId) -> Convergence.Encounters.BattleTeamPhaseClockDefinition!
+Convergence.Encounters.ExplicitBattleEncounterLifecycleClockPolicy.RoundEndEventId.get -> Convergence.Content.ContentId
+Convergence.Encounters.ExplicitBattleEncounterLifecycleClockPolicy.TeamPhases.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Encounters.BattleTeamPhaseClockDefinition!>!
+Convergence.Encounters.IBattleEncounterLifecycleClockPolicy
+Convergence.Encounters.IBattleEncounterLifecycleClockPolicy.ResolveTeamPhase(Convergence.Content.ContentId teamId) -> Convergence.Encounters.BattleTeamPhaseClockDefinition!
+Convergence.Encounters.IBattleEncounterLifecycleClockPolicy.RoundEndEventId.get -> Convergence.Content.ContentId
+Convergence.Encounters.IBattleEncounterLifecyclePort.ProcessRoundEndAsync(Convergence.Encounters.BattleEncounterLifecycleRequest! request, int roundNumber, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterEvent!>!>
+Convergence.Encounters.NoopBattleEncounterLifecyclePort.ProcessRoundEndAsync(Convergence.Encounters.BattleEncounterLifecycleRequest! request, int roundNumber, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterEvent!>!>
+Convergence.Execution.ActionLifecycleClockBoundary
+Convergence.Execution.ActionLifecycleClockBoundary.ActionLifecycleClockBoundary(long sequence) -> void
+Convergence.Execution.ActionLifecycleClockBoundary.Equals(Convergence.Execution.ActionLifecycleClockBoundary? other) -> bool
+Convergence.Execution.ActorTurnLifecycleClockBoundary
+Convergence.Execution.ActorTurnLifecycleClockBoundary.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Execution.ActorTurnLifecycleClockBoundary.ActorTurnLifecycleClockBoundary(Convergence.Content.ContentId eventId, Convergence.Runtime.RuntimeInstanceId actorId, long sequence) -> void
+Convergence.Execution.ActorTurnLifecycleClockBoundary.Equals(Convergence.Execution.ActorTurnLifecycleClockBoundary? other) -> bool
+Convergence.Execution.AdvanceReserveOnEncounterClockPolicy
+Convergence.Execution.AdvanceReserveOnEncounterClockPolicy.AdvanceReserveOnEncounterClockPolicy(Convergence.Execution.BattleLifecycleClockKind clockKind, Convergence.Content.ContentId eventId) -> void
+Convergence.Execution.AdvanceReserveOnEncounterClockPolicy.ClockKind.get -> Convergence.Execution.BattleLifecycleClockKind
+Convergence.Execution.AdvanceReserveOnEncounterClockPolicy.EventId.get -> Convergence.Content.ContentId
+Convergence.Execution.AdvanceReserveOnEncounterClockPolicy.ShouldAdvance(Convergence.Execution.BattleReserveLifecycleRequest! request) -> bool
+Convergence.Execution.BattleDurationLifecycleService.BattleDurationLifecycleService(Convergence.Execution.IBattleReserveLifecyclePolicy! reserveLifecyclePolicy) -> void
+Convergence.Execution.BattleDurationLifecycleService.ProcessClock(Convergence.Execution.BattleLifecycleClockRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.BattleLifecycleClockBoundary
+Convergence.Execution.BattleLifecycleClockBoundary.BattleLifecycleClockBoundary(Convergence.Execution.BattleLifecycleClockBoundary! original) -> void
+Convergence.Execution.BattleLifecycleClockBoundary.BattleLifecycleClockBoundary(Convergence.Execution.BattleLifecycleClockKind kind, long sequence) -> void
+Convergence.Execution.BattleLifecycleClockBoundary.Kind.get -> Convergence.Execution.BattleLifecycleClockKind
+Convergence.Execution.BattleLifecycleClockBoundary.Sequence.get -> long
+Convergence.Execution.BattleLifecycleClockKind
+Convergence.Execution.BattleLifecycleClockKind.Action = 1 -> Convergence.Execution.BattleLifecycleClockKind
+Convergence.Execution.BattleLifecycleClockKind.ActorTurn = 0 -> Convergence.Execution.BattleLifecycleClockKind
+Convergence.Execution.BattleLifecycleClockKind.Custom = 4 -> Convergence.Execution.BattleLifecycleClockKind
+Convergence.Execution.BattleLifecycleClockKind.Round = 3 -> Convergence.Execution.BattleLifecycleClockKind
+Convergence.Execution.BattleLifecycleClockKind.TeamPhase = 2 -> Convergence.Execution.BattleLifecycleClockKind
+Convergence.Execution.BattleLifecycleClockRequest
+Convergence.Execution.BattleLifecycleClockRequest.<Clone>$() -> Convergence.Execution.BattleLifecycleClockRequest!
+Convergence.Execution.BattleLifecycleClockRequest.BattleLifecycleClockRequest(System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, Convergence.Execution.BattleLifecycleClockBoundary! boundary, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? statModifierBoundaries = null) -> void
+Convergence.Execution.BattleLifecycleClockRequest.Boundary.get -> Convergence.Execution.BattleLifecycleClockBoundary!
+Convergence.Execution.BattleLifecycleClockRequest.Equals(Convergence.Execution.BattleLifecycleClockRequest? other) -> bool
+Convergence.Execution.BattleLifecycleClockRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
+Convergence.Execution.BattleLifecycleClockRequest.StatModifierBoundaries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
+Convergence.Execution.BattleReserveLifecycleRequest
+Convergence.Execution.BattleReserveLifecycleRequest.<Clone>$() -> Convergence.Execution.BattleReserveLifecycleRequest!
+Convergence.Execution.BattleReserveLifecycleRequest.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Execution.BattleReserveLifecycleRequest.BattleReserveLifecycleRequest(Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Content.ContentId teamId, Convergence.Execution.BattleLifecycleClockBoundary! boundary) -> void
+Convergence.Execution.BattleReserveLifecycleRequest.Boundary.get -> Convergence.Execution.BattleLifecycleClockBoundary!
+Convergence.Execution.BattleReserveLifecycleRequest.Equals(Convergence.Execution.BattleReserveLifecycleRequest? other) -> bool
+Convergence.Execution.BattleReserveLifecycleRequest.TeamId.get -> Convergence.Content.ContentId
+Convergence.Execution.BattleStatusLifecycleService.BattleStatusLifecycleService(Convergence.Hosting.IRandomSource! random, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Execution.ICustomAilmentTurnBehaviorHandler!>>? customTurnBehaviorHandlers, Convergence.Execution.IBattleTurnRestrictionPolicy? turnRestrictionPolicy, Convergence.Execution.IBattleReserveLifecyclePolicy! reserveLifecyclePolicy) -> void
+Convergence.Execution.BattleStatusLifecycleService.ProcessClock(Convergence.Execution.BattleLifecycleClockRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.CustomLifecycleClockBoundary
+Convergence.Execution.CustomLifecycleClockBoundary.CustomLifecycleClockBoundary(Convergence.Content.ContentId eventId, long sequence) -> void
+Convergence.Execution.CustomLifecycleClockBoundary.Equals(Convergence.Execution.CustomLifecycleClockBoundary? other) -> bool
+Convergence.Execution.IBattleDurationLifecycleService.ProcessClock(Convergence.Execution.BattleLifecycleClockRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
+Convergence.Execution.IBattleReserveLifecyclePolicy
+Convergence.Execution.IBattleReserveLifecyclePolicy.ShouldAdvance(Convergence.Execution.BattleReserveLifecycleRequest! request) -> bool
+Convergence.Execution.RoundLifecycleClockBoundary
+Convergence.Execution.RoundLifecycleClockBoundary.Equals(Convergence.Execution.RoundLifecycleClockBoundary? other) -> bool
+Convergence.Execution.RoundLifecycleClockBoundary.RoundLifecycleClockBoundary(Convergence.Content.ContentId eventId, int roundNumber) -> void
+Convergence.Execution.RoundLifecycleClockBoundary.RoundNumber.get -> int
+Convergence.Execution.SuspendReserveLifecyclePolicy
+Convergence.Execution.SuspendReserveLifecyclePolicy.ShouldAdvance(Convergence.Execution.BattleReserveLifecycleRequest! request) -> bool
+Convergence.Execution.SuspendReserveLifecyclePolicy.SuspendReserveLifecyclePolicy() -> void
+Convergence.Execution.TeamPhaseLifecycleClockBoundary
+Convergence.Execution.TeamPhaseLifecycleClockBoundary.Equals(Convergence.Execution.TeamPhaseLifecycleClockBoundary? other) -> bool
+Convergence.Execution.TeamPhaseLifecycleClockBoundary.PhaseId.get -> Convergence.Content.ContentId
+Convergence.Execution.TeamPhaseLifecycleClockBoundary.TeamId.get -> Convergence.Content.ContentId
+Convergence.Execution.TeamPhaseLifecycleClockBoundary.TeamPhaseLifecycleClockBoundary(Convergence.Content.ContentId eventId, Convergence.Content.ContentId teamId, Convergence.Content.ContentId phaseId, long sequence) -> void
+override Convergence.Encounters.BattleTeamPhaseClockDefinition.Equals(object? obj) -> bool
+override Convergence.Encounters.BattleTeamPhaseClockDefinition.GetHashCode() -> int
+override Convergence.Encounters.BattleTeamPhaseClockDefinition.ToString() -> string!
+override Convergence.Execution.ActionLifecycleClockBoundary.<Clone>$() -> Convergence.Execution.ActionLifecycleClockBoundary!
+override Convergence.Execution.ActionLifecycleClockBoundary.Equals(object? obj) -> bool
+override Convergence.Execution.ActionLifecycleClockBoundary.GetHashCode() -> int
+override Convergence.Execution.ActionLifecycleClockBoundary.ToString() -> string!
+override Convergence.Execution.ActorTurnLifecycleClockBoundary.<Clone>$() -> Convergence.Execution.ActorTurnLifecycleClockBoundary!
+override Convergence.Execution.ActorTurnLifecycleClockBoundary.Equals(object? obj) -> bool
+override Convergence.Execution.ActorTurnLifecycleClockBoundary.EventId.get -> Convergence.Content.ContentId?
+override Convergence.Execution.ActorTurnLifecycleClockBoundary.GetHashCode() -> int
+override Convergence.Execution.ActorTurnLifecycleClockBoundary.ToString() -> string!
+override Convergence.Execution.BattleLifecycleClockBoundary.Equals(object? obj) -> bool
+override Convergence.Execution.BattleLifecycleClockBoundary.GetHashCode() -> int
+override Convergence.Execution.BattleLifecycleClockBoundary.ToString() -> string!
+override Convergence.Execution.BattleLifecycleClockRequest.Equals(object? obj) -> bool
+override Convergence.Execution.BattleLifecycleClockRequest.GetHashCode() -> int
+override Convergence.Execution.BattleLifecycleClockRequest.ToString() -> string!
+override Convergence.Execution.BattleReserveLifecycleRequest.Equals(object? obj) -> bool
+override Convergence.Execution.BattleReserveLifecycleRequest.GetHashCode() -> int
+override Convergence.Execution.BattleReserveLifecycleRequest.ToString() -> string!
+override Convergence.Execution.CustomLifecycleClockBoundary.<Clone>$() -> Convergence.Execution.CustomLifecycleClockBoundary!
+override Convergence.Execution.CustomLifecycleClockBoundary.Equals(object? obj) -> bool
+override Convergence.Execution.CustomLifecycleClockBoundary.EventId.get -> Convergence.Content.ContentId?
+override Convergence.Execution.CustomLifecycleClockBoundary.GetHashCode() -> int
+override Convergence.Execution.CustomLifecycleClockBoundary.ToString() -> string!
+override Convergence.Execution.RoundLifecycleClockBoundary.<Clone>$() -> Convergence.Execution.RoundLifecycleClockBoundary!
+override Convergence.Execution.RoundLifecycleClockBoundary.Equals(object? obj) -> bool
+override Convergence.Execution.RoundLifecycleClockBoundary.EventId.get -> Convergence.Content.ContentId?
+override Convergence.Execution.RoundLifecycleClockBoundary.GetHashCode() -> int
+override Convergence.Execution.RoundLifecycleClockBoundary.ToString() -> string!
+override Convergence.Execution.TeamPhaseLifecycleClockBoundary.<Clone>$() -> Convergence.Execution.TeamPhaseLifecycleClockBoundary!
+override Convergence.Execution.TeamPhaseLifecycleClockBoundary.Equals(object? obj) -> bool
+override Convergence.Execution.TeamPhaseLifecycleClockBoundary.EventId.get -> Convergence.Content.ContentId?
+override Convergence.Execution.TeamPhaseLifecycleClockBoundary.GetHashCode() -> int
+override Convergence.Execution.TeamPhaseLifecycleClockBoundary.ToString() -> string!
+override sealed Convergence.Execution.ActionLifecycleClockBoundary.Equals(Convergence.Execution.BattleLifecycleClockBoundary? other) -> bool
+override sealed Convergence.Execution.ActorTurnLifecycleClockBoundary.Equals(Convergence.Execution.BattleLifecycleClockBoundary? other) -> bool
+override sealed Convergence.Execution.CustomLifecycleClockBoundary.Equals(Convergence.Execution.BattleLifecycleClockBoundary? other) -> bool
+override sealed Convergence.Execution.RoundLifecycleClockBoundary.Equals(Convergence.Execution.BattleLifecycleClockBoundary? other) -> bool
+override sealed Convergence.Execution.TeamPhaseLifecycleClockBoundary.Equals(Convergence.Execution.BattleLifecycleClockBoundary? other) -> bool
+static Convergence.Encounters.BattleTeamPhaseClockDefinition.operator !=(Convergence.Encounters.BattleTeamPhaseClockDefinition? left, Convergence.Encounters.BattleTeamPhaseClockDefinition? right) -> bool
+static Convergence.Encounters.BattleTeamPhaseClockDefinition.operator ==(Convergence.Encounters.BattleTeamPhaseClockDefinition? left, Convergence.Encounters.BattleTeamPhaseClockDefinition? right) -> bool
+static Convergence.Execution.ActionLifecycleClockBoundary.operator !=(Convergence.Execution.ActionLifecycleClockBoundary? left, Convergence.Execution.ActionLifecycleClockBoundary? right) -> bool
+static Convergence.Execution.ActionLifecycleClockBoundary.operator ==(Convergence.Execution.ActionLifecycleClockBoundary? left, Convergence.Execution.ActionLifecycleClockBoundary? right) -> bool
+static Convergence.Execution.ActorTurnLifecycleClockBoundary.operator !=(Convergence.Execution.ActorTurnLifecycleClockBoundary? left, Convergence.Execution.ActorTurnLifecycleClockBoundary? right) -> bool
+static Convergence.Execution.ActorTurnLifecycleClockBoundary.operator ==(Convergence.Execution.ActorTurnLifecycleClockBoundary? left, Convergence.Execution.ActorTurnLifecycleClockBoundary? right) -> bool
+static Convergence.Execution.BattleLifecycleClockBoundary.operator !=(Convergence.Execution.BattleLifecycleClockBoundary? left, Convergence.Execution.BattleLifecycleClockBoundary? right) -> bool
+static Convergence.Execution.BattleLifecycleClockBoundary.operator ==(Convergence.Execution.BattleLifecycleClockBoundary? left, Convergence.Execution.BattleLifecycleClockBoundary? right) -> bool
+static Convergence.Execution.BattleLifecycleClockRequest.operator !=(Convergence.Execution.BattleLifecycleClockRequest? left, Convergence.Execution.BattleLifecycleClockRequest? right) -> bool
+static Convergence.Execution.BattleLifecycleClockRequest.operator ==(Convergence.Execution.BattleLifecycleClockRequest? left, Convergence.Execution.BattleLifecycleClockRequest? right) -> bool
+static Convergence.Execution.BattleReserveLifecycleRequest.operator !=(Convergence.Execution.BattleReserveLifecycleRequest? left, Convergence.Execution.BattleReserveLifecycleRequest? right) -> bool
+static Convergence.Execution.BattleReserveLifecycleRequest.operator ==(Convergence.Execution.BattleReserveLifecycleRequest? left, Convergence.Execution.BattleReserveLifecycleRequest? right) -> bool
+static Convergence.Execution.CustomLifecycleClockBoundary.operator !=(Convergence.Execution.CustomLifecycleClockBoundary? left, Convergence.Execution.CustomLifecycleClockBoundary? right) -> bool
+static Convergence.Execution.CustomLifecycleClockBoundary.operator ==(Convergence.Execution.CustomLifecycleClockBoundary? left, Convergence.Execution.CustomLifecycleClockBoundary? right) -> bool
+static Convergence.Execution.RoundLifecycleClockBoundary.operator !=(Convergence.Execution.RoundLifecycleClockBoundary? left, Convergence.Execution.RoundLifecycleClockBoundary? right) -> bool
+static Convergence.Execution.RoundLifecycleClockBoundary.operator ==(Convergence.Execution.RoundLifecycleClockBoundary? left, Convergence.Execution.RoundLifecycleClockBoundary? right) -> bool
+static Convergence.Execution.SuspendReserveLifecyclePolicy.Instance.get -> Convergence.Execution.SuspendReserveLifecyclePolicy!
+static Convergence.Execution.TeamPhaseLifecycleClockBoundary.operator !=(Convergence.Execution.TeamPhaseLifecycleClockBoundary? left, Convergence.Execution.TeamPhaseLifecycleClockBoundary? right) -> bool
+static Convergence.Execution.TeamPhaseLifecycleClockBoundary.operator ==(Convergence.Execution.TeamPhaseLifecycleClockBoundary? left, Convergence.Execution.TeamPhaseLifecycleClockBoundary? right) -> bool
+virtual Convergence.Execution.BattleLifecycleClockBoundary.EqualityContract.get -> System.Type!
+virtual Convergence.Execution.BattleLifecycleClockBoundary.Equals(Convergence.Execution.BattleLifecycleClockBoundary? other) -> bool
+virtual Convergence.Execution.BattleLifecycleClockBoundary.EventId.get -> Convergence.Content.ContentId?
+virtual Convergence.Execution.BattleLifecycleClockBoundary.PrintMembers(System.Text.StringBuilder! builder) -> bool

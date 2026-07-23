@@ -127,7 +127,8 @@ public sealed class GodotIntegrationContractTests
             new BattleStatusLifecycleService(new MinimumRandomSource()),
             services,
             Id("battle_start"),
-            Id("owner_turn_end"));
+            Id("owner_turn_end"),
+            TestEncounterClocks.Standard(PlayerTeam, EnemyTeam));
         var turnEconomy = new BattleTurnEconomyRuleset(
             () => new ActionTokenTurnEconomy(),
             new BattlePhaseProgressPolicy(256, 32));

@@ -110,12 +110,14 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "complete",
-      "frameworkTests": ["BattleStatusLifecycleTests", "PassiveSkillRuntimeTests"],
+      "implementationState": "partial",
+      "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Order 4 typed transition evidence, live application hardening, passive targeting/liveness, schema reconciliation, and audience closure remain in progress."
+      ]
     },
     {
       "id": "encounter_orchestration",

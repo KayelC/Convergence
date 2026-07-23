@@ -589,7 +589,12 @@ public sealed class BattleStatusLifecycleTests
                     new MutatingThrowingCustomEffectHandler())
             ]);
         var lifecycle = new BattleStatusLifecycleService(new SequenceRandomSource());
-        var port = new BattleStatusEncounterLifecyclePort(lifecycle, services, BattleStart, OwnerTurnEnd);
+        var port = new BattleStatusEncounterLifecyclePort(
+            lifecycle,
+            services,
+            BattleStart,
+            OwnerTurnEnd,
+            TestEncounterClocks.Standard(PlayerTeam, ContentId.Parse("enemy_team")));
         BattleEncounterParticipant[] participants =
         [
             new(first, "First"),

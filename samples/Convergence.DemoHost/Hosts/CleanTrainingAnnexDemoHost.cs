@@ -241,7 +241,19 @@ internal sealed class CleanTrainingAnnexDemoHost
             new BattleStatusLifecycleService(random),
             executionServices,
             ContentId.Parse("battle_start"),
-            ContentId.Parse("owner_turn_end"));
+            ContentId.Parse("owner_turn_end"),
+            new ExplicitBattleEncounterLifecycleClockPolicy(
+                [
+                    new BattleTeamPhaseClockDefinition(
+                        PlayerTeam,
+                        ContentId.Parse("player_phase"),
+                        ContentId.Parse("player_phase_end")),
+                    new BattleTeamPhaseClockDefinition(
+                        EnemyTeam,
+                        ContentId.Parse("enemy_phase"),
+                        ContentId.Parse("enemy_phase_end"))
+                ],
+                ContentId.Parse("round_end")));
         AutomatedBattleResult battle = new AutomatedBattleRunner(
             skillExecutor,
             new DeterministicBattleActionSelector(skillExecutor),

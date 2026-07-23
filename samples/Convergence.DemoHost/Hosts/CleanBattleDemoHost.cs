@@ -191,7 +191,19 @@ internal sealed class CleanBattleDemoHost
             new BattleStatusLifecycleService(new SystemRandomSource(0)),
             services,
             BattleStart,
-            OwnerTurnEnd);
+            OwnerTurnEnd,
+            new ExplicitBattleEncounterLifecycleClockPolicy(
+                [
+                    new BattleTeamPhaseClockDefinition(
+                        PlayerTeam,
+                        ContentId.Parse("player_phase"),
+                        ContentId.Parse("player_phase_end")),
+                    new BattleTeamPhaseClockDefinition(
+                        EnemyTeam,
+                        ContentId.Parse("enemy_phase"),
+                        ContentId.Parse("enemy_phase_end"))
+                ],
+                ContentId.Parse("round_end")));
         var turnEconomy = new BattleTurnEconomyRuleset(
             () => new ActionTokenTurnEconomy(),
             new BattlePhaseProgressPolicy(

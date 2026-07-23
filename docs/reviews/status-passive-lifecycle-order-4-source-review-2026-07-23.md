@@ -444,9 +444,14 @@ change runtime behavior.
    permissions. Supplied deployment, encounter, field, persistent, uncurable,
    and protected compositions cover typed departure cleanup, consumption, and
    fixed natural recovery without treating persistence as cure resistance.
-3. **O4-R3 - Add canonical lifecycle clock dispatch.** Resolve M1 and M2 by
-   supporting actor, team-phase, round, action, and host-defined boundaries
-   without team-ID inference, including both reserve policies.
+3. **O4-R3 - Add canonical lifecycle clock dispatch. Implemented, pending
+   independent review.** M1 and M2 now use typed actor-turn, action,
+   team-phase, round, and host-defined boundaries. The encounter adapter
+   requires an explicit team-to-phase clock policy and the runner delivers one
+   round boundary after every complete set of team phases. Reserve state
+   suspends by default; the supplied advancing policy accepts only an exact
+   owning-team phase or round event and still honors status-level
+   `SuspendWhileReserve`.
 4. **O4-R4 - Complete typed lifecycle transitions and events.** Resolve M3 and
    D1 by surfacing new application, refresh, replacement, passive effects,
    expiry, and cleanup with complete typed evidence.
@@ -519,11 +524,30 @@ The first correction checkpoint was verified after implementation:
 - runtime save contract v12 round-trips expiration and allowed removal causes
   through both host-owned save codecs.
 
+### O4-R3 implementation gate
+
+The canonical clock checkpoint adds no inferred route from team identity to
+phase identity. Focused tests prove actor-only clocks, action expiry, distinct
+team/phase/event IDs, round dispatch frequency, host-defined boundaries,
+default reserve suspension, opt-in owning-team phase advancement, opt-in round
+advancement, and status-level reserve suspension. The implementation gate
+passed with:
+
+- focused lifecycle-clock, status-lifecycle, encounter-runner, catalog-runtime,
+  and stat-modifier integration coverage: 246 passed, 0 failed, 0 skipped;
+- complete solution: 1,559 passed, 0 failed, 0 skipped;
+- strict nonincremental Release solution build: 0 warnings, 0 errors;
+- all four noninteractive DemoHost modes and scripted Training Annex exit:
+  successful;
+- public API baseline, formatting verification, source inventory, Framework
+  architecture tests, content-tree status, and `git diff --check`: passed.
+
 ## Current Closure Decision
 
-Order 4 is **design-approved and implementation is in progress**. O4-R2 is
-implemented pending the fresh O4-R10 review. The existing
+Order 4 is **design-approved and implementation is in progress**. O4-R2 and
+O4-R3 are implemented pending the fresh O4-R10 review. The existing
 implementation is useful and largely transactional, but the capability
-matrix's `complete` label currently overstates lifecycle-clock completeness. No
-code should be removed, and the documentation coverage entries should remain
+matrix correctly remains `partial` until R4-R10 close the remaining application,
+passive, startup, persistence, and audience-documentation work. No code should
+be removed, and the documentation coverage entries should remain
 `existing_unreviewed` until R2-R10 and the audience review are complete.

@@ -1021,7 +1021,8 @@ public sealed class CatalogBattleRuntimeTests
             new BattleStatusLifecycleService(new MinimumRandomSource()),
             services,
             Id("battle_start"),
-            Id("owner_turn_end"));
+            Id("owner_turn_end"),
+            TestEncounterClocks.Standard(PlayerTeam, EnemyTeam));
         var lifecycle = new RestrictedBattleStatusLifecyclePort(
             innerLifecycle,
             player.State.InstanceId,
@@ -1812,7 +1813,8 @@ public sealed class CatalogBattleRuntimeTests
                 new BattleStatusLifecycleService(new MinimumRandomSource()),
                 services,
                 Id("battle_start"),
-                Id("owner_turn_end")),
+                Id("owner_turn_end"),
+                TestEncounterClocks.Standard(PlayerTeam, EnemyTeam)),
             turnEconomy ?? StandardTurnEconomy(),
             restrictionResolver ?? new AutomatedBattleTurnRestrictionResolver());
 
@@ -1910,7 +1912,8 @@ public sealed class CatalogBattleRuntimeTests
             new BattleStatusLifecycleService(new MinimumRandomSource()),
             services,
             Id("battle_start"),
-            Id("owner_turn_end"));
+            Id("owner_turn_end"),
+            TestEncounterClocks.Standard(PlayerTeam, EnemyTeam));
         return new LifecycleScenario(
             player,
             enemy,
@@ -1974,7 +1977,8 @@ public sealed class CatalogBattleRuntimeTests
     {
         (StatModifierTickRequest Request, StatModifierTransitionResult Result) tick = Assert.Single(
             statModifiers.Ticks,
-            value => value.Request.State.Tracks.Count > 0);
+            value => value.Request.State.Tracks.Count > 0 &&
+                     value.Request.LifecycleBoundary.EventId == Id("owner_turn_end"));
         RuntimeStatModifierContributionSnapshot before = Assert.Single(
             Assert.Single(tick.Request.State.Tracks).Contributions);
         RuntimeStatModifierContributionSnapshot after = Assert.Single(
@@ -2432,6 +2436,12 @@ public sealed class CatalogBattleRuntimeTests
             CancellationToken cancellationToken = default) =>
             inner.ProcessPhaseEndAsync(request, teamId, cancellationToken);
 
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessRoundEndAsync(
+            BattleEncounterLifecycleRequest request,
+            int roundNumber,
+            CancellationToken cancellationToken = default) =>
+            inner.ProcessRoundEndAsync(request, roundNumber, cancellationToken);
+
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
             BattleEncounterLifecycleRequest request,
             BattleEncounterOutcome outcome,
@@ -2485,6 +2495,16 @@ public sealed class CatalogBattleRuntimeTests
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
             BattleEncounterLifecycleRequest request,
             ContentId teamId,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
+                Array.Empty<BattleEncounterEvent>());
+        }
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessRoundEndAsync(
+            BattleEncounterLifecycleRequest request,
+            int roundNumber,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();

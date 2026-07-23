@@ -30,9 +30,18 @@ actor is in reserve. Stat-modifier clock boundaries and same-boundary
 application protection are defined in
 [Stat Modifier Policies](stat-modifier-policies.md); their runtime migration is
 tracked separately from existing ailment, charge, shield, Clean Break, and
-affinity-override duration handling.
+affinity-override duration handling. Team identity, authored phase identity,
+and lifecycle event identity are distinct values; the encounter composition
+must map them explicitly.
 
-Reserve suspension prevents configured turn-end effects and ticking while the actor is not deployed. Cleanup scopes let a host request battle-end, swap, or field-transition removal without parsing status names.
+Reserve state retains its exact remaining lifetime by default. A game may
+instead select the supplied advancing policy for one exact owning-team phase
+event or one round event. That policy never ages reserve state once per action,
+and a status authored with `SuspendWhileReserve` remains suspended even under
+the advancing policy. Field state does not advance unless a host deliberately
+dispatches a lifecycle clock. Typed departure reasons let a host request
+battle-end, deployment-swap, defeat, flee, roster-recall, or field-transition
+cleanup without parsing status names.
 
 ## Passive Skills
 

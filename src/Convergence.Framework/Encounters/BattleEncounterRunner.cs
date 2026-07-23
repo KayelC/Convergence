@@ -175,6 +175,11 @@ public interface IBattleEncounterLifecyclePort
         ContentId teamId,
         CancellationToken cancellationToken = default);
 
+    ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessRoundEndAsync(
+        BattleEncounterLifecycleRequest request,
+        int roundNumber,
+        CancellationToken cancellationToken = default);
+
     ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
         BattleEncounterLifecycleRequest request,
         BattleEncounterOutcome outcome,
@@ -217,6 +222,12 @@ public sealed class NoopBattleEncounterLifecyclePort : IBattleEncounterLifecycle
     public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
         BattleEncounterLifecycleRequest request,
         ContentId teamId,
+        CancellationToken cancellationToken = default) =>
+        new(Array.Empty<BattleEncounterEvent>());
+
+    public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessRoundEndAsync(
+        BattleEncounterLifecycleRequest request,
+        int roundNumber,
         CancellationToken cancellationToken = default) =>
         new(Array.Empty<BattleEncounterEvent>());
 
@@ -1398,6 +1409,38 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         $"Team {teamId} phase ended.")
                     .ConfigureAwait(false);
             }
+
+            IReadOnlyList<BattleEncounterEvent> roundEndEvents;
+            BattleEncounterLifecycleTransaction roundEndTransaction;
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                roundEndTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
+                IReadOnlyList<BattleEncounterEvent> returnedEvents =
+                    await services.Lifecycle.ProcessRoundEndAsync(
+                            new BattleEncounterLifecycleRequest(
+                                roundEndTransaction.CreateEncounter(request),
+                                roundEndTransaction.Participants,
+                                teamOrder),
+                            round,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                roundEndEvents = SnapshotLifecycleEvents(returnedEvents, "round-end");
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                return await FaultDuringBattleAsync(
+                        LifecycleFailureMessage("round-end", exception),
+                        faultCode: BattleEncounterFaultCode.LifecycleExecutionFailed)
+                    .ConfigureAwait(false);
+            }
+
+            roundEndTransaction.Commit();
+            await AddRangeAsync(roundEndEvents).ConfigureAwait(false);
         }
 
         return await FinishAsync(

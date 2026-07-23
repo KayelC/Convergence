@@ -545,6 +545,10 @@ public sealed record BattleStatusLifecycleResult
 
 public interface IBattleDurationLifecycleService
 {
+    BattleStatusLifecycleResult ProcessClock(
+        BattleLifecycleClockRequest request,
+        IStatModifierPolicyService statModifiers);
+
     BattleStatusLifecycleResult ProcessActionEnd(
         BattleActionEndLifecycleRequest request,
         IStatModifierPolicyService statModifiers);
@@ -582,6 +586,85 @@ public interface IBattleStatusLifecycleService : IBattleDurationLifecycleService
 
 public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleService
 {
+    private readonly IBattleReserveLifecyclePolicy _reserveLifecyclePolicy;
+
+    public BattleDurationLifecycleService()
+        : this(SuspendReserveLifecyclePolicy.Instance)
+    {
+    }
+
+    public BattleDurationLifecycleService(
+        IBattleReserveLifecyclePolicy reserveLifecyclePolicy)
+    {
+        _reserveLifecyclePolicy = reserveLifecyclePolicy ?? throw new ArgumentNullException(nameof(reserveLifecyclePolicy));
+    }
+
+    public BattleStatusLifecycleResult ProcessClock(
+        BattleLifecycleClockRequest request,
+        IStatModifierPolicyService statModifiers)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(statModifiers);
+        if (request.Participants.Count == 0)
+        {
+            return new BattleStatusLifecycleResult([]);
+        }
+
+        var transaction = new RuntimeActorExecutionTransaction(
+            request.Participants[0],
+            request.Participants);
+        RuntimeActorState[] staged = request.Participants
+            .Select(transaction.GetStaged)
+            .ToArray();
+        RuntimeActorState[] selected = SelectClockParticipants(staged, request.Boundary);
+        var advanceReserve = new Dictionary<RuntimeInstanceId, bool>();
+        foreach (RuntimeActorState actor in selected)
+        {
+            advanceReserve[actor.InstanceId] = !actor.IsDeployed &&
+                request.Boundary.Kind is BattleLifecycleClockKind.TeamPhase or BattleLifecycleClockKind.Round &&
+                _reserveLifecyclePolicy.ShouldAdvance(new BattleReserveLifecycleRequest(
+                    actor.InstanceId,
+                    actor.TeamId,
+                    request.Boundary));
+        }
+
+        RuntimeActorState[] advancing = selected
+            .Where(actor => actor.IsDeployed || advanceReserve[actor.InstanceId] ||
+                            request.Boundary.Kind == BattleLifecycleClockKind.Action)
+            .ToArray();
+        var events = new List<BattleStatusLifecycleEvent>();
+        if (request.Boundary is ActionLifecycleClockBoundary)
+        {
+            events.AddRange(Expire(advancing, actor => actor.ExpireInstantDurations()).Events);
+        }
+        else if (request.Boundary is TeamPhaseLifecycleClockBoundary phase)
+        {
+            events.AddRange(Expire(
+                advancing,
+                actor => actor.ExpirePhaseDurations(phase.PhaseId)).Events);
+        }
+
+        if (request.Boundary.EventId is ContentId eventId)
+        {
+            foreach (RuntimeActorState actor in advancing)
+            {
+                AddDurationTickEvents(
+                    actor,
+                    eventId,
+                    advanceReserve[actor.InstanceId],
+                    events);
+            }
+        }
+
+        events.AddRange(TickModifiers(
+            advancing,
+            request.StatModifierBoundaries,
+            statModifiers,
+            actor => advanceReserve[actor.InstanceId]));
+        transaction.Commit();
+        return new BattleStatusLifecycleResult(events);
+    }
+
     public BattleStatusLifecycleResult ProcessActionEnd(
         BattleActionEndLifecycleRequest request,
         IStatModifierPolicyService statModifiers)
@@ -690,7 +773,8 @@ public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleSer
     internal static IReadOnlyList<BattleStatusLifecycleEvent> TickModifiers(
         IEnumerable<RuntimeActorState> participants,
         IEnumerable<StatModifierLifecycleBoundary> boundaries,
-        IStatModifierPolicyService statModifiers)
+        IStatModifierPolicyService statModifiers,
+        Func<RuntimeActorState, bool>? advanceReserveState = null)
     {
         var events = new List<BattleStatusLifecycleEvent>();
         foreach (RuntimeActorState actor in participants)
@@ -699,7 +783,10 @@ public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleSer
             foreach (StatModifierLifecycleBoundary boundary in boundaries)
             {
                 StatModifierTransitionResult result = statModifiers.Tick(
-                    new StatModifierTickRequest(state, boundary, actor.IsDeployed));
+                    new StatModifierTickRequest(
+                        state,
+                        boundary,
+                        actor.IsDeployed || (advanceReserveState?.Invoke(actor) ?? false)));
                 RequireAccepted(result);
                 state = result.After;
                 events.AddRange(MapModifierEvents(actor.InstanceId, result));
@@ -713,6 +800,55 @@ public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleSer
         }
 
         return Array.AsReadOnly(events.ToArray());
+    }
+
+    private static RuntimeActorState[] SelectClockParticipants(
+        IEnumerable<RuntimeActorState> participants,
+        BattleLifecycleClockBoundary boundary)
+    {
+        RuntimeActorState[] snapshot = participants.ToArray();
+        if (boundary is not ActorTurnLifecycleClockBoundary actorTurn)
+        {
+            return snapshot;
+        }
+
+        RuntimeActorState[] matching = snapshot
+            .Where(actor => actor.InstanceId == actorTurn.ActorId)
+            .ToArray();
+        return matching.Length == 1
+            ? matching
+            : throw new InvalidOperationException(
+                $"Actor-turn lifecycle clock expected exactly one participant '{actorTurn.ActorId}', " +
+                $"but found {matching.Length}.");
+    }
+
+    private static void AddDurationTickEvents(
+        RuntimeActorState actor,
+        ContentId eventId,
+        bool advanceReserveState,
+        List<BattleStatusLifecycleEvent> events)
+    {
+        foreach (BattleDurationTickResult tick in actor.TickAilmentDurations(eventId, advanceReserveState))
+        {
+            if (tick.Expired)
+            {
+                events.Add(new BattleStatusLifecycleEvent(
+                    BattleStatusLifecycleEventKind.AilmentExpired,
+                    actor.InstanceId,
+                    tick.Id));
+            }
+        }
+
+        foreach (BattleDurationTickResult tick in actor.TickTimedStatuses(eventId, advanceReserveState))
+        {
+            if (tick.Expired)
+            {
+                events.Add(new BattleStatusLifecycleEvent(
+                    BattleStatusLifecycleEventKind.StatusExpired,
+                    actor.InstanceId,
+                    tick.Id));
+            }
+        }
     }
 
     internal static IReadOnlyList<BattleStatusLifecycleEvent> MapModifierEvents(
@@ -770,13 +906,25 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
     private readonly IRandomSource _random;
     private readonly IReadOnlyDictionary<ContentId, ICustomAilmentTurnBehaviorHandler> _customTurnBehaviorHandlers;
     private readonly IBattleTurnRestrictionPolicy _turnRestrictionPolicy;
-    private readonly IBattleDurationLifecycleService _durationLifecycle =
-        new BattleDurationLifecycleService();
+    private readonly IBattleDurationLifecycleService _durationLifecycle;
 
     public BattleStatusLifecycleService(
         IRandomSource random,
         IEnumerable<KeyValuePair<ContentId, ICustomAilmentTurnBehaviorHandler>>? customTurnBehaviorHandlers = null,
         IBattleTurnRestrictionPolicy? turnRestrictionPolicy = null)
+        : this(
+            random,
+            customTurnBehaviorHandlers,
+            turnRestrictionPolicy,
+            SuspendReserveLifecyclePolicy.Instance)
+    {
+    }
+
+    public BattleStatusLifecycleService(
+        IRandomSource random,
+        IEnumerable<KeyValuePair<ContentId, ICustomAilmentTurnBehaviorHandler>>? customTurnBehaviorHandlers,
+        IBattleTurnRestrictionPolicy? turnRestrictionPolicy,
+        IBattleReserveLifecyclePolicy reserveLifecyclePolicy)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _customTurnBehaviorHandlers = new ReadOnlyDictionary<ContentId, ICustomAilmentTurnBehaviorHandler>(
@@ -786,6 +934,8 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                     $"Custom ailment turn-behavior handler '{pair.Key}' cannot be null.",
                     nameof(customTurnBehaviorHandlers))));
         _turnRestrictionPolicy = turnRestrictionPolicy ?? new MostRestrictiveBattleTurnPolicy();
+        _durationLifecycle = new BattleDurationLifecycleService(
+            reserveLifecyclePolicy ?? throw new ArgumentNullException(nameof(reserveLifecyclePolicy)));
     }
 
     public BattleTurnStartLifecycleResult ProcessTurnStart(BattleTurnStartLifecycleRequest request)
@@ -922,6 +1072,11 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         BattleActionEndLifecycleRequest request,
         IStatModifierPolicyService statModifiers) =>
         _durationLifecycle.ProcessActionEnd(request, statModifiers);
+
+    public BattleStatusLifecycleResult ProcessClock(
+        BattleLifecycleClockRequest request,
+        IStatModifierPolicyService statModifiers) =>
+        _durationLifecycle.ProcessClock(request, statModifiers);
 
     public BattleStatusLifecycleResult ProcessPhaseEnd(
         BattlePhaseEndLifecycleRequest request,

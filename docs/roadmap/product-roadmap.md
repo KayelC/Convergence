@@ -8,7 +8,13 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+
+`status_and_passive_lifecycle` is temporarily `partial` while Order 4 replaces
+the remaining lifecycle assumptions with explicit clocks, application
+transitions, passive contracts, and restored-state validation. Completed
+checkpoints remain independently tested while that focused correction sequence
+continues.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience

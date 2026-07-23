@@ -16,18 +16,22 @@ public sealed class BattleStatusEncounterLifecyclePort :
     private readonly BattleExecutionServices _executionServices;
     private readonly ContentId _battleStartEventId;
     private readonly ContentId _ownerTurnEndEventId;
+    private readonly IBattleEncounterLifecycleClockPolicy _clockPolicy;
     private readonly Dictionary<RuntimeInstanceId, long> _ownerTurnSequences = [];
+    private readonly Dictionary<ContentId, long> _teamPhaseSequences = [];
 
     public BattleStatusEncounterLifecyclePort(
         IBattleStatusLifecycleService lifecycle,
         BattleExecutionServices executionServices,
         ContentId battleStartEventId,
-        ContentId ownerTurnEndEventId)
+        ContentId ownerTurnEndEventId,
+        IBattleEncounterLifecycleClockPolicy clockPolicy)
     {
         _lifecycle = lifecycle ?? throw new ArgumentNullException(nameof(lifecycle));
         _executionServices = executionServices ?? throw new ArgumentNullException(nameof(executionServices));
         _battleStartEventId = battleStartEventId;
         _ownerTurnEndEventId = ownerTurnEndEventId;
+        _clockPolicy = clockPolicy ?? throw new ArgumentNullException(nameof(clockPolicy));
     }
 
     public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
@@ -126,10 +130,55 @@ public sealed class BattleStatusEncounterLifecyclePort :
         }
 
         var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
-        BattleStatusLifecycleResult result = _lifecycle.ProcessPhaseEnd(
-            new BattlePhaseEndLifecycleRequest(
+        BattleTeamPhaseClockDefinition definition = _clockPolicy.ResolveTeamPhase(teamId);
+        if (definition.TeamId != teamId)
+        {
+            throw new InvalidOperationException(
+                $"Lifecycle clock policy resolved team '{teamId}' as '{definition.TeamId}'.");
+        }
+        long sequence = checked(_teamPhaseSequences.GetValueOrDefault(teamId) + 1);
+        var boundary = new TeamPhaseLifecycleClockBoundary(
+            definition.EventId,
+            definition.TeamId,
+            definition.PhaseId,
+            sequence);
+        BattleStatusLifecycleResult result = _lifecycle.ProcessClock(
+            new BattleLifecycleClockRequest(
                 transaction.Participants.Select(participant => participant.State),
-                teamId),
+                boundary,
+                [new StatModifierLifecycleBoundary(definition.EventId, sequence)]),
+            _executionServices.StatModifiers);
+        IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(result.Events);
+        transaction.Commit();
+        _teamPhaseSequences[teamId] = sequence;
+        return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(mappedEvents);
+    }
+
+    public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessRoundEndAsync(
+        BattleEncounterLifecycleRequest request,
+        int roundNumber,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (roundNumber <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(roundNumber));
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        if (request.Participants.Count == 0)
+        {
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
+                Array.Empty<BattleEncounterEvent>());
+        }
+
+        var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
+        ContentId eventId = _clockPolicy.RoundEndEventId;
+        var boundary = new RoundLifecycleClockBoundary(eventId, roundNumber);
+        BattleStatusLifecycleResult result = _lifecycle.ProcessClock(
+            new BattleLifecycleClockRequest(
+                transaction.Participants.Select(participant => participant.State),
+                boundary,
+                [new StatModifierLifecycleBoundary(eventId, roundNumber)]),
             _executionServices.StatModifiers);
         IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(result.Events);
         transaction.Commit();

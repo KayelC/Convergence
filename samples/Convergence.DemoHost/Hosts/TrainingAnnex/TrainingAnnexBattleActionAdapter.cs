@@ -1436,11 +1436,13 @@ internal sealed class TrainingAnnexBattleLifecyclePort :
 {
     private static readonly ContentId BattleStart = ContentId.Parse("battle_start");
     private static readonly ContentId OwnerTurnEnd = ContentId.Parse("owner_turn_end");
+    private static readonly ContentId RoundEnd = ContentId.Parse("round_end");
 
     private readonly IBattleStatusLifecycleService _lifecycle;
     private readonly BattleExecutionServices _services;
     private readonly TrainingAnnexLifecycleTracker _tracker;
     private readonly Dictionary<RuntimeInstanceId, long> _ownerTurnSequences = [];
+    private readonly Dictionary<ContentId, long> _teamPhaseSequences = [];
 
     public TrainingAnnexBattleLifecyclePort(
         IBattleStatusLifecycleService lifecycle,
@@ -1532,10 +1534,44 @@ internal sealed class TrainingAnnexBattleLifecyclePort :
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        BattleStatusLifecycleResult result = _lifecycle.ProcessPhaseEnd(
-            new BattlePhaseEndLifecycleRequest(
+        BattleTeamPhaseClockDefinition phase = teamId == TrainingAnnexHostSupport.PlayerTeam
+            ? new BattleTeamPhaseClockDefinition(
+                teamId,
+                ContentId.Parse("player_phase"),
+                ContentId.Parse("player_phase_end"))
+            : teamId == TrainingAnnexHostSupport.EnemyTeam
+                ? new BattleTeamPhaseClockDefinition(
+                    teamId,
+                    ContentId.Parse("enemy_phase"),
+                    ContentId.Parse("enemy_phase_end"))
+                : throw new InvalidOperationException($"No lifecycle phase is mapped for team '{teamId}'.");
+        long sequence = checked(_teamPhaseSequences.GetValueOrDefault(teamId) + 1);
+        BattleStatusLifecycleResult result = _lifecycle.ProcessClock(
+            new BattleLifecycleClockRequest(
                 request.Participants.Select(participant => participant.State),
-                teamId),
+                new TeamPhaseLifecycleClockBoundary(
+                    phase.EventId,
+                    phase.TeamId,
+                    phase.PhaseId,
+                    sequence),
+                [new StatModifierLifecycleBoundary(phase.EventId, sequence)]),
+            _services.StatModifiers);
+        _teamPhaseSequences[teamId] = sequence;
+        _tracker.RecordStatusEvents(result.Events);
+        return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapStatusEvents(result.Events));
+    }
+
+    public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessRoundEndAsync(
+        BattleEncounterLifecycleRequest request,
+        int roundNumber,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        BattleStatusLifecycleResult result = _lifecycle.ProcessClock(
+            new BattleLifecycleClockRequest(
+                request.Participants.Select(participant => participant.State),
+                new RoundLifecycleClockBoundary(RoundEnd, roundNumber),
+                [new StatModifierLifecycleBoundary(RoundEnd, roundNumber)]),
             _services.StatModifiers);
         _tracker.RecordStatusEvents(result.Events);
         return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapStatusEvents(result.Events));

@@ -62,6 +62,26 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_DispatchesOneRoundClockAfterEveryTeamPhaseNotAfterEveryAction()
+    {
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [Participant("round_player", PlayerTeam), Participant("round_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Equal(10, lifecycle.PhaseEndCalls);
+        Assert.Equal(5, lifecycle.RoundEndCalls);
+        Assert.Equal(10, handler.Requests.Count);
+    }
+
+    [Fact]
     public void Runner_PublishesImmutableTypedEncounterPayloadsWithoutRequiringDebugText()
     {
         BattleEncounterParticipant player = Participant("typed_player", PlayerTeam);
@@ -341,6 +361,7 @@ public sealed class BattleEncounterRunnerTests
     [InlineData(ThrowingLifecycleStage.TurnStart, 0, "lifecycle_player")]
     [InlineData(ThrowingLifecycleStage.TurnEnd, 1, "lifecycle_player")]
     [InlineData(ThrowingLifecycleStage.PhaseEnd, 1, null)]
+    [InlineData(ThrowingLifecycleStage.RoundEnd, 2, null)]
     [InlineData(ThrowingLifecycleStage.BattleEnd, 1, null)]
     public void Runner_ConvertsLifecycleExceptionsToTypedFaultsAndRollsBackTheStep(
         ThrowingLifecycleStage stage,
@@ -1876,6 +1897,15 @@ public sealed class BattleEncounterRunnerTests
             return [];
         }
 
+        public async ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessRoundEndAsync(
+            BattleEncounterLifecycleRequest request,
+            int roundNumber,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(1, cancellationToken).ConfigureAwait(false);
+            return [];
+        }
+
         public async ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
             BattleEncounterLifecycleRequest request,
             BattleEncounterOutcome outcome,
@@ -1969,6 +1999,7 @@ public sealed class BattleEncounterRunnerTests
         public int TurnStartCalls { get; private set; }
         public int TurnEndCalls { get; private set; }
         public int PhaseEndCalls { get; private set; }
+        public int RoundEndCalls { get; private set; }
         public int BattleEndCalls { get; private set; }
 
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
@@ -2008,6 +2039,16 @@ public sealed class BattleEncounterRunnerTests
         {
             PhaseEndCalls++;
             PhaseEndAction?.Invoke(request);
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
+                Array.Empty<BattleEncounterEvent>());
+        }
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessRoundEndAsync(
+            BattleEncounterLifecycleRequest request,
+            int roundNumber,
+            CancellationToken cancellationToken = default)
+        {
+            RoundEndCalls++;
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
                 Array.Empty<BattleEncounterEvent>());
         }
@@ -2077,6 +2118,12 @@ public sealed class BattleEncounterRunnerTests
             CancellationToken cancellationToken = default) =>
             new(Array.Empty<BattleEncounterEvent>());
 
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessRoundEndAsync(
+            BattleEncounterLifecycleRequest request,
+            int roundNumber,
+            CancellationToken cancellationToken = default) =>
+            new(Array.Empty<BattleEncounterEvent>());
+
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
             BattleEncounterLifecycleRequest request,
             BattleEncounterOutcome outcome,
@@ -2110,6 +2157,7 @@ public sealed class BattleEncounterRunnerTests
         TurnStart,
         TurnEnd,
         PhaseEnd,
+        RoundEnd,
         BattleEnd
     }
 
@@ -2150,6 +2198,15 @@ public sealed class BattleEncounterRunnerTests
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>([]);
         }
 
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessRoundEndAsync(
+            BattleEncounterLifecycleRequest request,
+            int roundNumber,
+            CancellationToken cancellationToken = default)
+        {
+            FailIf(ThrowingLifecycleStage.RoundEnd, request.Participants[0].State);
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>([]);
+        }
+
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
             BattleEncounterLifecycleRequest request,
             BattleEncounterOutcome outcome,
@@ -2177,6 +2234,7 @@ public sealed class BattleEncounterRunnerTests
         ThrowingLifecycleStage.TurnStart => "turn-start",
         ThrowingLifecycleStage.TurnEnd => "turn-end",
         ThrowingLifecycleStage.PhaseEnd => "phase-end",
+        ThrowingLifecycleStage.RoundEnd => "round-end",
         ThrowingLifecycleStage.BattleEnd => "battle-end",
         _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, null)
     };

@@ -76,6 +76,13 @@ recomposition, and aggregate restoration share that authority model. See
 
 Action execution reuses typed targeting, conditions, effects, lifecycle rules, and turn economy. Encounter orchestration accepts host command and event ports. Every encounter event carries a kind-specific immutable payload for initiative, rounds, teams, actors, commands, effects, turn economy, deployment, faults, or outcomes. Optional debug text is diagnostic only; hosts localize and present the typed payload rather than parsing prose. Hosts remain responsible for selecting when an encounter begins and how resulting events are presented.
 
+Status lifetime uses typed actor-turn, action, team-phase, round, and custom
+clock boundaries. Encounter composition maps team IDs to separate authored
+phase and event IDs; the Framework never infers one vocabulary from another.
+Reserve advancement is one selected policy per lifecycle service: suspension
+is the supplied default, while the supplied advancing policy permits only an
+explicit owning-team phase or round clock, never per-action aging.
+
 Turn economy is a policy family inside that flow, not the encounter scheduler.
 The supplied neutral and Action Token implementations bind through authored
 rulesets and control only action-opportunity state. The runner owns team order,

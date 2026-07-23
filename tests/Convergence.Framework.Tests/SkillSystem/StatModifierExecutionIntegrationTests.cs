@@ -49,7 +49,8 @@ public sealed class StatModifierExecutionIntegrationTests
             new BattleStatusLifecycleService(new MinimumRandomSource()),
             executionServices,
             ContentId.Parse("battle_start"),
-            OwnerTurnEnd);
+            OwnerTurnEnd,
+            TestEncounterClocks.Standard(PlayerTeam, ContentId.Parse("enemy_team")));
         var participant = new BattleEncounterParticipant(actor, "Encounter Actor");
 
         BattleEncounterResult result = await new BattleEncounterRunner().RunAsync(

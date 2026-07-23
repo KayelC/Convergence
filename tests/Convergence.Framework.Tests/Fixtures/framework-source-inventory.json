@@ -293,6 +293,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Encounters/BattleEncounterLifecycleClocks.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Encounters/BattleEncounterLifecycleTransaction.cs",
       "owner": "encounter_runtime",
       "publicSurface": "internal_only"
@@ -339,6 +344,11 @@
     },
     {
       "path": "Execution/BattleActionExecutor.cs",
+      "owner": "effect_execution",
+      "publicSurface": "exported"
+    },
+    {
+      "path": "Execution/BattleLifecycleClocks.cs",
       "owner": "effect_execution",
       "publicSurface": "exported"
     },

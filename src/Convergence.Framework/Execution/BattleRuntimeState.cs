@@ -581,12 +581,23 @@ public sealed class RuntimeActorState
         _otherStatuses[statusId] = new BattleOtherStatusState(
             lifetime ?? throw new ArgumentNullException(nameof(lifetime)));
 
-    public IReadOnlyList<BattleDurationTickResult> TickAilmentDurations(ContentId eventId)
+    public IReadOnlyList<BattleDurationTickResult> TickAilmentDurations(ContentId eventId) =>
+        TickAilmentDurations(eventId, advanceReserveState: false);
+
+    internal IReadOnlyList<BattleDurationTickResult> TickAilmentDurations(
+        ContentId eventId,
+        bool advanceReserveState)
     {
         var results = new List<BattleDurationTickResult>();
         foreach ((ContentId id, ActiveAilmentState state) in _ailments.ToArray())
         {
-            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(
+                    state.Duration,
+                    eventId,
+                    IsDeployed,
+                    advanceReserveState,
+                    out DurationDefinition? current,
+                    out bool expired))
             {
                 continue;
             }
@@ -613,13 +624,19 @@ public sealed class RuntimeActorState
         return Array.AsReadOnly(results.ToArray());
     }
 
-    public IReadOnlyList<BattleDurationTickResult> TickTimedStatuses(ContentId eventId)
+    public IReadOnlyList<BattleDurationTickResult> TickTimedStatuses(ContentId eventId) =>
+        TickTimedStatuses(eventId, advanceReserveState: false);
+
+    internal IReadOnlyList<BattleDurationTickResult> TickTimedStatuses(
+        ContentId eventId,
+        bool advanceReserveState)
     {
         var results = new List<BattleDurationTickResult>();
 
         foreach ((ChargeKind kind, BattleChargeState state) in _charges.ToArray())
         {
-            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(state.Duration, eventId, IsDeployed, advanceReserveState,
+                    out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -646,7 +663,8 @@ public sealed class RuntimeActorState
 
         foreach ((ShieldKind kind, BattleShieldState state) in _shields.ToArray())
         {
-            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(state.Duration, eventId, IsDeployed, advanceReserveState,
+                    out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -673,7 +691,8 @@ public sealed class RuntimeActorState
 
         foreach ((DamageElement element, BattleAffinityOverrideState state) in _affinityOverrides.ToArray())
         {
-            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(state.Duration, eventId, IsDeployed, advanceReserveState,
+                    out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -700,7 +719,8 @@ public sealed class RuntimeActorState
 
         foreach ((DamageElement element, BattleAffinityBreakState state) in _affinityBreaks.ToArray())
         {
-            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(state.Duration, eventId, IsDeployed, advanceReserveState,
+                    out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -727,7 +747,8 @@ public sealed class RuntimeActorState
 
         foreach ((ContentId id, BattleOtherStatusState state) in _otherStatuses.ToArray())
         {
-            if (!TryTickDuration(state.Duration, eventId, IsDeployed, out DurationDefinition? current, out bool expired))
+            if (!TryTickDuration(state.Duration, eventId, IsDeployed, advanceReserveState,
+                    out DurationDefinition? current, out bool expired))
             {
                 continue;
             }
@@ -1495,6 +1516,7 @@ public sealed class RuntimeActorState
         DurationDefinition duration,
         ContentId eventId,
         bool isDeployed,
+        bool advanceReserveState,
         out DurationDefinition? current,
         out bool expired)
     {
@@ -1502,7 +1524,7 @@ public sealed class RuntimeActorState
         expired = false;
         if (duration is not TurnDurationDefinition turns ||
             turns.TickEventId != eventId ||
-            turns.SuspendWhileReserve && !isDeployed)
+            !isDeployed && (turns.SuspendWhileReserve || !advanceReserveState))
         {
             return false;
         }
