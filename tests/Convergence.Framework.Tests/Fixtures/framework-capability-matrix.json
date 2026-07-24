@@ -110,12 +110,16 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Non-ailment dispels and lifecycle-triggered action-end expiry do not expose complete typed removal evidence.",
+        "Replacement passive dispatcher results are not validated against the dispatch request and loaded passive definitions.",
+        "Battle-start passive owner eligibility for undeployed participants requires an explicit policy decision."
+      ]
     },
     {
       "id": "encounter_orchestration",

@@ -182,28 +182,28 @@
     {
       "id": "status_and_passive_lifecycle",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "The owner-approved mechanics page was re-read against the corrected application, clock, reserve, cleanup, passive, and encounter-startup behavior through O4-R11."
+        "reason": "The independent Order 4 audit requires a precise outer effect-scope definition for Instant state and an owner decision for reserve-owned battle-start passives."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "The composition guide is source-verified for schema-v8 authoring, policies, explicit clocks, typed evidence, persistence, transaction boundaries, and host responsibilities."
+        "reason": "The guide names a nonexistent ailment-result diagnostics property and must cover the corrected evidence and passive-policy boundaries."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "The runtime reference traces the corrected authority, ordering, validation, atomic commit boundary, clocks, event publication boundary, and restoration invariants."
+        "reason": "The runtime reference overstates event validation and must trace the corrected non-ailment removal, lifecycle-trigger expiry, and passive-result coherence paths."
       }
     },
     {

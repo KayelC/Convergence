@@ -16,19 +16,16 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is `complete` after Documentation Order 4. The
-implemented boundary includes independent expiration and removal policy,
-explicit actor/action/team-phase/round/custom clocks, both reserve policies,
-typed transition evidence, transactional application and passive execution,
-validated extension results, persistent lifecycle state, and schema-v8 exact
-lifetime authoring. O4-R10 and O4-R11 corrected finite Battle expiry, competing
-phase advancement, authored removal profiles, malformed turn-restriction and
-passive results, and duplicate participant identity handling. A final
-source-and-documentation trace found no unresolved realistic defect in the
-supported scope. Demo coverage remains `focused`; completeness describes the
-Framework contract, not a claim that every host presents every optional rule.
+`status_and_passive_lifecycle` is `partial` after the
+[Order 4 independent audit](../reviews/status-passive-lifecycle-order-4-independent-audit-2026-07-24.md)
+reproduced incomplete typed evidence for non-ailment dispels and
+lifecycle-triggered action-end expiry. It also found that structurally valid
+custom passive results are not checked against the dispatch request, and that
+reserve-owner battle-start eligibility has no explicit policy. The underlying
+application, clock, cleanup, persistence, and schema boundaries remain sound.
+Demo coverage remains `focused`.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

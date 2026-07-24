@@ -8,16 +8,17 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` completed Documentation Order 4. The current
-Framework owns explicit status lifetimes and removal causes, application gates,
-turn restrictions, recovery, cleanup, passive targeting and activation limits,
-reserve-aware clocks, typed transition evidence, persistence validation, and
-transactional actor-state mutation. The closing O4-R10/R11 cycle also validates
-host extension results and runtime identity before commit. External event sinks
-remain host-owned resources and are intentionally not presented as part of an
-actor-state transaction.
+`status_and_passive_lifecycle` is reopened by the
+[Order 4 independent audit](../reviews/status-passive-lifecycle-order-4-independent-audit-2026-07-24.md).
+The current Framework still owns explicit status lifetimes and removal causes,
+application gates, turn restrictions, recovery, cleanup, passive targeting and
+activation limits, reserve-aware clocks, persistence validation, and
+transactional actor-state mutation. O4-R12 through O4-R17 now close incomplete
+status-removal evidence, lifecycle-trigger expiry evidence, passive extension
+coherence, reserve-owner battle-start policy, and audience documentation before
+the capability can return to `complete`.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -42,8 +43,8 @@ remaining and still pass encounter transition validation. O3-R16 now enforces
 the universal termination command before lifecycle and event commitment, and
 O3-R17 reconciled the corrected source with all three documentation audiences.
 The project owner confirmed the final contract on 23 July 2026. Order 3 is
-complete. Order 4 subsequently completed its approved source review,
-correction sequence, audience reconciliation, and independent closure review.
+complete. Order 4 subsequently completed its first correction sequence, but a
+later independent audit reopened its narrower evidence and policy boundaries.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in

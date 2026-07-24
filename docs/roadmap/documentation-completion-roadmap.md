@@ -295,15 +295,20 @@ The project owner explicitly confirmed the final six-rule contract on 23 July
 2026. Order 3 is formally complete.
 
 Order 4 followed that closure and reviewed status, ailment, passive, and
-duration lifecycle from current source before promotion. O4-R2 through O4-R9
-implemented and documented the approved runtime, schema, persistence, and host
-boundaries. O4-R10/R11 then corrected finite Battle expiry, duplicate lifecycle
-clocks, schema-v8 removal-profile authority, malformed extension results, and
-runtime-ID collision handling. The final source-and-documentation trace found
-no unresolved realistic defect in the supported scope. All three audience
-entries are now `reviewed`; the executable documentation matrix records 24
-reviewed, 28 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries.
-Order 5, `battle_knowledge`, is the next collaborative documentation subject.
+duration lifecycle from current source before promotion. O4-R2 through O4-R11
+implemented the approved runtime, schema, persistence, host, and first
+correction boundaries.
+
+A later
+[independent audit](../reviews/status-passive-lifecycle-order-4-independent-audit-2026-07-24.md)
+reopened Order 4 at `90b1fffb`. Non-ailment dispels and lifecycle-triggered
+action-end expiry omit exact typed evidence, passive replacement-dispatch
+results are not request-coherent, and reserve-owner battle-start eligibility
+requires an explicit owner decision. All three audience entries return to
+`existing_unreviewed` while O4-R12 through O4-R17 are pending. The executable
+documentation matrix records 21 reviewed, 31 `existing_unreviewed`, 16 missing,
+and 7 `not_applicable` entries. Order 5, `battle_knowledge`, follows only after
+Order 4 closes again.
 
 ## Deferred Documentation
 

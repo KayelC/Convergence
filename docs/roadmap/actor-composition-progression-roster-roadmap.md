@@ -5,12 +5,12 @@
 **Completed implementation authority. D1-D6 are approved, implemented, and
 verified across Checkpoints 0-8.**
 
-**Current state:** runtime save contract v10 is authoritative; the Framework
-Capability Matrix records 23 complete, 0 partial, and 2 intentionally deferred
-capabilities after the later stat-modifier policy family completed its source
-and documentation review. This actor roadmap itself remains completed.
-Save v8 and earlier capability counts below are preserved only as labelled
-checkpoint history. Sections written in proposal or future tense describe the
+**Current product state:** runtime save contract v13 is authoritative; the
+Framework Capability Matrix records 22 complete, 1 partial, and 2 intentionally
+deferred capabilities after the independent Order 4 lifecycle audit reopened
+that capability. This actor roadmap itself remains completed. Save v10 and
+earlier capability counts below are preserved only as labelled checkpoint
+history. Sections written in proposal or future tense describe the
 implementation plan that produced the current actor code, not unfinished actor
 work.
 
