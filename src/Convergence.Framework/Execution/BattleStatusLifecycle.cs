@@ -356,8 +356,16 @@ public sealed record BattleAilmentApplicationRequest
             "Authored ailment chance");
         Chance = chance;
         Lifetime = lifetime;
-        Participants = Array.AsReadOnly((participants ?? [actor, target])
-            .DistinctBy(participant => participant.InstanceId)
+        RuntimeActorState[] participantSnapshot = (participants ?? [actor, target]).ToArray();
+        if (participantSnapshot.Any(participant => participant is null))
+        {
+            throw new ArgumentException(
+                "Ailment application participants cannot contain null actors.",
+                nameof(participants));
+        }
+
+        Participants = Array.AsReadOnly(participantSnapshot
+            .Distinct<RuntimeActorState>(ReferenceEqualityComparer.Instance)
             .ToArray());
         BattleKindId = battleKindId;
         MoonPhaseId = moonPhaseId;

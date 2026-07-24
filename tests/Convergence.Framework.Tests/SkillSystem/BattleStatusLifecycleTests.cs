@@ -663,6 +663,49 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void AilmentApplicationRequestRejectsNullParticipants()
+    {
+        RuntimeActorState attacker = Actor("null_participant_attacker");
+        RuntimeActorState target = Actor("null_participant_target");
+
+        Assert.Throws<ArgumentException>(() => new BattleAilmentApplicationRequest(
+            attacker,
+            target,
+            Ailment("poison", new NormalAilmentTurnBehaviorDefinition()),
+            100,
+            participants: [attacker, null!, target]));
+    }
+
+    [Fact]
+    public void AilmentApplication_PreservesDistinctObjectsForRuntimeIdCollisionRejection()
+    {
+        var policy = new CountingAilmentPolicy();
+        var lifecycle = new BattleStatusLifecycleService(new SequenceRandomSource());
+        RuntimeActorState attacker = Actor("collision_attacker", hp: 80);
+        RuntimeActorState target = Actor("collision_target", hp: 70);
+        RuntimeActorState firstObserver = Actor("collision_observer", hp: 60);
+        RuntimeActorState secondObserver = Actor("collision_observer", hp: 50);
+        var request = new BattleAilmentApplicationRequest(
+            attacker,
+            target,
+            Ailment("poison", new NormalAilmentTurnBehaviorDefinition()),
+            100,
+            participants: [attacker, target, firstObserver, firstObserver, secondObserver]);
+
+        Assert.Equal(4, request.Participants.Count);
+        ArgumentException exception = Assert.Throws<ArgumentException>(() =>
+            lifecycle.TryApplyAilment(request, Services(policy)));
+
+        Assert.Contains("belongs to multiple actor objects", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(0, policy.CallCount);
+        Assert.Equal(80, attacker.GetRequiredResource(Hp).Current);
+        Assert.Equal(70, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(60, firstObserver.GetRequiredResource(Hp).Current);
+        Assert.Equal(50, secondObserver.GetRequiredResource(Hp).Current);
+        Assert.False(target.HasAilment(Poison));
+    }
+
+    [Fact]
     public void TurnEnd_AppliesLethalPoisonSleepRecoveryNaturalRecoveryAndDurationTicks()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource(0));
