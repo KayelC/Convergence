@@ -365,10 +365,9 @@ Primary source areas:
 Primary executable evidence:
 
 - `BattleStatusLifecycleTests`
-- `BattleAilmentTransitionTests`
 - `BattleLifecycleClockTests`
-- `PassiveRuntimeTests`
+- `PassiveSkillRuntimeTests`
 - `BattleStatusLifecycleEventMapperTests`
 - `BattleEncounterRunnerTests`
-- `RuntimePersistenceContractTests`
+- `RuntimePersistenceSnapshotTests`
 - `GodotIntegrationContractTests`

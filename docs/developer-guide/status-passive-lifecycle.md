@@ -300,12 +300,11 @@ separate: their selected accumulation policy owns those timers.
 ## Verification References
 
 - `BattleStatusLifecycleTests`
-- `BattleAilmentTransitionTests`
 - `BattleLifecycleClockTests`
-- `PassiveRuntimeTests`
+- `PassiveSkillRuntimeTests`
 - `BattleStatusLifecycleEventMapperTests`
 - `BattleEncounterRunnerTests`
-- `RuntimePersistenceContractTests`
+- `RuntimePersistenceSnapshotTests`
 - `GodotIntegrationContractTests`
 
 See [Status And Passive Lifecycle](../mechanics/status-passive-lifecycle.md)
