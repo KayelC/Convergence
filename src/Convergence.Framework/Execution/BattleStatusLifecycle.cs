@@ -93,9 +93,9 @@ public sealed record BattleTurnStartRestriction
         IEnumerable<ContentId>? allowedActionIds = null,
         IEnumerable<ContentId>? sourceAilmentIds = null)
     {
-        Outcome = outcome;
-        AllowedActionIds = Array.AsReadOnly((allowedActionIds ?? []).Distinct().ToArray());
-        SourceAilmentIds = Array.AsReadOnly((sourceAilmentIds ?? []).Distinct().ToArray());
+        Outcome = EnumDomain.RequireDefined(outcome, nameof(outcome));
+        AllowedActionIds = SnapshotIds(allowedActionIds, nameof(allowedActionIds));
+        SourceAilmentIds = SnapshotIds(sourceAilmentIds, nameof(sourceAilmentIds));
 
         if (outcome == BattleTurnStartOutcome.LimitedAction && AllowedActionIds.Count == 0)
         {
@@ -118,6 +118,21 @@ public sealed record BattleTurnStartRestriction
 
     public static BattleTurnStartRestriction CanAct { get; } =
         new(BattleTurnStartOutcome.CanAct);
+
+    private static IReadOnlyList<ContentId> SnapshotIds(
+        IEnumerable<ContentId>? ids,
+        string parameterName)
+    {
+        ContentId[] snapshot = (ids ?? []).Distinct().ToArray();
+        if (snapshot.Any(id => !id.IsValid))
+        {
+            throw new ArgumentException(
+                "Turn-start restriction IDs must be valid.",
+                parameterName);
+        }
+
+        return Array.AsReadOnly(snapshot);
+    }
 }
 
 public sealed record BattleTurnStartLifecycleResult
@@ -154,8 +169,16 @@ public sealed record CustomAilmentTurnBehaviorResult
         BattleTurnStartOutcome outcome,
         IEnumerable<ContentId>? allowedActionIds = null)
     {
-        Outcome = outcome;
-        AllowedActionIds = Array.AsReadOnly((allowedActionIds ?? []).Distinct().ToArray());
+        Outcome = EnumDomain.RequireDefined(outcome, nameof(outcome));
+        ContentId[] actionIds = (allowedActionIds ?? []).Distinct().ToArray();
+        if (actionIds.Any(id => !id.IsValid))
+        {
+            throw new ArgumentException(
+                "Custom allowed action IDs must be valid.",
+                nameof(allowedActionIds));
+        }
+
+        AllowedActionIds = Array.AsReadOnly(actionIds);
 
         if (outcome == BattleTurnStartOutcome.LimitedAction && AllowedActionIds.Count == 0)
         {

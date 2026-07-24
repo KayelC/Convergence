@@ -220,6 +220,68 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void TurnRestrictionContracts_RejectUndefinedOutcomesAndInvalidIds()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new BattleTurnStartRestriction((BattleTurnStartOutcome)int.MaxValue));
+        Assert.Throws<ArgumentException>(
+            () => new BattleTurnStartRestriction(
+                BattleTurnStartOutcome.LimitedAction,
+                [default(ContentId)]));
+        Assert.Throws<ArgumentException>(
+            () => new BattleTurnStartRestriction(
+                BattleTurnStartOutcome.Skip,
+                sourceAilmentIds: [default(ContentId)]));
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new CustomAilmentTurnBehaviorResult((BattleTurnStartOutcome)int.MaxValue));
+        Assert.Throws<ArgumentException>(
+            () => new CustomAilmentTurnBehaviorResult(
+                BattleTurnStartOutcome.LimitedAction,
+                [default(ContentId)]));
+    }
+
+    [Fact]
+    public void TurnStart_InvalidCustomBehaviorResultRollsBackGuard()
+    {
+        ContentId handlerId = ContentId.Parse("invalid_custom_result");
+        var service = new BattleStatusLifecycleService(
+            new SequenceRandomSource(),
+            [
+                new KeyValuePair<ContentId, ICustomAilmentTurnBehaviorHandler>(
+                    handlerId,
+                    new UndefinedOutcomeTurnBehaviorHandler())
+            ]);
+        RuntimeActorState actor = Actor("invalid_custom_result_actor");
+        actor.SetGuarding(true);
+        actor.ApplyAilment(
+            IndependentAilment(
+                "invalid_custom_result_ailment",
+                new CustomAilmentTurnBehaviorDefinition(handlerId)),
+            Turns(3));
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => service.ProcessTurnStart(new BattleTurnStartLifecycleRequest(actor)));
+
+        Assert.True(actor.IsGuarding);
+        Assert.True(actor.HasAilment(ContentId.Parse("invalid_custom_result_ailment")));
+    }
+
+    [Fact]
+    public void TurnStart_InvalidRestrictionPolicyResultRollsBackGuard()
+    {
+        var service = new BattleStatusLifecycleService(
+            new SequenceRandomSource(),
+            turnRestrictionPolicy: new UndefinedOutcomeTurnRestrictionPolicy());
+        RuntimeActorState actor = Actor("invalid_restriction_actor");
+        actor.SetGuarding(true);
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => service.ProcessTurnStart(new BattleTurnStartLifecycleRequest(actor)));
+
+        Assert.True(actor.IsGuarding);
+    }
+
+    [Fact]
     public void AilmentApplication_EnforcesGuardImmunityChanceAndMajorExclusivity()
     {
         var service = new BattleStatusLifecycleService(new SequenceRandomSource());
@@ -1762,6 +1824,21 @@ public sealed class BattleStatusLifecycleTests
             request.Actor.SetResource(Hp, 1);
             throw new InvalidOperationException("Deliberate turn-behavior failure.");
         }
+    }
+
+    private sealed class UndefinedOutcomeTurnBehaviorHandler : ICustomAilmentTurnBehaviorHandler
+    {
+        public CustomAilmentTurnBehaviorResult Resolve(
+            CustomAilmentTurnBehaviorDefinition behavior,
+            CustomAilmentTurnBehaviorRequest request) =>
+            new((BattleTurnStartOutcome)int.MaxValue);
+    }
+
+    private sealed class UndefinedOutcomeTurnRestrictionPolicy : IBattleTurnRestrictionPolicy
+    {
+        public BattleTurnStartRestriction Resolve(
+            IReadOnlyList<BattleTurnStartRestriction> restrictions) =>
+            new((BattleTurnStartOutcome)int.MaxValue);
     }
 
     private sealed class FailingCustomEffectHandler : ICustomEffectHandler
