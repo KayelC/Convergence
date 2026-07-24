@@ -1093,6 +1093,85 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void TurnEnd_PassiveResultForWrongEventIsRejectedBeforeMutationCommits()
+    {
+        SkillDefinition passive = PassiveSkill(
+            "wrong_event_passive",
+            [
+                new PassiveTriggerDefinition(
+                    OwnerTurnEnd,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))])
+            ]);
+        RuntimeActorState actor = Actor(
+            "wrong_event_owner",
+            hp: 50,
+            passiveSkills: [passive]);
+        var dispatcher = new DelegatingMutatingPassiveDispatcher(request =>
+            new PassiveTriggerDispatchResult(
+            [
+                new PassiveTriggerExecutionResult(
+                    passive.Id,
+                    0,
+                    BattleStart,
+                    request.Owner.InstanceId,
+                    PassiveTriggerOutcome.Executed,
+                    [])
+            ]));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            new BattleStatusLifecycleService(new SequenceRandomSource()).ProcessTurnEnd(
+                new BattleTurnEndLifecycleRequest(actor, [actor], Battle, OwnerTurnEnd),
+                Services(passiveTriggers: dispatcher)));
+
+        Assert.Contains("instead of requested event", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(50, actor.GetRequiredResource(Hp).Current);
+        Assert.NotSame(actor, dispatcher.ReceivedOwner);
+    }
+
+    [Fact]
+    public async Task BattleStart_PassiveResultForIneligibleTargetIsRejectedBeforeMutationCommits()
+    {
+        SkillDefinition passive = PassiveSkill(
+            "ineligible_target_passive",
+            [
+                new PassiveTriggerDefinition(
+                    BattleStart,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))])
+            ]);
+        RuntimeActorState actor = Actor(
+            "ineligible_target_owner",
+            hp: 50,
+            passiveSkills: [passive]);
+        var dispatcher = new DelegatingMutatingPassiveDispatcher(request =>
+            new PassiveTriggerDispatchResult(
+            [
+                new PassiveTriggerExecutionResult(
+                    passive.Id,
+                    0,
+                    request.EventId,
+                    RuntimeInstanceId.Parse("outside_participant_graph"),
+                    PassiveTriggerOutcome.Executed,
+                    [])
+            ]));
+        var port = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new SequenceRandomSource()),
+            Services(passiveTriggers: dispatcher),
+            BattleStart,
+            OwnerTurnEnd,
+            TestEncounterClocks.Standard(PlayerTeam, ContentId.Parse("enemy_team")));
+        BattleEncounterParticipant[] participants = [new(actor, "Actor")];
+        var encounter = new BattleEncounterRequest(participants, Battle, NormalBattle, null, 1);
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await port.ProcessBattleStartAsync(
+                new BattleEncounterLifecycleRequest(encounter, participants, [PlayerTeam])));
+
+        Assert.Contains("ineligible target", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(50, actor.GetRequiredResource(Hp).Current);
+        Assert.NotSame(actor, dispatcher.ReceivedOwner);
+    }
+
+    [Fact]
     public void TurnEnd_UsesSharedStopTargetAndStopActionSemantics()
     {
         ContentId failingHandlerId = ContentId.Parse("always_fail");
@@ -2036,6 +2115,22 @@ public sealed class BattleStatusLifecycleTests
                     (PassiveTriggerOutcome)int.MaxValue,
                     [])
             ]);
+        }
+    }
+
+    private sealed class DelegatingMutatingPassiveDispatcher(
+        Func<PassiveTriggerDispatchRequest, PassiveTriggerDispatchResult> dispatch)
+        : IPassiveTriggerDispatcher
+    {
+        public RuntimeActorState? ReceivedOwner { get; private set; }
+
+        public PassiveTriggerDispatchResult Dispatch(
+            PassiveTriggerDispatchRequest request,
+            BattleExecutionServices services)
+        {
+            ReceivedOwner = request.Owner;
+            request.Owner.SetResource(Hp, 1);
+            return dispatch(request);
         }
     }
 

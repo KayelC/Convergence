@@ -745,6 +745,128 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void DefeatPrevention_NonExecutedPassiveCannotReportEffectsOrCommitMutation()
+    {
+        ContentId defeatEvent = ContentId.Parse("owner_would_be_defeated");
+        SkillDefinition lastStand = PassiveSkill(
+            "invalid_last_stand_evidence",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    defeatEvent,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
+            ]);
+        RuntimeActorState actor = Actor("invalid_evidence_actor", PlayerTeam);
+        RuntimeActorState target = Actor(
+            "invalid_evidence_target",
+            EnemyTeam,
+            hp: 10,
+            passiveSkills: [lastStand]);
+        var dispatcher = new DelegatingMutatingPassiveDispatcher(request =>
+            new PassiveTriggerDispatchResult(
+            [
+                new PassiveTriggerExecutionResult(
+                    lastStand.Id,
+                    0,
+                    request.EventId,
+                    request.Owner.InstanceId,
+                    PassiveTriggerOutcome.ConditionNotMet,
+                    [
+                        new EffectExecutionResult(
+                            0,
+                            request.Owner.InstanceId,
+                            EffectExecutionOutcome.Success)
+                    ])
+            ]));
+        SkillDefinition lethal = new(
+            ContentId.Parse("invalid_evidence_attack"),
+            "Invalid Evidence Attack",
+            "Test instant-defeat skill.",
+            SkillActivation.Active,
+            SkillMenuGroup.Offense,
+            InheritanceGroup.Light,
+            new SkillInheritanceDefinition(true),
+            targeting: SingleEnemy(),
+            effects:
+            [
+                new InstantKillEffectDefinition(
+                    100,
+                    new NoInstantDeathResistanceCheckDefinition())
+            ],
+            availability: new SkillAvailabilityDefinition([Battle]));
+
+        SkillExecutionResult result = new SkillExecutor(Services(passiveTriggers: dispatcher))
+            .Execute(Request(lethal, actor, [actor, target], target));
+
+        Assert.Equal(SkillExecutionStatus.Rejected, result.Status);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == SkillExecutionDiagnosticCode.ExecutionFailed &&
+            diagnostic.Message.Contains("non-executed outcome", StringComparison.Ordinal));
+        Assert.Equal(10, target.GetRequiredResource(Hp).Current);
+        Assert.NotSame(target, dispatcher.ReceivedOwner);
+    }
+
+    [Fact]
+    public void PassiveDispatch_RejectsUnloadedSkillAndOutOfRangeTriggerEvidence()
+    {
+        ContentId eventId = ContentId.Parse("validated_event");
+        SkillDefinition loaded = PassiveSkill(
+            "loaded_passive",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
+            ]);
+        RuntimeActorState owner = Actor(
+            "validated_owner",
+            PlayerTeam,
+            passiveSkills: [loaded]);
+
+        var unloadedDispatcher = new DelegatingMutatingPassiveDispatcher(request =>
+            new PassiveTriggerDispatchResult(
+            [
+                new PassiveTriggerExecutionResult(
+                    ContentId.Parse("unloaded_passive"),
+                    0,
+                    request.EventId,
+                    request.Owner.InstanceId,
+                    PassiveTriggerOutcome.Executed,
+                    [])
+            ]));
+        InvalidOperationException unloaded = Assert.Throws<InvalidOperationException>(() =>
+            Dispatch(
+                eventId,
+                owner,
+                [owner],
+                [owner],
+                Services(passiveTriggers: unloadedDispatcher)));
+        Assert.Contains("not enabled", unloaded.Message, StringComparison.Ordinal);
+        Assert.Equal(100, owner.GetRequiredResource(Hp).Current);
+
+        var triggerDispatcher = new DelegatingMutatingPassiveDispatcher(request =>
+            new PassiveTriggerDispatchResult(
+            [
+                new PassiveTriggerExecutionResult(
+                    loaded.Id,
+                    1,
+                    request.EventId,
+                    request.Owner.InstanceId,
+                    PassiveTriggerOutcome.Executed,
+                    [])
+            ]));
+        InvalidOperationException trigger = Assert.Throws<InvalidOperationException>(() =>
+            Dispatch(
+                eventId,
+                owner,
+                [owner],
+                [owner],
+                Services(passiveTriggers: triggerDispatcher)));
+        Assert.Contains("outside passive", trigger.Message, StringComparison.Ordinal);
+        Assert.Equal(100, owner.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public void AffinityReplacements_RespectShieldBreakOverrideAndAlmightyRules()
     {
         SkillDefinition nullFire = PassiveSkill(
@@ -1012,7 +1134,8 @@ public sealed class PassiveSkillRuntimeTests
         Func<DamagePolicyRequest, IReadOnlyList<DamageHitResolution>>? damage = null,
         IAilmentApplicationPolicy? ailmentPolicy = null,
         IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null,
-        PassiveEventPolicyRegistry? passiveEventPolicies = null) =>
+        PassiveEventPolicyRegistry? passiveEventPolicies = null,
+        IPassiveTriggerDispatcher? passiveTriggers = null) =>
         new(
             new TestAilmentRepository([PoisonDefinition()]),
             new DelegateDamagePolicy(damage ?? (_ => [new DamageHitResolution(true, 10)])),
@@ -1025,7 +1148,8 @@ public sealed class PassiveSkillRuntimeTests
             TestStatModifierPolicy.CreatePersistent(),
             new SplitChargePolicy(),
             customEffectHandlers: customEffects,
-            passiveEventPolicies: passiveEventPolicies);
+            passiveEventPolicies: passiveEventPolicies,
+            passiveTriggers: passiveTriggers);
 
     private sealed class TestAilmentRepository(IEnumerable<AilmentDefinition> ailments)
         : IAilmentDefinitionRepository
@@ -1120,6 +1244,22 @@ public sealed class PassiveSkillRuntimeTests
         {
             (context.Target ?? context.Actor).SetResource(Hp, 1);
             throw new InvalidOperationException("Deliberate custom-effect failure.");
+        }
+    }
+
+    private sealed class DelegatingMutatingPassiveDispatcher(
+        Func<PassiveTriggerDispatchRequest, PassiveTriggerDispatchResult> dispatch)
+        : IPassiveTriggerDispatcher
+    {
+        public RuntimeActorState? ReceivedOwner { get; private set; }
+
+        public PassiveTriggerDispatchResult Dispatch(
+            PassiveTriggerDispatchRequest request,
+            BattleExecutionServices services)
+        {
+            ReceivedOwner = request.Owner;
+            request.Owner.SetResource(Hp, 1);
+            return dispatch(request);
         }
     }
 }

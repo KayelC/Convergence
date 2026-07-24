@@ -771,6 +771,266 @@ public interface IPassiveTriggerDispatcher
         BattleExecutionServices services);
 }
 
+internal sealed class ValidatingPassiveTriggerDispatcher : IPassiveTriggerDispatcher
+{
+    private readonly IPassiveTriggerDispatcher _inner;
+
+    public ValidatingPassiveTriggerDispatcher(IPassiveTriggerDispatcher inner)
+    {
+        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+    }
+
+    public PassiveTriggerDispatchResult Dispatch(
+        PassiveTriggerDispatchRequest request,
+        BattleExecutionServices services)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(services);
+
+        RequireValidRequestGraph(request);
+        RuntimeActorState[] transactionActors = request.Participants
+            .Concat(request.Targets)
+            .Append(request.Owner)
+            .Distinct<RuntimeActorState>(ReferenceEqualityComparer.Instance)
+            .ToArray();
+        var transaction = new RuntimeActorExecutionTransaction(request.Owner, transactionActors);
+        var stagedRequest = new PassiveTriggerDispatchRequest(
+            request.EventId,
+            transaction.GetStaged(request.Owner),
+            request.Participants.Select(transaction.GetStaged),
+            request.Targets.Select(transaction.GetStaged),
+            request.ContextId,
+            request.BattleKindId,
+            request.MoonPhaseId,
+            request.ActiveStatModifierBoundaries);
+        PassiveDispatchContract contract = PassiveDispatchContract.Capture(stagedRequest);
+
+        PassiveTriggerDispatchResult result = _inner.Dispatch(stagedRequest, services)
+            ?? throw new InvalidOperationException("The passive trigger dispatcher returned no result.");
+        contract.RequireValid(result);
+        transaction.Commit();
+        return result;
+    }
+
+    private static void RequireValidRequestGraph(PassiveTriggerDispatchRequest request)
+    {
+        if (!request.EventId.IsValid)
+        {
+            throw new ArgumentException("Passive dispatch event ID must be valid.", nameof(request));
+        }
+
+        if (!request.ContextId.IsValid)
+        {
+            throw new ArgumentException("Passive dispatch context ID must be valid.", nameof(request));
+        }
+
+        RuntimeActorState[] participants = request.Participants.ToArray();
+        if (participants.Any(participant => participant is null))
+        {
+            throw new ArgumentException(
+                "Passive dispatch participants cannot contain null entries.",
+                nameof(request));
+        }
+
+        var actorsById = new Dictionary<RuntimeInstanceId, RuntimeActorState>();
+        foreach (RuntimeActorState participant in participants)
+        {
+            if (actorsById.TryGetValue(participant.InstanceId, out RuntimeActorState? existing) &&
+                !ReferenceEquals(existing, participant))
+            {
+                throw new ArgumentException(
+                    $"Passive dispatch actor ID '{participant.InstanceId}' belongs to multiple actor objects.",
+                    nameof(request));
+            }
+
+            actorsById[participant.InstanceId] = participant;
+        }
+
+        if (!actorsById.TryGetValue(request.Owner.InstanceId, out RuntimeActorState? owner) ||
+            !ReferenceEquals(owner, request.Owner))
+        {
+            throw new ArgumentException(
+                "The passive owner must belong to the participant graph.",
+                nameof(request));
+        }
+
+        foreach (RuntimeActorState target in request.Targets)
+        {
+            if (target is null ||
+                !actorsById.TryGetValue(target.InstanceId, out RuntimeActorState? participant) ||
+                !ReferenceEquals(participant, target))
+            {
+                throw new ArgumentException(
+                    "Every passive event target must belong to the participant graph.",
+                    nameof(request));
+            }
+        }
+    }
+
+    private sealed class PassiveDispatchContract
+    {
+        private readonly ContentId _eventId;
+        private readonly IReadOnlyDictionary<ContentId, SkillDefinition> _skills;
+        private readonly IReadOnlySet<RuntimeInstanceId> _participantIds;
+        private readonly RuntimeActorState _owner;
+        private readonly IReadOnlyList<RuntimeActorState> _participants;
+        private readonly IReadOnlyList<RuntimeActorState> _eventTargets;
+
+        private PassiveDispatchContract(
+            ContentId eventId,
+            IReadOnlyDictionary<ContentId, SkillDefinition> skills,
+            IReadOnlySet<RuntimeInstanceId> participantIds,
+            RuntimeActorState owner,
+            IReadOnlyList<RuntimeActorState> participants,
+            IReadOnlyList<RuntimeActorState> eventTargets)
+        {
+            _eventId = eventId;
+            _skills = skills;
+            _participantIds = participantIds;
+            _owner = owner;
+            _participants = participants;
+            _eventTargets = eventTargets;
+        }
+
+        public static PassiveDispatchContract Capture(PassiveTriggerDispatchRequest request)
+        {
+            var enabledSkills = new ReadOnlyDictionary<ContentId, SkillDefinition>(
+                request.Owner.Passives.Entries
+                    .Where(entry => entry.IsEnabled)
+                    .ToDictionary(entry => entry.Skill.Id, entry => entry.Skill));
+            return new PassiveDispatchContract(
+                request.EventId,
+                enabledSkills,
+                new ReadOnlySet<RuntimeInstanceId>(
+                    request.Participants.Select(participant => participant.InstanceId)),
+                request.Owner,
+                request.Participants,
+                request.Targets);
+        }
+
+        public void RequireValid(PassiveTriggerDispatchResult result)
+        {
+            var activationKeys =
+                new HashSet<(ContentId SkillId, int TriggerIndex, RuntimeInstanceId TargetId)>();
+            foreach (PassiveTriggerExecutionResult activation in result.Activations)
+            {
+                if (activation.EventId != _eventId)
+                {
+                    throw Invalid(
+                        $"reported event '{activation.EventId}' instead of requested event '{_eventId}'.");
+                }
+
+                if (!_skills.TryGetValue(activation.SkillId, out SkillDefinition? skill))
+                {
+                    throw Invalid(
+                        $"reported passive '{activation.SkillId}', which is not enabled on the owner.");
+                }
+
+                if (activation.TriggerIndex >= skill.Triggers.Count)
+                {
+                    throw Invalid(
+                        $"reported trigger index {activation.TriggerIndex} outside passive '{skill.Id}'.");
+                }
+
+                PassiveTriggerDefinition trigger = skill.Triggers[activation.TriggerIndex];
+                if (trigger.EventId != _eventId)
+                {
+                    throw Invalid(
+                        $"reported trigger {activation.TriggerIndex} from passive '{skill.Id}' for the wrong event.");
+                }
+
+                IReadOnlySet<RuntimeInstanceId> eligibleTargetIds =
+                    new ReadOnlySet<RuntimeInstanceId>(PassiveTriggerTargetResolver.Resolve(
+                        trigger.Targeting,
+                        _owner,
+                        _participants,
+                        _eventTargets).Select(target => target.InstanceId));
+                if (!_participantIds.Contains(activation.TargetId) ||
+                    !eligibleTargetIds.Contains(activation.TargetId))
+                {
+                    throw Invalid(
+                        $"reported ineligible target '{activation.TargetId}' for passive '{skill.Id}'.");
+                }
+
+                if (!activationKeys.Add(
+                        (activation.SkillId, activation.TriggerIndex, activation.TargetId)))
+                {
+                    throw Invalid(
+                        $"reported duplicate activation evidence for passive '{skill.Id}', " +
+                        $"trigger {activation.TriggerIndex}, target '{activation.TargetId}'.");
+                }
+
+                RequireValidOutcomeShape(activation, trigger);
+            }
+        }
+
+        private void RequireValidOutcomeShape(
+            PassiveTriggerExecutionResult activation,
+            PassiveTriggerDefinition trigger)
+        {
+            if (activation.Outcome != PassiveTriggerOutcome.Executed)
+            {
+                if (activation.Effects.Count > 0 ||
+                    activation.CompletionLifecycleEvents.Count > 0)
+                {
+                    throw Invalid(
+                        $"reported committed effect evidence for non-executed outcome '{activation.Outcome}'.");
+                }
+
+                return;
+            }
+
+            var effectIndexes = new HashSet<int>();
+            foreach (EffectExecutionResult effect in activation.Effects)
+            {
+                if (effect.EffectIndex >= trigger.Effects.Count)
+                {
+                    throw Invalid(
+                        $"reported effect index {effect.EffectIndex} outside trigger " +
+                        $"{activation.TriggerIndex} of passive '{activation.SkillId}'.");
+                }
+
+                if (!effectIndexes.Add(effect.EffectIndex))
+                {
+                    throw Invalid(
+                        $"reported duplicate effect index {effect.EffectIndex} for one passive target.");
+                }
+
+                EffectLocalId? authoredEffectId = trigger.Effects[effect.EffectIndex].EffectId;
+                if (effect.EffectId != authoredEffectId)
+                {
+                    throw Invalid(
+                        $"reported effect ID '{effect.EffectId}' instead of authored ID " +
+                        $"'{authoredEffectId}' at index {effect.EffectIndex}.");
+                }
+
+                if (effect.TargetId is RuntimeInstanceId targetId &&
+                    !_participantIds.Contains(targetId))
+                {
+                    throw Invalid(
+                        $"reported effect target '{targetId}' outside the participant graph.");
+                }
+            }
+
+            foreach (BattleStatusLifecycleEvent @event in
+                     activation.Effects.SelectMany(effect => effect.LifecycleEvents)
+                         .Concat(activation.CompletionLifecycleEvents))
+            {
+                if (!_participantIds.Contains(@event.ActorId) ||
+                    (@event.SourceActorId is RuntimeInstanceId sourceActorId &&
+                     !_participantIds.Contains(sourceActorId)))
+                {
+                    throw Invalid(
+                        "reported lifecycle evidence for an actor outside the participant graph.");
+                }
+            }
+        }
+
+        private static InvalidOperationException Invalid(string detail) =>
+            new($"The passive trigger dispatcher returned incoherent activation evidence: {detail}");
+    }
+}
+
 public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
 {
     private readonly PassiveEventPolicyRegistry _policies;

@@ -570,7 +570,9 @@ public sealed class BattleExecutionServices
         PassiveEventPolicies.Register(
             OwnerWouldBeDefeatedEventId,
             new PassiveEventPolicy(ActivationLimitPerBattle: 1));
-        PassiveTriggers = passiveTriggers ?? new PassiveTriggerDispatcher(PassiveEventPolicies);
+        IPassiveTriggerDispatcher triggerDispatcher =
+            passiveTriggers ?? new PassiveTriggerDispatcher(PassiveEventPolicies);
+        PassiveTriggers = new ValidatingPassiveTriggerDispatcher(triggerDispatcher);
         ActionOutcomes = actionOutcomes ?? new StandardActionOutcomeAggregationPolicy();
     }
 
