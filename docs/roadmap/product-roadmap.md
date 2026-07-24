@@ -8,19 +8,17 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is reopened by the
+`status_and_passive_lifecycle` is complete after the
 [Order 4 independent audit](../reviews/status-passive-lifecycle-order-4-independent-audit-2026-07-24.md).
-The current Framework still owns explicit status lifetimes and removal causes,
-application gates, turn restrictions, recovery, cleanup, passive targeting and
-activation limits, reserve-aware clocks, persistence validation, and
-transactional actor-state mutation. O4-R12 through O4-R15 have closed
-status-removal evidence, lifecycle-trigger expiry evidence, passive extension
-coherence, and reserve-owner battle-start policy. O4-R16 aligns the audience
-documentation and ledgers. O4-R17 remains the independent source,
-documentation, and release-gate checkpoint before the capability can return to
-`complete`.
+O4-R12 through O4-R15 closed status-removal evidence, lifecycle-trigger expiry
+evidence, passive extension coherence, and reserve-owner battle-start policy.
+O4-R16 aligned the audience guidance. The
+[O4-R17 post-correction review](../reviews/status-passive-lifecycle-order-4-post-correction-review-2026-07-24.md)
+then re-read the current source, tests, diagrams, and prose and passed the
+complete release gate without finding another realistic reachable runtime
+defect.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience

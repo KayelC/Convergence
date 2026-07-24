@@ -42,13 +42,14 @@ or accepted event publication. O3-R17 re-read the corrected source and
 owner-confirmed guidance, so all three Order 3 entries are reviewed again.
 The project owner explicitly confirmed the final Order 3 contract on 23 July
 2026.
-Order 4 completed its first source-first review and correction sequence, but a
-later independent audit reopened all three audience entries. The current pages
-now describe the O4-R12 through O4-R15 corrections: typed removal and expiry
-evidence, request-aware passive extension validation, exact Instant scope, and
-the approved reserve-owner battle-start policy. They remain unreviewed only
-until O4-R17 independently checks the corrected source and prose. Order 5,
-`battle_knowledge`, follows only after Order 4 closes again.
+Order 4 completed its first source-first review and correction sequence, and a
+later independent audit reopened all three audience entries. O4-R12 through
+O4-R16 corrected typed removal and expiry evidence, request-aware passive
+extension validation, exact Instant scope, reserve-owner battle-start policy,
+and audience guidance. The
+[O4-R17 post-correction review](../reviews/status-passive-lifecycle-order-4-post-correction-review-2026-07-24.md)
+then re-read the corrected source and prose and returned all three entries to
+`reviewed`. Order 5, `battle_knowledge`, is next.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
@@ -76,13 +77,13 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 21 reviewed,
-31 existing_unreviewed, 16 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 24 reviewed,
+28 existing_unreviewed, 16 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 21 |
-| `existing_unreviewed` | 31 |
+| `reviewed` | 24 |
+| `existing_unreviewed` | 28 |
 | `missing` | 16 |
 | `not_applicable` | 7 |
 

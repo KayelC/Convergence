@@ -182,28 +182,28 @@
     {
       "id": "status_and_passive_lifecycle",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "O4-R16 now states the exact outer effect-scope lifetime, typed removal evidence, and deployed-owner battle-start default; O4-R17 fresh verification remains pending."
+        "reason": "O4-R17 re-read the corrected runtime and confirms the exact outer effect-scope lifetime, typed removal evidence, reserve clocks, cleanup rules, and deployed-owner battle-start default."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "O4-R16 now uses the actual ailment-result properties and documents removal, completion-event, dispatcher-validation, and owner-eligibility boundaries; O4-R17 fresh verification remains pending."
+        "reason": "O4-R17 verifies the public composition, policy selection, result properties, removal and completion evidence, dispatcher validation, owner eligibility, persistence, and host-owned side-effect boundaries."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "O4-R16 now narrows mapper guarantees and traces typed non-ailment removal, lifecycle completion events, request-aware passive validation, and owner eligibility; O4-R17 fresh verification remains pending."
+        "reason": "O4-R17 traces staged application, clocks, cleanup, typed non-ailment removal, lifecycle completion events, request-aware passive validation, encounter integration, and restore authority from current source."
       }
     },
     {

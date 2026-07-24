@@ -6,11 +6,11 @@
 verified across Checkpoints 0-8.**
 
 **Current product state:** runtime save contract v13 is authoritative; the
-Framework Capability Matrix records 22 complete, 1 partial, and 2 intentionally
-deferred capabilities after the independent Order 4 lifecycle audit reopened
-that capability. This actor roadmap itself remains completed. Save v10 and
-earlier capability counts below are preserved only as labelled checkpoint
-history. Sections written in proposal or future tense describe the
+Framework Capability Matrix records 23 complete, 0 partial, and 2 intentionally
+deferred capabilities after the Order 4 post-correction review closed the
+reopened lifecycle capability. This actor roadmap itself remains completed.
+Save v10 and earlier capability counts below are preserved only as labelled
+checkpoint history. Sections written in proposal or future tense describe the
 implementation plan that produced the current actor code, not unfinished actor
 work.
 

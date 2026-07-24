@@ -16,18 +16,20 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is `partial` after the
+`status_and_passive_lifecycle` is `complete` after the
 [Order 4 independent audit](../reviews/status-passive-lifecycle-order-4-independent-audit-2026-07-24.md)
-reproduced four bounded defects and one open owner-policy decision. O4-R12
-through O4-R15 now provide typed non-ailment removals, preserve outer-scope
-completion events, validate replacement passive results against their request,
-and supply deployed-only battle-start ownership with an explicit
-all-participants opt-in. O4-R16 reconciles the three audience documents and
-ledgers. The capability remains `partial` only until O4-R17 independently
-re-reads the corrected source and passes the full release gate. Demo coverage
-remains `focused`.
+reproduced three bounded runtime defects, two documentation defects, and one
+open owner-policy decision. O4-R12 through O4-R15 provide typed non-ailment
+removals, preserve outer-scope completion events, validate replacement passive
+results against their request, and supply deployed-only battle-start ownership
+with an explicit all-participants opt-in. O4-R16 reconciled the three audience
+documents. The
+[O4-R17 post-correction review](../reviews/status-passive-lifecycle-order-4-post-correction-review-2026-07-24.md)
+re-read the corrected source and tests, corrected stale evidence names, and
+passed the complete release gate without finding another realistic reachable
+runtime defect. Demo coverage remains `focused`.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

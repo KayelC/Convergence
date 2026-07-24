@@ -110,14 +110,12 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "The O4-R17 fresh source, documentation, and release-gate review remains pending before formal completion."
-      ]
+      "knownGaps": []
     },
     {
       "id": "encounter_orchestration",
