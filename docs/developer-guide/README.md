@@ -32,6 +32,9 @@ Developer guides focus on:
 - [Turn Economy Policies](turn-economy-policies.md): supplied economy
   selection, authored binding, typed presentation, replacement contracts,
   liveness, and the encounter-scheduling boundary.
+- [Status And Passive Lifecycle](status-passive-lifecycle.md): ailment
+  application, transition policies, passive targeting, lifecycle clocks,
+  cleanup, typed events, persistence, and Godot host responsibilities.
 
 The actor and typed action/effect guides have completed collaborative review.
 That Order 1 review includes stat-modifier policy composition and integration.
@@ -42,6 +45,9 @@ found no remaining reachable defect in that supported scope.
 The turn-economy guide completed the Order 3 source and correction workflow for
 Action Token, neutral standard actions, custom snapshot authority, and finite
 phase liveness.
+The status-lifecycle guide records the implemented Order 4 composition and its
+current schema-v7 removal-profile authoring boundary. Formal promotion waits
+for the independent O4-R10 source and documentation review.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

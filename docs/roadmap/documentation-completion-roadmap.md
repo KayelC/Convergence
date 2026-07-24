@@ -296,7 +296,11 @@ The project owner explicitly confirmed the final six-rule contract on 23 July
 
 Order 4 follows that closure. It reviews
 status, ailment, passive, and duration lifecycle from current source before any
-audience entry is promoted.
+audience entry is promoted. O4-R2 through O4-R8 implement the approved runtime,
+schema, persistence, and host corrections. O4-R9 now supplies dedicated
+mechanics, developer, and technical documents while retaining
+`existing_unreviewed` until the independent O4-R10 review verifies them against
+the corrected source.
 
 ## Deferred Documentation
 

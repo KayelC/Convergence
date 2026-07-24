@@ -483,9 +483,13 @@ change runtime behavior.
    Godot codecs, and aggregate validation rejects missing target actors.
    Catalog qualification now preserves authored targeting instead of silently
    reverting it to event targets. No compatibility fallback was added.
-9. **O4-R9 - Write and collaboratively review all three audience documents.**
-   Produce the technical lifecycle/state-machine reference, developer
-   composition guide, and player-facing mechanics page.
+9. **O4-R9 - Write and collaboratively review all three audience documents.
+   Implemented, pending independent review.** Dedicated mechanics, developer,
+   and technical pages now explain lifecycle application, restrictions,
+   expiration and removal, explicit clocks, reserve policy, cleanup, passive
+   targets and counts, atomicity, typed events, persistence, and host ownership.
+   They also state the current schema-v7 limitation: arbitrary runtime removal
+   profiles are not independently authored through ailment JSON.
 10. **O4-R10 - Perform a fresh source and documentation closure review.** Verify
     every approved decision from current code rather than this roadmap.
 
@@ -680,10 +684,32 @@ The checkpoint gate passed with:
 - formatting verification, public API baseline, active-content status, and
   `git diff --check`: passed.
 
+### O4-R9 implementation gate
+
+The audience checkpoint separates status and passive lifecycle from the still
+unreviewed battle-knowledge scope. Dedicated mechanics, developer, and
+technical pages describe the supported rules from their appropriate audience,
+with vertical application, clock, cleanup, turn-end, and encounter-startup
+diagrams. The pages do not conceal the current schema-v7 removal-profile
+authoring boundary and remain `existing_unreviewed` until O4-R10.
+
+The checkpoint gate passed with:
+
+- focused documentation, synchronization, link, product-boundary, and
+  capability-matrix coverage: 25 passed, 0 failed, 0 skipped;
+- complete solution: 1,591 passed, 0 failed, 0 skipped;
+- strict nonincremental Release solution build: 0 warnings, 0 errors;
+- all four noninteractive DemoHost modes and scripted Training Annex exit:
+  successful;
+- active content validation: 6 packs, 36 documents, and 98 qualified
+  definitions passed;
+- formatting verification, active-content status, and `git diff --check`:
+  passed.
+
 ## Current Closure Decision
 
 Order 4 is **design-approved and implementation is in progress**. O4-R2 through
-O4-R8 are implemented pending the fresh O4-R10 review. The existing
+O4-R9 are implemented pending the fresh O4-R10 review. The existing
 implementation is useful and largely transactional, but the capability
 matrix correctly remains `partial` until R9-R10 close the audience
 documentation and final review. No code should

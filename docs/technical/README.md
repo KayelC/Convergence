@@ -33,6 +33,9 @@ Technical pages focus on:
 - [Turn Economy Runtime](turn-economy-runtime.md): phase snapshot authority,
   supplied transition tables, liveness counters, typed events, fault
   containment, and the boundary with actor scheduling.
+- [Status And Passive Lifecycle Runtime](status-passive-lifecycle.md): lifetime
+  authority, staged application, explicit clocks, cleanup, passive dispatch,
+  event evidence, startup atomicity, and save-v13 restoration.
 
 The actor and typed action/effect references have completed collaborative
 review. That Order 1 review includes stat-modifier runtime authority and its
@@ -41,10 +44,11 @@ Order 2 source review, including dependency gating, current life-state
 eligibility, shared contact, complete-action aggregation, and custom result
 validation. The final pre-closure correction review found no remaining
 reachable defect in that supported scope. Order 3 source-reconciled the
-turn-economy runtime authority, liveness, and scheduling boundary. Other
-subsystem references remain
-tracked as
-`existing_unreviewed` or `missing` in the
+turn-economy runtime authority, liveness, and scheduling boundary.
+The Order 4 status-lifecycle reference is written from current source and
+records the remaining schema-v7 removal-profile authoring boundary; formal
+promotion waits for the independent closure review. Other subsystem references
+remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).
 
 New technical pages must follow the

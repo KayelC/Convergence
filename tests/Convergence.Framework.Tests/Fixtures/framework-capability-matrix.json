@@ -113,11 +113,11 @@
       "implementationState": "partial",
       "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "ContentSchemaContractTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
-      "hostNeutral": true,
-      "optionalModule": true,
-      "knownGaps": [
-        "Order 4 audience documentation and closure review remain in progress; schema-v7 targeting, save-v13 passive activation state, passive policy semantics, and atomic encounter startup are implemented."
-      ]
+        "hostNeutral": true,
+        "optionalModule": true,
+        "knownGaps": [
+          "The independent O4-R10 closure review remains in progress. Runtime definitions support independent removal profiles, while schema-v7 ailment JSON currently uses fixed supplied lifetime mappings."
+        ]
     },
     {
       "id": "encounter_orchestration",

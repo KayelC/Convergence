@@ -24,18 +24,22 @@ their coverage entries remain `reviewed` and the implementation gate is closed.
 Order 3 has now reconciled the Action Token and neutral standard-actions rules,
 pass precedence, phase liveness, and the boundary between opportunity counting
 and actor scheduling across all three audiences.
+Order 4 now has dedicated mechanics, developer, and technical lifecycle pages.
+They remain pending independent source closure because documentation is not
+promoted merely for existing.
 
 ## Rule Index
 
 1. [Actors, Stats, Resources, And Progression](actors-progression-and-resources.md)
 2. [Actions, Targeting, And Effects](actions-targeting-and-effects.md)
 3. [Combat, Defenses, And Turn Economy](combat-defenses-and-turns.md)
-4. [Ailments, Statuses, Passives, And Knowledge](status-passives-and-knowledge.md)
-5. [Party, Rosters, Inventory, Equipment, And Economy](party-inventory-and-economy.md)
-6. [Navigation, Dungeons, Encounters, Negotiation, And Rewards](world-encounters-and-rewards.md)
-7. [Fusion, Inheritance, Acquisition, And Compendium](fusion-acquisition-and-compendium.md)
-8. [Saving, Loading, And Suspend Saves](saving-loading-and-suspend.md)
-9. [Stat Modifier Policies](stat-modifier-policies.md)
+4. [Status And Passive Lifecycle](status-passive-lifecycle.md)
+5. [Battle Knowledge](status-passives-and-knowledge.md)
+6. [Party, Rosters, Inventory, Equipment, And Economy](party-inventory-and-economy.md)
+7. [Navigation, Dungeons, Encounters, Negotiation, And Rewards](world-encounters-and-rewards.md)
+8. [Fusion, Inheritance, Acquisition, And Compendium](fusion-acquisition-and-compendium.md)
+9. [Saving, Loading, And Suspend Saves](saving-loading-and-suspend.md)
+10. [Stat Modifier Policies](stat-modifier-policies.md)
 
 ## Reading A Result
 

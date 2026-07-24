@@ -184,23 +184,26 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": [
-          "docs/mechanics/status-passives-and-knowledge.md",
+          "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "The modifier clocks and reserve rules are owner-confirmed, while the remaining ailment and passive lifecycle still requires event-by-event review."
+        "reason": "The dedicated mechanics page reflects the approved lifecycle rules, but formal promotion waits for the independent O4-R10 source and documentation review."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
-        "documents": ["docs/developer-guide/stat-modifier-policies.md"],
-        "reason": "Modifier lifecycle composition and host scheduling are documented as confirmed design; ailment/passive handlers and complete presentation guidance remain to be documented and reviewed."
+        "documents": [
+          "docs/developer-guide/status-passive-lifecycle.md",
+          "docs/developer-guide/stat-modifier-policies.md"
+        ],
+        "reason": "Lifecycle composition, policies, clocks, events, persistence, and host responsibilities are documented; formal promotion waits for O4-R10."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": [
-          "docs/gameplay-systems.md",
+          "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "Modifier lifecycle authority, clocks, and cleanup are recorded as confirmed design; complete ailment/passive atomicity and ordering still need a dedicated source-reviewed reference."
+        "reason": "The dedicated runtime reference traces authority, ordering, atomicity, clocks, events, and restoration; formal promotion waits for O4-R10."
       }
     },
     {

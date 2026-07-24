@@ -30,9 +30,11 @@ rule is an injected application gate. O4-R6 adds typed owner, event-target,
 team, opponent, and all-participant passive targeting; validates passive
 re-entry liveness; and makes activation limits explicitly per-dispatch or
 per-target. O4-R7 makes battle-start passive reset atomic with lifecycle startup
-and names forced basic attacks accurately. Schema, persistence, and audience
-reconciliation remain tracked by the active Order 4 roadmap rather than being
-hidden behind the former `complete` label.
+and names forced basic attacks accurately. O4-R8 reconciles schema-v7 targeting,
+save-v13 per-target activations, clean content, DemoHost, and the Godot smoke.
+O4-R9 supplies all three audience documents and records the current JSON
+removal-profile authoring boundary. Independent source/documentation closure in
+O4-R10 remains required before the capability returns to `complete`.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial
