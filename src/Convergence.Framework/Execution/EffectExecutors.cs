@@ -773,13 +773,25 @@ internal sealed class RemoveStatusEffectExecutor : TargetedEffectExecutor, IEffe
                 statModifierTransitions: [modifierTransition]);
         }
 
-        int removed = target.RemoveNonModifierStatuses(
+        IReadOnlyList<BattleStatusRemovalResult> removals = target.RemoveNonModifierStatuses(
             kinds,
             definition.StatusIds,
             StatusRemovalCause.DispelEffect);
+        BattleStatusLifecycleEvent[] lifecycleEvents = removals
+            .Select(removal => new BattleStatusLifecycleEvent(
+                BattleStatusLifecycleEventKind.StatusRemoved,
+                target.InstanceId,
+                removal.Id,
+                Detail: removal.Cause.ToString())
+            {
+                SourceActorId = context.Actor.InstanceId,
+                SourceId = context.Request.SourceId,
+                RemovalTransition = removal
+            })
+            .ToArray();
         int modifierChanges = modifierTransition?.Events.Count(@event =>
             @event.Kind is StatModifierEventKind.ContributionRemoved or StatModifierEventKind.TrackRemoved) ?? 0;
-        int total = removed + modifierChanges;
+        int total = removals.Count + modifierChanges;
         return total == 0 && modifierTransition?.StateChanged != true
             ? Failure(
                 context,
@@ -788,7 +800,8 @@ internal sealed class RemoveStatusEffectExecutor : TargetedEffectExecutor, IEffe
             : Success(
                 context,
                 total,
-                statModifierTransitions: modifierTransition is null ? [] : [modifierTransition]);
+                statModifierTransitions: modifierTransition is null ? [] : [modifierTransition],
+                lifecycleEvents: lifecycleEvents);
     }
 }
 

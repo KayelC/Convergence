@@ -2139,6 +2139,100 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void RemoveStatus_EmitsOneOrderedTypedRemovalForEachCommittedNonModifierState()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        var executor = new SkillExecutor(Services());
+        ContentId mark = ContentId.Parse("marked");
+        ContentId retained = ContentId.Parse("retained");
+        StatusLifetimeDefinition lifetime = StandardStatusLifetimes.DeploymentTransient;
+
+        ExecuteEffect(
+            executor,
+            new GrantChargeEffectDefinition(ChargeKind.Magical, 2m, lifetime),
+            actor,
+            target);
+        target.GrantShield(ShieldKind.Physical, lifetime);
+        target.BreakAffinity(DamageElement.Fire, lifetime);
+        target.OverrideAffinity(DamageElement.Ice, ElementalAffinity.Null, lifetime);
+        target.AddOtherStatus(mark, lifetime);
+        target.AddOtherStatus(retained, lifetime);
+
+        SkillExecutionResult result = ExecuteEffect(
+            executor,
+            new RemoveStatusEffectDefinition(
+                [
+                    StatusEffectKind.Charge,
+                    StatusEffectKind.Shield,
+                    StatusEffectKind.AffinityBreak,
+                    StatusEffectKind.AffinityOverride,
+                    StatusEffectKind.Other
+                ],
+                [mark]),
+            actor,
+            target);
+
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(5m, effect.Value);
+        Assert.Equal(
+            [
+                ("charge_magical", BattleDurationStateKind.Charge),
+                ("shield_physical", BattleDurationStateKind.Shield),
+                ("affinity_break_fire", BattleDurationStateKind.AffinityBreak),
+                ("affinity_override_ice", BattleDurationStateKind.AffinityOverride),
+                ("marked", BattleDurationStateKind.OtherStatus)
+            ],
+            effect.LifecycleEvents.Select(@event =>
+                (
+                    @event.RelatedId?.ToString(),
+                    Assert.IsType<BattleStatusRemovalResult>(@event.RemovalTransition).StateKind
+                )));
+        Assert.All(effect.LifecycleEvents, @event =>
+        {
+            Assert.Equal(BattleStatusLifecycleEventKind.StatusRemoved, @event.Kind);
+            Assert.Equal(target.InstanceId, @event.ActorId);
+            Assert.Equal(actor.InstanceId, @event.SourceActorId);
+            Assert.Equal(ContentId.Parse("test_skill"), @event.SourceId);
+            Assert.Equal(StatusRemovalCause.DispelEffect, @event.RemovalTransition!.Cause);
+            Assert.Equal(@event.RelatedId, @event.RemovalTransition.Id);
+        });
+        Assert.Empty(target.Charges);
+        Assert.Empty(target.Shields);
+        Assert.Empty(target.AffinityBreaks);
+        Assert.Empty(target.AffinityOverrides);
+        Assert.DoesNotContain(mark, target.OtherStatuses);
+        Assert.Contains(retained, target.OtherStatuses);
+    }
+
+    [Fact]
+    public void RemoveStatus_LeavesProtectedStatesAndEmitsNoRemovalEvidence()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        var executor = new SkillExecutor(Services());
+        ContentId protectedMark = ContentId.Parse("protected_mark");
+
+        target.GrantShield(ShieldKind.Magical, StandardStatusLifetimes.ProtectedPersistent);
+        target.AddOtherStatus(protectedMark, StandardStatusLifetimes.ProtectedPersistent);
+
+        SkillExecutionResult result = ExecuteEffect(
+            executor,
+            new RemoveStatusEffectDefinition(
+                [StatusEffectKind.Shield, StatusEffectKind.Other],
+                [protectedMark]),
+            actor,
+            target);
+
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(EffectExecutionOutcome.Failure, effect.Outcome);
+        Assert.Equal("No matching removable status was active.", effect.Detail);
+        Assert.Empty(effect.LifecycleEvents);
+        Assert.Contains(ShieldKind.Magical, target.Shields.Keys);
+        Assert.Contains(protectedMark, target.OtherStatuses);
+    }
+
+    [Fact]
     public void TemporaryAffinityOverrideRemainsBelowShieldAndBreakPrecedence()
     {
         var profile = new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]);

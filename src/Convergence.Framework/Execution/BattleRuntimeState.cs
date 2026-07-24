@@ -917,17 +917,19 @@ public sealed class RuntimeActorState
         return Array.AsReadOnly(removed.ToArray());
     }
 
-    internal int RemoveNonModifierStatuses(
+    internal IReadOnlyList<BattleStatusRemovalResult> RemoveNonModifierStatuses(
         IReadOnlySet<StatusEffectKind> kinds,
         IEnumerable<ContentId> statusIds,
         StatusRemovalCause cause)
     {
+        ArgumentNullException.ThrowIfNull(kinds);
+        ArgumentNullException.ThrowIfNull(statusIds);
         if (!Enum.IsDefined(cause))
         {
             throw new ArgumentOutOfRangeException(nameof(cause));
         }
-        int before = _charges.Count + _shields.Count + _affinityBreaks.Count +
-            _affinityOverrides.Count + _otherStatuses.Count;
+
+        var removed = new List<BattleStatusRemovalResult>();
         if (kinds.Contains(StatusEffectKind.Charge))
         {
             foreach (ChargeKind kind in _charges
@@ -936,6 +938,10 @@ public sealed class RuntimeActorState
                          .ToArray())
             {
                 _charges.Remove(kind);
+                removed.Add(new BattleStatusRemovalResult(
+                    ContentId.Parse("charge_" + kind.ToString().ToLowerInvariant()),
+                    BattleDurationStateKind.Charge,
+                    cause));
             }
         }
         if (kinds.Contains(StatusEffectKind.Shield))
@@ -946,6 +952,10 @@ public sealed class RuntimeActorState
                          .ToArray())
             {
                 _shields.Remove(kind);
+                removed.Add(new BattleStatusRemovalResult(
+                    ContentId.Parse("shield_" + kind.ToString().ToLowerInvariant()),
+                    BattleDurationStateKind.Shield,
+                    cause));
             }
         }
         if (kinds.Contains(StatusEffectKind.AffinityBreak))
@@ -956,6 +966,10 @@ public sealed class RuntimeActorState
                          .ToArray())
             {
                 _affinityBreaks.Remove(element);
+                removed.Add(new BattleStatusRemovalResult(
+                    ContentId.Parse("affinity_break_" + element.ToString().ToLowerInvariant()),
+                    BattleDurationStateKind.AffinityBreak,
+                    cause));
             }
         }
         if (kinds.Contains(StatusEffectKind.AffinityOverride))
@@ -966,6 +980,10 @@ public sealed class RuntimeActorState
                          .ToArray())
             {
                 _affinityOverrides.Remove(element);
+                removed.Add(new BattleStatusRemovalResult(
+                    ContentId.Parse("affinity_override_" + element.ToString().ToLowerInvariant()),
+                    BattleDurationStateKind.AffinityOverride,
+                    cause));
             }
         }
         if (kinds.Contains(StatusEffectKind.Other))
@@ -976,13 +994,15 @@ public sealed class RuntimeActorState
                     state.Lifetime.Allows(cause))
                 {
                     _otherStatuses.Remove(statusId);
+                    removed.Add(new BattleStatusRemovalResult(
+                        statusId,
+                        BattleDurationStateKind.OtherStatus,
+                        cause));
                 }
             }
         }
 
-        int after = _charges.Count + _shields.Count + _affinityBreaks.Count +
-            _affinityOverrides.Count + _otherStatuses.Count;
-        return before - after;
+        return Array.AsReadOnly(removed.ToArray());
     }
 
     public void Reveal(RuntimeInstanceId targetInstanceId, IEnumerable<AnalysisLayer> layers)
