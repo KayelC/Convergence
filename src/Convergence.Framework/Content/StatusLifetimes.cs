@@ -158,7 +158,8 @@ public sealed record StatusLifetimeDefinition
     {
         Expiration = expiration ?? throw new ArgumentNullException(nameof(expiration));
         RemovalProfile = removalProfile ?? throw new ArgumentNullException(nameof(removalProfile));
-        if (expiration is InstantDurationDefinition or TurnDurationDefinition or PhaseDurationDefinition &&
+        if (expiration is InstantDurationDefinition or TurnDurationDefinition or PhaseDurationDefinition or
+                BattleDurationDefinition &&
             !removalProfile.Allows(StatusRemovalCause.DurationExpired))
         {
             throw new ArgumentException(

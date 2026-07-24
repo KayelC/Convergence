@@ -439,9 +439,21 @@ public sealed class DomainDefinitionTests
         Assert.False(lifetime.Allows(StatusRemovalCause.BattleEnd));
         Assert.Throws<NotSupportedException>(() =>
             ((IList<StatusRemovalCause>)lifetime.RemovalProfile.AllowedCauses).Clear());
-        Assert.Throws<ArgumentException>(() => new StatusLifetimeDefinition(
+        DurationDefinition[] finiteExpirations =
+        [
+            new InstantDurationDefinition(),
             expiration,
-            new StatusRemovalProfileDefinition([])));
+            new PhaseDurationDefinition(ContentId.Parse("player_phase")),
+            new BattleDurationDefinition()
+        ];
+        Assert.All(finiteExpirations, finite =>
+            Assert.Throws<ArgumentException>(() => new StatusLifetimeDefinition(
+                finite,
+                new StatusRemovalProfileDefinition([]))));
+        var permanent = new StatusLifetimeDefinition(
+            new PermanentDurationDefinition(),
+            new StatusRemovalProfileDefinition([]));
+        Assert.Empty(permanent.RemovalProfile.AllowedCauses);
         Assert.Throws<ArgumentOutOfRangeException>(() => new StatusRemovalProfileDefinition(
             [(StatusRemovalCause)999]));
 
