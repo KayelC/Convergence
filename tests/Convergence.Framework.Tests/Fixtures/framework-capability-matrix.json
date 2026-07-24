@@ -116,9 +116,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Non-ailment dispels and lifecycle-triggered action-end expiry do not expose complete typed removal evidence.",
-        "Replacement passive dispatcher results are not validated against the dispatch request and loaded passive definitions.",
-        "Battle-start passive owner eligibility for undeployed participants requires an explicit policy decision."
+        "The O4-R17 fresh source, documentation, and release-gate review remains pending before formal completion."
       ]
     },
     {

@@ -44,9 +44,11 @@ The project owner explicitly confirmed the final Order 3 contract on 23 July
 2026.
 Order 4 completed its first source-first review and correction sequence, but a
 later independent audit reopened all three audience entries. The current pages
-must correct typed removal and expiry evidence, passive extension coherence,
-Instant scope wording, and reserve-owner battle-start policy before promotion.
-Order 5, `battle_knowledge`, follows only after Order 4 closes again.
+now describe the O4-R12 through O4-R15 corrections: typed removal and expiry
+evidence, request-aware passive extension validation, exact Instant scope, and
+the approved reserve-owner battle-start policy. They remain unreviewed only
+until O4-R17 independently checks the corrected source and prose. Order 5,
+`battle_knowledge`, follows only after Order 4 closes again.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 

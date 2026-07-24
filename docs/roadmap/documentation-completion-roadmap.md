@@ -304,10 +304,14 @@ A later
 reopened Order 4 at `90b1fffb`. Non-ailment dispels and lifecycle-triggered
 action-end expiry omit exact typed evidence, passive replacement-dispatch
 results are not request-coherent, and reserve-owner battle-start eligibility
-requires an explicit owner decision. All three audience entries return to
-`existing_unreviewed` while O4-R12 through O4-R17 are pending. The executable
-documentation matrix records 21 reviewed, 31 `existing_unreviewed`, 16 missing,
-and 7 `not_applicable` entries. Order 5, `battle_knowledge`, follows only after
+required an explicit owner decision. The project owner approved deployed-only
+battle-start ownership with an all-participants opt-in and directed the
+correction sequence on 24 July 2026. O4-R12 through O4-R15 have corrected the
+runtime findings, and O4-R16 has reconciled all three audience documents and
+executable ledgers. The entries remain `existing_unreviewed` until O4-R17's
+fresh source and documentation review. The executable documentation matrix
+therefore still records 21 reviewed, 31 `existing_unreviewed`, 16 missing, and
+7 `not_applicable` entries. Order 5, `battle_knowledge`, follows only after
 Order 4 closes again.
 
 ## Deferred Documentation

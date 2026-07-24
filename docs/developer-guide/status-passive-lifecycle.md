@@ -30,7 +30,8 @@ A canonical encounter composition needs:
 2. `BattleExecutionServices`, including passive and stat-modifier services;
 3. `BattleStatusLifecycleService` with random, transition, application-gate,
    turn-restriction, custom-handler, and reserve policies as needed;
-4. `PassiveEventPolicyRegistry` for events with re-entry or activation limits;
+4. `PassiveEventPolicyRegistry` for owner eligibility, re-entry, or activation
+   limits;
 5. explicit battle-start and owner-turn-end event IDs; and
 6. `IBattleEncounterLifecycleClockPolicy` mapping each team to distinct phase
    and event IDs plus one round-end event ID.
@@ -137,24 +138,34 @@ receive that fallback.
 
 ## Registering Passive Event Policies
 
-Unregistered events use the non-reentrant, unlimited, per-dispatch default.
-Register only events that need another liveness rule:
+Unregistered events use the non-reentrant, unlimited, per-dispatch,
+`AllParticipants` default. `BattleStatusEncounterLifecyclePort` installs a
+`DeployedOnly` policy for its battle-start event only when the host has not
+already registered that event. Register `AllParticipants` before constructing
+the port when reserve-owned battle-start passives are intended:
 
 ```csharp
 var passivePolicies = new PassiveEventPolicyRegistry()
+    .Register(
+        battleStartEventId,
+        new PassiveEventPolicy(PassiveOwnerEligibility.AllParticipants))
     .Register(
         reactionEventId,
         new PassiveEventPolicy(
             AllowReentry: true,
             ActivationLimitPerBattle: 2,
-            PassiveActivationCountingScope.PerTarget));
+            ActivationCountingScope: PassiveActivationCountingScope.PerTarget,
+            OwnerEligibility: PassiveOwnerEligibility.DeployedOnly));
 
 var passiveDispatcher = new PassiveTriggerDispatcher(passivePolicies);
 ```
 
 Re-entry without a finite positive limit is rejected at construction. A
 per-dispatch limit records one successful fan-out; a per-target limit records
-one count for each target. Condition failures do not consume a count.
+one count for each target. Condition failures do not consume a count. Owner
+eligibility is evaluated before target resolution. It is independent from
+`PassiveTriggerTargetingDefinition.IncludeReserveActors`, which controls
+reserve targets rather than reserve owners.
 
 ## Applying An Ailment Directly
 
@@ -174,9 +185,13 @@ BattleAilmentApplicationResult result = lifecycleService.TryApplyAilment(
     executionServices);
 ```
 
-Inspect `result.Status`, its gate decision, transition result, diagnostics, and
-events. Do not mutate the target first and treat the service as a validator.
-The service stages all involved actors and commits only an accepted result.
+Inspect `result.Status`, `result.GateDecision`, `result.Transition`, and
+`result.Events`. Gate rejection detail is carried by the typed gate decision;
+same-ailment, exclusivity, and replacement detail is carried by the transition;
+ordered presentation evidence is carried by the events. The result has no
+`Diagnostics` collection. Do not mutate the target first and treat the service
+as a validator. The service stages all involved actors and commits only an
+accepted result.
 
 Skill and item effect execution already uses this canonical application path.
 
@@ -185,7 +200,8 @@ Skill and item effect execution already uses this canonical application path.
 Use typed boundaries instead of passing loosely related IDs:
 
 - `ActorTurnLifecycleClockBoundary` advances one matching actor-turn event;
-- `ActionLifecycleClockBoundary` expires instant state;
+- `ActionLifecycleClockBoundary` explicitly expires Instant state when a host
+  executes outside the standard outermost ordered-effect scope;
 - `TeamPhaseLifecycleClockBoundary` carries distinct event, team, and phase
   IDs;
 - `RoundLifecycleClockBoundary` advances one authored round-end event; and
@@ -227,6 +243,11 @@ new profile without calling actor-departure cleanup.
 - passive event, trigger index, target, outcome, and effect result; and
 - cleanup departure reason.
 
+`StatusRemoved` events carry `RemovalTransition`, including the exact status
+family, removed ID, and cause. Passive and ailment trigger activations retain
+their outer-scope completion events, so an Instant grant and its expiry are
+both observable even though the state no longer exists after dispatch.
+
 `BattleStatusLifecycleEventMapper` converts committed status events into typed
 `BattleEncounterEvent` payloads. Treat debug text as optional. A Godot host can
 map runtime IDs to Nodes and map event kinds to animations without parsing the
@@ -234,9 +255,12 @@ message.
 
 ## Custom Handlers And Side Effects
 
-Custom ailment turn handlers and custom effect handlers execute against staged
-framework actors. Returning malformed data or throwing prevents staged actor
-state from committing.
+Custom ailment turn handlers, custom effect handlers, and replacement passive
+dispatchers execute against staged framework actors. A passive dispatcher may
+choose its evaluation algorithm, but returned activations are checked against
+the request's enabled skills, authored trigger indexes and event, eligible
+participant targets, and effect/outcome shape. Returning malformed data or
+throwing prevents staged actor state from committing.
 
 The framework cannot roll back a file write, network call, scene deletion, or
 other external host side effect. Custom handlers should therefore return a

@@ -45,6 +45,13 @@ public timed-state mutator stores them.
 The same lifetime shape is used by ailments, charges, shields, affinity Break,
 affinity overrides, and other timed status state.
 
+Instant expiration belongs to the end of the outermost
+`OrderedEffectExecutor` scope. A passive or ailment trigger therefore has one
+action-end boundary for its complete ordered sequence; nested execution does
+not expire state early. The executor returns those completion events separately
+from effect-owned events so callers can retain the exact expiry evidence
+without duplicating grants or other effect events.
+
 ## Ailment Application Transaction
 
 ```mermaid
@@ -173,6 +180,12 @@ retain the correct cause. Cleanup operates on all timed-state families and the
 selected stat-modifier service. Unknown or rejected modifier transitions abort
 the transaction.
 
+Direct status-removal effects use `RemoveNonModifierStatuses`, which returns
+one `BattleStatusRemovalResult` per committed charge, shield, affinity Break,
+affinity override, or other-status removal. `RemoveStatusEffectExecutor`
+projects each transition into a typed `StatusRemoved` lifecycle event.
+Protected and missing state returns no transition and no event.
+
 ## Passive Dispatcher Authority
 
 ### Target resolution
@@ -183,6 +196,13 @@ rejected before target policies run. `PassiveTriggerTargetResolver` then
 evaluates the typed scope over that validated graph, filters by life state and
 reserve inclusion, and normalizes repeated references while preserving
 encounter order.
+
+`PassiveEventPolicy.OwnerEligibility` is evaluated before target resolution.
+Generic unregistered events use `AllParticipants`.
+`BattleStatusEncounterLifecyclePort` registers `DeployedOnly` for battle start
+when no host policy exists; a prior explicit `AllParticipants` registration is
+preserved. Owner eligibility and target reserve inclusion are independent
+decisions.
 
 ### Dispatch order
 
@@ -212,12 +232,21 @@ condition-not-met target does not record an activation.
 
 ### Atomic dispatch
 
-The dispatcher creates one actor transaction over owner, participants, and
-event targets. Effects run against staged actors. Activation counts and all
-effect mutations commit together. Passive results validate their outcome,
-identifiers, trigger index, and effect collection at the extension boundary. A
-thrown effect or malformed result leaves both actor state and activation counts
-unchanged.
+`BattleExecutionServices` wraps its supplied or replacement dispatcher in one
+canonical validating transaction over owner, participants, and event targets.
+Before commit, the wrapper captures enabled passive definitions and requires
+each returned activation to match the requested event, an authored trigger
+index, and a target selected by that trigger over the participant graph. It
+rejects duplicate activation evidence, out-of-range or mismatched authored
+effect evidence, foreign actor IDs, and effects attached to a non-executed
+outcome.
+
+The standard `PassiveTriggerDispatcher` retains its own transaction so it is
+also safe when used directly. Effects run against staged actors. Activation
+counts and all effect mutations commit together. A thrown effect or malformed
+replacement result leaves actor state and activation counts unchanged. Skill
+execution translates such an exception into its typed `ExecutionFailed`
+rejection; lifecycle ports propagate it to their encounter fault boundary.
 
 ## Encounter Startup Atomicity
 
@@ -264,9 +293,12 @@ Lifecycle events do not make `Detail` authoritative. Typed fields carry:
 - passive source, event, trigger, target, outcome, and full effect result; and
 - cleanup reason.
 
-`BattleStatusLifecycleEventMapper` validates required payload combinations and
-maps only committed evidence into encounter events. Action-end expiry is
-included in action results instead of being discarded.
+`BattleStatusLifecycleEventMapper` validates the specialized passive and effect
+payload combinations it maps. Generic status events are wrapped in
+`BattleStatusChangedEventPayload`; the mapper does not claim to revalidate
+every possible generic status-field combination. Outermost action-completion
+expiry is retained in active action results and in passive or ailment trigger
+results instead of being discarded.
 
 ## Persistence And Restore
 
@@ -324,6 +356,7 @@ Primary source areas:
 - `Execution/BattleLifecycleClocks.cs`
 - `Execution/BattleRuntimeState.cs`
 - `Execution/BattleStatusLifecycle.cs`
+- `Execution/OrderedEffectExecutor.cs`
 - `Execution/PassiveRuntime.cs`
 - `Encounters/BattleEncounterLifecycleClocks.cs`
 - `Encounters/BattleStatusEncounterLifecyclePort.cs`

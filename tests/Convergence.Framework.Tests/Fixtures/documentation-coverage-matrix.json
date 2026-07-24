@@ -187,7 +187,7 @@
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "The independent Order 4 audit requires a precise outer effect-scope definition for Instant state and an owner decision for reserve-owned battle-start passives."
+        "reason": "O4-R16 now states the exact outer effect-scope lifetime, typed removal evidence, and deployed-owner battle-start default; O4-R17 fresh verification remains pending."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
@@ -195,7 +195,7 @@
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "The guide names a nonexistent ailment-result diagnostics property and must cover the corrected evidence and passive-policy boundaries."
+        "reason": "O4-R16 now uses the actual ailment-result properties and documents removal, completion-event, dispatcher-validation, and owner-eligibility boundaries; O4-R17 fresh verification remains pending."
       },
       "technical": {
         "state": "existing_unreviewed",
@@ -203,7 +203,7 @@
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "The runtime reference overstates event validation and must trace the corrected non-ailment removal, lifecycle-trigger expiry, and passive-result coherence paths."
+        "reason": "O4-R16 now narrows mapper guarantees and traces typed non-ailment removal, lifecycle completion events, request-aware passive validation, and owner eligibility; O4-R17 fresh verification remains pending."
       }
     },
     {

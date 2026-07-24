@@ -264,6 +264,21 @@ The fresh trace found no unresolved defect in these supported areas:
 Each runtime checkpoint should be an isolated commit. Order 4 must remain
 `partial` until O4-R17 completes.
 
+## Correction Progress
+
+The project owner approved `DeployedOnly` as the supplied battle-start owner
+policy, with explicit `AllParticipants` opt-in, and directed this roadmap on
+24 July 2026.
+
+| Checkpoint | State | Evidence |
+|---|---|---|
+| O4-R12 | Implemented pending final review | `2982fd10`; typed transitions and events for every non-modifier status family |
+| O4-R13 | Implemented pending final review | `2bb2cf7f`; outer-scope completion events retained through passive and ailment triggers |
+| O4-R14 | Implemented pending final review | `e4fc6fd`; request-aware transactional validation at defeat, turn-end, and battle-start ingress |
+| O4-R15 | Implemented pending final review | `97643c9`; deployed-only battle-start default and all-participants opt-in |
+| O4-R16 | In progress in this documentation checkpoint | Three audience documents and executable ledgers reconciled |
+| O4-R17 | Pending | Fresh source/documentation review and complete release gate |
+
 ## Verification Record
 
 The unmodified reviewed revision passed:

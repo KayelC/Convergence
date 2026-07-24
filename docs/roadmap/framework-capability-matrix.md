@@ -20,12 +20,14 @@ The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 defe
 
 `status_and_passive_lifecycle` is `partial` after the
 [Order 4 independent audit](../reviews/status-passive-lifecycle-order-4-independent-audit-2026-07-24.md)
-reproduced incomplete typed evidence for non-ailment dispels and
-lifecycle-triggered action-end expiry. It also found that structurally valid
-custom passive results are not checked against the dispatch request, and that
-reserve-owner battle-start eligibility has no explicit policy. The underlying
-application, clock, cleanup, persistence, and schema boundaries remain sound.
-Demo coverage remains `focused`.
+reproduced four bounded defects and one open owner-policy decision. O4-R12
+through O4-R15 now provide typed non-ailment removals, preserve outer-scope
+completion events, validate replacement passive results against their request,
+and supply deployed-only battle-start ownership with an explicit
+all-participants opt-in. O4-R16 reconciles the three audience documents and
+ledgers. The capability remains `partial` only until O4-R17 independently
+re-reads the corrected source and passes the full release gate. Demo coverage
+remains `focused`.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

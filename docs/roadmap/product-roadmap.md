@@ -15,10 +15,12 @@ Phase 8 established the clean product boundary. Framework, DemoHost, tests, and 
 The current Framework still owns explicit status lifetimes and removal causes,
 application gates, turn restrictions, recovery, cleanup, passive targeting and
 activation limits, reserve-aware clocks, persistence validation, and
-transactional actor-state mutation. O4-R12 through O4-R17 now close incomplete
+transactional actor-state mutation. O4-R12 through O4-R15 have closed
 status-removal evidence, lifecycle-trigger expiry evidence, passive extension
-coherence, reserve-owner battle-start policy, and audience documentation before
-the capability can return to `complete`.
+coherence, and reserve-owner battle-start policy. O4-R16 aligns the audience
+documentation and ledgers. O4-R17 remains the independent source,
+documentation, and release-gate checkpoint before the capability can return to
+`complete`.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience

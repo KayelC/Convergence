@@ -103,11 +103,18 @@ it is never inferred from the number of actions taken.
 
 | Duration | Meaning |
 |---|---|
-| Instant | Expires at the next action boundary |
+| Instant | Expires at the end of the outermost ordered-effect execution scope |
 | Counted turns | Decrements only when its authored event ID occurs |
 | Phase | Expires when its authored phase ID completes |
 | Battle | Expires during battle-end cleanup |
 | Permanent | Has no automatic clock expiry |
+
+An outermost ordered-effect scope is one complete framework effect sequence.
+That may be a selected skill or item, a passive trigger, or an ailment trigger.
+An Instant state can affect later effects inside the same sequence, then expires
+before a separately selected command begins. Nested effects do not create extra
+expiry boundaries. A host that runs effects outside the standard executors must
+dispatch the explicit action-end lifecycle boundary itself.
 
 Team IDs, phase IDs, and lifecycle event IDs are separate identifiers. A host
 must map them explicitly when composing an encounter.
@@ -157,6 +164,10 @@ status-producing effect selects its expiration and the exact causes allowed to
 remove it. The supplied profiles above remain convenient programmatic defaults;
 JSON content is not forced to choose one of them.
 
+Typed dispel effects report one removal transition for every charge, shield,
+affinity Break, affinity override, or other status they actually remove. A
+protected or absent state produces no removal event and no hidden mutation.
+
 ## Cleanup
 
 Cleanup is requested with one typed departure reason: deployment swap, defeat,
@@ -185,6 +196,13 @@ An authored trigger explicitly selects:
 - an optional condition; and
 - ordered typed effects.
 
+Event policy separately decides whether the passive's **owner** may initiate a
+trigger. The canonical encounter lifecycle supplies `DeployedOnly` for battle
+start, so reserve-owned battle-start passives do not fire by default. A game
+can explicitly select `AllParticipants` for reserve auras or similar rules.
+This does not change trigger targeting: `includeReserveActors` still decides
+whether reserve actors may be **targets**.
+
 Execution order is passive loadout, trigger index, resolved target order, then
 effect order. Duplicate target IDs are removed.
 
@@ -203,6 +221,12 @@ Application, turn lifecycle, cleanup, passive dispatch, and encounter lifecycle
 ingress use staged actor state. A rejected policy decision, malformed extension
 result, exception, or cancellation before commit does not publish a partial
 actor mutation.
+
+A replacement passive dispatcher may evaluate conditions differently, but its
+evidence must still identify an enabled passive, one of that passive's authored
+triggers for the requested event, and an eligible participant target.
+Non-executed outcomes cannot claim committed effects. Incoherent evidence is
+rejected before the staged actor graph commits.
 
 This guarantee covers framework actor state, not external host work. An event
 sink may fail after a lifecycle transaction has committed; the encounter then
