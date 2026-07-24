@@ -525,6 +525,11 @@ public enum PassiveTriggerOutcome
 
 public sealed record PassiveTriggerExecutionResult
 {
+    private ContentId _skillId;
+    private int _triggerIndex;
+    private ContentId _eventId;
+    private RuntimeInstanceId _targetId;
+    private PassiveTriggerOutcome _outcome;
     private readonly IReadOnlyList<EffectExecutionResult> _effects =
         Array.Empty<EffectExecutionResult>();
 
@@ -544,15 +549,89 @@ public sealed record PassiveTriggerExecutionResult
         this.Effects = Effects;
     }
 
-    public ContentId SkillId { get; init; }
-    public int TriggerIndex { get; init; }
-    public ContentId EventId { get; init; }
-    public RuntimeInstanceId TargetId { get; init; }
-    public PassiveTriggerOutcome Outcome { get; init; }
+    public ContentId SkillId
+    {
+        get => _skillId;
+        init
+        {
+            if (!value.IsValid)
+            {
+                throw new ArgumentException("Passive skill ID must be valid.", nameof(value));
+            }
+
+            _skillId = value;
+        }
+    }
+
+    public int TriggerIndex
+    {
+        get => _triggerIndex;
+        init
+        {
+            if (value < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "Passive trigger index cannot be negative.");
+            }
+
+            _triggerIndex = value;
+        }
+    }
+
+    public ContentId EventId
+    {
+        get => _eventId;
+        init
+        {
+            if (!value.IsValid)
+            {
+                throw new ArgumentException("Passive event ID must be valid.", nameof(value));
+            }
+
+            _eventId = value;
+        }
+    }
+
+    public RuntimeInstanceId TargetId
+    {
+        get => _targetId;
+        init
+        {
+            if (!value.IsValid)
+            {
+                throw new ArgumentException("Passive target ID must be valid.", nameof(value));
+            }
+
+            _targetId = value;
+        }
+    }
+
+    public PassiveTriggerOutcome Outcome
+    {
+        get => _outcome;
+        init
+        {
+            if (!Enum.IsDefined(value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Passive trigger outcome is not supported.");
+            }
+
+            _outcome = value;
+        }
+    }
+
     public IReadOnlyList<EffectExecutionResult> Effects
     {
         get => _effects;
-        init => _effects = Array.AsReadOnly(value?.ToArray() ?? []);
+        init
+        {
+            EffectExecutionResult[] snapshot = value?.ToArray() ?? [];
+            if (snapshot.Any(effect => effect is null))
+            {
+                throw new ArgumentException("Passive effect results cannot contain null entries.", nameof(value));
+            }
+
+            _effects = Array.AsReadOnly(snapshot);
+        }
     }
 
     public void Deconstruct(
@@ -585,7 +664,16 @@ public sealed record PassiveTriggerDispatchResult
     public IReadOnlyList<PassiveTriggerExecutionResult> Activations
     {
         get => _activations;
-        init => _activations = Array.AsReadOnly(value?.ToArray() ?? []);
+        init
+        {
+            PassiveTriggerExecutionResult[] snapshot = value?.ToArray() ?? [];
+            if (snapshot.Any(activation => activation is null))
+            {
+                throw new ArgumentException("Passive activations cannot contain null entries.", nameof(value));
+            }
+
+            _activations = Array.AsReadOnly(snapshot);
+        }
     }
 
     public void Deconstruct(out IReadOnlyList<PassiveTriggerExecutionResult> Activations) =>

@@ -986,6 +986,21 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void TurnEnd_MalformedPassiveDispatcherResultRollsBackStagedMutation()
+    {
+        RuntimeActorState actor = Actor("malformed_turn_end_passive", hp: 50);
+        var dispatcher = new MutatingMalformedPassiveDispatcher();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new BattleStatusLifecycleService(new SequenceRandomSource()).ProcessTurnEnd(
+                new BattleTurnEndLifecycleRequest(actor, [actor], Battle, OwnerTurnEnd),
+                Services(passiveTriggers: dispatcher)));
+
+        Assert.Equal(50, actor.GetRequiredResource(Hp).Current);
+        Assert.NotSame(actor, dispatcher.ReceivedOwner);
+    }
+
+    [Fact]
     public void TurnEnd_UsesSharedStopTargetAndStopActionSemantics()
     {
         ContentId failingHandlerId = ContentId.Parse("always_fail");
@@ -1132,6 +1147,29 @@ public sealed class BattleStatusLifecycleTests
         Assert.Equal(50, second.GetRequiredResource(Hp).Current);
         Assert.Empty(first.ToSnapshot().BattleActivations.PassiveActivations);
         Assert.Empty(second.ToSnapshot().BattleActivations.PassiveActivations);
+    }
+
+    [Fact]
+    public async Task BattleStartPort_MalformedPassiveDispatcherResultRollsBackStagedMutation()
+    {
+        RuntimeActorState actor = Actor("malformed_battle_start_passive", hp: 50);
+        var dispatcher = new MutatingMalformedPassiveDispatcher();
+        BattleExecutionServices services = Services(passiveTriggers: dispatcher);
+        var port = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new SequenceRandomSource()),
+            services,
+            BattleStart,
+            OwnerTurnEnd,
+            TestEncounterClocks.Standard(PlayerTeam, ContentId.Parse("enemy_team")));
+        BattleEncounterParticipant[] participants = [new(actor, "Actor")];
+        var encounter = new BattleEncounterRequest(participants, Battle, NormalBattle, null, 1);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => port.ProcessBattleStartAsync(
+                new BattleEncounterLifecycleRequest(encounter, participants, [PlayerTeam]))
+            .AsTask());
+
+        Assert.Equal(50, actor.GetRequiredResource(Hp).Current);
+        Assert.NotSame(actor, dispatcher.ReceivedOwner);
     }
 
     [Fact]
@@ -1647,7 +1685,8 @@ public sealed class BattleStatusLifecycleTests
         IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffectHandlers = null,
         IBattleAilmentTransitionPolicy? ailmentTransitions = null,
         IBattleAilmentApplicationGatePolicy? ailmentGate = null,
-        IBattleAilmentApplicationService? ailmentApplications = null) =>
+        IBattleAilmentApplicationService? ailmentApplications = null,
+        IPassiveTriggerDispatcher? passiveTriggers = null) =>
         new(
             new EmptyAilments(),
             new NoDamagePolicy(),
@@ -1666,7 +1705,8 @@ public sealed class BattleStatusLifecycleTests
                     new PoisonFormulaHandler())
             ],
             customEffectHandlers: customEffectHandlers,
-            ailmentApplications: ailmentApplications)
+            ailmentApplications: ailmentApplications,
+            passiveTriggers: passiveTriggers)
         {
             AilmentApplicationGate = ailmentGate ?? GuardBlocksAilmentsApplicationGatePolicy.Instance,
             AilmentTransitions = ailmentTransitions ?? StandardBattleAilmentTransitionPolicy.Instance
@@ -1882,6 +1922,29 @@ public sealed class BattleStatusLifecycleTests
         public BattleTurnStartRestriction Resolve(
             IReadOnlyList<BattleTurnStartRestriction> restrictions) =>
             new((BattleTurnStartOutcome)int.MaxValue);
+    }
+
+    private sealed class MutatingMalformedPassiveDispatcher : IPassiveTriggerDispatcher
+    {
+        public RuntimeActorState? ReceivedOwner { get; private set; }
+
+        public PassiveTriggerDispatchResult Dispatch(
+            PassiveTriggerDispatchRequest request,
+            BattleExecutionServices services)
+        {
+            ReceivedOwner = request.Owner;
+            request.Owner.SetResource(Hp, 1);
+            return new PassiveTriggerDispatchResult(
+            [
+                new PassiveTriggerExecutionResult(
+                    ContentId.Parse("malformed_passive"),
+                    0,
+                    request.EventId,
+                    request.Owner.InstanceId,
+                    (PassiveTriggerOutcome)int.MaxValue,
+                    [])
+            ]);
+        }
     }
 
     private sealed class FailingCustomEffectHandler : ICustomEffectHandler

@@ -62,6 +62,36 @@ public sealed class LifecycleResultImmutabilityTests
     }
 
     [Fact]
+    public void PassiveResultContractsRejectMalformedConstructorAndRecordCloneValues()
+    {
+        PassiveTriggerExecutionResult valid = Activation("valid", []);
+
+        Assert.Throws<ArgumentException>(() => new PassiveTriggerExecutionResult(
+            default,
+            0,
+            ContentId.Parse("event"),
+            RuntimeInstanceId.Parse("target"),
+            PassiveTriggerOutcome.Executed,
+            []));
+        Assert.Throws<ArgumentOutOfRangeException>(() => valid with { TriggerIndex = -1 });
+        Assert.Throws<ArgumentException>(() => valid with { EventId = default });
+        Assert.Throws<ArgumentException>(() => valid with { TargetId = default });
+        Assert.Throws<ArgumentOutOfRangeException>(() => valid with
+        {
+            Outcome = (PassiveTriggerOutcome)int.MaxValue
+        });
+        Assert.Throws<ArgumentException>(() => valid with
+        {
+            Effects = [null!]
+        });
+        Assert.Throws<ArgumentException>(() => new PassiveTriggerDispatchResult([null!]));
+        Assert.Throws<ArgumentException>(() => PassiveTriggerDispatchResult.Empty with
+        {
+            Activations = [null!]
+        });
+    }
+
+    [Fact]
     public void BattleTurnEndLifecycleResult_SnapshotsConstructorAndRecordCloneCollections()
     {
         BattleStatusLifecycleEvent originalEvent = Event("original");
