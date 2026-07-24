@@ -245,3 +245,36 @@ claim one runtime ID before any policy or mutation runs.
 
 After both runtime corrections, the lifecycle source and all three audience
 documents must be re-read again before capability or documentation promotion.
+
+## Follow-Up Finding From The Corrected Passive Trace
+
+### O4-R11-M2: Passive-dispatch extension output can commit malformed evidence
+
+**Severity:** Medium
+
+**Invariant:** a host-supplied passive dispatcher must return structurally valid
+typed activation evidence before its staged actor mutations can commit.
+
+**Reachable path:** `IPassiveTriggerDispatcher` is a public extension boundary.
+`PassiveTriggerExecutionResult` currently accepts undefined
+`PassiveTriggerOutcome` values, negative trigger indexes, empty skill/event/target
+IDs, and null collection members. `ProcessTurnEnd` maps every outcome other than
+`Executed` to `PassiveEvaluated` and then commits the surrounding actor
+transaction.
+
+**Consequence:** a defective custom dispatcher can mutate staged actor state,
+return semantically impossible activation evidence, and have both accepted as a
+successful turn-end lifecycle result. The host then receives an apparently
+ordinary evaluation event whose typed payload is invalid.
+
+**Evidence:**
+
+- `Execution/PassiveRuntime.cs`: `PassiveTriggerExecutionResult` and
+  `PassiveTriggerDispatchResult` accept unvalidated extension output; and
+- `Execution/BattleStatusLifecycle.cs`: `ProcessTurnEndCore` and
+  `AddPassiveEvents` trust the returned activation outcome and identifiers.
+
+**Correction checkpoint:** validate every scalar and collection member in the
+passive result records, including record-clone setters, and prove a malformed
+custom dispatcher cannot commit staged resource mutation through turn-end or
+battle-start lifecycle ingress.
