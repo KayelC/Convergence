@@ -13,25 +13,35 @@ public sealed class LifecycleResultImmutabilityTests
     {
         EffectExecutionResult originalEffect = Effect(0);
         EffectExecutionResult replacementEffect = Effect(1);
+        BattleStatusLifecycleEvent originalCompletion = Event("original_completion");
+        BattleStatusLifecycleEvent replacementCompletion = Event("replacement_completion");
         var originalEffects = new List<EffectExecutionResult> { originalEffect };
         var replacementEffects = new List<EffectExecutionResult> { replacementEffect };
-        var original = Activation("original", originalEffects);
+        var originalCompletions = new List<BattleStatusLifecycleEvent> { originalCompletion };
+        var replacementCompletions = new List<BattleStatusLifecycleEvent> { replacementCompletion };
+        var original = Activation("original", originalEffects, originalCompletions);
 
         PassiveTriggerExecutionResult clone = original with
         {
             Outcome = PassiveTriggerOutcome.ConditionNotMet,
-            Effects = replacementEffects
+            Effects = replacementEffects,
+            CompletionLifecycleEvents = replacementCompletions
         };
 
         originalEffects.Clear();
         replacementEffects.Clear();
+        originalCompletions.Clear();
+        replacementCompletions.Clear();
 
         Assert.Equal(originalEffect, Assert.Single(original.Effects));
+        Assert.Equal(originalCompletion, Assert.Single(original.CompletionLifecycleEvents));
         Assert.Equal(replacementEffect, Assert.Single(clone.Effects));
+        Assert.Equal(replacementCompletion, Assert.Single(clone.CompletionLifecycleEvents));
         Assert.Equal(PassiveTriggerOutcome.ConditionNotMet, clone.Outcome);
         Assert.NotSame(originalEffects, original.Effects);
         Assert.NotSame(replacementEffects, clone.Effects);
         AssertReadOnly(clone.Effects, originalEffect);
+        AssertReadOnly(clone.CompletionLifecycleEvents, originalCompletion);
 
         clone.Deconstruct(out _, out _, out _, out _, out _, out IReadOnlyList<EffectExecutionResult> effects);
         Assert.Same(clone.Effects, effects);
@@ -83,6 +93,10 @@ public sealed class LifecycleResultImmutabilityTests
         Assert.Throws<ArgumentException>(() => valid with
         {
             Effects = [null!]
+        });
+        Assert.Throws<ArgumentException>(() => valid with
+        {
+            CompletionLifecycleEvents = [null!]
         });
         Assert.Throws<ArgumentException>(() => new PassiveTriggerDispatchResult([null!]));
         Assert.Throws<ArgumentException>(() => PassiveTriggerDispatchResult.Empty with
@@ -261,7 +275,11 @@ public sealed class LifecycleResultImmutabilityTests
     [Fact]
     public void LifecycleResultRecordClones_NormalizeNullCollectionsToImmutableEmptySnapshots()
     {
-        PassiveTriggerExecutionResult activation = Activation("null", []) with { Effects = null! };
+        PassiveTriggerExecutionResult activation = Activation("null", []) with
+        {
+            Effects = null!,
+            CompletionLifecycleEvents = null!
+        };
         PassiveTriggerDispatchResult dispatch = PassiveTriggerDispatchResult.Empty with { Activations = null! };
         var turnEnd = new BattleTurnEndLifecycleResult([], []) with
         {
@@ -274,6 +292,7 @@ public sealed class LifecycleResultImmutabilityTests
         };
 
         Assert.Empty(activation.Effects);
+        Assert.Empty(activation.CompletionLifecycleEvents);
         Assert.Empty(dispatch.Activations);
         Assert.Empty(turnEnd.Events);
         Assert.Empty(turnEnd.PassiveActivations);
@@ -287,14 +306,16 @@ public sealed class LifecycleResultImmutabilityTests
 
     private static PassiveTriggerExecutionResult Activation(
         string id,
-        IReadOnlyList<EffectExecutionResult> effects) =>
+        IReadOnlyList<EffectExecutionResult> effects,
+        IReadOnlyList<BattleStatusLifecycleEvent>? completionLifecycleEvents = null) =>
         new(
             ContentId.Parse($"{id}_skill"),
             0,
             ContentId.Parse($"{id}_event"),
             RuntimeInstanceId.Parse($"{id}_target"),
             PassiveTriggerOutcome.Executed,
-            effects);
+            effects,
+            completionLifecycleEvents ?? []);
 
     private static EffectExecutionResult Effect(int index) =>
         new(index, RuntimeInstanceId.Parse($"target_{index}"), EffectExecutionOutcome.Success);

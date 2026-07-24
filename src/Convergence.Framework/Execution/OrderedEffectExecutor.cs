@@ -14,7 +14,8 @@ internal enum OrderedEffectStopReason
 internal sealed record OrderedEffectExecution(
     IReadOnlyList<EffectExecutionResult> Effects,
     OrderedEffectStopReason StopReason,
-    IReadOnlyList<BattleStatusLifecycleEvent> LifecycleEvents)
+    IReadOnlyList<BattleStatusLifecycleEvent> LifecycleEvents,
+    IReadOnlyList<BattleStatusLifecycleEvent> CompletionLifecycleEvents)
 {
     public bool Interrupted => StopReason == OrderedEffectStopReason.Interrupted;
     public bool StopsAction => StopReason is OrderedEffectStopReason.Action or OrderedEffectStopReason.Interrupted;
@@ -92,7 +93,8 @@ internal sealed class OrderedEffectExecutor
             ? execution with
             {
                 LifecycleEvents = Array.AsReadOnly(
-                    execution.LifecycleEvents.Concat(actionEndEvents).ToArray())
+                    execution.LifecycleEvents.Concat(actionEndEvents).ToArray()),
+                CompletionLifecycleEvents = Array.AsReadOnly(actionEndEvents.ToArray())
             }
             : execution;
     }
@@ -211,7 +213,8 @@ internal sealed class OrderedEffectExecutor
                     return new OrderedEffectExecution(
                         Array.AsReadOnly(results.ToArray()),
                         OrderedEffectStopReason.Interrupted,
-                        LifecycleEvents(results));
+                        LifecycleEvents(results),
+                        []);
                 }
 
                 if (result.Outcome != EffectExecutionOutcome.Failure)
@@ -224,7 +227,8 @@ internal sealed class OrderedEffectExecutor
                     return new OrderedEffectExecution(
                         Array.AsReadOnly(results.ToArray()),
                         OrderedEffectStopReason.Action,
-                        LifecycleEvents(results));
+                        LifecycleEvents(results),
+                        []);
                 }
 
                 if (effect.OnFailure == EffectFailurePolicy.StopTarget)
@@ -234,7 +238,8 @@ internal sealed class OrderedEffectExecutor
                         return new OrderedEffectExecution(
                             Array.AsReadOnly(results.ToArray()),
                             OrderedEffectStopReason.Target,
-                            LifecycleEvents(results));
+                            LifecycleEvents(results),
+                            []);
                     }
 
                     stoppedTargets.Add(target.InstanceId);
@@ -246,7 +251,8 @@ internal sealed class OrderedEffectExecutor
         return new OrderedEffectExecution(
             Array.AsReadOnly(results.ToArray()),
             targetStopped ? OrderedEffectStopReason.Target : OrderedEffectStopReason.None,
-            LifecycleEvents(results));
+            LifecycleEvents(results),
+            []);
     }
 
     private static IReadOnlyList<BattleStatusLifecycleEvent> LifecycleEvents(

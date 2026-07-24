@@ -986,6 +986,98 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void TurnEnd_PassiveCompletionEventsExposeInstantStatusExpirationExactlyOnce()
+    {
+        SkillDefinition passive = PassiveSkill(
+            "instant_turn_end_shield",
+            [
+                new PassiveTriggerDefinition(
+                    OwnerTurnEnd,
+                    [
+                        new GrantShieldEffectDefinition(
+                            ShieldKind.Magical,
+                            StandardStatusLifetimes.Encounter(new InstantDurationDefinition()))
+                    ])
+            ]);
+        RuntimeActorState actor = Actor("instant_turn_end_actor", passiveSkills: [passive]);
+
+        BattleTurnEndLifecycleResult result = new BattleStatusLifecycleService(new SequenceRandomSource())
+            .ProcessTurnEnd(new(actor, [actor], Battle, OwnerTurnEnd), Services());
+
+        Assert.Empty(actor.Shields);
+        PassiveTriggerExecutionResult activation = Assert.Single(result.PassiveActivations);
+        BattleStatusLifecycleEvent completion = Assert.Single(activation.CompletionLifecycleEvents);
+        Assert.Equal(BattleStatusLifecycleEventKind.StatusExpired, completion.Kind);
+        Assert.Equal(BattleDurationStateKind.Shield, completion.DurationTransition!.StateKind);
+        Assert.Same(completion, Assert.Single(result.Events, @event =>
+            @event.Kind == BattleStatusLifecycleEventKind.StatusExpired));
+    }
+
+    [Fact]
+    public async Task BattleStartPort_MapsPassiveInstantStatusExpirationExactlyOnce()
+    {
+        SkillDefinition passive = PassiveSkill(
+            "instant_battle_start_shield",
+            [
+                new PassiveTriggerDefinition(
+                    BattleStart,
+                    [
+                        new GrantShieldEffectDefinition(
+                            ShieldKind.Physical,
+                            StandardStatusLifetimes.Encounter(new InstantDurationDefinition()))
+                    ])
+            ]);
+        RuntimeActorState actor = Actor("instant_battle_start_actor", passiveSkills: [passive]);
+        BattleExecutionServices services = Services();
+        var port = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new SequenceRandomSource()),
+            services,
+            BattleStart,
+            OwnerTurnEnd,
+            TestEncounterClocks.Standard(PlayerTeam, ContentId.Parse("enemy_team")));
+        BattleEncounterParticipant[] participants = [new(actor, "Actor")];
+        var encounter = new BattleEncounterRequest(participants, Battle, NormalBattle, null, 1);
+
+        IReadOnlyList<BattleEncounterEvent> events = await port.ProcessBattleStartAsync(
+            new BattleEncounterLifecycleRequest(encounter, participants, [PlayerTeam]));
+
+        Assert.Empty(actor.Shields);
+        BattleStatusChangedEventPayload status = Assert.IsType<BattleStatusChangedEventPayload>(
+            Assert.Single(events, @event =>
+                @event.Payload is BattleStatusChangedEventPayload payload &&
+                payload.StatusEvent.Kind == BattleStatusLifecycleEventKind.StatusExpired).Payload);
+        Assert.Equal(BattleDurationStateKind.Shield, status.StatusEvent.DurationTransition!.StateKind);
+    }
+
+    [Fact]
+    public void TurnEnd_AilmentTriggerCompletionEventsExposeInstantStatusExpirationExactlyOnce()
+    {
+        RuntimeActorState actor = Actor("instant_ailment_actor");
+        actor.ApplyAilment(
+            IndependentAilment(
+                "instant_shield_ailment",
+                new NormalAilmentTurnBehaviorDefinition(),
+                [
+                    new PassiveTriggerDefinition(
+                        OwnerTurnEnd,
+                        [
+                            new GrantShieldEffectDefinition(
+                                ShieldKind.Magical,
+                                StandardStatusLifetimes.Encounter(new InstantDurationDefinition()))
+                        ])
+                ]),
+            Turns(3));
+
+        BattleTurnEndLifecycleResult result = new BattleStatusLifecycleService(new SequenceRandomSource())
+            .ProcessTurnEnd(new(actor, [actor], Battle, OwnerTurnEnd), Services());
+
+        Assert.Empty(actor.Shields);
+        BattleStatusLifecycleEvent expired = Assert.Single(result.Events, @event =>
+            @event.Kind == BattleStatusLifecycleEventKind.StatusExpired);
+        Assert.Equal(BattleDurationStateKind.Shield, expired.DurationTransition!.StateKind);
+    }
+
+    [Fact]
     public void TurnEnd_MalformedPassiveDispatcherResultRollsBackStagedMutation()
     {
         RuntimeActorState actor = Actor("malformed_turn_end_passive", hp: 50);

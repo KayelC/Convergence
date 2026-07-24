@@ -3468,6 +3468,8 @@ Convergence.Execution.PassiveTriggerDispatchResult.Equals(Convergence.Execution.
 Convergence.Execution.PassiveTriggerDispatchResult.PassiveTriggerDispatchResult(System.Collections.Generic.IReadOnlyList<Convergence.Execution.PassiveTriggerExecutionResult!>! Activations) -> void
 Convergence.Execution.PassiveTriggerExecutionResult
 Convergence.Execution.PassiveTriggerExecutionResult.<Clone>$() -> Convergence.Execution.PassiveTriggerExecutionResult!
+Convergence.Execution.PassiveTriggerExecutionResult.CompletionLifecycleEvents.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleStatusLifecycleEvent!>!
+Convergence.Execution.PassiveTriggerExecutionResult.CompletionLifecycleEvents.init -> void
 Convergence.Execution.PassiveTriggerExecutionResult.Deconstruct(out Convergence.Content.ContentId SkillId, out int TriggerIndex, out Convergence.Content.ContentId EventId, out Convergence.Runtime.RuntimeInstanceId TargetId, out Convergence.Execution.PassiveTriggerOutcome Outcome, out System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>! Effects) -> void
 Convergence.Execution.PassiveTriggerExecutionResult.Effects.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>!
 Convergence.Execution.PassiveTriggerExecutionResult.Effects.init -> void
@@ -3477,6 +3479,7 @@ Convergence.Execution.PassiveTriggerExecutionResult.EventId.init -> void
 Convergence.Execution.PassiveTriggerExecutionResult.Outcome.get -> Convergence.Execution.PassiveTriggerOutcome
 Convergence.Execution.PassiveTriggerExecutionResult.Outcome.init -> void
 Convergence.Execution.PassiveTriggerExecutionResult.PassiveTriggerExecutionResult(Convergence.Content.ContentId SkillId, int TriggerIndex, Convergence.Content.ContentId EventId, Convergence.Runtime.RuntimeInstanceId TargetId, Convergence.Execution.PassiveTriggerOutcome Outcome, System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>! Effects) -> void
+Convergence.Execution.PassiveTriggerExecutionResult.PassiveTriggerExecutionResult(Convergence.Content.ContentId SkillId, int TriggerIndex, Convergence.Content.ContentId EventId, Convergence.Runtime.RuntimeInstanceId TargetId, Convergence.Execution.PassiveTriggerOutcome Outcome, System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>! Effects, System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleStatusLifecycleEvent!>! CompletionLifecycleEvents) -> void
 Convergence.Execution.PassiveTriggerExecutionResult.SkillId.get -> Convergence.Content.ContentId
 Convergence.Execution.PassiveTriggerExecutionResult.SkillId.init -> void
 Convergence.Execution.PassiveTriggerExecutionResult.TargetId.get -> Convergence.Runtime.RuntimeInstanceId

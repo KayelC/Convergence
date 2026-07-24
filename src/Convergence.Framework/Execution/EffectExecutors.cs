@@ -88,8 +88,10 @@ internal abstract class TargetedEffectExecutor
         IEnumerable<BattleStatusLifecycleEvent>? lifecycleEvents) =>
         Array.AsReadOnly((lifecycleEvents ?? [])
             .Concat((activations ?? [])
-                .SelectMany(activation => activation.Effects)
-                .SelectMany(effect => effect.LifecycleEvents))
+                .SelectMany(activation =>
+                    activation.Effects
+                        .SelectMany(effect => effect.LifecycleEvents)
+                        .Concat(activation.CompletionLifecycleEvents)))
             .ToArray());
 
     protected static IReadOnlyList<PassiveTriggerExecutionResult> DispatchDefeatPrevention(

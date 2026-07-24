@@ -1628,6 +1628,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                         trigger.Effects,
                         new ResolvedRuntimeTargetSet([target]));
                     AddEffectEvents(events, actor.InstanceId, active.Definition.Id, execution.Effects);
+                    events.AddRange(execution.CompletionLifecycleEvents);
 
                     if (execution.StopsAction)
                     {
@@ -1779,6 +1780,7 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
             if (activation.Outcome == PassiveTriggerOutcome.Executed)
             {
                 AddEffectEvents(events, ownerId, activation.SkillId, activation.Effects);
+                events.AddRange(activation.CompletionLifecycleEvents);
             }
         }
     }

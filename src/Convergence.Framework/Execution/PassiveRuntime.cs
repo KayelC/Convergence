@@ -532,6 +532,8 @@ public sealed record PassiveTriggerExecutionResult
     private PassiveTriggerOutcome _outcome;
     private readonly IReadOnlyList<EffectExecutionResult> _effects =
         Array.Empty<EffectExecutionResult>();
+    private readonly IReadOnlyList<BattleStatusLifecycleEvent> _completionLifecycleEvents =
+        Array.Empty<BattleStatusLifecycleEvent>();
 
     public PassiveTriggerExecutionResult(
         ContentId SkillId,
@@ -540,6 +542,25 @@ public sealed record PassiveTriggerExecutionResult
         RuntimeInstanceId TargetId,
         PassiveTriggerOutcome Outcome,
         IReadOnlyList<EffectExecutionResult> Effects)
+        : this(
+            SkillId,
+            TriggerIndex,
+            EventId,
+            TargetId,
+            Outcome,
+            Effects,
+            [])
+    {
+    }
+
+    public PassiveTriggerExecutionResult(
+        ContentId SkillId,
+        int TriggerIndex,
+        ContentId EventId,
+        RuntimeInstanceId TargetId,
+        PassiveTriggerOutcome Outcome,
+        IReadOnlyList<EffectExecutionResult> Effects,
+        IReadOnlyList<BattleStatusLifecycleEvent> CompletionLifecycleEvents)
     {
         this.SkillId = SkillId;
         this.TriggerIndex = TriggerIndex;
@@ -547,6 +568,7 @@ public sealed record PassiveTriggerExecutionResult
         this.TargetId = TargetId;
         this.Outcome = Outcome;
         this.Effects = Effects;
+        this.CompletionLifecycleEvents = CompletionLifecycleEvents;
     }
 
     public ContentId SkillId
@@ -631,6 +653,23 @@ public sealed record PassiveTriggerExecutionResult
             }
 
             _effects = Array.AsReadOnly(snapshot);
+        }
+    }
+
+    public IReadOnlyList<BattleStatusLifecycleEvent> CompletionLifecycleEvents
+    {
+        get => _completionLifecycleEvents;
+        init
+        {
+            BattleStatusLifecycleEvent[] snapshot = value?.ToArray() ?? [];
+            if (snapshot.Any(@event => @event is null))
+            {
+                throw new ArgumentException(
+                    "Passive completion lifecycle events cannot contain null entries.",
+                    nameof(value));
+            }
+
+            _completionLifecycleEvents = Array.AsReadOnly(snapshot);
         }
     }
 
@@ -913,7 +952,8 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
                             request.EventId,
                             target.InstanceId,
                             PassiveTriggerOutcome.Executed,
-                            execution.Effects));
+                            execution.Effects,
+                            execution.CompletionLifecycleEvents));
                     }
                     finally
                     {
@@ -981,7 +1021,10 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
                 request,
                 trigger.Effects,
                 new ResolvedRuntimeTargetSet([target]));
-        return new TriggerEffectExecution(execution.Effects, execution.StopsAction);
+        return new TriggerEffectExecution(
+            execution.Effects,
+            execution.CompletionLifecycleEvents,
+            execution.StopsAction);
     }
 
     private static PassiveTriggerExecutionResult NonExecuting(
@@ -1000,6 +1043,7 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
 
     private sealed record TriggerEffectExecution(
         IReadOnlyList<EffectExecutionResult> Effects,
+        IReadOnlyList<BattleStatusLifecycleEvent> CompletionLifecycleEvents,
         bool StopsDispatch);
 }
 
