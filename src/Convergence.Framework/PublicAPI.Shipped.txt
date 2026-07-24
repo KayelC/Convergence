@@ -2988,11 +2988,6 @@ Convergence.Execution.BattlePassiveEntry.IsEnabled.get -> bool
 Convergence.Execution.BattlePassiveEntry.IsEnabled.init -> void
 Convergence.Execution.BattlePassiveEntry.Skill.get -> Convergence.Content.SkillDefinition!
 Convergence.Execution.BattlePassiveEntry.Skill.init -> void
-Convergence.Execution.BattlePhaseEndLifecycleRequest
-Convergence.Execution.BattlePhaseEndLifecycleRequest.<Clone>$() -> Convergence.Execution.BattlePhaseEndLifecycleRequest!
-Convergence.Execution.BattlePhaseEndLifecycleRequest.Equals(Convergence.Execution.BattlePhaseEndLifecycleRequest? other) -> bool
-Convergence.Execution.BattlePhaseEndLifecycleRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
-Convergence.Execution.BattlePhaseEndLifecycleRequest.PhaseId.get -> Convergence.Content.ContentId
 Convergence.Execution.BattlePhaseProgressPolicy
 Convergence.Execution.BattlePhaseProgressPolicy.<Clone>$() -> Convergence.Execution.BattlePhaseProgressPolicy!
 Convergence.Execution.BattlePhaseProgressPolicy.BattlePhaseProgressPolicy(int maximumCommands, int maximumConsecutiveFreeActions) -> void
@@ -7698,9 +7693,6 @@ override Convergence.Execution.BattleOtherStatusState.ToString() -> string!
 override Convergence.Execution.BattlePassiveEntry.Equals(object? obj) -> bool
 override Convergence.Execution.BattlePassiveEntry.GetHashCode() -> int
 override Convergence.Execution.BattlePassiveEntry.ToString() -> string!
-override Convergence.Execution.BattlePhaseEndLifecycleRequest.Equals(object? obj) -> bool
-override Convergence.Execution.BattlePhaseEndLifecycleRequest.GetHashCode() -> int
-override Convergence.Execution.BattlePhaseEndLifecycleRequest.ToString() -> string!
 override Convergence.Execution.BattlePhaseProgressPolicy.Equals(object? obj) -> bool
 override Convergence.Execution.BattlePhaseProgressPolicy.GetHashCode() -> int
 override Convergence.Execution.BattlePhaseProgressPolicy.ToString() -> string!
@@ -9119,8 +9111,6 @@ static Convergence.Execution.BattleOtherStatusState.operator !=(Convergence.Exec
 static Convergence.Execution.BattleOtherStatusState.operator ==(Convergence.Execution.BattleOtherStatusState? left, Convergence.Execution.BattleOtherStatusState? right) -> bool
 static Convergence.Execution.BattlePassiveEntry.operator !=(Convergence.Execution.BattlePassiveEntry? left, Convergence.Execution.BattlePassiveEntry? right) -> bool
 static Convergence.Execution.BattlePassiveEntry.operator ==(Convergence.Execution.BattlePassiveEntry? left, Convergence.Execution.BattlePassiveEntry? right) -> bool
-static Convergence.Execution.BattlePhaseEndLifecycleRequest.operator !=(Convergence.Execution.BattlePhaseEndLifecycleRequest? left, Convergence.Execution.BattlePhaseEndLifecycleRequest? right) -> bool
-static Convergence.Execution.BattlePhaseEndLifecycleRequest.operator ==(Convergence.Execution.BattlePhaseEndLifecycleRequest? left, Convergence.Execution.BattlePhaseEndLifecycleRequest? right) -> bool
 static Convergence.Execution.BattlePhaseProgressPolicy.operator !=(Convergence.Execution.BattlePhaseProgressPolicy? left, Convergence.Execution.BattlePhaseProgressPolicy? right) -> bool
 static Convergence.Execution.BattlePhaseProgressPolicy.operator ==(Convergence.Execution.BattlePhaseProgressPolicy? left, Convergence.Execution.BattlePhaseProgressPolicy? right) -> bool
 static Convergence.Execution.BattleShieldState.operator !=(Convergence.Execution.BattleShieldState? left, Convergence.Execution.BattleShieldState? right) -> bool
@@ -9940,10 +9930,7 @@ Convergence.Execution.BattleActionEndLifecycleRequest.BattleActionEndLifecycleRe
 Convergence.Execution.BattleActionEndLifecycleRequest.StatModifierBoundaries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
 Convergence.Execution.BattleDurationLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.BattleDurationLifecycleService.ProcessActionEnd(Convergence.Execution.BattleActionEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
-Convergence.Execution.BattleDurationLifecycleService.ProcessPhaseEnd(Convergence.Execution.BattlePhaseEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.BattleExecutionServices.StatModifiers.get -> Convergence.Runtime.IStatModifierPolicyService!
-Convergence.Execution.BattlePhaseEndLifecycleRequest.BattlePhaseEndLifecycleRequest(System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, Convergence.Content.ContentId phaseId, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? statModifierBoundaries = null) -> void
-Convergence.Execution.BattlePhaseEndLifecycleRequest.StatModifierBoundaries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
 Convergence.Execution.BattleStatusLifecycleEvent.BattleStatusLifecycleEvent(Convergence.Execution.BattleStatusLifecycleEventKind Kind, Convergence.Runtime.RuntimeInstanceId ActorId, Convergence.Content.ContentId? RelatedId = null, decimal? Value = null, string? Detail = null, Convergence.Runtime.StatModifierEvent? ModifierEvent = null) -> void
 Convergence.Execution.BattleStatusLifecycleEvent.Deconstruct(out Convergence.Execution.BattleStatusLifecycleEventKind Kind, out Convergence.Runtime.RuntimeInstanceId ActorId, out Convergence.Content.ContentId? RelatedId, out decimal? Value, out string? Detail, out Convergence.Runtime.StatModifierEvent? ModifierEvent) -> void
 Convergence.Execution.BattleStatusLifecycleEvent.ModifierEvent.get -> Convergence.Runtime.StatModifierEvent?
@@ -9952,7 +9939,6 @@ Convergence.Execution.BattleStatusLifecycleEventKind.StatModifierChanged = 13 ->
 Convergence.Execution.BattleStatusLifecycleService.ApplyStatStage(Convergence.Execution.RuntimeActorState! target, Convergence.Content.ContentId modifierTrackId, int delta, Convergence.Execution.BattleExecutionServices! services, Convergence.Content.DurationDefinition? duration = null, Convergence.Runtime.StatModifierLifecycleBoundary? activeBoundary = null) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.BattleStatusLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.BattleStatusLifecycleService.ProcessActionEnd(Convergence.Execution.BattleActionEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
-Convergence.Execution.BattleStatusLifecycleService.ProcessPhaseEnd(Convergence.Execution.BattlePhaseEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.BattleTurnEndLifecycleRequest.BattleTurnEndLifecycleRequest(Convergence.Execution.RuntimeActorState! actor, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId eventId, Convergence.Content.ContentId? battleKindId = null, Convergence.Content.ContentId? moonPhaseId = null, Convergence.Runtime.StatModifierLifecycleBoundary? statModifierBoundary = null) -> void
 Convergence.Execution.BattleTurnEndLifecycleRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
 Convergence.Execution.BattleTurnEndLifecycleRequest.StatModifierBoundary.get -> Convergence.Runtime.StatModifierLifecycleBoundary?
@@ -9963,7 +9949,6 @@ Convergence.Execution.EffectExecutionResult.StatModifierTransitions.get -> Syste
 Convergence.Execution.EffectExecutionResult.StatModifierTransitions.init -> void
 Convergence.Execution.IBattleDurationLifecycleService.Cleanup(Convergence.Execution.BattleStatusCleanupRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.IBattleDurationLifecycleService.ProcessActionEnd(Convergence.Execution.BattleActionEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
-Convergence.Execution.IBattleDurationLifecycleService.ProcessPhaseEnd(Convergence.Execution.BattlePhaseEndLifecycleRequest! request, Convergence.Runtime.IStatModifierPolicyService! statModifiers) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.IBattleStatusLifecycleService.ApplyStatStage(Convergence.Execution.RuntimeActorState! target, Convergence.Content.ContentId modifierTrackId, int delta, Convergence.Execution.BattleExecutionServices! services, Convergence.Content.DurationDefinition? duration = null, Convergence.Runtime.StatModifierLifecycleBoundary? activeBoundary = null) -> Convergence.Execution.BattleStatusLifecycleResult!
 Convergence.Execution.PassiveTriggerDispatchRequest.ActiveStatModifierBoundaries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
 Convergence.Execution.PassiveTriggerDispatchRequest.PassiveTriggerDispatchRequest(Convergence.Content.ContentId eventId, Convergence.Execution.RuntimeActorState! owner, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! participants, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! targets, Convergence.Content.ContentId contextId, Convergence.Content.ContentId? battleKindId, Convergence.Content.ContentId? moonPhaseId, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? activeStatModifierBoundaries = null) -> void

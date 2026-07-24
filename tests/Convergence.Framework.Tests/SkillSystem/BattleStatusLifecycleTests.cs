@@ -1171,8 +1171,14 @@ public sealed class BattleStatusLifecycleTests
         SeedDurationStates(other, new PhaseDurationDefinition(ContentId.Parse("enemy_phase")), "other");
         SeedDurationStates(permanent, new PermanentDurationDefinition(), "permanent");
 
-        BattleStatusLifecycleResult result = service.ProcessPhaseEnd(
-            new BattlePhaseEndLifecycleRequest([matching, other, permanent], playerPhase),
+        BattleStatusLifecycleResult result = service.ProcessClock(
+            new BattleLifecycleClockRequest(
+                [matching, other, permanent],
+                new TeamPhaseLifecycleClockBoundary(
+                    ContentId.Parse("player_phase_end"),
+                    PlayerTeam,
+                    playerPhase,
+                    1)),
             TestStatModifierPolicy.CreatePersistent());
 
         AssertNoDurationStates(matching, "matching");

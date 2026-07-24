@@ -321,10 +321,10 @@ public sealed class StatModifierExecutionIntegrationTests
             statModifierPolicy: policy);
 
         var lifecycle = new BattleStatusLifecycleService(new MinimumRandomSource());
-        lifecycle.ProcessPhaseEnd(
-            new BattlePhaseEndLifecycleRequest(
+        lifecycle.ProcessClock(
+            new BattleLifecycleClockRequest(
                 [actor],
-                PlayerPhase,
+                new TeamPhaseLifecycleClockBoundary(PhaseEnd, PlayerTeam, PlayerPhase, 2),
                 [new StatModifierLifecycleBoundary(PhaseEnd, 2)]),
             policy);
 
@@ -341,7 +341,7 @@ public sealed class StatModifierExecutionIntegrationTests
             Assert.Equal(
                 new TurnDurationDefinition(3, PhaseEnd, true),
                 contribution.Duration);
-            Assert.Equal(2, contribution.LastLifecycleBoundary?.Sequence);
+            Assert.Equal(1, contribution.LastLifecycleBoundary?.Sequence);
         }
     }
 
@@ -678,8 +678,15 @@ public sealed class StatModifierExecutionIntegrationTests
     {
         if (usePhaseBoundary)
         {
-            return lifecycle.ProcessPhaseEnd(
-                new BattlePhaseEndLifecycleRequest([actor], PlayerPhase, [boundary]),
+            return lifecycle.ProcessClock(
+                new BattleLifecycleClockRequest(
+                    [actor],
+                    new TeamPhaseLifecycleClockBoundary(
+                        tickEvent,
+                        PlayerTeam,
+                        PlayerPhase,
+                        boundary.Sequence),
+                    [boundary]),
                 services.StatModifiers);
         }
 

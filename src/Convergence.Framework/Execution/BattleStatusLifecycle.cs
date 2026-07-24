@@ -839,39 +839,6 @@ public sealed record BattleActionEndLifecycleRequest
     }
 }
 
-public sealed record BattlePhaseEndLifecycleRequest
-{
-    public BattlePhaseEndLifecycleRequest(
-        IEnumerable<RuntimeActorState> participants,
-        ContentId phaseId,
-        IEnumerable<StatModifierLifecycleBoundary>? statModifierBoundaries = null)
-    {
-        ArgumentNullException.ThrowIfNull(participants);
-        RuntimeActorState[] snapshot = participants.ToArray();
-        if (snapshot.Any(actor => actor is null))
-        {
-            throw new ArgumentException("Duration lifecycle participants cannot contain null actors.", nameof(participants));
-        }
-
-        Participants = Array.AsReadOnly(
-            snapshot.Distinct<RuntimeActorState>(ReferenceEqualityComparer.Instance).ToArray());
-        PhaseId = phaseId;
-        StatModifierBoundaries = Array.AsReadOnly((statModifierBoundaries ?? []).ToArray());
-        if (StatModifierBoundaries.Any(boundary => boundary is null) ||
-            StatModifierBoundaries.Select(boundary => boundary.EventId).Distinct().Count() !=
-            StatModifierBoundaries.Count)
-        {
-            throw new ArgumentException(
-                "Stat-modifier phase boundaries must be non-null and unique by event ID.",
-                nameof(statModifierBoundaries));
-        }
-    }
-
-    public IReadOnlyList<RuntimeActorState> Participants { get; }
-    public ContentId PhaseId { get; }
-    public IReadOnlyList<StatModifierLifecycleBoundary> StatModifierBoundaries { get; }
-}
-
 public sealed record BattleStatusLifecycleResult
 {
     public BattleStatusLifecycleResult(IEnumerable<BattleStatusLifecycleEvent> events)
@@ -891,10 +858,6 @@ public interface IBattleDurationLifecycleService
 
     BattleStatusLifecycleResult ProcessActionEnd(
         BattleActionEndLifecycleRequest request,
-        IStatModifierPolicyService statModifiers);
-
-    BattleStatusLifecycleResult ProcessPhaseEnd(
-        BattlePhaseEndLifecycleRequest request,
         IStatModifierPolicyService statModifiers);
 
     BattleStatusLifecycleResult Cleanup(
@@ -1016,19 +979,6 @@ public sealed class BattleDurationLifecycleService : IBattleDurationLifecycleSer
             request.StatModifierBoundaries,
             statModifiers,
             actor => actor.ExpireInstantDurations());
-    }
-
-    public BattleStatusLifecycleResult ProcessPhaseEnd(
-        BattlePhaseEndLifecycleRequest request,
-        IStatModifierPolicyService statModifiers)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(statModifiers);
-        return ProcessParticipants(
-            request.Participants,
-            request.StatModifierBoundaries,
-            statModifiers,
-            actor => actor.ExpirePhaseDurations(request.PhaseId));
     }
 
     public BattleStatusLifecycleResult Cleanup(
@@ -1441,11 +1391,6 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         BattleLifecycleClockRequest request,
         IStatModifierPolicyService statModifiers) =>
         _durationLifecycle.ProcessClock(request, statModifiers);
-
-    public BattleStatusLifecycleResult ProcessPhaseEnd(
-        BattlePhaseEndLifecycleRequest request,
-        IStatModifierPolicyService statModifiers) =>
-        _durationLifecycle.ProcessPhaseEnd(request, statModifiers);
 
     public BattleStatusLifecycleResult ApplyStatStage(
         RuntimeActorState target,
