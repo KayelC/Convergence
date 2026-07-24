@@ -45,9 +45,9 @@ eligibility, shared contact, complete-action aggregation, and custom result
 validation. The final pre-closure correction review found no remaining
 reachable defect in that supported scope. Order 3 source-reconciled the
 turn-economy runtime authority, liveness, and scheduling boundary.
-The Order 4 status-lifecycle reference is written from current source and
-records the remaining schema-v7 removal-profile authoring boundary; formal
-promotion waits for the independent closure review. Other subsystem references
+The Order 4 status-lifecycle reference is written from current source. Schema
+v8 now preserves explicit expiration and removal profiles from authored JSON;
+formal promotion waits for the independent closure review. Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).
 

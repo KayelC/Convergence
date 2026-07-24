@@ -29,7 +29,7 @@ public sealed class SchemaDeserializationTests
             File.ReadAllText(TestContentPath.Resolve(jsonRoot, "skill_system_redesign.races.sample.json")),
             "races.sample.json");
 
-        Assert.Equal(7, manifest.SchemaVersion);
+        Assert.Equal(8, manifest.SchemaVersion);
         Assert.Equal(3, manifest.Documents.Count);
         SkillDefinition iceBoost = Assert.Single(skills.Records);
         EntityDefinition cinder = Assert.Single(entities.Records);
@@ -79,15 +79,45 @@ public sealed class SchemaDeserializationTests
                     "scope": "same_target"
                   }
                 },
-                { "type": "apply_ailment", "ailmentId": "poison", "chance": 40, "duration": { "type": "battle" } },
+                {
+                  "type": "apply_ailment", "ailmentId": "poison", "chance": 40,
+                  "lifetime": {
+                    "expiration": { "type": "battle" },
+                    "allowedRemovalCauses": ["duration_expired", "battle_end"]
+                  }
+                },
                 { "type": "restore_resource", "resourceId": "hp", "amount": { "type": "full" } },
                 { "type": "remove_ailment", "scope": "selected", "ailmentIds": ["poison"], "ailmentGroupIds": ["mental"] },
                 { "type": "revive", "resourceId": "hp", "amount": { "type": "percent_max", "value": 50 } },
                 { "type": "modify_stat_stage", "modifierTrackIds": ["defense"], "stageDelta": 1, "duration": { "type": "turns", "value": 3, "tick": "owner_turn_end", "suspendWhileReserve": true } },
-                { "type": "grant_charge", "charge": "physical", "multiplier": 2.5, "duration": { "type": "phase", "phaseId": "next_attack" } },
-                { "type": "grant_shield", "shield": "magical", "duration": { "type": "permanent" } },
-                { "type": "break_affinity", "elementIds": ["fire", "ice"], "duration": { "type": "battle" } },
-                { "type": "override_affinity", "elementIds": ["fire", "ice"], "affinityId": "normal", "duration": { "type": "instant" } },
+                {
+                  "type": "grant_charge", "charge": "physical", "multiplier": 2.5,
+                  "lifetime": {
+                    "expiration": { "type": "phase", "phaseId": "next_attack" },
+                    "allowedRemovalCauses": ["duration_expired", "consumed"]
+                  }
+                },
+                {
+                  "type": "grant_shield", "shield": "magical",
+                  "lifetime": {
+                    "expiration": { "type": "permanent" },
+                    "allowedRemovalCauses": ["scripted_removal"]
+                  }
+                },
+                {
+                  "type": "break_affinity", "elementIds": ["fire", "ice"],
+                  "lifetime": {
+                    "expiration": { "type": "battle" },
+                    "allowedRemovalCauses": ["duration_expired", "battle_end"]
+                  }
+                },
+                {
+                  "type": "override_affinity", "elementIds": ["fire", "ice"], "affinityId": "normal",
+                  "lifetime": {
+                    "expiration": { "type": "instant" },
+                    "allowedRemovalCauses": ["duration_expired"]
+                  }
+                },
                 { "type": "remove_status_effect", "statusKinds": ["buff", "charge"], "statusIds": ["focus"] },
                 { "type": "reduce_resource", "resourceId": "hp", "amount": { "type": "power", "power": 80 }, "canReduceToZero": true },
                 { "type": "set_resource", "resourceId": "sp", "amount": { "type": "formula", "formulaId": "sample_formula", "parameters": { "ratio": 1.5 } } },
@@ -120,9 +150,25 @@ public sealed class SchemaDeserializationTests
         Assert.Equal(EffectDependencyScope.SameTarget, dependency.Scope);
         Assert.IsType<ChannelInstantDeathResistanceCheckDefinition>(
             Assert.IsType<InstantKillEffectDefinition>(skill.Effects[1]).ResistanceCheck);
+        Assert.Equal(
+            [StatusRemovalCause.DurationExpired, StatusRemovalCause.BattleEnd],
+            Assert.IsType<ApplyAilmentEffectDefinition>(skill.Effects[2]).Lifetime!
+                .RemovalProfile.AllowedCauses);
         BreakAffinityEffectDefinition affinityBreak = Assert.IsType<BreakAffinityEffectDefinition>(skill.Effects[9]);
         Assert.Equal([DamageElement.Fire, DamageElement.Ice], affinityBreak.Elements);
         Assert.IsType<BattleDurationDefinition>(affinityBreak.Lifetime.Expiration);
+        Assert.Equal(
+            [StatusRemovalCause.DurationExpired, StatusRemovalCause.BattleEnd],
+            affinityBreak.Lifetime.RemovalProfile.AllowedCauses);
+        Assert.Equal(
+            [StatusRemovalCause.DurationExpired, StatusRemovalCause.Consumed],
+            Assert.IsType<GrantChargeEffectDefinition>(skill.Effects[7]).Lifetime!.RemovalProfile.AllowedCauses);
+        Assert.Equal(
+            [StatusRemovalCause.ScriptedRemoval],
+            Assert.IsType<GrantShieldEffectDefinition>(skill.Effects[8]).Lifetime!.RemovalProfile.AllowedCauses);
+        Assert.Equal(
+            [StatusRemovalCause.DurationExpired],
+            Assert.IsType<OverrideAffinityEffectDefinition>(skill.Effects[10]).Lifetime.RemovalProfile.AllowedCauses);
         Assert.IsType<FormulaAmountDefinition>(Assert.IsType<SetResourceEffectDefinition>(skill.Effects[13]).Amount);
     }
 
@@ -215,7 +261,7 @@ public sealed class SchemaDeserializationTests
     {
         const string valid = """
         {
-          "schemaVersion": 7,
+          "schemaVersion": 8,
           "equipment": [{
             "id": "blade", "displayName": "Blade", "description": "",
             "slot": "weapon", "baseValue": 1,
@@ -239,7 +285,7 @@ public sealed class SchemaDeserializationTests
         """;
         const string oldShape = """
         {
-          "schemaVersion": 7,
+          "schemaVersion": 8,
           "equipment": [{
             "id": "blade", "displayName": "Blade", "description": "",
             "slot": "weapon", "baseValue": 1,
@@ -359,11 +405,14 @@ public sealed class SchemaDeserializationTests
     {
         string json = $$"""
         {
-          "schemaVersion": 7,
+          "schemaVersion": 8,
           "ailments": [
             {
               "id": "test_ailment", "displayName": "Test", "description": "Test ailment.",
-              "defaultDuration": { "type": "turns", "value": 3, "tick": "owner_turn_end", "suspendWhileReserve": true },
+              "defaultLifetime": {
+                "expiration": { "type": "turns", "value": 3, "tick": "owner_turn_end", "suspendWhileReserve": true },
+                "allowedRemovalCauses": ["cure_effect", "duration_expired", "battle_end"]
+              },
               "turnBehavior": {{turnBehavior}},
               "modifiers": {
                 "evasionMultiplier": 1.0, "criticalChanceTakenBonus": 0,
@@ -377,6 +426,9 @@ public sealed class SchemaDeserializationTests
 
         AilmentDefinition ailment = Assert.Single(_deserializer.DeserializeAilments(json, "ailment.json").Records);
         Assert.IsType(expectedType, ailment.TurnBehavior);
+        Assert.Equal(
+            [StatusRemovalCause.CureEffect, StatusRemovalCause.DurationExpired, StatusRemovalCause.BattleEnd],
+            ailment.DefaultLifetime.RemovalProfile.AllowedCauses);
     }
 
     [Fact]
@@ -451,7 +503,7 @@ public sealed class SchemaDeserializationTests
             "\"inheritance\": null",
             StringComparison.Ordinal));
         const string nullRecord = """
-            { "schemaVersion": 7, "skills": [null] }
+            { "schemaVersion": 8, "skills": [null] }
             """;
         string nullEffect = WrapSkill(MinimalActiveRecord("[null]"));
 
@@ -630,7 +682,7 @@ public sealed class SchemaDeserializationTests
     }
 
     private static string WrapSkill(string record) => $$"""
-    { "schemaVersion": 7, "skills": [ {{record}} ] }
+    { "schemaVersion": 8, "skills": [ {{record}} ] }
     """;
 
     private static string MinimalPassiveRecord() =>

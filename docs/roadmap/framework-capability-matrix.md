@@ -32,9 +32,11 @@ re-entry liveness; and makes activation limits explicitly per-dispatch or
 per-target. O4-R7 makes battle-start passive reset atomic with lifecycle startup
 and names forced basic attacks accurately. O4-R8 reconciles schema-v7 targeting,
 save-v13 per-target activations, clean content, DemoHost, and the Godot smoke.
-O4-R9 supplies all three audience documents and records the current JSON
-removal-profile authoring boundary. Independent source/documentation closure in
-O4-R10 remains required before the capability returns to `complete`.
+O4-R9 supplies all three audience documents. O4-R10 identified and corrected
+finite-expiry, parallel-phase-API, and JSON removal-profile authority gaps;
+schema v8 now authors exact status lifetimes. Independent post-correction
+source/documentation closure remains required before the capability returns to
+`complete`.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial
@@ -97,7 +99,7 @@ Charge state is policy-owned; supplied hit/evasion uses
 authored accuracy, explicit Agility coefficients, typed modifiers, exact
 probability bounds, and no hidden Luck. Critical eligibility and chance are
 separate replaceable policies. Instant defeat uses authored chance, explicit
-resistance multipliers, bypass semantics, and one roll. Schema v7 requires
+resistance multipliers, bypass semantics, and one roll. Schema v8 requires
 weapon basic attacks to declare critical behavior.
 
 Every attempted damage hit now carries immutable accuracy, critical, affinity,

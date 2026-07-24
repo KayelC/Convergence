@@ -7,7 +7,7 @@ namespace Convergence.Framework.Tests.SkillSystem;
 
 public sealed class ContentSchemaContractTests
 {
-    private const string SchemaPrefix = "urn:convergence:schema:content:v7:";
+    private const string SchemaPrefix = "urn:convergence:schema:content:v8:";
 
     [Fact]
     public void ActiveContentDocuments_ValidateAgainstTheirDeclaredDraft202012Schemas()
@@ -88,6 +88,46 @@ public sealed class ContentSchemaContractTests
             document.RootElement);
 
         Assert.False(result.IsValid, $"{definition} accepted invalid numeric contract {json}.");
+    }
+
+    [Theory]
+    [MemberData(nameof(StatusLifetimeVariants))]
+    public void StatusLifetimeVariants_AreIndependentlyValid(string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        EvaluationResults result = SchemaSet.Load().EvaluateReference(
+            SchemaPrefix + "shared#/$defs/statusLifetime",
+            document.RootElement);
+
+        Assert.True(result.IsValid, $"Status lifetime rejected {json}: {Describe(result)}");
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidStatusLifetimeVariants))]
+    public void StatusLifetimeContracts_RejectMalformedRemovalPolicies(string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        EvaluationResults result = SchemaSet.Load().EvaluateReference(
+            SchemaPrefix + "shared#/$defs/statusLifetime",
+            document.RootElement);
+
+        Assert.False(result.IsValid, $"Status lifetime accepted malformed contract {json}.");
+    }
+
+    [Theory]
+    [InlineData("{\"type\":\"apply_ailment\",\"ailmentId\":\"poison\",\"chance\":50,\"duration\":{\"type\":\"battle\"}}")]
+    [InlineData("{\"type\":\"grant_charge\",\"charge\":\"physical\",\"multiplier\":2,\"duration\":{\"type\":\"battle\"}}")]
+    [InlineData("{\"type\":\"grant_shield\",\"shield\":\"magical\",\"duration\":{\"type\":\"battle\"}}")]
+    [InlineData("{\"type\":\"break_affinity\",\"elementIds\":[\"fire\"],\"duration\":{\"type\":\"battle\"}}")]
+    [InlineData("{\"type\":\"override_affinity\",\"elementIds\":[\"ice\"],\"affinityId\":\"repel\",\"duration\":{\"type\":\"battle\"}}")]
+    public void StatusProducingEffects_RejectRetiredDurationShape(string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        EvaluationResults result = SchemaSet.Load().EvaluateReference(
+            SchemaPrefix + "shared#/$defs/effect",
+            document.RootElement);
+
+        Assert.False(result.IsValid, $"Effect accepted retired duration shape {json}.");
     }
 
     [Theory]
@@ -234,18 +274,18 @@ public sealed class ContentSchemaContractTests
             """{"type":"damage","elementId":"physical","power":1,"accuracy":100,"critical":{"mode":"never"},"hits":{"minimum":1024,"maximum":1024}}""",
             """{"type":"damage","elementId":"fire","power":10,"accuracy":50,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1},"contactMode":"shared_contact","dependency":{"sourceEffectId":"primary_hit","requirement":"positive_damage","scope":"same_target"}}""",
             """{"type":"instant_kill","chance":25,"resistanceCheck":{"mode":"channel","channelId":"dark"}}""",
-            """{"type":"apply_ailment","ailmentId":"poison","chance":50,"duration":{"type":"battle"}}""",
+            """{"type":"apply_ailment","ailmentId":"poison","chance":50,"lifetime":{"expiration":{"type":"battle"},"allowedRemovalCauses":["duration_expired","battle_end"]}}""",
             """{"type":"restore_resource","resourceId":"hp","amount":{"type":"flat","value":20}}""",
             """{"type":"revive","resourceId":"hp","amount":{"type":"percent_max","value":25}}""",
             """{"type":"reduce_resource","resourceId":"sp","amount":{"type":"flat","value":5},"canReduceToZero":true}""",
             """{"type":"set_resource","resourceId":"hp","amount":{"type":"full"}}""",
             """{"type":"remove_ailment","scope":"selected","ailmentIds":["poison"]}""",
             """{"type":"modify_stat_stage","modifierTrackIds":["attack"],"stageDelta":1,"duration":{"type":"turns","value":3,"tick":"owner_turn_end","suspendWhileReserve":true}}""",
-            """{"type":"grant_charge","charge":"physical","multiplier":2.0,"duration":{"type":"battle"}}""",
-            """{"type":"grant_charge","charge":"general","multiplier":2.0,"duration":{"type":"battle"}}""",
-            """{"type":"grant_shield","shield":"magical","duration":{"type":"turns","value":1,"tick":"owner_turn_end","suspendWhileReserve":false}}""",
-            """{"type":"break_affinity","elementIds":["fire"],"duration":{"type":"battle"}}""",
-            """{"type":"override_affinity","elementIds":["ice"],"affinityId":"repel","duration":{"type":"battle"}}""",
+            """{"type":"grant_charge","charge":"physical","multiplier":2.0,"lifetime":{"expiration":{"type":"battle"},"allowedRemovalCauses":["duration_expired","consumed"]}}""",
+            """{"type":"grant_charge","charge":"general","multiplier":2.0,"lifetime":{"expiration":{"type":"battle"},"allowedRemovalCauses":["duration_expired","consumed"]}}""",
+            """{"type":"grant_shield","shield":"magical","lifetime":{"expiration":{"type":"turns","value":1,"tick":"owner_turn_end","suspendWhileReserve":false},"allowedRemovalCauses":["duration_expired","deployment_swap"]}}""",
+            """{"type":"break_affinity","elementIds":["fire"],"lifetime":{"expiration":{"type":"battle"},"allowedRemovalCauses":["duration_expired","battle_end"]}}""",
+            """{"type":"override_affinity","elementIds":["ice"],"affinityId":"repel","lifetime":{"expiration":{"type":"battle"},"allowedRemovalCauses":["duration_expired","battle_end"]}}""",
             """{"type":"remove_status_effect","statusKinds":["buff"],"statusIds":["attack"]}""",
             """{"type":"analyze","layers":["full"]}""",
             """{"type":"escape","eligibilityRuleId":"standard_escape","chance":100}""",
@@ -292,6 +332,28 @@ public sealed class ContentSchemaContractTests
         { "effect", """{"type":"modify_stat_stage","modifierTrackIds":["attack"],"stageDelta":0}""" },
         { "effect", """{"type":"grant_charge","charge":"physical","multiplier":0}""" },
         { "effect", """{"type":"escape","eligibilityRuleId":"standard_escape","chance":101}""" }
+    };
+
+    public static TheoryData<string> StatusLifetimeVariants() => new()
+    {
+        """{"expiration":{"type":"instant"},"allowedRemovalCauses":["duration_expired"]}""",
+        """{"expiration":{"type":"battle"},"allowedRemovalCauses":["duration_expired","battle_end"]}""",
+        """{"expiration":{"type":"permanent"},"allowedRemovalCauses":[]}""",
+        """{"expiration":{"type":"permanent"},"allowedRemovalCauses":["scripted_removal"]}""",
+        """{"expiration":{"type":"turns","value":2,"tick":"owner_turn_end","suspendWhileReserve":true},"allowedRemovalCauses":["cure_effect","duration_expired"]}""",
+        """{"expiration":{"type":"phase","phaseId":"round_end"},"allowedRemovalCauses":["duration_expired","dispel_effect"]}"""
+    };
+
+    public static TheoryData<string> InvalidStatusLifetimeVariants() => new()
+    {
+        """{"expiration":{"type":"battle"},"allowedRemovalCauses":["battle_end"]}""",
+        """{"expiration":{"type":"turns","value":2,"tick":"owner_turn_end","suspendWhileReserve":true},"allowedRemovalCauses":["cure_effect"]}""",
+        """{"expiration":{"type":"phase","phaseId":"round_end"},"allowedRemovalCauses":[]}""",
+        """{"expiration":{"type":"instant"},"allowedRemovalCauses":["duration_expired","duration_expired"]}""",
+        """{"expiration":{"type":"permanent"},"allowedRemovalCauses":["unknown_cause"]}""",
+        """{"allowedRemovalCauses":["scripted_removal"]}""",
+        """{"expiration":{"type":"permanent"}}""",
+        """{"expiration":{"type":"permanent"},"allowedRemovalCauses":[],"unexpected":true}"""
     };
 
     public static TheoryData<string, string> FamilyUnionVariants()
@@ -352,7 +414,7 @@ public sealed class ContentSchemaContractTests
 
     private static string ContentRoot() => Path.Combine(AppContext.BaseDirectory, "Content");
 
-    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v7");
+    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v8");
 
     private static string Describe(EvaluationResults result)
     {

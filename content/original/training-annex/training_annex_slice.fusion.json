@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:fusion",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:fusion",
+  "schemaVersion": 8,
   "fusionRecipes": [
     {
       "id": "ashling_bramble_shell",

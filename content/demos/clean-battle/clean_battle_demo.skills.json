@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:skills",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:skills",
+  "schemaVersion": 8,
   "skills": [
     {
       "id": "frost_lance_demo",

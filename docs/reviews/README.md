@@ -49,6 +49,7 @@ or implementation authority.
 - [Turn Economy Order 3 Fresh Closure Audit, 22 July 2026](turn-economy-order-3-fresh-closure-audit-2026-07-22.md)
 - [Turn Economy Order 3 Termination Contract Closure Review, 22 July 2026](turn-economy-order-3-termination-contract-closure-review-2026-07-22.md)
 - [Status And Passive Lifecycle Order 4 Source Review And Roadmap, 23 July 2026](status-passive-lifecycle-order-4-source-review-2026-07-23.md)
+- [Status And Passive Lifecycle Order 4 Closure Review, 24 July 2026](status-passive-lifecycle-order-4-closure-review-2026-07-24.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.

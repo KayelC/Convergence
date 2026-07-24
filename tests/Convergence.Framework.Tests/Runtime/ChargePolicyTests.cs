@@ -222,7 +222,7 @@ public sealed class ChargePolicyTests
         const string json =
             """
             {
-              "schemaVersion": 7,
+              "schemaVersion": 8,
               "skills": [{
                 "id": "unified_focus",
                 "displayName": "Unified Focus",
@@ -242,7 +242,10 @@ public sealed class ChargePolicyTests
                   "type": "grant_charge",
                   "charge": "general",
                   "multiplier": 2.25,
-                  "duration": { "type": "battle" }
+                  "lifetime": {
+                    "expiration": { "type": "battle" },
+                    "allowedRemovalCauses": ["duration_expired", "consumed"]
+                  }
                 }]
               }]
             }

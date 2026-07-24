@@ -289,7 +289,7 @@ public partial class ConvergenceSmokeRoot : Node
         string saveJson = GodotSaveCodec.Serialize(
             [player, enemy, hostedEntity],
             partyRoster,
-            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.7.0")),
+            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.8.0")),
             sceneInstances);
         ChargePolicyRegistry chargePolicies = ChargePolicyRegistry.CreateStandard();
         var restoreService = new RuntimeSessionRestoreService(

@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:ailments",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:ailments",
+  "schemaVersion": 8,
   "ailments": [
     {
       "id": "poison",
@@ -8,11 +8,23 @@
       "description": "Reference poison: acts normally, deals lethal turn-end damage, and can recover naturally.",
       "groupIds": ["major_ailment", "poison"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 3,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 3,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "normal"
@@ -60,11 +72,23 @@
       "description": "Reference freeze: skips a turn, grants rigid-body handling, and expires after one turn-end.",
       "groupIds": ["major_ailment", "immobilize"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 1,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 1,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "skip"
@@ -86,11 +110,23 @@
       "description": "Reference shock: skips a turn, grants rigid-body handling, and expires after one turn-end.",
       "groupIds": ["major_ailment", "immobilize"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 1,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 1,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "skip"
@@ -112,11 +148,23 @@
       "description": "Reference fear: may flee or skip, otherwise acts normally.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 3,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 3,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "chance_skip_or_flee",
@@ -146,11 +194,23 @@
       "description": "Reference panic: 50 percent chance to skip the turn.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 3,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 3,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "chance_skip",
@@ -178,11 +238,23 @@
       "description": "Reference charm: forces confused action selection.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 3,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 3,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "confused_action"
@@ -209,11 +281,23 @@
       "description": "Reference rage: forces physical attacks and changes damage taken/dealt.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 3,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 3,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "forced_basic_attack"
@@ -240,11 +324,23 @@
       "description": "Reference distress: action is available, but evasion and incoming critical pressure are altered.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 3,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 3,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "normal"
@@ -271,11 +367,23 @@
       "description": "Reference sleep: skips turns and restores HP/SP at turn end.",
       "groupIds": ["major_ailment", "mental"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 3,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 3,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "skip"
@@ -330,11 +438,23 @@
       "description": "Reference bind: limits action choices and marks the body rigid.",
       "groupIds": ["major_ailment", "immobilize"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 3,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 3,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "limited_actions",
@@ -362,11 +482,23 @@
       "description": "Reference stun: skips a turn and marks the body rigid.",
       "groupIds": ["major_ailment", "immobilize"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 1,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 1,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "skip"

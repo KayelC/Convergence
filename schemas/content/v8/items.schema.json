@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v8:items",
+  "type": "object", "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "items"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v8:items" },
+    "schemaVersion": { "const": 8 },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+  },
+  "$defs": {
+    "item": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "displayName", "description", "itemKind", "stackLimit", "baseValue"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "itemKind": { "enum": ["consumable", "key", "material", "valuable"] },
+        "stackLimit": { "type": "integer", "minimum": 1 },
+        "baseValue": { "type": "number", "minimum": 0 },
+        "usage": {
+          "type": "object", "additionalProperties": false,
+          "required": ["contexts", "consumeOn", "targeting", "effects"],
+          "properties": {
+            "contexts": { "type": "array", "minItems": 1, "items": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/contentId" } },
+            "consumeOn": { "const": "successful_execution" },
+            "targeting": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/targeting" },
+            "effects": { "type": "array", "minItems": 1, "items": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/effect" } }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "itemKind": { "const": "consumable" } }, "required": ["itemKind"] },
+          "then": { "required": ["usage"] },
+          "else": { "not": { "required": ["usage"] } }
+        }
+      ]
+    }
+  }
+}

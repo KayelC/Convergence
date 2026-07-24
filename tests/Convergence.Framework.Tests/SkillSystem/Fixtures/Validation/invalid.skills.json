@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "skills": [
     {
       "id": "unstable_blast",
@@ -60,11 +60,14 @@
           "type": "apply_ailment",
           "ailmentId": "missing_ailment",
           "chance": 101,
-          "duration": {
-            "type": "turns",
-            "value": 0,
-            "tick": "missing_event",
-            "suspendWhileReserve": false
+          "lifetime": {
+            "expiration": {
+              "type": "turns",
+              "value": 0,
+              "tick": "missing_event",
+              "suspendWhileReserve": false
+            },
+            "allowedRemovalCauses": ["duration_expired"]
           }
         },
         {
@@ -83,8 +86,11 @@
             "almighty"
           ],
           "affinityId": "resist",
-          "duration": {
-            "type": "instant"
+          "lifetime": {
+            "expiration": {
+              "type": "instant"
+            },
+            "allowedRemovalCauses": ["duration_expired"]
           }
         },
         {

@@ -152,9 +152,10 @@ The supplied common lifetimes are:
 | Persistent | Same Field permissions with no automatic duration |
 | Protected persistent | Everything except scripted removal |
 
-**Current content-authoring boundary:** schema-v7 ailment duration records map
-to these supplied lifetime choices. Arbitrary removal profiles can be composed
-through framework definitions, but are not yet independently authored in JSON.
+Schema-v8 content authors both lifetime decisions directly. An ailment or
+status-producing effect selects its expiration and the exact causes allowed to
+remove it. The supplied profiles above remain convenient programmatic defaults;
+JSON content is not forced to choose one of them.
 
 ## Cleanup
 
@@ -228,4 +229,3 @@ activation; under a per-target limit, each ally is counted separately.
 - [Battle Knowledge](status-passives-and-knowledge.md)
 - [Developer: Status And Passive Lifecycle](../developer-guide/status-passive-lifecycle.md)
 - [Technical: Status And Passive Lifecycle](../technical/status-passive-lifecycle.md)
-

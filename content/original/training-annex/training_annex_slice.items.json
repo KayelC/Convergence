@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:items",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:items",
+  "schemaVersion": 8,
   "items": [
     {
       "id": "annex_tonic",

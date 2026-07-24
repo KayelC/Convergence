@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v8:ailments",
+  "type": "object", "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "ailments"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v8:ailments" },
+    "schemaVersion": { "const": 8 },
+    "ailments": { "type": "array", "items": { "$ref": "#/$defs/ailment" } }
+  },
+  "$defs": {
+    "turnBehavior": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "enum": ["normal", "skip", "forced_basic_attack", "confused_action"] } }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type", "allowedActionIds"],
+          "properties": {
+            "type": { "const": "limited_actions" },
+            "allowedActionIds": { "type": "array", "minItems": 1, "items": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/contentId" } }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type", "skipChance"],
+          "properties": {
+            "type": { "const": "chance_skip" },
+            "skipChance": { "type": "integer", "minimum": 0, "maximum": 100 }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type", "skipChance", "fleeChance", "companionFleeOutcome"],
+          "properties": {
+            "type": { "const": "chance_skip_or_flee" },
+            "skipChance": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "fleeChance": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "companionFleeOutcome": { "enum": ["recall_to_roster", "escape_battle"] }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type", "handlerId"],
+          "properties": {
+            "type": { "const": "custom" },
+            "handlerId": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/contentId" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/parameters" }
+          }
+        }
+      ]
+    },
+    "ailment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "displayName", "description", "defaultLifetime", "turnBehavior", "modifiers", "recovery"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "groupIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/contentId" } },
+        "exclusivityGroupId": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/contentId" },
+        "defaultLifetime": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/statusLifetime" },
+        "turnBehavior": { "$ref": "#/$defs/turnBehavior" },
+        "modifiers": {
+          "type": "object", "additionalProperties": false,
+          "required": ["evasionMultiplier", "criticalChanceTakenBonus", "damageTakenMultiplier", "damageDealtMultiplier", "isRigidBody"],
+          "properties": {
+            "evasionMultiplier": { "type": "number" },
+            "criticalChanceTakenBonus": { "type": "integer" },
+            "damageTakenMultiplier": { "type": "number" },
+            "damageDealtMultiplier": { "type": "number" },
+            "isRigidBody": { "type": "boolean" }
+          }
+        },
+        "triggers": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/passiveTrigger" } },
+        "recovery": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "natural": {
+              "type": "object", "additionalProperties": false,
+              "required": ["baseChance", "statId", "statMultiplier"],
+              "properties": {
+                "baseChance": { "type": "integer", "minimum": 0, "maximum": 100 },
+                "statId": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/contentId" },
+                "statMultiplier": { "type": "number" }
+              }
+            },
+            "removeOnEvents": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v8:shared#/$defs/contentId" } }
+          }
+        }
+      }
+    }
+  }
+}

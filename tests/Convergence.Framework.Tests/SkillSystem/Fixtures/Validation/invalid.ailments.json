@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "ailments": [
     {
       "id": "invalid_ailment",
@@ -10,11 +10,14 @@
         "missing_group"
       ],
       "exclusivityGroupId": "missing_exclusive_group",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 0,
-        "tick": "missing_event",
-        "suspendWhileReserve": false
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 0,
+          "tick": "missing_event",
+          "suspendWhileReserve": false
+        },
+        "allowedRemovalCauses": ["duration_expired"]
       },
       "turnBehavior": {
         "type": "chance_skip_or_flee",

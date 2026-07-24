@@ -25,6 +25,7 @@ namespace Convergence.Serialization;
 [JsonSerializable(typeof(MarkerDurationDto))]
 [JsonSerializable(typeof(TurnDurationDto))]
 [JsonSerializable(typeof(PhaseDurationDto))]
+[JsonSerializable(typeof(StatusLifetimeDto))]
 [JsonSerializable(typeof(NeverCriticalDto))]
 [JsonSerializable(typeof(ChanceCriticalDto))]
 [JsonSerializable(typeof(ChannelInstantDeathResistanceCheckDto))]

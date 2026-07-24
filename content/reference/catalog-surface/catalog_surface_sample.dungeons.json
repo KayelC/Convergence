@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:dungeons",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:dungeons",
+  "schemaVersion": 8,
   "dungeons": [
     {
       "id": "sample_depths",

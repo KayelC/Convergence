@@ -218,7 +218,7 @@ public sealed class CatalogLoaderTests
                 "[{\"id\":\"core.pack\",\"version\":\"1.0.0\"}]", documents:
                 "[{\"type\":\"entities\",\"path\":\"entities.json\"}]"),
             Document("entities.json", $$"""
-            { "schemaVersion": 7, "entities": [
+            { "schemaVersion": 8, "entities": [
               {{EntityRecord("wrong", "core.pack:not_a_race")}},
               {{EntityRecord("missing", "core.pack:missing_race")}}
             ] }
@@ -311,7 +311,7 @@ public sealed class CatalogLoaderTests
             Document("skills.json",
                 """
                 {
-                  "schemaVersion": 7,
+                  "schemaVersion": 8,
                   "skills": [{
                     "id": "fire_break",
                     "displayName": "Fire Break",
@@ -328,9 +328,12 @@ public sealed class CatalogLoaderTests
                     "effects": [{
                       "type": "break_affinity",
                       "elementIds": ["fire"],
-                      "duration": {
-                        "type": "turns", "value": 3,
-                        "tick": "owner_turn_end", "suspendWhileReserve": true
+                      "lifetime": {
+                        "expiration": {
+                          "type": "turns", "value": 3,
+                          "tick": "owner_turn_end", "suspendWhileReserve": true
+                        },
+                        "allowedRemovalCauses": ["duration_expired", "battle_end"]
                       }
                     }]
                   }]
@@ -387,7 +390,7 @@ public sealed class CatalogLoaderTests
         ContentPackTextBundle validationFailure = Bundle(
             Manifest("validation.pack", documents: "[{\"type\":\"skills\",\"path\":\"skills.json\"}]"),
             Document("skills.json",
-                "{\"schemaVersion\":7,\"skills\":[{\"id\":\"empty_passive\",\"displayName\":\"Empty\",\"description\":\"Empty.\",\"activation\":\"passive\",\"inheritanceGroupId\":\"passive\",\"inheritance\":{\"isInheritable\":true}}]}"));
+                "{\"schemaVersion\":8,\"skills\":[{\"id\":\"empty_passive\",\"displayName\":\"Empty\",\"description\":\"Empty.\",\"activation\":\"passive\",\"inheritanceGroupId\":\"passive\",\"inheritance\":{\"isInheritable\":true}}]}"));
 
         Assert.Equal(CatalogLoadDiagnosticCode.ManifestDeserializationFailed,
             Assert.Single(manifestFailure.Diagnostics).Code);
@@ -458,7 +461,7 @@ public sealed class CatalogLoaderTests
         string dependencies = "[]",
         string documents = "[]") => $$"""
         {
-          "schemaVersion": 7,
+          "schemaVersion": 8,
           "id": "{{id}}",
           "version": "{{version}}",
           "displayName": "{{id}}",
@@ -468,12 +471,12 @@ public sealed class CatalogLoaderTests
         """;
 
     private static string RaceDocument(string id) => $$"""
-        { "schemaVersion": 7, "races": [{ "id": "{{id}}", "displayName": "{{id}}" }] }
+        { "schemaVersion": 8, "races": [{ "id": "{{id}}", "displayName": "{{id}}" }] }
         """;
 
     private static string SkillDocument(string id, bool isInheritable = true) => $$"""
         {
-          "schemaVersion": 7,
+          "schemaVersion": 8,
           "skills": [{
             "id": "{{id}}",
             "displayName": "{{id}}",
@@ -492,7 +495,7 @@ public sealed class CatalogLoaderTests
         string? baseSkillId = null,
         string? allowedSkillId = null,
         string? ailmentId = null) => $$"""
-        { "schemaVersion": 7, "entities": [
+        { "schemaVersion": 8, "entities": [
           {{EntityRecord(id, raceId, baseSkillId, allowedSkillId, ailmentId)}}
         ] }
         """;
@@ -524,10 +527,13 @@ public sealed class CatalogLoaderTests
 
     private static string AilmentDocument(string id) => $$"""
         {
-          "schemaVersion": 7,
+          "schemaVersion": 8,
           "ailments": [{
             "id": "{{id}}", "displayName": "{{id}}", "description": "Reference ailment.",
-            "defaultDuration": { "type": "turns", "value": 3, "tick": "owner_turn_end", "suspendWhileReserve": false },
+            "defaultLifetime": {
+              "expiration": { "type": "turns", "value": 3, "tick": "owner_turn_end", "suspendWhileReserve": false },
+              "allowedRemovalCauses": ["duration_expired", "battle_end"]
+            },
             "turnBehavior": { "type": "normal" },
             "modifiers": {
               "evasionMultiplier": 1, "criticalChanceTakenBonus": 0,
@@ -541,7 +547,7 @@ public sealed class CatalogLoaderTests
     private static string TriggerSkillDocument() =>
         """
         {
-          "schemaVersion": 7,
+          "schemaVersion": 8,
           "skills": [{
             "id": "skill", "displayName": "Skill", "description": "Reference trigger.",
             "activation": "passive", "inheritanceGroupId": "passive",

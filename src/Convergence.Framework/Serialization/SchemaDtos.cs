@@ -452,6 +452,12 @@ internal sealed class PhaseDurationDto : DurationDto
     public required string PhaseId { get; init; }
 }
 
+internal sealed class StatusLifetimeDto
+{
+    public required DurationDto Expiration { get; init; }
+    public required List<StatusRemovalCause> AllowedRemovalCauses { get; init; }
+}
+
 internal abstract class CriticalDto
 {
     public required string Mode { get; init; }
@@ -605,7 +611,7 @@ internal sealed class ApplyAilmentEffectDto : EffectDto
 {
     public required string AilmentId { get; init; }
     public required int Chance { get; init; }
-    public DurationDto? Duration { get; init; }
+    public StatusLifetimeDto? Lifetime { get; init; }
 }
 
 internal sealed class ResourceAmountEffectDto : EffectDto
@@ -633,26 +639,26 @@ internal sealed class GrantChargeEffectDto : EffectDto
 {
     public required ChargeKind Charge { get; init; }
     public required decimal Multiplier { get; init; }
-    public DurationDto? Duration { get; init; }
+    public StatusLifetimeDto? Lifetime { get; init; }
 }
 
 internal sealed class GrantShieldEffectDto : EffectDto
 {
     public required ShieldKind Shield { get; init; }
-    public DurationDto? Duration { get; init; }
+    public StatusLifetimeDto? Lifetime { get; init; }
 }
 
 internal sealed class BreakAffinityEffectDto : EffectDto
 {
     public required List<DamageElement> ElementIds { get; init; }
-    public required DurationDto Duration { get; init; }
+    public required StatusLifetimeDto Lifetime { get; init; }
 }
 
 internal sealed class OverrideAffinityEffectDto : EffectDto
 {
     public required List<DamageElement> ElementIds { get; init; }
     public required ElementalAffinity AffinityId { get; init; }
-    public required DurationDto Duration { get; init; }
+    public required StatusLifetimeDto Lifetime { get; init; }
 }
 
 internal sealed class RemoveStatusEffectDto : EffectDto
@@ -785,7 +791,7 @@ internal sealed class AilmentDto
     public required string Description { get; init; }
     public List<string> GroupIds { get; init; } = [];
     public string? ExclusivityGroupId { get; init; }
-    public required DurationDto DefaultDuration { get; init; }
+    public required StatusLifetimeDto DefaultLifetime { get; init; }
     public required AilmentTurnBehaviorDto TurnBehavior { get; init; }
     public required AilmentModifiersDto Modifiers { get; init; }
     public List<PassiveTriggerDto> Triggers { get; init; } = [];

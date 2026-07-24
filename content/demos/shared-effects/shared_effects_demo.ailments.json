@@ -1,17 +1,29 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:ailments",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:ailments",
+  "schemaVersion": 8,
   "ailments": [
     {
       "id": "poison_demo",
       "displayName": "Poison",
       "description": "A removable poison used by the shared-effects demonstration.",
       "groupIds": ["poison"],
-      "defaultDuration": {
-        "type": "turns",
-        "value": 3,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": false
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 3,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": false
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "normal"

@@ -116,7 +116,7 @@
         "hostNeutral": true,
         "optionalModule": true,
         "knownGaps": [
-          "The independent O4-R10 closure review remains in progress. Runtime definitions support independent removal profiles, while schema-v7 ailment JSON currently uses fixed supplied lifetime mappings."
+          "The independent O4-R10 post-correction review remains in progress. Schema-v8 content now authors exact status expiration and removal profiles."
         ]
     },
     {

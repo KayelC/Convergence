@@ -6,7 +6,7 @@ namespace Convergence.ContentValidator;
 
 internal static class ContentValidatorApplication
 {
-    private const string ManifestSchemaId = "urn:convergence:schema:content:v7:manifest";
+    private const string ManifestSchemaId = "urn:convergence:schema:content:v8:manifest";
 
     public static int Run(string[] args, TextWriter output, TextWriter error)
     {

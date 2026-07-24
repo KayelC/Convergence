@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:skills",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:skills",
+  "schemaVersion": 8,
   "skills": [
     {
       "id": "echo_strike",
@@ -280,11 +280,23 @@
           "type": "apply_ailment",
           "ailmentId": "sample_poison",
           "chance": 100,
-          "duration": {
-            "type": "turns",
-            "value": 3,
-            "tick": "owner_turn_end",
-            "suspendWhileReserve": true
+          "lifetime": {
+            "expiration": {
+              "type": "turns",
+              "value": 3,
+              "tick": "owner_turn_end",
+              "suspendWhileReserve": true
+            },
+            "allowedRemovalCauses": [
+              "cure_effect",
+              "dispel_effect",
+              "natural_recovery",
+              "recovery_event",
+              "duration_expired",
+              "exclusivity_replacement",
+              "consumed",
+              "scripted_removal"
+            ]
           }
         }
       ]

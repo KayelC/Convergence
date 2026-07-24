@@ -260,13 +260,18 @@ actor. Aggregate restore validates before exposing restored session state.
 The host owns JSON or another save encoding. Preserve all typed fields rather
 than rebuilding state from icons or display names.
 
-## Current JSON Lifetime Boundary
+## JSON Lifetime Authoring
 
-Programmatic framework definitions can construct any valid
-`StatusLifetimeDefinition` from an expiration and removal profile. Schema-v7
-ailment JSON currently authors `defaultDuration`; the mapper selects supplied
-removal behavior from that duration kind. JSON does not yet expose arbitrary
-removal-profile authoring. Do not promise content authors otherwise.
+Schema-v8 JSON constructs the same `StatusLifetimeDefinition` available to
+programmatic integrations. Ailments use `defaultLifetime`; applicable typed
+effects use `lifetime`. Each contains `expiration` and
+`allowedRemovalCauses`, so content does not acquire hidden Deployment,
+Encounter, or Field persistence from its duration kind.
+
+For a finite Instant, Turn, Phase, or Battle expiration, include
+`duration_expired`. Permanent state may instead list only explicit removal
+causes such as `scripted_removal`. Keep stat-modifier `duration` records
+separate: their selected accumulation policy owns those timers.
 
 ## Verification References
 
@@ -283,4 +288,3 @@ See [Status And Passive Lifecycle](../mechanics/status-passive-lifecycle.md)
 for player-visible rules and
 [Status And Passive Lifecycle Technical Reference](../technical/status-passive-lifecycle.md)
 for mutation and event invariants.
-

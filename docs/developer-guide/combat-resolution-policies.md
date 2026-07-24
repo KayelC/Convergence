@@ -124,7 +124,7 @@ whole-action consumption behavior.
 
 ## Bound Multi-Hit Work
 
-Schema v7 and Framework semantic validation allow `1..1024` hits for one
+Schema v8 and Framework semantic validation allow `1..1024` hits for one
 damage effect. The supplied `standard_damage` policy adds
 `maximumHitsPerDamageEffect`, which defaults to `64` and must itself remain
 within `1..1024`.

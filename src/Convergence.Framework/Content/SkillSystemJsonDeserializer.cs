@@ -170,6 +170,7 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
         options.Converters.Add(new StrictSnakeCaseEnumConverter<FusionParentRole>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<FusionResultOperationKind>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<RulesetCategory>());
+        options.Converters.Add(new StrictSnakeCaseEnumConverter<StatusRemovalCause>());
         return options;
     }
 

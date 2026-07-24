@@ -24,7 +24,7 @@ Session restore is aggregate and framework-owned. Hosts decode their save envelo
 ## Content Flow
 
 Host-supplied JSON is checked against the strict Draft 2020-12 contracts in
-`schemas/content/v7` before Framework deserialization and semantic catalog
+`schemas/content/v8` before Framework deserialization and semantic catalog
 validation. JSON Schema owns document shape; Framework validation owns graph,
 dependency-visibility, registration, and host-capability rules. This keeps the
 reusable assembly free of schema-evaluation and filesystem dependencies while

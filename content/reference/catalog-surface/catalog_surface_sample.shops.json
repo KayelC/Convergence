@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:shops",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:shops",
+  "schemaVersion": 8,
   "shops": [
     {
       "id": "sample_outfitter",

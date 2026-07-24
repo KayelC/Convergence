@@ -60,7 +60,7 @@ public sealed class ProductBoundaryTests
             "XPlat Code Coverage",
             "Assert-CoberturaCoverage.ps1",
             "Convergence.ContentValidator.csproj",
-            "--schema-root schemas/content/v7",
+            "--schema-root schemas/content/v8",
             "--clean-battle-demo",
             "--clean-field-demo",
             "--clean-save-demo",

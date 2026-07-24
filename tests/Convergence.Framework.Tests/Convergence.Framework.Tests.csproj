@@ -34,7 +34,7 @@
     <Content Include="..\..\content\**\*.json" Link="Content\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\..\schemas\content\v7\*.json" Link="Schemas\content\v7\%(Filename)%(Extension)">
+    <Content Include="..\..\schemas\content\v8\*.json" Link="Schemas\content\v8\%(Filename)%(Extension)">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Fixtures\framework-capability-matrix.json" Link="Fixtures\framework-capability-matrix.json">

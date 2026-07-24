@@ -17,7 +17,7 @@ Ruleset categories stay generic. In particular, `turn_economy` identifies the po
 
 ## Version Boundary
 
-Active content uses schema version `7`, and active runtime snapshots use save contract version `13`. Schema v7 requires every authored passive trigger to declare its target scope, life-state filter, and reserve inclusion. Save v13 retains the actor, move-list, canonical-roster, stat-modifier, selected charge-policy, and typed status-lifetime authorities established by v12 while preserving the optional target runtime ID used by per-target passive activation limits. Earlier pre-release shapes have no aliases or automatic translation; any non-current shape can be accepted only through an explicit host-supplied migration step. This is an intentional clean break made before a stable public release.
+Active content uses schema version `8`, and active runtime snapshots use save contract version `13`. Schema v8 retains explicit passive targeting and adds authored status lifetimes containing both expiration and permitted removal causes. Save v13 retains the actor, move-list, canonical-roster, stat-modifier, selected charge-policy, and typed status-lifetime authorities established by v12 while preserving the optional target runtime ID used by per-target passive activation limits. Earlier pre-release shapes have no aliases or automatic translation; any non-current shape can be accepted only through an explicit host-supplied migration step. This is an intentional clean break made before a stable public release.
 
 ## Executable Guard
 

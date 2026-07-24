@@ -5,7 +5,7 @@ namespace Convergence.Validation;
 
 public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 {
-    private const int SupportedSchemaVersion = 7;
+    private const int SupportedSchemaVersion = 8;
 
     public ContentValidationResult Validate(SkillSystemValidationRequest request)
     {
@@ -618,7 +618,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
         private void ValidateAilment(RecordSource<AilmentDefinition> source)
         {
             AilmentDefinition ailment = source.Definition;
-            ValidateDuration(source, ailment.DefaultLifetime.Expiration, source.Path + ".defaultDuration");
+            ValidateDuration(source, ailment.DefaultLifetime.Expiration, source.Path + ".defaultLifetime.expiration");
             ValidateAilmentBehavior(source, ailment.TurnBehavior, source.Path + ".turnBehavior");
 
             ValidateDuplicates(source, ailment.GroupIds, source.Path + ".groupIds");
@@ -1006,7 +1006,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             if (recipe.Parents.Count != 2)
             {
                 Add(source, source.Path + ".parents", ContentValidationErrorCode.ShapeInvalid,
-                    "Schema v7 fusion recipes require exactly two parents.");
+                    "Schema v8 fusion recipes require exactly two parents.");
             }
 
             var seenParents = new HashSet<(FusionParentSelectorKind Kind, ContentId Id)>();
@@ -1082,7 +1082,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         recipe.Path + ".parents",
                         ContentValidationErrorCode.FusionRecipeAmbiguous,
                         $"Fusion recipe '{recipe.Id}' overlaps equal-specificity recipe '{previous.Id}'.",
-                        "Make the parent selectors non-overlapping; schema v7 has no recipe-priority field.");
+                        "Make the parent selectors non-overlapping; schema v8 has no recipe-priority field.");
                     break;
                 }
             }
@@ -1460,7 +1460,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     ValidateContentReference(source, apply.AilmentId, path + ".ailmentId", _ailmentIndex, "ailment");
                     if (apply.Lifetime is not null)
                     {
-                        ValidateDuration(source, apply.Lifetime.Expiration, path + ".duration");
+                        ValidateDuration(source, apply.Lifetime.Expiration, path + ".lifetime.expiration");
                     }
                     break;
                 case RestoreResourceEffectDefinition restore:
@@ -1503,11 +1503,11 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     RequirePositive(source, charge.Multiplier, path + ".multiplier", "Charge multiplier");
                     if (charge.Lifetime is not null)
                     {
-                        ValidateDuration(source, charge.Lifetime.Expiration, path + ".duration");
+                        ValidateDuration(source, charge.Lifetime.Expiration, path + ".lifetime.expiration");
                     }
                     break;
                 case GrantShieldEffectDefinition shield when shield.Lifetime is not null:
-                    ValidateDuration(source, shield.Lifetime.Expiration, path + ".duration");
+                    ValidateDuration(source, shield.Lifetime.Expiration, path + ".lifetime.expiration");
                     break;
                 case BreakAffinityEffectDefinition affinityBreak:
                     ValidateAffinityElements(
@@ -1515,7 +1515,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         affinityBreak.Elements,
                         path + ".elementIds",
                         "Affinity Break effects");
-                    ValidateDuration(source, affinityBreak.Lifetime.Expiration, path + ".duration");
+                    ValidateDuration(source, affinityBreak.Lifetime.Expiration, path + ".lifetime.expiration");
                     break;
                 case OverrideAffinityEffectDefinition affinity:
                     ValidateAffinityElements(
@@ -1523,7 +1523,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         affinity.Elements,
                         path + ".elementIds",
                         "Affinity overrides");
-                    ValidateDuration(source, affinity.Lifetime.Expiration, path + ".duration");
+                    ValidateDuration(source, affinity.Lifetime.Expiration, path + ".lifetime.expiration");
                     break;
                 case RemoveStatusEffectDefinition removeStatus:
                     if (removeStatus.StatusKinds.Count == 0 && removeStatus.StatusIds.Count == 0)

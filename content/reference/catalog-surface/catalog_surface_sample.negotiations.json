@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:negotiations",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:negotiations",
+  "schemaVersion": 8,
   "negotiations": [
     {
       "id": "playful_sample",

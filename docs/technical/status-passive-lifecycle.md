@@ -283,18 +283,20 @@ external host operations. Integration code must observe this sequence:
 Custom handlers should therefore be deterministic rule adapters, not scene or
 storage mutators.
 
-## Current Authoring Boundary
+## Authored Lifetime Boundary
 
-The runtime accepts independently composed expiration and removal profiles.
-The schema-v7 ailment DTO exposes `defaultDuration` but not a removal-profile
-field. `SkillSystemDtoMapper` currently maps Instant, Phase, and Battle
-durations to an Encounter lifetime; Turn durations to a Field lifetime; and
-Permanent durations to Persistent. Apply-ailment duration overrides use the
-same mapping.
+Schema v8 maps authored lifetime policy without inference. Each ailment
+`defaultLifetime` and each applicable status-producing effect `lifetime`
+contains an expiration definition plus the exact typed removal causes allowed
+for that state. `SkillSystemDtoMapper.MapStatusLifetime` preserves both parts
+when constructing `StatusLifetimeDefinition`.
 
-This is a real authoring limitation, not a runtime limitation. It must remain
-visible until a later schema decision either exposes removal profiles or
-deliberately confirms the fixed mapping as the content contract.
+Finite Instant, Turn, Phase, and Battle expirations must permit
+`DurationExpired`; both JSON Schema and the runtime definition constructor
+enforce that invariant. Permanent state may omit automatic expiry. Duplicate
+or unknown causes are rejected by the authoring contract. Stat modifiers keep
+their separate `duration` shape because the selected stat-modifier policy owns
+contribution expiry rather than `StatusLifetimeDefinition`.
 
 ## Source And Test Evidence
 
@@ -323,4 +325,3 @@ Primary executable evidence:
 - `BattleEncounterRunnerTests`
 - `RuntimePersistenceContractTests`
 - `GodotIntegrationContractTests`
-

@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:ailments",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:ailments",
+  "schemaVersion": 8,
   "ailments": [
     {
       "id": "sample_poison",
@@ -8,11 +8,23 @@
       "description": "A neutral poison example used by the framework sample pack.",
       "groupIds": ["major_ailment", "toxin"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 3,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 3,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "normal"
@@ -60,11 +72,23 @@
       "description": "A neutral sleep example that skips action and restores small resources at turn end.",
       "groupIds": ["major_ailment", "rest"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 2,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 2,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "skip"
@@ -119,11 +143,23 @@
       "description": "A neutral one-turn action skip example.",
       "groupIds": ["major_ailment", "immobilize"],
       "exclusivityGroupId": "major_ailment",
-      "defaultDuration": {
-        "type": "turns",
-        "value": 1,
-        "tick": "owner_turn_end",
-        "suspendWhileReserve": true
+      "defaultLifetime": {
+        "expiration": {
+          "type": "turns",
+          "value": 1,
+          "tick": "owner_turn_end",
+          "suspendWhileReserve": true
+        },
+        "allowedRemovalCauses": [
+          "cure_effect",
+          "dispel_effect",
+          "natural_recovery",
+          "recovery_event",
+          "duration_expired",
+          "exclusivity_replacement",
+          "consumed",
+          "scripted_removal"
+        ]
       },
       "turnBehavior": {
         "type": "skip"

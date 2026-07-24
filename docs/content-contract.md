@@ -14,12 +14,12 @@ Every active manifest lists its documents in authored order. DemoHost preserves 
 
 ## Validation Layers
 
-The active pre-release authoring contract is schema version `7`. Versions `1`
-through `6` are intentionally unsupported after the Action Token,
+The active pre-release authoring contract is schema version `8`. Versions `1`
+through `7` are intentionally unsupported after the Action Token,
 catalyst-role, stat-modifier, explicit weapon-critical, bounded-hit-count, and
-explicit passive-targeting migrations. The validator reports an
+explicit passive-targeting and status-lifetime migrations. The validator reports an
 unsupported-schema diagnostic instead of translating old documents. Active
-example packs are version `0.7.0`; exact dependency versions advance with the
+example packs are version `0.8.0`; exact dependency versions advance with the
 contract.
 
 1. Draft 2020-12 schemas validate document structure independently of Framework code.
@@ -27,33 +27,33 @@ contract.
 3. Semantic validation checks IDs, ranges, references, supported types, and explicit host registrations.
 4. Catalog loading checks paths, dependencies, versions, direct visibility, external references, and canonical qualification.
 
-## Schema v7
+## Schema v8
 
-The authored schemas live under [`../schemas/content/v7`](../schemas/content/v7).
-They use stable `urn:convergence:schema:content:v7:*` identifiers and reject
+The authored schemas live under [`../schemas/content/v8`](../schemas/content/v8).
+They use stable `urn:convergence:schema:content:v8:*` identifiers and reject
 unknown properties. Every active document must declare the schema matching its
 manifest document type:
 
 | Manifest type | `$schema` |
 |---|---|
-| `skills` | `urn:convergence:schema:content:v7:skills` |
-| `entities` | `urn:convergence:schema:content:v7:entities` |
-| `races` | `urn:convergence:schema:content:v7:races` |
-| `ailments` | `urn:convergence:schema:content:v7:ailments` |
-| `items` | `urn:convergence:schema:content:v7:items` |
-| `equipment` | `urn:convergence:schema:content:v7:equipment` |
-| `shops` | `urn:convergence:schema:content:v7:shops` |
-| `negotiations` | `urn:convergence:schema:content:v7:negotiations` |
-| `encounters` | `urn:convergence:schema:content:v7:encounters` |
-| `dungeons` | `urn:convergence:schema:content:v7:dungeons` |
-| `fusion` | `urn:convergence:schema:content:v7:fusion` |
-| `rulesets` | `urn:convergence:schema:content:v7:rulesets` |
+| `skills` | `urn:convergence:schema:content:v8:skills` |
+| `entities` | `urn:convergence:schema:content:v8:entities` |
+| `races` | `urn:convergence:schema:content:v8:races` |
+| `ailments` | `urn:convergence:schema:content:v8:ailments` |
+| `items` | `urn:convergence:schema:content:v8:items` |
+| `equipment` | `urn:convergence:schema:content:v8:equipment` |
+| `shops` | `urn:convergence:schema:content:v8:shops` |
+| `negotiations` | `urn:convergence:schema:content:v8:negotiations` |
+| `encounters` | `urn:convergence:schema:content:v8:encounters` |
+| `dungeons` | `urn:convergence:schema:content:v8:dungeons` |
+| `fusion` | `urn:convergence:schema:content:v8:fusion` |
+| `rulesets` | `urn:convergence:schema:content:v8:rulesets` |
 
-Manifests use `urn:convergence:schema:content:v7:manifest`. Shared definitions
-use `urn:convergence:schema:content:v7:shared` and are not content documents.
+Manifests use `urn:convergence:schema:content:v8:manifest`. Shared definitions
+use `urn:convergence:schema:content:v8:shared` and are not content documents.
 
 Every weapon basic attack must explicitly author its critical behavior with the
-same `never` or `chance` definition used by typed damage effects. Schema v7
+same `never` or `chance` definition used by typed damage effects. Schema v8
 rejects the pre-release shape that omitted this decision; the runtime never
 invents a weapon critical chance. A basic attack may additionally expose a
 local `primaryEffectId` and append `secondaryEffects`; those secondary records
@@ -67,6 +67,35 @@ same-target positive-damage dependency; independent damage performs its own hit
 resolution. Semantic validation rejects duplicate IDs, missing or forward
 sources, incompatible positive-damage sources, and malformed shared-contact
 graphs.
+
+Schema v8 gives authored runtime status state an explicit `lifetime` object:
+
+```json
+{
+  "expiration": {
+    "type": "turns",
+    "value": 3,
+    "tick": "owner_turn_end",
+    "suspendWhileReserve": true
+  },
+  "allowedRemovalCauses": [
+    "cure_effect",
+    "duration_expired",
+    "battle_end"
+  ]
+}
+```
+
+`expiration` defines the clock. `allowedRemovalCauses` independently defines
+which typed expiry, cure, cleanup, consumption, or scripted requests may remove
+the state. Instant, turn, phase, and battle expirations must include
+`duration_expired`; permanent state need not. Duplicate or unknown causes are
+invalid. Ailments require `defaultLifetime`; apply-ailment overrides, charges,
+and shields may provide `lifetime`; affinity Break and override effects require
+it. Stat modifiers deliberately retain their `duration` field because their
+accumulation and independently timed contribution policies own that separate
+contract. Schema v8 rejects the former status-effect `duration` shape rather
+than guessing a removal profile.
 
 JSON Schema is the structural authoring contract: exact property names, enum
 values, discriminated unions, required members, and basic numeric/string ranges.
@@ -101,7 +130,7 @@ Every passive trigger explicitly authors a `targeting` object. Its `scope`
 selects the owner, event-supplied targets, owner team, opposing teams, or all
 participants; `lifeState` filters alive, defeated, or any actors; and
 `includeReserveActors` decides whether undeployed actors may be selected.
-Catalog qualification preserves this targeting unchanged. Schema v7 rejects
+Catalog qualification preserves this targeting unchanged. Schema v8 rejects
 the earlier trigger shape instead of silently treating it as event-targeted.
 
 The checked-in [Content Authoring Validator](content-authoring-validator.md)
@@ -122,7 +151,7 @@ how signed stat changes accumulate, expire, and clear; it does not select the
 and parameters are normatively listed in
 [Ruleset Policy Contracts](ruleset-policy-contracts.md).
 
-Schema v7 accepts the neutral `general` value for `grant_charge` so a custom
+Schema v8 accepts the neutral `general` value for `grant_charge` so a custom
 combat composition can select `UnifiedChargePolicy`; the supplied split policy
 continues to accept only `physical` and `magical`. The optional standard-damage
 parameter `itemActionOutcomeBehavior` selects `normal` or `effect_driven`

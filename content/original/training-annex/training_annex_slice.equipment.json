@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:equipment",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:equipment",
+  "schemaVersion": 8,
   "equipment": [
     {
       "id": "practice_blade",

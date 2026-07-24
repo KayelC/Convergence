@@ -45,9 +45,9 @@ found no remaining reachable defect in that supported scope.
 The turn-economy guide completed the Order 3 source and correction workflow for
 Action Token, neutral standard actions, custom snapshot authority, and finite
 phase liveness.
-The status-lifecycle guide records the implemented Order 4 composition and its
-current schema-v7 removal-profile authoring boundary. Formal promotion waits
-for the independent O4-R10 source and documentation review.
+The status-lifecycle guide records the implemented Order 4 composition and
+schema-v8 explicit lifetime authoring. Formal promotion waits for the
+independent O4-R10 source and documentation review.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

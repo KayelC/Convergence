@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v7:races",
-  "schemaVersion": 7,
+  "$schema": "urn:convergence:schema:content:v8:races",
+  "schemaVersion": 8,
   "races": [
     {
       "id": "sample_spirit",
