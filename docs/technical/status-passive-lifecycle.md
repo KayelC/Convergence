@@ -35,8 +35,8 @@ downstream and never rule authority.
 2. one immutable `StatusRemovalProfileDefinition`.
 
 Duration and persistence are deliberately independent. Clock-driven Instant,
-Turn, and Phase durations must permit `DurationExpired`; construction rejects a
-profile that would make their clock impossible to complete.
+Turn, Phase, and Battle durations must permit `DurationExpired`; construction
+rejects a profile that would make their clock impossible to complete.
 
 The live duration guard rejects null values, non-positive counted turns,
 invalid event IDs, invalid phase IDs, and undefined duration kinds before any
@@ -177,9 +177,12 @@ the transaction.
 
 ### Target resolution
 
-`PassiveTriggerTargetResolver` evaluates the typed scope over the fixed
-participant graph, filters by life state and reserve inclusion, and removes
-duplicate runtime IDs while preserving encounter order.
+The surrounding execution transaction first requires every distinct actor
+object to have a unique runtime ID. Two different objects claiming one ID are
+rejected before target policies run. `PassiveTriggerTargetResolver` then
+evaluates the typed scope over that validated graph, filters by life state and
+reserve inclusion, and normalizes repeated references while preserving
+encounter order.
 
 ### Dispatch order
 
@@ -211,8 +214,10 @@ condition-not-met target does not record an activation.
 
 The dispatcher creates one actor transaction over owner, participants, and
 event targets. Effects run against staged actors. Activation counts and all
-effect mutations commit together. A thrown effect or malformed result leaves
-both actor state and activation counts unchanged.
+effect mutations commit together. Passive results validate their outcome,
+identifiers, trigger index, and effect collection at the extension boundary. A
+thrown effect or malformed result leaves both actor state and activation counts
+unchanged.
 
 ## Encounter Startup Atomicity
 
@@ -225,18 +230,27 @@ sequenceDiagram
 
     R->>T: Clone complete participant graph
     R->>T: Reset staged per-battle passive counts
-    R->>L: Dispatch staged battle-start passives
-    L-->>R: Typed lifecycle events
-    R->>S: Publish actor and startup events
-    alt cancellation or publication failure
+    R->>S: Publish actor, battle-start, and initiative events
+    alt cancellation or initial publication failure
         R-->>T: Discard staged graph
-    else startup accepted
-        R->>T: Commit all participants once
+    else initial events accepted
+        R->>L: Dispatch staged battle-start passives
+        L-->>R: Validate and return typed lifecycle events
+        alt cancellation or lifecycle failure
+            R-->>T: Discard staged graph
+        else lifecycle accepted
+            R->>T: Commit all participants once
+            R->>S: Publish lifecycle evidence
+            Note over R,S: A later sink failure faults the encounter; it cannot roll back committed state
+        end
     end
 ```
 
 No participant's activation counters or battle-start mutations become live
-until the complete startup boundary is accepted.
+until lifecycle validation succeeds and the complete staged graph commits.
+External event publication is deliberately outside the actor transaction. Host
+sinks must not assume that throwing can undo framework state or prior host side
+effects.
 
 ## Event Evidence
 

@@ -46,8 +46,8 @@ The turn-economy guide completed the Order 3 source and correction workflow for
 Action Token, neutral standard actions, custom snapshot authority, and finite
 phase liveness.
 The status-lifecycle guide records the implemented Order 4 composition and
-schema-v8 explicit lifetime authoring. Formal promotion waits for the
-independent O4-R10 source and documentation review.
+schema-v8 explicit lifetime authoring. Its mechanics, developer, and technical
+documents completed independent source reconciliation through O4-R11.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

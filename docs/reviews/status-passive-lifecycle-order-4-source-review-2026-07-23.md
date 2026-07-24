@@ -690,8 +690,9 @@ The audience checkpoint separates status and passive lifecycle from the still
 unreviewed battle-knowledge scope. Dedicated mechanics, developer, and
 technical pages describe the supported rules from their appropriate audience,
 with vertical application, clock, cleanup, turn-end, and encounter-startup
-diagrams. The pages do not conceal the current schema-v7 removal-profile
-authoring boundary and remain `existing_unreviewed` until O4-R10.
+diagrams. At this historical checkpoint, the pages described the then-current
+schema-v7 removal-profile authoring boundary and remained
+`existing_unreviewed` until O4-R10. Schema v8 later removed that boundary.
 
 The checkpoint gate passed with:
 
@@ -708,10 +709,15 @@ The checkpoint gate passed with:
 
 ## Current Closure Decision
 
-Order 4 is **design-approved and implementation is in progress**. O4-R2 through
-O4-R9 are implemented pending the fresh O4-R10 review. The existing
-implementation is useful and largely transactional, but the capability
-matrix correctly remains `partial` until R9-R10 close the audience
-documentation and final review. No code should
-be removed, and the documentation coverage entries should remain
-`existing_unreviewed` until R2-R10 and the audience review are complete.
+Order 4 is **complete**. O4-R2 through O4-R9 implemented the approved design.
+O4-R10 independently found and corrected finite Battle expiry, the competing
+phase-end API, and missing authored removal-profile authority. O4-R11 then
+closed malformed turn-restriction output, duplicate participant identity, and
+malformed passive-dispatch output at their public extension boundaries.
+
+The corrected source, tests, active schema-v8 content, persistence path,
+encounter integration, and all three audience documents were re-read together.
+No unresolved realistic reachable defect remains in the supported Order 4
+scope. `status_and_passive_lifecycle` is `complete`, and its mechanics,
+developer-guide, and technical entries are `reviewed`. Order 5,
+`battle_knowledge`, is next.

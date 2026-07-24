@@ -107,7 +107,7 @@ policy permits the actor to advance.
 
 ## Authoring A Passive Trigger
 
-Schema-v7 content must declare targeting explicitly:
+Schema-v8 content must declare targeting explicitly:
 
 ```json
 {

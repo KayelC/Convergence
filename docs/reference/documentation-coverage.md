@@ -34,8 +34,7 @@ O3-R11 returned all three Order 3 audiences to `reviewed`, and O3-R12 closed
 that revision. The owner-closure audit at `7aa3467e` then found that
 port-provided events could impersonate runner-owned structural events. O3-R13
 now enforces a fail-closed port-event allow-list, and O3-R14 re-read the source
-and reconciled all three audience documents. They are reviewed again. Order 4
-remains the next full capability review rather than a bulk status promotion.
+and reconciled all three audience documents. They are reviewed again.
 The fresh closure audit at `6e1169b5` subsequently found that custom economies
 could ignore explicit phase termination while still passing transition
 validation. O3-R16 now rejects that transition before owner-turn-end lifecycle
@@ -43,6 +42,11 @@ or accepted event publication. O3-R17 re-read the corrected source and
 owner-confirmed guidance, so all three Order 3 entries are reviewed again.
 The project owner explicitly confirmed the final Order 3 contract on 23 July
 2026.
+Order 4 subsequently completed its own source-first review, approved correction
+sequence, three-audience documentation pass, and post-correction closure. Its
+status, passive, lifetime, reserve-clock, cleanup, persistence, and transaction
+guidance is now reviewed. Order 5, `battle_knowledge`, is next rather than a
+bulk promotion of the remaining entries.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
@@ -70,13 +74,13 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 21 reviewed,
-31 existing_unreviewed, 16 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 24 reviewed,
+28 existing_unreviewed, 16 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 21 |
-| `existing_unreviewed` | 31 |
+| `reviewed` | 24 |
+| `existing_unreviewed` | 28 |
 | `missing` | 16 |
 | `not_applicable` | 7 |
 

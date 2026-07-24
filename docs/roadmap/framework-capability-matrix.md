@@ -16,27 +16,19 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is temporarily `partial` while Documentation
-Order 4 completes its approved correction sequence. O4-R2 separates expiration
-from typed removal/persistence, and O4-R3 supplies explicit lifecycle clocks,
-team-to-phase mapping, round dispatch, and both reserve policies. O4-R4 adds
-typed application, refresh, replacement, rejection, expiry, cleanup, and
-passive-effect evidence through action and encounter results. Live application
-hardening is complete in O4-R5: malformed timed state is rejected before live
-mutation, public ailment application is transactional, and the supplied guard
-rule is an injected application gate. O4-R6 adds typed owner, event-target,
-team, opponent, and all-participant passive targeting; validates passive
-re-entry liveness; and makes activation limits explicitly per-dispatch or
-per-target. O4-R7 makes battle-start passive reset atomic with lifecycle startup
-and names forced basic attacks accurately. O4-R8 reconciles schema-v7 targeting,
-save-v13 per-target activations, clean content, DemoHost, and the Godot smoke.
-O4-R9 supplies all three audience documents. O4-R10 identified and corrected
-finite-expiry, parallel-phase-API, and JSON removal-profile authority gaps;
-schema v8 now authors exact status lifetimes. Independent post-correction
-source/documentation closure remains required before the capability returns to
-`complete`.
+`status_and_passive_lifecycle` is `complete` after Documentation Order 4. The
+implemented boundary includes independent expiration and removal policy,
+explicit actor/action/team-phase/round/custom clocks, both reserve policies,
+typed transition evidence, transactional application and passive execution,
+validated extension results, persistent lifecycle state, and schema-v8 exact
+lifetime authoring. O4-R10 and O4-R11 corrected finite Battle expiry, competing
+phase advancement, authored removal profiles, malformed turn-restriction and
+passive results, and duplicate participant identity handling. A final
+source-and-documentation trace found no unresolved realistic defect in the
+supported scope. Demo coverage remains `focused`; completeness describes the
+Framework contract, not a claim that every host presents every optional rule.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

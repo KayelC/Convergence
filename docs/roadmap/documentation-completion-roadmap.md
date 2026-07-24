@@ -294,13 +294,16 @@ owner-confirmed guidance, then promoted all three audience entries together.
 The project owner explicitly confirmed the final six-rule contract on 23 July
 2026. Order 3 is formally complete.
 
-Order 4 follows that closure. It reviews
-status, ailment, passive, and duration lifecycle from current source before any
-audience entry is promoted. O4-R2 through O4-R8 implement the approved runtime,
-schema, persistence, and host corrections. O4-R9 now supplies dedicated
-mechanics, developer, and technical documents while retaining
-`existing_unreviewed` until the independent O4-R10 review verifies them against
-the corrected source.
+Order 4 followed that closure and reviewed status, ailment, passive, and
+duration lifecycle from current source before promotion. O4-R2 through O4-R9
+implemented and documented the approved runtime, schema, persistence, and host
+boundaries. O4-R10/R11 then corrected finite Battle expiry, duplicate lifecycle
+clocks, schema-v8 removal-profile authority, malformed extension results, and
+runtime-ID collision handling. The final source-and-documentation trace found
+no unresolved realistic defect in the supported scope. All three audience
+entries are now `reviewed`; the executable documentation matrix records 24
+reviewed, 28 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries.
+Order 5, `battle_knowledge`, is the next collaborative documentation subject.
 
 ## Deferred Documentation
 

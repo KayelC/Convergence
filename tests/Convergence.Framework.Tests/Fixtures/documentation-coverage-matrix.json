@@ -182,28 +182,28 @@
     {
       "id": "status_and_passive_lifecycle",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "The dedicated mechanics page reflects the approved lifecycle rules, but formal promotion waits for the independent O4-R10 source and documentation review."
+        "reason": "The owner-approved mechanics page was re-read against the corrected application, clock, reserve, cleanup, passive, and encounter-startup behavior through O4-R11."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "Lifecycle composition, policies, clocks, events, persistence, and host responsibilities are documented; formal promotion waits for O4-R10."
+        "reason": "The composition guide is source-verified for schema-v8 authoring, policies, explicit clocks, typed evidence, persistence, transaction boundaries, and host responsibilities."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "The dedicated runtime reference traces authority, ordering, atomicity, clocks, events, and restoration; formal promotion waits for O4-R10."
+        "reason": "The runtime reference traces the corrected authority, ordering, validation, atomic commit boundary, clocks, event publication boundary, and restoration invariants."
       }
     },
     {

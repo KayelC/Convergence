@@ -341,4 +341,5 @@ developer, and technical guidance now state that distinction, and executable
 matrices return `turn_economy` to `complete` with all three audiences
 `reviewed`. No realistic reachable Order 3 defect remains in the reviewed
 scope. The project owner explicitly confirmed the resulting six-rule contract
-on 23 July 2026. Order 4 is next.
+on 23 July 2026. Order 4 later completed its independent lifecycle review and
+correction cycle; Order 5 is next.

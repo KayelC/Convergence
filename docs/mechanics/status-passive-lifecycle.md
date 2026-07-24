@@ -199,13 +199,17 @@ executed, condition-not-met, recursion-suppressed, and limit-reached outcomes.
 
 ## Atomicity
 
-Application, turn lifecycle, cleanup, passive dispatch, and encounter startup
-use staged actor state. A rejected policy decision, malformed extension result,
-exception, cancellation, or failed event publication does not commit a partial
+Application, turn lifecycle, cleanup, passive dispatch, and encounter lifecycle
+ingress use staged actor state. A rejected policy decision, malformed extension
+result, exception, or cancellation before commit does not publish a partial
 actor mutation.
 
-This guarantee covers framework actor state. A custom handler should not make
-irreversible external host changes before the framework accepts its result.
+This guarantee covers framework actor state, not external host work. An event
+sink may fail after a lifecycle transaction has committed; the encounter then
+reports a typed fault, but it cannot rewind an animation, file write, network
+call, or other side effect already performed by the host. Custom handlers and
+event sinks should therefore defer irreversible work, make it idempotent, or
+provide their own compensation.
 
 ## Examples
 

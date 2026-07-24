@@ -2,12 +2,13 @@
 
 **Review date:** 24 July 2026
 
-**Reviewed revision:** `fe3657a0`
+**Reviewed revisions:** `fe3657a0` through `34d9a9e1`
 
 **Capability:** `status_and_passive_lifecycle`
 
-**Conclusion:** three correctable contract gaps remain before Order 4 can be
-closed
+**Conclusion:** all reproduced findings are corrected; the final source and
+documentation trace found no unresolved realistic defect in the supported
+Order 4 scope
 
 ## Review Method
 
@@ -278,3 +279,81 @@ ordinary evaluation event whose typed payload is invalid.
 passive result records, including record-clone setters, and prove a malformed
 custom dispatcher cannot commit staged resource mutation through turn-end or
 battle-start lifecycle ingress.
+
+## Final Correction Record
+
+The post-correction findings were implemented as isolated commits:
+
+- `b294c5cb` validates turn-restriction and custom turn-behavior outcomes,
+  identifiers, and clone setters before staged Guard clearing can commit;
+- `bbe47dfe` preserves distinct participant objects so the canonical execution
+  transaction rejects runtime-ID collisions before an ailment policy runs; and
+- `34d9a9e1` validates passive activation outcomes, identifiers, trigger
+  indexes, effect members, dispatch members, and clone setters before lifecycle
+  ingress can commit staged mutations.
+
+Focused regressions prove malformed custom restrictions and passive dispatchers
+leave live actors unchanged, and conflicting ailment participant graphs never
+reach a host policy. The closing documentation correction also distinguishes
+Framework actor-state transactions from external event-sink side effects.
+
+## Final Source And Documentation Re-Review
+
+The closing trace re-read the current lifetime definitions, live timed-state
+mutators, ailment transaction, turn-start and turn-end lifecycle, explicit
+clocks, cleanup, passive dispatcher, encounter lifecycle port, persistence
+validation, schema-v8 mapper, active content, tests, and all three audience
+documents. It did not use the earlier conclusion as proof.
+
+The supported invariant now holds end to end:
+
+1. definitions author expiration separately from permitted removal causes;
+2. every finite duration has a reachable expiry cause;
+3. live state and restored state reject malformed durations;
+4. actor, action, phase, round, and custom boundaries advance through one
+   explicit clock model with configured reserve behavior;
+5. ailment and passive extension outputs validate before commit;
+6. lifecycle mutations and activation counts commit atomically within
+   Framework actor state; and
+7. immutable typed results and events expose the committed transition without
+   treating external host publication as a transactional resource.
+
+No additional realistic reachable defect was reproduced. Order 4 may therefore
+promote after the complete release gate recorded below.
+
+## Complete Release Gate
+
+The final corrected revision passed:
+
+- focused lifecycle, immutability, encounter, schema, persistence, and
+  documentation-contract coverage: 436 passed, 0 failed, 0 skipped;
+- complete solution: 1,618 passed, 0 failed, 0 skipped (1,438 Framework, 173
+  DemoHost, and 7 ContentValidator tests);
+- locked dependency restore with NuGet vulnerability auditing: passed;
+- strict nonincremental Release build with warnings as errors: 0 warnings and
+  0 errors, including the Godot reference project;
+- formatting verification and trimming analysis: passed with 0 warnings;
+- Framework coverage: 90.69% lines and 76.22% branches, above the 90%/70%
+  release thresholds;
+- active content validation: 6 packs, 36 documents, and 98 qualified
+  definitions;
+- all four noninteractive DemoHost modes and PTY-scripted Training Annex exit:
+  successful;
+- real Godot 4.7.1 .NET headless smoke: exit 0 with
+  `CONVERGENCE_GODOT_SMOKE_OK` and save contract 13; and
+- architecture, API, documentation-link, forbidden-reference, active-content,
+  and `git diff --check` gates: passed.
+
+The first sandboxed Godot attempt could not create `user://logs` and entered
+the engine's native Windows crash handler. That blocked process was terminated
+and the same checked-in executable was rerun with normal user-data access; the
+real smoke then completed successfully. This environmental first attempt is not
+counted as a product pass.
+
+## Closure Decision
+
+Order 4 is formally complete. The capability matrix records
+`status_and_passive_lifecycle` as `complete`; mechanics, developer-guide, and
+technical documentation are `reviewed`. The feature remains an optional,
+host-neutral Framework module with focused rather than end-to-end presentation
+coverage. Order 5, `battle_knowledge`, is next.

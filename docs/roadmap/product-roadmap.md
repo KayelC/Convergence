@@ -8,19 +8,16 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is temporarily `partial` while Order 4 replaces
-the remaining lifecycle assumptions with explicit clocks, application
-transitions, passive contracts, and restored-state validation. Completed
-checkpoints now include independent lifetime/removal policy, explicit clocks,
-and complete typed transition evidence. O4-R5 rejects malformed live timed
-state, stages public ailment application, and exposes guard blocking as a
-replaceable application-gate policy. O4-R6 completes passive liveness, typed
-targeting, and per-dispatch/per-target activation semantics. Encounter startup
-is atomic in O4-R7, and forced-turn terminology now identifies the typed basic
-attack it requires. Wire reconciliation and audience closure remain in the
-focused sequence.
+`status_and_passive_lifecycle` completed Documentation Order 4. The current
+Framework owns explicit status lifetimes and removal causes, application gates,
+turn restrictions, recovery, cleanup, passive targeting and activation limits,
+reserve-aware clocks, typed transition evidence, persistence validation, and
+transactional actor-state mutation. The closing O4-R10/R11 cycle also validates
+host extension results and runtime identity before commit. External event sinks
+remain host-owned resources and are intentionally not presented as part of an
+actor-state transaction.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -45,8 +42,8 @@ remaining and still pass encounter transition validation. O3-R16 now enforces
 the universal termination command before lifecycle and event commitment, and
 O3-R17 reconciled the corrected source with all three documentation audiences.
 The project owner confirmed the final contract on 23 July 2026. Order 3 is
-complete; Order 4 is in progress under its approved source-review roadmap.
-O4-R2 through O4-R7 are implemented pending the final independent review.
+complete. Order 4 subsequently completed its approved source review,
+correction sequence, audience reconciliation, and independent closure review.
 
 The `typed_action_and_effect_execution` inventory and actor-action authority
 rules are confirmed, implemented, source-reviewed, and owner-approved in
@@ -134,7 +131,8 @@ integration defects before returning the capability and all three audience
 documents to complete/reviewed. O3-R12 independently confirmed that closure
 from current code. O3-R15 later found the custom explicit-termination gap;
 O3-R16 and O3-R17 corrected and independently reconciled it. Order 4, status
-and passive lifecycle, is the next collaborative documentation subject.
+and passive lifecycle, subsequently completed the same source-first workflow.
+Order 5, `battle_knowledge`, is the next collaborative documentation subject.
 
 ## Priority 2: Persistence Evolution
 

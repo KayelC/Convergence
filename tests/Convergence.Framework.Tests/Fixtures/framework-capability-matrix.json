@@ -110,14 +110,12 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "partial",
-      "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "ContentSchemaContractTests", "RuntimePersistenceSnapshotTests"],
+      "implementationState": "complete",
+      "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
-        "hostNeutral": true,
-        "optionalModule": true,
-        "knownGaps": [
-          "The independent O4-R10 post-correction review remains in progress. Schema-v8 content now authors exact status expiration and removal profiles."
-        ]
+      "hostNeutral": true,
+      "optionalModule": true,
+      "knownGaps": []
     },
     {
       "id": "encounter_orchestration",
