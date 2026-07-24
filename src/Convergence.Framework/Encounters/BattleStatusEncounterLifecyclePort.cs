@@ -32,6 +32,9 @@ public sealed class BattleStatusEncounterLifecyclePort :
         _battleStartEventId = battleStartEventId;
         _ownerTurnEndEventId = ownerTurnEndEventId;
         _clockPolicy = clockPolicy ?? throw new ArgumentNullException(nameof(clockPolicy));
+        _executionServices.PassiveEventPolicies.RegisterIfAbsent(
+            _battleStartEventId,
+            new PassiveEventPolicy(PassiveOwnerEligibility.DeployedOnly));
     }
 
     public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(

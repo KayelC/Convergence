@@ -1050,6 +1050,105 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public async Task BattleStart_DefaultOwnerPolicyDispatchesDeployedButNotReserveOwners()
+    {
+        SkillDefinition passive = PassiveSkill(
+            "deployment_owned_battle_start",
+            [
+                new PassiveTriggerDefinition(
+                    BattleStart,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))])
+            ]);
+        RuntimeActorState deployed = Actor(
+            "deployed_passive_owner",
+            hp: 50,
+            passiveSkills: [passive]);
+        RuntimeActorState reserve = Actor(
+            "reserve_passive_owner",
+            hp: 50,
+            passiveSkills: [passive]);
+        reserve.SetEncounterPresence(isDeployed: false);
+        BattleExecutionServices services = Services();
+        var port = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new SequenceRandomSource()),
+            services,
+            BattleStart,
+            OwnerTurnEnd,
+            TestEncounterClocks.Standard(PlayerTeam, ContentId.Parse("enemy_team")));
+        BattleEncounterParticipant[] participants =
+        [
+            new(deployed, "Deployed"),
+            new(reserve, "Reserve")
+        ];
+        var encounter = new BattleEncounterRequest(participants, Battle, NormalBattle, null, 1);
+
+        IReadOnlyList<BattleEncounterEvent> events = await port.ProcessBattleStartAsync(
+            new BattleEncounterLifecycleRequest(encounter, participants, [PlayerTeam]));
+
+        Assert.Equal(PassiveOwnerEligibility.DeployedOnly, services.PassiveEventPolicies
+            .Resolve(BattleStart)
+            .OwnerEligibility);
+        Assert.Equal(60, deployed.GetRequiredResource(Hp).Current);
+        Assert.Equal(50, reserve.GetRequiredResource(Hp).Current);
+        Assert.DoesNotContain(events, @event =>
+            @event.ActorId == reserve.InstanceId &&
+            @event.Payload is BattlePassiveActivatedEventPayload);
+    }
+
+    [Fact]
+    public async Task BattleStart_AllParticipantsOwnerPolicyOptsReserveOwnersIntoDispatch()
+    {
+        SkillDefinition passive = PassiveSkill(
+            "reserve_enabled_battle_start",
+            [
+                new PassiveTriggerDefinition(
+                    BattleStart,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))])
+            ]);
+        RuntimeActorState deployed = Actor(
+            "opted_in_deployed_owner",
+            hp: 50,
+            passiveSkills: [passive]);
+        RuntimeActorState reserve = Actor(
+            "opted_in_reserve_owner",
+            hp: 50,
+            passiveSkills: [passive]);
+        reserve.SetEncounterPresence(isDeployed: false);
+        var policies = new PassiveEventPolicyRegistry()
+            .Register(
+                BattleStart,
+                new PassiveEventPolicy(PassiveOwnerEligibility.AllParticipants));
+        BattleExecutionServices services = Services(passiveEventPolicies: policies);
+        var port = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new SequenceRandomSource()),
+            services,
+            BattleStart,
+            OwnerTurnEnd,
+            TestEncounterClocks.Standard(PlayerTeam, ContentId.Parse("enemy_team")));
+        BattleEncounterParticipant[] participants =
+        [
+            new(deployed, "Deployed"),
+            new(reserve, "Reserve")
+        ];
+        var encounter = new BattleEncounterRequest(participants, Battle, NormalBattle, null, 1);
+
+        IReadOnlyList<BattleEncounterEvent> events = await port.ProcessBattleStartAsync(
+            new BattleEncounterLifecycleRequest(encounter, participants, [PlayerTeam]));
+
+        Assert.Equal(PassiveOwnerEligibility.AllParticipants, services.PassiveEventPolicies
+            .Resolve(BattleStart)
+            .OwnerEligibility);
+        Assert.Equal(60, deployed.GetRequiredResource(Hp).Current);
+        Assert.Equal(60, reserve.GetRequiredResource(Hp).Current);
+        Assert.Contains(events, @event =>
+            @event.ActorId == deployed.InstanceId &&
+            @event.Payload is BattlePassiveActivatedEventPayload);
+        Assert.Contains(events, @event =>
+            @event.ActorId == reserve.InstanceId &&
+            @event.Payload is BattlePassiveActivatedEventPayload);
+    }
+
+    [Fact]
     public void TurnEnd_AilmentTriggerCompletionEventsExposeInstantStatusExpirationExactlyOnce()
     {
         RuntimeActorState actor = Actor("instant_ailment_actor");
@@ -1857,7 +1956,8 @@ public sealed class BattleStatusLifecycleTests
         IBattleAilmentTransitionPolicy? ailmentTransitions = null,
         IBattleAilmentApplicationGatePolicy? ailmentGate = null,
         IBattleAilmentApplicationService? ailmentApplications = null,
-        IPassiveTriggerDispatcher? passiveTriggers = null) =>
+        IPassiveTriggerDispatcher? passiveTriggers = null,
+        PassiveEventPolicyRegistry? passiveEventPolicies = null) =>
         new(
             new EmptyAilments(),
             new NoDamagePolicy(),
@@ -1877,7 +1977,8 @@ public sealed class BattleStatusLifecycleTests
             ],
             customEffectHandlers: customEffectHandlers,
             ailmentApplications: ailmentApplications,
-            passiveTriggers: passiveTriggers)
+            passiveTriggers: passiveTriggers,
+            passiveEventPolicies: passiveEventPolicies)
         {
             AilmentApplicationGate = ailmentGate ?? GuardBlocksAilmentsApplicationGatePolicy.Instance,
             AilmentTransitions = ailmentTransitions ?? StandardBattleAilmentTransitionPolicy.Instance

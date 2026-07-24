@@ -19,7 +19,13 @@ Convergence.Execution.PassiveActivationCountingScope
 Convergence.Execution.PassiveActivationCountingScope.PerDispatch = 0 -> Convergence.Execution.PassiveActivationCountingScope
 Convergence.Execution.PassiveActivationCountingScope.PerTarget = 1 -> Convergence.Execution.PassiveActivationCountingScope
 Convergence.Execution.PassiveEventPolicy.ActivationCountingScope.get -> Convergence.Execution.PassiveActivationCountingScope
+Convergence.Execution.PassiveEventPolicy.OwnerEligibility.get -> Convergence.Execution.PassiveOwnerEligibility
+Convergence.Execution.PassiveEventPolicy.PassiveEventPolicy(Convergence.Execution.PassiveOwnerEligibility OwnerEligibility) -> void
 Convergence.Execution.PassiveEventPolicy.PassiveEventPolicy(bool AllowReentry, int? ActivationLimitPerBattle, Convergence.Execution.PassiveActivationCountingScope ActivationCountingScope) -> void
+Convergence.Execution.PassiveEventPolicy.PassiveEventPolicy(bool AllowReentry, int? ActivationLimitPerBattle, Convergence.Execution.PassiveActivationCountingScope ActivationCountingScope, Convergence.Execution.PassiveOwnerEligibility OwnerEligibility) -> void
+Convergence.Execution.PassiveOwnerEligibility
+Convergence.Execution.PassiveOwnerEligibility.AllParticipants = 1 -> Convergence.Execution.PassiveOwnerEligibility
+Convergence.Execution.PassiveOwnerEligibility.DeployedOnly = 0 -> Convergence.Execution.PassiveOwnerEligibility
 Convergence.Runtime.RuntimePassiveActivationSnapshot.RuntimePassiveActivationSnapshot(Convergence.Content.ContentId skillId, Convergence.Content.ContentId eventId, int triggerIndex, int activationCount, Convergence.Runtime.RuntimeInstanceId? targetInstanceId) -> void
 Convergence.Runtime.RuntimePassiveActivationSnapshot.TargetInstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
 override Convergence.Content.PassiveTriggerTargetingDefinition.Equals(object? obj) -> bool

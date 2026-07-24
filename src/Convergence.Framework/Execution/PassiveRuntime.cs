@@ -450,6 +450,12 @@ public enum PassiveActivationCountingScope
     PerTarget
 }
 
+public enum PassiveOwnerEligibility
+{
+    DeployedOnly,
+    AllParticipants
+}
+
 public sealed record PassiveEventPolicy
 {
     public PassiveEventPolicy(
@@ -459,10 +465,32 @@ public sealed record PassiveEventPolicy
     {
     }
 
+    public PassiveEventPolicy(PassiveOwnerEligibility OwnerEligibility)
+        : this(
+            AllowReentry: false,
+            ActivationLimitPerBattle: null,
+            PassiveActivationCountingScope.PerDispatch,
+            OwnerEligibility)
+    {
+    }
+
     public PassiveEventPolicy(
         bool AllowReentry,
         int? ActivationLimitPerBattle,
         PassiveActivationCountingScope ActivationCountingScope)
+        : this(
+            AllowReentry,
+            ActivationLimitPerBattle,
+            ActivationCountingScope,
+            PassiveOwnerEligibility.AllParticipants)
+    {
+    }
+
+    public PassiveEventPolicy(
+        bool AllowReentry,
+        int? ActivationLimitPerBattle,
+        PassiveActivationCountingScope ActivationCountingScope,
+        PassiveOwnerEligibility OwnerEligibility)
     {
         if (ActivationLimitPerBattle is <= 0)
         {
@@ -482,15 +510,35 @@ public sealed record PassiveEventPolicy
                 nameof(ActivationCountingScope),
                 "Passive activation counting scope is not supported.");
         }
+        if (!Enum.IsDefined(OwnerEligibility))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(OwnerEligibility),
+                "Passive owner eligibility is not supported.");
+        }
 
         this.AllowReentry = AllowReentry;
         this.ActivationLimitPerBattle = ActivationLimitPerBattle;
         this.ActivationCountingScope = ActivationCountingScope;
+        this.OwnerEligibility = OwnerEligibility;
     }
 
     public bool AllowReentry { get; }
     public int? ActivationLimitPerBattle { get; }
     public PassiveActivationCountingScope ActivationCountingScope { get; }
+    public PassiveOwnerEligibility OwnerEligibility { get; }
+
+    internal bool AllowsOwner(RuntimeActorState owner)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+        return OwnerEligibility switch
+        {
+            PassiveOwnerEligibility.DeployedOnly => owner.IsDeployed,
+            PassiveOwnerEligibility.AllParticipants => true,
+            _ => throw new InvalidOperationException(
+                $"Passive owner eligibility '{OwnerEligibility}' is not supported.")
+        };
+    }
 
     public void Deconstruct(out bool AllowReentry, out int? ActivationLimitPerBattle)
     {
@@ -513,6 +561,12 @@ public sealed class PassiveEventPolicyRegistry
         _policies.TryGetValue(eventId, out PassiveEventPolicy? policy)
             ? policy
             : new PassiveEventPolicy();
+
+    internal void RegisterIfAbsent(ContentId eventId, PassiveEventPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        _policies.TryAdd(eventId, policy);
+    }
 }
 
 public enum PassiveTriggerOutcome
@@ -788,6 +842,11 @@ internal sealed class ValidatingPassiveTriggerDispatcher : IPassiveTriggerDispat
         ArgumentNullException.ThrowIfNull(services);
 
         RequireValidRequestGraph(request);
+        if (!services.PassiveEventPolicies.Resolve(request.EventId).AllowsOwner(request.Owner))
+        {
+            return PassiveTriggerDispatchResult.Empty;
+        }
+
         RuntimeActorState[] transactionActors = request.Participants
             .Concat(request.Targets)
             .Append(request.Owner)
@@ -1083,6 +1142,12 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
         PassiveTriggerDispatchRequest request,
         BattleExecutionServices services)
     {
+        PassiveEventPolicy policy = _policies.Resolve(request.EventId);
+        if (!policy.AllowsOwner(request.Owner))
+        {
+            return PassiveTriggerDispatchResult.Empty;
+        }
+
         var results = new List<PassiveTriggerExecutionResult>();
         HashSet<ActiveTriggerKey> activeTriggers = _activeTriggers.Value ??= [];
         SkillDefinition[] enabledSkills = request.Owner.Passives.EnabledSkills.ToArray();
@@ -1097,7 +1162,6 @@ public sealed class PassiveTriggerDispatcher : IPassiveTriggerDispatcher
                     continue;
                 }
 
-                PassiveEventPolicy policy = _policies.Resolve(request.EventId);
                 var activeKey = new ActiveTriggerKey(
                     request.Owner.InstanceId,
                     skill.Id,
