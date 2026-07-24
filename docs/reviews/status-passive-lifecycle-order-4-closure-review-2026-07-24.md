@@ -157,3 +157,91 @@ without automatic clock expiry.
 Order 4 remains open until step 6. Passing existing tests does not waive these
 findings because the tests currently encode the competing phase API and fixed
 schema mappings rather than challenging them.
+
+## Post-Correction Re-Review At `8721a6b`
+
+The three findings above are implemented:
+
+- O4-R10-L1 now includes Battle duration in the finite-expiration invariant;
+- O4-R10-M2 removed the competing phase-end API and routes phase and round
+  advancement through explicit lifecycle clocks; and
+- O4-R10-M1 published schema v8, maps exact authored removal causes, and moved
+  all active clean packs to `0.8.0`.
+
+A fresh trace of the corrected source found two additional public extension
+boundary gaps. These are narrow integration defects rather than conventional
+security vulnerabilities, but both violate established fail-closed runtime
+invariants and therefore block final promotion.
+
+### O4-R11-M1: Turn-restriction extension output is not validated
+
+**Severity:** Medium
+
+**Invariant:** every result crossing a host-supplied policy boundary must use
+defined enum values and valid content IDs before staged lifecycle state is
+committed.
+
+**Reachable path:** `BattleTurnStartRestriction` and
+`CustomAilmentTurnBehaviorResult` accept an undefined
+`BattleTurnStartOutcome`. `BattleStatusLifecycleService.ProcessTurnStart`
+trusts the result returned by `IBattleTurnRestrictionPolicy`, clears Guard on
+the staged actor, builds an event, and commits the transaction.
+
+**Consequence:** a defective policy can return an undefined outcome as an
+apparently accepted turn-start result. Guard clearing becomes live before the
+encounter runner later faults while interpreting the impossible restriction.
+Invalid limited-action or source IDs can likewise escape the policy boundary.
+
+**Evidence:**
+
+- `Execution/BattleStatusLifecycle.cs`:
+  `BattleTurnStartRestriction`, `CustomAilmentTurnBehaviorResult`, and
+  `ProcessTurnStartCore`; and
+- the absence of a malformed custom-policy regression in
+  `BattleStatusLifecycleTests`.
+
+**Correction checkpoint:** validate outcomes and all supplied action/source
+IDs in the immutable result constructors, then prove malformed custom behavior
+and restriction policies roll back Guard and return no live mutation.
+
+### O4-R11-L1: Ailment requests silently collapse runtime-ID collisions
+
+**Severity:** Low
+
+**Invariant:** one runtime instance ID identifies one actor object throughout
+an execution transaction; a conflicting graph must reject deterministically.
+
+**Reachable path:** `BattleAilmentApplicationRequest` snapshots participants
+with `DistinctBy(participant.InstanceId)`. If two different actor objects use
+the same ID, whichever object appears second is discarded before
+`RuntimeActorExecutionTransaction` can enforce the global identity rule.
+
+**Consequence:** application gates, conditions, and extension services can
+observe an order-dependent participant graph instead of a typed rejection.
+The same malformed graph is correctly rejected by other canonical execution
+transactions.
+
+**Evidence:**
+
+- `Execution/BattleStatusLifecycle.cs`:
+  `BattleAilmentApplicationRequest` participant capture; and
+- `Execution/RuntimeActorExecutionTransaction.cs`: the collision check that
+  the prior `DistinctBy` can bypass.
+
+**Correction checkpoint:** preserve unique object references in the request,
+reject null entries, and let the execution transaction reject two objects that
+claim one runtime ID before any policy or mutation runs.
+
+### Documentation corrections required at closure
+
+- `docs/developer-guide/status-passive-lifecycle.md` still labels the passive
+  targeting example as schema v7 even though active content now uses v8.
+- `docs/mechanics/status-passive-lifecycle.md` overstates transactional scope
+  by promising rollback after any event-sink publication failure. Framework
+  actor mutation is transactional through policy, execution, lifecycle, and
+  encounter ingress; an external sink is not a transactional resource and may
+  fail after committed evidence is produced. The technical startup diagram
+  must make the same boundary explicit.
+
+After both runtime corrections, the lifecycle source and all three audience
+documents must be re-read again before capability or documentation promotion.
