@@ -182,28 +182,28 @@
     {
       "id": "status_and_passive_lifecycle",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "The lifecycle rules remain substantially accurate, but the second independent Order 4 audit reopened review because ailment combat-modifier composition is omitted and two atomicity claims exceed current runtime behavior."
+        "reason": "O4-R36 independently reconciled application, restrictions, clocks, cleanup, passive evidence, cancellation rollback, and ailment combat-modifier stacking with the corrected runtime."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "The integration guidance is reopened pending cancellation-before-commit, replacement-passive evidence, and ailment combat-modifier composition corrections."
+        "reason": "O4-R36 verifies the host integration boundary, policy selection, staged extension behavior, executed-passive commit requirement, combat-profile ownership, persistence, and event consumption."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "The technical reference is reopened pending exact documentation of ailment profile composition and correction of the two staged-commit gaps found by the second independent audit."
+        "reason": "O4-R36 source-traced lifecycle transactions, exact-instance schedules, passive dispatch, encounter cancellation, combat-profile composition, persistence, and immutable evidence without finding an unresolved reachable defect."
       }
     },
     {

@@ -293,7 +293,9 @@ triggers for the requested event, and a participant target that was eligible
 when dispatch began. Eligibility is not recomputed from actor state after
 effects run.
 Non-executed outcomes cannot claim committed effects. Incoherent evidence is
-rejected before the staged actor graph commits.
+rejected before the staged actor graph commits. If the complete replacement
+result contains no `Executed` activation, every staged actor mutation is
+discarded; an empty or wholly non-executed result cannot hide a state change.
 
 This guarantee covers framework actor state, not external host work. An event
 sink may fail after a lifecycle transaction has committed; the encounter then

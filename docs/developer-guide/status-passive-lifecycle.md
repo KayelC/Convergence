@@ -324,7 +324,10 @@ the request's enabled skills, authored trigger indexes and event, participant
 targets that were eligible before dispatch, and effect/outcome shape. The
 validating wrapper freezes each matching trigger's eligible runtime IDs before
 the dispatcher can mutate health or other targeting state. Returning malformed
-data or throwing prevents staged actor state from committing.
+data or throwing prevents staged actor state from committing. The wrapper also
+requires at least one `Executed` activation before it commits any staged actor
+mutation. Empty results and results made entirely of condition, recursion, or
+activation-limit outcomes therefore leave the live graph unchanged.
 
 The framework cannot roll back a file write, network call, scene deletion, or
 other external host side effect. Custom handlers should therefore return a

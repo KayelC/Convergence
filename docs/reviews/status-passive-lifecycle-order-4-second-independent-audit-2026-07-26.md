@@ -6,6 +6,12 @@ Reviewed revision: `ac09a025`
 
 Verdict: **reopened; two medium runtime corrections and one documentation correction remain**
 
+Correction status: **closed by O4-R36**. O4-R33 (`4b1095d7`) corrected the
+encounter cancellation boundaries, O4-R34 (`168ff0fb`) corrected replacement
+passive commit authority, and O4-R35 (`94bdded`) documented and tested ailment
+combat-profile composition. The independent closure evidence is recorded in
+[the O4-R36 closure review](status-passive-lifecycle-order-4-r36-closure-review-2026-07-26.md).
+
 ## Review Method
 
 This audit treated prior reviews and completion summaries as historical records,

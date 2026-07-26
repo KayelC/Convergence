@@ -342,9 +342,13 @@ defect at that revision. A
 [second independent audit](../reviews/status-passive-lifecycle-order-4-second-independent-audit-2026-07-26.md)
 then reproduced two staged-commit defects and found that ailment combat-profile
 composition is absent from all three audience documents. Order 4 is reopened
-under O4-R33 through O4-R36. The executable documentation matrix records 21
-reviewed, 31 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries.
-Order 5 waits for the fresh O4-R36 closure gate.
+under O4-R33 through O4-R36. O4-R33 through O4-R35 corrected and evidenced all
+three findings. The
+[O4-R36 closure review](../reviews/status-passive-lifecycle-order-4-r36-closure-review-2026-07-26.md)
+then reconciled current source, tests, and all three audiences. Order 4 is
+complete. The executable documentation matrix records 24 reviewed, 28
+`existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 5,
+`battle_knowledge`, is next.
 
 ## Deferred Documentation
 

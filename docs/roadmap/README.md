@@ -53,5 +53,9 @@ runtime paths, O4-R31 reconciled active guidance, and the
 [final O4-R32 closure review](../reviews/status-passive-lifecycle-order-4-final-closure-review-2026-07-26.md)
 found no unresolved realistic reachable defect in that corrected revision. A
 [second independent audit](../reviews/status-passive-lifecycle-order-4-second-independent-audit-2026-07-26.md)
-has now reopened Order 4 under O4-R33 through O4-R36 for two staged-commit
-defects and one audience-documentation omission. Order 5 waits for closure.
+reopened Order 4 under O4-R33 through O4-R36 for two staged-commit
+defects and one audience-documentation omission. O4-R33 through O4-R35
+corrected those findings, and the
+[O4-R36 closure review](../reviews/status-passive-lifecycle-order-4-r36-closure-review-2026-07-26.md)
+closed the current source and documentation. Order 5, `battle_knowledge`, is
+next.

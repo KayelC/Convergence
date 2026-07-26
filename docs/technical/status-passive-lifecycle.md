@@ -345,6 +345,11 @@ replacement result leaves actor state and activation counts unchanged. Skill
 execution translates such an exception into its typed `ExecutionFailed`
 rejection; lifecycle ports propagate it to their encounter fault boundary.
 
+The validating wrapper commits its staged graph only when the coherent result
+contains at least one `PassiveTriggerOutcome.Executed` activation. An empty
+result or a result containing only non-executed outcomes is still valid
+evaluation evidence, but cannot authorize a state commit.
+
 ## Encounter Startup Atomicity
 
 ```mermaid
