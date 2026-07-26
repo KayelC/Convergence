@@ -805,6 +805,24 @@ public sealed class ContentValidationTests
     }
 
     [Fact]
+    public void ProgrammaticAilmentCompanionFleeOutcomeMustBeDefined()
+    {
+        AilmentDefinition ailment = Ailment(
+            "invalid_flee_outcome",
+            new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(
+                40,
+                15,
+                (CompanionFleeOutcome)int.MaxValue));
+
+        ContentValidationResult result = _validator.Validate(Request(
+            ComprehensiveRegistrations(), ailments: [ailment]));
+
+        Assert.Contains(result.Errors, error =>
+            error.JsonPath == "$.ailments[0].turnBehavior.companionFleeOutcome" &&
+            error.Code == ContentValidationErrorCode.ShapeInvalid);
+    }
+
+    [Fact]
     public void UnsupportedDefinitionTypesAndQualifiedRegistrationsRemainHostControlled()
     {
         SkillDefinition skill = ActiveSkill(

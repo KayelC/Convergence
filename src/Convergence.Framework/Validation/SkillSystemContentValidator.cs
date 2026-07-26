@@ -1838,6 +1838,11 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                 case ChanceSkipOrFleeAilmentTurnBehaviorDefinition fear:
                     RequirePercentage(source, fear.SkipChance, path + ".skipChance", "Skip chance");
                     RequirePercentage(source, fear.FleeChance, path + ".fleeChance", "Flee chance");
+                    RequireDefinedEnum(
+                        source,
+                        fear.CompanionFleeOutcome,
+                        path + ".companionFleeOutcome",
+                        "Companion flee outcome");
                     if (fear.SkipChance >= 0 && fear.FleeChance >= 0 && fear.SkipChance + fear.FleeChance > 100)
                     {
                         Add(source, path, ContentValidationErrorCode.ValueOutOfRange,

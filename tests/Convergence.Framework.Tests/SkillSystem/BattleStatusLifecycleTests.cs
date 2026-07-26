@@ -111,6 +111,50 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void TurnStart_RejectsUndefinedCompanionFleeOutcomeWithoutMutation()
+    {
+        var service = new BattleStatusLifecycleService(new ThrowingRandomSource());
+        RuntimeActorState actor = Actor("invalid_flee_outcome");
+        actor.SetGuarding(true);
+        actor.ApplyAilment(
+            Ailment(
+                "invalid_flee_outcome_ailment",
+                new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(
+                    0,
+                    100,
+                    (CompanionFleeOutcome)int.MaxValue)),
+            Turns(3));
+
+        ArgumentOutOfRangeException exception = Assert.Throws<ArgumentOutOfRangeException>(
+            () => service.ProcessTurnStart(new(actor, CanRecallToRoster: true)));
+
+        Assert.Equal("fear", exception.ParamName);
+        Assert.True(actor.IsGuarding);
+        Assert.True(actor.HasAilment(ContentId.Parse("invalid_flee_outcome_ailment")));
+    }
+
+    [Theory]
+    [InlineData(CompanionFleeOutcome.RecallToRoster, BattleTurnStartOutcome.RecallToRoster)]
+    [InlineData(CompanionFleeOutcome.EscapeBattle, BattleTurnStartOutcome.FleeBattle)]
+    public void TurnStart_HonorsDefinedCompanionFleeOutcomes(
+        CompanionFleeOutcome fleeOutcome,
+        BattleTurnStartOutcome expected)
+    {
+        var service = new BattleStatusLifecycleService(new ThrowingRandomSource());
+        RuntimeActorState actor = Actor("defined_flee_outcome");
+        actor.ApplyAilment(
+            Ailment(
+                "defined_flee_outcome_ailment",
+                new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(0, 100, fleeOutcome)),
+            Turns(3));
+
+        BattleTurnStartLifecycleResult result = service.ProcessTurnStart(
+            new(actor, CanRecallToRoster: true));
+
+        Assert.Equal(expected, result.Outcome);
+    }
+
+    [Fact]
     public void TurnStart_ZeroAndOneHundredPercentDoNotDrawRandomness()
     {
         var service = new BattleStatusLifecycleService(new ThrowingRandomSource());

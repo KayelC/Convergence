@@ -1545,6 +1545,14 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         ChanceSkipOrFleeAilmentTurnBehaviorDefinition fear,
         bool canRecallToRoster)
     {
+        if (!Enum.IsDefined(fear.CompanionFleeOutcome))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(fear),
+                fear.CompanionFleeOutcome,
+                "Companion flee outcome must be defined.");
+        }
+
         AuthoredPercentage.RequireCombinedMaximum(
             fear.FleeChance,
             fear.SkipChance,
