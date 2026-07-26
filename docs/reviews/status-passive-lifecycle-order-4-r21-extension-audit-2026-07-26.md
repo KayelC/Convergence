@@ -170,7 +170,7 @@ No regression was found in those corrected paths.
 | O4-R23 | Complete | Commit `7c5a5a6c` uses a boundary-start exact-instance schedule for turn-start ailment behavior and covers addition, removal, refresh, order, and rollback. |
 | O4-R24 | Complete | Commit `e5ddb4b` adds the optional typed departure port and canonical flee, roster-recall, and newly observed defeat cleanup with cancellation, rollback, and event-order coverage. |
 | O4-R25 | Complete | The mechanics, developer, technical, roadmap, and executable-matrix guidance now describe the corrected source while retaining pending review state. |
-| O4-R26 | Pending | Requires a new source-first and documentation review plus the complete release gate. |
+| O4-R26 | Complete, closure rejected | The [R26 correction audit](status-passive-lifecycle-order-4-r26-correction-audit-2026-07-26.md) re-read current source and found four additional reachable correction paths. O4-R27 through O4-R32 govern the extension. |
 
 ## Scope Boundary
 
@@ -184,5 +184,6 @@ actor departure and must not trigger cleanup.
 ## Closure Decision
 
 Order 4 remains `partial`. Its three audience documents remain
-`existing_unreviewed`. O4-R18 through O4-R20 stay accepted, while O4-R22
-through O4-R26 extend the closure sequence discovered during O4-R21.
+`existing_unreviewed`. O4-R18 through O4-R25 stay accepted. O4-R26 completed
+its independent review but rejected closure; O4-R27 through O4-R32 now govern
+the correction sequence.

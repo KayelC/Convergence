@@ -187,7 +187,7 @@
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "O4-R23 and O4-R24 corrected turn-start exact-instance scheduling and canonical encounter departure cleanup. O4-R25 reconciled this mechanics guidance; O4-R26 remains the independent closure review."
+        "reason": "O4-R26 rejected closure after finding four additional passive and restore correctness paths. O4-R27 through O4-R32 govern correction, audience reconciliation, and independent closure."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
@@ -195,7 +195,7 @@
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "O4-R23 and O4-R24 corrected turn-start exact-instance scheduling and canonical encounter departure cleanup. O4-R25 reconciled the integration guidance; O4-R26 remains the independent closure review."
+        "reason": "O4-R26 rejected closure after finding four additional passive and restore correctness paths. O4-R27 through O4-R32 govern correction, audience reconciliation, and independent closure."
       },
       "technical": {
         "state": "existing_unreviewed",
@@ -203,7 +203,7 @@
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "O4-R23 and O4-R24 corrected turn-start exact-instance scheduling and framework-owned departure cleanup. O4-R25 traces both transactions and event order; O4-R26 remains the independent closure review."
+        "reason": "O4-R26 rejected closure after finding four additional passive and restore correctness paths. O4-R27 through O4-R32 govern correction, audience reconciliation, and independent closure."
       }
     },
     {

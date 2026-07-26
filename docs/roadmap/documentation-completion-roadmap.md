@@ -324,8 +324,12 @@ departure cleanup. The
 [R21 extension audit](../reviews/status-passive-lifecycle-order-4-r21-extension-audit-2026-07-26.md)
 governs the extension. O4-R22 through O4-R25 recorded and corrected turn-start
 exact-instance scheduling, canonical encounter departure cleanup, and the
-corresponding mechanics, developer, and technical guidance. O4-R26 remains the
-independent closure review. Until that review passes, the executable
+corresponding mechanics, developer, and technical guidance. O4-R26 completed
+the independent review but rejected closure after finding pre-mutation passive
+eligibility, exact passive restore coverage, ailment exclusivity restoration,
+and explicit defeat-prevention policy composition gaps. The
+[R26 correction audit](../reviews/status-passive-lifecycle-order-4-r26-correction-audit-2026-07-26.md)
+governs O4-R27 through O4-R32. Until O4-R32 passes, the executable
 documentation matrix continues to record 21 reviewed, 31
 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 5
 remains paused.

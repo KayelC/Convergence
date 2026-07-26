@@ -116,7 +116,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "O4-R23 and O4-R24 corrected turn-start exact-instance scheduling and encounter-owned departure cleanup; O4-R25 reconciled all three documentation audiences. O4-R26 remains the independent source, documentation, and release-gate closure."
+        "O4-R26 completed the independent review but rejected closure after finding pre-mutation passive eligibility, exact passive restore coverage, ailment exclusivity restoration, and explicit defeat-prevention policy composition gaps. O4-R27 through O4-R32 govern correction and closure."
       ]
     },
     {

@@ -49,9 +49,12 @@ paths, and O4-R20 now defines queued-trigger membership and authored passive
 activation-key validation across the mechanics, developer, and technical
 audiences. O4-R21 then reproduced a separate turn-start scheduling failure and
 missing encounter-owned departure cleanup. O4-R22 through O4-R25 recorded and
-corrected both paths and reconciled the three audience documents. The entries
-remain `existing_unreviewed` until the O4-R26 independent source and
-documentation review passes.
+corrected both paths and reconciled the three audience documents. O4-R26
+completed its independent review but rejected closure after finding four
+additional passive and restore correctness paths. The
+[R26 correction audit](../reviews/status-passive-lifecycle-order-4-r26-correction-audit-2026-07-26.md)
+governs O4-R27 through O4-R32. The entries remain `existing_unreviewed` until
+O4-R32 passes.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
