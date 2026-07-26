@@ -902,6 +902,92 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void PassiveDispatch_PreservesEligibilityFromBeforeLegitimateLifeStateMutation()
+    {
+        ContentId eventId = ContentId.Parse("life_state_event");
+        SkillDefinition finisher = PassiveSkill(
+            "passive_finisher",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [Damage(DamageElement.Physical)],
+                    new PassiveTriggerTargetingDefinition(
+                        PassiveTriggerTargetScope.EventTargets,
+                        TargetLifeState.Alive,
+                        includeReserveActors: true))
+            ]);
+        RuntimeActorState owner = Actor(
+            "finisher_owner",
+            PlayerTeam,
+            passiveSkills: [finisher]);
+        RuntimeActorState target = Actor("finisher_target", EnemyTeam, hp: 10);
+
+        PassiveTriggerDispatchResult result = Dispatch(
+            eventId,
+            owner,
+            [owner, target],
+            [target],
+            Services());
+
+        PassiveTriggerExecutionResult activation = Assert.Single(result.Activations);
+        Assert.Equal(PassiveTriggerOutcome.Executed, activation.Outcome);
+        Assert.Equal(target.InstanceId, activation.TargetId);
+        Assert.True(target.IsDefeated);
+    }
+
+    [Fact]
+    public void PassiveDispatch_RejectsTargetMadeEligibleOnlyByReplacementDispatcher()
+    {
+        ContentId eventId = ContentId.Parse("fabricated_life_state_event");
+        SkillDefinition passive = PassiveSkill(
+            "fabricated_life_state_passive",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [],
+                    new PassiveTriggerTargetingDefinition(
+                        PassiveTriggerTargetScope.EventTargets,
+                        TargetLifeState.Alive,
+                        includeReserveActors: true))
+            ]);
+        RuntimeActorState owner = Actor(
+            "fabricated_life_state_owner",
+            PlayerTeam,
+            passiveSkills: [passive]);
+        RuntimeActorState target = Actor("fabricated_life_state_target", EnemyTeam, hp: 0);
+        var dispatcher = new DelegatingMutatingPassiveDispatcher(request =>
+        {
+            RuntimeActorState stagedTarget = Assert.Single(request.Targets);
+            stagedTarget.SetResource(Hp, 1);
+            return new PassiveTriggerDispatchResult(
+            [
+                new PassiveTriggerExecutionResult(
+                    passive.Id,
+                    0,
+                    request.EventId,
+                    stagedTarget.InstanceId,
+                    PassiveTriggerOutcome.Executed,
+                    [])
+            ]);
+        });
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            Dispatch(
+                eventId,
+                owner,
+                [owner, target],
+                [target],
+                Services(passiveTriggers: dispatcher)));
+
+        Assert.Contains("ineligible target", exception.Message, StringComparison.Ordinal);
+        Assert.True(target.IsDefeated);
+        Assert.Equal(0, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(100, owner.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public void AffinityReplacements_RespectShieldBreakOverrideAndAlmightyRules()
     {
         SkillDefinition nullFire = PassiveSkill(

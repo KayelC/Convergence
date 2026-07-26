@@ -963,40 +963,60 @@ internal sealed class ValidatingPassiveTriggerDispatcher : IPassiveTriggerDispat
         private readonly ContentId _eventId;
         private readonly IReadOnlyDictionary<ContentId, SkillDefinition> _skills;
         private readonly IReadOnlySet<RuntimeInstanceId> _participantIds;
-        private readonly RuntimeActorState _owner;
-        private readonly IReadOnlyList<RuntimeActorState> _participants;
-        private readonly IReadOnlyList<RuntimeActorState> _eventTargets;
+        private readonly IReadOnlyDictionary<
+            (ContentId SkillId, int TriggerIndex),
+            IReadOnlySet<RuntimeInstanceId>> _eligibleTargetIds;
 
         private PassiveDispatchContract(
             ContentId eventId,
             IReadOnlyDictionary<ContentId, SkillDefinition> skills,
             IReadOnlySet<RuntimeInstanceId> participantIds,
-            RuntimeActorState owner,
-            IReadOnlyList<RuntimeActorState> participants,
-            IReadOnlyList<RuntimeActorState> eventTargets)
+            IReadOnlyDictionary<
+                (ContentId SkillId, int TriggerIndex),
+                IReadOnlySet<RuntimeInstanceId>> eligibleTargetIds)
         {
             _eventId = eventId;
             _skills = skills;
             _participantIds = participantIds;
-            _owner = owner;
-            _participants = participants;
-            _eventTargets = eventTargets;
+            _eligibleTargetIds = eligibleTargetIds;
         }
 
         public static PassiveDispatchContract Capture(PassiveTriggerDispatchRequest request)
         {
-            var enabledSkills = new ReadOnlyDictionary<ContentId, SkillDefinition>(
-                request.Owner.Passives.Entries
-                    .Where(entry => entry.IsEnabled)
-                    .ToDictionary(entry => entry.Skill.Id, entry => entry.Skill));
+            Dictionary<ContentId, SkillDefinition> enabledSkills = request.Owner.Passives.Entries
+                .Where(entry => entry.IsEnabled)
+                .ToDictionary(entry => entry.Skill.Id, entry => entry.Skill);
+            var eligibleTargetIds = new Dictionary<
+                (ContentId SkillId, int TriggerIndex),
+                IReadOnlySet<RuntimeInstanceId>>();
+            foreach (SkillDefinition skill in enabledSkills.Values)
+            {
+                for (int triggerIndex = 0; triggerIndex < skill.Triggers.Count; triggerIndex++)
+                {
+                    PassiveTriggerDefinition trigger = skill.Triggers[triggerIndex];
+                    if (trigger.EventId != request.EventId)
+                    {
+                        continue;
+                    }
+
+                    eligibleTargetIds.Add(
+                        (skill.Id, triggerIndex),
+                        new ReadOnlySet<RuntimeInstanceId>(PassiveTriggerTargetResolver.Resolve(
+                            trigger.Targeting,
+                            request.Owner,
+                            request.Participants,
+                            request.Targets).Select(target => target.InstanceId)));
+                }
+            }
+
             return new PassiveDispatchContract(
                 request.EventId,
-                enabledSkills,
+                new ReadOnlyDictionary<ContentId, SkillDefinition>(enabledSkills),
                 new ReadOnlySet<RuntimeInstanceId>(
                     request.Participants.Select(participant => participant.InstanceId)),
-                request.Owner,
-                request.Participants,
-                request.Targets);
+                new ReadOnlyDictionary<
+                    (ContentId SkillId, int TriggerIndex),
+                    IReadOnlySet<RuntimeInstanceId>>(eligibleTargetIds));
         }
 
         public void RequireValid(PassiveTriggerDispatchResult result)
@@ -1030,12 +1050,15 @@ internal sealed class ValidatingPassiveTriggerDispatcher : IPassiveTriggerDispat
                         $"reported trigger {activation.TriggerIndex} from passive '{skill.Id}' for the wrong event.");
                 }
 
-                IReadOnlySet<RuntimeInstanceId> eligibleTargetIds =
-                    new ReadOnlySet<RuntimeInstanceId>(PassiveTriggerTargetResolver.Resolve(
-                        trigger.Targeting,
-                        _owner,
-                        _participants,
-                        _eventTargets).Select(target => target.InstanceId));
+                if (!_eligibleTargetIds.TryGetValue(
+                        (activation.SkillId, activation.TriggerIndex),
+                        out IReadOnlySet<RuntimeInstanceId>? eligibleTargetIds))
+                {
+                    throw Invalid(
+                        $"reported trigger {activation.TriggerIndex} from passive '{skill.Id}' " +
+                        "without captured target eligibility.");
+                }
+
                 if (!_participantIds.Contains(activation.TargetId) ||
                     !eligibleTargetIds.Contains(activation.TargetId))
                 {
