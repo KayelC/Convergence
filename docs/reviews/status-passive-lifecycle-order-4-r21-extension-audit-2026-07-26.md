@@ -162,6 +162,16 @@ No regression was found in those corrected paths.
 | O4-R25 | Reconcile mechanics, developer, technical, roadmap, and matrix guidance. | Documentation tests and active link validation. |
 | O4-R26 | Re-read corrected source and documentation independently and run the complete release gate. | A new closure report with no unresolved reachable Order 4 defect. |
 
+## Implementation Progress
+
+| Checkpoint | State | Evidence |
+|---|---|---|
+| O4-R22 | Complete | Commit `60e72305` records this extension audit and reopens the active matrices. |
+| O4-R23 | Complete | Commit `7c5a5a6c` uses a boundary-start exact-instance schedule for turn-start ailment behavior and covers addition, removal, refresh, order, and rollback. |
+| O4-R24 | Complete | Commit `e5ddb4b` adds the optional typed departure port and canonical flee, roster-recall, and newly observed defeat cleanup with cancellation, rollback, and event-order coverage. |
+| O4-R25 | Complete | The mechanics, developer, technical, roadmap, and executable-matrix guidance now describe the corrected source while retaining pending review state. |
+| O4-R26 | Pending | Requires a new source-first and documentation review plus the complete release gate. |
+
 ## Scope Boundary
 
 O4-R24 covers departures the framework can identify authoritatively:

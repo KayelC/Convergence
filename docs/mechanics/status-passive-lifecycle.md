@@ -82,6 +82,13 @@ If equally strong limited-action effects coexist, their allowed action sets are
 intersected. An empty intersection becomes `Skip`. Ties are deterministic by
 the source ailment ID.
 
+The ailments present when turn-start resolution begins receive ordered
+restriction slots. Before each slot, the framework checks that the same
+ailment instance is still active. If an earlier custom behavior removes,
+refreshes, or replaces a later ailment, that stale slot is skipped. An ailment
+newly added during turn start waits until the next turn-start boundary.
+Surviving slots keep their boundary-start order.
+
 ## Turn-End Order
 
 For a deployed actor, one owner-turn-end boundary runs in this exact order:
@@ -187,6 +194,15 @@ not run departure cleanup merely because the composed combat profile changed.
 Cleanup also clears Guard and coordinates the selected stat-modifier policy.
 Its result identifies each expired or removed status and the cause; a host does
 not need to compare mutable state or parse debug text.
+
+The canonical runner, when composed with the supplied status lifecycle port,
+performs this cleanup automatically for causes it owns and can identify: a turn
+restriction that commits flee, a turn restriction that commits roster recall,
+or an actor newly observed as defeated. Cleanup evidence is published before
+defeat narration or battle completion. Manual deployment swaps and roster
+commands remain host-owned operations, so the host must request their matching
+cleanup until those commands are executed inside the canonical encounter
+transaction.
 
 ## Passive Skills
 

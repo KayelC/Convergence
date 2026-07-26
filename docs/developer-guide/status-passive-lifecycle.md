@@ -63,8 +63,19 @@ var lifecyclePort = new BattleStatusEncounterLifecyclePort(
 ```
 
 The encounter runner calls that port at battle start, turn start, owner turn
-end, team phase end, round end, and battle end. A custom runner must preserve
-the same semantic boundaries rather than ticking state ad hoc.
+end, team phase end, round end, and battle end.
+`BattleStatusEncounterLifecyclePort` also implements the optional
+`IBattleEncounterDepartureLifecyclePort`. The canonical runner uses that
+extension for framework-known flee, roster-recall, and newly observed defeat
+causes. A custom runner must preserve the same semantic boundaries rather than
+ticking or cleaning state ad hoc.
+
+At turn start, the lifecycle schedules the exact ailment instances present at
+the boundary. It rechecks each scheduled instance before invoking its behavior.
+A successful custom handler may add, remove, refresh, or replace ailments on
+the staged actor. Removed, refreshed, and replaced slots are skipped; additions
+wait for the next turn-start boundary. If a handler throws or returns malformed
+evidence, Guard clearing and every staged handler mutation roll back together.
 
 At owner turn end, the lifecycle schedules the exact ailment instances that
 exist when ailment-trigger dispatch begins. It rechecks each scheduled instance
@@ -235,6 +246,25 @@ BattleStatusLifecycleResult result = lifecycleService.Cleanup(
 Deployment swap, defeat, flee, roster recall, battle end, and field transition
 are distinct causes. The status's removal profile decides whether that cause is
 allowed. Do not substitute battle-end cleanup for every scene transition.
+
+When `BattleStatusEncounterLifecyclePort` is used with
+`BattleEncounterRunner`, the runner dispatches:
+
+- `Flee` after a `FleeBattle` restriction has actually undeployed the actor;
+- `RosterRecall` after a `RecallToRoster` restriction has actually undeployed
+  the actor; and
+- `Defeat` once for every actor newly observed as defeated.
+
+These departures are processed against one staged participant graph. A
+departure-port exception or cancellation before commit leaves cleanup state
+unchanged and becomes the encounter's typed lifecycle fault. Committed cleanup
+events precede defeat announcements and terminal completion.
+
+The extension is optional so a lifecycle implementation that does not own
+status cleanup is not forced to invent it. If a host performs a manual
+deployment swap or roster command outside the canonical encounter transaction,
+the host must call `Cleanup` with that exact reason. Do not report a flee or
+recall reason until the actor's deployment change has actually committed.
 
 Changing an Active Hosted Entity does not mean the Vessel departed. Compose the
 new profile without calling actor-departure cleanup.

@@ -322,7 +322,10 @@ independent closure gate named by that audit, but its fresh source trace
 reproduced turn-start live-enumeration failure and omitted encounter-owned
 departure cleanup. The
 [R21 extension audit](../reviews/status-passive-lifecycle-order-4-r21-extension-audit-2026-07-26.md)
-now governs O4-R22 through O4-R26. Until that sequence passes, the executable
+governs the extension. O4-R22 through O4-R25 recorded and corrected turn-start
+exact-instance scheduling, canonical encounter departure cleanup, and the
+corresponding mechanics, developer, and technical guidance. O4-R26 remains the
+independent closure review. Until that review passes, the executable
 documentation matrix continues to record 21 reviewed, 31
 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 5
 remains paused.

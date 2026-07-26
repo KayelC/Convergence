@@ -64,11 +64,16 @@ and actor scheduling, while hosts own token presentation.
 The optional lifecycle service handles battle start, turn restrictions, turn
 end, explicit action/actor/phase/round clocks, reserve suspension or configured
 reserve advancement, typed departure cleanup, staged ailment application, and
-passive trigger dispatch. Expiration and permitted removal causes are separate.
-Custom-handler execution is transactional. Passive targeting and activation
-counting are explicit, and committed lifecycle changes reach hosts as typed
-events. See [Status And Passive Lifecycle](mechanics/status-passive-lifecycle.md)
-and its [integration guide](developer-guide/status-passive-lifecycle.md).
+passive trigger dispatch. Turn-start behavior and owner-turn-end triggers both
+use boundary-start exact-instance schedules, so custom status mutation cannot
+execute stale or newly added slots. The canonical runner composed with the
+supplied lifecycle port dispatches flee, roster-recall, and newly observed
+defeat cleanup before completion.
+Expiration and permitted removal causes are separate. Custom-handler execution
+is transactional. Passive targeting and activation counting are explicit, and
+committed lifecycle changes reach hosts as typed events. See
+[Status And Passive Lifecycle](mechanics/status-passive-lifecycle.md) and its
+[integration guide](developer-guide/status-passive-lifecycle.md).
 
 The stat-modifier policy family separately supplies persistent staged,
 timed-exclusive signal, and independently timed contribution policies. Timed

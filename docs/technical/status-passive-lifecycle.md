@@ -90,15 +90,24 @@ For exclusivity replacement, each removed ailment must allow
 `ProcessTurnStart` creates a one-actor transaction and follows this order:
 
 1. clear Guard and add a typed `GuardCleared` event;
-2. resolve each active ailment's turn behavior;
-3. validate custom-handler results;
-4. combine restrictions through `IBattleTurnRestrictionPolicy`;
-5. add one typed restriction event; and
-6. commit.
+2. snapshot ordered ailment ID and exact-instance pairs;
+3. re-resolve each scheduled ID and skip a missing or different instance;
+4. resolve the surviving instance's turn behavior;
+5. validate custom-handler results;
+6. combine restrictions through `IBattleTurnRestrictionPolicy`;
+7. add one typed restriction event; and
+8. commit.
 
 The supplied resolver ranks recall/flee, skip, confusion, basic attack,
 limited actions, then normal action. Equal limited-action restrictions are
 intersected. Deterministic source-ID ordering resolves equal non-limited ties.
+
+Custom turn-behavior handlers receive the staged actor and may alter its
+ailments. The boundary-start schedule prevents those writes from invalidating
+dictionary enumeration. Removing, refreshing, or replacing a scheduled
+instance invalidates only that old slot. Adding an ailment does not append a
+new slot. A handler exception, malformed result, or later policy failure
+discards Guard clearing and all handler mutations with the transaction.
 
 Chance-skip and flee behavior use the injected `IRandomSource`. Invalid random
 values fail at the host-random boundary rather than indexing or selecting an
@@ -199,6 +208,50 @@ one `BattleStatusRemovalResult` per committed charge, shield, affinity Break,
 affinity override, or other-status removal. `RemoveStatusEffectExecutor`
 projects each transition into a typed `StatusRemoved` lifecycle event.
 Protected and missing state returns no transition and no event.
+
+### Encounter-owned departures
+
+`IBattleEncounterDepartureLifecyclePort` is an optional encounter extension.
+The canonical `BattleStatusEncounterLifecyclePort` implements it by adapting
+`BattleEncounterDepartureLifecycleRequest` to `BattleStatusCleanupRequest`.
+The request requires the departing actor and its participant list to belong to
+the same encounter participant graph.
+
+```mermaid
+sequenceDiagram
+    participant R as Encounter Runner
+    participant T as Participant Transaction
+    participant L as Departure Lifecycle Port
+    participant S as Event Sink
+
+    R->>R: observe committed flee, recall, or new defeat
+    R->>T: clone complete participant graph
+    loop departures in participant order
+        R->>L: cleanup staged actor with exact reason
+        L-->>R: return typed removal and cleanup events
+    end
+    alt cancellation, malformed events, or lifecycle exception
+        R-->>T: discard every staged cleanup mutation
+        R->>S: publish typed lifecycle fault
+    else all departures accepted
+        R->>T: commit participant graph once
+        R->>S: publish ordered cleanup evidence
+        R->>S: publish defeat announcement or battle completion
+    end
+```
+
+The runner maps an undeployed actor's committed `FleeBattle` restriction to
+`Flee` and `RecallToRoster` restriction to `RosterRecall`. It scans the full
+participant graph for newly defeated actors and dispatches `Defeat` once per
+runtime ID. An explicit flee or recall reason wins if the same actor is also
+defeated during that command. Actors already defeated when the encounter
+request begins are not treated as newly defeated.
+
+If the supplied lifecycle port does not implement the optional extension, the
+runner does not fabricate cleanup behavior. Manual deployment swaps and roster
+commands also remain outside this automatic path. Their owner must call cleanup
+with the matching typed cause. Active Hosted Entity selection changes combat
+composition but is not actor departure.
 
 ## Passive Dispatcher Authority
 
@@ -383,6 +436,7 @@ Primary source areas:
 - `Execution/BattleStatusLifecycle.cs`
 - `Execution/OrderedEffectExecutor.cs`
 - `Execution/PassiveRuntime.cs`
+- `Encounters/BattleEncounterRunner.cs`
 - `Encounters/BattleEncounterLifecycleClocks.cs`
 - `Encounters/BattleStatusEncounterLifecyclePort.cs`
 - `Runtime/RuntimeActorSnapshotIntegrity.cs`
@@ -395,5 +449,6 @@ Primary executable evidence:
 - `PassiveSkillRuntimeTests`
 - `BattleStatusLifecycleEventMapperTests`
 - `BattleEncounterRunnerTests`
+- `CatalogBattleRuntimeTests`
 - `RuntimePersistenceSnapshotTests`
 - `GodotIntegrationContractTests`

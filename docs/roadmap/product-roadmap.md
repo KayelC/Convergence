@@ -18,9 +18,11 @@ paths, and O4-R20 reconciled the audience documentation. O4-R21 was the sole
 closure gate named by that audit, but its source trace reproduced two
 additional integration defects. The
 [R21 extension audit](../reviews/status-passive-lifecycle-order-4-r21-extension-audit-2026-07-26.md)
-now governs O4-R22 through O4-R26: turn-start exact-instance scheduling,
-encounter-owned departure cleanup, documentation reconciliation, and a fresh
-closure gate.
+governs the extension. O4-R22 through O4-R25 have now recorded and corrected
+turn-start exact-instance scheduling, encounter-owned departure cleanup, and
+all three documentation audiences. O4-R26 remains the independent source,
+documentation, and release-gate closure; the capability stays partial until
+that review passes.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -134,8 +136,9 @@ integration defects before returning the capability and all three audience
 documents to complete/reviewed. O3-R12 independently confirmed that closure
 from current code. O3-R15 later found the custom explicit-termination gap;
 O3-R16 and O3-R17 corrected and independently reconciled it. Order 4, status
-and passive lifecycle, is executing O4-R22 through O4-R26 after O4-R21
-reproduced two additional integration defects.
+and passive lifecycle, has completed O4-R22 through O4-R25 after O4-R21
+reproduced two additional integration defects. O4-R26 is its remaining
+independent closure gate.
 Order 5, `battle_knowledge`, follows only after that gate.
 
 ## Priority 2: Persistence Evolution

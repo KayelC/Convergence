@@ -76,6 +76,12 @@ recomposition, and aggregate restoration share that authority model. See
 
 Action execution reuses typed targeting, conditions, effects, lifecycle rules, and turn economy. Encounter orchestration accepts host command and event ports. Every encounter event carries a kind-specific immutable payload for initiative, rounds, teams, actors, commands, effects, turn economy, deployment, faults, or outcomes. Status application, refresh, replacement, rejection, duration advancement, expiry, cleanup, and passive effects retain typed transition evidence through action and encounter results. Optional debug text is diagnostic only; hosts localize and present the typed payload rather than parsing prose. Hosts remain responsible for selecting when an encounter begins and how resulting events are presented.
 
+Encounter lifecycle composition may also implement the optional typed departure
+port. The supplied status lifecycle adapter uses it so canonical flee,
+roster-recall, and newly observed defeat transitions receive their exact
+cleanup cause through one staged participant graph. Manual host-owned
+deployment changes remain explicit host cleanup boundaries.
+
 Status lifetime uses typed actor-turn, action, team-phase, round, and custom
 clock boundaries. Encounter composition maps team IDs to separate authored
 phase and event IDs; the Framework never infers one vocabulary from another.
@@ -110,7 +116,7 @@ The supported distribution is a Git checkout, submodule, subtree, or copied sour
 
 ## Pre-Release Contract Boundary
 
-The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `7` and runtime save contract version `13` are deliberate pre-release breaks with no compatibility aliases. Save v13 retains the actor, move-list, canonical-roster, stat-modifier, charge-policy, and typed status-lifetime state established by v12 while adding the optional target runtime ID required by per-target passive activation limits. Save validation rejects a retained passive target that is absent from the aggregate actor set. Save validation and aggregate restoration must bind retained stat-modifier and charge policies explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
+The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `8` and runtime save contract version `13` are deliberate pre-release breaks with no compatibility aliases. Save v13 retains the actor, move-list, canonical-roster, stat-modifier, charge-policy, and typed status-lifetime state established by v12 while adding the optional target runtime ID required by per-target passive activation limits. Save validation rejects a retained passive target that is absent from the aggregate actor set. Save validation and aggregate restoration must bind retained stat-modifier and charge policies explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
 
 Assembly version `0.1.0` is guarded by a checked-in textual API baseline. The
 [Public API Contract](public-api-contract.md) identifies the supported

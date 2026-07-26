@@ -77,6 +77,14 @@ protocol used by `BattleEncounterRunner`; this preserves one auditable economy
 authority and prevents a retained policy instance from spending a command both
 inside a host port and again when the runner applies its returned cost.
 
+`IBattleEncounterDepartureLifecyclePort` is an optional extension to
+`IBattleEncounterLifecyclePort`. Its immutable request identifies one
+departing participant, the complete matching encounter graph, and an exact
+typed cleanup reason. `BattleStatusEncounterLifecyclePort` implements the
+extension; the runner invokes it for committed flee, roster recall, and newly
+observed defeat without forcing lifecycle implementations that do not own
+status cleanup to fabricate behavior.
+
 `EffectExecutionResult` retains its public record shape for custom effect
 composition, but its scalar and collection `init` assignments now enforce the
 same legal boundary during construction and record cloning. Undefined effect

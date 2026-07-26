@@ -42,5 +42,7 @@ O4-R18 and O4-R19 corrected the two runtime findings, O4-R20 reconciled the
 audience guidance, and O4-R21 then reproduced two additional integration
 defects under the
 [R21 extension audit](../reviews/status-passive-lifecycle-order-4-r21-extension-audit-2026-07-26.md).
-O4-R22 through O4-R26 are now the active correction and independent closure
-sequence before Order 5.
+O4-R22 recorded the extension, O4-R23 stabilized turn-start exact-instance
+scheduling, O4-R24 integrated encounter-owned departure cleanup, and O4-R25
+reconciled all three documentation audiences. O4-R26 is the remaining fresh
+source, documentation, and release-gate review before Order 5.

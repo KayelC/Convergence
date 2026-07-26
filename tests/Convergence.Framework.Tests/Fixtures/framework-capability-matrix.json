@@ -116,7 +116,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "O4-R21 reproduced missing exact-instance scheduling at turn start and missing encounter-owned departure cleanup. O4-R22 through O4-R26 are the active correction and independent closure sequence."
+        "O4-R23 and O4-R24 corrected turn-start exact-instance scheduling and encounter-owned departure cleanup; O4-R25 reconciled all three documentation audiences. O4-R26 remains the independent source, documentation, and release-gate closure."
       ]
     },
     {
