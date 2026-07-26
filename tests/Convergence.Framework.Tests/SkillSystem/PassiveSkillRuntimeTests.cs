@@ -691,6 +691,57 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void DefeatPrevention_PreservesExplicitHostActivationPolicy()
+    {
+        ContentId defeatEventId = ContentId.Parse("owner_would_be_defeated");
+        SkillDefinition lastStand = PassiveSkill(
+            "repeatable_last_stand",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    defeatEventId,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
+            ]);
+        RuntimeActorState actor = Actor("repeatable_actor", PlayerTeam);
+        RuntimeActorState target = Actor(
+            "repeatable_target",
+            EnemyTeam,
+            hp: 10,
+            passiveSkills: [lastStand]);
+        var policies = new PassiveEventPolicyRegistry().Register(
+            defeatEventId,
+            new PassiveEventPolicy(ActivationLimitPerBattle: 2));
+        BattleExecutionServices services = Services(
+            damage: _ => [new DamageHitResolution(true, 20)],
+            passiveEventPolicies: policies);
+        var executor = new SkillExecutor(services);
+        SkillDefinition attack = ActiveDamageSkill(
+            "repeatable_attack",
+            DamageElement.Physical);
+
+        SkillExecutionResult first = executor.Execute(
+            Request(attack, actor, [actor, target], target));
+        SkillExecutionResult second = executor.Execute(
+            Request(attack, actor, [actor, target], target));
+        SkillExecutionResult third = executor.Execute(
+            Request(attack, actor, [actor, target], target));
+
+        Assert.Equal(
+            2,
+            services.PassiveEventPolicies.Resolve(defeatEventId).ActivationLimitPerBattle);
+        Assert.Equal(
+            PassiveTriggerOutcome.Executed,
+            Assert.Single(first.PassiveActivations).Outcome);
+        Assert.Equal(
+            PassiveTriggerOutcome.Executed,
+            Assert.Single(second.PassiveActivations).Outcome);
+        Assert.Equal(
+            PassiveTriggerOutcome.ActivationLimitReached,
+            Assert.Single(third.PassiveActivations).Outcome);
+        Assert.True(target.IsDefeated);
+    }
+
+    [Fact]
     public void LastStand_DispatchesAtTheLethalHitWithinOneMultiHitAction()
     {
         SkillDefinition lastStand = PassiveSkill(

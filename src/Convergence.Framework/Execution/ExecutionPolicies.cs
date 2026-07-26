@@ -567,7 +567,7 @@ public sealed class BattleExecutionServices
         AilmentApplications = ailmentApplications ?? new BattleAilmentApplicationService();
         OwnerWouldBeDefeatedEventId = ownerWouldBeDefeatedEventId ?? ContentId.Parse("owner_would_be_defeated");
         PassiveEventPolicies = passiveEventPolicies ?? new PassiveEventPolicyRegistry();
-        PassiveEventPolicies.Register(
+        PassiveEventPolicies.RegisterIfAbsent(
             OwnerWouldBeDefeatedEventId,
             new PassiveEventPolicy(ActivationLimitPerBattle: 1));
         IPassiveTriggerDispatcher triggerDispatcher =
