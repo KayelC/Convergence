@@ -367,6 +367,13 @@ Save contract v13 preserves:
 - per-battle activation counts; and
 - optional per-target activation IDs.
 
+Capture the aggregate save only at a committed host checkpoint after the
+outermost action-end lifecycle boundary. Instant state represents an effect
+sequence that is still in progress, so actor and aggregate restore reject it
+with `RetainedDurationKindInvalid`. Convergence does not resume a partially
+executed action from a save. Dispatch action-end explicitly first when a custom
+executor owns that boundary.
+
 Validation rejects malformed durations, invalid enums and IDs, duplicate
 activation keys, and per-target activation IDs that do not reference a saved
 actor. Each activation must also reference an equipped passive, an existing

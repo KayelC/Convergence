@@ -162,6 +162,13 @@ before a separately selected command begins. Nested effects do not create extra
 expiry boundaries. A host that runs effects outside the standard executors must
 dispatch the explicit action-end lifecycle boundary itself.
 
+Instant state is therefore not a legal save-and-restore state. A host must
+capture a save only after the outer action-end boundary has committed. A
+snapshot taken while Instant state is still active is rejected rather than
+restored into the middle of an already-started effect sequence. Counted, Phase,
+Battle, and Permanent state may be retained when their other validation rules
+are satisfied.
+
 Team IDs, phase IDs, and lifecycle event IDs are separate identifiers. A host
 must map them explicitly when composing an encounter. Timed stat modifiers use
 one monotonic sequence stream per lifecycle event ID across the complete

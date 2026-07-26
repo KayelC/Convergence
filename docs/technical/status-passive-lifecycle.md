@@ -439,6 +439,14 @@ Runtime save contract v13 serializes the status lifetime rather than only the
 remaining number. This preserves expiration kind, event or phase identity,
 reserve behavior, and allowed removal causes.
 
+`RuntimeActorSnapshotIntegrity` accepts retained Counted, Phase, Battle, and
+Permanent duration kinds when their IDs and values are valid. It rejects
+Instant duration state with `RetainedDurationKindInvalid`, because Instant
+state belongs to an in-progress outer effect sequence and must expire at
+action-end. Public catalog restore returns the corresponding typed snapshot
+diagnostic instead of constructing a partially resumed actor. Hosts must place
+save checkpoints after that committed boundary.
+
 Passive state snapshots contain exactly one enabled or disabled entry for every
 equipped passive. Aggregate validation reports
 `MissingPassiveSkillState` when coverage is incomplete; direct actor restore
