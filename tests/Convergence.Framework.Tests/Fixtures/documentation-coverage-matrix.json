@@ -182,28 +182,28 @@
     {
       "id": "status_and_passive_lifecycle",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "O4-R27 through O4-R30 corrected the four R26 runtime paths and O4-R31 reconciled this audience. O4-R32 remains the independent closure gate."
+        "reason": "The source-reviewed and owner-confirmed mechanics define application, exclusivity, turn restrictions, exact-instance lifecycle scheduling, duration clocks, reserve behavior, cleanup, passive targeting, counting, and restore parity."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "O4-R27 through O4-R30 corrected the four R26 runtime paths and O4-R31 reconciled this audience. O4-R32 remains the independent closure gate."
+        "reason": "The reviewed integration guidance covers policy selection, encounter composition, exact lifecycle boundaries, typed evidence, persistence, extension validation, and host-side responsibility."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "O4-R27 through O4-R30 corrected the four R26 runtime paths and O4-R31 reconciled this audience. O4-R32 remains the independent closure gate."
+        "reason": "The source-traced technical references define staged mutation, exact-instance scheduling, passive eligibility and evidence validation, duration and cleanup transactions, encounter integration, and restore invariants."
       }
     },
     {

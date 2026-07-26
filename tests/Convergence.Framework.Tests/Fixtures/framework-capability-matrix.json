@@ -110,14 +110,12 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "partial",
-      "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimePersistenceSnapshotTests"],
+      "implementationState": "complete",
+      "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleStatusLifecycleEventMapperTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimeStateSnapshotTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "O4-R27 through O4-R30 corrected frozen passive eligibility, exact passive restore coverage, ailment exclusivity restoration, and explicit defeat-prevention policy composition. O4-R31 reconciled active guidance; O4-R32 remains the independent closure gate."
-      ]
+      "knownGaps": []
     },
     {
       "id": "encounter_orchestration",

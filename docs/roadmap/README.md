@@ -49,5 +49,7 @@ but rejected closure after finding four additional passive and restore
 correctness paths. The
 [R26 correction audit](../reviews/status-passive-lifecycle-order-4-r26-correction-audit-2026-07-26.md)
 governs O4-R27 through O4-R32. O4-R27 through O4-R30 corrected all four
-runtime paths, and O4-R31 reconciled active guidance. O4-R32 remains the
-independent closure gate. Order 5 remains paused.
+runtime paths, O4-R31 reconciled active guidance, and the
+[final O4-R32 closure review](../reviews/status-passive-lifecycle-order-4-final-closure-review-2026-07-26.md)
+found no unresolved realistic reachable defect in the corrected source or
+documentation. Order 4 is complete; Order 5 is next.

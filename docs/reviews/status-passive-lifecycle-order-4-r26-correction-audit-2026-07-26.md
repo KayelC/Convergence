@@ -245,10 +245,10 @@ The fresh trace also confirmed:
 | O4-R29 | Complete | Commit `9c3e4af6` rejects restored active ailments that share one exclusivity group while retaining independent ailments. |
 | O4-R30 | Complete | Commit `a5699379` preserves explicit host defeat-prevention policies while retaining the supplied one-use default when absent. |
 | O4-R31 | Complete | Mechanics, developer, technical, architecture, API, roadmap, and executable-matrix guidance now describe the corrected contracts while retaining pending-review status. |
-| O4-R32 | Pending | Requires a fresh source/documentation trace and complete release gate. |
+| O4-R32 | Complete | The [final closure review](status-passive-lifecycle-order-4-final-closure-review-2026-07-26.md) re-read corrected source and documentation and found no unresolved realistic reachable defect. |
 
 ## Closure Decision
 
-Order 4 remains `partial`. Its three documentation audience entries remain
-`existing_unreviewed`. O4-R27 through O4-R32 extend the closure sequence.
-Formal closure and Order 5 remain blocked until the fresh O4-R32 review passes.
+O4-R32 completes the correction sequence. `status_and_passive_lifecycle` is
+`complete`, all three documentation audience entries are `reviewed`, and
+Order 5 is the next collaborative documentation subject.

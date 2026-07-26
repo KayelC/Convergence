@@ -55,8 +55,11 @@ additional passive and restore correctness paths. The
 [R26 correction audit](../reviews/status-passive-lifecycle-order-4-r26-correction-audit-2026-07-26.md)
 governs O4-R27 through O4-R32. O4-R27 through O4-R30 corrected those four
 paths, and O4-R31 reconciled the mechanics, developer, and technical guidance
-with the implementation. The entries remain `existing_unreviewed` until the
-independent O4-R32 source and release-gate review passes.
+with the implementation. The
+[final O4-R32 closure review](../reviews/status-passive-lifecycle-order-4-final-closure-review-2026-07-26.md)
+re-read the corrected source and all three audiences without finding an
+unresolved realistic reachable defect, so all three entries are now
+`reviewed`.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
@@ -84,13 +87,13 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 21 reviewed,
-31 existing_unreviewed, 16 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 24 reviewed,
+28 existing_unreviewed, 16 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 21 |
-| `existing_unreviewed` | 31 |
+| `reviewed` | 24 |
+| `existing_unreviewed` | 28 |
 | `missing` | 16 |
 | `not_applicable` | 7 |
 

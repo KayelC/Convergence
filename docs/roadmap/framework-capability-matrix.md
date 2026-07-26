@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is `partial`. The
+`status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced two bounded defects from current source. O4-R18 now skips a scheduled
 ailment trigger when that exact active instance has been removed or replaced,
@@ -33,8 +33,11 @@ finding four additional passive and restore correctness paths. The
 governs O4-R27 through O4-R32. O4-R27 through O4-R30 corrected frozen passive
 eligibility, exact passive-state restore coverage, ailment exclusivity restore,
 and explicit defeat-prevention policy composition. O4-R31 reconciled active
-guidance. O4-R32 remains the independent closure gate, so the capability is not
-promoted prematurely. Demo coverage remains `focused`.
+guidance. The
+[final O4-R32 closure review](../reviews/status-passive-lifecycle-order-4-final-closure-review-2026-07-26.md)
+then re-read current source, tests, schemas, content, and all three audiences
+without finding an unresolved realistic reachable defect. Demo coverage
+remains `focused`.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

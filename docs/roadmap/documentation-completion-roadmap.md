@@ -331,10 +331,16 @@ and explicit defeat-prevention policy composition gaps. The
 [R26 correction audit](../reviews/status-passive-lifecycle-order-4-r26-correction-audit-2026-07-26.md)
 governs O4-R27 through O4-R32. O4-R27 through O4-R30 corrected the four
 runtime paths, and O4-R31 reconciled the mechanics, developer, technical,
-architecture, API, roadmap, and executable-matrix guidance. Until O4-R32
-passes, the executable documentation matrix continues to record 21 reviewed,
-31 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 5
-remains paused.
+architecture, API, roadmap, and executable-matrix guidance. Before O4-R32, the
+executable documentation matrix still recorded 21 reviewed, 31
+`existing_unreviewed`, 16 missing, and 7 `not_applicable` entries.
+The
+[final O4-R32 closure review](../reviews/status-passive-lifecycle-order-4-final-closure-review-2026-07-26.md)
+subsequently re-read the corrected source, tests, schemas, content, diagrams,
+and all three audiences without finding an unresolved realistic reachable
+defect. Order 4 is formally complete. The executable documentation matrix now
+records 24 reviewed, 28 `existing_unreviewed`, 16 missing, and 7
+`not_applicable` entries. Order 5 is next.
 
 ## Deferred Documentation
 
