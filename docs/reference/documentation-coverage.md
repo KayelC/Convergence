@@ -47,8 +47,10 @@ Order 4 completed its earlier source-first correction sequence, but the
 reopened all three audience entries. O4-R18 and O4-R19 corrected the runtime
 paths, and O4-R20 now defines queued-trigger membership and authored passive
 activation-key validation across the mechanics, developer, and technical
-audiences. The entries remain `existing_unreviewed` until O4-R21 independently
-rechecks the corrected source and guidance.
+audiences. O4-R21 then reproduced a separate turn-start scheduling failure and
+missing encounter-owned departure cleanup. The entries remain
+`existing_unreviewed` through the O4-R22 to O4-R26 correction and independent
+review sequence.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 

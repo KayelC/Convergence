@@ -317,10 +317,15 @@ restore-coherence gap from current source. Order 4 remains reopened, but O4-R18
 now rechecks the exact scheduled ailment instance before trigger execution and
 O4-R19 now validates persisted activation keys against the equipped passive's
 authored trigger index and event. O4-R20 has reconciled those rules across the
-mechanics, developer, and technical audiences. O4-R21 is the only remaining
-independent closure gate. Until it passes, the executable documentation matrix
-continues to record 21 reviewed, 31 `existing_unreviewed`, 16 missing, and 7
-`not_applicable` entries. Order 5 remains paused.
+mechanics, developer, and technical audiences. O4-R21 was the only remaining
+independent closure gate named by that audit, but its fresh source trace
+reproduced turn-start live-enumeration failure and omitted encounter-owned
+departure cleanup. The
+[R21 extension audit](../reviews/status-passive-lifecycle-order-4-r21-extension-audit-2026-07-26.md)
+now governs O4-R22 through O4-R26. Until that sequence passes, the executable
+documentation matrix continues to record 21 reviewed, 31
+`existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 5
+remains paused.
 
 ## Deferred Documentation
 

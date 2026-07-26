@@ -116,7 +116,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "O4-R18 through O4-R20 are implemented; the independent O4-R21 source and documentation closure review remains pending."
+        "O4-R21 reproduced missing exact-instance scheduling at turn start and missing encounter-owned departure cleanup. O4-R22 through O4-R26 are the active correction and independent closure sequence."
       ]
     },
     {

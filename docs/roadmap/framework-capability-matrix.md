@@ -24,8 +24,10 @@ reproduced two bounded defects from current source. O4-R18 now skips a scheduled
 ailment trigger when that exact active instance has been removed or replaced,
 and O4-R19 validates restored passive activation keys against the equipped
 passive's authored trigger index and event. O4-R20 reconciled all three
-documentation audiences. O4-R21 is the remaining source-first closure gate, so
-the capability is not promoted prematurely. Demo coverage remains `focused`.
+documentation audiences. O4-R21 then reproduced live turn-start ailment
+enumeration failure and omitted encounter-owned departure cleanup. O4-R22
+through O4-R26 now govern correction and independent closure, so the capability
+is not promoted prematurely. Demo coverage remains `focused`.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

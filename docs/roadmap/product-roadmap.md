@@ -14,8 +14,13 @@ Phase 8 established the clean product boundary. Framework, DemoHost, tests, and 
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced stale execution by a removed ailment and definition-incoherent
 passive activation restore keys. O4-R18 and O4-R19 corrected those runtime
-paths, and O4-R20 reconciled the audience documentation. O4-R21 is the sole
-remaining closure gate.
+paths, and O4-R20 reconciled the audience documentation. O4-R21 was the sole
+closure gate named by that audit, but its source trace reproduced two
+additional integration defects. The
+[R21 extension audit](../reviews/status-passive-lifecycle-order-4-r21-extension-audit-2026-07-26.md)
+now governs O4-R22 through O4-R26: turn-start exact-instance scheduling,
+encounter-owned departure cleanup, documentation reconciliation, and a fresh
+closure gate.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -129,7 +134,8 @@ integration defects before returning the capability and all three audience
 documents to complete/reviewed. O3-R12 independently confirmed that closure
 from current code. O3-R15 later found the custom explicit-termination gap;
 O3-R16 and O3-R17 corrected and independently reconciled it. Order 4, status
-and passive lifecycle, is awaiting only the O4-R21 independent closure review.
+and passive lifecycle, is executing O4-R22 through O4-R26 after O4-R21
+reproduced two additional integration defects.
 Order 5, `battle_knowledge`, follows only after that gate.
 
 ## Priority 2: Persistence Evolution

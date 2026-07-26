@@ -187,7 +187,7 @@
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "O4-R20 documents boundary-start ailment scheduling, exact-instance rechecks, skipped removed or refreshed slots, deferred additions, and stable surviving order; O4-R21 review remains pending."
+        "reason": "O4-R20 documents owner-turn-end exact-instance scheduling. O4-R21 reproduced a separate turn-start scheduling defect and missing encounter departure cleanup; O4-R22 through O4-R26 remain pending."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
@@ -195,7 +195,7 @@
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "O4-R20 documents current-membership trigger rechecks, definition-coherent passive activation restore diagnostics, and the host-owned counting-policy boundary; O4-R21 review remains pending."
+        "reason": "O4-R20 documents current owner-turn-end membership checks and definition-coherent passive restoration. O4-R21 reopened turn-start scheduling and canonical encounter departure integration for O4-R22 through O4-R26."
       },
       "technical": {
         "state": "existing_unreviewed",
@@ -203,7 +203,7 @@
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "O4-R20 traces the corrected exact-instance trigger schedule and definition-aware, atomic passive activation restoration; O4-R21 review remains pending."
+        "reason": "O4-R20 traces corrected owner-turn-end scheduling and passive restoration. O4-R21 found that turn-start custom mutation and framework-owned actor departures still need correction and independent review."
       }
     },
     {
