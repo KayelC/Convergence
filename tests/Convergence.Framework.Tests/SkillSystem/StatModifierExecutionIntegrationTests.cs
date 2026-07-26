@@ -93,6 +93,7 @@ public sealed class StatModifierExecutionIntegrationTests
                 AllowSelf: false));
         RuntimeActorState source = Actor("sequence_source");
         RuntimeActorState target = Actor("sequence_target", teamId: targetTeam);
+        RuntimeActorState intervening = Actor("sequence_intervening");
         BattleExecutionServices services = Services(policy);
         var port = new BattleStatusEncounterLifecyclePort(
             new BattleStatusLifecycleService(new MinimumRandomSource()),
@@ -103,7 +104,8 @@ public sealed class StatModifierExecutionIntegrationTests
         BattleEncounterParticipant[] participants =
         [
             new(source, "Sequence Source"),
-            new(target, "Sequence Target")
+            new(target, "Sequence Target"),
+            new(intervening, "Sequence Intervening")
         ];
         var encounter = new BattleEncounterRequest(
             participants,
@@ -130,6 +132,9 @@ public sealed class StatModifierExecutionIntegrationTests
         Assert.Equal(2, applicationBoundary.Sequence);
         Assert.Equal(3, RemainingDuration(target));
         await port.ProcessTurnEndAsync(TurnRequest(encounter, participants[0], participants));
+        Assert.Equal(3, RemainingDuration(target));
+
+        await port.ProcessTurnEndAsync(TurnRequest(encounter, participants[2], participants));
         Assert.Equal(3, RemainingDuration(target));
 
         await port.ProcessTurnEndAsync(TurnRequest(encounter, participants[1], participants));
