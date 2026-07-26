@@ -1358,6 +1358,70 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public async Task Runner_CancellationFromRoundEndLifecycleRollsBackStagedMutation()
+    {
+        BattleEncounterParticipant player = Participant("round_end_cancel_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("round_end_cancel_enemy", EnemyTeam);
+        using var cancellation = new CancellationTokenSource();
+        var lifecycle = new RecordingLifecycle
+        {
+            RoundEndAction = request =>
+            {
+                request.Participants[0].State.SetResource(Hp, 1);
+                cancellation.Cancel();
+            }
+        };
+
+        ValueTask<BattleEncounterResult> run = new BattleEncounterRunner().RunAsync(
+            new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 1),
+            new BattleEncounterServices(
+                new FixedInitiative(PlayerTeam, EnemyTeam),
+                lifecycle,
+                new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+                new CompleteAfterTurnsPolicy(99),
+                () => new StandardActionTurnEconomy(),
+                new BattlePhaseProgressPolicy(8, 1)),
+            cancellation.Token);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
+        Assert.Equal(1, lifecycle.RoundEndCalls);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(10, enemy.State.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
+    public async Task Runner_CancellationFromSuccessfulBattleEndLifecycleRollsBackStagedMutation()
+    {
+        BattleEncounterParticipant player = Participant("battle_end_cancel_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("battle_end_cancel_enemy", EnemyTeam);
+        using var cancellation = new CancellationTokenSource();
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleEndAction = request =>
+            {
+                request.Participants[0].State.SetResource(Hp, 1);
+                cancellation.Cancel();
+            }
+        };
+
+        ValueTask<BattleEncounterResult> run = new BattleEncounterRunner().RunAsync(
+            new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 1),
+            new BattleEncounterServices(
+                new FixedInitiative(PlayerTeam, EnemyTeam),
+                lifecycle,
+                new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+                new CompleteAfterTurnsPolicy(1),
+                () => new StandardActionTurnEconomy(),
+                new BattlePhaseProgressPolicy(8, 1)),
+            cancellation.Token);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(10, enemy.State.GetRequiredResource(Hp).Current);
+    }
+
+    [Fact]
     public void Runner_RejectsInitiativeUnlessItIsAnExactTeamPermutation()
     {
         ContentId[][] invalidOrders =
@@ -2165,6 +2229,7 @@ public sealed class BattleEncounterRunnerTests
         public Action<BattleEncounterTurnLifecycleRequest>? TurnStartAction { get; init; }
         public Action<BattleEncounterTurnLifecycleRequest>? TurnEndAction { get; init; }
         public Action<BattleEncounterLifecycleRequest>? PhaseEndAction { get; init; }
+        public Action<BattleEncounterLifecycleRequest>? RoundEndAction { get; init; }
         public Action<BattleEncounterLifecycleRequest>? BattleEndAction { get; init; }
         public IReadOnlyList<BattleEncounterEvent> BattleStartEvents { get; init; } = [];
         public IReadOnlyList<BattleEncounterEvent> BattleEndEvents { get; init; } = [];
@@ -2222,6 +2287,7 @@ public sealed class BattleEncounterRunnerTests
             CancellationToken cancellationToken = default)
         {
             RoundEndCalls++;
+            RoundEndAction?.Invoke(request);
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
                 Array.Empty<BattleEncounterEvent>());
         }

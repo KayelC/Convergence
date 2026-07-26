@@ -946,6 +946,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     departureEvents.AddRange(returnedEvents);
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
                 transaction.Commit();
                 await AddRangeAsync(departureEvents).ConfigureAwait(false);
             }
@@ -1208,6 +1209,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             .ConfigureAwait(false);
                     }
 
+                    cancellationToken.ThrowIfCancellationRequested();
                     turnStartTransaction.Commit();
 
                     await AddRangeAsync(MapStatusEvents(turnStart.Events)).ConfigureAwait(false);
@@ -1435,6 +1437,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                 .ConfigureAwait(false);
                         }
 
+                        cancellationToken.ThrowIfCancellationRequested();
                         turnEndTransaction.Commit();
 
                         await AddRangeAsync(turnEndEvents).ConfigureAwait(false);
@@ -1566,6 +1569,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         .ConfigureAwait(false);
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
                 phaseEndTransaction.Commit();
 
                 await AddRangeAsync(phaseEndEvents).ConfigureAwait(false);
@@ -1605,6 +1609,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     .ConfigureAwait(false);
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             roundEndTransaction.Commit();
             await AddRangeAsync(roundEndEvents).ConfigureAwait(false);
         }
@@ -1714,6 +1719,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             .ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
                     battleEndEvents = SnapshotLifecycleEvents(returnedEvents, "battle-end");
+                    cancellationToken.ThrowIfCancellationRequested();
                     lifecycleTransaction.Commit();
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -1821,6 +1827,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         cancellationToken)
                     .ConfigureAwait(false);
                 battleEndEvents = SnapshotLifecycleEvents(returnedEvents, "battle-end");
+                cancellationToken.ThrowIfCancellationRequested();
                 lifecycleTransaction.Commit();
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
