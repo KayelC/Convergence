@@ -187,7 +187,7 @@
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "The 26 July fresh closure audit reopened this entry until removed or replaced ailments are rechecked before their queued owner-turn-end trigger slot."
+        "reason": "O4-R20 documents boundary-start ailment scheduling, exact-instance rechecks, skipped removed or refreshed slots, deferred additions, and stable surviving order; O4-R21 review remains pending."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
@@ -195,7 +195,7 @@
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "The integration guide remains accurate in its existing boundaries but must document current-membership trigger rechecks and authored passive activation-key validation before renewed review."
+        "reason": "O4-R20 documents current-membership trigger rechecks, definition-coherent passive activation restore diagnostics, and the host-owned counting-policy boundary; O4-R21 review remains pending."
       },
       "technical": {
         "state": "existing_unreviewed",
@@ -203,7 +203,7 @@
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "The 26 July audit found stale ailment-trigger execution and definition-incoherent passive activation restore keys; O4-R18 through O4-R20 must reconcile the runtime and technical invariants."
+        "reason": "O4-R20 traces the corrected exact-instance trigger schedule and definition-aware, atomic passive activation restoration; O4-R21 review remains pending."
       }
     },
     {

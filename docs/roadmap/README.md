@@ -38,4 +38,6 @@ economies, and O3-R17 independently reconciled the implementation, audience
 documentation, and full release gate. Order 4, status and passive lifecycle,
 is reopened under the
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md).
-O4-R18 through O4-R21 precede Order 5.
+O4-R18 and O4-R19 corrected the two runtime findings, O4-R20 reconciled the
+audience guidance, and O4-R21 is the remaining independent closure gate before
+Order 5.

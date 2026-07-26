@@ -95,6 +95,13 @@ This order matters. A passive recovery can occur before poison-like damage,
 and recovery is evaluated before a duration expires at that same boundary.
 Every accepted mutation and every rejection is returned as typed evidence.
 
+The ailments present when the trigger step begins receive ordered trigger
+slots. Before each slot, the framework checks that the same ailment instance is
+still active. An ailment removed, cured, refreshed, or replaced by an earlier
+trigger does not execute its old slot. An ailment newly applied during this
+step waits until the next matching owner-turn boundary. Surviving ailments keep
+their original order.
+
 An undeployed reserve actor does not receive owner-turn-end effects. Reserve
 aging, when desired, occurs through a separately configured encounter clock;
 it is never inferred from the number of actions taken.
@@ -214,6 +221,13 @@ it must also configure a positive finite per-battle limit. Limits may count:
 
 A condition that is not met does not consume an activation. Results distinguish
 executed, condition-not-met, recursion-suppressed, and limit-reached outcomes.
+
+Saved activation counts remain meaningful only while their passive and
+authored trigger still exist. Loading rejects a count whose trigger index is
+missing or whose event differs from that trigger's authored event. A game that
+counts per target also preserves the referenced actor; the selected event
+policy still decides whether a particular event counts per dispatch or per
+target.
 
 ## Atomicity
 

@@ -20,12 +20,12 @@ The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 defe
 
 `status_and_passive_lifecycle` is `partial`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
-reproduced two bounded defects from current source: an ailment removed by an
-earlier ailment trigger can still execute its stale queued trigger, and save
-validation accepts passive activation keys that do not match an authored
-trigger index and event. O4-R18 through O4-R20 own the corrections and audience
-reconciliation; O4-R21 owns a new source-first closure gate. Demo coverage
-remains `focused`.
+reproduced two bounded defects from current source. O4-R18 now skips a scheduled
+ailment trigger when that exact active instance has been removed or replaced,
+and O4-R19 validates restored passive activation keys against the equipped
+passive's authored trigger index and event. O4-R20 reconciled all three
+documentation audiences. O4-R21 is the remaining source-first closure gate, so
+the capability is not promoted prematurely. Demo coverage remains `focused`.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

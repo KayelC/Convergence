@@ -116,8 +116,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "A removed ailment can still execute a stale trigger captured earlier in the same owner-turn-end boundary.",
-        "Save validation does not yet require passive activation keys to match an authored trigger index and event."
+        "O4-R18 through O4-R20 are implemented; the independent O4-R21 source and documentation closure review remains pending."
       ]
     },
     {

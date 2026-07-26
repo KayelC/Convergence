@@ -44,10 +44,11 @@ The project owner explicitly confirmed the final Order 3 contract on 23 July
 2026.
 Order 4 completed its earlier source-first correction sequence, but the
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
-reopened all three audience entries. The mechanics pages need to define current
-ailment membership at a queued trigger slot; the developer and technical pages
-must also document passive activation-key validation against authored triggers.
-O4-R18 through O4-R21 now precede Order 5.
+reopened all three audience entries. O4-R18 and O4-R19 corrected the runtime
+paths, and O4-R20 now defines queued-trigger membership and authored passive
+activation-key validation across the mechanics, developer, and technical
+audiences. The entries remain `existing_unreviewed` until O4-R21 independently
+rechecks the corrected source and guidance.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 

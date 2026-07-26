@@ -111,12 +111,26 @@ flowchart TD
     A["Begin staged owner + participant graph"] --> B{"Owner deployed?"}
     B -- "No" --> Z["Return empty owner-turn result"]
     B -- "Yes" --> C["Dispatch owner-turn passive triggers"]
-    C --> D["Execute ailment triggers in active-state order"]
-    D --> E["Resolve authored recovery event or natural recovery"]
-    E --> F["Advance matching status durations"]
-    F --> G["Advance matching stat-modifier boundary"]
-    G --> H["Commit and return ordered evidence"]
+    C --> D["Snapshot ordered ailment IDs and instances"]
+    D --> E{"Same instance still active at its slot?"}
+    E -- "No" --> F["Skip removed, refreshed, or replaced slot"]
+    E -- "Yes" --> G["Execute authored triggers for this event"]
+    F --> H{"More scheduled slots?"}
+    G --> H
+    H -- "Yes" --> E
+    H -- "No" --> I["Resolve authored recovery event or natural recovery"]
+    I --> J["Advance matching status durations"]
+    J --> K["Advance matching stat-modifier boundary"]
+    K --> L["Commit and return ordered evidence"]
 ```
+
+The schedule is fixed when ailment-trigger dispatch begins. Each slot retains
+both its ID and the exact `ActiveAilmentState` reference. Re-resolving the ID
+and comparing the current instance prevents a removed ailment or a same-ID
+refresh from executing stale effects. An exclusivity replacement likewise
+removes the old slot. Ailments added after the snapshot are absent from the
+schedule and first become eligible at the next matching boundary. The active
+state's boundary-start order is preserved for surviving scheduled instances.
 
 If an ailment trigger's ordered effect pipeline stops, later ailment triggers
 do not run. Recovery and duration processing still follow, because those are
@@ -311,9 +325,20 @@ Passive activation snapshots preserve:
 `skill + trigger index + event + optional target + count`
 
 The optional target is present only for per-target accounting. Save validation
-requires it to reference a saved actor. Duplicate keys and invalid counts are
-rejected before aggregate restoration. Restored state is normalized through
-the same runtime validity guards as live state.
+requires it to reference a saved actor. Validation resolves every equipped
+passive to its `SkillDefinition`, rejects a trigger index outside
+`SkillDefinition.Triggers`, and requires the saved event to equal the event at
+that exact index. A passive without authored triggers cannot own a persisted
+activation counter. Duplicate keys and invalid counts are rejected before
+aggregate restoration.
+
+`BattlePassiveCollection.RestoreActivations` repeats the definition check into
+temporary activation state before replacing current counts. A malformed later
+entry therefore cannot clear or partially replace existing counters. Restore
+does not infer per-dispatch or per-target shape because that decision belongs
+to the host-supplied `PassiveEventPolicyRegistry`; aggregate save validation
+separately verifies any supplied target actor reference. Restored state is
+normalized through the same runtime validity guards as live state.
 
 ## Failure Containment
 
@@ -360,6 +385,7 @@ Primary source areas:
 - `Execution/PassiveRuntime.cs`
 - `Encounters/BattleEncounterLifecycleClocks.cs`
 - `Encounters/BattleStatusEncounterLifecyclePort.cs`
+- `Runtime/RuntimeActorSnapshotIntegrity.cs`
 - `Runtime/RuntimePersistenceSnapshots.cs`
 
 Primary executable evidence:

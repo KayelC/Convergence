@@ -66,6 +66,13 @@ The encounter runner calls that port at battle start, turn start, owner turn
 end, team phase end, round end, and battle end. A custom runner must preserve
 the same semantic boundaries rather than ticking state ad hoc.
 
+At owner turn end, the lifecycle schedules the exact ailment instances that
+exist when ailment-trigger dispatch begins. It rechecks each scheduled instance
+before execution. Removing, refreshing, or exclusivity-replacing a later
+ailment invalidates that old slot, while a newly applied ailment waits until the
+next matching boundary. Hosts should consume the returned event order; they
+must not enumerate live ailments and dispatch those triggers themselves.
+
 ## Selecting Policies
 
 ### Ailment application gate
@@ -279,7 +286,16 @@ Save contract v13 preserves:
 
 Validation rejects malformed durations, invalid enums and IDs, duplicate
 activation keys, and per-target activation IDs that do not reference a saved
-actor. Aggregate restore validates before exposing restored session state.
+actor. Each activation must also reference an equipped passive, an existing
+trigger index on that passive, and the exact event authored at that index.
+Failures use `PassiveActivationTriggerIndexInvalid` or
+`PassiveActivationEventMismatch`. Direct actor restore enforces the same
+definition coherence before constructing live state.
+
+The event-policy registry remains host-supplied. Restore validation therefore
+does not infer whether an otherwise valid counter should contain a target ID;
+the policy selected for that event owns per-dispatch versus per-target
+accounting. Aggregate restore validates before exposing restored session state.
 
 The host owns JSON or another save encoding. Preserve all typed fields rather
 than rebuilding state from icons or display names.

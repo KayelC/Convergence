@@ -313,12 +313,14 @@ The
 closed that revision. A new
 [fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 then reproduced one stale ailment-trigger path and one passive activation
-restore-coherence gap from current source. Order 4 is reopened. O4-R18 corrects
-trigger membership, O4-R19 corrects persisted activation keys, O4-R20
-reconciles the three audiences, and O4-R21 performs the next independent
-closure gate. The executable documentation matrix now records 21 reviewed, 31
-`existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 5
-remains paused.
+restore-coherence gap from current source. Order 4 remains reopened, but O4-R18
+now rechecks the exact scheduled ailment instance before trigger execution and
+O4-R19 now validates persisted activation keys against the equipped passive's
+authored trigger index and event. O4-R20 has reconciled those rules across the
+mechanics, developer, and technical audiences. O4-R21 is the only remaining
+independent closure gate. Until it passes, the executable documentation matrix
+continues to record 21 reviewed, 31 `existing_unreviewed`, 16 missing, and 7
+`not_applicable` entries. Order 5 remains paused.
 
 ## Deferred Documentation
 
