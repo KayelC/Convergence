@@ -220,6 +220,116 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void TurnStart_CustomAdditionWaitsUntilTheNextBoundary()
+    {
+        ContentId handlerId = ContentId.Parse("add_ailment_once");
+        AilmentDefinition added = IndependentAilment(
+            "added_during_turn_start",
+            new SkipAilmentTurnBehaviorDefinition());
+        var handler = new AddAilmentOnceTurnBehaviorHandler(added);
+        var service = new BattleStatusLifecycleService(
+            new SequenceRandomSource(),
+            [new KeyValuePair<ContentId, ICustomAilmentTurnBehaviorHandler>(handlerId, handler)]);
+        RuntimeActorState actor = Actor("turn_start_addition");
+        actor.ApplyAilment(
+            IndependentAilment(
+                "custom_addition",
+                new CustomAilmentTurnBehaviorDefinition(handlerId)),
+            Turns(3));
+
+        BattleTurnStartLifecycleResult first = service.ProcessTurnStart(new(actor));
+        BattleTurnStartLifecycleResult second = service.ProcessTurnStart(new(actor));
+
+        Assert.Equal(BattleTurnStartOutcome.CanAct, first.Outcome);
+        Assert.Equal(BattleTurnStartOutcome.Skip, second.Outcome);
+        Assert.True(actor.HasAilment(added.Id));
+        Assert.Equal(1, handler.MutationCount);
+    }
+
+    [Fact]
+    public void TurnStart_CustomRemovalSkipsTheRemovedScheduledAilment()
+    {
+        ContentId handlerId = ContentId.Parse("remove_later_ailment");
+        ContentId removedId = ContentId.Parse("removed_before_turn_start_slot");
+        var handler = new RemoveAilmentTurnBehaviorHandler(removedId);
+        var service = new BattleStatusLifecycleService(
+            new SequenceRandomSource(),
+            [new KeyValuePair<ContentId, ICustomAilmentTurnBehaviorHandler>(handlerId, handler)]);
+        RuntimeActorState actor = Actor("turn_start_removal");
+        actor.ApplyAilment(
+            IndependentAilment(
+                "custom_removal",
+                new CustomAilmentTurnBehaviorDefinition(handlerId)),
+            Turns(3));
+        actor.ApplyAilment(
+            IndependentAilment(
+                removedId.ToString(),
+                new SkipAilmentTurnBehaviorDefinition()),
+            Turns(3));
+
+        BattleTurnStartLifecycleResult result = service.ProcessTurnStart(new(actor));
+
+        Assert.Equal(BattleTurnStartOutcome.CanAct, result.Outcome);
+        Assert.False(actor.HasAilment(removedId));
+    }
+
+    [Fact]
+    public void TurnStart_CustomRefreshDefersTheReplacedInstance()
+    {
+        ContentId handlerId = ContentId.Parse("refresh_later_ailment");
+        AilmentDefinition refreshed = IndependentAilment(
+            "refreshed_before_turn_start_slot",
+            new SkipAilmentTurnBehaviorDefinition());
+        var handler = new RefreshAilmentOnceTurnBehaviorHandler(refreshed, Turns(4));
+        var service = new BattleStatusLifecycleService(
+            new SequenceRandomSource(),
+            [new KeyValuePair<ContentId, ICustomAilmentTurnBehaviorHandler>(handlerId, handler)]);
+        RuntimeActorState actor = Actor("turn_start_refresh");
+        actor.ApplyAilment(
+            IndependentAilment(
+                "custom_refresh",
+                new CustomAilmentTurnBehaviorDefinition(handlerId)),
+            Turns(3));
+        actor.ApplyAilment(refreshed, Turns(1));
+
+        BattleTurnStartLifecycleResult first = service.ProcessTurnStart(new(actor));
+        BattleTurnStartLifecycleResult second = service.ProcessTurnStart(new(actor));
+
+        Assert.Equal(BattleTurnStartOutcome.CanAct, first.Outcome);
+        Assert.Equal(BattleTurnStartOutcome.Skip, second.Outcome);
+        Assert.Equal(
+            4,
+            Assert.IsType<TurnDurationDefinition>(
+                actor.Ailments[refreshed.Id].Duration).Value);
+        Assert.Equal(1, handler.MutationCount);
+    }
+
+    [Fact]
+    public void TurnStart_SurvivingScheduledAilmentsRetainInsertionOrder()
+    {
+        var callOrder = new List<ContentId>();
+        ContentId handlerId = ContentId.Parse("record_turn_start_order");
+        var handler = new RecordingTurnBehaviorHandler(callOrder);
+        var service = new BattleStatusLifecycleService(
+            new SequenceRandomSource(),
+            [new KeyValuePair<ContentId, ICustomAilmentTurnBehaviorHandler>(handlerId, handler)]);
+        RuntimeActorState actor = Actor("turn_start_order");
+        AilmentDefinition first = IndependentAilment(
+            "turn_start_first",
+            new CustomAilmentTurnBehaviorDefinition(handlerId));
+        AilmentDefinition second = IndependentAilment(
+            "turn_start_second",
+            new CustomAilmentTurnBehaviorDefinition(handlerId));
+        actor.ApplyAilment(first, Turns(3));
+        actor.ApplyAilment(second, Turns(3));
+
+        BattleTurnStartLifecycleResult result = service.ProcessTurnStart(new(actor));
+
+        Assert.Equal(BattleTurnStartOutcome.CanAct, result.Outcome);
+        Assert.Equal([first.Id, second.Id], callOrder);
+    }
+
+    [Fact]
     public void TurnRestrictionContracts_RejectUndefinedOutcomesAndInvalidIds()
     {
         Assert.Throws<ArgumentOutOfRangeException>(
@@ -2338,6 +2448,72 @@ public sealed class BattleStatusLifecycleTests
             ReceivedActor = request.Actor;
             request.Actor.SetResource(Hp, 1);
             throw new InvalidOperationException("Deliberate turn-behavior failure.");
+        }
+    }
+
+    private sealed class AddAilmentOnceTurnBehaviorHandler(AilmentDefinition ailment)
+        : ICustomAilmentTurnBehaviorHandler
+    {
+        public int MutationCount { get; private set; }
+
+        public CustomAilmentTurnBehaviorResult Resolve(
+            CustomAilmentTurnBehaviorDefinition behavior,
+            CustomAilmentTurnBehaviorRequest request)
+        {
+            if (!request.Actor.HasAilment(ailment.Id))
+            {
+                request.Actor.ApplyAilment(ailment, ailment.DefaultLifetime);
+                MutationCount++;
+            }
+
+            return new CustomAilmentTurnBehaviorResult(BattleTurnStartOutcome.CanAct);
+        }
+    }
+
+    private sealed class RemoveAilmentTurnBehaviorHandler(ContentId ailmentId)
+        : ICustomAilmentTurnBehaviorHandler
+    {
+        public CustomAilmentTurnBehaviorResult Resolve(
+            CustomAilmentTurnBehaviorDefinition behavior,
+            CustomAilmentTurnBehaviorRequest request)
+        {
+            request.Actor.RemoveAilments(
+                StatusRemovalCause.ScriptedRemoval,
+                active => active.Definition.Id == ailmentId);
+            return new CustomAilmentTurnBehaviorResult(BattleTurnStartOutcome.CanAct);
+        }
+    }
+
+    private sealed class RefreshAilmentOnceTurnBehaviorHandler(
+        AilmentDefinition ailment,
+        StatusLifetimeDefinition lifetime)
+        : ICustomAilmentTurnBehaviorHandler
+    {
+        public int MutationCount { get; private set; }
+
+        public CustomAilmentTurnBehaviorResult Resolve(
+            CustomAilmentTurnBehaviorDefinition behavior,
+            CustomAilmentTurnBehaviorRequest request)
+        {
+            if (MutationCount == 0)
+            {
+                request.Actor.ApplyAilment(ailment, lifetime);
+                MutationCount++;
+            }
+
+            return new CustomAilmentTurnBehaviorResult(BattleTurnStartOutcome.CanAct);
+        }
+    }
+
+    private sealed class RecordingTurnBehaviorHandler(ICollection<ContentId> callOrder)
+        : ICustomAilmentTurnBehaviorHandler
+    {
+        public CustomAilmentTurnBehaviorResult Resolve(
+            CustomAilmentTurnBehaviorDefinition behavior,
+            CustomAilmentTurnBehaviorRequest request)
+        {
+            callOrder.Add(request.Ailment.Id);
+            return new CustomAilmentTurnBehaviorResult(BattleTurnStartOutcome.CanAct);
         }
     }
 

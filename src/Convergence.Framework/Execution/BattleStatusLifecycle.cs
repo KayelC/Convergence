@@ -1317,13 +1317,27 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
                 actor.InstanceId));
         }
 
+        KeyValuePair<ContentId, ActiveAilmentState>[] scheduledAilments =
+            actor.Ailments.ToArray();
+        var scheduledRestrictions = new List<BattleTurnStartRestriction>();
+        foreach ((ContentId ailmentId, ActiveAilmentState scheduledAilment) in scheduledAilments)
+        {
+            if (!actor.Ailments.TryGetValue(
+                    ailmentId,
+                    out ActiveAilmentState? currentAilment) ||
+                !ReferenceEquals(currentAilment, scheduledAilment))
+            {
+                continue;
+            }
+
+            scheduledRestrictions.Add(ResolveTurnStartRestriction(
+                actor,
+                currentAilment.Definition,
+                request.CanRecallToRoster));
+        }
+
         BattleTurnStartRestriction restriction = _turnRestrictionPolicy.Resolve(
-                actor.Ailments.Values
-                    .Select(active => ResolveTurnStartRestriction(
-                        actor,
-                        active.Definition,
-                        request.CanRecallToRoster))
-                    .ToArray())
+                scheduledRestrictions)
             ?? throw new InvalidOperationException("The battle turn-restriction policy returned null.");
         if (restriction.Outcome != BattleTurnStartOutcome.CanAct)
         {
