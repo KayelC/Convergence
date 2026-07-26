@@ -72,6 +72,241 @@ public sealed class StatModifierExecutionIntegrationTests
     }
 
     [Theory]
+    [InlineData(SuppliedPolicyKind.TimedExclusive, TargetRelation.Ally)]
+    [InlineData(SuppliedPolicyKind.TimedExclusive, TargetRelation.Enemy)]
+    [InlineData(SuppliedPolicyKind.TimedContribution, TargetRelation.Ally)]
+    [InlineData(SuppliedPolicyKind.TimedContribution, TargetRelation.Enemy)]
+    public async Task EncounterLifecycle_CrossTargetModifierUsesOneOwnerTurnEventSequence(
+        SuppliedPolicyKind policyKind,
+        TargetRelation relation)
+    {
+        IStatModifierPolicyService policy = Policy(policyKind);
+        ContentId enemyTeam = ContentId.Parse("enemy_team");
+        ContentId targetTeam = relation == TargetRelation.Ally ? PlayerTeam : enemyTeam;
+        SkillDefinition skill = ActiveSkill(
+            $"{policyKind}_{relation}_focus",
+            [new ModifyStatStageEffectDefinition([Attack], 1, Turns(3))],
+            targeting: new TargetingDefinition(
+                relation,
+                TargetSelection.Single,
+                TargetLifeState.Alive,
+                AllowSelf: false));
+        RuntimeActorState source = Actor("sequence_source");
+        RuntimeActorState target = Actor("sequence_target", teamId: targetTeam);
+        BattleExecutionServices services = Services(policy);
+        var port = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            services,
+            ContentId.Parse("battle_start"),
+            OwnerTurnEnd,
+            TestEncounterClocks.Standard(PlayerTeam, enemyTeam));
+        BattleEncounterParticipant[] participants =
+        [
+            new(source, "Sequence Source"),
+            new(target, "Sequence Target")
+        ];
+        var encounter = new BattleEncounterRequest(
+            participants,
+            Battle,
+            NormalBattle,
+            moonPhaseId: null,
+            roundLimit: 3);
+
+        await port.ProcessTurnEndAsync(TurnRequest(encounter, participants[0], participants));
+        StatModifierLifecycleBoundary applicationBoundary = Assert.Single(
+            port.GetActiveStatModifierBoundaries(TurnRequest(encounter, participants[0], participants)));
+        SkillExecutionResult application = new SkillExecutor(services).Execute(
+            new SkillExecutionRequest(
+                skill,
+                source,
+                [source, target],
+                new EffectExecutionEnvironment(
+                    Battle,
+                    NormalBattle,
+                    activeStatModifierBoundaries: [applicationBoundary]),
+                [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, application.Status);
+        Assert.Equal(2, applicationBoundary.Sequence);
+        Assert.Equal(3, RemainingDuration(target));
+        await port.ProcessTurnEndAsync(TurnRequest(encounter, participants[0], participants));
+        Assert.Equal(3, RemainingDuration(target));
+
+        await port.ProcessTurnEndAsync(TurnRequest(encounter, participants[1], participants));
+        Assert.Equal(2, RemainingDuration(target));
+        await port.ProcessTurnEndAsync(TurnRequest(encounter, participants[1], participants));
+        Assert.Equal(1, RemainingDuration(target));
+        await port.ProcessTurnEndAsync(TurnRequest(encounter, participants[1], participants));
+
+        Assert.Empty(target.StatStages);
+    }
+
+    [Theory]
+    [InlineData(SuppliedPolicyKind.TimedExclusive)]
+    [InlineData(SuppliedPolicyKind.TimedContribution)]
+    public async Task EncounterLifecycle_SharedTeamPhaseEventAdvancesEveryOccurrenceExactlyOnce(
+        SuppliedPolicyKind policyKind)
+    {
+        IStatModifierPolicyService policy = Policy(policyKind);
+        ContentId enemyTeam = ContentId.Parse("enemy_team");
+        ContentId sharedPhaseEnd = ContentId.Parse("shared_phase_end");
+        RuntimeActorState actor = Actor("shared_phase_actor");
+        ContentId statusId = ContentId.Parse("shared_phase_status");
+        actor.AddOtherStatus(
+            statusId,
+            StandardStatusLifetimes.Encounter(
+                new TurnDurationDefinition(2, sharedPhaseEnd, SuspendWhileReserve: false)));
+        ApplyModifier(
+            actor,
+            policy,
+            new TurnDurationDefinition(2, sharedPhaseEnd, SuspendWhileReserve: false));
+        RuntimeActorState enemy = Actor("shared_phase_enemy", teamId: enemyTeam);
+        BattleExecutionServices services = Services(policy);
+        var port = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            services,
+            ContentId.Parse("battle_start"),
+            OwnerTurnEnd,
+            new ExplicitBattleEncounterLifecycleClockPolicy(
+            [
+                new BattleTeamPhaseClockDefinition(PlayerTeam, PlayerPhase, sharedPhaseEnd),
+                new BattleTeamPhaseClockDefinition(
+                    enemyTeam,
+                    ContentId.Parse("enemy_phase"),
+                    sharedPhaseEnd)
+            ],
+            ContentId.Parse("round_end")));
+        BattleEncounterParticipant[] participants =
+        [
+            new(actor, "Shared Phase Actor"),
+            new(enemy, "Shared Phase Enemy")
+        ];
+        var encounter = new BattleEncounterRequest(
+            participants,
+            Battle,
+            NormalBattle,
+            moonPhaseId: null,
+            roundLimit: 3);
+        var request = new BattleEncounterLifecycleRequest(
+            encounter,
+            participants,
+            [PlayerTeam, enemyTeam]);
+
+        await port.ProcessPhaseEndAsync(request, PlayerTeam);
+
+        Assert.Equal(1, RemainingStatusDuration(actor, statusId));
+        Assert.Equal(1, RemainingDuration(actor));
+
+        await port.ProcessPhaseEndAsync(request, enemyTeam);
+
+        Assert.DoesNotContain(statusId, actor.OtherStatuses);
+        Assert.Empty(actor.StatStages);
+    }
+
+    [Theory]
+    [InlineData(SuppliedPolicyKind.TimedExclusive)]
+    [InlineData(SuppliedPolicyKind.TimedContribution)]
+    public async Task EncounterLifecycle_SharedPhaseAndRoundEventUseOneSequenceStream(
+        SuppliedPolicyKind policyKind)
+    {
+        IStatModifierPolicyService policy = Policy(policyKind);
+        ContentId enemyTeam = ContentId.Parse("enemy_team");
+        ContentId sharedEvent = ContentId.Parse("shared_phase_round_end");
+        RuntimeActorState actor = Actor("shared_round_actor");
+        ContentId statusId = ContentId.Parse("shared_round_status");
+        actor.AddOtherStatus(
+            statusId,
+            StandardStatusLifetimes.Encounter(
+                new TurnDurationDefinition(2, sharedEvent, SuspendWhileReserve: false)));
+        ApplyModifier(
+            actor,
+            policy,
+            new TurnDurationDefinition(2, sharedEvent, SuspendWhileReserve: false));
+        RuntimeActorState enemy = Actor("shared_round_enemy", teamId: enemyTeam);
+        BattleExecutionServices services = Services(policy);
+        var port = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            services,
+            ContentId.Parse("battle_start"),
+            OwnerTurnEnd,
+            new ExplicitBattleEncounterLifecycleClockPolicy(
+            [
+                new BattleTeamPhaseClockDefinition(PlayerTeam, PlayerPhase, sharedEvent),
+                new BattleTeamPhaseClockDefinition(
+                    enemyTeam,
+                    ContentId.Parse("enemy_phase"),
+                    ContentId.Parse("enemy_phase_end"))
+            ],
+            sharedEvent));
+        BattleEncounterParticipant[] participants =
+        [
+            new(actor, "Shared Round Actor"),
+            new(enemy, "Shared Round Enemy")
+        ];
+        var encounter = new BattleEncounterRequest(
+            participants,
+            Battle,
+            NormalBattle,
+            moonPhaseId: null,
+            roundLimit: 3);
+        var request = new BattleEncounterLifecycleRequest(
+            encounter,
+            participants,
+            [PlayerTeam, enemyTeam]);
+
+        await port.ProcessPhaseEndAsync(request, PlayerTeam);
+        await port.ProcessRoundEndAsync(request, roundNumber: 1);
+
+        Assert.DoesNotContain(statusId, actor.OtherStatuses);
+        Assert.Empty(actor.StatStages);
+    }
+
+    [Theory]
+    [InlineData(SuppliedPolicyKind.TimedExclusive)]
+    [InlineData(SuppliedPolicyKind.TimedContribution)]
+    public async Task EncounterLifecycle_CancellationDoesNotConsumePendingOwnerTurnBoundary(
+        SuppliedPolicyKind policyKind)
+    {
+        IStatModifierPolicyService policy = Policy(policyKind);
+        RuntimeActorState actor = Actor("cancelled_boundary_actor");
+        BattleExecutionServices services = Services(policy);
+        var port = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            services,
+            ContentId.Parse("battle_start"),
+            OwnerTurnEnd,
+            TestEncounterClocks.Standard(PlayerTeam, ContentId.Parse("enemy_team")));
+        BattleEncounterParticipant[] participants = [new(actor, "Cancelled Boundary Actor")];
+        var encounter = new BattleEncounterRequest(
+            participants,
+            Battle,
+            NormalBattle,
+            moonPhaseId: null,
+            roundLimit: 3);
+        BattleEncounterTurnLifecycleRequest request = TurnRequest(
+            encounter,
+            participants[0],
+            participants);
+        StatModifierLifecycleBoundary before = Assert.Single(
+            port.GetActiveStatModifierBoundaries(request));
+        ApplyModifier(actor, policy, Turns(3), before);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            port.ProcessTurnEndAsync(request, cancellation.Token).AsTask());
+
+        Assert.Equal(3, RemainingDuration(actor));
+        StatModifierLifecycleBoundary afterCancellation = Assert.Single(
+            port.GetActiveStatModifierBoundaries(request));
+        Assert.Equal(before.EventId, afterCancellation.EventId);
+        Assert.Equal(before.Sequence, afterCancellation.Sequence);
+        await port.ProcessTurnEndAsync(request);
+        Assert.Equal(3, RemainingDuration(actor));
+        Assert.Equal(2, Assert.Single(port.GetActiveStatModifierBoundaries(request)).Sequence);
+    }
+
+    [Theory]
     [InlineData(SuppliedPolicyKind.PersistentStaged)]
     [InlineData(SuppliedPolicyKind.TimedExclusive)]
     [InlineData(SuppliedPolicyKind.TimedContribution)]
@@ -593,7 +828,8 @@ public sealed class StatModifierExecutionIntegrationTests
     private static SkillDefinition ActiveSkill(
         string id,
         IEnumerable<EffectDefinition> effects,
-        IEnumerable<SkillCostDefinition>? costs = null) =>
+        IEnumerable<SkillCostDefinition>? costs = null,
+        TargetingDefinition? targeting = null) =>
         new(
             ContentId.Parse(id),
             id,
@@ -603,7 +839,7 @@ public sealed class StatModifierExecutionIntegrationTests
             InheritanceGroup.Support,
             new SkillInheritanceDefinition(true),
             costs: costs,
-            targeting: SelfTargeting(),
+            targeting: targeting ?? SelfTargeting(),
             effects: effects,
             availability: new SkillAvailabilityDefinition([Battle]));
 
@@ -639,18 +875,48 @@ public sealed class StatModifierExecutionIntegrationTests
         decimal sp = 20,
         IEnumerable<SkillDefinition>? passiveSkills = null,
         IEnumerable<ContentId>? skillIds = null,
-        bool isDeployed = true) =>
+        bool isDeployed = true,
+        ContentId? teamId = null) =>
         new(
             RuntimeInstanceId.Parse(id),
             ContentId.Parse($"{id}_entity"),
-            PlayerTeam,
+            teamId ?? PlayerTeam,
             Hp,
             CombatDefenseProfile.Empty,
             [new BattleResourceState(Hp, 100, 100), new BattleResourceState(Sp, sp, 100)],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: isDeployed),
-            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), PlayerTeam),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), teamId ?? PlayerTeam),
             skillIds: skillIds,
             passiveSkills: passiveSkills);
+
+    private static BattleEncounterTurnLifecycleRequest TurnRequest(
+        BattleEncounterRequest encounter,
+        BattleEncounterParticipant actor,
+        IReadOnlyList<BattleEncounterParticipant> participants) =>
+        new(encounter, actor, participants, CanRecallToRoster: false);
+
+    private static void ApplyModifier(
+        RuntimeActorState actor,
+        IStatModifierPolicyService policy,
+        TurnDurationDefinition duration,
+        StatModifierLifecycleBoundary? activeBoundary = null)
+    {
+        RuntimeStatModifierStateSnapshot before = actor.ResolveStatModifierState(policy);
+        StatModifierTransitionResult result = policy.Apply(
+            new StatModifierApplicationRequest(
+                before,
+                Attack,
+                stageDelta: 1,
+                duration,
+                actor.IsDeployed,
+                activeBoundary));
+        Assert.True(result.Accepted, string.Join("; ", result.Diagnostics.Select(value => value.Message)));
+        actor.ReplaceStatModifierState(policy, result.After);
+    }
+
+    private static int RemainingStatusDuration(RuntimeActorState actor, ContentId statusId) =>
+        Assert.IsType<TurnDurationDefinition>(
+            actor.ToSnapshot().BattleStatus.Statuses.Single(status => status.Id == statusId).Duration).Value;
 
     private static BattleActionExecutor ActionExecutor(
         IStatModifierPolicyService statModifiers,

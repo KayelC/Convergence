@@ -18,8 +18,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
     private readonly ContentId _battleStartEventId;
     private readonly ContentId _ownerTurnEndEventId;
     private readonly IBattleEncounterLifecycleClockPolicy _clockPolicy;
-    private readonly Dictionary<RuntimeInstanceId, long> _ownerTurnSequences = [];
-    private readonly Dictionary<ContentId, long> _teamPhaseSequences = [];
+    private readonly Dictionary<ContentId, long> _lifecycleEventSequences = [];
 
     public BattleStatusEncounterLifecyclePort(
         IBattleStatusLifecycleService lifecycle,
@@ -91,7 +90,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
         BattleEncounterTurnLifecycleRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        long sequence = checked(_ownerTurnSequences.GetValueOrDefault(request.Actor.InstanceId) + 1);
+        long sequence = GetNextLifecycleEventSequence(_ownerTurnEndEventId);
         return Array.AsReadOnly<StatModifierLifecycleBoundary>(
             [new StatModifierLifecycleBoundary(_ownerTurnEndEventId, sequence)]);
     }
@@ -105,7 +104,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
         RuntimeActorState[] participants = request.Participants
             .Select(participant => participant.State)
             .ToArray();
-        long sequence = checked(_ownerTurnSequences.GetValueOrDefault(request.Actor.InstanceId) + 1);
+        long sequence = GetNextLifecycleEventSequence(_ownerTurnEndEventId);
         BattleTurnEndLifecycleResult result = _lifecycle.ProcessTurnEnd(
             new BattleTurnEndLifecycleRequest(
                 request.Actor.State,
@@ -116,7 +115,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
                 request.Encounter.MoonPhaseId,
                 new StatModifierLifecycleBoundary(_ownerTurnEndEventId, sequence)),
             _executionServices);
-        _ownerTurnSequences[request.Actor.InstanceId] = sequence;
+        CommitLifecycleEventSequence(_ownerTurnEndEventId, sequence);
         return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapStatusEvents(result.Events));
     }
 
@@ -140,7 +139,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
             throw new InvalidOperationException(
                 $"Lifecycle clock policy resolved team '{teamId}' as '{definition.TeamId}'.");
         }
-        long sequence = checked(_teamPhaseSequences.GetValueOrDefault(teamId) + 1);
+        long sequence = GetNextLifecycleEventSequence(definition.EventId);
         var boundary = new TeamPhaseLifecycleClockBoundary(
             definition.EventId,
             definition.TeamId,
@@ -154,7 +153,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
             _executionServices.StatModifiers);
         IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(result.Events);
         transaction.Commit();
-        _teamPhaseSequences[teamId] = sequence;
+        CommitLifecycleEventSequence(definition.EventId, sequence);
         return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(mappedEvents);
     }
 
@@ -177,15 +176,17 @@ public sealed class BattleStatusEncounterLifecyclePort :
 
         var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
         ContentId eventId = _clockPolicy.RoundEndEventId;
+        long sequence = GetNextLifecycleEventSequence(eventId);
         var boundary = new RoundLifecycleClockBoundary(eventId, roundNumber);
         BattleStatusLifecycleResult result = _lifecycle.ProcessClock(
             new BattleLifecycleClockRequest(
                 transaction.Participants.Select(participant => participant.State),
                 boundary,
-                [new StatModifierLifecycleBoundary(eventId, roundNumber)]),
+                [new StatModifierLifecycleBoundary(eventId, sequence)]),
             _executionServices.StatModifiers);
         IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(result.Events);
         transaction.Commit();
+        CommitLifecycleEventSequence(eventId, sequence);
         return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(mappedEvents);
     }
 
@@ -237,6 +238,21 @@ public sealed class BattleStatusEncounterLifecyclePort :
     private static IReadOnlyList<BattleEncounterEvent> MapStatusEvents(
         IEnumerable<BattleStatusLifecycleEvent> events) =>
         BattleStatusLifecycleEventMapper.MapAll(events, StatusMessage);
+
+    private long GetNextLifecycleEventSequence(ContentId eventId) =>
+        checked(_lifecycleEventSequences.GetValueOrDefault(eventId) + 1);
+
+    private void CommitLifecycleEventSequence(ContentId eventId, long sequence)
+    {
+        long expected = GetNextLifecycleEventSequence(eventId);
+        if (sequence != expected)
+        {
+            throw new InvalidOperationException(
+                $"Lifecycle event '{eventId}' expected sequence {expected}, but received {sequence}.");
+        }
+
+        _lifecycleEventSequences[eventId] = sequence;
+    }
 
     private static string StatusMessage(BattleStatusLifecycleEvent statusEvent) =>
         statusEvent.Kind switch
