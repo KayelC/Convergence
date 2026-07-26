@@ -1263,6 +1263,170 @@ public sealed class CatalogBattleRuntimeTests
         Assert.False(presenceChanged.IsDeployed);
     }
 
+    [Theory]
+    [InlineData(false, StatusRemovalCause.Flee, "Flee")]
+    [InlineData(true, StatusRemovalCause.RosterRecall, "RosterRecall")]
+    public void Runner_CanonicalLifecycleCleansStatusesForTypedActorExit(
+        bool canRecallToRoster,
+        StatusRemovalCause removalCause,
+        string expectedCleanupDetail)
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "canonical_exit_player",
+            "canonical_exit_player",
+            PlayerTeam,
+            capabilityIds: canRecallToRoster ? [Id("recall_to_roster")] : []);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "canonical_exit_enemy",
+            "canonical_exit_enemy",
+            EnemyTeam);
+        ContentId departureStatusId = Id("test.pack:departure_only_status");
+        player.State.AddOtherStatus(
+            departureStatusId,
+            new StatusLifetimeDefinition(
+                new PermanentDurationDefinition(),
+                new StatusRemovalProfileDefinition([removalCause])));
+        StatusLifetimeDefinition fearLifetime = new(
+            new PermanentDurationDefinition(),
+            StatusRemovalProfiles.Standard);
+        var fear = new AilmentDefinition(
+            Id("test.pack:forced_departure"),
+            "Forced Departure",
+            "Forces an encounter departure for lifecycle integration coverage.",
+            fearLifetime,
+            new ChanceSkipOrFleeAilmentTurnBehaviorDefinition(
+                SkipChance: 0,
+                FleeChance: 100,
+                CompanionFleeOutcome.RecallToRoster),
+            new AilmentModifiersDefinition(1m, 0, 1m, 1m, false),
+            new AilmentRecoveryDefinition());
+        player.State.ApplyAilment(fear, fearLifetime);
+
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy],
+                Battle,
+                NormalBattle,
+                NewMoon,
+                1));
+
+        Assert.Equal(AutomatedBattleOutcome.Victory, result.Outcome);
+        Assert.Equal(EnemyTeam, result.WinningTeamId);
+        Assert.False(player.State.IsDeployed);
+        Assert.DoesNotContain(departureStatusId, player.State.OtherStatuses);
+        BattleRuntimeEvent presence = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.EncounterPresenceChanged &&
+            battleEvent.ActorId == player.State.InstanceId);
+        BattleRuntimeEvent[] departureEvents = result.Events.Where(battleEvent =>
+                battleEvent.Kind == BattleRuntimeEventKind.StatusChanged &&
+                battleEvent.ActorId == player.State.InstanceId &&
+                battleEvent.Message == expectedCleanupDetail)
+            .ToArray();
+        Assert.Equal(2, departureEvents.Length);
+        BattleRuntimeEvent cleanup = departureEvents[^1];
+        BattleRuntimeEvent battleEnd = result.Events.Single(battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.BattleEnded);
+        Assert.True(presence.Sequence < cleanup.Sequence);
+        Assert.True(cleanup.Sequence < battleEnd.Sequence);
+    }
+
+    [Fact]
+    public void Runner_CanonicalLifecycleCleansDefeatStatusesBeforeDefeatAnnouncement()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        SkillDefinition attack = Active("test.pack:defeat_cleanup_attack", DamageElement.Physical);
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "defeat_cleanup_player",
+            "defeat_cleanup_player",
+            PlayerTeam,
+            [attack]);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "defeat_cleanup_enemy",
+            "defeat_cleanup_enemy",
+            EnemyTeam);
+        enemy.State.SetResource(Id("hp"), 1m);
+        ContentId defeatStatusId = Id("test.pack:defeat_only_status");
+        enemy.State.AddOtherStatus(
+            defeatStatusId,
+            new StatusLifetimeDefinition(
+                new PermanentDurationDefinition(),
+                new StatusRemovalProfileDefinition([StatusRemovalCause.Defeat])));
+
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy],
+                Battle,
+                NormalBattle,
+                NewMoon,
+                1));
+
+        Assert.Equal(AutomatedBattleOutcome.Victory, result.Outcome);
+        Assert.Equal(PlayerTeam, result.WinningTeamId);
+        Assert.DoesNotContain(defeatStatusId, enemy.State.OtherStatuses);
+        BattleRuntimeEvent[] defeatLifecycleEvents = result.Events.Where(battleEvent =>
+                battleEvent.Kind == BattleRuntimeEventKind.StatusChanged &&
+                battleEvent.ActorId == enemy.State.InstanceId &&
+                battleEvent.Message == "Defeat")
+            .ToArray();
+        Assert.Equal(2, defeatLifecycleEvents.Length);
+        BattleRuntimeEvent cleanup = defeatLifecycleEvents[^1];
+        BattleRuntimeEvent defeat = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.ActorDefeated &&
+            battleEvent.ActorId == enemy.State.InstanceId);
+        Assert.True(cleanup.Sequence < defeat.Sequence);
+    }
+
+    [Fact]
+    public async Task CanonicalLifecycle_DepartureCancellationPrecedesCleanupMutation()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor actor = RuntimeCatalogActor(
+            "cancelled_departure_actor",
+            "cancelled_departure_actor",
+            PlayerTeam);
+        ContentId statusId = Id("test.pack:cancelled_departure_status");
+        actor.State.AddOtherStatus(
+            statusId,
+            new StatusLifetimeDefinition(
+                new PermanentDurationDefinition(),
+                new StatusRemovalProfileDefinition([StatusRemovalCause.Flee])));
+        BattleExecutionServices services = Services(catalog);
+        var lifecycle = new BattleStatusEncounterLifecyclePort(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            services,
+            Id("battle_start"),
+            Id("owner_turn_end"),
+            TestEncounterClocks.Standard(PlayerTeam, EnemyTeam));
+        var participant = new BattleEncounterParticipant(actor.State, actor.Entity.DisplayName);
+        var encounter = new BattleEncounterRequest(
+            [participant],
+            Battle,
+            NormalBattle,
+            NewMoon,
+            1);
+        var request = new BattleEncounterDepartureLifecycleRequest(
+            encounter,
+            participant,
+            encounter.Participants,
+            BattleStatusDepartureReason.Flee);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => lifecycle.ProcessActorDepartureAsync(request, cancellation.Token).AsTask());
+
+        Assert.Contains(statusId, actor.State.OtherStatuses);
+    }
+
     [Fact]
     public void Runner_FaultsRatherThanDiscardingAForcedCommandWithoutAConfiguredPolicy()
     {
@@ -1999,7 +2163,8 @@ public sealed class CatalogBattleRuntimeTests
         ContentId teamId,
         IEnumerable<SkillDefinition>? loadout = null,
         CombatDefenseProfile? defense = null,
-        IEnumerable<SkillDefinition>? catalogSkills = null)
+        IEnumerable<SkillDefinition>? catalogSkills = null,
+        IEnumerable<ContentId>? capabilityIds = null)
     {
         SkillDefinition[] skills = loadout?.ToArray() ?? [];
         EntityDefinition entity = Entity(
@@ -2018,6 +2183,7 @@ public sealed class CatalogBattleRuntimeTests
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             new RuntimeActorAffiliationSnapshot(Id("test_host"), teamId),
             skillIds: skills.Select(skill => skill.Id),
+            capabilityIds: capabilityIds,
             passiveSkills: skills.Where(skill => skill.Activation == SkillActivation.Passive),
             skillState: new RuntimeSkillStateSnapshot(
                 skills.Select(skill => skill.Id),

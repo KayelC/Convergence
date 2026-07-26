@@ -156,6 +156,53 @@ public sealed record BattleEncounterTurnLifecycleRequest(
     IReadOnlyList<BattleEncounterParticipant> Participants,
     bool CanRecallToRoster);
 
+public sealed record BattleEncounterDepartureLifecycleRequest
+{
+    public BattleEncounterDepartureLifecycleRequest(
+        BattleEncounterRequest encounter,
+        BattleEncounterParticipant actor,
+        IEnumerable<BattleEncounterParticipant> participants,
+        BattleStatusDepartureReason reason)
+    {
+        Encounter = encounter ?? throw new ArgumentNullException(nameof(encounter));
+        Actor = actor ?? throw new ArgumentNullException(nameof(actor));
+        BattleEncounterParticipant[] participantSnapshot =
+            participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants));
+        if (participantSnapshot.Any(participant => participant is null))
+        {
+            throw new ArgumentException(
+                "Departure lifecycle participants cannot contain null entries.",
+                nameof(participants));
+        }
+        if (!participantSnapshot.Contains(actor, ReferenceEqualityComparer.Instance))
+        {
+            throw new ArgumentException(
+                "The departing actor must belong to the supplied participant graph.",
+                nameof(actor));
+        }
+        if (!encounter.Participants.SequenceEqual(
+                participantSnapshot,
+                ReferenceEqualityComparer.Instance))
+        {
+            throw new ArgumentException(
+                "Departure lifecycle participants must match the encounter participant graph.",
+                nameof(participants));
+        }
+        if (!Enum.IsDefined(reason))
+        {
+            throw new ArgumentOutOfRangeException(nameof(reason));
+        }
+
+        Participants = Array.AsReadOnly(participantSnapshot);
+        Reason = reason;
+    }
+
+    public BattleEncounterRequest Encounter { get; }
+    public BattleEncounterParticipant Actor { get; }
+    public IReadOnlyList<BattleEncounterParticipant> Participants { get; }
+    public BattleStatusDepartureReason Reason { get; }
+}
+
 public interface IBattleEncounterLifecyclePort
 {
     ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
@@ -183,6 +230,17 @@ public interface IBattleEncounterLifecyclePort
     ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
         BattleEncounterLifecycleRequest request,
         BattleEncounterOutcome outcome,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Extends an encounter lifecycle port with cleanup for actor departures whose
+/// semantic cause is known by the encounter runner.
+/// </summary>
+public interface IBattleEncounterDepartureLifecyclePort
+{
+    ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessActorDepartureAsync(
+        BattleEncounterDepartureLifecycleRequest request,
         CancellationToken cancellationToken = default);
 }
 
@@ -663,6 +721,10 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         var events = new List<BattleEncounterEvent>();
         var defeatedAnnouncements = new HashSet<RuntimeInstanceId>();
+        var processedDefeatDepartures = new HashSet<RuntimeInstanceId>(
+            request.Participants
+                .Where(participant => participant.State.IsDefeated)
+                .Select(participant => participant.InstanceId));
         int sequence = 0;
         int completedRounds = 0;
         bool battleStarted = false;
@@ -816,6 +878,87 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             }
         }
 
+        async ValueTask ProcessPendingDeparturesAsync(
+            BattleEncounterParticipant? explicitActor = null,
+            BattleStatusDepartureReason? explicitReason = null)
+        {
+            if ((explicitActor is null) != (explicitReason is null))
+            {
+                throw new InvalidOperationException(
+                    "An explicit encounter departure requires both an actor and a reason.");
+            }
+
+            var reasonsByActor = new Dictionary<RuntimeInstanceId, BattleStatusDepartureReason>();
+            if (explicitActor is not null &&
+                explicitReason is BattleStatusDepartureReason explicitDepartureReason)
+            {
+                reasonsByActor.Add(explicitActor.InstanceId, explicitDepartureReason);
+            }
+
+            foreach (BattleEncounterParticipant participant in request.Participants)
+            {
+                if (participant.State.IsDefeated &&
+                    !processedDefeatDepartures.Contains(participant.InstanceId))
+                {
+                    reasonsByActor.TryAdd(
+                        participant.InstanceId,
+                        BattleStatusDepartureReason.Defeat);
+                }
+            }
+
+            if (reasonsByActor.Count == 0)
+            {
+                return;
+            }
+
+            if (services.Lifecycle is IBattleEncounterDepartureLifecyclePort departureLifecycle)
+            {
+                var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
+                var departureEvents = new List<BattleEncounterEvent>();
+                foreach (BattleEncounterParticipant participant in transaction.Participants)
+                {
+                    if (!reasonsByActor.TryGetValue(
+                            participant.InstanceId,
+                            out BattleStatusDepartureReason participantDepartureReason))
+                    {
+                        continue;
+                    }
+
+                    IReadOnlyList<BattleEncounterEvent> returnedEvents =
+                        await InvokePortAsync(
+                                BattleEncounterFaultCode.LifecycleExecutionFailed,
+                                "actor-departure-lifecycle",
+                                async () =>
+                                {
+                                    IReadOnlyList<BattleEncounterEvent> result =
+                                        await departureLifecycle.ProcessActorDepartureAsync(
+                                                new BattleEncounterDepartureLifecycleRequest(
+                                                    transaction.CreateEncounter(request),
+                                                    participant,
+                                                    transaction.Participants,
+                                                    participantDepartureReason),
+                                                cancellationToken)
+                                            .ConfigureAwait(false);
+                                    return SnapshotLifecycleEvents(result, "actor-departure");
+                                },
+                                participant.InstanceId)
+                            .ConfigureAwait(false);
+                    departureEvents.AddRange(returnedEvents);
+                }
+
+                transaction.Commit();
+                await AddRangeAsync(departureEvents).ConfigureAwait(false);
+            }
+
+            foreach ((RuntimeInstanceId actorId, BattleStatusDepartureReason departureReason) in reasonsByActor)
+            {
+                if (departureReason == BattleStatusDepartureReason.Defeat)
+                {
+                    processedDefeatDepartures.Add(actorId);
+                }
+            }
+        }
+
         RuntimeInstanceId[] duplicateParticipantIds = request.Participants
             .GroupBy(participant => participant.InstanceId)
             .Where(group => group.Skip(1).Any())
@@ -920,6 +1063,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         }
 
         await AddRangeAsync(battleStartEvents).ConfigureAwait(false);
+        await ProcessPendingDeparturesAsync().ConfigureAwait(false);
 
         BattleEncounterCompletion initial = EvaluateCompletion(null);
         if (initial.IsComplete)
@@ -1317,6 +1461,27 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         .ConfigureAwait(false);
 
                     Synchronize();
+                    BattleStatusDepartureReason? explicitDepartureReason =
+                        !actor.State.IsDeployed
+                            ? turnStart.Outcome switch
+                            {
+                                BattleTurnStartOutcome.FleeBattle =>
+                                    BattleStatusDepartureReason.Flee,
+                                BattleTurnStartOutcome.RecallToRoster =>
+                                    BattleStatusDepartureReason.RosterRecall,
+                                _ => null
+                            }
+                            : null;
+                    if (explicitDepartureReason is BattleStatusDepartureReason departureReason)
+                    {
+                        await ProcessPendingDeparturesAsync(actor, departureReason)
+                            .ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await ProcessPendingDeparturesAsync().ConfigureAwait(false);
+                    }
+
                     await AnnounceNewDefeatsAsync(request.Participants, defeatedAnnouncements, AddAsync)
                         .ConfigureAwait(false);
 

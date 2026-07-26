@@ -10,6 +10,7 @@ namespace Convergence.Encounters;
 /// </summary>
 public sealed class BattleStatusEncounterLifecyclePort :
     IBattleEncounterLifecyclePort,
+    IBattleEncounterDepartureLifecyclePort,
     IBattleEncounterStatModifierBoundarySource
 {
     private readonly IBattleStatusLifecycleService _lifecycle;
@@ -216,6 +217,21 @@ public sealed class BattleStatusEncounterLifecyclePort :
         IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(statusEvents);
         transaction.Commit();
         return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(mappedEvents);
+    }
+
+    public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessActorDepartureAsync(
+        BattleEncounterDepartureLifecycleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+        BattleStatusLifecycleResult result = _lifecycle.Cleanup(
+            new BattleStatusCleanupRequest(
+                request.Actor.State,
+                request.Reason),
+            _executionServices.StatModifiers);
+        return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
+            MapStatusEvents(result.Events));
     }
 
     private static IReadOnlyList<BattleEncounterEvent> MapStatusEvents(

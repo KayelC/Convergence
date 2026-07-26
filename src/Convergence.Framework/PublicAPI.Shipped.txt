@@ -11118,3 +11118,19 @@ static Convergence.Execution.RefreshExistingAilmentTransitionPolicy.Instance.get
 static Convergence.Execution.RejectExistingAilmentTransitionPolicy.Instance.get -> Convergence.Execution.RejectExistingAilmentTransitionPolicy!
 static Convergence.Execution.ReplaceExclusiveAilmentTransitionPolicy.Instance.get -> Convergence.Execution.ReplaceExclusiveAilmentTransitionPolicy!
 static Convergence.Execution.StandardBattleAilmentTransitionPolicy.Instance.get -> Convergence.Execution.StandardBattleAilmentTransitionPolicy!
+Convergence.Encounters.BattleEncounterDepartureLifecycleRequest
+Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.<Clone>$() -> Convergence.Encounters.BattleEncounterDepartureLifecycleRequest!
+Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.Actor.get -> Convergence.Encounters.BattleEncounterParticipant!
+Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.BattleEncounterDepartureLifecycleRequest(Convergence.Encounters.BattleEncounterRequest! encounter, Convergence.Encounters.BattleEncounterParticipant! actor, System.Collections.Generic.IEnumerable<Convergence.Encounters.BattleEncounterParticipant!>! participants, Convergence.Execution.BattleStatusDepartureReason reason) -> void
+Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.Encounter.get -> Convergence.Encounters.BattleEncounterRequest!
+Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.Equals(Convergence.Encounters.BattleEncounterDepartureLifecycleRequest? other) -> bool
+Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterParticipant!>!
+Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.Reason.get -> Convergence.Execution.BattleStatusDepartureReason
+Convergence.Encounters.BattleStatusEncounterLifecyclePort.ProcessActorDepartureAsync(Convergence.Encounters.BattleEncounterDepartureLifecycleRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterEvent!>!>
+Convergence.Encounters.IBattleEncounterDepartureLifecyclePort
+Convergence.Encounters.IBattleEncounterDepartureLifecyclePort.ProcessActorDepartureAsync(Convergence.Encounters.BattleEncounterDepartureLifecycleRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterEvent!>!>
+override Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.Equals(object? obj) -> bool
+override Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.GetHashCode() -> int
+override Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.ToString() -> string!
+static Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.operator !=(Convergence.Encounters.BattleEncounterDepartureLifecycleRequest? left, Convergence.Encounters.BattleEncounterDepartureLifecycleRequest? right) -> bool
+static Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.operator ==(Convergence.Encounters.BattleEncounterDepartureLifecycleRequest? left, Convergence.Encounters.BattleEncounterDepartureLifecycleRequest? right) -> bool
