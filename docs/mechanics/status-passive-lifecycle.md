@@ -227,7 +227,10 @@ This does not change trigger targeting: `includeReserveActors` still decides
 whether reserve actors may be **targets**.
 
 Execution order is passive loadout, trigger index, resolved target order, then
-effect order. Duplicate target IDs are removed.
+effect order. Duplicate target IDs are removed. Each matching trigger's eligible
+target set is fixed when dispatch begins, before any passive effect runs. An
+effect that defeats or revives an actor does not retroactively remove or add
+that actor to the activation that is already being resolved.
 
 Re-entry is blocked by default. If a game permits a trigger to re-enter itself,
 it must also configure a positive finite per-battle limit. Limits may count:
@@ -237,13 +240,19 @@ it must also configure a positive finite per-battle limit. Limits may count:
 
 A condition that is not met does not consume an activation. Results distinguish
 executed, condition-not-met, recursion-suppressed, and limit-reached outcomes.
+The supplied defeat-prevention event allows one activation per battle only when
+the game has not registered its own policy. An explicit host policy remains
+authoritative and may choose another finite limit.
 
-Saved activation counts remain meaningful only while their passive and
-authored trigger still exist. Loading rejects a count whose trigger index is
-missing or whose event differs from that trigger's authored event. A game that
-counts per target also preserves the referenced actor; the selected event
-policy still decides whether a particular event counts per dispatch or per
-target.
+Persistence records one enabled or disabled state for every equipped passive.
+Loading rejects a missing state instead of silently enabling the passive.
+Saved activation counts remain meaningful only while their passive and authored
+trigger still exist. Loading rejects a count whose trigger index is missing or
+whose event differs from that trigger's authored event. A game that counts per
+target also preserves the referenced actor; the selected event policy still
+decides whether a particular event counts per dispatch or per target. Loading
+also rejects two active ailments from the same exclusivity group because live
+application could not produce that state.
 
 ## Atomicity
 
@@ -254,7 +263,9 @@ actor mutation.
 
 A replacement passive dispatcher may evaluate conditions differently, but its
 evidence must still identify an enabled passive, one of that passive's authored
-triggers for the requested event, and an eligible participant target.
+triggers for the requested event, and a participant target that was eligible
+when dispatch began. Eligibility is not recomputed from actor state after
+effects run.
 Non-executed outcomes cannot claim committed effects. Incoherent evidence is
 rejected before the staged actor graph commits.
 

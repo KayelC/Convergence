@@ -24,8 +24,9 @@ all three documentation audiences. O4-R26 completed the independent review but
 rejected closure after finding four additional passive and restore correctness
 paths. The
 [R26 correction audit](../reviews/status-passive-lifecycle-order-4-r26-correction-audit-2026-07-26.md)
-governs O4-R27 through O4-R32; the capability stays partial until O4-R32
-passes.
+governs O4-R27 through O4-R32. O4-R27 through O4-R30 corrected all four
+runtime paths, and O4-R31 reconciled active guidance; the capability stays
+partial until the independent O4-R32 review passes.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -139,10 +140,11 @@ integration defects before returning the capability and all three audience
 documents to complete/reviewed. O3-R12 independently confirmed that closure
 from current code. O3-R15 later found the custom explicit-termination gap;
 O3-R16 and O3-R17 corrected and independently reconciled it. Order 4, status
-and passive lifecycle, has completed O4-R22 through O4-R25. O4-R26's fresh
-review found four additional passive and restore correctness paths, so O4-R27
-through O4-R32 are now its remaining correction and closure gates. Order 5,
-`battle_knowledge`, follows only after that gate.
+and passive lifecycle, has completed O4-R22 through O4-R31. O4-R26's fresh
+review found four additional passive and restore correctness paths; O4-R27
+through O4-R30 corrected them and O4-R31 reconciled their guidance. O4-R32 is
+the remaining independent closure gate. Order 5, `battle_knowledge`, follows
+only after that gate.
 
 ## Priority 2: Persistence Evolution
 

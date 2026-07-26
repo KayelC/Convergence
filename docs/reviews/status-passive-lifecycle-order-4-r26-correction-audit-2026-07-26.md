@@ -236,6 +236,17 @@ The fresh trace also confirmed:
 | O4-R31 | Reconcile mechanics, developer, technical, roadmap, API, and matrix guidance. | Documentation tests and active link validation. |
 | O4-R32 | Re-read corrected source and documentation independently and run the complete release gate. | New closure report with no unresolved reachable Order 4 defect. |
 
+## Implementation Progress
+
+| Checkpoint | State | Evidence |
+|---|---|---|
+| O4-R27 | Complete | Commit `6845e367` freezes trigger eligibility before passive dispatch mutation and covers valid defeat plus fabricated post-mutation eligibility. |
+| O4-R28 | Complete | Commit `4c32a8ff` requires one enabled/disabled state for every equipped passive across aggregate validation, direct restore, fusion, and Compendium recall. |
+| O4-R29 | Complete | Commit `9c3e4af6` rejects restored active ailments that share one exclusivity group while retaining independent ailments. |
+| O4-R30 | Complete | Commit `a5699379` preserves explicit host defeat-prevention policies while retaining the supplied one-use default when absent. |
+| O4-R31 | Complete | Mechanics, developer, technical, architecture, API, roadmap, and executable-matrix guidance now describe the corrected contracts while retaining pending-review status. |
+| O4-R32 | Pending | Requires a fresh source/documentation trace and complete release gate. |
+
 ## Closure Decision
 
 Order 4 remains `partial`. Its three documentation audience entries remain

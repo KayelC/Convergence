@@ -30,8 +30,11 @@ through O4-R25 recorded and corrected those paths and reconciled all three
 audiences. O4-R26 completed the independent review but rejected closure after
 finding four additional passive and restore correctness paths. The
 [R26 correction audit](../reviews/status-passive-lifecycle-order-4-r26-correction-audit-2026-07-26.md)
-governs O4-R27 through O4-R32, so the capability is not promoted prematurely.
-Demo coverage remains `focused`.
+governs O4-R27 through O4-R32. O4-R27 through O4-R30 corrected frozen passive
+eligibility, exact passive-state restore coverage, ailment exclusivity restore,
+and explicit defeat-prevention policy composition. O4-R31 reconciled active
+guidance. O4-R32 remains the independent closure gate, so the capability is not
+promoted prematurely. Demo coverage remains `focused`.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

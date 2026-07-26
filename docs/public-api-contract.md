@@ -85,6 +85,13 @@ extension; the runner invokes it for committed flee, roster recall, and newly
 observed defeat without forcing lifecycle implementations that do not own
 status cleanup to fabricate behavior.
 
+`RuntimeSaveValidationCode` appends `MissingPassiveSkillState` and
+`ConflictingActorAilmentExclusivityGroup`. These guarded `0.1.0` diagnostics
+reject incomplete passive enabled-state coverage and mutually exclusive active
+ailments before aggregate restore. They do not change save contract v13's wire
+shape; they close validation paths for state that the existing contract already
+expresses.
+
 `EffectExecutionResult` retains its public record shape for custom effect
 composition, but its scalar and collection `init` assignments now enforce the
 same legal boundary during construction and record cloning. Undefined effect

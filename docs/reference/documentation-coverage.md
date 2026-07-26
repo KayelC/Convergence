@@ -53,8 +53,10 @@ corrected both paths and reconciled the three audience documents. O4-R26
 completed its independent review but rejected closure after finding four
 additional passive and restore correctness paths. The
 [R26 correction audit](../reviews/status-passive-lifecycle-order-4-r26-correction-audit-2026-07-26.md)
-governs O4-R27 through O4-R32. The entries remain `existing_unreviewed` until
-O4-R32 passes.
+governs O4-R27 through O4-R32. O4-R27 through O4-R30 corrected those four
+paths, and O4-R31 reconciled the mechanics, developer, and technical guidance
+with the implementation. The entries remain `existing_unreviewed` until the
+independent O4-R32 source and release-gate review passes.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 

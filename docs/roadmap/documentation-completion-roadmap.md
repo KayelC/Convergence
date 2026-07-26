@@ -329,9 +329,11 @@ the independent review but rejected closure after finding pre-mutation passive
 eligibility, exact passive restore coverage, ailment exclusivity restoration,
 and explicit defeat-prevention policy composition gaps. The
 [R26 correction audit](../reviews/status-passive-lifecycle-order-4-r26-correction-audit-2026-07-26.md)
-governs O4-R27 through O4-R32. Until O4-R32 passes, the executable
-documentation matrix continues to record 21 reviewed, 31
-`existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 5
+governs O4-R27 through O4-R32. O4-R27 through O4-R30 corrected the four
+runtime paths, and O4-R31 reconciled the mechanics, developer, technical,
+architecture, API, roadmap, and executable-matrix guidance. Until O4-R32
+passes, the executable documentation matrix continues to record 21 reviewed,
+31 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 5
 remains paused.
 
 ## Deferred Documentation

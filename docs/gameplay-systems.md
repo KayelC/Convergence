@@ -71,7 +71,11 @@ supplied lifecycle port dispatches flee, roster-recall, and newly observed
 defeat cleanup before completion.
 Expiration and permitted removal causes are separate. Custom-handler execution
 is transactional. Passive targeting and activation counting are explicit, and
-committed lifecycle changes reach hosts as typed events. See
+target eligibility is frozen before passive effects can change the staged actor
+graph. Supplied passive event policies never replace an explicit host
+registration. Committed lifecycle changes reach hosts as typed events. Save
+restore requires one enabled/disabled state per equipped passive and rejects
+active ailments that conflict within one exclusivity group. See
 [Status And Passive Lifecycle](mechanics/status-passive-lifecycle.md) and its
 [integration guide](developer-guide/status-passive-lifecycle.md).
 

@@ -262,13 +262,18 @@ object to have a unique runtime ID. Two different objects claiming one ID are
 rejected before target policies run. `PassiveTriggerTargetResolver` then
 evaluates the typed scope over that validated graph, filters by life state and
 reserve inclusion, and normalizes repeated references while preserving
-encounter order.
+encounter order. The validating dispatch contract captures those eligible
+runtime IDs for every enabled trigger matching the requested event before the
+inner dispatcher runs. Validation therefore uses one immutable eligibility
+view even when an effect changes target life state.
 
 `PassiveEventPolicy.OwnerEligibility` is evaluated before target resolution.
 Generic unregistered events use `AllParticipants`.
 `BattleStatusEncounterLifecyclePort` registers `DeployedOnly` for battle start
 when no host policy exists; a prior explicit `AllParticipants` registration is
-preserved. Owner eligibility and target reserve inclusion are independent
+preserved. `BattleExecutionServices` uses the same register-if-absent rule for
+the supplied one-use defeat-prevention event, so an explicit host policy is not
+replaced. Owner eligibility and target reserve inclusion are independent
 decisions.
 
 ### Dispatch order
@@ -301,12 +306,12 @@ condition-not-met target does not record an activation.
 
 `BattleExecutionServices` wraps its supplied or replacement dispatcher in one
 canonical validating transaction over owner, participants, and event targets.
-Before commit, the wrapper captures enabled passive definitions and requires
-each returned activation to match the requested event, an authored trigger
-index, and a target selected by that trigger over the participant graph. It
-rejects duplicate activation evidence, out-of-range or mismatched authored
-effect evidence, foreign actor IDs, and effects attached to a non-executed
-outcome.
+Before dispatch, the wrapper captures enabled passive definitions and each
+matching trigger's eligible runtime IDs. Before commit, it requires each
+returned activation to match the requested event, an authored trigger index,
+and that pre-mutation target set. It rejects duplicate activation evidence,
+out-of-range or mismatched authored effect evidence, foreign actor IDs, and
+effects attached to a non-executed outcome.
 
 The standard `PassiveTriggerDispatcher` retains its own transaction so it is
 also safe when used directly. Effects run against staged actors. Activation
@@ -373,6 +378,12 @@ Runtime save contract v13 serializes the status lifetime rather than only the
 remaining number. This preserves expiration kind, event or phase identity,
 reserve behavior, and allowed removal causes.
 
+Passive state snapshots contain exactly one enabled or disabled entry for every
+equipped passive. Aggregate validation reports
+`MissingPassiveSkillState` when coverage is incomplete; direct actor restore
+rejects the same input rather than applying the passive collection's enabled
+constructor default.
+
 Passive activation snapshots preserve:
 
 `skill + trigger index + event + optional target + count`
@@ -384,6 +395,12 @@ passive to its `SkillDefinition`, rejects a trigger index outside
 that exact index. A passive without authored triggers cannot own a persisted
 activation counter. Duplicate keys and invalid counts are rejected before
 aggregate restoration.
+
+Active ailment restore state is checked against resolved
+`AilmentDefinition.ExclusivityGroupId` values. Two distinct active ailments in
+one valid group are rejected as
+`ConflictingActorAilmentExclusivityGroup`; independent ailments remain valid.
+This keeps restoration inside the same state space as live ailment application.
 
 `BattlePassiveCollection.RestoreActivations` repeats the definition check into
 temporary activation state before replacing current counts. A malformed later

@@ -267,6 +267,29 @@ public sealed class DocumentationFoundationTests
     }
 
     [Fact]
+    public void StatusLifecycleDocumentation_PreservesDispatchAndRestoreAuthority()
+    {
+        string mechanics = File.ReadAllText(
+            RepositoryPath("docs", "mechanics", "status-passive-lifecycle.md"))
+            .ReplaceLineEndings(" ");
+        string developer = File.ReadAllText(
+            RepositoryPath("docs", "developer-guide", "status-passive-lifecycle.md"))
+            .ReplaceLineEndings(" ");
+        string technical = File.ReadAllText(
+            RepositoryPath("docs", "technical", "status-passive-lifecycle.md"))
+            .ReplaceLineEndings(" ");
+
+        Assert.Contains("target set is fixed when dispatch begins", mechanics, StringComparison.Ordinal);
+        Assert.Contains("does not retroactively remove or add", mechanics, StringComparison.Ordinal);
+        Assert.Contains("only when that event is absent", developer, StringComparison.Ordinal);
+        Assert.Contains("MissingPassiveSkillState", developer, StringComparison.Ordinal);
+        Assert.Contains("ConflictingActorAilmentExclusivityGroup", developer, StringComparison.Ordinal);
+        Assert.Contains("eligible runtime IDs", technical, StringComparison.Ordinal);
+        Assert.Contains("before the inner dispatcher runs", technical, StringComparison.Ordinal);
+        Assert.Contains("same register-if-absent rule", technical, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AudienceEvidenceAndRoadmapDirectories_AreIndexedAndDeclutterTheDocsRoot()
     {
         string docsRoot = RepositoryPath("docs");

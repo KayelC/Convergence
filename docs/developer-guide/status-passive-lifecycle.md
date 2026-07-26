@@ -159,8 +159,11 @@ receive that fallback.
 Unregistered events use the non-reentrant, unlimited, per-dispatch,
 `AllParticipants` default. `BattleStatusEncounterLifecyclePort` installs a
 `DeployedOnly` policy for its battle-start event only when the host has not
-already registered that event. Register `AllParticipants` before constructing
-the port when reserve-owned battle-start passives are intended:
+already registered that event. `BattleExecutionServices` likewise installs the
+supplied one-use `owner_would_be_defeated` policy only when that event is
+absent. Register an explicit policy before composition when a game requires a
+different finite defeat-prevention limit. Register `AllParticipants` before
+constructing the port when reserve-owned battle-start passives are intended:
 
 ```csharp
 var passivePolicies = new PassiveEventPolicyRegistry()
@@ -295,9 +298,11 @@ message.
 Custom ailment turn handlers, custom effect handlers, and replacement passive
 dispatchers execute against staged framework actors. A passive dispatcher may
 choose its evaluation algorithm, but returned activations are checked against
-the request's enabled skills, authored trigger indexes and event, eligible
-participant targets, and effect/outcome shape. Returning malformed data or
-throwing prevents staged actor state from committing.
+the request's enabled skills, authored trigger indexes and event, participant
+targets that were eligible before dispatch, and effect/outcome shape. The
+validating wrapper freezes each matching trigger's eligible runtime IDs before
+the dispatcher can mutate health or other targeting state. Returning malformed
+data or throwing prevents staged actor state from committing.
 
 The framework cannot roll back a file write, network call, scene deletion, or
 other external host side effect. Custom handlers should therefore return a
@@ -310,7 +315,7 @@ Save contract v13 preserves:
 
 - active ailments and other timed state with expiration and removal profile;
 - stat-modifier and charge-policy state;
-- enabled passive IDs;
+- exactly one enabled or disabled state for every equipped passive;
 - per-battle activation counts; and
 - optional per-target activation IDs.
 
@@ -319,8 +324,11 @@ activation keys, and per-target activation IDs that do not reference a saved
 actor. Each activation must also reference an equipped passive, an existing
 trigger index on that passive, and the exact event authored at that index.
 Failures use `PassiveActivationTriggerIndexInvalid` or
-`PassiveActivationEventMismatch`. Direct actor restore enforces the same
-definition coherence before constructing live state.
+`PassiveActivationEventMismatch`. Missing equipped-passive state uses
+`MissingPassiveSkillState`. Two active ailments sharing one exclusivity group
+use `ConflictingActorAilmentExclusivityGroup`. Direct actor restore enforces
+the same definition coherence and exclusivity rules before constructing live
+state.
 
 The event-policy registry remains host-supplied. Restore validation therefore
 does not infer whether an otherwise valid counter should contain a target ID;
