@@ -124,6 +124,28 @@ rejected so a larger action economy cannot age reserve state faster.
 override. A value of `true` suspends that status even when the aggregate reserve
 policy permits the actor to advance.
 
+### Combat-profile modifiers
+
+`AilmentModifiersDefinition` is authored data, not presentation metadata. The
+standard combat ruleset reads every active ailment and composes:
+
+- `DamageDealtMultiplier` from a neutral value of `1`;
+- `DamageTakenMultiplier` from the selected stat-stage policy's defense result;
+- `EvasionMultiplier` from the selected stat-stage policy's evasion result;
+- `CriticalChanceTakenBonus` from a neutral value of `0`; and
+- `IsRigidBody` from a neutral value of `false`.
+
+The three decimal values multiply per active ailment, critical bonuses add, and
+rigid body uses logical OR. Arithmetic saturates at the supported numeric limit.
+Physical and magical attack-stage multipliers stay in their distinct profile
+channels; damage execution combines the relevant channel with the generic
+damage-dealt multiplier later.
+
+Do not reproduce this calculation in Godot or another host. Retain the typed
+ailment state on `RuntimeActorState`, execute through `ProductionCombatRuleset`,
+and use the resulting profile/effect evidence for presentation. Display names
+and descriptions may be changed without changing behavior.
+
 ## Authoring A Passive Trigger
 
 Schema-v8 content must declare targeting explicitly:

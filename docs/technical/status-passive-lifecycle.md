@@ -85,6 +85,31 @@ For exclusivity replacement, each removed ailment must allow
 `ExclusivityReplacement`. Otherwise the transition rejects with
 `ReplacementProtected`.
 
+## Combat-Profile Composition
+
+`ProductionCombatRuleset.CreateCombatantProfile` projects live status into the
+combat resolver without mutating the actor:
+
+1. resolve physical attack, magical attack, defense, hit, and evasion through
+   the injected `IStatStageScalingPolicy`;
+2. initialize generic damage dealt to `1`, critical vulnerability to `0`, and
+   rigid body to `false`;
+3. for each active ailment, saturating-multiply generic damage dealt, damage
+   taken, and evasion by the authored ailment values;
+4. saturating-add the authored critical-chance-taken bonus; and
+5. OR the authored rigid-body flag into the projected status.
+
+Consequently, stage-derived damage taken and evasion are the starting values
+for ailment composition. Physical and magical stage-derived damage-dealt
+multipliers remain separate from the generic ailment damage-dealt multiplier;
+the damage resolver multiplies the applicable attack channel later. Ailment
+enumeration order cannot change ordinary results because multiplication,
+addition, and logical OR are commutative; saturation makes extreme inputs
+bounded rather than overflowing.
+
+The projection consumes only typed definitions and live runtime state. It does
+not inspect display text, and the host does not participate in the arithmetic.
+
 ## Turn-Start Resolution
 
 `ProcessTurnStart` creates a one-actor transaction and follows this order:

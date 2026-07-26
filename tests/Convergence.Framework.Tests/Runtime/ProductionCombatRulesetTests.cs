@@ -774,6 +774,44 @@ public sealed class ProductionCombatRulesetTests
         Assert.Equal(int.MaxValue, profile.Modifiers.CriticalChanceTakenBonus);
     }
 
+    [Fact]
+    public void RuntimeCombatProfileComposesStageChannelsAndAuthoredAilmentModifiers()
+    {
+        RuntimeActorState actor = RuntimeActor("composed_actor");
+        TestStatModifierPolicy.ApplyPersistent(actor, StandardProgressionIds.PhysicalAttack, 1);
+        TestStatModifierPolicy.ApplyPersistent(actor, StandardProgressionIds.Defense, 1);
+        TestStatModifierPolicy.ApplyPersistent(actor, StandardProgressionIds.AgilityTrack, 1);
+        actor.ApplyAilment(
+            CombatModifierAilment(
+                "first_modifier",
+                evasion: 0.8m,
+                criticalChanceTakenBonus: 10,
+                damageTaken: 1.2m,
+                damageDealt: 1.5m,
+                isRigidBody: false),
+            EncounterLifetime(new BattleDurationDefinition()));
+        actor.ApplyAilment(
+            CombatModifierAilment(
+                "second_modifier",
+                evasion: 0.5m,
+                criticalChanceTakenBonus: 7,
+                damageTaken: 0.5m,
+                damageDealt: 2m,
+                isRigidBody: true),
+            EncounterLifetime(new BattleDurationDefinition()));
+
+        ProductionCombatantProfile profile = Rules().CreateCombatantProfile(actor);
+
+        Assert.Equal(3m, profile.Modifiers.DamageDealtMultiplier);
+        Assert.Equal(0.525m, profile.Modifiers.DamageTakenMultiplier);
+        Assert.Equal(1.25m, profile.Modifiers.HitMultiplier);
+        Assert.Equal(0.5m, profile.Modifiers.EvasionMultiplier);
+        Assert.Equal(17, profile.Modifiers.CriticalChanceTakenBonus);
+        Assert.Equal(1.25m, profile.Modifiers.PhysicalDamageDealtMultiplier);
+        Assert.Equal(1m, profile.Modifiers.MagicalDamageDealtMultiplier);
+        Assert.True(profile.Status.IsRigidBody);
+    }
+
     private static ProductionCombatRuleset Rules(params decimal[] units) =>
         new(new SequenceRandomSource(units));
 
@@ -827,6 +865,27 @@ public sealed class ProductionCombatRulesetTests
                 decimal.MaxValue,
                 decimal.MaxValue,
                 false),
+            new AilmentRecoveryDefinition());
+
+    private static AilmentDefinition CombatModifierAilment(
+        string id,
+        decimal evasion,
+        int criticalChanceTakenBonus,
+        decimal damageTaken,
+        decimal damageDealt,
+        bool isRigidBody) =>
+        new(
+            ContentId.Parse(id),
+            id,
+            "Exercises ordinary combat-profile composition.",
+            EncounterLifetime(new BattleDurationDefinition()),
+            new NormalAilmentTurnBehaviorDefinition(),
+            new AilmentModifiersDefinition(
+                evasion,
+                criticalChanceTakenBonus,
+                damageTaken,
+                damageDealt,
+                isRigidBody),
             new AilmentRecoveryDefinition());
 
     private sealed class SequenceRandomSource : IRandomSource

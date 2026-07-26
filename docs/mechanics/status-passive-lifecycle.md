@@ -56,6 +56,32 @@ refresh the same ailment while rejecting a different exclusive ailment.
 An exclusivity group can model "only one major ailment" without preventing
 unrelated status groups from coexisting.
 
+## Ailment Combat Modifiers
+
+An active ailment may change combat without adding a turn restriction. Its
+typed modifier record can:
+
+- multiply all damage dealt;
+- multiply damage taken;
+- multiply evasion;
+- add a flat critical-chance vulnerability; and
+- mark the actor as rigid-bodied for rules that care about that state.
+
+When several ailments coexist, their three multipliers stack by multiplication,
+critical vulnerability stacks by addition, and rigid body is active when any
+ailment supplies it. For example, damage-dealt multipliers of `1.5` and `2.0`
+produce `3.0`; they do not add to `3.5`.
+
+Combat stat stages are resolved before these generic ailment modifiers. Attack
+stages retain separate physical and magical channels. Defense and evasion stage
+multipliers become the starting values that ailment multipliers then modify.
+Saturating arithmetic prevents an authored stack from wrapping around at the
+numeric limit.
+
+Names and descriptions do not create these effects. A content author must set
+each modifier explicitly, and a host should display the resulting typed state
+rather than recalculate it.
+
 ## Turn-Start Restrictions
 
 At the start of an actor's turn, Guard clears before ailment restrictions are
