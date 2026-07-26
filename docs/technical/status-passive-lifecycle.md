@@ -204,7 +204,31 @@ are never treated as phase IDs. Reserve advancement accepts only TeamPhase or
 Round policies and, for TeamPhase, only the reserve actor's owning team.
 
 Boundary sequence values support idempotent stat-modifier lifecycle handling.
-They do not make field time advance automatically.
+The canonical encounter port maintains one committed sequence per lifecycle
+event ID across actor turns, team phases, and rounds. Mutation selection stays
+boundary-specific: an actor-turn event still advances only its actor, while
+phase and round processing use their participant policies. A numeric jump
+between two observations decrements a selected modifier once, not once per
+missing number.
+
+```mermaid
+flowchart TD
+    A["Authored event ID"] --> B["One battle-wide committed sequence"]
+    B --> C["Owner-turn occurrence"]
+    B --> D["Team-phase occurrence"]
+    B --> E["Round occurrence"]
+    C --> F["Tick only acting actor"]
+    D --> G["Tick phase-selected participants"]
+    E --> H["Tick round-selected participants"]
+    F --> I["Each selected modifier advances at most once"]
+    G --> I
+    H --> I
+```
+
+Sharing an event ID deliberately shares this identity stream. Independent
+clocks require independent event IDs. A cancelled or rejected transition does
+not commit the pending sequence. Sequence values do not make field time advance
+automatically.
 
 ## Cleanup Transaction
 

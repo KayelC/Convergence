@@ -179,12 +179,12 @@ the public integration contract ambiguous.
 
 ## Correction Roadmap
 
-| Checkpoint | Scope | Required evidence |
-|---|---|---|
-| O4-R37 | Record this independent audit and reopen the executable maturity records | Review document, matrix consistency, and clean baseline |
-| O4-R38 | Replace actor-local and team-local stat-modifier clock identities with one coherent monotonic sequence authority per lifecycle event | Cross-target ally/enemy modifiers, uneven actor-turn counts, same-boundary self application, shared team event, and cancellation regressions |
-| O4-R39 | Reconcile mechanics, developer, and technical guidance | Exact source/target duration examples, sequence ownership, custom scheduler requirements, diagrams, and coverage-matrix review |
-| O4-R40 | Fresh closure review | New source trace, full release gate, documentation links, and matrix promotion only if no reachable defect remains |
+| Checkpoint | Status | Scope | Required evidence |
+|---|---|---|---|
+| O4-R37 | Complete | Record this independent audit and reopen the executable maturity records | Review document, matrix consistency, and clean baseline |
+| O4-R38 | Complete | Replace actor-local and team-local stat-modifier clock identities with one coherent monotonic sequence authority per lifecycle event | Cross-target ally/enemy modifiers, uneven actor-turn counts, same-boundary self application, shared team event, shared phase/round event, and cancellation regressions |
+| O4-R39 | Complete | Reconcile mechanics, developer, and technical guidance | Exact source/target duration examples, sequence ownership, custom scheduler requirements, diagrams, and coverage-matrix review |
+| O4-R40 | Pending | Fresh closure review | New source trace, full release gate, documentation links, and matrix promotion only if no reachable defect remains |
 
 Until O4-R40 passes, `status_and_passive_lifecycle` is `partial`, its three
 documentation entries are `existing_unreviewed`, and Order 5 does not become

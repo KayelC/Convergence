@@ -128,21 +128,34 @@ BattleTurnEndLifecycleResult result = lifecycle.ProcessTurnEnd(
     executionServices);
 ```
 
-The supplied `BattleStatusEncounterLifecyclePort` creates owner-turn sequences
-for the canonical encounter runner and implements
+The supplied `BattleStatusEncounterLifecyclePort` creates one monotonic
+stat-modifier sequence per authored lifecycle event ID for the canonical
+encounter runner and implements
 `IBattleEncounterStatModifierBoundarySource`. Before each command, the runner
 snapshots that source into
 `BattleEncounterTurnRequest.ActiveStatModifierBoundaries`. A turn handler must
 pass those values into the action's `EffectExecutionEnvironment`; the supplied
 automated runner and DemoHost do this already. Direct action-end and phase-end
 lifecycle APIs accept their own boundaries. If a custom scheduler uses another
-clock, it must generate one monotonic sequence per clock scope, expose the
-currently active values to action execution, and must not derive sequences from
-frames, animations, or button presses.
+clock, it must generate one monotonic sequence per event ID across every actor,
+team, phase, and round occurrence that uses that ID. Per-actor or per-team
+counters are valid only when those scopes use distinct event IDs. The scheduler
+must expose the pending value to action execution, deliver that same value when
+the application boundary closes, and commit the value only after successful
+lifecycle processing. Cancelled or rejected processing retains the prior
+committed value. Sequences must not be derived from frames, animations, or
+button presses.
 
 A boundary used during application should also be present in
 `EffectExecutionEnvironment.ActiveStatModifierBoundaries`. The policy stamps
-new state with that boundary, preventing same-boundary decrement.
+new state with that boundary, preventing same-boundary decrement. A later
+boundary decrements once even if its numeric sequence is more than one greater;
+the number is occurrence identity, not elapsed-time arithmetic.
+
+For cross-target effects, stamp every target with the command's pending event
+boundary. Turn-end processing still selects only the actor whose turn ended.
+The next matching turn for another target therefore receives a later sequence
+and decrements exactly once instead of comparing unrelated actor-local clocks.
 
 ## Present Results In Godot
 

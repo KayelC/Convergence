@@ -43,8 +43,9 @@ then re-read the corrected source and all three audiences and closed Order 4
 without an unresolved realistic reachable defect at that revision. The
 [third independent audit](../reviews/status-passive-lifecycle-order-4-third-independent-audit-2026-07-26.md)
 subsequently reproduced canonical cross-target timed-modifier failure and
-shared phase-event clock divergence. O4-R37 records the reopened state;
-O4-R38 through O4-R40 now take priority over Order 5.
+shared phase-event clock divergence. O4-R38 corrected the runtime with one
+sequence authority per lifecycle event ID, and O4-R39 reconciled all three
+documentation audiences. O4-R40 fresh closure now takes priority over Order 5.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -164,8 +165,8 @@ through O4-R30 corrected them, O4-R31 reconciled their guidance, and O4-R32
 independently closed that corrected revision. The second independent audit
 reopened and O4-R33 through O4-R36 corrected that revision. The third
 independent audit has now reopened Order 4 under O4-R37 through O4-R40 for
-lifecycle sequence authority. Order 5 (`battle_knowledge`) remains queued
-until that correction and fresh closure complete.
+lifecycle sequence authority. O4-R38 and O4-R39 are complete; Order 5
+(`battle_knowledge`) remains queued until O4-R40 fresh closure completes.
 
 ## Priority 2: Persistence Evolution
 

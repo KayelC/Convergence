@@ -163,18 +163,35 @@ encounter lifecycle follows these confirmed rules:
 - Cancelling command selection before commitment does not.
 - A bonus action that continues the current turn window does not advance the
   owner-turn clock a second time.
+- Every authored lifecycle event has one battle-wide sequence stream. The
+  sequence does not restart for each actor or team.
 
 A newly applied modifier is anchored to the current matching boundary and does
 not immediately lose one count when that same boundary closes:
 
 ```text
-owner turn 12: apply duration 3
+event sequence 12: actor applies duration 3 to itself
 The same turn completes -> modifier remains at 3
-owner turn 13 ends: becomes 2
+That actor's next matching turn completes at a later sequence -> becomes 2
 ```
 
-Repeated delivery of boundary 13 is idempotent. Delivery of an older boundary
+Cross-target application uses the same rule:
+
+```text
+sequence 20: source applies duration 3 to another actor
+source turn closes at sequence 20 -> target is not the actor being ticked, so it remains 3
+an unrelated actor closes at sequence 21 -> target still remains 3
+target closes its next matching turn at sequence 22 -> target becomes 2
+```
+
+The jump from `20` to `22` is identity evidence, not two elapsed duration
+units. One matching lifecycle call decrements the selected target once.
+Repeated delivery of sequence `22` is idempotent. Delivery of an older boundary
 is rejected rather than silently shortening state.
+
+If two teams deliberately map their phase completion to the same event ID,
+those phase completions are consecutive occurrences in that one event stream.
+Games that want independent clocks should author distinct event IDs.
 
 If reserve suspension is enabled, a matching boundary records that it was
 observed but does not decrement the duration. This prevents deployment from

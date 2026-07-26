@@ -60,5 +60,6 @@ corrected those findings, and the
 closed that source revision. The
 [third independent audit](../reviews/status-passive-lifecycle-order-4-third-independent-audit-2026-07-26.md)
 then reproduced cross-target owner-turn sequence failure and shared phase-event
-clock divergence. O4-R37 through O4-R40 now govern the reopened correction;
-Order 5, `battle_knowledge`, remains queued.
+clock divergence. O4-R38 corrected the runtime with one sequence stream per
+lifecycle event ID, and O4-R39 reconciled the three documentation audiences.
+O4-R40 fresh closure remains active; Order 5, `battle_knowledge`, stays queued.

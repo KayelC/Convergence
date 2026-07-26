@@ -255,6 +255,20 @@ A `BattleLifecycleClockRequest` applies one boundary atomically over a fixed
 participant set. Duplicate object references are removed. Associated
 stat-modifier boundaries must be valid and unique by event ID.
 
+The supplied encounter port keys stat-modifier sequence authority by lifecycle
+event ID, not by actor or team. Actor-turn boundaries still select one actor;
+team-phase and round boundaries select according to their lifecycle policy.
+Sequence scope and mutation scope are therefore separate concepts. If several
+team mappings intentionally reuse one event ID, every phase completion advances
+that shared event sequence. Give the mappings different event IDs when they
+must be independent clocks.
+
+A custom encounter scheduler must preserve the same invariant: expose one
+pending sequence for action application, reuse it for completion of that exact
+boundary, and advance the event's committed sequence only after successful
+processing. A pre-cancelled lifecycle request must mutate neither actor state
+nor sequence authority.
+
 Do not dispatch battle clocks while the game is in field state unless the game
 design intentionally ages that state there.
 

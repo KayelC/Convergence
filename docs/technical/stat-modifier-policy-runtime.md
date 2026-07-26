@@ -222,17 +222,50 @@ flowchart TD
     V -->|"no"| K["Decrement once and advance cursor"]
 ```
 
-The canonical `BattleStatusEncounterLifecyclePort` owns per-actor owner-turn
-sequences and implements `IBattleEncounterStatModifierBoundarySource`. The
-encounter runner snapshots the next owner-turn boundary before command
-execution, places it on `BattleEncounterTurnRequest`, and later supplies that
-same boundary to turn-end lifecycle processing. Framework automated actions and
-the DemoHost carry the request boundaries into `EffectExecutionEnvironment`,
-so application and completion share one identity. A custom lifecycle port that
-owns a timed clock must implement the boundary-source contract, and its turn
-handler must propagate those boundaries. The lower-level duration lifecycle
-also accepts action-end and phase-end boundary collections from schedulers that
-define those clocks.
+The canonical `BattleStatusEncounterLifecyclePort` owns one committed sequence
+per lifecycle event ID and implements
+`IBattleEncounterStatModifierBoundarySource`. The encounter runner snapshots
+the next owner-turn event boundary before command execution, places it on
+`BattleEncounterTurnRequest`, and later supplies that same boundary to turn-end
+lifecycle processing. Framework automated actions and the DemoHost carry the
+request boundaries into `EffectExecutionEnvironment`, so application and
+completion share one identity.
+
+Sequence authority is intentionally independent from mutation selection:
+
+- owner-turn processing advances the event sequence but ticks only the acting
+  actor;
+- team-phase processing advances the mapped event sequence and evaluates the
+  phase participant set;
+- round processing advances the round event in the same event-keyed authority;
+- reusing an event ID across teams or clock kinds shares one sequence stream;
+  and
+- distinct event IDs create distinct streams.
+
+```mermaid
+flowchart TD
+    A["Encounter reaches a lifecycle occurrence"] --> B["Key sequence authority by event ID"]
+    B --> C["Peek next positive sequence"]
+    C --> D{"Command application occurs<br/>inside this boundary?"}
+    D -- "yes" --> E["Expose pending boundary to every effect target"]
+    D -- "no" --> F["Process selected lifecycle participants"]
+    E --> F
+    F --> G{"Lifecycle processing succeeds?"}
+    G -- "no or cancelled" --> H["Retain committed sequence"]
+    G -- "yes" --> I["Commit event sequence"]
+    I --> J["A selected actor decrements at most once"]
+```
+
+A larger incoming sequence is one later observed occurrence, not a duration
+delta. This matters when other actors use the same owner-turn event between a
+cross-target application and the target's next turn.
+
+A custom lifecycle port that owns a timed clock must implement the
+boundary-source contract, propagate pending boundaries through its turn
+handler, and maintain one monotonic committed sequence per event ID. It must
+not use actor-local or team-local counters behind a shared event ID. The
+lower-level duration lifecycle also accepts action-end and phase-end boundary
+collections from schedulers that define those clocks.
 
 ## Lifecycle Commit And Cleanup
 

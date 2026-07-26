@@ -52,9 +52,11 @@ found no remaining realistic reachable defect in that corrected revision. The
 then reproduced a canonical cross-target timed-modifier fault and a separate
 shared phase-event clock divergence. The root cause is that the encounter port
 uses actor-local and team-local sequence counters while the public timed
-modifier boundary identifies a clock only by event ID and sequence. O4-R37
-records the reopened state; O4-R38 through O4-R40 govern runtime correction,
-audience reconciliation, and fresh closure.
+modifier boundary identifies a clock only by event ID and sequence. O4-R38 now
+uses one committed sequence stream per lifecycle event ID across actors, teams,
+phases, and rounds. O4-R39 reconciled mechanics, integration, and technical
+guidance. The capability remains partial until O4-R40 independently reviews
+that correction and the complete release gate.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

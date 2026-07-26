@@ -70,8 +70,10 @@ re-read that implementation and promoted the three entries to reviewed. The
 [third independent audit](../reviews/status-passive-lifecycle-order-4-third-independent-audit-2026-07-26.md)
 subsequently reproduced a cross-target timed-modifier fault and shared
 phase-event divergence. The mechanics, developer, and technical entries are
-therefore `existing_unreviewed` again until O4-R38 corrects sequence authority,
-O4-R39 reconciles all audiences, and O4-R40 independently closes the result.
+therefore `existing_unreviewed` again. O4-R38 replaced actor-local and
+team-local counters with event-keyed sequence authority, and O4-R39 reconciled
+all audiences with that implementation. O4-R40 must still independently review
+the corrected source and documentation before promotion.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 

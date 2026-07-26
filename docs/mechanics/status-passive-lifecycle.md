@@ -157,7 +157,16 @@ expiry boundaries. A host that runs effects outside the standard executors must
 dispatch the explicit action-end lifecycle boundary itself.
 
 Team IDs, phase IDs, and lifecycle event IDs are separate identifiers. A host
-must map them explicitly when composing an encounter.
+must map them explicitly when composing an encounter. Timed stat modifiers use
+one monotonic sequence stream per lifecycle event ID across the complete
+battle. Sharing one event ID between two team phases means both phase endings
+are occurrences of the same clock; using different event IDs creates
+independent clocks.
+
+An actor-turn event still advances state only for the actor whose turn ended.
+The battle-wide sequence identifies the occurrence; it does not make every
+actor's duration tick. This distinction lets a buff applied to another actor
+retain its full duration until that target reaches its own next matching turn.
 
 The supplied reserve policy suspends reserve state by default. A game may use
 the supplied advancing policy for one exact owning-team phase event or round

@@ -349,9 +349,9 @@ then reconciled current source, tests, and all three audiences. Order 4 is
 complete at that revision. The
 [third independent audit](../reviews/status-passive-lifecycle-order-4-third-independent-audit-2026-07-26.md)
 then reproduced cross-target owner-turn sequence failure and shared phase-event
-clock divergence. O4-R37 records the reopened state; O4-R38 corrects sequence
-authority, O4-R39 reconciles the three audiences, and O4-R40 performs fresh
-closure. The executable documentation matrix therefore records 21 reviewed,
+clock divergence. O4-R37 recorded the reopened state. O4-R38 corrected sequence
+authority and O4-R39 reconciled the three audiences; O4-R40 now performs fresh
+closure. The executable documentation matrix therefore still records 21 reviewed,
 31 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 5,
 `battle_knowledge`, remains queued.
 

@@ -187,7 +187,7 @@
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "The third independent Order 4 audit reopened lifecycle-clock guidance: actor-local and team-local counters do not match the event-plus-sequence identity used by cross-target timed modifiers. O4-R39 must reconcile the corrected player-facing timing contract."
+        "reason": "O4-R39 now explains event-keyed sequence authority, same-boundary self application, cross-target duration behavior, and shared phase events. O4-R40 independent review remains required before promotion."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
@@ -195,7 +195,7 @@
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "The third independent Order 4 audit found that the integration guide does not define coherent sequence ownership for cross-target modifiers or reused lifecycle event IDs. O4-R39 must document the corrected host and custom-scheduler contract."
+        "reason": "O4-R39 now defines event-keyed sequence ownership, effect-boundary propagation, successful commit, cancellation, and custom scheduler requirements. O4-R40 independent review remains required before promotion."
       },
       "technical": {
         "state": "existing_unreviewed",
@@ -203,7 +203,7 @@
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "The third independent Order 4 audit reproduced a canonical cross-target timed-modifier fault and shared phase-event clock divergence. O4-R38 must correct sequence authority before O4-R39 can reconcile the technical model."
+        "reason": "O4-R39 now documents the O4-R38 event-keyed runtime authority, mutation selection, cross-target progression, shared event semantics, and sequence commit model. O4-R40 independent review remains required before promotion."
       }
     },
     {
