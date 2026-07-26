@@ -92,7 +92,8 @@ public enum RuntimeSaveValidationCode
     ActorChargeStateInvalid,
     PassiveActivationTriggerIndexInvalid,
     PassiveActivationEventMismatch,
-    MissingPassiveSkillState = 83
+    MissingPassiveSkillState = 83,
+    ConflictingActorAilmentExclusivityGroup = 84
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -768,7 +769,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrity.ValidateForRestore(
                 actor,
                 equippedPassiveSkills,
-                catalog.Ailments.Keys,
+                catalog.Ailments.Values,
                 catalog.RegisteredEventIds,
                 catalog.RegisteredPhaseIds);
         foreach (RuntimeActorSnapshotIntegrityDiagnostic issue in integrityDiagnostics)
@@ -925,6 +926,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.DuplicateCapability => RuntimeSaveValidationCode.DuplicateActorCapability,
             RuntimeActorSnapshotIntegrityCode.DuplicateAilment => RuntimeSaveValidationCode.DuplicateActorAilment,
             RuntimeActorSnapshotIntegrityCode.MissingAilmentDefinition => RuntimeSaveValidationCode.MissingCatalogAilment,
+            RuntimeActorSnapshotIntegrityCode.ConflictingAilmentExclusivityGroup => RuntimeSaveValidationCode.ConflictingActorAilmentExclusivityGroup,
             RuntimeActorSnapshotIntegrityCode.DuplicateStatus => RuntimeSaveValidationCode.DuplicateActorStatus,
             RuntimeActorSnapshotIntegrityCode.DuplicateCharge => RuntimeSaveValidationCode.DuplicateActorCharge,
             RuntimeActorSnapshotIntegrityCode.DuplicateShield => RuntimeSaveValidationCode.DuplicateActorShield,

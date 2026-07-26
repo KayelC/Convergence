@@ -300,7 +300,7 @@ public sealed class RuntimeActorState
             RuntimeActorSnapshotIntegrity.ValidateForRestore(
                 snapshot,
                 passiveDefinitions,
-                ailmentDefinitions.Select(ailment => ailment.Id),
+                ailmentDefinitions,
                 registeredEventIds,
                 registeredPhaseIds);
         if (integrityDiagnostics.Count > 0)

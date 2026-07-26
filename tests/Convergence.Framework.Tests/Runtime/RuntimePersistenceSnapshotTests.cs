@@ -1524,6 +1524,71 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Equal(isEnabled, captured.IsEnabled);
     }
 
+    [Fact]
+    public void RuntimeSaveValidator_RejectsMutuallyExclusiveRestoredAilments()
+    {
+        ContentId groupId = Id("convergence.shared_effects_demo:major_ailment");
+        AilmentDefinition first = RestoreAilment("conflicting_ailment_one", groupId);
+        AilmentDefinition second = RestoreAilment("conflicting_ailment_two", groupId);
+        GameDataCatalog catalog = WithAilments(LoadCatalog(), first, second);
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot malformed = CopyActor(
+            baseline.Actors[0],
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                ailments:
+                [
+                    new RuntimeTimedStateSnapshot(first.Id, StandardStatusLifetimes.Persistent),
+                    new RuntimeTimedStateSnapshot(second.Id, StandardStatusLifetimes.Persistent)
+                ]));
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [malformed, baseline.Actors[1]]),
+            catalog);
+
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.ConflictingActorAilmentExclusivityGroup,
+            "$.actors[0].battleStatus.ailments[1]");
+        ArgumentException directRestore = Assert.Throws<ArgumentException>(() =>
+            RuntimeActorState.Restore(
+                malformed,
+                CombatDefenseProfile.Empty,
+                [catalog.Skills[Id("convergence.skill_system_redesign_sample:ice_boost_sample")]],
+                [first, second]));
+        Assert.Contains(
+            "$.battleStatus.ailments[1]",
+            directRestore.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_AllowsIndependentRestoredAilments()
+    {
+        AilmentDefinition first = RestoreAilment("independent_ailment_one");
+        AilmentDefinition second = RestoreAilment("independent_ailment_two");
+        GameDataCatalog catalog = WithAilments(LoadCatalog(), first, second);
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot candidate = CopyActor(
+            baseline.Actors[0],
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                ailments:
+                [
+                    new RuntimeTimedStateSnapshot(first.Id, StandardStatusLifetimes.Persistent),
+                    new RuntimeTimedStateSnapshot(second.Id, StandardStatusLifetimes.Persistent)
+                ]));
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [candidate, baseline.Actors[1]]),
+            catalog);
+        RuntimeActorState restored = RuntimeActorState.Restore(
+            validation.RequireValidSnapshot().Actors[0],
+            CombatDefenseProfile.Empty,
+            [catalog.Skills[Id("convergence.skill_system_redesign_sample:ice_boost_sample")]],
+            [first, second]);
+
+        Assert.Equal([first.Id, second.Id], restored.Ailments.Keys);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -2794,6 +2859,39 @@ public sealed class RuntimePersistenceSnapshotTests
             catalog.Rulesets,
             Registrations());
     }
+
+    private static GameDataCatalog WithAilments(
+        GameDataCatalog catalog,
+        params AilmentDefinition[] ailments) =>
+        new(
+            catalog.ContentPacks,
+            catalog.Skills,
+            catalog.Entities,
+            catalog.Races,
+            catalog.Ailments.Concat(ailments.Select(ailment =>
+                new KeyValuePair<ContentId, AilmentDefinition>(ailment.Id, ailment))),
+            catalog.Items,
+            catalog.Equipment,
+            catalog.Shops,
+            catalog.Negotiations,
+            catalog.Encounters,
+            catalog.Dungeons,
+            catalog.FusionRecipes,
+            catalog.Rulesets,
+            Registrations());
+
+    private static AilmentDefinition RestoreAilment(
+        string localId,
+        ContentId? exclusivityGroupId = null) =>
+        new(
+            Id($"convergence.shared_effects_demo:{localId}"),
+            localId,
+            "Restore validation test ailment.",
+            StandardStatusLifetimes.Persistent,
+            new NormalAilmentTurnBehaviorDefinition(),
+            new AilmentModifiersDefinition(1m, 0, 1m, 1m, false),
+            new AilmentRecoveryDefinition(),
+            exclusivityGroupId: exclusivityGroupId);
 
     internal static RuntimeActorSnapshot CreateActor(
         RuntimeInstanceId instanceId,

@@ -18,6 +18,7 @@ internal enum RuntimeActorSnapshotIntegrityCode
     DuplicateCapability,
     DuplicateAilment,
     MissingAilmentDefinition,
+    ConflictingAilmentExclusivityGroup,
     DuplicateStatus,
     DuplicateCharge,
     DuplicateShield,
@@ -54,7 +55,7 @@ internal static class RuntimeActorSnapshotIntegrity
     public static IReadOnlyList<RuntimeActorSnapshotIntegrityDiagnostic> ValidateForRestore(
         RuntimeActorSnapshot snapshot,
         IEnumerable<SkillDefinition>? loadedPassiveSkills,
-        IEnumerable<ContentId>? availableAilmentIds,
+        IEnumerable<AilmentDefinition>? availableAilments,
         IReadOnlySet<ContentId>? registeredEventIds = null,
         IReadOnlySet<ContentId>? registeredPhaseIds = null)
     {
@@ -158,8 +159,13 @@ internal static class RuntimeActorSnapshotIntegrity
             key => key,
             diagnostics);
 
-        HashSet<ContentId> availableAilments = (availableAilmentIds ?? []).ToHashSet();
+        Dictionary<ContentId, AilmentDefinition> ailmentDefinitions =
+            (availableAilments ?? [])
+                .GroupBy(ailment => ailment.Id)
+                .ToDictionary(group => group.Key, group => group.First());
         var seenAilments = new HashSet<ContentId>();
+        var activeExclusivityGroups =
+            new Dictionary<ContentId, (ContentId AilmentId, int Index)>();
         for (int index = 0; index < snapshot.BattleStatus.Ailments.Count; index++)
         {
             RuntimeTimedStateSnapshot ailment = snapshot.BattleStatus.Ailments[index];
@@ -172,13 +178,41 @@ internal static class RuntimeActorSnapshotIntegrity
                     ailment.Id));
             }
 
-            if (!availableAilments.Contains(ailment.Id))
+            if (!ailmentDefinitions.TryGetValue(
+                    ailment.Id,
+                    out AilmentDefinition? definition))
             {
                 diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
                     RuntimeActorSnapshotIntegrityCode.MissingAilmentDefinition,
                     $"Ailment '{ailment.Id}' has no definition available during actor restoration.",
                     $"$.battleStatus.ailments[{index}]",
                     ailment.Id));
+                continue;
+            }
+
+            if (definition.ExclusivityGroupId is not ContentId exclusivityGroupId ||
+                !exclusivityGroupId.IsValid)
+            {
+                continue;
+            }
+
+            if (activeExclusivityGroups.TryGetValue(
+                    exclusivityGroupId,
+                    out (ContentId AilmentId, int Index) existing) &&
+                existing.AilmentId != ailment.Id)
+            {
+                diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                    RuntimeActorSnapshotIntegrityCode.ConflictingAilmentExclusivityGroup,
+                    $"Ailment '{ailment.Id}' conflicts with active ailment " +
+                    $"'{existing.AilmentId}' in exclusivity group '{exclusivityGroupId}'.",
+                    $"$.battleStatus.ailments[{index}]",
+                    ailment.Id));
+            }
+            else
+            {
+                activeExclusivityGroups.TryAdd(
+                    exclusivityGroupId,
+                    (ailment.Id, index));
             }
         }
 

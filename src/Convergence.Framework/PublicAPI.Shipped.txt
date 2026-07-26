@@ -6162,6 +6162,7 @@ Convergence.Runtime.RuntimeSaveValidationCode.ActorTurnDurationValueOutOfRange =
 Convergence.Runtime.RuntimeSaveValidationCode.CompanionRosterCapacityExceeded = 26 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.CompendiumEntityNotEligible = 15 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.CompendiumEquippedSkillNotLearned = 21 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.ConflictingActorAilmentExclusivityGroup = 84 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ContentPackVersionMismatch = 3 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.ContractVersionUnsupported = 0 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAffinityBreak = 46 -> Convergence.Runtime.RuntimeSaveValidationCode
