@@ -70,7 +70,12 @@ closure preflight. The
 [O4-R44 closure review](../reviews/status-passive-lifecycle-order-4-r44-closure-review-2026-07-26.md)
 then re-read the corrected source, schemas, tests, and all three audiences,
 passed the complete release gate, and found no unresolved realistic reachable
-defect. Demo coverage remains `focused`.
+defect. The subsequent
+[bounded final certification](../reviews/status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
+added 1,536 model-checked deployment and clock operations plus public-restore
+equivalence at every supported lifecycle boundary. It corrected the documented
+save-checkpoint rule for action-scoped `Instant` state and found no qualifying
+runtime defect. Demo coverage remains `focused`.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

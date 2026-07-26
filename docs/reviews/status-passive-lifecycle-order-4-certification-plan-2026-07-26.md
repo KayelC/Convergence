@@ -75,3 +75,17 @@ mechanic work provides reproducible contrary evidence.
 - Godot contract tests and headless smoke;
 - documentation, API, and product-boundary guards; and
 - `git diff --check` plus a clean worktree after each commit.
+
+## Completion Record
+
+Status: **complete**.
+
+| Checkpoint | Evidence | Result |
+|---|---|---|
+| O4-C1 | `85ee583d` | Bounded protocol and closure threshold recorded. |
+| O4-C2 | `2ddf6940` | 1,536 model-checked sequence operations and public restore equivalence added. |
+| Documentation correction | `e979a973` | Committed action-end save boundary reconciled across all three audiences. |
+| O4-C3 | [Final certification](status-passive-lifecycle-order-4-final-certification-2026-07-26.md) | Source, documentation, and complete release gates passed without a qualifying runtime defect. |
+
+Order 4 is formally closed. A later reopening requires new reproducible
+evidence under the qualification rules in this plan.

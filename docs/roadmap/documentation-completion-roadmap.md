@@ -369,6 +369,15 @@ records 24 reviewed, 28 `existing_unreviewed`, 16 missing, and 7
 `not_applicable` entries. Order 5, `battle_knowledge`, is now the next
 collaborative documentation subject.
 
+A final bounded certification subsequently exercised 1,536 deterministic
+reserve/deployment clock operations against an independent model and restored
+mixed lifecycle state through the public catalog boundary at every supported
+checkpoint. It found no qualifying runtime defect. It did expose and correct
+one documentation omission: action-scoped `Instant` state must reach committed
+outer action-end before a save is captured. The
+[final certification record](../reviews/status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
+is the formal Order 4 closure authority.
+
 ## Deferred Documentation
 
 Two capability IDs describe extension seams rather than completed mechanics:

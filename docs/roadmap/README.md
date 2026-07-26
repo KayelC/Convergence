@@ -71,5 +71,9 @@ save-version guidance. O4-R42 corrected the runtime, O4-R43 and O4-R43A
 corrected current save-v13 guidance, and the
 [O4-R44 closure review](../reviews/status-passive-lifecycle-order-4-r44-closure-review-2026-07-26.md)
 independently passed the source, documentation, and complete release gate.
-Order 4 is closed. Order 5, `battle_knowledge`, is the next collaborative
-documentation subject.
+The
+[bounded final certification](../reviews/status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
+then added independent sequence-model and public-restore evidence, corrected
+the committed action-end save-checkpoint guidance, and found no qualifying
+runtime defect. Order 4 is formally closed. Order 5, `battle_knowledge`, is the
+next collaborative documentation subject.
