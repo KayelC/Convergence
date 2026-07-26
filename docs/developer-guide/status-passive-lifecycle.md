@@ -113,6 +113,15 @@ incompatible operation/result shape.
 precedence and intersects equally strong limited-action sets. Implement
 `IBattleTurnRestrictionPolicy` only when the game's conflict rule differs.
 
+`ChanceSkipOrFleeAilmentTurnBehaviorDefinition` must use either
+`CompanionFleeOutcome.RecallToRoster` or
+`CompanionFleeOutcome.EscapeBattle`. Schema-v8 JSON and the built-in strict
+converter reject any other wire value. The semantic content validator applies
+the same rule to programmatic definitions and custom deserializers. Direct
+lifecycle execution also rejects an undefined enum before staged Guard clearing
+or other turn-start mutation can commit. Do not map unknown host integers to a
+fallback outcome.
+
 ### Reserve aging
 
 `SuspendReserveLifecyclePolicy` is the supplied default. To age reserve state,

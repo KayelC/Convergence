@@ -122,6 +122,11 @@ This is not a security vulnerability and does not affect valid authored
 content. It is a real supported-boundary correctness gap, not theoretical
 hardening.
 
+Correction status: **corrected by O4-R42**. Semantic validation now reports the
+exact `companionFleeOutcome` path, direct execution rejects the undefined enum
+inside its transaction, and focused tests preserve both valid outcomes and
+rollback.
+
 ### O4-D1: two stat-modifier guides advertise obsolete save contract v10
 
 Severity: **low documentation defect**
@@ -152,6 +157,11 @@ Required correction:
 - recheck the surrounding persistence claims against current snapshot source;
   and
 - rerun documentation links, synchronization guards, and audience review.
+
+Correction status: **corrected by O4-R43**. Both stat-modifier pages and the
+technical persistence diagram now identify save contract v13. The surrounding
+snapshot, ruleset binding, validation, and aggregate restore descriptions were
+rechecked against current source.
 
 ## Verified Strengths
 
@@ -231,8 +241,8 @@ At reviewed revision `8870aea3`:
 | Checkpoint | State | Required outcome |
 |---|---|---|
 | O4-R41 | `complete` | Record this source-first audit and reopen the capability honestly. |
-| O4-R42 | `pending` | Reject undefined Companion flee outcomes in semantic validation and direct lifecycle execution, with focused regression tests. |
-| O4-R43 | `pending` | Correct save-v13 guidance and independently reconcile all three Order 4 audience layers. |
+| O4-R42 | `complete` | Reject undefined Companion flee outcomes in semantic validation and direct lifecycle execution, with focused regression tests. |
+| O4-R43 | `complete` | Correct save-v13 guidance and independently reconcile all three Order 4 audience layers. |
 | O4-R44 | `pending` | Re-read corrected source and documentation, run the complete release gate, and decide closure without using this report as proof. |
 
 ## Closure Decision

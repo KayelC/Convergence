@@ -50,8 +50,8 @@ documentation audiences. The
 found no unresolved reachable defect at that revision. The
 [fourth independent audit](../reviews/status-passive-lifecycle-order-4-fourth-independent-audit-2026-07-26.md)
 then found one narrow programmatic flee-outcome validation defect and two stale
-save-version labels. O4-R42 through O4-R44 now govern correction, audience
-reconciliation, and independent closure.
+save-version labels. O4-R42 and O4-R43 have corrected the supported boundary
+and all three audiences. O4-R44 independently decides closure.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -174,7 +174,8 @@ independent audit has now reopened Order 4 under O4-R37 through O4-R40 for
 lifecycle sequence authority. O4-R38 and O4-R39 corrected the implementation
 and guidance, and O4-R40 independently closed that revision. The fourth
 independent audit has now reopened Order 4 under O4-R41 through O4-R44 for one
-programmatic validation defect and save-version documentation drift. Order 5
+programmatic validation defect and save-version documentation drift. O4-R42 and
+O4-R43 are complete; O4-R44 remains the closure gate. Order 5
 (`battle_knowledge`) remains queued until that sequence closes.
 
 ## Priority 2: Persistence Evolution

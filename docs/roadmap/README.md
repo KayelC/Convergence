@@ -67,6 +67,6 @@ The
 found no unresolved reachable defect at that revision. The
 [fourth independent audit](../reviews/status-passive-lifecycle-order-4-fourth-independent-audit-2026-07-26.md)
 then found one narrow programmatic flee-outcome validation defect and stale
-save-version guidance. O4-R42 through O4-R44 now govern correction,
-documentation reconciliation, and independent closure. Order 5,
+save-version guidance. O4-R42 and O4-R43 have corrected the runtime and
+documentation. O4-R44 independent closure remains active. Order 5,
 `battle_knowledge`, remains queued.

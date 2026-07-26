@@ -357,8 +357,9 @@ finding an unresolved reachable defect at that revision. The
 [fourth independent audit](../reviews/status-passive-lifecycle-order-4-fourth-independent-audit-2026-07-26.md)
 then found one narrow programmatic enum-validation defect and stale save-v10
 labels in two stat-modifier audience pages. O4-R41 records the reopened state;
-O4-R42 corrects the supported content/runtime boundary, O4-R43 reconciles all
-three audiences with save v13, and O4-R44 independently decides closure. The
+O4-R42 has corrected the supported content/runtime boundary and O4-R43 has
+reconciled all three audiences with save v13. O4-R44 independently decides
+closure. The
 executable documentation matrix therefore records 21 reviewed, 31
 `existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 5,
 `battle_knowledge`, remains queued.

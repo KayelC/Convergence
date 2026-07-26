@@ -62,9 +62,10 @@ an unresolved realistic reachable defect at that revision. The
 [fourth independent audit](../reviews/status-passive-lifecycle-order-4-fourth-independent-audit-2026-07-26.md)
 subsequently found one narrow supported-boundary defect: programmatic
 `ChanceSkipOrFlee` content can pass an undefined Companion flee outcome through
-semantic validation and silently resolve it as battle escape. O4-R42 corrects
-that boundary, O4-R43 reconciles the audience documentation and stale save
-version labels, and O4-R44 independently decides closure.
+semantic validation and silently resolve it as battle escape. O4-R42 now
+rejects that value in semantic validation and direct lifecycle execution.
+O4-R43 reconciles all three audiences and corrects the stale save-v10 labels to
+v13. O4-R44 independently decides closure.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

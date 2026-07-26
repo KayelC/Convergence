@@ -187,7 +187,7 @@
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "O4-R41 reopened the capability after finding an undefined programmatic Companion flee outcome can be interpreted as escape. O4-R42 must correct that rule boundary before all audiences are independently reconciled."
+        "reason": "O4-R42 rejects undefined Companion flee outcomes and O4-R43 now explains the two valid choices without an implicit fallback. O4-R44 independent review remains required before promotion."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
@@ -195,7 +195,7 @@
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "O4-R41 found both a programmatic content-validation gap and a stale save-v10 statement in the stat-modifier guide. O4-R42 and O4-R43 must correct and reconcile the supported host boundary."
+        "reason": "O4-R42 aligns JSON, programmatic validation, and direct execution; O4-R43 corrects the stat-modifier guide to save v13 and reconciles host integration. O4-R44 independent review remains required before promotion."
       },
       "technical": {
         "state": "existing_unreviewed",
@@ -203,7 +203,7 @@
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "O4-R41 found one narrow content/runtime enum-validation inconsistency and stale save-v10 labels in the stat-modifier runtime reference. O4-R42 through O4-R44 govern correction and independent closure."
+        "reason": "O4-R42 corrects the content/runtime enum-validation boundary and O4-R43 corrects the stat-modifier runtime reference and diagram to save v13. O4-R44 independent review remains required before promotion."
       }
     },
     {

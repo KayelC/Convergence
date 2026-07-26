@@ -138,6 +138,13 @@ Chance-skip and flee behavior use the injected `IRandomSource`. Invalid random
 values fail at the host-random boundary rather than indexing or selecting an
 unrelated outcome.
 
+Before chance validation or random input, chance-skip-or-flee resolution checks
+that `CompanionFleeOutcome` is one of `RecallToRoster` or `EscapeBattle`. The
+semantic content validator performs the same check for programmatic content.
+An undefined value throws inside the turn-start transaction, so staged Guard
+clearing and handler mutation are discarded instead of treating the value as
+escape.
+
 ## Owner-Turn-End Pipeline
 
 ```mermaid

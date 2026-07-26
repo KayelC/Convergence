@@ -95,6 +95,12 @@ resolved. The lifecycle can produce:
 - `FleeBattle`: remove the actor through the encounter's flee path; or
 - `RecallToRoster`: recall an eligible Companion instead of fleeing.
 
+A chance-based flee restriction explicitly chooses whether an eligible
+Companion is recalled or escapes the battle. A recall choice still becomes
+`FleeBattle` when that actor cannot be recalled. These are the only two authored
+outcomes; an undefined value is invalid content and never acts as an implicit
+escape choice.
+
 The supplied most-restrictive policy uses this precedence:
 
 1. flee or roster recall;

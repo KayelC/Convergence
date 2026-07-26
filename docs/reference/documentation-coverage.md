@@ -79,8 +79,9 @@ unresolved reachable defect at that revision. The
 [fourth independent audit](../reviews/status-passive-lifecycle-order-4-fourth-independent-audit-2026-07-26.md)
 subsequently found one programmatic flee-outcome validation gap and stale
 save-v10 labels in two stat-modifier pages. All three entries are therefore
-`existing_unreviewed` again until O4-R42 through O4-R44 correct and independently
-reconcile the supported boundary.
+`existing_unreviewed` again. O4-R42 corrected the runtime boundary and O4-R43
+reconciled the three audience pages; O4-R44 independent review remains required
+before promotion.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 

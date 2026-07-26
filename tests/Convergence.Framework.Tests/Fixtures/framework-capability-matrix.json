@@ -116,7 +116,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "O4-R41 found that programmatic ChanceSkipOrFlee ailment definitions can carry an undefined CompanionFleeOutcome through semantic validation and silently resolve it as FleeBattle. O4-R42 through O4-R44 govern validation, documentation reconciliation, and fresh closure."
+        "O4-R42 now rejects undefined Companion flee outcomes in semantic validation and direct lifecycle execution, and O4-R43 reconciles all three audience layers with save contract v13. O4-R44 fresh source and documentation review remains required before returning this capability to complete."
       ]
     },
     {
