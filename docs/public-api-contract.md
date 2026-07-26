@@ -156,7 +156,7 @@ application as an independently timed signed contribution, derives a bounded
 aggregate, refreshes the oldest same-sign contribution at a configured cap,
 and uses the same typed lifecycle-boundary contract per contribution.
 
-Save contract v10 retains the canonical roster and pending skill-choice
+Save contract v13 retains the canonical roster and pending skill-choice
 authorities established by v9 and stores complete stat-modifier policy state.
 `RuntimeSessionRestoreService` binds retained modifier policies explicitly,
 derives the Active Hosted Entity dependency from `RuntimePartyRosterSnapshot`,

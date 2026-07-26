@@ -318,7 +318,7 @@ for later loadout editing.
 ## Save And Restore
 
 The host serializes `RuntimeSaveGameSnapshot`; Framework does not own the file
-format. Save contract v10 includes actors, the canonical party roster, pending
+format. Save contract v13 includes actors, the canonical party roster, pending
 skill choices, complete selected-policy stat-modifier state, and the remaining
 session modules.
 

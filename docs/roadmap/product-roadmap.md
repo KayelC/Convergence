@@ -51,7 +51,9 @@ found no unresolved reachable defect at that revision. The
 [fourth independent audit](../reviews/status-passive-lifecycle-order-4-fourth-independent-audit-2026-07-26.md)
 then found one narrow programmatic flee-outcome validation defect and two stale
 save-version labels. O4-R42 and O4-R43 have corrected the supported boundary
-and all three audiences. O4-R44 independently decides closure.
+and all three audiences. O4-R43A corrected two additional current-authority
+v10 labels discovered during closure preflight. O4-R44 independently decides
+closure.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
