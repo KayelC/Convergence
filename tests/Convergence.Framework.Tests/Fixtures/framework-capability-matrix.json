@@ -110,12 +110,15 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleStatusLifecycleEventMapperTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimeStateSnapshotTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Round-end and successful battle-end lifecycle transactions can commit staged actor mutations when cancellation is signaled immediately before commit.",
+        "Replacement passive dispatchers can commit staged actor mutations while returning no executed activation evidence."
+      ]
     },
     {
       "id": "encounter_orchestration",

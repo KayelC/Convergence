@@ -182,28 +182,28 @@
     {
       "id": "status_and_passive_lifecycle",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "The source-reviewed and owner-confirmed mechanics define application, exclusivity, turn restrictions, exact-instance lifecycle scheduling, duration clocks, reserve behavior, cleanup, passive targeting, counting, and restore parity."
+        "reason": "The lifecycle rules remain substantially accurate, but the second independent Order 4 audit reopened review because ailment combat-modifier composition is omitted and two atomicity claims exceed current runtime behavior."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "The reviewed integration guidance covers policy selection, encounter composition, exact lifecycle boundaries, typed evidence, persistence, extension validation, and host-side responsibility."
+        "reason": "The integration guidance is reopened pending cancellation-before-commit, replacement-passive evidence, and ailment combat-modifier composition corrections."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "The source-traced technical references define staged mutation, exact-instance scheduling, passive eligibility and evidence validation, duration and cleanup transactions, encounter integration, and restore invariants."
+        "reason": "The technical reference is reopened pending exact documentation of ailment profile composition and correction of the two staged-commit gaps found by the second independent audit."
       }
     },
     {

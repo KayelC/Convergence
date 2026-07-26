@@ -51,5 +51,7 @@ correctness paths. The
 governs O4-R27 through O4-R32. O4-R27 through O4-R30 corrected all four
 runtime paths, O4-R31 reconciled active guidance, and the
 [final O4-R32 closure review](../reviews/status-passive-lifecycle-order-4-final-closure-review-2026-07-26.md)
-found no unresolved realistic reachable defect in the corrected source or
-documentation. Order 4 is complete; Order 5 is next.
+found no unresolved realistic reachable defect in that corrected revision. A
+[second independent audit](../reviews/status-passive-lifecycle-order-4-second-independent-audit-2026-07-26.md)
+has now reopened Order 4 under O4-R33 through O4-R36 for two staged-commit
+defects and one audience-documentation omission. Order 5 waits for closure.
