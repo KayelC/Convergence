@@ -953,6 +953,116 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void PassiveDispatch_EmptyReplacementEvidenceCannotCommitMutation()
+    {
+        ContentId eventId = ContentId.Parse("empty_replacement_event");
+        SkillDefinition passive = PassiveSkill(
+            "empty_replacement_passive",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
+            ]);
+        RuntimeActorState owner = Actor(
+            "empty_replacement_owner",
+            PlayerTeam,
+            passiveSkills: [passive]);
+        var dispatcher = new DelegatingMutatingPassiveDispatcher(_ => PassiveTriggerDispatchResult.Empty);
+
+        PassiveTriggerDispatchResult result = Dispatch(
+            eventId,
+            owner,
+            [owner],
+            [owner],
+            Services(passiveTriggers: dispatcher));
+
+        Assert.Empty(result.Activations);
+        Assert.Equal(100, owner.GetRequiredResource(Hp).Current);
+        Assert.NotSame(owner, dispatcher.ReceivedOwner);
+    }
+
+    [Fact]
+    public void PassiveDispatch_NonExecutedReplacementEvidenceCannotCommitMutation()
+    {
+        ContentId eventId = ContentId.Parse("non_executed_replacement_event");
+        SkillDefinition passive = PassiveSkill(
+            "non_executed_replacement_passive",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
+            ]);
+        RuntimeActorState owner = Actor(
+            "non_executed_replacement_owner",
+            PlayerTeam,
+            passiveSkills: [passive]);
+        var dispatcher = new DelegatingMutatingPassiveDispatcher(request =>
+            new PassiveTriggerDispatchResult(
+            [
+                new PassiveTriggerExecutionResult(
+                    passive.Id,
+                    0,
+                    request.EventId,
+                    request.Owner.InstanceId,
+                    PassiveTriggerOutcome.ConditionNotMet,
+                    [])
+            ]));
+
+        PassiveTriggerDispatchResult result = Dispatch(
+            eventId,
+            owner,
+            [owner],
+            [owner],
+            Services(passiveTriggers: dispatcher));
+
+        Assert.Equal(PassiveTriggerOutcome.ConditionNotMet, Assert.Single(result.Activations).Outcome);
+        Assert.Equal(100, owner.GetRequiredResource(Hp).Current);
+        Assert.NotSame(owner, dispatcher.ReceivedOwner);
+    }
+
+    [Fact]
+    public void PassiveDispatch_ExecutedReplacementEvidenceCommitsStagedMutation()
+    {
+        ContentId eventId = ContentId.Parse("executed_replacement_event");
+        SkillDefinition passive = PassiveSkill(
+            "executed_replacement_passive",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(1))])
+            ]);
+        RuntimeActorState owner = Actor(
+            "executed_replacement_owner",
+            PlayerTeam,
+            passiveSkills: [passive]);
+        var dispatcher = new DelegatingMutatingPassiveDispatcher(request =>
+            new PassiveTriggerDispatchResult(
+            [
+                new PassiveTriggerExecutionResult(
+                    passive.Id,
+                    0,
+                    request.EventId,
+                    request.Owner.InstanceId,
+                    PassiveTriggerOutcome.Executed,
+                    [])
+            ]));
+
+        PassiveTriggerDispatchResult result = Dispatch(
+            eventId,
+            owner,
+            [owner],
+            [owner],
+            Services(passiveTriggers: dispatcher));
+
+        Assert.Equal(PassiveTriggerOutcome.Executed, Assert.Single(result.Activations).Outcome);
+        Assert.Equal(1, owner.GetRequiredResource(Hp).Current);
+        Assert.NotSame(owner, dispatcher.ReceivedOwner);
+    }
+
+    [Fact]
     public void PassiveDispatch_PreservesEligibilityFromBeforeLegitimateLifeStateMutation()
     {
         ContentId eventId = ContentId.Parse("life_state_event");

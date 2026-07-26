@@ -899,7 +899,11 @@ internal sealed class ValidatingPassiveTriggerDispatcher : IPassiveTriggerDispat
         PassiveTriggerDispatchResult result = _inner.Dispatch(stagedRequest, services)
             ?? throw new InvalidOperationException("The passive trigger dispatcher returned no result.");
         contract.RequireValid(result);
-        transaction.Commit();
+        if (result.Activations.Any(activation => activation.Outcome == PassiveTriggerOutcome.Executed))
+        {
+            transaction.Commit();
+        }
+
         return result;
     }
 
