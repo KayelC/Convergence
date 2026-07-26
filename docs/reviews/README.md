@@ -52,6 +52,7 @@ or implementation authority.
 - [Status And Passive Lifecycle Order 4 Closure Review, 24 July 2026](status-passive-lifecycle-order-4-closure-review-2026-07-24.md)
 - [Status And Passive Lifecycle Order 4 Independent Audit, 24 July 2026](status-passive-lifecycle-order-4-independent-audit-2026-07-24.md)
 - [Status And Passive Lifecycle Order 4 Post-Correction Review, 24 July 2026](status-passive-lifecycle-order-4-post-correction-review-2026-07-24.md)
+- [Status And Passive Lifecycle Order 4 Fresh Closure Audit, 26 July 2026](status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.

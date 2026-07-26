@@ -8,17 +8,12 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is complete after the
-[Order 4 independent audit](../reviews/status-passive-lifecycle-order-4-independent-audit-2026-07-24.md).
-O4-R12 through O4-R15 closed status-removal evidence, lifecycle-trigger expiry
-evidence, passive extension coherence, and reserve-owner battle-start policy.
-O4-R16 aligned the audience guidance. The
-[O4-R17 post-correction review](../reviews/status-passive-lifecycle-order-4-post-correction-review-2026-07-24.md)
-then re-read the current source, tests, diagrams, and prose and passed the
-complete release gate without finding another realistic reachable runtime
-defect.
+`status_and_passive_lifecycle` is partial after the
+[26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
+reproduced stale execution by a removed ailment and definition-incoherent
+passive activation restore keys. O4-R18 through O4-R21 are the current priority.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -132,8 +127,8 @@ integration defects before returning the capability and all three audience
 documents to complete/reviewed. O3-R12 independently confirmed that closure
 from current code. O3-R15 later found the custom explicit-termination gap;
 O3-R16 and O3-R17 corrected and independently reconciled it. Order 4, status
-and passive lifecycle, subsequently completed the same source-first workflow.
-Order 5, `battle_knowledge`, is the next collaborative documentation subject.
+and passive lifecycle, is reopened for O4-R18 through O4-R21. Order 5,
+`battle_knowledge`, follows only after that closure gate.
 
 ## Priority 2: Persistence Evolution
 

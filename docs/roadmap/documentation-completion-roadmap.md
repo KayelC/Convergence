@@ -310,11 +310,15 @@ correction sequence on 24 July 2026. O4-R12 through O4-R15 corrected the
 runtime findings, and O4-R16 reconciled all three audience documents.
 The
 [O4-R17 post-correction review](../reviews/status-passive-lifecycle-order-4-post-correction-review-2026-07-24.md)
-re-read the implementation, tests, diagrams, and prose, corrected stale test
-evidence names, and passed the complete release gate. All three Order 4 entries
-are `reviewed`; the executable documentation matrix records 24 reviewed, 28
-`existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 4 is
-formally complete. Order 5, `battle_knowledge`, follows.
+closed that revision. A new
+[fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
+then reproduced one stale ailment-trigger path and one passive activation
+restore-coherence gap from current source. Order 4 is reopened. O4-R18 corrects
+trigger membership, O4-R19 corrects persisted activation keys, O4-R20
+reconciles the three audiences, and O4-R21 performs the next independent
+closure gate. The executable documentation matrix now records 21 reviewed, 31
+`existing_unreviewed`, 16 missing, and 7 `not_applicable` entries. Order 5
+remains paused.
 
 ## Deferred Documentation
 

@@ -182,28 +182,28 @@
     {
       "id": "status_and_passive_lifecycle",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "O4-R17 re-read the corrected runtime and confirms the exact outer effect-scope lifetime, typed removal evidence, reserve clocks, cleanup rules, and deployed-owner battle-start default."
+        "reason": "The 26 July fresh closure audit reopened this entry until removed or replaced ailments are rechecked before their queued owner-turn-end trigger slot."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "O4-R17 verifies the public composition, policy selection, result properties, removal and completion evidence, dispatcher validation, owner eligibility, persistence, and host-owned side-effect boundaries."
+        "reason": "The integration guide remains accurate in its existing boundaries but must document current-membership trigger rechecks and authored passive activation-key validation before renewed review."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "O4-R17 traces staged application, clocks, cleanup, typed non-ailment removal, lifecycle completion events, request-aware passive validation, encounter integration, and restore authority from current source."
+        "reason": "The 26 July audit found stale ailment-trigger execution and definition-incoherent passive activation restore keys; O4-R18 through O4-R20 must reconcile the runtime and technical invariants."
       }
     },
     {

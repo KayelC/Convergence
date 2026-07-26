@@ -110,12 +110,15 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "A removed ailment can still execute a stale trigger captured earlier in the same owner-turn-end boundary.",
+        "Save validation does not yet require passive activation keys to match an authored trigger index and event."
+      ]
     },
     {
       "id": "encounter_orchestration",

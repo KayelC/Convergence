@@ -36,4 +36,6 @@ and release-gate recheck. Order 3 is complete under its source-first correction
 roadmap. Its final O3-R16 guard enforces explicit termination for replacement
 economies, and O3-R17 independently reconciled the implementation, audience
 documentation, and full release gate. Order 4, status and passive lifecycle,
-is next.
+is reopened under the
+[26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md).
+O4-R18 through O4-R21 precede Order 5.
