@@ -111,7 +111,7 @@
     {
       "id": "status_and_passive_lifecycle",
       "implementationState": "complete",
-      "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleStatusLifecycleEventMapperTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimeStateSnapshotTests", "RuntimePersistenceSnapshotTests"],
+      "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "StatusLifecycleCertificationTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleStatusLifecycleEventMapperTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimeStateSnapshotTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,

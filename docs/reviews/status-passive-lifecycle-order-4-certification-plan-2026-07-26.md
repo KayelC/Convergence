@@ -37,11 +37,12 @@ example-based cases:
   independent reference model;
 - prove the supplied reserve-aging policy advances only opted-in state and the
   authored `suspendWhileReserve` flag still wins;
-- restore an actor at every boundary in a mixed lifecycle timeline;
+- prove snapshots containing uncommitted action-scoped state are rejected
+  before action-end rather than being misrepresented as valid save points;
+- restore an actor at every supported boundary after action-end;
 - prove the restored path remains equivalent to an uninterrupted path for
-  Guard, ailments, counted status, action state, phase state, battle state,
-  permanent state, shields, affinity overrides, affinity breaks, resources,
-  and deployment; and
+  Guard, ailments, counted status, phase state, battle state, permanent state,
+  shields, affinity overrides, affinity breaks, resources, and deployment; and
 - report the seed and step when a model assertion fails so the sequence is
   reproducible.
 
@@ -74,4 +75,3 @@ mechanic work provides reproducible contrary evidence.
 - Godot contract tests and headless smoke;
 - documentation, API, and product-boundary guards; and
 - `git diff --check` plus a clean worktree after each commit.
-
