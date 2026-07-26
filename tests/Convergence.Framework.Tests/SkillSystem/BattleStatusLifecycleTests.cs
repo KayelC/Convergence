@@ -928,6 +928,150 @@ public sealed class BattleStatusLifecycleTests
     }
 
     [Fact]
+    public void TurnEnd_RemovedAilmentDoesNotExecuteItsCapturedTriggerSlot()
+    {
+        ContentId recoveryId = ContentId.Parse("removed_recovery");
+        AilmentDefinition recovery = IndependentAilment(
+            recoveryId.ToString(),
+            new NormalAilmentTurnBehaviorDefinition(),
+            [new PassiveTriggerDefinition(
+                OwnerTurnEnd,
+                [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20))])]);
+        AilmentDefinition remover = IndependentAilment(
+            "remove_later_ailment",
+            new NormalAilmentTurnBehaviorDefinition(),
+            [new PassiveTriggerDefinition(
+                OwnerTurnEnd,
+                [new RemoveAilmentEffectDefinition(AilmentRemovalScope.Selected, [recoveryId])])]);
+        RuntimeActorState actor = Actor("removed_trigger_actor", hp: 50);
+        actor.ApplyAilment(remover, Turns(3));
+        actor.ApplyAilment(recovery, Turns(3));
+
+        BattleTurnEndLifecycleResult result = new BattleStatusLifecycleService(new SequenceRandomSource())
+            .ProcessTurnEnd(new(actor, [actor], Battle, OwnerTurnEnd), Services());
+
+        Assert.Equal(50, actor.GetRequiredResource(Hp).Current);
+        Assert.False(actor.HasAilment(recoveryId));
+        Assert.Contains(result.Events, item =>
+            item.Kind == BattleStatusLifecycleEventKind.AilmentRemoved &&
+            item.RelatedId == recoveryId);
+        Assert.DoesNotContain(result.Events, item =>
+            item.Kind == BattleStatusLifecycleEventKind.ResourceChanged &&
+            item.SourceId == recoveryId);
+    }
+
+    [Fact]
+    public void TurnEnd_RefreshedAilmentDoesNotExecuteTheReplacedTriggerSlot()
+    {
+        ContentId recoveryId = ContentId.Parse("refreshed_recovery");
+        AilmentDefinition recovery = IndependentAilment(
+            recoveryId.ToString(),
+            new NormalAilmentTurnBehaviorDefinition(),
+            [new PassiveTriggerDefinition(
+                OwnerTurnEnd,
+                [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20))])]);
+        AilmentDefinition refresher = IndependentAilment(
+            "refresh_later_ailment",
+            new NormalAilmentTurnBehaviorDefinition(),
+            [new PassiveTriggerDefinition(
+                OwnerTurnEnd,
+                [new ApplyAilmentEffectDefinition(recoveryId, 100, Turns(4))])]);
+        RuntimeActorState actor = Actor("refreshed_trigger_actor", hp: 50);
+        actor.ApplyAilment(refresher, Turns(3));
+        actor.ApplyAilment(recovery, Turns(3));
+
+        BattleTurnEndLifecycleResult result = new BattleStatusLifecycleService(new SequenceRandomSource())
+            .ProcessTurnEnd(
+                new(actor, [actor], Battle, OwnerTurnEnd),
+                Services(ailments: new TestAilmentRepository(recovery)));
+
+        Assert.Equal(50, actor.GetRequiredResource(Hp).Current);
+        BattleStatusLifecycleEvent refreshed = Assert.Single(result.Events, item =>
+            item.Kind == BattleStatusLifecycleEventKind.AilmentRefreshed &&
+            item.RelatedId == recoveryId);
+        Assert.Equal(
+            BattleAilmentTransitionOutcome.Refreshed,
+            refreshed.AilmentTransition!.Outcome);
+        Assert.DoesNotContain(result.Events, item =>
+            item.Kind == BattleStatusLifecycleEventKind.ResourceChanged &&
+            item.SourceId == recoveryId);
+    }
+
+    [Fact]
+    public void TurnEnd_NewAilmentWaitsUntilTheNextMatchingBoundary()
+    {
+        ContentId delayedId = ContentId.Parse("delayed_recovery");
+        AilmentDefinition delayed = IndependentAilment(
+            delayedId.ToString(),
+            new NormalAilmentTurnBehaviorDefinition(),
+            [new PassiveTriggerDefinition(
+                OwnerTurnEnd,
+                [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(20))])]);
+        AilmentDefinition creator = IndependentAilment(
+            "create_later_ailment",
+            new NormalAilmentTurnBehaviorDefinition(),
+            [new PassiveTriggerDefinition(
+                OwnerTurnEnd,
+                [new ApplyAilmentEffectDefinition(delayedId, 100, Turns(4))])]);
+        RuntimeActorState actor = Actor("delayed_trigger_actor", hp: 50);
+        actor.ApplyAilment(creator, Turns(3));
+        BattleExecutionServices services = Services(ailments: new TestAilmentRepository(delayed));
+        var lifecycle = new BattleStatusLifecycleService(new SequenceRandomSource());
+
+        BattleTurnEndLifecycleResult first = lifecycle.ProcessTurnEnd(
+            new(actor, [actor], Battle, OwnerTurnEnd),
+            services);
+
+        Assert.Equal(50, actor.GetRequiredResource(Hp).Current);
+        Assert.True(actor.HasAilment(delayedId));
+        Assert.DoesNotContain(first.Events, item =>
+            item.Kind == BattleStatusLifecycleEventKind.ResourceChanged &&
+            item.SourceId == delayedId);
+
+        Assert.Single(actor.RemoveAilments(
+            StatusRemovalCause.ScriptedRemoval,
+            active => active.Definition.Id == creator.Id));
+        BattleTurnEndLifecycleResult second = lifecycle.ProcessTurnEnd(
+            new(actor, [actor], Battle, OwnerTurnEnd),
+            services);
+
+        Assert.Equal(70, actor.GetRequiredResource(Hp).Current);
+        Assert.Contains(second.Events, item =>
+            item.Kind == BattleStatusLifecycleEventKind.ResourceChanged &&
+            item.SourceId == delayedId);
+    }
+
+    [Fact]
+    public void TurnEnd_SurvivingAilmentsKeepTheirBoundaryStartOrder()
+    {
+        AilmentDefinition first = IndependentAilment(
+            "ordered_first",
+            new NormalAilmentTurnBehaviorDefinition(),
+            [new PassiveTriggerDefinition(
+                OwnerTurnEnd,
+                [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(5))])]);
+        AilmentDefinition second = IndependentAilment(
+            "ordered_second",
+            new NormalAilmentTurnBehaviorDefinition(),
+            [new PassiveTriggerDefinition(
+                OwnerTurnEnd,
+                [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))])]);
+        RuntimeActorState actor = Actor("ordered_trigger_actor", hp: 50);
+        actor.ApplyAilment(first, Turns(3));
+        actor.ApplyAilment(second, Turns(3));
+
+        BattleTurnEndLifecycleResult result = new BattleStatusLifecycleService(new SequenceRandomSource())
+            .ProcessTurnEnd(new(actor, [actor], Battle, OwnerTurnEnd), Services());
+
+        Assert.Equal(65, actor.GetRequiredResource(Hp).Current);
+        Assert.Equal(
+            [first.Id, second.Id],
+            result.Events
+                .Where(item => item.Kind == BattleStatusLifecycleEventKind.ResourceChanged)
+                .Select(item => item.SourceId));
+    }
+
+    [Fact]
     public void TurnEnd_PassiveEventsPreserveTriggerOutcomeIndexEventAndEffects()
     {
         SkillDefinition passive = PassiveSkill(
@@ -1952,6 +2096,7 @@ public sealed class BattleStatusLifecycleTests
 
     private static BattleExecutionServices Services(
         IAilmentApplicationPolicy? ailmentPolicy = null,
+        IAilmentDefinitionRepository? ailments = null,
         IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffectHandlers = null,
         IBattleAilmentTransitionPolicy? ailmentTransitions = null,
         IBattleAilmentApplicationGatePolicy? ailmentGate = null,
@@ -1959,7 +2104,7 @@ public sealed class BattleStatusLifecycleTests
         IPassiveTriggerDispatcher? passiveTriggers = null,
         PassiveEventPolicyRegistry? passiveEventPolicies = null) =>
         new(
-            new EmptyAilments(),
+            ailments ?? new EmptyAilments(),
             new NoDamagePolicy(),
             new NoInstantDeathPolicy(),
             ailmentPolicy ?? new AlwaysAilmentPolicy(),
@@ -2051,6 +2196,21 @@ public sealed class BattleStatusLifecycleTests
         }
 
         public AilmentDefinition GetRequiredAilment(ContentId id) => throw new KeyNotFoundException();
+    }
+
+    private sealed class TestAilmentRepository(params AilmentDefinition[] ailments)
+        : IAilmentDefinitionRepository
+    {
+        private readonly IReadOnlyDictionary<ContentId, AilmentDefinition> _ailments =
+            ailments.ToDictionary(ailment => ailment.Id);
+
+        public bool TryGetAilment(ContentId id, out AilmentDefinition? definition) =>
+            _ailments.TryGetValue(id, out definition);
+
+        public AilmentDefinition GetRequiredAilment(ContentId id) =>
+            _ailments.TryGetValue(id, out AilmentDefinition? definition)
+                ? definition
+                : throw new KeyNotFoundException();
     }
 
     private sealed class NoDamagePolicy : IDamageExecutionPolicy

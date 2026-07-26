@@ -1582,8 +1582,16 @@ public sealed class BattleStatusLifecycleService : IBattleStatusLifecycleService
         List<BattleStatusLifecycleEvent> events)
     {
         RuntimeActorState actor = request.Actor;
-        foreach (ActiveAilmentState active in actor.Ailments.Values.ToArray())
+        KeyValuePair<ContentId, ActiveAilmentState>[] scheduledAilments =
+            actor.Ailments.ToArray();
+        foreach ((ContentId ailmentId, ActiveAilmentState scheduled) in scheduledAilments)
         {
+            if (!actor.Ailments.TryGetValue(ailmentId, out ActiveAilmentState? active) ||
+                !ReferenceEquals(active, scheduled))
+            {
+                continue;
+            }
+
             foreach (PassiveTriggerDefinition trigger in active.Definition.Triggers.Where(trigger => trigger.EventId == request.EventId))
             {
                 IReadOnlyList<RuntimeActorState> targets = PassiveTriggerTargetResolver.Resolve(
