@@ -587,7 +587,13 @@ public sealed class RuntimeStateSnapshotTests
                 SkillActivation.Passive,
                 null,
                 InheritanceGroup.Passive,
-                new SkillInheritanceDefinition(true))],
+                new SkillInheritanceDefinition(true),
+                triggers:
+                [
+                    new PassiveTriggerDefinition(
+                        Id("owner_would_be_defeated"),
+                        [])
+                ])],
             [new AilmentDefinition(
                 Id("poison"),
                 "Poison",

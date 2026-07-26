@@ -299,7 +299,7 @@ public sealed class RuntimeActorState
         IReadOnlyList<RuntimeActorSnapshotIntegrityDiagnostic> integrityDiagnostics =
             RuntimeActorSnapshotIntegrity.ValidateForRestore(
                 snapshot,
-                passiveDefinitions.Select(skill => skill.Id),
+                passiveDefinitions,
                 ailmentDefinitions.Select(ailment => ailment.Id),
                 registeredEventIds,
                 registeredPhaseIds);

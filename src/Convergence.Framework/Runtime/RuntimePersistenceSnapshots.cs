@@ -89,7 +89,9 @@ public enum RuntimeSaveValidationCode
     ActorStatModifierStateInvalid,
     ActorChargePolicyResolverMissing,
     ActorChargePolicyBindingRejected,
-    ActorChargeStateInvalid
+    ActorChargeStateInvalid,
+    PassiveActivationTriggerIndexInvalid,
+    PassiveActivationEventMismatch
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -755,15 +757,16 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
         int actorIndex)
     {
-        HashSet<ContentId> equippedPassiveSkillIds = actor.Skills.EquippedSkillIds
+        SkillDefinition[] equippedPassiveSkills = actor.Skills.EquippedSkillIds
             .Where(skillId =>
                 catalog.Skills.TryGetValue(skillId, out SkillDefinition? skill) &&
                 skill.Activation == SkillActivation.Passive)
-            .ToHashSet();
+            .Select(skillId => catalog.Skills[skillId])
+            .ToArray();
         IReadOnlyList<RuntimeActorSnapshotIntegrityDiagnostic> integrityDiagnostics =
             RuntimeActorSnapshotIntegrity.ValidateForRestore(
                 actor,
-                equippedPassiveSkillIds,
+                equippedPassiveSkills,
                 catalog.Ailments.Keys,
                 catalog.RegisteredEventIds,
                 catalog.RegisteredPhaseIds);
@@ -933,6 +936,8 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.PassiveSkillStateNotLoaded => RuntimeSaveValidationCode.PassiveStateSkillNotLoaded,
             RuntimeActorSnapshotIntegrityCode.DuplicatePassiveActivation => RuntimeSaveValidationCode.DuplicatePassiveActivation,
             RuntimeActorSnapshotIntegrityCode.PassiveActivationSkillNotLoaded => RuntimeSaveValidationCode.PassiveActivationSkillNotLoaded,
+            RuntimeActorSnapshotIntegrityCode.PassiveActivationTriggerIndexInvalid => RuntimeSaveValidationCode.PassiveActivationTriggerIndexInvalid,
+            RuntimeActorSnapshotIntegrityCode.PassiveActivationEventMismatch => RuntimeSaveValidationCode.PassiveActivationEventMismatch,
             RuntimeActorSnapshotIntegrityCode.BaseStatOutOfRange => RuntimeSaveValidationCode.ActorBaseStatOutOfRange,
             RuntimeActorSnapshotIntegrityCode.EffectiveStatOutOfRange => RuntimeSaveValidationCode.ActorEffectiveStatOutOfRange,
             RuntimeActorSnapshotIntegrityCode.BaseResourceValueOutOfRange => RuntimeSaveValidationCode.ActorBaseResourceValueOutOfRange,

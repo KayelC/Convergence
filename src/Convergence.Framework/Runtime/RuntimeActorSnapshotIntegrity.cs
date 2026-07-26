@@ -30,6 +30,8 @@ internal enum RuntimeActorSnapshotIntegrityCode
     PassiveSkillStateNotLoaded,
     DuplicatePassiveActivation,
     PassiveActivationSkillNotLoaded,
+    PassiveActivationTriggerIndexInvalid,
+    PassiveActivationEventMismatch,
     BaseStatOutOfRange,
     EffectiveStatOutOfRange,
     BaseResourceValueOutOfRange,
@@ -50,7 +52,7 @@ internal static class RuntimeActorSnapshotIntegrity
 {
     public static IReadOnlyList<RuntimeActorSnapshotIntegrityDiagnostic> ValidateForRestore(
         RuntimeActorSnapshot snapshot,
-        IEnumerable<ContentId>? loadedPassiveSkillIds,
+        IEnumerable<SkillDefinition>? loadedPassiveSkills,
         IEnumerable<ContentId>? availableAilmentIds,
         IReadOnlySet<ContentId>? registeredEventIds = null,
         IReadOnlySet<ContentId>? registeredPhaseIds = null)
@@ -235,7 +237,7 @@ internal static class RuntimeActorSnapshotIntegrity
             registeredPhaseIds,
             diagnostics);
         ValidateAnalysis(snapshot.BattleStatus.Analysis, diagnostics);
-        ValidatePassives(snapshot.BattleActivations, loadedPassiveSkillIds, diagnostics);
+        ValidatePassives(snapshot.BattleActivations, loadedPassiveSkills, diagnostics);
 
         return Array.AsReadOnly(diagnostics.ToArray());
     }
@@ -776,10 +778,12 @@ internal static class RuntimeActorSnapshotIntegrity
 
     private static void ValidatePassives(
         RuntimeBattleActivationSnapshot battleActivations,
-        IEnumerable<ContentId>? loadedPassiveSkillIds,
+        IEnumerable<SkillDefinition>? loadedPassiveSkills,
         ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
     {
-        HashSet<ContentId> loadedPassives = (loadedPassiveSkillIds ?? []).ToHashSet();
+        Dictionary<ContentId, SkillDefinition> loadedPassives = (loadedPassiveSkills ?? [])
+            .GroupBy(skill => skill.Id)
+            .ToDictionary(group => group.Key, group => group.First());
         var seenStates = new HashSet<ContentId>();
         for (int index = 0; index < battleActivations.PassiveSkillStates.Count; index++)
         {
@@ -793,7 +797,7 @@ internal static class RuntimeActorSnapshotIntegrity
                     state.SkillId));
             }
 
-            if (!loadedPassives.Contains(state.SkillId))
+            if (!loadedPassives.ContainsKey(state.SkillId))
             {
                 diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
                     RuntimeActorSnapshotIntegrityCode.PassiveSkillStateNotLoaded,
@@ -825,12 +829,38 @@ internal static class RuntimeActorSnapshotIntegrity
                     activation.SkillId));
             }
 
-            if (!loadedPassives.Contains(activation.SkillId))
+            if (!loadedPassives.TryGetValue(
+                    activation.SkillId,
+                    out SkillDefinition? passive))
             {
                 diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
                     RuntimeActorSnapshotIntegrityCode.PassiveActivationSkillNotLoaded,
                     $"Passive activation references skill '{activation.SkillId}', which is not loaded as an equipped passive.",
                     $"$.battleActivations.passiveActivations[{index}]",
+                    activation.SkillId));
+                continue;
+            }
+
+            if (activation.TriggerIndex >= passive.Triggers.Count)
+            {
+                diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                    RuntimeActorSnapshotIntegrityCode.PassiveActivationTriggerIndexInvalid,
+                    $"Passive activation references trigger index {activation.TriggerIndex}, " +
+                    $"but skill '{activation.SkillId}' defines {passive.Triggers.Count} triggers.",
+                    $"$.battleActivations.passiveActivations[{index}].triggerIndex",
+                    activation.SkillId));
+                continue;
+            }
+
+            ContentId authoredEventId = passive.Triggers[activation.TriggerIndex].EventId;
+            if (activation.EventId != authoredEventId)
+            {
+                diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                    RuntimeActorSnapshotIntegrityCode.PassiveActivationEventMismatch,
+                    $"Passive activation event '{activation.EventId}' does not match authored " +
+                    $"event '{authoredEventId}' for skill '{activation.SkillId}' trigger " +
+                    $"{activation.TriggerIndex}.",
+                    $"$.battleActivations.passiveActivations[{index}].eventId",
                     activation.SkillId));
             }
         }

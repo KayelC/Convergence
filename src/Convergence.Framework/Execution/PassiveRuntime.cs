@@ -107,24 +107,56 @@ public sealed class BattlePassiveCollection
 
     internal void RestoreActivations(IEnumerable<RuntimePassiveActivationSnapshot> activations)
     {
-        _activationCounts.Clear();
-        foreach (RuntimePassiveActivationSnapshot activation in
-                 activations ?? throw new ArgumentNullException(nameof(activations)))
+        RuntimePassiveActivationSnapshot[] snapshot =
+            (activations ?? throw new ArgumentNullException(nameof(activations))).ToArray();
+        var restored = new Dictionary<PassiveActivationKey, int>();
+        foreach (RuntimePassiveActivationSnapshot activation in snapshot)
         {
-            if (!_entries.Any(entry => entry.Skill.Id == activation.SkillId))
+            BattlePassiveEntry? entry =
+                _entries.FirstOrDefault(entry => entry.Skill.Id == activation.SkillId);
+            if (entry is null)
             {
                 throw new ArgumentException(
                     $"Passive activation references unloaded skill '{activation.SkillId}'.",
                     nameof(activations));
             }
 
-            _activationCounts.Add(
-                new PassiveActivationKey(
-                    activation.SkillId,
-                    activation.TriggerIndex,
-                    activation.EventId,
-                    activation.TargetInstanceId),
-                activation.ActivationCount);
+            if (activation.TriggerIndex >= entry.Skill.Triggers.Count)
+            {
+                throw new ArgumentException(
+                    $"Passive activation references trigger index {activation.TriggerIndex}, " +
+                    $"but skill '{activation.SkillId}' defines {entry.Skill.Triggers.Count} triggers.",
+                    nameof(activations));
+            }
+
+            ContentId authoredEventId = entry.Skill.Triggers[activation.TriggerIndex].EventId;
+            if (activation.EventId != authoredEventId)
+            {
+                throw new ArgumentException(
+                    $"Passive activation event '{activation.EventId}' does not match authored " +
+                    $"event '{authoredEventId}' for skill '{activation.SkillId}' trigger " +
+                    $"{activation.TriggerIndex}.",
+                    nameof(activations));
+            }
+
+            var key = new PassiveActivationKey(
+                activation.SkillId,
+                activation.TriggerIndex,
+                activation.EventId,
+                activation.TargetInstanceId);
+            if (!restored.TryAdd(key, activation.ActivationCount))
+            {
+                throw new ArgumentException(
+                    $"Passive activation '{activation.SkillId}/{activation.EventId}/" +
+                    $"{activation.TriggerIndex}' appears more than once.",
+                    nameof(activations));
+            }
+        }
+
+        _activationCounts.Clear();
+        foreach ((PassiveActivationKey key, int count) in restored)
+        {
+            _activationCounts.Add(key, count);
         }
     }
 

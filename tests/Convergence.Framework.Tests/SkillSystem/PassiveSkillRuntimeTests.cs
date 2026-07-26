@@ -37,6 +37,41 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void PassiveCollection_RejectsDefinitionIncoherentActivationWithoutDiscardingCurrentCounts()
+    {
+        ContentId eventId = ContentId.Parse("limited_support");
+        SkillDefinition passive = PassiveSkill(
+            "coherent_activation",
+            triggers:
+            [
+                new PassiveTriggerDefinition(
+                    eventId,
+                    [new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10))])
+            ]);
+        var collection = new BattlePassiveCollection([passive]);
+        collection.RecordActivation(
+            passive.Id,
+            triggerIndex: 0,
+            eventId: eventId,
+            targetInstanceId: null);
+
+        ArgumentException exception = Assert.Throws<ArgumentException>(() =>
+            collection.RestoreActivations(
+            [
+                new RuntimePassiveActivationSnapshot(
+                    passive.Id,
+                    ContentId.Parse("wrong_event"),
+                    triggerIndex: 0,
+                    activationCount: 5)
+            ]));
+
+        Assert.Contains("does not match authored event", exception.Message, StringComparison.Ordinal);
+        RuntimePassiveActivationSnapshot retained = Assert.Single(collection.CaptureActivations());
+        Assert.Equal(eventId, retained.EventId);
+        Assert.Equal(1, retained.ActivationCount);
+    }
+
+    [Fact]
     public void IceBoostFixture_ChangesIceDamageButNotFireDamage()
     {
         string path = TestContentPath.Resolve(

@@ -1366,6 +1366,118 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_RejectsActivationForPassiveWithoutAuthoredTriggers()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot frost = baseline.Actors[0];
+        ContentId iceBoost = Id("convergence.skill_system_redesign_sample:ice_boost_sample");
+        RuntimeActorSnapshot malformed = CopyActor(
+            frost,
+            battleActivations: new RuntimeBattleActivationSnapshot(
+                [new RuntimePassiveActivationSnapshot(
+                    iceBoost,
+                    Id("owner_turn_end"),
+                    triggerIndex: 0,
+                    activationCount: 1)]));
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [malformed, baseline.Actors[1]]),
+            catalog);
+
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.PassiveActivationTriggerIndexInvalid,
+            "$.actors[0].battleActivations.passiveActivations[0].triggerIndex");
+        ArgumentException directRestore = Assert.Throws<ArgumentException>(() =>
+            RuntimeActorState.Restore(
+                malformed,
+                CombatDefenseProfile.Empty,
+                [catalog.Skills[iceBoost]]));
+        Assert.Contains(
+            "$.battleActivations.passiveActivations[0].triggerIndex",
+            directRestore.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsPassiveActivationWithWrongIndexOrEvent()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot ember = baseline.Actors[1];
+        ContentId regenerate = Id("convergence.clean_battle_demo:regenerate_demo");
+        RuntimeActorSnapshot malformed = WithRegeneratePassive(
+            ember,
+            [
+                new RuntimePassiveActivationSnapshot(
+                    regenerate,
+                    Id("owner_turn_end"),
+                    triggerIndex: 1,
+                    activationCount: 1),
+                new RuntimePassiveActivationSnapshot(
+                    regenerate,
+                    Id("battle_start"),
+                    triggerIndex: 0,
+                    activationCount: 1)
+            ]);
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [baseline.Actors[0], malformed]),
+            catalog);
+
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.PassiveActivationTriggerIndexInvalid,
+            "$.actors[1].battleActivations.passiveActivations[0].triggerIndex");
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.PassiveActivationEventMismatch,
+            "$.actors[1].battleActivations.passiveActivations[1].eventId");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RuntimeSaveValidator_RoundTripsDefinitionCoherentPassiveActivation(
+        bool perTarget)
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot ember = baseline.Actors[1];
+        ContentId regenerate = Id("convergence.clean_battle_demo:regenerate_demo");
+        RuntimeInstanceId? targetInstanceId = perTarget
+            ? baseline.Actors[0].Identity.InstanceId
+            : null;
+        RuntimeActorSnapshot candidate = WithRegeneratePassive(
+            ember,
+            [
+                new RuntimePassiveActivationSnapshot(
+                    regenerate,
+                    Id("owner_turn_end"),
+                    triggerIndex: 0,
+                    activationCount: 2,
+                    targetInstanceId: targetInstanceId)
+            ]);
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [baseline.Actors[0], candidate]),
+            catalog);
+        RuntimeActorState restored = RuntimeActorState.Restore(
+            validation.RequireValidSnapshot().Actors[1],
+            CombatDefenseProfile.Empty,
+            [catalog.Skills[regenerate]]);
+
+        RuntimePassiveActivationSnapshot activation = Assert.Single(
+            restored.ToSnapshot().BattleActivations.PassiveActivations);
+        Assert.Equal(regenerate, activation.SkillId);
+        Assert.Equal(Id("owner_turn_end"), activation.EventId);
+        Assert.Equal(0, activation.TriggerIndex);
+        Assert.Equal(2, activation.ActivationCount);
+        Assert.Equal(targetInstanceId, activation.TargetInstanceId);
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_RejectsMissingPerTargetPassiveActivationActor()
     {
         GameDataCatalog catalog = LoadCatalog();
@@ -2529,6 +2641,24 @@ public sealed class RuntimePersistenceSnapshotTests
             baseResourceValues ?? snapshot.BaseResourceValues,
             snapshot.VitalResourceId,
             capabilityIds ?? snapshot.CapabilityIds);
+
+    private static RuntimeActorSnapshot WithRegeneratePassive(
+        RuntimeActorSnapshot actor,
+        IEnumerable<RuntimePassiveActivationSnapshot> activations)
+    {
+        ContentId emberBolt =
+            Id("convergence.clean_battle_demo:ember_bolt_demo");
+        ContentId regenerate =
+            Id("convergence.clean_battle_demo:regenerate_demo");
+        return CopyActor(
+            actor,
+            skills: new RuntimeSkillStateSnapshot(
+                [emberBolt, regenerate],
+                [emberBolt, regenerate]),
+            battleActivations: new RuntimeBattleActivationSnapshot(
+                activations,
+                [new RuntimePassiveSkillStateSnapshot(regenerate, IsEnabled: true)]));
+    }
 
     private static GameDataCatalog WithEntitySkillUnlock(
         GameDataCatalog catalog,
