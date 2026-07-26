@@ -182,28 +182,28 @@
     {
       "id": "status_and_passive_lifecycle",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "O4-R36 independently reconciled application, restrictions, clocks, cleanup, passive evidence, cancellation rollback, and ailment combat-modifier stacking with the corrected runtime."
+        "reason": "The third independent Order 4 audit reopened lifecycle-clock guidance: actor-local and team-local counters do not match the event-plus-sequence identity used by cross-target timed modifiers. O4-R39 must reconcile the corrected player-facing timing contract."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "O4-R36 verifies the host integration boundary, policy selection, staged extension behavior, executed-passive commit requirement, combat-profile ownership, persistence, and event consumption."
+        "reason": "The third independent Order 4 audit found that the integration guide does not define coherent sequence ownership for cross-target modifiers or reused lifecycle event IDs. O4-R39 must document the corrected host and custom-scheduler contract."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "O4-R36 source-traced lifecycle transactions, exact-instance schedules, passive dispatch, encounter cancellation, combat-profile composition, persistence, and immutable evidence without finding an unresolved reachable defect."
+        "reason": "The third independent Order 4 audit reproduced a canonical cross-target timed-modifier fault and shared phase-event clock divergence. O4-R38 must correct sequence authority before O4-R39 can reconcile the technical model."
       }
     },
     {

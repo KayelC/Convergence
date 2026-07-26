@@ -57,5 +57,8 @@ reopened Order 4 under O4-R33 through O4-R36 for two staged-commit
 defects and one audience-documentation omission. O4-R33 through O4-R35
 corrected those findings, and the
 [O4-R36 closure review](../reviews/status-passive-lifecycle-order-4-r36-closure-review-2026-07-26.md)
-closed the current source and documentation. Order 5, `battle_knowledge`, is
-next.
+closed that source revision. The
+[third independent audit](../reviews/status-passive-lifecycle-order-4-third-independent-audit-2026-07-26.md)
+then reproduced cross-target owner-turn sequence failure and shared phase-event
+clock divergence. O4-R37 through O4-R40 now govern the reopened correction;
+Order 5, `battle_knowledge`, remains queued.

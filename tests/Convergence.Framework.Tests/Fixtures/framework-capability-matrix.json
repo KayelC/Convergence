@@ -110,12 +110,14 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleStatusLifecycleEventMapperTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimeStateSnapshotTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "The canonical encounter lifecycle uses actor-local owner-turn and team-local phase counters even though timed stat-modifier boundary identity contains only event ID and sequence. Cross-target timed modifiers can therefore age incorrectly or fault, and shared phase event IDs can diverge from ordinary status clocks. O4-R38 through O4-R40 govern correction and closure."
+      ]
     },
     {
       "id": "encounter_orchestration",

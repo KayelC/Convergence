@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is `complete`. The
+`status_and_passive_lifecycle` is `partial`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced two bounded defects from current source. O4-R18 now skips a scheduled
 ailment trigger when that exact active instance has been removed or replaced,
@@ -47,7 +47,14 @@ executed activation evidence mandatory for replacement mutation commits, and
 O4-R35 added exact ailment combat-profile documentation and ordinary-value
 composition coverage. The
 [O4-R36 closure review](../reviews/status-passive-lifecycle-order-4-r36-closure-review-2026-07-26.md)
-found no remaining realistic reachable defect in the corrected capability.
+found no remaining realistic reachable defect in that corrected revision. The
+[third independent audit](../reviews/status-passive-lifecycle-order-4-third-independent-audit-2026-07-26.md)
+then reproduced a canonical cross-target timed-modifier fault and a separate
+shared phase-event clock divergence. The root cause is that the encounter port
+uses actor-local and team-local sequence counters while the public timed
+modifier boundary identifies a clock only by event ID and sequence. O4-R37
+records the reopened state; O4-R38 through O4-R40 govern runtime correction,
+audience reconciliation, and fresh closure.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial
