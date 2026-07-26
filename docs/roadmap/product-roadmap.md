@@ -8,9 +8,9 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is partial. The
+`status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced stale execution by a removed ailment and definition-incoherent
 passive activation restore keys. O4-R18 and O4-R19 corrected those runtime
@@ -50,10 +50,12 @@ documentation audiences. The
 found no unresolved reachable defect at that revision. The
 [fourth independent audit](../reviews/status-passive-lifecycle-order-4-fourth-independent-audit-2026-07-26.md)
 then found one narrow programmatic flee-outcome validation defect and two stale
-save-version labels. O4-R42 and O4-R43 have corrected the supported boundary
-and all three audiences. O4-R43A corrected two additional current-authority
-v10 labels discovered during closure preflight. O4-R44 independently decides
-closure.
+save-version labels. O4-R42 corrected the supported boundary, and O4-R43 plus
+O4-R43A corrected all current-authority save-v13 guidance. The
+[O4-R44 closure review](../reviews/status-passive-lifecycle-order-4-r44-closure-review-2026-07-26.md)
+then independently re-read the corrected source and documentation and passed
+the complete release gate without finding an unresolved realistic reachable
+defect.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -175,10 +177,11 @@ reopened and O4-R33 through O4-R36 corrected that revision. The third
 independent audit has now reopened Order 4 under O4-R37 through O4-R40 for
 lifecycle sequence authority. O4-R38 and O4-R39 corrected the implementation
 and guidance, and O4-R40 independently closed that revision. The fourth
-independent audit has now reopened Order 4 under O4-R41 through O4-R44 for one
-programmatic validation defect and save-version documentation drift. O4-R42 and
-O4-R43 are complete; O4-R44 remains the closure gate. Order 5
-(`battle_knowledge`) remains queued until that sequence closes.
+independent audit reopened Order 4 under O4-R41 through O4-R44 for one
+programmatic validation defect and save-version documentation drift. O4-R42,
+O4-R43, and O4-R43A corrected those paths, and O4-R44 independently closed the
+sequence. Order 5 (`battle_knowledge`) is now the next collaborative
+documentation subject.
 
 ## Priority 2: Persistence Evolution
 

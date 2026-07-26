@@ -182,28 +182,28 @@
     {
       "id": "status_and_passive_lifecycle",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "O4-R42 rejects undefined Companion flee outcomes and O4-R43 now explains the two valid choices without an implicit fallback. O4-R44 independent review remains required before promotion."
+        "reason": "O4-R44 independently re-read the corrected lifecycle source and mechanics guidance, found no unresolved reachable defect, and passed the complete release gate."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "O4-R42 aligns JSON, programmatic validation, and direct execution; O4-R43 corrects the stat-modifier guide to save v13 and reconciles host integration. O4-R44 independent review remains required before promotion."
+        "reason": "O4-R44 independently reconciled host integration, validation, lifecycle clocks, stat-modifier policy selection, and save-v13 guidance with current source."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "O4-R42 corrects the content/runtime enum-validation boundary and O4-R43 corrects the stat-modifier runtime reference and diagram to save v13. O4-R44 independent review remains required before promotion."
+        "reason": "O4-R44 independently reconciled the technical state machines, transaction boundaries, encounter sequencing, restoration, and save-v13 guidance with current source."
       }
     },
     {

@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is `partial`. The
+`status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced two bounded defects from current source. O4-R18 now skips a scheduled
 ailment trigger when that exact active instance has been removed or replaced,
@@ -64,8 +64,13 @@ subsequently found one narrow supported-boundary defect: programmatic
 `ChanceSkipOrFlee` content can pass an undefined Companion flee outcome through
 semantic validation and silently resolve it as battle escape. O4-R42 now
 rejects that value in semantic validation and direct lifecycle execution.
-O4-R43 reconciles all three audiences and corrects the stale save-v10 labels to
-v13. O4-R44 independently decides closure.
+O4-R43 reconciled all three audiences and corrected the stale save-v10 labels
+to v13. O4-R43A corrected two additional current-authority labels found during
+closure preflight. The
+[O4-R44 closure review](../reviews/status-passive-lifecycle-order-4-r44-closure-review-2026-07-26.md)
+then re-read the corrected source, schemas, tests, and all three audiences,
+passed the complete release gate, and found no unresolved realistic reachable
+defect. Demo coverage remains `focused`.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

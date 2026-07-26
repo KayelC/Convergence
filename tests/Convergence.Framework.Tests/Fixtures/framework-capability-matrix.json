@@ -110,14 +110,12 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleStatusLifecycleEventMapperTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimeStateSnapshotTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "O4-R42 now rejects undefined Companion flee outcomes in semantic validation and direct lifecycle execution, and O4-R43 reconciles all three audience layers with save contract v13. O4-R44 fresh source and documentation review remains required before returning this capability to complete."
-      ]
+      "knownGaps": []
     },
     {
       "id": "encounter_orchestration",

@@ -78,10 +78,12 @@ independently re-read the corrected source and documents without finding an
 unresolved reachable defect at that revision. The
 [fourth independent audit](../reviews/status-passive-lifecycle-order-4-fourth-independent-audit-2026-07-26.md)
 subsequently found one programmatic flee-outcome validation gap and stale
-save-v10 labels in two stat-modifier pages. All three entries are therefore
-`existing_unreviewed` again. O4-R42 corrected the runtime boundary and O4-R43
-reconciled the three audience pages; O4-R44 independent review remains required
-before promotion.
+save-v10 labels in two stat-modifier pages. All three entries were therefore
+returned to `existing_unreviewed`. O4-R42 corrected the runtime boundary,
+O4-R43 and O4-R43A reconciled the current save-v13 guidance, and the
+[O4-R44 closure review](../reviews/status-passive-lifecycle-order-4-r44-closure-review-2026-07-26.md)
+independently re-read current source and all three audiences before passing the
+complete release gate. All three entries are `reviewed` again.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
@@ -109,13 +111,13 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 21 reviewed,
-31 existing_unreviewed, 16 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 24 reviewed,
+28 existing_unreviewed, 16 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 21 |
-| `existing_unreviewed` | 31 |
+| `reviewed` | 24 |
+| `existing_unreviewed` | 28 |
 | `missing` | 16 |
 | `not_applicable` | 7 |
 

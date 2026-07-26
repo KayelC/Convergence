@@ -249,7 +249,7 @@ At reviewed revision `8870aea3`:
 | O4-R42 | `complete` | Reject undefined Companion flee outcomes in semantic validation and direct lifecycle execution, with focused regression tests. |
 | O4-R43 | `complete` | Correct save-v13 guidance and independently reconcile all three Order 4 audience layers. |
 | O4-R43A | `complete` | Correct the remaining current-authority save-v10 labels discovered by the closure preflight. |
-| O4-R44 | `pending` | Re-read corrected source and documentation, run the complete release gate, and decide closure without using this report as proof. |
+| O4-R44 | `complete` | Re-read corrected source and documentation, passed the complete release gate, and closed Order 4 in the independent [R44 closure review](status-passive-lifecycle-order-4-r44-closure-review-2026-07-26.md). |
 
 ## Closure Decision
 
@@ -258,6 +258,8 @@ persistence, and encounter-integration paths. O4-L1 is narrow and affects only
 malformed programmatic definitions; O4-D1 is documentation drift. Neither
 justifies redesigning the lifecycle architecture.
 
-Order 4 should nevertheless remain formally open until O4-R42 through O4-R44
-are complete. Order 5 remains queued so the project does not carry a knowingly
-inconsistent public content boundary or stale persistence instruction forward.
+O4-R42 through O4-R43A corrected the supported content boundary and current
+save-version guidance. O4-R44 then independently re-read the corrected source,
+tests, schemas, content, and documentation and passed the complete release
+gate. Order 4 is formally closed; Order 5 `battle_knowledge` is now the next
+collaborative documentation subject.
