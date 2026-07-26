@@ -27,6 +27,7 @@ internal enum RuntimeActorSnapshotIntegrityCode
     DuplicateAnalysisTarget,
     DuplicateAnalysisLayer,
     DuplicatePassiveSkillState,
+    MissingPassiveSkillState,
     PassiveSkillStateNotLoaded,
     DuplicatePassiveActivation,
     PassiveActivationSkillNotLoaded,
@@ -803,8 +804,19 @@ internal static class RuntimeActorSnapshotIntegrity
                     RuntimeActorSnapshotIntegrityCode.PassiveSkillStateNotLoaded,
                     $"Passive state references skill '{state.SkillId}', which is not loaded as an equipped passive.",
                     $"$.battleActivations.passiveSkillStates[{index}]",
-                    state.SkillId));
+                state.SkillId));
             }
+        }
+
+        foreach (ContentId skillId in loadedPassives.Keys
+                     .Where(skillId => !seenStates.Contains(skillId))
+                     .OrderBy(skillId => skillId.ToString(), StringComparer.Ordinal))
+        {
+            diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
+                RuntimeActorSnapshotIntegrityCode.MissingPassiveSkillState,
+                $"Equipped passive skill '{skillId}' has no saved enabled-state entry.",
+                "$.battleActivations.passiveSkillStates",
+                skillId));
         }
 
         var seenActivations = new HashSet<(

@@ -193,7 +193,7 @@ public sealed class CompendiumRuntimeServiceTests
     [Fact]
     public void Recall_IsAtomicAndRestoresRegisteredProgressionStatsSkillsAndFullResources()
     {
-        TestContext context = CreateContext();
+        TestContext context = CreateContext(includePassive: true);
         var service = context.CreateService();
         CatalogBattleActor source = context.CreateActor("owned_ashling");
         RuntimeActorSnapshot sourceSnapshot = source.State.ToSnapshot();
@@ -225,6 +225,10 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Equal(sourceSnapshot.Stats.BaseStats, recalledSnapshot.Stats.BaseStats);
         Assert.Equal(sourceSnapshot.Skills.LearnedSkillIds, recalledSnapshot.Skills.LearnedSkillIds);
         Assert.Equal(sourceSnapshot.Skills.EquippedSkillIds, recalledSnapshot.Skills.EquippedSkillIds);
+        RuntimePassiveSkillStateSnapshot passiveState = Assert.Single(
+            recalledSnapshot.BattleActivations.PassiveSkillStates);
+        Assert.Equal(Id("test.pack:steady_breath"), passiveState.SkillId);
+        Assert.True(passiveState.IsEnabled);
         Assert.Equal(Id("player_controller"), recalledSnapshot.Affiliation.CommandAuthorityId);
         Assert.Equal(Id("player_team"), recalledSnapshot.Affiliation.TeamId);
         Assert.All(recalledSnapshot.Resources, resource => Assert.Equal(resource.Maximum, resource.Current));
@@ -715,10 +719,23 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Equal(0, diagnostic.Index);
     }
 
-    private static TestContext CreateContext(bool compendiumEligible = true)
+    private static TestContext CreateContext(
+        bool compendiumEligible = true,
+        bool includePassive = false)
     {
         ContentId entityId = Id("test.pack:ashling");
         ContentId ailmentId = Id("test.pack:poison");
+        ContentId passiveId = Id("test.pack:steady_breath");
+        SkillDefinition? passive = includePassive
+            ? new SkillDefinition(
+                passiveId,
+                "Steady Breath",
+                "Framework Compendium test passive.",
+                SkillActivation.Passive,
+                null,
+                InheritanceGroup.Passive,
+                new SkillInheritanceDefinition(true))
+            : null;
         var entity = new EntityDefinition(
             entityId,
             "Ashling",
@@ -750,7 +767,8 @@ public sealed class CompendiumRuntimeServiceTests
             instantDeathResistances:
             [
                 new KeyValuePair<InstantDeathChannel, ResistanceLevel>(InstantDeathChannel.Dark, ResistanceLevel.Immune)
-            ]);
+            ],
+            baseSkillIds: passive is null ? [] : [passive.Id]);
         var ailment = new AilmentDefinition(
             ailmentId,
             "Poison",
@@ -761,7 +779,9 @@ public sealed class CompendiumRuntimeServiceTests
             new AilmentRecoveryDefinition());
         var catalog = new GameDataCatalog(
             contentPacks: [],
-            skills: [],
+            skills: passive is null
+                ? []
+                : [new KeyValuePair<ContentId, SkillDefinition>(passive.Id, passive)],
             entities: [new KeyValuePair<ContentId, EntityDefinition>(entity.Id, entity)],
             races: [],
             ailments: [new KeyValuePair<ContentId, AilmentDefinition>(ailment.Id, ailment)],

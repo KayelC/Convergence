@@ -177,7 +177,8 @@ internal sealed class CleanSaveDemoHost
             [
                 ContentId.Parse("convergence.clean_battle_demo:frost_lance_demo"),
                 ContentId.Parse("convergence.skill_system_redesign_sample:ice_boost_sample")
-            ]);
+            ],
+            [ContentId.Parse("convergence.skill_system_redesign_sample:ice_boost_sample")]);
         RuntimeActorSnapshot ember = CreateActor(
             RuntimeInstanceId.Parse("ember"),
             ContentId.Parse("convergence.clean_battle_demo:ember_duelist_demo"),
@@ -273,7 +274,11 @@ internal sealed class CleanSaveDemoHost
             [new KeyValuePair<ContentId, string>(ContentId.Parse("scene"), "clean_save_demo")]);
     }
 
-    private static RuntimeActorSnapshot CreateActor(RuntimeInstanceId instanceId, ContentId entityId, IEnumerable<ContentId> skillIds) =>
+    private static RuntimeActorSnapshot CreateActor(
+        RuntimeInstanceId instanceId,
+        ContentId entityId,
+        IEnumerable<ContentId> skillIds,
+        IEnumerable<ContentId>? passiveSkillIds = null) =>
         new(
             new RuntimeActorIdentitySnapshot(instanceId, entityId, ContentId.Parse("companion"), entityId.ToString()),
             new RuntimeActorAffiliationSnapshot(ContentId.Parse("host"), ContentId.Parse("player_team")),
@@ -289,7 +294,9 @@ internal sealed class CleanSaveDemoHost
             new RuntimeSkillStateSnapshot(skillIds, skillIds),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
-            new RuntimeBattleActivationSnapshot(),
+            new RuntimeBattleActivationSnapshot(
+                passiveSkillStates: (passiveSkillIds ?? []).Select(skillId =>
+                    new RuntimePassiveSkillStateSnapshot(skillId, IsEnabled: true))),
             [new KeyValuePair<ContentId, decimal>(ContentId.Parse("hp"), 40)],
             ContentId.Parse("hp"));
 

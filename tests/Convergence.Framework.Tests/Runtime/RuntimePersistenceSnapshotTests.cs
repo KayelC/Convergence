@@ -30,7 +30,9 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeSaveGameSnapshot valid = result.RequireValidSnapshot();
         RuntimeActorSnapshot restored = RuntimeActorState.Restore(
             valid.Actors[0],
-            CombatDefenseProfile.Empty).ToSnapshot();
+            CombatDefenseProfile.Empty,
+            [catalog.Skills[Id("convergence.skill_system_redesign_sample:ice_boost_sample")]])
+            .ToSnapshot();
         Assert.Equal(Id("convergence.clean_battle_demo:frost_duelist_demo"), restored.Identity.EntityDefinitionId);
         Assert.Equal(Id("convergence.shared_effects_demo:medicine_demo"), valid.Inventory.ItemQuantities.Keys.Single());
         Assert.Equal(
@@ -151,7 +153,14 @@ public sealed class RuntimePersistenceSnapshotTests
                     new RuntimeSkillChoiceToken(41),
                     5,
                     pendingSkillId)],
-                revision: 7));
+                revision: 7),
+            battleActivations: new RuntimeBattleActivationSnapshot(
+                passiveSkillStates:
+                [
+                    new RuntimePassiveSkillStateSnapshot(
+                        iceBoost,
+                        IsEnabled: true)
+                ]));
         RuntimeActorSnapshot vessel = CopyActor(
             savedVessel,
             stats: new RuntimeStatBlockSnapshot(
@@ -1313,7 +1322,8 @@ public sealed class RuntimePersistenceSnapshotTests
             .RequireValidSnapshot();
         RuntimeActorState restored = RuntimeActorState.Restore(
             validated.Actors[0],
-            CombatDefenseProfile.Empty);
+            CombatDefenseProfile.Empty,
+            [catalog.Skills[Id("convergence.skill_system_redesign_sample:ice_boost_sample")]]);
 
         StatResolutionResult resolved = new StandardStatResolutionPolicy().Resolve(
             new StatResolutionRequest(
@@ -1379,7 +1389,8 @@ public sealed class RuntimePersistenceSnapshotTests
                     iceBoost,
                     Id("owner_turn_end"),
                     triggerIndex: 0,
-                    activationCount: 1)]));
+                    activationCount: 1)],
+                [new RuntimePassiveSkillStateSnapshot(iceBoost, IsEnabled: true)]));
 
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
             Copy(baseline, actors: [malformed, baseline.Actors[1]]),
@@ -1434,6 +1445,83 @@ public sealed class RuntimePersistenceSnapshotTests
             validation,
             RuntimeSaveValidationCode.PassiveActivationEventMismatch,
             "$.actors[1].battleActivations.passiveActivations[1].eventId");
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsMissingEquippedPassiveState()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot ember = baseline.Actors[1];
+        ContentId emberBolt = Id("convergence.clean_battle_demo:ember_bolt_demo");
+        ContentId regenerate = Id("convergence.clean_battle_demo:regenerate_demo");
+        RuntimeActorSnapshot malformed = CopyActor(
+            ember,
+            skills: new RuntimeSkillStateSnapshot(
+                [emberBolt, regenerate],
+                [emberBolt, regenerate]),
+            battleActivations: new RuntimeBattleActivationSnapshot());
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [baseline.Actors[0], malformed]),
+            catalog);
+
+        AssertDiagnostic(
+            validation,
+            RuntimeSaveValidationCode.MissingPassiveSkillState,
+            "$.actors[1].battleActivations.passiveSkillStates");
+        ArgumentException directRestore = Assert.Throws<ArgumentException>(() =>
+            RuntimeActorState.Restore(
+                malformed,
+                CombatDefenseProfile.Empty,
+                [catalog.Skills[regenerate]]));
+        Assert.Contains(
+            "$.battleActivations.passiveSkillStates",
+            directRestore.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RuntimeSaveValidator_RoundTripsExactEquippedPassiveState(bool isEnabled)
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot ember = baseline.Actors[1];
+        ContentId emberBolt = Id("convergence.clean_battle_demo:ember_bolt_demo");
+        ContentId regenerate = Id("convergence.clean_battle_demo:regenerate_demo");
+        RuntimeActorSnapshot candidate = CopyActor(
+            ember,
+            skills: new RuntimeSkillStateSnapshot(
+                [emberBolt, regenerate],
+                [emberBolt, regenerate]),
+            battleActivations: new RuntimeBattleActivationSnapshot(
+                passiveSkillStates:
+                [
+                    new RuntimePassiveSkillStateSnapshot(regenerate, isEnabled)
+                ]));
+
+        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [baseline.Actors[0], candidate]),
+            catalog);
+        Assert.True(
+            validation.IsValid,
+            string.Join(
+                " | ",
+                validation.Diagnostics.Select(diagnostic =>
+                    $"{diagnostic.Code}:{diagnostic.Path}:{diagnostic.Message}")));
+        RuntimeActorState restored = RuntimeActorState.Restore(
+            validation.RequireValidSnapshot().Actors[1],
+            CombatDefenseProfile.Empty,
+            [catalog.Skills[regenerate]]);
+
+        BattlePassiveEntry entry = Assert.Single(restored.Passives.Entries);
+        Assert.Equal(regenerate, entry.Skill.Id);
+        Assert.Equal(isEnabled, entry.IsEnabled);
+        RuntimePassiveSkillStateSnapshot captured = Assert.Single(
+            restored.ToSnapshot().BattleActivations.PassiveSkillStates);
+        Assert.Equal(isEnabled, captured.IsEnabled);
     }
 
     [Theory]
@@ -2493,6 +2581,12 @@ public sealed class RuntimePersistenceSnapshotTests
             [
                 Id("convergence.clean_battle_demo:frost_lance_demo"),
                 Id("convergence.skill_system_redesign_sample:ice_boost_sample")
+            ],
+            passiveSkillStates:
+            [
+                new RuntimePassiveSkillStateSnapshot(
+                    Id("convergence.skill_system_redesign_sample:ice_boost_sample"),
+                    IsEnabled: true)
             ]);
         RuntimeActorSnapshot ember = CreateActor(
             RuntimeInstanceId.Parse("ember"),
@@ -2705,7 +2799,8 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeInstanceId instanceId,
         ContentId entityId,
         IEnumerable<ContentId>? learnedSkills = null,
-        IEnumerable<RuntimeTimedStateSnapshot>? ailments = null) =>
+        IEnumerable<RuntimeTimedStateSnapshot>? ailments = null,
+        IEnumerable<RuntimePassiveSkillStateSnapshot>? passiveSkillStates = null) =>
         new(
             new RuntimeActorIdentitySnapshot(instanceId, entityId, Id("companion"), entityId.ToString()),
             new RuntimeActorAffiliationSnapshot(Id("host"), Id("player_team")),
@@ -2721,7 +2816,7 @@ public sealed class RuntimePersistenceSnapshotTests
             new RuntimeSkillStateSnapshot(learnedSkills ?? [Id("convergence.clean_battle_demo:frost_lance_demo")], learnedSkills ?? [Id("convergence.clean_battle_demo:frost_lance_demo")]),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(ailments: ailments),
-            new RuntimeBattleActivationSnapshot(),
+            new RuntimeBattleActivationSnapshot(passiveSkillStates: passiveSkillStates),
             [new KeyValuePair<ContentId, decimal>(Id("hp"), 40)],
             Id("hp"));
 

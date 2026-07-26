@@ -366,6 +366,10 @@ public sealed class FusionTransactionServiceTests
                 Qualified("steady_breath")
             ],
             result.ResultActorSnapshot?.Skills.LearnedSkillIds);
+        RuntimePassiveSkillStateSnapshot passiveState = Assert.Single(
+            result.ResultActorSnapshot!.BattleActivations.PassiveSkillStates);
+        Assert.Equal(Qualified("steady_breath"), passiveState.SkillId);
+        Assert.True(passiveState.IsEnabled);
         Assert.Equal(4, result.RosterTransitions.Count);
     }
 

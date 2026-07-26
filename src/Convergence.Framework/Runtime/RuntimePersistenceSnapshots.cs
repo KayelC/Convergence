@@ -91,7 +91,8 @@ public enum RuntimeSaveValidationCode
     ActorChargePolicyBindingRejected,
     ActorChargeStateInvalid,
     PassiveActivationTriggerIndexInvalid,
-    PassiveActivationEventMismatch
+    PassiveActivationEventMismatch,
+    MissingPassiveSkillState = 83
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -933,6 +934,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.DuplicateAnalysisTarget => RuntimeSaveValidationCode.DuplicateActorAnalysisTarget,
             RuntimeActorSnapshotIntegrityCode.DuplicateAnalysisLayer => RuntimeSaveValidationCode.DuplicateActorAnalysisLayer,
             RuntimeActorSnapshotIntegrityCode.DuplicatePassiveSkillState => RuntimeSaveValidationCode.DuplicatePassiveSkillState,
+            RuntimeActorSnapshotIntegrityCode.MissingPassiveSkillState => RuntimeSaveValidationCode.MissingPassiveSkillState,
             RuntimeActorSnapshotIntegrityCode.PassiveSkillStateNotLoaded => RuntimeSaveValidationCode.PassiveStateSkillNotLoaded,
             RuntimeActorSnapshotIntegrityCode.DuplicatePassiveActivation => RuntimeSaveValidationCode.DuplicatePassiveActivation,
             RuntimeActorSnapshotIntegrityCode.PassiveActivationSkillNotLoaded => RuntimeSaveValidationCode.PassiveActivationSkillNotLoaded,

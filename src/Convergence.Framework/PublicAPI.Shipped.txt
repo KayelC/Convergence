@@ -6210,6 +6210,7 @@ Convergence.Runtime.RuntimeSaveValidationCode.MissingCatalogSkill = 8 -> Converg
 Convergence.Runtime.RuntimeSaveValidationCode.MissingCompendiumEntity = 13 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.MissingCompendiumStat = 19 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.MissingContentPack = 2 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.MissingPassiveSkillState = 83 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.PartyRosterIdentityCollision = 29 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.PassiveActivationEventMismatch = 82 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.PassiveActivationSkillNotLoaded = 54 -> Convergence.Runtime.RuntimeSaveValidationCode

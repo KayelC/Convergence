@@ -30,6 +30,12 @@ internal static class CleanSaveTestFixture
             [
                 Id("convergence.clean_battle_demo:frost_lance_demo"),
                 Id("convergence.skill_system_redesign_sample:ice_boost_sample")
+            ],
+            passiveSkillStates:
+            [
+                new RuntimePassiveSkillStateSnapshot(
+                    Id("convergence.skill_system_redesign_sample:ice_boost_sample"),
+                    IsEnabled: true)
             ]);
         RuntimeActorSnapshot ember = CreateActor(
             RuntimeInstanceId.Parse("ember"),
@@ -133,7 +139,8 @@ internal static class CleanSaveTestFixture
         RuntimeInstanceId instanceId,
         ContentId entityId,
         IEnumerable<ContentId>? learnedSkills = null,
-        IEnumerable<RuntimeTimedStateSnapshot>? ailments = null) =>
+        IEnumerable<RuntimeTimedStateSnapshot>? ailments = null,
+        IEnumerable<RuntimePassiveSkillStateSnapshot>? passiveSkillStates = null) =>
         new(
             new RuntimeActorIdentitySnapshot(instanceId, entityId, Id("companion"), entityId.ToString()),
             new RuntimeActorAffiliationSnapshot(Id("host"), Id("player_team")),
@@ -151,7 +158,7 @@ internal static class CleanSaveTestFixture
                 learnedSkills ?? [Id("convergence.clean_battle_demo:frost_lance_demo")]),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(ailments: ailments),
-            new RuntimeBattleActivationSnapshot(),
+            new RuntimeBattleActivationSnapshot(passiveSkillStates: passiveSkillStates),
             [new KeyValuePair<ContentId, decimal>(Id("hp"), 40)],
             Id("hp"));
 

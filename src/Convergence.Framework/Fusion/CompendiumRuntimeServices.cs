@@ -559,6 +559,13 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
         IReadOnlyList<ContentId> equippedSkills = entry.EquippedSkillIds.Count == 0
             ? learnedSkills
             : entry.EquippedSkillIds;
+        RuntimePassiveSkillStateSnapshot[] passiveStates = equippedSkills
+            .Select(_skills.GetRequiredSkill)
+            .Where(skill => skill.Activation == SkillActivation.Passive)
+            .Select(skill => new RuntimePassiveSkillStateSnapshot(
+                skill.Id,
+                IsEnabled: true))
+            .ToArray();
         var snapshot = new RuntimeActorSnapshot(
             new RuntimeActorIdentitySnapshot(
                 request.RecalledInstanceId,
@@ -574,7 +581,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             new RuntimeSkillStateSnapshot(learnedSkills, equippedSkills),
             new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
-            new RuntimeBattleActivationSnapshot(),
+            new RuntimeBattleActivationSnapshot(passiveSkillStates: passiveStates),
             fresh.BaseResourceValues,
             fresh.VitalResourceId,
             fresh.CapabilityIds);

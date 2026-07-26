@@ -588,7 +588,7 @@ public sealed class FusionTransactionService : IFusionTransactionService
                 prepared.ResultEquippedSkillIds),
             baseline.Equipment,
             baseline.BattleStatus,
-            baseline.BattleActivations,
+            ResultBattleActivations(prepared, baseline),
             baseline.BaseResourceValues,
             baseline.VitalResourceId,
             baseline.CapabilityIds);
@@ -776,6 +776,41 @@ public sealed class FusionTransactionService : IFusionTransactionService
             .Distinct()
             .ToArray());
         return (learned, equipped);
+    }
+
+    private static RuntimeBattleActivationSnapshot ResultBattleActivations(
+        PreparedFusionTransaction prepared,
+        RuntimeActorSnapshot baseline)
+    {
+        Dictionary<ContentId, RuntimePassiveSkillStateSnapshot> baselineStates =
+            baseline.BattleActivations.PassiveSkillStates.ToDictionary(
+                state => state.SkillId);
+        HashSet<ContentId> selectedPassiveIds = prepared.InheritanceSelection.SelectedSkills
+            .Where(skill => skill.Activation == SkillActivation.Passive)
+            .Select(skill => skill.Id)
+            .ToHashSet();
+        var states = new List<RuntimePassiveSkillStateSnapshot>();
+        foreach (ContentId skillId in prepared.ResultEquippedSkillIds)
+        {
+            if (baselineStates.TryGetValue(
+                    skillId,
+                    out RuntimePassiveSkillStateSnapshot? retained))
+            {
+                states.Add(retained);
+            }
+            else if (selectedPassiveIds.Contains(skillId))
+            {
+                states.Add(new RuntimePassiveSkillStateSnapshot(skillId, IsEnabled: true));
+            }
+        }
+
+        HashSet<ContentId> retainedPassiveIds = states
+            .Select(state => state.SkillId)
+            .ToHashSet();
+        return new RuntimeBattleActivationSnapshot(
+            baseline.BattleActivations.PassiveActivations.Where(activation =>
+                retainedPassiveIds.Contains(activation.SkillId)),
+            states);
     }
 
     private static FusionRuntimeDiagnostic TransitionDiagnostic(
