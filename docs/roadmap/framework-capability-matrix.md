@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is `complete`. The
+`status_and_passive_lifecycle` is `partial`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced two bounded defects from current source. O4-R18 now skips a scheduled
 ailment trigger when that exact active instance has been removed or replaced,
@@ -58,7 +58,13 @@ phases, and rounds. O4-R39 reconciled mechanics, integration, and technical
 guidance. The
 [O4-R40 closure review](../reviews/status-passive-lifecycle-order-4-r40-closure-review-2026-07-26.md)
 completed a fresh source, documentation, coverage, host, and Godot gate without
-an unresolved realistic reachable defect, so the capability is complete again.
+an unresolved realistic reachable defect at that revision. The
+[fourth independent audit](../reviews/status-passive-lifecycle-order-4-fourth-independent-audit-2026-07-26.md)
+subsequently found one narrow supported-boundary defect: programmatic
+`ChanceSkipOrFlee` content can pass an undefined Companion flee outcome through
+semantic validation and silently resolve it as battle escape. O4-R42 corrects
+that boundary, O4-R43 reconciles the audience documentation and stale save
+version labels, and O4-R44 independently decides closure.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

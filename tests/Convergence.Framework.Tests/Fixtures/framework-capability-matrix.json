@@ -110,12 +110,14 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleStatusLifecycleEventMapperTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimeStateSnapshotTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "O4-R41 found that programmatic ChanceSkipOrFlee ailment definitions can carry an undefined CompanionFleeOutcome through semantic validation and silently resolve it as FleeBattle. O4-R42 through O4-R44 govern validation, documentation reconciliation, and fresh closure."
+      ]
     },
     {
       "id": "encounter_orchestration",

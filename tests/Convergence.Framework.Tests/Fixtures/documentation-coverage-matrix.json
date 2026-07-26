@@ -182,28 +182,28 @@
     {
       "id": "status_and_passive_lifecycle",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "O4-R40 independently reconciled application, restrictions, clocks, cleanup, passives, event-keyed sequence authority, same-boundary self application, cross-target duration behavior, and shared lifecycle events with the corrected runtime."
+        "reason": "O4-R41 reopened the capability after finding an undefined programmatic Companion flee outcome can be interpreted as escape. O4-R42 must correct that rule boundary before all audiences are independently reconciled."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "O4-R40 verifies the host integration boundary, policy selection, event-keyed sequence ownership, effect-boundary propagation, successful commit, cancellation, persistence, and custom scheduler requirements."
+        "reason": "O4-R41 found both a programmatic content-validation gap and a stale save-v10 statement in the stat-modifier guide. O4-R42 and O4-R43 must correct and reconcile the supported host boundary."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": [
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "O4-R40 source-traced lifecycle transactions, exact-instance schedules, passive dispatch, encounter integration, event-keyed sequence authority, target-specific mutation, shared event semantics, persistence, and immutable evidence without finding an unresolved reachable defect."
+        "reason": "O4-R41 found one narrow content/runtime enum-validation inconsistency and stale save-v10 labels in the stat-modifier runtime reference. O4-R42 through O4-R44 govern correction and independent closure."
       }
     },
     {
