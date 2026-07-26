@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is `partial`. The
+`status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced two bounded defects from current source. O4-R18 now skips a scheduled
 ailment trigger when that exact active instance has been removed or replaced,
@@ -50,13 +50,15 @@ composition coverage. The
 found no remaining realistic reachable defect in that corrected revision. The
 [third independent audit](../reviews/status-passive-lifecycle-order-4-third-independent-audit-2026-07-26.md)
 then reproduced a canonical cross-target timed-modifier fault and a separate
-shared phase-event clock divergence. The root cause is that the encounter port
-uses actor-local and team-local sequence counters while the public timed
+shared phase-event clock divergence. The root cause was that the encounter port
+used actor-local and team-local sequence counters while the public timed
 modifier boundary identifies a clock only by event ID and sequence. O4-R38 now
 uses one committed sequence stream per lifecycle event ID across actors, teams,
 phases, and rounds. O4-R39 reconciled mechanics, integration, and technical
-guidance. The capability remains partial until O4-R40 independently reviews
-that correction and the complete release gate.
+guidance. The
+[O4-R40 closure review](../reviews/status-passive-lifecycle-order-4-r40-closure-review-2026-07-26.md)
+completed a fresh source, documentation, coverage, host, and Godot gate without
+an unresolved realistic reachable defect, so the capability is complete again.
 
 Documentation Order 3 reopened `turn_economy` after a source-first review found
 that a malformed custom economy could execute one command before its initial

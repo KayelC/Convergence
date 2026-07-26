@@ -182,28 +182,28 @@
     {
       "id": "status_and_passive_lifecycle",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/mechanics/status-passive-lifecycle.md",
           "docs/mechanics/stat-modifier-policies.md"
         ],
-        "reason": "O4-R39 now explains event-keyed sequence authority, same-boundary self application, cross-target duration behavior, and shared phase events. O4-R40 independent review remains required before promotion."
+        "reason": "O4-R40 independently reconciled application, restrictions, clocks, cleanup, passives, event-keyed sequence authority, same-boundary self application, cross-target duration behavior, and shared lifecycle events with the corrected runtime."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/developer-guide/status-passive-lifecycle.md",
           "docs/developer-guide/stat-modifier-policies.md"
         ],
-        "reason": "O4-R39 now defines event-keyed sequence ownership, effect-boundary propagation, successful commit, cancellation, and custom scheduler requirements. O4-R40 independent review remains required before promotion."
+        "reason": "O4-R40 verifies the host integration boundary, policy selection, event-keyed sequence ownership, effect-boundary propagation, successful commit, cancellation, persistence, and custom scheduler requirements."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": [
           "docs/technical/status-passive-lifecycle.md",
           "docs/technical/stat-modifier-policy-runtime.md"
         ],
-        "reason": "O4-R39 now documents the O4-R38 event-keyed runtime authority, mutation selection, cross-target progression, shared event semantics, and sequence commit model. O4-R40 independent review remains required before promotion."
+        "reason": "O4-R40 source-traced lifecycle transactions, exact-instance schedules, passive dispatch, encounter integration, event-keyed sequence authority, target-specific mutation, shared event semantics, persistence, and immutable evidence without finding an unresolved reachable defect."
       }
     },
     {

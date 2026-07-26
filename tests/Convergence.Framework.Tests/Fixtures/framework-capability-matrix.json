@@ -110,14 +110,12 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleStatusLifecycleEventMapperTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimeStateSnapshotTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "O4-R38 replaced actor-local and team-local counters with one committed sequence stream per lifecycle event ID, and O4-R39 reconciled all three documentation audiences. O4-R40 fresh source and documentation review remains required before this capability returns to complete."
-      ]
+      "knownGaps": []
     },
     {
       "id": "encounter_orchestration",

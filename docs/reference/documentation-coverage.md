@@ -72,8 +72,10 @@ subsequently reproduced a cross-target timed-modifier fault and shared
 phase-event divergence. The mechanics, developer, and technical entries are
 therefore `existing_unreviewed` again. O4-R38 replaced actor-local and
 team-local counters with event-keyed sequence authority, and O4-R39 reconciled
-all audiences with that implementation. O4-R40 must still independently review
-the corrected source and documentation before promotion.
+all audiences with that implementation. The
+[O4-R40 closure review](../reviews/status-passive-lifecycle-order-4-r40-closure-review-2026-07-26.md)
+independently re-read the corrected source and documents without finding an
+unresolved reachable defect, so all three entries are reviewed again.
 Their review order and promotion gates are maintained in the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
@@ -101,13 +103,13 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 21 reviewed,
-31 existing_unreviewed, 16 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 24 reviewed,
+28 existing_unreviewed, 16 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 21 |
-| `existing_unreviewed` | 31 |
+| `reviewed` | 24 |
+| `existing_unreviewed` | 28 |
 | `missing` | 16 |
 | `not_applicable` | 7 |
 

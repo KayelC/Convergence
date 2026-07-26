@@ -8,9 +8,9 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`status_and_passive_lifecycle` is partial. The
+`status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced stale execution by a removed ailment and definition-incoherent
 passive activation restore keys. O4-R18 and O4-R19 corrected those runtime
@@ -45,7 +45,9 @@ without an unresolved realistic reachable defect at that revision. The
 subsequently reproduced canonical cross-target timed-modifier failure and
 shared phase-event clock divergence. O4-R38 corrected the runtime with one
 sequence authority per lifecycle event ID, and O4-R39 reconciled all three
-documentation audiences. O4-R40 fresh closure now takes priority over Order 5.
+documentation audiences. The
+[O4-R40 closure review](../reviews/status-passive-lifecycle-order-4-r40-closure-review-2026-07-26.md)
+found no unresolved reachable defect and formally closed the corrected result.
 
 `combat_resolution` is complete. O2-R36 through O2-R38 corrected exact charge
 participation, added supplied disabled composition, and reconciled the audience
@@ -165,8 +167,9 @@ through O4-R30 corrected them, O4-R31 reconciled their guidance, and O4-R32
 independently closed that corrected revision. The second independent audit
 reopened and O4-R33 through O4-R36 corrected that revision. The third
 independent audit has now reopened Order 4 under O4-R37 through O4-R40 for
-lifecycle sequence authority. O4-R38 and O4-R39 are complete; Order 5
-(`battle_knowledge`) remains queued until O4-R40 fresh closure completes.
+lifecycle sequence authority. O4-R38 and O4-R39 corrected the implementation
+and guidance, and O4-R40 independently closed the result. Order 5
+(`battle_knowledge`) is the next collaborative documentation subject.
 
 ## Priority 2: Persistence Evolution
 

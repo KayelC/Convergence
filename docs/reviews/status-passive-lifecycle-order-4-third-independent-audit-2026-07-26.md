@@ -184,11 +184,11 @@ the public integration contract ambiguous.
 | O4-R37 | Complete | Record this independent audit and reopen the executable maturity records | Review document, matrix consistency, and clean baseline |
 | O4-R38 | Complete | Replace actor-local and team-local stat-modifier clock identities with one coherent monotonic sequence authority per lifecycle event | Cross-target ally/enemy modifiers, uneven actor-turn counts, same-boundary self application, shared team event, shared phase/round event, and cancellation regressions |
 | O4-R39 | Complete | Reconcile mechanics, developer, and technical guidance | Exact source/target duration examples, sequence ownership, custom scheduler requirements, diagrams, and coverage-matrix review |
-| O4-R40 | Pending | Fresh closure review | New source trace, full release gate, documentation links, and matrix promotion only if no reachable defect remains |
+| O4-R40 | Complete | Fresh closure review | New source trace, full release gate, documentation links, and matrix promotion only if no reachable defect remains |
 
-Until O4-R40 passes, `status_and_passive_lifecycle` is `partial`, its three
-documentation entries are `existing_unreviewed`, and Order 5 does not become
-the active collaborative subject.
+At audit time, until O4-R40 passed, `status_and_passive_lifecycle` was `partial`,
+its three documentation entries were `existing_unreviewed`, and Order 5 did
+not become the active collaborative subject.
 
 ## Verification At Audit Time
 
@@ -213,3 +213,12 @@ Do **not** formally close Order 4 at revision `26498370`. The broader lifecycle
 implementation is healthy, but O4-H2 is reachable through ordinary timed ally
 buffs or enemy debuffs and can fault a canonical encounter. Complete O4-R38
 through O4-R40 before promotion.
+
+## Correction Outcome
+
+O4-R38 corrected sequence authority, O4-R39 reconciled all three audience
+documents, and the
+[O4-R40 closure review](status-passive-lifecycle-order-4-r40-closure-review-2026-07-26.md)
+re-read the corrected implementation without finding an unresolved realistic
+reachable defect. The recommendation above remains the correct verdict for the
+originally reviewed revision; Order 4 is complete at the O4-R40 revision.
