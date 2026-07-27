@@ -143,6 +143,14 @@ Consequences:
 - final snapshots are returned in `AutomatedBattleResult.TeamKnowledge`; and
 - no automated path writes persistent player knowledge.
 
+The supplied `DeterministicBattleActionSelector` uses stable elemental facts for
+weakness preference and blocking-affinity avoidance. It deliberately does not
+score a fact whose `BattleDefenseInfluence` is non-`None`: the knowledge
+snapshot records what was observed, but it does not prove that a temporary
+guard, shield, Break, override, or conditional passive is still active when a
+later turn is selected. A custom strategy may combine those flags with its own
+live-state policy when it can prove that the influence remains current.
+
 ## Familiarity Import
 
 `FamiliarEntityKnowledgeService` asks `IFamiliarKnowledgeImportPolicy` which

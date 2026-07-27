@@ -201,7 +201,11 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
                         element,
                         out ElementalAffinity affinity,
                         out _,
-                        out _))
+                        out BattleDefenseInfluence temporaryInfluences))
+                {
+                    continue;
+                }
+                if (temporaryInfluences != BattleDefenseInfluence.None)
                 {
                     continue;
                 }

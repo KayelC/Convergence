@@ -136,6 +136,13 @@ Seeds must use a participating team ID and target runtime/entity identities
 that match current participants. The runner never adds those snapshots to a
 save.
 
+The supplied deterministic selector scores only facts with
+`BattleDefenseInfluence.None`. A temporary encounter observation remains useful
+presentation evidence, but the snapshot alone cannot prove that its shield,
+Break, override, guard, or conditional passive is still active on a later turn.
+If a custom selector wants to act on temporary observations, it must compare the
+returned influence flags with authoritative live state before trusting them.
+
 ## Familiarity Import
 
 Acquisition and Compendium code must opt in explicitly:

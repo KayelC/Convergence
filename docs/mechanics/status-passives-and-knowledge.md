@@ -75,6 +75,12 @@ by Ice.
 - A target UI may show the encounter fact while the shield lasts.
 - The temporary result cannot corrupt the saved entity record.
 
+The observation remains encounter history after the temporary state expires;
+its influence flags tell a host that it is not timeless. Convergence's supplied
+deterministic AI therefore does not use temporarily influenced facts for later
+weakness preference or defense avoidance. A game-specific strategy may use one
+only while it can independently prove that the named influence is still active.
+
 ## Analyze
 
 Analyze asks an injected disclosure policy about each requested field. The

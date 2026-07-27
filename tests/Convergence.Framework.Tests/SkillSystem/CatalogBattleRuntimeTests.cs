@@ -660,6 +660,41 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(Id("convergence.clean_battle_demo:ember_bolt_demo"), afterNull.Skill!.Id);
     }
 
+    [Fact]
+    public void Selector_UsesStableEncounterFactsButDoesNotTreatTemporaryObservationsAsTimeless()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor frost = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
+        CatalogBattleActor ember = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var selector = new DeterministicBattleActionSelector(new SkillExecutor(services));
+        BattleActionSelection Select(BattleDefenseInfluence influences) => selector.Select(
+            new BattleActionSelectionRequest(
+                frost,
+                [frost, ember],
+                Battle,
+                NormalBattle,
+                NewMoon,
+                new BattleKnowledgeView(
+                    new RuntimeKnowledgeSnapshot(),
+                    new RuntimeEncounterKnowledgeSnapshot(
+                        elemental:
+                        [
+                            new EncounterElementalKnowledgeEntry(
+                                ember.State.InstanceId,
+                                ember.Entity.Id,
+                                DamageElement.Fire,
+                                ElementalAffinity.Resist,
+                                influences)
+                        ]))));
+
+        BattleActionSelection stable = Select(BattleDefenseInfluence.None);
+        BattleActionSelection temporary = Select(BattleDefenseInfluence.AffinityOverride);
+
+        Assert.Equal(Id("convergence.clean_battle_demo:frost_lance_demo"), stable.Skill!.Id);
+        Assert.Equal(Id("convergence.clean_battle_demo:ember_bolt_demo"), temporary.Skill!.Id);
+    }
+
     [Theory]
     [InlineData(TargetSelection.All)]
     [InlineData(TargetSelection.Random)]
