@@ -513,6 +513,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Knowledge/PersistentBattleKnowledge.cs",
+      "owner": "combat_knowledge",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Properties/AssemblyInfo.cs",
       "owner": "assembly_metadata",
       "publicSurface": "internal_only"

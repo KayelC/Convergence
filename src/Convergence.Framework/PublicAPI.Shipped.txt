@@ -11136,3 +11136,44 @@ override Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.GetHash
 override Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.ToString() -> string!
 static Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.operator !=(Convergence.Encounters.BattleEncounterDepartureLifecycleRequest? left, Convergence.Encounters.BattleEncounterDepartureLifecycleRequest? right) -> bool
 static Convergence.Encounters.BattleEncounterDepartureLifecycleRequest.operator ==(Convergence.Encounters.BattleEncounterDepartureLifecycleRequest? left, Convergence.Encounters.BattleEncounterDepartureLifecycleRequest? right) -> bool
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnostic
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnostic.BattleKnowledgeTransitionDiagnostic(Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode code, string! message, string! path) -> void
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnostic.Code.get -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnostic.Message.get -> string!
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnostic.Path.get -> string!
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.DuplicateCurrentEntry = 2 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.DuplicateDiscoveryEntry = 3 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.InvalidAilmentId = 1 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.InvalidEntityId = 0 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeTransitionRequest
+Convergence.Knowledge.BattleKnowledgeTransitionRequest.BattleKnowledgeTransitionRequest(Convergence.Runtime.RuntimeKnowledgeSnapshot! before, Convergence.Runtime.RuntimeKnowledgeSnapshot! discoveries) -> void
+Convergence.Knowledge.BattleKnowledgeTransitionRequest.Before.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeTransitionRequest.Discoveries.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeTransitionResult
+Convergence.Knowledge.BattleKnowledgeTransitionResult.After.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeTransitionResult.Applied.get -> bool
+Convergence.Knowledge.BattleKnowledgeTransitionResult.AppliedDiscoveries.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeTransitionResult.BattleKnowledgeTransitionResult(Convergence.Knowledge.BattleKnowledgeTransitionStatus status, Convergence.Runtime.RuntimeKnowledgeSnapshot! before, Convergence.Runtime.RuntimeKnowledgeSnapshot! after, Convergence.Runtime.RuntimeKnowledgeSnapshot! appliedDiscoveries, System.Collections.Generic.IEnumerable<Convergence.Knowledge.BattleKnowledgeTransitionDiagnostic!>? diagnostics = null) -> void
+Convergence.Knowledge.BattleKnowledgeTransitionResult.Before.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeTransitionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleKnowledgeTransitionDiagnostic!>!
+Convergence.Knowledge.BattleKnowledgeTransitionResult.Diagnostics.init -> void
+Convergence.Knowledge.BattleKnowledgeTransitionResult.Status.get -> Convergence.Knowledge.BattleKnowledgeTransitionStatus
+Convergence.Knowledge.BattleKnowledgeTransitionStatus
+Convergence.Knowledge.BattleKnowledgeTransitionStatus.Applied = 0 -> Convergence.Knowledge.BattleKnowledgeTransitionStatus
+Convergence.Knowledge.BattleKnowledgeTransitionStatus.Rejected = 2 -> Convergence.Knowledge.BattleKnowledgeTransitionStatus
+Convergence.Knowledge.BattleKnowledgeTransitionStatus.Unchanged = 1 -> Convergence.Knowledge.BattleKnowledgeTransitionStatus
+Convergence.Knowledge.IPersistentBattleKnowledgeTransitionService
+Convergence.Knowledge.IPersistentBattleKnowledgeTransitionService.Apply(Convergence.Knowledge.BattleKnowledgeTransitionRequest! request) -> Convergence.Knowledge.BattleKnowledgeTransitionResult!
+Convergence.Knowledge.IPersistentBattleKnowledgeView
+Convergence.Knowledge.IPersistentBattleKnowledgeView.TryGetAilmentResistance(Convergence.Content.ContentId entityId, Convergence.Content.ContentId ailmentId, out Convergence.Content.ResistanceLevel resistance) -> bool
+Convergence.Knowledge.IPersistentBattleKnowledgeView.TryGetElementalAffinity(Convergence.Content.ContentId entityId, Convergence.Content.DamageElement element, out Convergence.Content.ElementalAffinity affinity) -> bool
+Convergence.Knowledge.IPersistentBattleKnowledgeView.TryGetInstantDeathResistance(Convergence.Content.ContentId entityId, Convergence.Content.InstantDeathChannel channel, out Convergence.Content.ResistanceLevel resistance) -> bool
+Convergence.Knowledge.PersistentBattleKnowledgeTransitionService
+Convergence.Knowledge.PersistentBattleKnowledgeTransitionService.Apply(Convergence.Knowledge.BattleKnowledgeTransitionRequest! request) -> Convergence.Knowledge.BattleKnowledgeTransitionResult!
+Convergence.Knowledge.PersistentBattleKnowledgeTransitionService.PersistentBattleKnowledgeTransitionService() -> void
+Convergence.Knowledge.PersistentBattleKnowledgeView
+Convergence.Knowledge.PersistentBattleKnowledgeView.PersistentBattleKnowledgeView(Convergence.Runtime.RuntimeKnowledgeSnapshot! snapshot) -> void
+Convergence.Knowledge.PersistentBattleKnowledgeView.TryGetAilmentResistance(Convergence.Content.ContentId entityId, Convergence.Content.ContentId ailmentId, out Convergence.Content.ResistanceLevel resistance) -> bool
+Convergence.Knowledge.PersistentBattleKnowledgeView.TryGetElementalAffinity(Convergence.Content.ContentId entityId, Convergence.Content.DamageElement element, out Convergence.Content.ElementalAffinity affinity) -> bool
+Convergence.Knowledge.PersistentBattleKnowledgeView.TryGetInstantDeathResistance(Convergence.Content.ContentId entityId, Convergence.Content.InstantDeathChannel channel, out Convergence.Content.ResistanceLevel resistance) -> bool

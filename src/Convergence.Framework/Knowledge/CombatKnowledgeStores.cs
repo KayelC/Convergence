@@ -14,6 +14,7 @@ public sealed class ElementalAffinityKnowledge
 
     public void Learn(ContentId entityId, DamageElement element, ElementalAffinity affinity)
     {
+        RequireValid(entityId, nameof(entityId));
         EnumDomain.RequireDefined(element, nameof(element));
         EnumDomain.RequireDefined(affinity, nameof(affinity));
         if (element == DamageElement.Almighty)
@@ -47,6 +48,14 @@ public sealed class ElementalAffinityKnowledge
     {
         return new ReadOnlyDictionary<TKey, TValue>(new Dictionary<TKey, TValue>(entries));
     }
+
+    private static void RequireValid(ContentId id, string parameterName)
+    {
+        if (!id.IsValid)
+        {
+            throw new ArgumentException("Knowledge entity IDs must be valid.", parameterName);
+        }
+    }
 }
 
 public sealed class AilmentResistanceKnowledge
@@ -55,6 +64,8 @@ public sealed class AilmentResistanceKnowledge
 
     public void Learn(ContentId entityId, ContentId ailmentId, ResistanceLevel resistance)
     {
+        RequireValid(entityId, nameof(entityId), "Knowledge entity IDs must be valid.");
+        RequireValid(ailmentId, nameof(ailmentId), "Knowledge ailment IDs must be valid.");
         EnumDomain.RequireDefined(resistance, nameof(resistance));
         _entries[new AilmentResistanceKnowledgeKey(entityId, ailmentId)] = resistance;
     }
@@ -74,6 +85,14 @@ public sealed class AilmentResistanceKnowledge
         return new ReadOnlyDictionary<AilmentResistanceKnowledgeKey, ResistanceLevel>(
             new Dictionary<AilmentResistanceKnowledgeKey, ResistanceLevel>(_entries));
     }
+
+    private static void RequireValid(ContentId id, string parameterName, string message)
+    {
+        if (!id.IsValid)
+        {
+            throw new ArgumentException(message, parameterName);
+        }
+    }
 }
 
 public sealed class InstantDeathResistanceKnowledge
@@ -82,6 +101,11 @@ public sealed class InstantDeathResistanceKnowledge
 
     public void Learn(ContentId entityId, InstantDeathChannel channel, ResistanceLevel resistance)
     {
+        if (!entityId.IsValid)
+        {
+            throw new ArgumentException("Knowledge entity IDs must be valid.", nameof(entityId));
+        }
+
         EnumDomain.RequireDefined(channel, nameof(channel));
         EnumDomain.RequireDefined(resistance, nameof(resistance));
         _entries[new InstantDeathResistanceKnowledgeKey(entityId, channel)] = resistance;
