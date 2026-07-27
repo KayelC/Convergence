@@ -2545,6 +2545,91 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_ValidCustomKnowledgeEvidencePassesAuthoritativeIntegration()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        ContentId handlerId = ContentId.Parse("observe_target");
+        SkillDefinition skill = ActiveSkill([new CustomEffectDefinition(handlerId)]);
+        BattleExecutionServices services = Services(
+            customEffects: [new(handlerId, new KnowledgeEvidenceCustomEffectHandler())]);
+
+        SkillExecutionResult execution = new SkillExecutor(services).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, execution.Status);
+        EffectExecutionResult effect = Assert.Single(execution.Effects);
+        Assert.Equal(0, effect.EffectIndex);
+        Assert.Equal(target.InstanceId, effect.TargetId);
+        Assert.Equal(7m, effect.Value);
+
+        var authority = new BattleKnowledgeExecutionAuthority(
+            skill.Id,
+            actor.InstanceId,
+            [KeyValuePair.Create(target.InstanceId, target.EntityId)]);
+        BattleKnowledgeExecutionTransitionResult knowledge =
+            new BattleKnowledgeExecutionTransitionService().Apply(
+                new BattleKnowledgeExecutionTransitionRequest(
+                    new RuntimeKnowledgeSnapshot(),
+                    RuntimeEncounterKnowledgeSnapshot.Empty,
+                    authority,
+                    execution.Effects,
+                    BattleKnowledgePersistenceScope.EncounterAndPersistent));
+
+        Assert.True(knowledge.Applied);
+        BattleKnowledgeObservation observation = Assert.Single(knowledge.AcceptedObservations);
+        Assert.Equal(skill.Id, observation.SourceActionId);
+        Assert.Equal(actor.InstanceId, observation.ActorId);
+        Assert.Equal(target.InstanceId, observation.TargetId);
+        Assert.Equal(target.EntityId, observation.TargetEntityId);
+        Assert.Equal(0, observation.EffectIndex);
+        Assert.Equal(ElementalAffinity.Weak, Assert.Single(knowledge.PersistentAfter.ElementalAffinities).Affinity);
+        Assert.Equal(ElementalAffinity.Weak, Assert.Single(knowledge.EncounterAfter.Elemental).Affinity);
+    }
+
+    [Fact]
+    public void Execute_CustomKnowledgeEvidenceCannotForgeTheAcceptedAction()
+    {
+        RuntimeActorState actor = Actor("actor", PlayerTeam);
+        RuntimeActorState target = Actor("target", EnemyTeam);
+        ContentId handlerId = ContentId.Parse("forge_observation_source");
+        SkillDefinition skill = ActiveSkill([new CustomEffectDefinition(handlerId)]);
+        BattleExecutionServices services = Services(
+            customEffects: [new(handlerId, new ForgedSourceKnowledgeEffectHandler())]);
+
+        SkillExecutionResult execution = new SkillExecutor(services).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        Assert.Equal(SkillExecutionStatus.Executed, execution.Status);
+        EffectExecutionResult effect = Assert.Single(execution.Effects);
+        Assert.Equal(0, effect.EffectIndex);
+        Assert.Equal(target.InstanceId, effect.TargetId);
+
+        RuntimeKnowledgeSnapshot persistent = new();
+        RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
+        var authority = new BattleKnowledgeExecutionAuthority(
+            skill.Id,
+            actor.InstanceId,
+            [KeyValuePair.Create(target.InstanceId, target.EntityId)]);
+        BattleKnowledgeExecutionTransitionResult knowledge =
+            new BattleKnowledgeExecutionTransitionService().Apply(
+                new BattleKnowledgeExecutionTransitionRequest(
+                    persistent,
+                    encounter,
+                    authority,
+                    execution.Effects,
+                    BattleKnowledgePersistenceScope.EncounterAndPersistent));
+
+        Assert.Equal(BattleKnowledgeTransitionStatus.Rejected, knowledge.Status);
+        Assert.Same(persistent, knowledge.PersistentAfter);
+        Assert.Same(encounter, knowledge.EncounterAfter);
+        Assert.Empty(knowledge.AcceptedObservations);
+        Assert.Equal(
+            BattleKnowledgeExecutionDiagnosticCode.ObservationSourceActionMismatch,
+            Assert.Single(knowledge.Diagnostics).Code);
+    }
+
+    [Fact]
     public void DefaultRegistrySupportsEveryApprovedActiveEffect()
     {
         EffectExecutorRegistry registry = EffectExecutorRegistry.CreateDefault();
@@ -3316,6 +3401,61 @@ public sealed class ActiveSkillExecutionTests
         {
             context.Actor.AddResource(resourceId, amount);
             return new EffectExecutionResult(999, RuntimeInstanceId.Parse("forged_target"), EffectExecutionOutcome.Success, Value: amount);
+        }
+    }
+
+    private sealed class KnowledgeEvidenceCustomEffectHandler : ICustomEffectHandler
+    {
+        public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context)
+        {
+            RuntimeActorState target = context.Target
+                ?? throw new InvalidOperationException("Knowledge evidence requires a target.");
+            BattleKnowledgeObservation observation = BattleKnowledgeObservation.Elemental(
+                context.Request.SourceId,
+                context.Actor.InstanceId,
+                target.InstanceId,
+                target.EntityId,
+                context.EffectIndex,
+                DamageElement.Ice,
+                contacted: true,
+                ElementalAffinity.Weak,
+                ElementalAffinity.Weak);
+
+            return new EffectExecutionResult(
+                999,
+                RuntimeInstanceId.Parse("forged_target"),
+                EffectExecutionOutcome.Success,
+                Value: 7m)
+            {
+                KnowledgeObservations = [observation]
+            };
+        }
+    }
+
+    private sealed class ForgedSourceKnowledgeEffectHandler : ICustomEffectHandler
+    {
+        public EffectExecutionResult Execute(CustomEffectDefinition effect, EffectExecutionContext context)
+        {
+            RuntimeActorState target = context.Target
+                ?? throw new InvalidOperationException("Knowledge evidence requires a target.");
+            BattleKnowledgeObservation observation = BattleKnowledgeObservation.Elemental(
+                ContentId.Parse("forged_action"),
+                context.Actor.InstanceId,
+                target.InstanceId,
+                target.EntityId,
+                context.EffectIndex,
+                DamageElement.Ice,
+                contacted: true,
+                ElementalAffinity.Weak,
+                ElementalAffinity.Weak);
+
+            return new EffectExecutionResult(
+                context.EffectIndex,
+                target.InstanceId,
+                EffectExecutionOutcome.Success)
+            {
+                KnowledgeObservations = [observation]
+            };
         }
     }
 

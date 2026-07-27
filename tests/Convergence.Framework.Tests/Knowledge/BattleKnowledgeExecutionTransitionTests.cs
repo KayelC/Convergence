@@ -142,6 +142,54 @@ public sealed class BattleKnowledgeExecutionTransitionTests
     }
 
     [Fact]
+    public void ExecutionAuthorityDefensivelyCopiesAndProtectsTargetIdentityMappings()
+    {
+        var targetIdentities = new List<KeyValuePair<RuntimeInstanceId, ContentId>>
+        {
+            KeyValuePair.Create(Target, TargetEntity)
+        };
+
+        var authority = new BattleKnowledgeExecutionAuthority(
+            Action,
+            Observer,
+            targetIdentities);
+        targetIdentities.Clear();
+
+        Assert.Equal(TargetEntity, authority.TargetEntityIds[Target]);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IDictionary<RuntimeInstanceId, ContentId>)authority.TargetEntityIds).Add(
+                RuntimeInstanceId.Parse("other_target"),
+                ContentId.Parse("other_entity")));
+    }
+
+    [Fact]
+    public void ExecutionAuthorityRejectsInvalidOrDuplicateIdentityMappings()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new BattleKnowledgeExecutionAuthority(default, Observer, []));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleKnowledgeExecutionAuthority(Action, default, []));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleKnowledgeExecutionAuthority(
+                Action,
+                Observer,
+                [KeyValuePair.Create(default(RuntimeInstanceId), TargetEntity)]));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleKnowledgeExecutionAuthority(
+                Action,
+                Observer,
+                [KeyValuePair.Create(Target, default(ContentId))]));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleKnowledgeExecutionAuthority(
+                Action,
+                Observer,
+                [
+                    KeyValuePair.Create(Target, TargetEntity),
+                    KeyValuePair.Create(Target, ContentId.Parse("other_entity"))
+                ]));
+    }
+
+    [Fact]
     public void RejectsObservationWhoseEffectIndexDoesNotMatchItsExecutionResult()
     {
         RuntimeKnowledgeSnapshot persistent = new();
@@ -198,6 +246,76 @@ public sealed class BattleKnowledgeExecutionTransitionTests
     }
 
     [Fact]
+    public void RejectsObservationWhoseSourceActionDoesNotMatchExecutionAuthority()
+    {
+        RuntimeKnowledgeSnapshot persistent = new();
+        RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
+        BattleKnowledgeObservation mismatched = Elemental(
+            TargetEntity,
+            effectIndex: 0,
+            sourceActionId: ContentId.Parse("different_action"));
+
+        BattleKnowledgeExecutionTransitionResult result = Apply(
+            persistent,
+            encounter,
+            [EffectWithObservation(0, mismatched)],
+            BattleKnowledgePersistenceScope.EncounterAndPersistent);
+
+        AssertRejectedWithoutMutation(
+            result,
+            persistent,
+            encounter,
+            BattleKnowledgeExecutionDiagnosticCode.ObservationSourceActionMismatch);
+    }
+
+    [Fact]
+    public void RejectsObservationWhoseActorDoesNotMatchExecutionAuthority()
+    {
+        RuntimeKnowledgeSnapshot persistent = new();
+        RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
+        BattleKnowledgeObservation mismatched = Elemental(
+            TargetEntity,
+            effectIndex: 0,
+            actorId: RuntimeInstanceId.Parse("different_observer"));
+
+        BattleKnowledgeExecutionTransitionResult result = Apply(
+            persistent,
+            encounter,
+            [EffectWithObservation(0, mismatched)],
+            BattleKnowledgePersistenceScope.EncounterAndPersistent);
+
+        AssertRejectedWithoutMutation(
+            result,
+            persistent,
+            encounter,
+            BattleKnowledgeExecutionDiagnosticCode.ObservationActorMismatch);
+    }
+
+    [Fact]
+    public void RejectsObservationWhenExecutionAuthorityDoesNotBindItsTargetEntity()
+    {
+        RuntimeKnowledgeSnapshot persistent = new();
+        RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
+        var authority = new BattleKnowledgeExecutionAuthority(Action, Observer, []);
+
+        BattleKnowledgeExecutionTransitionResult result =
+            new BattleKnowledgeExecutionTransitionService().Apply(
+                new BattleKnowledgeExecutionTransitionRequest(
+                    persistent,
+                    encounter,
+                    authority,
+                    [EffectWithObservation(0, Elemental(TargetEntity, 0))],
+                    BattleKnowledgePersistenceScope.EncounterAndPersistent));
+
+        BattleKnowledgeExecutionDiagnostic diagnostic = AssertRejectedWithoutMutation(
+            result,
+            persistent,
+            encounter,
+            BattleKnowledgeExecutionDiagnosticCode.ObservationTargetEntityMismatch);
+        Assert.Contains("<unbound>", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RejectsAnalysisWhoseTargetDoesNotMatchItsExecutionResult()
     {
         RuntimeKnowledgeSnapshot persistent = new();
@@ -223,6 +341,100 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         BattleKnowledgeExecutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetMismatch, diagnostic.Code);
         Assert.Equal(0, diagnostic.EffectIndex);
+    }
+
+    [Fact]
+    public void RejectsAnalysisWhoseActorDoesNotMatchExecutionAuthority()
+    {
+        RuntimeKnowledgeSnapshot persistent = new();
+        RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
+        BattleAnalysisResult analysis = new BattleAnalysisService().Analyze(
+            new BattleAnalysisRequest(
+                Actor("different_observer"),
+                Actor("target"),
+                [AnalysisLayer.Stats],
+                Sp));
+        var effect = new EffectExecutionResult(0, Target, EffectExecutionOutcome.Success)
+        {
+            Analysis = analysis
+        };
+
+        BattleKnowledgeExecutionTransitionResult result = Apply(
+            persistent,
+            encounter,
+            [effect],
+            BattleKnowledgePersistenceScope.EncounterAndPersistent);
+
+        AssertRejectedWithoutMutation(
+            result,
+            persistent,
+            encounter,
+            BattleKnowledgeExecutionDiagnosticCode.AnalysisActorMismatch);
+    }
+
+    [Fact]
+    public void RejectsAnalysisWhoseEntityDoesNotMatchExecutionAuthority()
+    {
+        RuntimeKnowledgeSnapshot persistent = new();
+        RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
+        BattleAnalysisResult analysis = new BattleAnalysisService().Analyze(
+            new BattleAnalysisRequest(
+                Actor("observer"),
+                Actor(
+                    "target",
+                    entityId: ContentId.Parse("different_target_entity")),
+                [AnalysisLayer.Stats],
+                Sp));
+        var effect = new EffectExecutionResult(0, Target, EffectExecutionOutcome.Success)
+        {
+            Analysis = analysis
+        };
+
+        BattleKnowledgeExecutionTransitionResult result = Apply(
+            persistent,
+            encounter,
+            [effect],
+            BattleKnowledgePersistenceScope.EncounterAndPersistent);
+
+        AssertRejectedWithoutMutation(
+            result,
+            persistent,
+            encounter,
+            BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetEntityMismatch);
+    }
+
+    [Fact]
+    public void ProvenancePreflightRejectsTheWholeBatchBeforeAnyLowerTransitionRuns()
+    {
+        RuntimeKnowledgeSnapshot persistent = new();
+        RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
+        var observations = new RecordingObservationService();
+        var service = new BattleKnowledgeExecutionTransitionService(observations);
+        EffectExecutionResult[] effects =
+        [
+            EffectWithObservation(0, Elemental(TargetEntity, 0)),
+            EffectWithObservation(
+                1,
+                Elemental(
+                    TargetEntity,
+                    effectIndex: 1,
+                    sourceActionId: ContentId.Parse("different_action")))
+        ];
+
+        BattleKnowledgeExecutionTransitionResult result = service.Apply(
+            new BattleKnowledgeExecutionTransitionRequest(
+                persistent,
+                encounter,
+                Authority(),
+                effects,
+                BattleKnowledgePersistenceScope.EncounterAndPersistent));
+
+        AssertRejectedWithoutMutation(
+            result,
+            persistent,
+            encounter,
+            BattleKnowledgeExecutionDiagnosticCode.ObservationSourceActionMismatch);
+        Assert.Equal(0, observations.ApplyCalls);
     }
 
     [Fact]
@@ -276,10 +488,14 @@ public sealed class BattleKnowledgeExecutionTransitionTests
             KnowledgeObservations = [observation]
         };
 
-    private static BattleKnowledgeObservation Elemental(ContentId entityId, int effectIndex) =>
+    private static BattleKnowledgeObservation Elemental(
+        ContentId entityId,
+        int effectIndex,
+        ContentId? sourceActionId = null,
+        RuntimeInstanceId? actorId = null) =>
         BattleKnowledgeObservation.Elemental(
-            Action,
-            Observer,
+            sourceActionId ?? Action,
+            actorId ?? Observer,
             Target,
             entityId,
             effectIndex,
@@ -303,10 +519,13 @@ public sealed class BattleKnowledgeExecutionTransitionTests
             [AnalysisLayer.Affinities],
             Sp));
 
-    private static RuntimeActorState Actor(string id, CombatDefenseProfile? defense = null) =>
+    private static RuntimeActorState Actor(
+        string id,
+        CombatDefenseProfile? defense = null,
+        ContentId? entityId = null) =>
         new(
             RuntimeInstanceId.Parse(id),
-            ContentId.Parse($"{id}_entity"),
+            entityId ?? ContentId.Parse($"{id}_entity"),
             ContentId.Parse("test_team"),
             Hp,
             defense ?? CombatDefenseProfile.Empty,
@@ -315,6 +534,39 @@ public sealed class BattleKnowledgeExecutionTransitionTests
             new RuntimeActorAffiliationSnapshot(
                 ContentId.Parse("test_authority"),
                 ContentId.Parse("test_team")));
+
+    private static BattleKnowledgeExecutionDiagnostic AssertRejectedWithoutMutation(
+        BattleKnowledgeExecutionTransitionResult result,
+        RuntimeKnowledgeSnapshot persistent,
+        RuntimeEncounterKnowledgeSnapshot encounter,
+        BattleKnowledgeExecutionDiagnosticCode expectedCode)
+    {
+        Assert.Equal(BattleKnowledgeTransitionStatus.Rejected, result.Status);
+        Assert.Same(persistent, result.PersistentAfter);
+        Assert.Same(encounter, result.EncounterAfter);
+        Assert.Empty(result.AcceptedObservations);
+        Assert.Empty(result.ProcessedAnalyses);
+        BattleKnowledgeExecutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(expectedCode, diagnostic.Code);
+        return diagnostic;
+    }
+
+    private sealed class RecordingObservationService
+        : IBattleKnowledgeObservationTransitionService
+    {
+        public int ApplyCalls { get; private set; }
+
+        public BattleKnowledgeObservationTransitionResult Apply(
+            BattleKnowledgeObservationTransitionRequest request)
+        {
+            ApplyCalls++;
+            return new BattleKnowledgeObservationTransitionService().Apply(request);
+        }
+
+        public BattleKnowledgeEncounterCleanupResult ClearEncounter(
+            RuntimeEncounterKnowledgeSnapshot before) =>
+            new BattleKnowledgeObservationTransitionService().ClearEncounter(before);
+    }
 
     private sealed class DiagnosticFreeRejectingObservationService
         : IBattleKnowledgeObservationTransitionService
