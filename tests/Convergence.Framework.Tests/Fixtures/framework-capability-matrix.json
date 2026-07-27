@@ -128,7 +128,7 @@
     },
     {
       "id": "battle_knowledge",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "PersistentBattleKnowledgeTests",
         "BattleKnowledgeObservationTransitionTests",
@@ -141,7 +141,9 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "The aggregate execution transition does not yet validate custom observation and Analyze source-action, acting-actor, and target-entity provenance against authoritative execution context."
+      ]
     },
     {
       "id": "party_and_rosters",

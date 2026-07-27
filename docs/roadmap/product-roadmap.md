@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
@@ -180,11 +180,12 @@ and guidance, and O4-R40 independently closed that revision. The fourth
 independent audit reopened Order 4 under O4-R41 through O4-R44 for one
 programmatic validation defect and save-version documentation drift. O4-R42,
 O4-R43, and O4-R43A corrected those paths, and O4-R44 independently closed the
-sequence. Order 5 (`battle_knowledge`) has implemented its framework authority,
+sequence. Order 5 (`battle_knowledge`) implemented its core framework authority,
 host integration, persistence validation, and three audience documents through
-O5-R8. Its independent review found no unresolved realistic Battle Knowledge
-defect. Formal owner closure and a successful compatible-environment Godot
-headless smoke remain pending.
+O5-R8. A later fresh source audit reopened one supported custom-effect
+provenance boundary: aggregate knowledge integration validates effect index and
+runtime target, but not authoritative source action, acting actor, or target
+entity. The capability is therefore `partial`, with O5-R10 through O5-R13 next.
 
 ## Priority 2: Persistence Evolution
 

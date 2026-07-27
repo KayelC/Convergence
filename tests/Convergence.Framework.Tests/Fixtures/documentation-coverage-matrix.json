@@ -232,14 +232,14 @@
         "reason": "Owner-confirmed persistent and encounter scopes, conservative discovery, Analyze disclosure, boss restriction, familiarity, and AI lifetime rules are reconciled with current source."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/battle-knowledge.md"],
-        "reason": "The guide covers execution evidence, atomic transitions, aggregate queries, Analyze policies, team seeds, familiarity, save boundaries, and Godot responsibilities."
+        "reason": "The guide covers the intended integration, but its custom-evidence provenance guarantee exceeds the current aggregate execution contract and must be reconciled after O5-F1."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/battle-knowledge-runtime.md"],
-        "reason": "The technical reference traces canonical authorities, transition atomicity, discovery rules, AI sharing, familiarity, and session-save validation."
+        "reason": "The runtime trace is otherwise accurate, but it overstates custom-handler provenance validation until source-action, actor, and target-entity authority are enforced."
       }
     },
     {

@@ -57,10 +57,13 @@ original references as both `Before` and `After`.
 
 An observation's effect index and target must match the enclosing
 `EffectExecutionResult`, and an Analyze result must identify that same target.
-These checks prevent a custom effect handler from attributing knowledge to a
-different authored effect or runtime actor. A rejecting custom transition that
-omits diagnostics is still converted into a deterministic typed aggregate
-diagnostic rather than escaping through diagnostic construction.
+These checks prevent effect-index and runtime-target substitution. At revision
+`792d3863`, the request does not carry authoritative source-action,
+acting-actor, or target-entity context, so it cannot yet reject substitution of
+those fields by a custom handler. O5-F1 tracks that bounded contract defect. A
+rejecting custom transition that omits diagnostics is still converted into a
+deterministic typed aggregate diagnostic rather than escaping through
+diagnostic construction.
 
 Callers must not apply an intermediate snapshot themselves. They publish only
 the aggregate `After` snapshots when status is not `Rejected`.

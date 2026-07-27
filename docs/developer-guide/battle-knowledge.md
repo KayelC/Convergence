@@ -61,7 +61,11 @@ Apply knowledge only after an execution result has been accepted. Assessment,
 menu selection, cancellation, and rejected execution do not teach anything.
 Custom effect evidence must report the same effect index as its enclosing
 `EffectExecutionResult`; mismatched provenance is rejected without changing
-either knowledge scope.
+either knowledge scope. At revision `792d3863`, the aggregate transition also
+checks the runtime target but does not yet receive authoritative source-action,
+acting-actor, or target-entity context. A custom handler must therefore preserve
+those values from its `EffectExecutionContext`; O5-F1 tracks fail-closed
+framework validation for this supported extension boundary.
 
 ## Query For UI Or Strategy
 

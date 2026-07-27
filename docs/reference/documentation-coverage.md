@@ -93,10 +93,11 @@ Order 5 completed O5-R1 through O5-R8. The
 independently traced current Battle Knowledge source and all three audience
 documents. Four reachable integration defects were corrected in isolated
 commits, and the final source trace found no unresolved realistic Battle
-Knowledge defect. The three entries remain `reviewed`. Formal owner closure
-still awaits confirmation and a successful real Godot headless smoke in a
-compatible environment; the local engine currently fails during native project
-startup before Convergence code runs.
+Knowledge defect at that revision. A later fresh source audit found one bounded
+custom-effect provenance defect that the developer and technical pages currently
+overstate. Mechanics remains `reviewed`; developer and technical return to
+`existing_unreviewed` until O5-R10 through O5-R13 correct and independently
+recheck that boundary.
 
 The review order and promotion gates for all capabilities are maintained in
 the active
@@ -126,13 +127,13 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-26 existing_unreviewed, 15 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 25 reviewed,
+28 existing_unreviewed, 15 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 27 |
-| `existing_unreviewed` | 26 |
+| `reviewed` | 25 |
+| `existing_unreviewed` | 28 |
 | `missing` | 15 |
 | `not_applicable` | 7 |
 

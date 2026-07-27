@@ -377,15 +377,21 @@ persistent entity knowledge from encounter-instance observations, prevents
 temporary defenses from corrupting permanent records, keeps ordinary enemy AI
 knowledge encounter-local, imports all authored defenses after approved
 acquisition paths, and adds policy-controlled restricted Analyze disclosure for
-bosses and other special targets. The three audience entries are now reviewed,
-bringing the matrix to 27 reviewed, 26 `existing_unreviewed`, 15 missing, and 7
-`not_applicable`. The
+bosses and other special targets. The
 [O5-R8 Final Review](../reviews/battle-knowledge-order-5-r8-final-review-2026-07-27.md)
 found and corrected four reachable integration defects, then found no remaining
-realistic Battle Knowledge defect. Owner confirmation and a successful real
-Godot headless run in a compatible environment remain before formal closure;
-the local Godot 4.7.1 executable crashes during native project startup before
-the Convergence smoke path executes.
+realistic Battle Knowledge defect at that revision.
+
+A later
+[fresh code and documentation audit](../reviews/battle-knowledge-order-5-fresh-code-and-documentation-audit-2026-07-27.md)
+reopened the implementation and two integration audiences. O5-F1 demonstrates
+that a supported custom effect can supply a mismatched source action, acting
+actor, or target entity while preserving the two provenance fields currently
+checked by the aggregate transition. Mechanics remains reviewed, while the
+developer and technical entries return to `existing_unreviewed`. The matrix now
+records 25 reviewed, 28 `existing_unreviewed`, 15 missing, and 7
+`not_applicable`. O5-R10 through O5-R13 govern correction, regression coverage,
+documentation reconciliation, and fresh closure review.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
