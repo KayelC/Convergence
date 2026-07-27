@@ -430,6 +430,12 @@ public interface IBattleAnalysisKnowledgeTransitionService
         RuntimeKnowledgeSnapshot persistentBefore,
         RuntimeEncounterKnowledgeSnapshot encounterBefore,
         BattleAnalysisResult analysis);
+
+    BattleAnalysisKnowledgeTransitionResult Apply(
+        RuntimeKnowledgeSnapshot persistentBefore,
+        RuntimeEncounterKnowledgeSnapshot encounterBefore,
+        BattleAnalysisResult analysis,
+        BattleKnowledgePersistenceScope persistenceScope);
 }
 
 public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKnowledgeTransitionService
@@ -445,11 +451,26 @@ public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKn
     public BattleAnalysisKnowledgeTransitionResult Apply(
         RuntimeKnowledgeSnapshot persistentBefore,
         RuntimeEncounterKnowledgeSnapshot encounterBefore,
-        BattleAnalysisResult analysis)
+        BattleAnalysisResult analysis) =>
+        Apply(
+            persistentBefore,
+            encounterBefore,
+            analysis,
+            BattleKnowledgePersistenceScope.EncounterAndPersistent);
+
+    public BattleAnalysisKnowledgeTransitionResult Apply(
+        RuntimeKnowledgeSnapshot persistentBefore,
+        RuntimeEncounterKnowledgeSnapshot encounterBefore,
+        BattleAnalysisResult analysis,
+        BattleKnowledgePersistenceScope persistenceScope)
     {
         ArgumentNullException.ThrowIfNull(persistentBefore);
         ArgumentNullException.ThrowIfNull(encounterBefore);
         ArgumentNullException.ThrowIfNull(analysis);
+        if (!Enum.IsDefined(persistenceScope))
+        {
+            throw new ArgumentOutOfRangeException(nameof(persistenceScope));
+        }
 
         EncounterAnalysisKnowledgeEntry? existing = encounterBefore.Analysis
             .SingleOrDefault(entry => entry.TargetInstanceId == analysis.TargetId);
@@ -470,6 +491,55 @@ public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKn
         RuntimeEncounterKnowledgeSnapshot encounterAfter = encounterBefore;
         if (disclosed.Length > 0)
         {
+            var elemental = encounterBefore.Elemental.ToDictionary(
+                entry => (entry.TargetInstanceId, entry.Element));
+            var ailments = encounterBefore.Ailments.ToDictionary(
+                entry => (entry.TargetInstanceId, entry.AilmentId));
+            var instantDeath = encounterBefore.InstantDeath.ToDictionary(
+                entry => (entry.TargetInstanceId, entry.Channel));
+            if (disclosed.Contains(BattleAnalysisField.ElementalAffinities))
+            {
+                foreach ((DamageElement element, ElementalAffinity affinity) in analysis.Data.ElementalAffinities)
+                {
+                    if (element != DamageElement.Almighty)
+                    {
+                        elemental.TryAdd(
+                            (analysis.TargetId, element),
+                            new EncounterElementalKnowledgeEntry(
+                                analysis.TargetId,
+                                analysis.TargetEntityId,
+                                element,
+                                affinity));
+                    }
+                }
+            }
+            if (disclosed.Contains(BattleAnalysisField.AilmentResistances))
+            {
+                foreach ((ContentId ailmentId, ResistanceLevel resistance) in analysis.Data.AilmentResistances)
+                {
+                    ailments.TryAdd(
+                        (analysis.TargetId, ailmentId),
+                        new EncounterAilmentKnowledgeEntry(
+                            analysis.TargetId,
+                            analysis.TargetEntityId,
+                            ailmentId,
+                            resistance));
+                }
+            }
+            if (disclosed.Contains(BattleAnalysisField.InstantDeathResistances))
+            {
+                foreach ((InstantDeathChannel channel, ResistanceLevel resistance) in analysis.Data.InstantDeathResistances)
+                {
+                    instantDeath.TryAdd(
+                        (analysis.TargetId, channel),
+                        new EncounterInstantDeathKnowledgeEntry(
+                            analysis.TargetId,
+                            analysis.TargetEntityId,
+                            channel,
+                            resistance));
+                }
+            }
+
             BattleAnalysisField[] merged = (existing?.DisclosedFields ?? [])
                 .Concat(disclosed)
                 .Distinct()
@@ -482,14 +552,16 @@ public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKn
                     analysis.TargetEntityId,
                     merged));
             encounterAfter = new RuntimeEncounterKnowledgeSnapshot(
-                encounterBefore.Elemental,
-                encounterBefore.Ailments,
-                encounterBefore.InstantDeath,
+                elemental.Values,
+                ailments.Values,
+                instantDeath.Values,
                 analysisEntries);
         }
 
         BattleAnalysisField[] persistentFields = disclosed.Where(IsDefenseField).ToArray();
-        RuntimeKnowledgeSnapshot discoveries = BuildDiscoveries(analysis, persistentFields);
+        RuntimeKnowledgeSnapshot discoveries = persistenceScope == BattleKnowledgePersistenceScope.EncounterAndPersistent
+            ? BuildDiscoveries(analysis, persistentFields)
+            : new RuntimeKnowledgeSnapshot();
         BattleKnowledgeTransitionResult persistentResult = _persistentTransitions.Apply(
             new BattleKnowledgeTransitionRequest(persistentBefore, discoveries));
         if (persistentResult.Status == BattleKnowledgeTransitionStatus.Rejected)

@@ -1666,17 +1666,19 @@ Convergence.Encounters.AutomatedBattleOutcome.Victory = 0 -> Convergence.Encount
 Convergence.Encounters.AutomatedBattleRequest
 Convergence.Encounters.AutomatedBattleRequest.<Clone>$() -> Convergence.Encounters.AutomatedBattleRequest!
 Convergence.Encounters.AutomatedBattleRequest.AutomatedBattleRequest(System.Collections.Generic.IEnumerable<Convergence.Encounters.CatalogBattleActor!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId battleKindId, Convergence.Content.ContentId? moonPhaseId, int roundLimit) -> void
+Convergence.Encounters.AutomatedBattleRequest.AutomatedBattleRequest(System.Collections.Generic.IEnumerable<Convergence.Encounters.CatalogBattleActor!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId battleKindId, Convergence.Content.ContentId? moonPhaseId, int roundLimit, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!>>? teamKnowledgeSeeds) -> void
 Convergence.Encounters.AutomatedBattleRequest.BattleKindId.get -> Convergence.Content.ContentId
 Convergence.Encounters.AutomatedBattleRequest.ContextId.get -> Convergence.Content.ContentId
 Convergence.Encounters.AutomatedBattleRequest.Equals(Convergence.Encounters.AutomatedBattleRequest? other) -> bool
 Convergence.Encounters.AutomatedBattleRequest.MoonPhaseId.get -> Convergence.Content.ContentId?
 Convergence.Encounters.AutomatedBattleRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>!
 Convergence.Encounters.AutomatedBattleRequest.RoundLimit.get -> int
+Convergence.Encounters.AutomatedBattleRequest.TeamKnowledgeSeeds.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!>!
 Convergence.Encounters.AutomatedBattleRestrictionActionRequest
 Convergence.Encounters.AutomatedBattleRestrictionActionRequest.<Clone>$() -> Convergence.Encounters.AutomatedBattleRestrictionActionRequest!
 Convergence.Encounters.AutomatedBattleRestrictionActionRequest.Actor.get -> Convergence.Encounters.CatalogBattleActor!
 Convergence.Encounters.AutomatedBattleRestrictionActionRequest.Equals(Convergence.Encounters.AutomatedBattleRestrictionActionRequest? other) -> bool
-Convergence.Encounters.AutomatedBattleRestrictionActionRequest.Knowledge.get -> Convergence.Knowledge.ElementalAffinityKnowledge!
+Convergence.Encounters.AutomatedBattleRestrictionActionRequest.Knowledge.get -> Convergence.Knowledge.IBattleKnowledgeView!
 Convergence.Encounters.AutomatedBattleRestrictionActionRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>!
 Convergence.Encounters.AutomatedBattleRestrictionActionRequest.Turn.get -> Convergence.Encounters.BattleEncounterTurnRequest!
 Convergence.Encounters.AutomatedBattleResult
@@ -1687,6 +1689,7 @@ Convergence.Encounters.AutomatedBattleResult.FaultCode.get -> Convergence.Encoun
 Convergence.Encounters.AutomatedBattleResult.FaultMessage.get -> string?
 Convergence.Encounters.AutomatedBattleResult.FinalActors.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleActorFinalSnapshot!>!
 Convergence.Encounters.AutomatedBattleResult.Outcome.get -> Convergence.Encounters.AutomatedBattleOutcome
+Convergence.Encounters.AutomatedBattleResult.TeamKnowledge.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!>!
 Convergence.Encounters.AutomatedBattleResult.WinningTeamId.get -> Convergence.Content.ContentId?
 Convergence.Encounters.AutomatedBattleRunner
 Convergence.Encounters.AutomatedBattleRunner.AutomatedBattleRunner(Convergence.Execution.ISkillExecutor! executor, Convergence.Encounters.IBattleActionSelector! selector, Convergence.Execution.BattleExecutionServices! services, Convergence.Encounters.IBattleEncounterLifecyclePort! lifecycle, Convergence.Runtime.BattleTurnEconomyRuleset! turnEconomy, Convergence.Encounters.IAutomatedBattleTurnRestrictionResolver! restrictionResolver) -> void
@@ -1695,7 +1698,7 @@ Convergence.Encounters.AutomatedBattleTurnRestrictionRequest
 Convergence.Encounters.AutomatedBattleTurnRestrictionRequest.<Clone>$() -> Convergence.Encounters.AutomatedBattleTurnRestrictionRequest!
 Convergence.Encounters.AutomatedBattleTurnRestrictionRequest.Actor.get -> Convergence.Encounters.CatalogBattleActor!
 Convergence.Encounters.AutomatedBattleTurnRestrictionRequest.Equals(Convergence.Encounters.AutomatedBattleTurnRestrictionRequest? other) -> bool
-Convergence.Encounters.AutomatedBattleTurnRestrictionRequest.Knowledge.get -> Convergence.Knowledge.ElementalAffinityKnowledge!
+Convergence.Encounters.AutomatedBattleTurnRestrictionRequest.Knowledge.get -> Convergence.Knowledge.IBattleKnowledgeView!
 Convergence.Encounters.AutomatedBattleTurnRestrictionRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>!
 Convergence.Encounters.AutomatedBattleTurnRestrictionRequest.Turn.get -> Convergence.Encounters.BattleEncounterTurnRequest!
 Convergence.Encounters.AutomatedBattleTurnRestrictionResolver
@@ -1750,15 +1753,15 @@ Convergence.Encounters.BattleActionSelectionRequest.<Clone>$() -> Convergence.En
 Convergence.Encounters.BattleActionSelectionRequest.ActiveStatModifierBoundaries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.StatModifierLifecycleBoundary!>!
 Convergence.Encounters.BattleActionSelectionRequest.Actor.get -> Convergence.Encounters.CatalogBattleActor!
 Convergence.Encounters.BattleActionSelectionRequest.Actor.init -> void
-Convergence.Encounters.BattleActionSelectionRequest.BattleActionSelectionRequest(Convergence.Encounters.CatalogBattleActor! Actor, System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>! Participants, Convergence.Content.ContentId ContextId, Convergence.Content.ContentId BattleKindId, Convergence.Content.ContentId? MoonPhaseId, Convergence.Knowledge.ElementalAffinityKnowledge! Knowledge) -> void
-Convergence.Encounters.BattleActionSelectionRequest.BattleActionSelectionRequest(Convergence.Encounters.CatalogBattleActor! actor, System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId battleKindId, Convergence.Content.ContentId? moonPhaseId, Convergence.Knowledge.ElementalAffinityKnowledge! knowledge, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? activeStatModifierBoundaries) -> void
+Convergence.Encounters.BattleActionSelectionRequest.BattleActionSelectionRequest(Convergence.Encounters.CatalogBattleActor! Actor, System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>! Participants, Convergence.Content.ContentId ContextId, Convergence.Content.ContentId BattleKindId, Convergence.Content.ContentId? MoonPhaseId, Convergence.Knowledge.IBattleKnowledgeView! Knowledge) -> void
+Convergence.Encounters.BattleActionSelectionRequest.BattleActionSelectionRequest(Convergence.Encounters.CatalogBattleActor! actor, System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId battleKindId, Convergence.Content.ContentId? moonPhaseId, Convergence.Knowledge.IBattleKnowledgeView! knowledge, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? activeStatModifierBoundaries) -> void
 Convergence.Encounters.BattleActionSelectionRequest.BattleKindId.get -> Convergence.Content.ContentId
 Convergence.Encounters.BattleActionSelectionRequest.BattleKindId.init -> void
 Convergence.Encounters.BattleActionSelectionRequest.ContextId.get -> Convergence.Content.ContentId
 Convergence.Encounters.BattleActionSelectionRequest.ContextId.init -> void
-Convergence.Encounters.BattleActionSelectionRequest.Deconstruct(out Convergence.Encounters.CatalogBattleActor! Actor, out System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>! Participants, out Convergence.Content.ContentId ContextId, out Convergence.Content.ContentId BattleKindId, out Convergence.Content.ContentId? MoonPhaseId, out Convergence.Knowledge.ElementalAffinityKnowledge! Knowledge) -> void
+Convergence.Encounters.BattleActionSelectionRequest.Deconstruct(out Convergence.Encounters.CatalogBattleActor! Actor, out System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>! Participants, out Convergence.Content.ContentId ContextId, out Convergence.Content.ContentId BattleKindId, out Convergence.Content.ContentId? MoonPhaseId, out Convergence.Knowledge.IBattleKnowledgeView! Knowledge) -> void
 Convergence.Encounters.BattleActionSelectionRequest.Equals(Convergence.Encounters.BattleActionSelectionRequest? other) -> bool
-Convergence.Encounters.BattleActionSelectionRequest.Knowledge.get -> Convergence.Knowledge.ElementalAffinityKnowledge!
+Convergence.Encounters.BattleActionSelectionRequest.Knowledge.get -> Convergence.Knowledge.IBattleKnowledgeView!
 Convergence.Encounters.BattleActionSelectionRequest.Knowledge.init -> void
 Convergence.Encounters.BattleActionSelectionRequest.MoonPhaseId.get -> Convergence.Content.ContentId?
 Convergence.Encounters.BattleActionSelectionRequest.MoonPhaseId.init -> void
@@ -11416,6 +11419,7 @@ Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult.PersistentBefore.g
 Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult.Status.get -> Convergence.Knowledge.BattleKnowledgeTransitionStatus
 Convergence.Knowledge.BattleAnalysisKnowledgeTransitionService
 Convergence.Knowledge.BattleAnalysisKnowledgeTransitionService.Apply(Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentBefore, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterBefore, Convergence.Knowledge.BattleAnalysisResult! analysis) -> Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult!
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionService.Apply(Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentBefore, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterBefore, Convergence.Knowledge.BattleAnalysisResult! analysis, Convergence.Knowledge.BattleKnowledgePersistenceScope persistenceScope) -> Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult!
 Convergence.Knowledge.BattleAnalysisKnowledgeTransitionService.BattleAnalysisKnowledgeTransitionService(Convergence.Knowledge.IPersistentBattleKnowledgeTransitionService? persistentTransitions = null) -> void
 Convergence.Knowledge.BattleAnalysisRequest
 Convergence.Knowledge.BattleAnalysisRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
@@ -11438,6 +11442,7 @@ Convergence.Knowledge.IBattleAnalysisDisclosurePolicy
 Convergence.Knowledge.IBattleAnalysisDisclosurePolicy.Resolve(Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest! request) -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisFieldDisclosure!>!
 Convergence.Knowledge.IBattleAnalysisKnowledgeTransitionService
 Convergence.Knowledge.IBattleAnalysisKnowledgeTransitionService.Apply(Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentBefore, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterBefore, Convergence.Knowledge.BattleAnalysisResult! analysis) -> Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult!
+Convergence.Knowledge.IBattleAnalysisKnowledgeTransitionService.Apply(Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentBefore, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterBefore, Convergence.Knowledge.BattleAnalysisResult! analysis, Convergence.Knowledge.BattleKnowledgePersistenceScope persistenceScope) -> Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult!
 Convergence.Knowledge.IBattleAnalysisService
 Convergence.Knowledge.IBattleAnalysisService.Analyze(Convergence.Knowledge.BattleAnalysisRequest! request) -> Convergence.Knowledge.BattleAnalysisResult!
 Convergence.Knowledge.IPersistentBattleKnowledgeView.IsDefenseProfileDisclosed(Convergence.Content.ContentId entityId, Convergence.Knowledge.BattleAnalysisField field) -> bool

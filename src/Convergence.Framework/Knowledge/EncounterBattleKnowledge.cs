@@ -357,6 +357,14 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
 
         affinity = default;
         temporaryInfluences = BattleDefenseInfluence.None;
+        if (IsAnalysisDisclosed(
+                targetInstanceId,
+                targetEntityId,
+                BattleAnalysisField.ElementalAffinities))
+        {
+            affinity = ElementalAffinity.Normal;
+            return true;
+        }
         return false;
     }
 
@@ -381,6 +389,14 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
 
         resistance = default;
         temporaryInfluences = BattleDefenseInfluence.None;
+        if (IsAnalysisDisclosed(
+                targetInstanceId,
+                targetEntityId,
+                BattleAnalysisField.AilmentResistances))
+        {
+            resistance = ResistanceLevel.Normal;
+            return true;
+        }
         return false;
     }
 
@@ -402,6 +418,14 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
 
         resistance = default;
         temporaryInfluences = BattleDefenseInfluence.None;
+        if (IsAnalysisDisclosed(
+                targetInstanceId,
+                targetEntityId,
+                BattleAnalysisField.InstantDeathResistances))
+        {
+            resistance = ResistanceLevel.Normal;
+            return true;
+        }
         return false;
     }
 

@@ -644,15 +644,15 @@ public sealed class CatalogBattleRuntimeTests
         BattleExecutionServices services = Services(catalog);
         var executor = new SkillExecutor(services);
         var selector = new DeterministicBattleActionSelector(executor);
-        var knowledge = new ElementalAffinityKnowledge();
-        var request = new BattleActionSelectionRequest(
+        BattleActionSelectionRequest Request(IBattleKnowledgeView knowledge) => new(
             frost, [frost, ember], Battle, NormalBattle, NewMoon, knowledge);
 
-        BattleActionSelection first = selector.Select(request);
-        knowledge.Learn(ember.Entity.Id, DamageElement.Fire, ElementalAffinity.Resist);
-        BattleActionSelection afterResistance = selector.Select(request);
-        knowledge.Learn(ember.Entity.Id, DamageElement.Ice, ElementalAffinity.Null);
-        BattleActionSelection afterNull = selector.Select(request);
+        BattleActionSelection first = selector.Select(Request(KnowledgeView()));
+        BattleActionSelection afterResistance = selector.Select(Request(KnowledgeView(
+            (ember, DamageElement.Fire, ElementalAffinity.Resist))));
+        BattleActionSelection afterNull = selector.Select(Request(KnowledgeView(
+            (ember, DamageElement.Fire, ElementalAffinity.Resist),
+            (ember, DamageElement.Ice, ElementalAffinity.Null))));
 
         Assert.Equal(Id("convergence.clean_battle_demo:ember_bolt_demo"), first.Skill!.Id);
         Assert.Equal(Id("convergence.clean_battle_demo:frost_lance_demo"), afterResistance.Skill!.Id);
@@ -697,9 +697,6 @@ public sealed class CatalogBattleRuntimeTests
             "blocking_target",
             "blocking_target",
             EnemyTeam);
-        var knowledge = new ElementalAffinityKnowledge();
-        knowledge.Learn(firstTarget.Entity.Id, DamageElement.Fire, ElementalAffinity.Weak);
-        knowledge.Learn(blockingTarget.Entity.Id, DamageElement.Fire, ElementalAffinity.Null);
         var executor = new SkillExecutor(Services(catalog));
         var selector = new DeterministicBattleActionSelector(executor);
 
@@ -709,7 +706,9 @@ public sealed class CatalogBattleRuntimeTests
             Battle,
             NormalBattle,
             NewMoon,
-            knowledge));
+            KnowledgeView(
+                (firstTarget, DamageElement.Fire, ElementalAffinity.Weak),
+                (blockingTarget, DamageElement.Fire, ElementalAffinity.Null))));
 
         Assert.Equal(BattleActionSelectionStatus.Selected, result.Status);
         Assert.Equal(safeIce.Id, result.Skill!.Id);
@@ -748,6 +747,228 @@ public sealed class CatalogBattleRuntimeTests
         Assert.True(result.Events.Select(battleEvent => battleEvent.Sequence).SequenceEqual(
             Enumerable.Range(1, result.Events.Count)));
         Assert.True(result.FinalActors.Single(actor => actor.TeamId == EnemyTeam).IsDefeated);
+    }
+
+    [Fact]
+    public void Runner_SharesEncounterKnowledgeWithinTeamAndReturnsImmutableEvidence()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        SkillDefinition openingFire = Active("test.pack:opening_fire", DamageElement.Fire);
+        SkillDefinition followupFire = Active("test.pack:followup_fire", DamageElement.Fire);
+        SkillDefinition followupIce = Active("test.pack:followup_ice", DamageElement.Ice);
+        CatalogBattleActor scout = RuntimeCatalogActor(
+            "knowledge_scout",
+            "knowledge_scout",
+            PlayerTeam,
+            [openingFire]);
+        CatalogBattleActor teammate = RuntimeCatalogActor(
+            "knowledge_teammate",
+            "knowledge_teammate",
+            PlayerTeam,
+            [followupFire, followupIce]);
+        CatalogBattleActor target = RuntimeCatalogActor(
+            "knowledge_target",
+            "knowledge_target",
+            EnemyTeam,
+            defense: new CombatDefenseProfile(
+            [
+                new KeyValuePair<DamageElement, ElementalAffinity>(
+                    DamageElement.Fire,
+                    ElementalAffinity.Resist)
+            ]));
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services).Run(new AutomatedBattleRequest(
+                [scout, teammate, target], Battle, NormalBattle, null, 1));
+
+        ContentId[] playerSelections = result.Events
+            .Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
+                                  battleEvent.ActorId is RuntimeInstanceId actorId &&
+                                  actorId != target.State.InstanceId)
+            .Select(battleEvent => battleEvent.SkillId!.Value)
+            .ToArray();
+        Assert.Equal([openingFire.Id, followupIce.Id], playerSelections);
+        EncounterElementalKnowledgeEntry learned = Assert.Single(
+            result.TeamKnowledge[PlayerTeam].Elemental,
+            entry => entry.Element == DamageElement.Fire);
+        Assert.Equal(target.State.InstanceId, learned.TargetInstanceId);
+        Assert.Equal(target.Entity.Id, learned.TargetEntityId);
+        Assert.Equal(DamageElement.Fire, learned.Element);
+        Assert.Equal(ElementalAffinity.Resist, learned.Affinity);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot>)result.TeamKnowledge).Add(
+                Id("test.pack:other_team"),
+                RuntimeEncounterKnowledgeSnapshot.Empty));
+    }
+
+    [Fact]
+    public void Runner_StartsFreshUnlessTheHostExplicitlySeedsTeamKnowledge()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        SkillDefinition fire = Active("test.pack:fresh_fire", DamageElement.Fire);
+        SkillDefinition ice = Active("test.pack:fresh_ice", DamageElement.Ice);
+
+        (CatalogBattleActor Actor, CatalogBattleActor Target) Actors() =>
+        (
+            RuntimeCatalogActor("fresh_actor", "fresh_actor", PlayerTeam, [fire, ice]),
+            RuntimeCatalogActor(
+                "fresh_target",
+                "fresh_target",
+                EnemyTeam,
+                defense: new CombatDefenseProfile(
+                [
+                    new KeyValuePair<DamageElement, ElementalAffinity>(
+                        DamageElement.Fire,
+                        ElementalAffinity.Resist)
+                ]))
+        );
+
+        AutomatedBattleResult Run(
+            CatalogBattleActor actor,
+            CatalogBattleActor target,
+            RuntimeEncounterKnowledgeSnapshot? seed = null)
+        {
+            BattleExecutionServices services = Services(catalog);
+            var executor = new SkillExecutor(services);
+            var runner = CreateAutomatedRunner(
+                executor,
+                new DeterministicBattleActionSelector(executor),
+                services);
+            return seed is null
+                ? runner.Run(new AutomatedBattleRequest([actor, target], Battle, NormalBattle, null, 1))
+                : runner.Run(new AutomatedBattleRequest(
+                    [actor, target],
+                    Battle,
+                    NormalBattle,
+                    null,
+                    1,
+                    [new KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>(PlayerTeam, seed)]));
+        }
+
+        (CatalogBattleActor firstActor, CatalogBattleActor firstTarget) = Actors();
+        AutomatedBattleResult first = Run(firstActor, firstTarget);
+        (CatalogBattleActor secondActor, CatalogBattleActor secondTarget) = Actors();
+        AutomatedBattleResult second = Run(secondActor, secondTarget);
+        (CatalogBattleActor seededActor, CatalogBattleActor seededTarget) = Actors();
+        AutomatedBattleResult seeded = Run(
+            seededActor,
+            seededTarget,
+            first.TeamKnowledge[PlayerTeam]);
+
+        Assert.Equal(fire.Id, FirstSelectedSkill(first, firstActor));
+        Assert.Equal(fire.Id, FirstSelectedSkill(second, secondActor));
+        Assert.Equal(ice.Id, FirstSelectedSkill(seeded, seededActor));
+    }
+
+    [Fact]
+    public void Runner_MissedDamageDoesNotBecomeEncounterKnowledge()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        SkillDefinition attack = Active("test.pack:missed_fire", DamageElement.Fire);
+        CatalogBattleActor actor = RuntimeCatalogActor("miss_actor", "miss_actor", PlayerTeam, [attack]);
+        CatalogBattleActor target = RuntimeCatalogActor(
+            "miss_target",
+            "miss_target",
+            EnemyTeam,
+            defense: new CombatDefenseProfile(
+            [
+                new KeyValuePair<DamageElement, ElementalAffinity>(
+                    DamageElement.Fire,
+                    ElementalAffinity.Weak)
+            ]));
+        BattleExecutionServices services = Services(catalog, damagePolicy: new AlwaysMissDamagePolicy());
+        var executor = new SkillExecutor(services);
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services).Run(new AutomatedBattleRequest([actor, target], Battle, NormalBattle, null, 1));
+
+        Assert.Empty(result.TeamKnowledge[PlayerTeam].Elemental);
+    }
+
+    [Fact]
+    public void Runner_SuppliesAllSeededKnowledgeDomainsToAReadOnlyStrategyView()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        ContentId ailmentId = Id("test.pack:seeded_ailment");
+        CatalogBattleActor actor = RuntimeCatalogActor("seed_actor", "seed_actor", PlayerTeam);
+        CatalogBattleActor target = RuntimeCatalogActor("seed_target", "seed_target", EnemyTeam);
+        RuntimeEncounterKnowledgeSnapshot seed = new(
+            ailments:
+            [
+                new EncounterAilmentKnowledgeEntry(
+                    target.State.InstanceId,
+                    target.Entity.Id,
+                    ailmentId,
+                    ResistanceLevel.Resistant)
+            ],
+            instantDeath:
+            [
+                new EncounterInstantDeathKnowledgeEntry(
+                    target.State.InstanceId,
+                    target.Entity.Id,
+                    InstantDeathChannel.Light,
+                    ResistanceLevel.Immune)
+            ]);
+        var selector = new RecordingAggregateKnowledgeSelector(
+            actor.State.InstanceId,
+            target.State.InstanceId,
+            target.Entity.Id,
+            ailmentId);
+        BattleExecutionServices services = Services(catalog);
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            new SkillExecutor(services),
+            selector,
+            services).Run(new AutomatedBattleRequest(
+                [actor, target],
+                Battle,
+                NormalBattle,
+                null,
+                1,
+                [new KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>(PlayerTeam, seed)]));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
+        Assert.True(selector.ObservedAilment);
+        Assert.True(selector.ObservedInstantDeath);
+    }
+
+    [Fact]
+    public void AutomatedBattleRequest_RejectsKnowledgeSeedsForUnknownTeamsOrTargets()
+    {
+        CatalogBattleActor actor = RuntimeCatalogActor("seed_guard_actor", "seed_guard_actor", PlayerTeam);
+        CatalogBattleActor target = RuntimeCatalogActor("seed_guard_target", "seed_guard_target", EnemyTeam);
+        RuntimeEncounterKnowledgeSnapshot mismatchedTarget = new(
+            elemental:
+            [
+                new EncounterElementalKnowledgeEntry(
+                    RuntimeInstanceId.Parse("missing_target"),
+                    target.Entity.Id,
+                    DamageElement.Fire,
+                    ElementalAffinity.Weak)
+            ]);
+
+        Assert.Throws<ArgumentException>(() => new AutomatedBattleRequest(
+            [actor, target],
+            Battle,
+            NormalBattle,
+            null,
+            1,
+            [new KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>(PlayerTeam, mismatchedTarget)]));
+        Assert.Throws<ArgumentException>(() => new AutomatedBattleRequest(
+            [actor, target],
+            Battle,
+            NormalBattle,
+            null,
+            1,
+            [new KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>(
+                Id("test.pack:unknown_team"),
+                RuntimeEncounterKnowledgeSnapshot.Empty)]));
     }
 
     [Fact]
@@ -1185,6 +1406,58 @@ public sealed class CatalogBattleRuntimeTests
             battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
             battleEvent.ActorId == player.State.InstanceId &&
             battleEvent.SkillId == Id("basic_attack"));
+    }
+
+    [Fact]
+    public void Runner_RestrictedActionEvidenceUpdatesTheActingTeamsEncounterKnowledge()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor("forced_learner", "forced_learner", PlayerTeam);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "forced_observed",
+            "forced_observed",
+            EnemyTeam,
+            defense: new CombatDefenseProfile(
+            [
+                new KeyValuePair<DamageElement, ElementalAffinity>(
+                    DamageElement.Physical,
+                    ElementalAffinity.Resist)
+            ]));
+        BattleExecutionServices services = Services(catalog);
+        var skillExecutor = new SkillExecutor(services);
+        var source = new RecordingRestrictedActionSource(request =>
+            AutomatedRestrictedActionSelection.Selected(
+                Id("forced_observation"),
+                new BasicAttackBattleActionCommand(
+                    new EquipmentBasicAttackDefinition(
+                        DamageElement.Physical,
+                        10,
+                        100,
+                        new NeverCriticalDefinition(),
+                        false),
+                    new TargetingDefinition(
+                        TargetRelation.Enemy,
+                        TargetSelection.Single,
+                        TargetLifeState.Alive,
+                        false),
+                    [enemy.State.InstanceId],
+                    Id("forced_observation"))));
+        var lifecycle = new FixedTurnRestrictionLifecyclePort(
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.ForcedBasicAttack));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            skillExecutor,
+            new DeterministicBattleActionSelector(skillExecutor),
+            services,
+            lifecycle,
+            restrictionResolver: RestrictionResolver(skillExecutor, services, source)).Run(
+            new AutomatedBattleRequest([player, enemy], Battle, NormalBattle, null, 1));
+
+        EncounterElementalKnowledgeEntry learned = Assert.Single(result.TeamKnowledge[PlayerTeam].Elemental);
+        Assert.Equal(enemy.State.InstanceId, learned.TargetInstanceId);
+        Assert.Equal(DamageElement.Physical, learned.Element);
+        Assert.Equal(ElementalAffinity.Resist, learned.Affinity);
     }
 
     [Fact]
@@ -1950,9 +2223,10 @@ public sealed class CatalogBattleRuntimeTests
     private static BattleExecutionServices Services(
         GameDataCatalog catalog,
         IRandomTargetSelectionPolicy? randomTargetPolicy = null,
-        IStatModifierPolicyService? statModifiers = null) => new(
+        IStatModifierPolicyService? statModifiers = null,
+        IDamageExecutionPolicy? damagePolicy = null) => new(
         catalog,
-        new TestDamagePolicy(),
+        damagePolicy ?? new TestDamagePolicy(),
         new NeverInstantDeathPolicy(),
         new TestAilmentPolicy(),
         new AlwaysChancePolicy(),
@@ -1961,6 +2235,23 @@ public sealed class CatalogBattleRuntimeTests
         new OrderedRuntimeTargetSelectionPolicy(),
         statModifiers ?? TestStatModifierPolicy.CreatePersistent(),
         new SplitChargePolicy());
+
+    private static IBattleKnowledgeView KnowledgeView(
+        params (CatalogBattleActor Target, DamageElement Element, ElementalAffinity Affinity)[] facts) =>
+        new BattleKnowledgeView(
+            new RuntimeKnowledgeSnapshot(
+                facts.Select(fact => new RuntimeElementalAffinityKnowledgeSnapshot(
+                    fact.Target.Entity.Id,
+                    fact.Element,
+                    fact.Affinity))),
+            RuntimeEncounterKnowledgeSnapshot.Empty);
+
+    private static ContentId FirstSelectedSkill(
+        AutomatedBattleResult result,
+        CatalogBattleActor actor) =>
+        result.Events.First(battleEvent =>
+            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
+            battleEvent.ActorId == actor.State.InstanceId).SkillId!.Value;
 
     private static AutomatedBattleRunner CreateAutomatedRunner(
         ISkillExecutor executor,
@@ -2462,6 +2753,49 @@ public sealed class CatalogBattleRuntimeTests
             IReadOnlyList<RuntimeActorState> candidates,
             TargetCountDefinition count,
             SkillExecutionRequest request) => candidates.Take(count.Minimum).ToArray();
+    }
+
+    private sealed class AlwaysMissDamagePolicy : IDamageExecutionPolicy
+    {
+        public DamagePolicyResolution Resolve(DamagePolicyRequest request) =>
+            new([new DamageHitResolution(false, 0m)], request.Affinity);
+    }
+
+    private sealed class RecordingAggregateKnowledgeSelector(
+        RuntimeInstanceId observedActorId,
+        RuntimeInstanceId targetId,
+        ContentId targetEntityId,
+        ContentId ailmentId) : IBattleActionSelector
+    {
+        public bool ObservedAilment { get; private set; }
+        public bool ObservedInstantDeath { get; private set; }
+
+        public BattleActionSelection Select(BattleActionSelectionRequest request)
+        {
+            if (request.Actor.State.InstanceId == observedActorId)
+            {
+                ObservedAilment = request.Knowledge.TryGetAilmentResistance(
+                    targetId,
+                    targetEntityId,
+                    ailmentId,
+                    out ResistanceLevel ailmentResistance,
+                    out BattleKnowledgeFactSource ailmentSource,
+                    out _) &&
+                    ailmentResistance == ResistanceLevel.Resistant &&
+                    ailmentSource == BattleKnowledgeFactSource.Encounter;
+                ObservedInstantDeath = request.Knowledge.TryGetInstantDeathResistance(
+                    targetId,
+                    targetEntityId,
+                    InstantDeathChannel.Light,
+                    out ResistanceLevel instantDeathResistance,
+                    out BattleKnowledgeFactSource instantDeathSource,
+                    out _) &&
+                    instantDeathResistance == ResistanceLevel.Immune &&
+                    instantDeathSource == BattleKnowledgeFactSource.Encounter;
+            }
+
+            return BattleActionSelection.Pass();
+        }
     }
 
     private sealed class MinimumRandomSource : IRandomSource

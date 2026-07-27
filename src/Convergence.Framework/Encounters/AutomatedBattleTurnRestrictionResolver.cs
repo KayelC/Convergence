@@ -78,7 +78,7 @@ public sealed record AutomatedBattleRestrictionActionRequest
         BattleEncounterTurnRequest turn,
         CatalogBattleActor actor,
         IEnumerable<CatalogBattleActor> participants,
-        ElementalAffinityKnowledge knowledge)
+        IBattleKnowledgeView knowledge)
     {
         Turn = turn ?? throw new ArgumentNullException(nameof(turn));
         Actor = actor ?? throw new ArgumentNullException(nameof(actor));
@@ -90,7 +90,7 @@ public sealed record AutomatedBattleRestrictionActionRequest
     public BattleEncounterTurnRequest Turn { get; }
     public CatalogBattleActor Actor { get; }
     public IReadOnlyList<CatalogBattleActor> Participants { get; }
-    public ElementalAffinityKnowledge Knowledge { get; }
+    public IBattleKnowledgeView Knowledge { get; }
 }
 
 public interface IAutomatedBattleRestrictionActionSource
@@ -106,7 +106,7 @@ public sealed record AutomatedBattleTurnRestrictionRequest
         BattleEncounterTurnRequest turn,
         CatalogBattleActor actor,
         IEnumerable<CatalogBattleActor> participants,
-        ElementalAffinityKnowledge knowledge)
+        IBattleKnowledgeView knowledge)
     {
         Turn = turn ?? throw new ArgumentNullException(nameof(turn));
         Actor = actor ?? throw new ArgumentNullException(nameof(actor));
@@ -126,7 +126,7 @@ public sealed record AutomatedBattleTurnRestrictionRequest
     public BattleEncounterTurnRequest Turn { get; }
     public CatalogBattleActor Actor { get; }
     public IReadOnlyList<CatalogBattleActor> Participants { get; }
-    public ElementalAffinityKnowledge Knowledge { get; }
+    public IBattleKnowledgeView Knowledge { get; }
 }
 
 public interface IAutomatedBattleTurnRestrictionResolver
@@ -427,7 +427,6 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
                 AddResourceChange(events, request.Actor.State.InstanceId, actionId, change);
             }
 
-            LearnAffinity(request, command, effect);
             foreach (PassiveTriggerExecutionResult passive in effect.PassiveActivations ?? [])
             {
                 events.Add(new BattleEncounterEvent(
@@ -479,39 +478,6 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
                 change.ResourceId,
                 sourceId),
             $"Resource {change.ResourceId} changed by {change.Delta}."));
-
-    private static void LearnAffinity(
-        AutomatedBattleTurnRestrictionRequest request,
-        BattleActionCommand command,
-        EffectExecutionResult effect)
-    {
-        if (effect.TargetId is not RuntimeInstanceId targetId ||
-            effect.ResolvedAffinity is not ElementalAffinity affinity ||
-            DamageElementFor(command, effect.EffectIndex) is not DamageElement element)
-        {
-            return;
-        }
-
-        CatalogBattleActor? target = request.Participants.FirstOrDefault(
-            candidate => candidate.State.InstanceId == targetId);
-        if (target is not null)
-        {
-            request.Knowledge.Learn(target.Entity.Id, element, affinity);
-        }
-    }
-
-    private static DamageElement? DamageElementFor(BattleActionCommand command, int effectIndex) =>
-        command switch
-        {
-            BasicAttackBattleActionCommand attack when effectIndex == 0 => attack.BasicAttack.Element,
-            SkillBattleActionCommand skill
-                when skill.Skill.Effects.ElementAtOrDefault(effectIndex) is DamageEffectDefinition damage =>
-                damage.Element,
-            ItemBattleActionCommand item
-                when item.Item.Usage?.Effects.ElementAtOrDefault(effectIndex) is DamageEffectDefinition damage =>
-                damage.Element,
-            _ => null
-        };
 
     private static BattleEncounterCommandResult Fault(
         AutomatedBattleTurnRestrictionRequest request,

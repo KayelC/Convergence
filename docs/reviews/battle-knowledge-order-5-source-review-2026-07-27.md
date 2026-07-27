@@ -1,6 +1,6 @@
 # Battle Knowledge Order 5 Source Review
 
-Status: implementation in progress; O5-R1 through O5-R4 implemented and reviewed
+Status: implementation in progress; O5-R1 through O5-R5 implemented and reviewed
 
 Date: 2026-07-27
 
@@ -234,7 +234,7 @@ diagnostics.
 | O5-R2 | `implemented_reviewed` | Add typed observation evidence that distinguishes contact, authored base defense, effective defense, and temporary modification. |
 | O5-R3 | `implemented_reviewed` | Separate persistent entity knowledge from encounter analysis and define battle-end cleanup. |
 | O5-R4 | `implemented_reviewed` | Add policy-controlled Analyze disclosure, including typed restricted/unknown boss fields. |
-| O5-R5 | `pending` | Route automated AI through encounter-local aggregate read-only knowledge with optional explicit seeding. |
+| O5-R5 | `implemented_reviewed` | Route automated AI through encounter-local aggregate read-only knowledge with optional explicit seeding. |
 | O5-R6 | `pending` | Route familiar acquisition and Compendium imports through the approved persistent knowledge policy. |
 | O5-R7 | `pending` | Update save validation, DemoHost integration, capability evidence, mechanics, developer, and technical documentation. |
 | O5-R8 | `pending` | Perform a fresh source and documentation review, run the complete quality gate, and obtain owner confirmation before closure. |
@@ -302,3 +302,25 @@ review caught and corrected a cross-fact identity path so prior elemental,
 ailment, instant-defeat, or analysis evidence for a runtime ID can all trigger a
 typed atomic conflict rejection. The reviewed checkpoint passed 1,526 Framework
 tests with zero skips and built nonincrementally with zero warnings.
+
+### O5-R5
+
+Automated strategies now receive the aggregate read-only `IBattleKnowledgeView`
+rather than a mutable elemental-only store. Every participating team owns one
+immutable encounter snapshot for the duration of a run. Typed observations from
+normal and lifecycle-restricted actions update that shared team snapshot after
+successful execution, allowing a later teammate to act on what an earlier
+teammate established. Miss evidence remains non-disclosing.
+
+An ordinary `AutomatedBattleRequest` starts each side with empty encounter
+knowledge. A host may explicitly provide a team-keyed seed for a boss or scripted
+encounter; construction rejects unknown teams and target identities that do not
+match current participants. Seeds never enter save-facing persistent knowledge,
+and immutable final team snapshots are returned only as encounter evidence.
+
+The checkpoint review preserved the existing five-argument request constructor,
+covered all aggregate knowledge domains through a custom strategy, and verified
+fresh runs, explicit seeding, teammate sharing, missed attacks, restricted-turn
+actions, invalid seeds, and result immutability. The full Framework suite passed
+1,532 tests with zero skips, and the Framework built nonincrementally with zero
+warnings.

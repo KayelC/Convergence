@@ -705,7 +705,9 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 request.Encounter.ContextId,
                 request.Encounter.BattleKindId,
                 request.Encounter.MoonPhaseId,
-                _encounterAiKnowledge.ElementalAffinities,
+                new BattleKnowledgeView(
+                    _encounterAiKnowledge.ToSnapshot(),
+                    RuntimeEncounterKnowledgeSnapshot.Empty),
                 request.ActiveStatModifierBoundaries));
             if (selection.Status == BattleActionSelectionStatus.Selected && selection.Skill is SkillDefinition skill)
             {

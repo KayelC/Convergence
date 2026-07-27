@@ -143,7 +143,12 @@ public sealed class BattleAnalysisTests
             out BattleKnowledgeFactSource iceSource,
             out _));
         Assert.Equal(ElementalAffinity.Weak, ice);
-        Assert.Equal(BattleKnowledgeFactSource.Persistent, iceSource);
+        Assert.Equal(BattleKnowledgeFactSource.Encounter, iceSource);
+        Assert.Contains(
+            transition.PersistentAfter.ElementalAffinities,
+            entry => entry.EntityId == target.EntityId &&
+                     entry.Element == DamageElement.Ice &&
+                     entry.Affinity == ElementalAffinity.Weak);
         Assert.True(view.TryGetElementalAffinity(
             target.InstanceId,
             target.EntityId,

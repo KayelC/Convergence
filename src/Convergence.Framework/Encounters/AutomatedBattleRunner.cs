@@ -41,7 +41,7 @@ public sealed record BattleActionSelectionRequest(
     ContentId ContextId,
     ContentId BattleKindId,
     ContentId? MoonPhaseId,
-    ElementalAffinityKnowledge Knowledge)
+    IBattleKnowledgeView Knowledge)
 {
     public BattleActionSelectionRequest(
         CatalogBattleActor actor,
@@ -49,7 +49,7 @@ public sealed record BattleActionSelectionRequest(
         ContentId contextId,
         ContentId battleKindId,
         ContentId? moonPhaseId,
-        ElementalAffinityKnowledge knowledge,
+        IBattleKnowledgeView knowledge,
         IEnumerable<StatModifierLifecycleBoundary>? activeStatModifierBoundaries)
         : this(actor, participants, contextId, battleKindId, moonPhaseId, knowledge)
     {
@@ -160,7 +160,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
         SkillDefinition skill,
         IReadOnlyList<RuntimeInstanceId> targetIds,
         IReadOnlyList<CatalogBattleActor> participants,
-        ElementalAffinityKnowledge knowledge)
+        IBattleKnowledgeView knowledge)
     {
         CatalogBattleActor[] targets;
         if (skill.Targeting?.Selection == TargetSelection.Random)
@@ -195,7 +195,13 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
         {
             foreach (DamageElement element in elements)
             {
-                if (!knowledge.TryGet(target.Entity.Id, element, out ElementalAffinity affinity))
+                if (!knowledge.TryGetElementalAffinity(
+                        target.State.InstanceId,
+                        target.State.EntityId,
+                        element,
+                        out ElementalAffinity affinity,
+                        out _,
+                        out _))
                 {
                     continue;
                 }
@@ -314,12 +320,30 @@ public sealed record AutomatedBattleRequest
         ContentId battleKindId,
         ContentId? moonPhaseId,
         int roundLimit)
+        : this(
+            participants,
+            contextId,
+            battleKindId,
+            moonPhaseId,
+            roundLimit,
+            teamKnowledgeSeeds: null)
+    {
+    }
+
+    public AutomatedBattleRequest(
+        IEnumerable<CatalogBattleActor> participants,
+        ContentId contextId,
+        ContentId battleKindId,
+        ContentId? moonPhaseId,
+        int roundLimit,
+        IEnumerable<KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>>? teamKnowledgeSeeds)
     {
         Participants = Array.AsReadOnly(participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants)));
         ContextId = contextId;
         BattleKindId = battleKindId;
         MoonPhaseId = moonPhaseId;
         RoundLimit = roundLimit;
+        TeamKnowledgeSeeds = ValidateKnowledgeSeeds(Participants, teamKnowledgeSeeds);
     }
 
     public IReadOnlyList<CatalogBattleActor> Participants { get; }
@@ -327,6 +351,47 @@ public sealed record AutomatedBattleRequest
     public ContentId BattleKindId { get; }
     public ContentId? MoonPhaseId { get; }
     public int RoundLimit { get; }
+    public IReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> TeamKnowledgeSeeds { get; }
+
+    private static IReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> ValidateKnowledgeSeeds(
+        IReadOnlyList<CatalogBattleActor> participants,
+        IEnumerable<KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>>? seeds)
+    {
+        var result = new Dictionary<ContentId, RuntimeEncounterKnowledgeSnapshot>();
+        IReadOnlyDictionary<RuntimeInstanceId, CatalogBattleActor> actors = participants
+            .GroupBy(participant => participant.State.InstanceId)
+            .ToDictionary(group => group.Key, group => group.First());
+        HashSet<ContentId> teams = participants.Select(participant => participant.State.TeamId).ToHashSet();
+        foreach ((ContentId teamId, RuntimeEncounterKnowledgeSnapshot snapshot) in seeds ?? [])
+        {
+            if (!teamId.IsValid || !teams.Contains(teamId) || snapshot is null || !result.TryAdd(teamId, snapshot))
+            {
+                throw new ArgumentException(
+                    "Automated battle knowledge seeds require unique participating team IDs and non-null snapshots.",
+                    nameof(seeds));
+            }
+
+            foreach ((RuntimeInstanceId instanceId, ContentId entityId) in TargetIdentities(snapshot))
+            {
+                if (!actors.TryGetValue(instanceId, out CatalogBattleActor? actor) || actor.State.EntityId != entityId)
+                {
+                    throw new ArgumentException(
+                        $"Knowledge seed target '{instanceId}' does not match an encounter participant.",
+                        nameof(seeds));
+                }
+            }
+        }
+
+        return new ReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot>(result);
+    }
+
+    private static IEnumerable<(RuntimeInstanceId InstanceId, ContentId EntityId)> TargetIdentities(
+        RuntimeEncounterKnowledgeSnapshot snapshot) =>
+        snapshot.Elemental.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId))
+            .Concat(snapshot.Ailments.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
+            .Concat(snapshot.InstantDeath.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
+            .Concat(snapshot.Analysis.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
+            .Distinct();
 }
 
 public sealed record AutomatedBattleResult
@@ -336,6 +401,7 @@ public sealed record AutomatedBattleResult
         ContentId? winningTeamId,
         IEnumerable<BattleEncounterParticipantSnapshot> participants,
         IEnumerable<BattleRuntimeEvent> events,
+        IEnumerable<KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>> teamKnowledge,
         string? faultMessage = null,
         BattleEncounterFaultCode? faultCode = null)
     {
@@ -343,6 +409,8 @@ public sealed record AutomatedBattleResult
         WinningTeamId = winningTeamId;
         FinalActors = Array.AsReadOnly(participants.Select(actor => new BattleActorFinalSnapshot(actor)).ToArray());
         Events = Array.AsReadOnly(events.ToArray());
+        TeamKnowledge = new ReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot>(
+            teamKnowledge.ToDictionary(pair => pair.Key, pair => pair.Value));
         FaultMessage = faultMessage;
         FaultCode = faultCode;
     }
@@ -351,6 +419,7 @@ public sealed record AutomatedBattleResult
     public ContentId? WinningTeamId { get; }
     public IReadOnlyList<BattleActorFinalSnapshot> FinalActors { get; }
     public IReadOnlyList<BattleRuntimeEvent> Events { get; }
+    public IReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> TeamKnowledge { get; }
     public string? FaultMessage { get; }
     public BattleEncounterFaultCode? FaultCode { get; }
 }
@@ -394,15 +463,17 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         BattleEncounterParticipant[] participants = request.Participants
             .Select(actor => new BattleEncounterParticipant(actor.State, actor.Entity.DisplayName))
             .ToArray();
+        var turnHandler = new AutomatedBattleTurnHandler(
+            _executor,
+            _selector,
+            _services,
+            request.Participants,
+            _restrictionResolver,
+            request.TeamKnowledgeSeeds);
         var services = new BattleEncounterServices(
             new ParticipantOrderInitiativePolicy(),
             _lifecycle,
-            new AutomatedBattleTurnHandler(
-                _executor,
-                _selector,
-                _services,
-                request.Participants,
-                _restrictionResolver),
+            turnHandler,
             new LastTeamStandingCompletionPolicy(),
             _turnEconomy.CreateEconomy,
             _turnEconomy.PhaseProgress);
@@ -425,6 +496,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             result.WinningTeamId,
             result.Participants,
             ToRuntimeEvents(result.Events),
+            turnHandler.KnowledgeSnapshots,
             result.FaultMessage,
             result.FaultCode);
     }
@@ -483,10 +555,15 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
 
     private sealed class AutomatedBattleTurnHandler : IBattleEncounterTurnHandler
     {
+        private static readonly RuntimeKnowledgeSnapshot NoPersistentKnowledge = new();
         private readonly ISkillExecutor _executor;
         private readonly IBattleActionSelector _selector;
         private readonly IReadOnlyList<CatalogBattleActor> _actors;
-        private readonly Dictionary<ContentId, ElementalAffinityKnowledge> _knowledge;
+        private readonly Dictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> _knowledge;
+        private readonly IBattleKnowledgeObservationTransitionService _observationTransitions =
+            new BattleKnowledgeObservationTransitionService();
+        private readonly IBattleAnalysisKnowledgeTransitionService _analysisTransitions =
+            new BattleAnalysisKnowledgeTransitionService();
         private readonly IAutomatedBattleTurnRestrictionResolver _restrictionResolver;
 
         public AutomatedBattleTurnHandler(
@@ -494,16 +571,26 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             IBattleActionSelector selector,
             BattleExecutionServices services,
             IReadOnlyList<CatalogBattleActor> actors,
-            IAutomatedBattleTurnRestrictionResolver restrictionResolver)
+            IAutomatedBattleTurnRestrictionResolver restrictionResolver,
+            IReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> knowledgeSeeds)
         {
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _selector = selector ?? throw new ArgumentNullException(nameof(selector));
             ArgumentNullException.ThrowIfNull(services);
             _actors = actors ?? throw new ArgumentNullException(nameof(actors));
             _restrictionResolver = restrictionResolver ?? throw new ArgumentNullException(nameof(restrictionResolver));
+            ArgumentNullException.ThrowIfNull(knowledgeSeeds);
             _knowledge = _actors.Select(actor => actor.State.TeamId).Distinct()
-                .ToDictionary(team => team, _ => new ElementalAffinityKnowledge());
+                .ToDictionary(
+                    team => team,
+                    team => knowledgeSeeds.TryGetValue(team, out RuntimeEncounterKnowledgeSnapshot? seed)
+                        ? seed
+                        : RuntimeEncounterKnowledgeSnapshot.Empty);
         }
+
+        public IReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> KnowledgeSnapshots =>
+            new ReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot>(
+                new Dictionary<ContentId, RuntimeEncounterKnowledgeSnapshot>(_knowledge));
 
         public ValueTask<BattleEncounterCommandResult> ExecuteTurnAsync(
             BattleEncounterTurnRequest request,
@@ -515,12 +602,12 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
 
             if (request.TurnStartOutcome != BattleTurnStartOutcome.CanAct)
             {
-                return _restrictionResolver.ResolveAsync(
+                return ResolveRestrictedTurnAsync(
                     new AutomatedBattleTurnRestrictionRequest(
                         request,
                         actor,
                         _actors,
-                        _knowledge[actor.State.TeamId]),
+                        KnowledgeView(actor.State.TeamId)),
                     cancellationToken);
             }
 
@@ -530,7 +617,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 request.Encounter.ContextId,
                 request.Encounter.BattleKindId,
                 request.Encounter.MoonPhaseId,
-                _knowledge[actor.State.TeamId],
+                KnowledgeView(actor.State.TeamId),
                 request.ActiveStatModifierBoundaries);
             BattleActionSelection selection = _selector.Select(selectionRequest);
             if (selection.Status == BattleActionSelectionStatus.Pass)
@@ -605,7 +692,11 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 return FaultedAutomatedAction(actor, fault, events);
             }
 
-            RecordExecution(events, actor, selection.Skill, execution, _actors, _knowledge[actor.State.TeamId]);
+            RecordExecution(events, actor, selection.Skill, execution);
+            if (!TryApplyKnowledge(actor.State.TeamId, execution, out string? knowledgeFault))
+            {
+                return FaultedAutomatedAction(actor, knowledgeFault!, events);
+            }
             return new ValueTask<BattleEncounterCommandResult>(
                 BattleEncounterCommandResult.Executed(
                     ActionTurnConsumption.FromTurnEconomy(execution.TurnEconomy),
@@ -680,15 +771,95 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             return new ValueTask<BattleEncounterCommandResult>(
                 BattleEncounterCommandResult.Faulted(fault, events));
         }
+
+        private IBattleKnowledgeView KnowledgeView(ContentId teamId) =>
+            new BattleKnowledgeView(NoPersistentKnowledge, _knowledge[teamId]);
+
+        private async ValueTask<BattleEncounterCommandResult> ResolveRestrictedTurnAsync(
+            AutomatedBattleTurnRestrictionRequest request,
+            CancellationToken cancellationToken)
+        {
+            BattleEncounterCommandResult result = await _restrictionResolver.ResolveAsync(
+                request,
+                cancellationToken).ConfigureAwait(false);
+            if (result.Status != BattleEncounterCommandStatus.Executed)
+            {
+                return result;
+            }
+
+            EffectExecutionResult[] effects = result.Events
+                .Select(battleEvent => battleEvent.Payload)
+                .OfType<BattleEffectResolvedEventPayload>()
+                .Select(payload => payload.Result)
+                .ToArray();
+            if (TryApplyKnowledge(request.Actor.State.TeamId, effects, out string? fault))
+            {
+                return result;
+            }
+
+            var events = result.Events.ToList();
+            return await FaultedAutomatedAction(request.Actor, fault!, events).ConfigureAwait(false);
+        }
+
+        private bool TryApplyKnowledge(
+            ContentId teamId,
+            SkillExecutionResult execution,
+            out string? fault) =>
+            TryApplyKnowledge(teamId, execution.Effects, out fault);
+
+        private bool TryApplyKnowledge(
+            ContentId teamId,
+            IEnumerable<EffectExecutionResult> effects,
+            out string? fault)
+        {
+            RuntimeEncounterKnowledgeSnapshot current = _knowledge[teamId];
+            foreach (EffectExecutionResult effect in effects)
+            {
+                if (effect.KnowledgeObservations.Count > 0)
+                {
+                    BattleKnowledgeObservationTransitionResult observation = _observationTransitions.Apply(
+                        new BattleKnowledgeObservationTransitionRequest(
+                            NoPersistentKnowledge,
+                            current,
+                            effect.KnowledgeObservations,
+                            BattleKnowledgePersistenceScope.EncounterOnly));
+                    if (observation.Status == BattleKnowledgeTransitionStatus.Rejected)
+                    {
+                        fault = "Automated knowledge observation was rejected: " +
+                            string.Join("; ", observation.Diagnostics.Select(item => item.Message));
+                        return false;
+                    }
+                    current = observation.EncounterAfter;
+                }
+
+                if (effect.Analysis is BattleAnalysisResult analysis)
+                {
+                    BattleAnalysisKnowledgeTransitionResult analyzed = _analysisTransitions.Apply(
+                        NoPersistentKnowledge,
+                        current,
+                        analysis,
+                        BattleKnowledgePersistenceScope.EncounterOnly);
+                    if (analyzed.Status == BattleKnowledgeTransitionStatus.Rejected)
+                    {
+                        fault = "Automated analysis knowledge was rejected: " +
+                            string.Join("; ", analyzed.Diagnostics.Select(item => item.Message));
+                        return false;
+                    }
+                    current = analyzed.EncounterAfter;
+                }
+            }
+
+            _knowledge[teamId] = current;
+            fault = null;
+            return true;
+        }
     }
 
     private static void RecordExecution(
         List<BattleEncounterEvent> events,
         CatalogBattleActor actor,
         SkillDefinition skill,
-        SkillExecutionResult execution,
-        IReadOnlyList<CatalogBattleActor> participants,
-        ElementalAffinityKnowledge knowledge)
+        SkillExecutionResult execution)
     {
         foreach (ExecutionResourceChange change in execution.CommittedCostChanges)
         {
@@ -705,14 +876,6 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             foreach (ExecutionResourceChange change in effect.ResourceChanges)
             {
                 RecordResourceChange(events, actor.State.InstanceId, skill.Id, change);
-            }
-
-            if (effect.TargetId is RuntimeInstanceId targetId &&
-                effect.ResolvedAffinity is ElementalAffinity affinity &&
-                skill.Effects.ElementAtOrDefault(effect.EffectIndex) is DamageEffectDefinition damage)
-            {
-                CatalogBattleActor? target = participants.FirstOrDefault(candidate => candidate.State.InstanceId == targetId);
-                if (target is not null) knowledge.Learn(target.Entity.Id, damage.Element, affinity);
             }
 
             foreach (PassiveTriggerExecutionResult passive in effect.PassiveActivations ?? [])
