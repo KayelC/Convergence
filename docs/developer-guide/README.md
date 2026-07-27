@@ -35,6 +35,9 @@ Developer guides focus on:
 - [Status And Passive Lifecycle](status-passive-lifecycle.md): ailment
   application, transition policies, passive targeting, lifecycle clocks,
   cleanup, typed events, persistence, and Godot host responsibilities.
+- [Battle Knowledge Integration](battle-knowledge.md): persistent and
+  encounter scopes, typed execution transitions, Analyze policy, team seeds,
+  familiar imports, UI queries, and save boundaries.
 
 The actor and typed action/effect guides have completed collaborative review.
 That Order 1 review includes stat-modifier policy composition and integration.
@@ -48,6 +51,10 @@ phase liveness.
 The status-lifecycle guide records the implemented Order 4 composition and
 schema-v8 explicit lifetime authoring. Its mechanics, developer, and technical
 documents completed independent source reconciliation through O4-R11.
+The battle-knowledge guide records the owner-confirmed Order 5 distinction
+between durable entity facts and encounter-instance facts. It routes DemoHost
+and automated battles through framework-owned typed evidence rather than
+host-side defense inspection.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

@@ -36,6 +36,9 @@ Technical pages focus on:
 - [Status And Passive Lifecycle Runtime](status-passive-lifecycle.md): lifetime
   authority, staged application, explicit clocks, cleanup, passive dispatch,
   event evidence, startup atomicity, and save-v13 restoration.
+- [Battle Knowledge Runtime Authority](battle-knowledge-runtime.md): persistent
+  and encounter authorities, evidence transitions, Analyze disclosure, AI team
+  sharing, familiarity, atomicity, and session-save validation.
 
 The actor and typed action/effect references have completed collaborative
 review. That Order 1 review includes stat-modifier runtime authority and its
@@ -46,8 +49,12 @@ validation. The final pre-closure correction review found no remaining
 reachable defect in that supported scope. Order 3 source-reconciled the
 turn-economy runtime authority, liveness, and scheduling boundary.
 The Order 4 status-lifecycle reference is written from current source. Schema
-v8 now preserves explicit expiration and removal profiles from authored JSON;
-formal promotion waits for the independent closure review. Other subsystem references
+v8 preserves explicit expiration and removal profiles from authored JSON, and
+its final certification completed the independent closure gate.
+The Order 5 knowledge reference traces current source through execution,
+automated strategy, familiarity, and persistence boundaries. Its final
+independent closure review remains separate from this documentation checkpoint.
+Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).
 

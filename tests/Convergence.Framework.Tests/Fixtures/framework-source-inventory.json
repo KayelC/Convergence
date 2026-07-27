@@ -518,6 +518,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Knowledge/BattleKnowledgeExecutionTransitions.cs",
+      "owner": "combat_knowledge",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Knowledge/CombatKnowledgeStores.cs",
       "owner": "combat_knowledge",
       "publicSurface": "exported"

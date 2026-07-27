@@ -25,8 +25,11 @@ complete-action aggregation, explicit ordered effect dependencies, staged
 life-state eligibility, secondary damage contact, and Action Token integration.
 Order 3 now covers neutral standard actions, Action Token transitions, pass
 precedence, finite liveness, typed phase evidence, and the explicit boundary
-between opportunity counting and actor scheduling. Other subsystem entries
-remain unreviewed until they complete the same process.
+between opportunity counting and actor scheduling. Order 5 now additionally
+covers persistent entity knowledge, encounter-local team knowledge,
+conservative contact discovery, policy-controlled Analyze, familiarity imports,
+and save boundaries. Other subsystem entries remain unreviewed until they
+complete the same process.
 O3-R7 independently verified the source and audience documents at that
 revision. A later source-first recheck reopened the developer and technical
 entries while three command-boundary defects were corrected. O3-R8 through
@@ -111,14 +114,14 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 24 reviewed,
-28 existing_unreviewed, 16 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 27 reviewed,
+26 existing_unreviewed, 15 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 24 |
-| `existing_unreviewed` | 28 |
-| `missing` | 16 |
+| `reviewed` | 27 |
+| `existing_unreviewed` | 26 |
+| `missing` | 15 |
 | `not_applicable` | 7 |
 
 These totals describe documentation only. They do not reduce the implementation

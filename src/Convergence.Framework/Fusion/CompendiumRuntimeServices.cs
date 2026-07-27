@@ -826,20 +826,13 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
                         FamiliarKnowledgeImportDiagnosticCode.DuplicateAilmentResistanceKnowledge,
                     RuntimeKnowledgeCollection.InstantDeathResistances =>
                         FamiliarKnowledgeImportDiagnosticCode.DuplicateInstantDeathResistanceKnowledge,
+                    RuntimeKnowledgeCollection.AnalyzedDefenses =>
+                        FamiliarKnowledgeImportDiagnosticCode.DuplicateAnalyzedDefenseKnowledge,
                     _ => throw new InvalidOperationException(
                         $"Unsupported knowledge collection '{duplicate.Collection}'.")
                 },
                 $"Current knowledge contains a duplicate key for {duplicate.KeyDescription}.",
                 duplicate.EntityId,
-                duplicate.Index)));
-        currentDiagnostics.AddRange(current.AnalyzedDefenses
-            .Select((entry, index) => (Entry: entry, Index: index))
-            .GroupBy(value => value.Entry.EntityId)
-            .SelectMany(group => group.Skip(1))
-            .Select(duplicate => new FamiliarKnowledgeImportDiagnostic(
-                FamiliarKnowledgeImportDiagnosticCode.DuplicateAnalyzedDefenseKnowledge,
-                $"Current knowledge contains a duplicate analyzed-defense profile for entity '{duplicate.Entry.EntityId}'.",
-                duplicate.Entry.EntityId,
                 duplicate.Index)));
         if (currentDiagnostics.Count > 0)
         {

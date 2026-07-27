@@ -227,19 +227,19 @@
     {
       "id": "battle_knowledge",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/status-passives-and-knowledge.md"],
-        "reason": "Player and encounter knowledge concepts exist but need owner confirmation."
+        "reason": "Owner-confirmed persistent and encounter scopes, conservative discovery, Analyze disclosure, boss restriction, familiarity, and AI lifetime rules are reconciled with current source."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Knowledge seeding, encounter scope, persistence, and UI querying need a guide."
+        "state": "reviewed",
+        "documents": ["docs/developer-guide/battle-knowledge.md"],
+        "reason": "The guide covers execution evidence, atomic transitions, aggregate queries, Analyze policies, team seeds, familiarity, save boundaries, and Godot responsibilities."
       },
       "technical": {
-        "state": "existing_unreviewed",
-        "documents": ["docs/gameplay-systems.md"],
-        "reason": "Knowledge store authority and save boundaries need a reviewed technical page."
+        "state": "reviewed",
+        "documents": ["docs/technical/battle-knowledge-runtime.md"],
+        "reason": "The technical reference traces canonical authorities, transition atomicity, discovery rules, AI sharing, familiarity, and session-save validation."
       }
     },
     {

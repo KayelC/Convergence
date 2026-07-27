@@ -60,6 +60,13 @@ Runtime actors are identified by `RuntimeInstanceId` and content records by
 navigation, traversal, Compendium, knowledge, and session state have immutable
 snapshot boundaries.
 
+Battle knowledge deliberately uses two snapshot authorities. Persistent facts
+are keyed by entity definition and belong to session persistence. Encounter
+facts are keyed by runtime target identity, take query precedence for that
+target, and are discarded after battle. Framework execution results supply
+typed observation and Analyze evidence to an atomic transition service; hosts
+render the result but do not rediscover defenses from private catalog data.
+
 Actor authority is split deliberately. Individual actor state owns identity,
 progression, resources, equipment, skills, status, affiliation, and encounter
 presence. `RuntimePartyRosterSnapshot` exclusively owns active/reserve

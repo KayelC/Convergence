@@ -564,7 +564,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             knowledge.EntityId == Qualified("bramble_runner") &&
             knowledge.Element == DamageElement.Fire &&
             knowledge.Affinity == ElementalAffinity.Weak);
-        Assert.Empty(summary.EncounterAiKnowledge.ElementalAffinities);
+        Assert.Empty(summary.EncounterAiKnowledge.Elemental);
         CompendiumEntrySnapshot entry = Assert.Single(summary.Compendium.Entries);
         Assert.Equal(Qualified("bramble_runner"), entry.EntityId);
         TrainingAnnexCompendiumEvidence acquisition = Assert.Single(summary.CompendiumEvidence);
@@ -712,9 +712,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
             knowledge.EntityId == Qualified("ashling") &&
             knowledge.Element == DamageElement.Ice &&
             knowledge.Affinity == ElementalAffinity.Weak);
-        Assert.Empty(summary.EncounterAiKnowledge.ElementalAffinities);
-        Assert.Empty(summary.EncounterAiKnowledge.AilmentResistances);
-        Assert.Empty(summary.EncounterAiKnowledge.InstantDeathResistances);
+        Assert.Empty(summary.EncounterAiKnowledge.Elemental);
+        Assert.Empty(summary.EncounterAiKnowledge.Ailments);
+        Assert.Empty(summary.EncounterAiKnowledge.InstantDeath);
         Assert.Equal(
             [
                 CleanTrainingAnnexPlayCommand.OpenCompendium,
@@ -1011,7 +1011,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             knowledge.EntityId == Qualified("ward_shell") &&
             knowledge.Element == DamageElement.Electric &&
             knowledge.Affinity == ElementalAffinity.Weak);
-        Assert.Empty(summary.EncounterAiKnowledge.ElementalAffinities);
+        Assert.Empty(summary.EncounterAiKnowledge.Elemental);
         CompendiumEntrySnapshot compendiumEntry = Assert.Single(summary.Compendium.Entries);
         Assert.Equal(Qualified("ward_shell"), compendiumEntry.EntityId);
         TrainingAnnexCompendiumEvidence acquisition = Assert.Single(summary.CompendiumEvidence);
@@ -2092,8 +2092,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.DoesNotContain(summary.BattleKnowledge.ElementalAffinities, knowledge =>
             knowledge.EntityId == Qualified("echo_adept") &&
             knowledge.Element == DamageElement.Fire);
-        Assert.Contains(summary.EncounterAiKnowledge.ElementalAffinities, knowledge =>
-            knowledge.EntityId == Qualified("echo_adept") &&
+        Assert.Contains(summary.EncounterAiKnowledge.Elemental, knowledge =>
+            knowledge.TargetEntityId == Qualified("echo_adept") &&
             knowledge.Element == DamageElement.Fire &&
             knowledge.Affinity == ElementalAffinity.Resist);
         Assert.Contains("Framework AI selected: Ashling -> Ash Spark.", output.ToString(), StringComparison.Ordinal);

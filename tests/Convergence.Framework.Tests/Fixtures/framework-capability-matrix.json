@@ -129,8 +129,16 @@
     {
       "id": "battle_knowledge",
       "implementationState": "complete",
-      "frameworkTests": ["RuntimePersistenceSnapshotTests", "CatalogBattleRuntimeTests"],
-      "demoCoverage": "focused",
+      "frameworkTests": [
+        "PersistentBattleKnowledgeTests",
+        "BattleKnowledgeObservationTransitionTests",
+        "BattleAnalysisTests",
+        "BattleKnowledgeExecutionTransitionTests",
+        "CatalogBattleRuntimeTests",
+        "CompendiumRuntimeServiceTests",
+        "RuntimePersistenceSnapshotTests"
+      ],
+      "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": []

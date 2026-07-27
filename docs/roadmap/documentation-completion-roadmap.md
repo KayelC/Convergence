@@ -364,20 +364,22 @@ rewriting historical checkpoint records. The
 [O4-R44 closure review](../reviews/status-passive-lifecycle-order-4-r44-closure-review-2026-07-26.md)
 then independently re-read the corrected implementation and documentation,
 passed the complete release gate, and closed Order 4 without an unresolved
-realistic reachable defect. The executable documentation matrix therefore
-records 24 reviewed, 28 `existing_unreviewed`, 16 missing, and 7
-`not_applicable` entries. Order 5, `battle_knowledge`, is now the next
-collaborative documentation subject.
+realistic reachable defect. The executable documentation matrix at Order 4
+closure recorded 24 reviewed, 28 `existing_unreviewed`, 16 missing, and 7
+`not_applicable` entries.
 
 The source-backed opening review and owner-approved discovery rules are recorded
 in the
 [Battle Knowledge Order 5 Source Review](../reviews/battle-knowledge-order-5-source-review-2026-07-27.md).
-Order 5 is now in implementation planning. Its confirmed scope separates
+Order 5 has implemented checkpoints O5-R1 through O5-R7. Its confirmed scope separates
 persistent entity knowledge from encounter-instance observations, prevents
 temporary defenses from corrupting permanent records, keeps ordinary enemy AI
 knowledge encounter-local, imports all authored defenses after approved
 acquisition paths, and adds policy-controlled restricted Analyze disclosure for
-bosses and other special targets.
+bosses and other special targets. The three audience entries are now reviewed,
+bringing the matrix to 27 reviewed, 26 `existing_unreviewed`, 15 missing, and 7
+`not_applicable`. O5-R8 remains the independent source, documentation, and full
+quality-gate review before owner closure.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored

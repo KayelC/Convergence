@@ -6,7 +6,8 @@ internal enum RuntimeKnowledgeCollection
 {
     ElementalAffinities,
     AilmentResistances,
-    InstantDeathResistances
+    InstantDeathResistances,
+    AnalyzedDefenses
 }
 
 internal sealed record RuntimeKnowledgeDuplicate(
@@ -22,6 +23,7 @@ internal sealed record RuntimeKnowledgeDuplicate(
         RuntimeKnowledgeCollection.ElementalAffinities => $"$.knowledge.elementalAffinities[{Index}]",
         RuntimeKnowledgeCollection.AilmentResistances => $"$.knowledge.ailmentResistances[{Index}]",
         RuntimeKnowledgeCollection.InstantDeathResistances => $"$.knowledge.instantDeathResistances[{Index}]",
+        RuntimeKnowledgeCollection.AnalyzedDefenses => $"$.knowledge.analyzedDefenses[{Index}]",
         _ => throw new InvalidOperationException($"Unsupported knowledge collection '{Collection}'.")
     };
 
@@ -33,6 +35,7 @@ internal sealed record RuntimeKnowledgeDuplicate(
             $"entity '{EntityId}' and ailment '{AilmentId}'",
         RuntimeKnowledgeCollection.InstantDeathResistances =>
             $"entity '{EntityId}' and instant-death channel '{DeathChannel}'",
+        RuntimeKnowledgeCollection.AnalyzedDefenses => $"entity '{EntityId}'",
         _ => throw new InvalidOperationException($"Unsupported knowledge collection '{Collection}'.")
     };
 }
@@ -84,6 +87,19 @@ internal static class RuntimeKnowledgeIntegrity
                     index,
                     entry.EntityId,
                     DeathChannel: entry.Channel));
+            }
+        }
+
+        var analyzedDefenseKeys = new HashSet<ContentId>();
+        for (int index = 0; index < knowledge.AnalyzedDefenses.Count; index++)
+        {
+            RuntimeAnalyzedDefenseKnowledgeSnapshot entry = knowledge.AnalyzedDefenses[index];
+            if (!analyzedDefenseKeys.Add(entry.EntityId))
+            {
+                duplicates.Add(new RuntimeKnowledgeDuplicate(
+                    RuntimeKnowledgeCollection.AnalyzedDefenses,
+                    index,
+                    entry.EntityId));
             }
         }
 

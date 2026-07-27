@@ -18,6 +18,14 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
+`battle_knowledge` is complete. Persistent entity facts and encounter-local
+runtime facts have separate immutable authorities; typed execution evidence and
+Analyze results pass through one atomic framework transition; automated teams
+share only their own encounter snapshot; familiar acquisition is optional and
+policy-controlled; and session-save validation rejects duplicate, missing, or
+encounter-only knowledge. Training Annex now exercises this path end to end
+without inspecting hidden target defenses in the host.
+
 `status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced two bounded defects from current source. O4-R18 now skips a scheduled

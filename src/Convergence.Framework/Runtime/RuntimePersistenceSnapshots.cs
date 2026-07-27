@@ -93,7 +93,9 @@ public enum RuntimeSaveValidationCode
     PassiveActivationTriggerIndexInvalid,
     PassiveActivationEventMismatch,
     MissingPassiveSkillState = 83,
-    ConflictingActorAilmentExclusivityGroup = 84
+    ConflictingActorAilmentExclusivityGroup = 84,
+    DuplicateAnalyzedDefenseKnowledge = 85,
+    ActorEncounterAnalysisCannotPersist = 86
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -562,6 +564,11 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             ValidateContentId(snapshot.Knowledge.InstantDeathResistances[index].EntityId,
                 $"$.knowledge.instantDeathResistances[{index}].entityId", diagnostics);
         }
+        for (int index = 0; index < snapshot.Knowledge.AnalyzedDefenses.Count; index++)
+        {
+            ValidateContentId(snapshot.Knowledge.AnalyzedDefenses[index].EntityId,
+                $"$.knowledge.analyzedDefenses[{index}].entityId", diagnostics);
+        }
 
         if (snapshot.Session.MoonPhaseId is ContentId moonPhaseId)
         {
@@ -830,6 +837,14 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 
         ValidateActorStatModifiers(actor, catalog, diagnostics, actorIndex);
         ValidateActorCharges(actor, diagnostics, actorIndex);
+        if (actor.BattleStatus.Analysis.Count > 0)
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.ActorEncounterAnalysisCannotPersist,
+                "Actor-local analysis refers to encounter runtime IDs and cannot enter a session save.",
+                actor.Identity.InstanceId,
+                Path: $"$.actors[{actorIndex}].battleStatus.analysis"));
+        }
 
         ValidateActorSkillCatalogReferences(
             actor.Skills.LearnedSkillIds,
@@ -1517,6 +1532,8 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     RuntimeSaveValidationCode.DuplicateAilmentResistanceKnowledge,
                 RuntimeKnowledgeCollection.InstantDeathResistances =>
                     RuntimeSaveValidationCode.DuplicateInstantDeathResistanceKnowledge,
+                RuntimeKnowledgeCollection.AnalyzedDefenses =>
+                    RuntimeSaveValidationCode.DuplicateAnalyzedDefenseKnowledge,
                 _ => throw new InvalidOperationException(
                     $"Unsupported knowledge collection '{duplicate.Collection}'.")
             };
@@ -1548,6 +1565,11 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         foreach (RuntimeInstantDeathResistanceKnowledgeSnapshot entry in knowledge.InstantDeathResistances)
         {
             ValidateKnowledgeEntity(entry.EntityId, knownActorEntities, catalog, diagnostics, "$.knowledge.instantDeathResistances");
+        }
+
+        foreach (RuntimeAnalyzedDefenseKnowledgeSnapshot entry in knowledge.AnalyzedDefenses)
+        {
+            ValidateKnowledgeEntity(entry.EntityId, knownActorEntities, catalog, diagnostics, "$.knowledge.analyzedDefenses");
         }
     }
 

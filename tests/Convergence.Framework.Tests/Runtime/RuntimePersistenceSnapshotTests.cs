@@ -6,6 +6,7 @@ using Convergence.Fusion;
 using Convergence.Battle;
 using Convergence.Execution;
 using Convergence.Encounters;
+using Convergence.Knowledge;
 using Convergence.Runtime;
 using Xunit;
 
@@ -1930,6 +1931,15 @@ public sealed class RuntimePersistenceSnapshotTests
                     entityId,
                     InstantDeathChannel.Light,
                     ResistanceLevel.Resistant)
+            ],
+            analyzedDefenses:
+            [
+                new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+                    entityId,
+                    [BattleAnalysisField.ElementalAffinities]),
+                new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+                    entityId,
+                    [BattleAnalysisField.AilmentResistances])
             ]);
 
         RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(
@@ -1956,8 +1966,63 @@ public sealed class RuntimePersistenceSnapshotTests
                 Assert.Equal(RuntimeSaveValidationCode.DuplicateInstantDeathResistanceKnowledge, diagnostic.Code);
                 Assert.Equal("$.knowledge.instantDeathResistances[1]", diagnostic.Path);
                 Assert.Equal(entityId, diagnostic.ContentId);
+            },
+            diagnostic =>
+            {
+                Assert.Equal(RuntimeSaveValidationCode.DuplicateAnalyzedDefenseKnowledge, diagnostic.Code);
+                Assert.Equal("$.knowledge.analyzedDefenses[1]", diagnostic.Path);
+                Assert.Equal(entityId, diagnostic.ContentId);
             });
         Assert.Throws<RuntimeSaveValidationException>(() => result.RequireValidSnapshot());
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsMissingAnalyzedDefenseTarget()
+    {
+        ContentId missing = Id("missing.pack:unknown_entity");
+        var knowledge = new RuntimeKnowledgeSnapshot(
+            elementalAffinities: null,
+            ailmentResistances: null,
+            instantDeathResistances: null,
+            analyzedDefenses:
+            [
+                new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+                    missing,
+                    [BattleAnalysisField.ElementalAffinities])
+            ]);
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(
+            CreateSaveSnapshot(knowledge: knowledge),
+            LoadCatalog());
+
+        RuntimeSaveValidationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(RuntimeSaveValidationCode.KnowledgeTargetMissing, diagnostic.Code);
+        Assert.Equal("$.knowledge.analyzedDefenses", diagnostic.Path);
+        Assert.Equal(missing, diagnostic.ContentId);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsActorLocalEncounterAnalysis()
+    {
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot actor = CopyActor(
+            baseline.Actors[0],
+            battleStatus: new RuntimeBattleStatusSnapshot(
+                analysis:
+                [
+                    new RuntimeAnalysisSnapshot(
+                        RuntimeInstanceId.Parse("encounter_target"),
+                        [AnalysisLayer.Affinities])
+                ]));
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(
+            CreateSaveSnapshot(actors: [actor, baseline.Actors[1]]),
+            LoadCatalog());
+
+        AssertDiagnostic(
+            result,
+            RuntimeSaveValidationCode.ActorEncounterAnalysisCannotPersist,
+            "$.actors[0].battleStatus.analysis");
     }
 
     [Fact]

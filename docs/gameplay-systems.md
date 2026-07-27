@@ -89,7 +89,23 @@ replaceable choice.
 
 ## Encounters, AI, Knowledge, And Rewards
 
-The encounter runner owns initiative, phases, turns, lifecycle dispatch, command execution, liveness, cancellation, outcomes, and ordered events. Its events expose immutable typed payloads instead of making debug messages authoritative, so Godot, console, and test hosts can map the same event to different presentation. Strategy ports allow deterministic or host-defined action selection. Player knowledge can persist through snapshots, while encounter AI knowledge may be scoped to one battle. Negotiation and reward services return immutable outcomes without owning presentation.
+The encounter runner owns initiative, phases, turns, lifecycle dispatch,
+command execution, liveness, cancellation, outcomes, and ordered events. Its
+events expose immutable typed payloads instead of making debug messages
+authoritative, so Godot, console, and test hosts can map the same event to
+different presentation. Strategy ports allow deterministic or host-defined
+action selection.
+
+Battle knowledge has two explicit authorities. `RuntimeKnowledgeSnapshot`
+stores persistent entity-definition facts for a player session, while
+`RuntimeEncounterKnowledgeSnapshot` stores current-target facts by runtime ID.
+Executed effects carry typed observations, and one atomic transition service
+applies ordinary contact and Analyze evidence without allowing hosts to inspect
+hidden defenses. Automated teammates share one encounter snapshot per side;
+ordinary runs start fresh, while scripted encounters may supply validated
+seeds. Familiar acquisition imports are optional and policy-controlled.
+Negotiation and reward services return immutable outcomes without owning
+presentation.
 
 ## Party, Rosters, Inventory, And Economy
 

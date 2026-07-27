@@ -180,8 +180,9 @@ and guidance, and O4-R40 independently closed that revision. The fourth
 independent audit reopened Order 4 under O4-R41 through O4-R44 for one
 programmatic validation defect and save-version documentation drift. O4-R42,
 O4-R43, and O4-R43A corrected those paths, and O4-R44 independently closed the
-sequence. Order 5 (`battle_knowledge`) is now the next collaborative
-documentation subject.
+sequence. Order 5 (`battle_knowledge`) has implemented its framework authority,
+host integration, persistence validation, and three audience documents through
+O5-R7. O5-R8 remains its independent closure gate.
 
 ## Priority 2: Persistence Evolution
 

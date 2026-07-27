@@ -75,5 +75,6 @@ The
 [bounded final certification](../reviews/status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
 then added independent sequence-model and public-restore evidence, corrected
 the committed action-end save-checkpoint guidance, and found no qualifying
-runtime defect. Order 4 is formally closed. Order 5, `battle_knowledge`, is the
-next collaborative documentation subject.
+runtime defect. Order 4 is formally closed. Order 5, `battle_knowledge`, has
+implemented O5-R1 through O5-R7; its independent O5-R8 review remains before
+formal owner closure.

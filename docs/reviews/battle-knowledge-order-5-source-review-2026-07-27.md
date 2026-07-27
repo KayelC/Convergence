@@ -1,6 +1,6 @@
 # Battle Knowledge Order 5 Source Review
 
-Status: implementation in progress; O5-R1 through O5-R6 implemented and reviewed
+Status: implementation in progress; O5-R1 through O5-R7 implemented and reviewed
 
 Date: 2026-07-27
 
@@ -236,7 +236,7 @@ diagnostics.
 | O5-R4 | `implemented_reviewed` | Add policy-controlled Analyze disclosure, including typed restricted/unknown boss fields. |
 | O5-R5 | `implemented_reviewed` | Route automated AI through encounter-local aggregate read-only knowledge with optional explicit seeding. |
 | O5-R6 | `implemented_reviewed` | Route familiar acquisition and Compendium imports through the approved persistent knowledge policy. |
-| O5-R7 | `pending` | Update save validation, DemoHost integration, capability evidence, mechanics, developer, and technical documentation. |
+| O5-R7 | `implemented_reviewed` | Update save validation, DemoHost integration, capability evidence, mechanics, developer, and technical documentation. |
 | O5-R8 | `pending` | Perform a fresh source and documentation review, run the complete quality gate, and obtain owner confirmation before closure. |
 
 Each implementation checkpoint receives its own staged commit. Order 5 remains
@@ -348,3 +348,32 @@ malformed-policy paths; immutable preservation of Analyze knowledge; typed
 duplicate/identifier diagnostics; and existing recruitment, fusion, and manual
 Compendium behavior. The full Framework suite passed 1,536 tests with zero skips
 and built nonincrementally with zero warnings.
+
+### O5-R7
+
+`BattleKnowledgeExecutionTransitionService` now applies the complete ordered
+effect list through one atomic framework transition. Both automated battles and
+the Training Annex manual battle consume the same typed observation and Analyze
+results. The host no longer maps command definitions back to hidden target
+defenses, and its player knowledge wrapper retains the complete immutable
+snapshot, including analyzed-profile markers.
+
+The Training Annex keeps persistent player knowledge separately from one
+encounter snapshot per side. Ordinary enemy knowledge is exposed as the actual
+runtime-ID-scoped `RuntimeEncounterKnowledgeSnapshot`, remains shareable only
+within that battle, and never enters the save-facing player snapshot.
+
+Save validation now checks analyzed-defense duplicates and catalog targets in
+addition to the three fact collections. Actor-local analysis keyed by encounter
+runtime ID is rejected from session saves because the aggregate does not contain
+the encounter required to restore those identities. Live actor snapshots retain
+that API shape; persistent defenses belong in `RuntimeKnowledgeSnapshot`, and
+current-target disclosure belongs in `RuntimeEncounterKnowledgeSnapshot`.
+
+The mechanics, developer, and technical audience pages now document the
+owner-confirmed discovery table, temporary-defense boundary, Analyze policy,
+boss restrictions, familiarity policy, team-local AI, save rules, Godot
+responsibilities, and transition atomicity. The capability and documentation
+matrices cite the concrete source and test evidence. R8 remains the independent
+closure gate and will record final test totals after running the complete release
+verification.

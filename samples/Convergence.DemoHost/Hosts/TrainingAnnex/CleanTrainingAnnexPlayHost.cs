@@ -143,7 +143,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> BattleKnowledgeEvidence,
     IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> EncounterAiKnowledgeEvidence,
     RuntimeKnowledgeSnapshot BattleKnowledge,
-    RuntimeKnowledgeSnapshot EncounterAiKnowledge,
+    RuntimeEncounterKnowledgeSnapshot EncounterAiKnowledge,
     BattleRewardResult? PreparedBattleRewardPreview,
     BattleRewardResult? AppliedBattleReward,
     int AppliedBattleRewardLevelUpCount,
@@ -505,7 +505,8 @@ internal sealed class CleanTrainingAnnexPlayHost
         var playerBattleKnowledge = new TrainingAnnexBattleKnowledgeState();
         var battleKnowledgeEvidence = new List<TrainingAnnexBattleKnowledgeEvidence>();
         var encounterAiKnowledgeEvidence = new List<TrainingAnnexBattleKnowledgeEvidence>();
-        var lastEncounterAiKnowledge = new RuntimeKnowledgeSnapshot();
+        RuntimeEncounterKnowledgeSnapshot lastEncounterAiKnowledge =
+            RuntimeEncounterKnowledgeSnapshot.Empty;
         BattleRewardResult? preparedBattleRewardPreview = null;
         BattleRewardResult? appliedBattleReward = null;
         int appliedBattleRewardLevelUpCount = 0;
@@ -2037,7 +2038,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> battleKnowledgeEvidence,
         IReadOnlyList<TrainingAnnexBattleKnowledgeEvidence> encounterAiKnowledgeEvidence,
         RuntimeKnowledgeSnapshot battleKnowledge,
-        RuntimeKnowledgeSnapshot encounterAiKnowledge,
+        RuntimeEncounterKnowledgeSnapshot encounterAiKnowledge,
         BattleRewardResult? preparedBattleRewardPreview,
         BattleRewardResult? appliedBattleReward,
         int appliedBattleRewardLevelUpCount,

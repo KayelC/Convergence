@@ -22,6 +22,10 @@ This directory is the active documentation authority for Convergence Framework.
     bind, present, or replace Action Token and neutral standard actions.
 12. [Turn Economy Runtime](technical/turn-economy-runtime.md): phase authority,
     liveness, typed events, and scheduling boundaries.
+13. [Battle Knowledge](mechanics/status-passives-and-knowledge.md): confirmed
+    discovery, Analyze, familiarity, AI scope, and persistence rules.
+14. [Battle Knowledge Integration](developer-guide/battle-knowledge.md): using
+    typed evidence and immutable knowledge in a Godot or other host.
 
 ## Documentation Audiences
 

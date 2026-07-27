@@ -560,10 +560,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         private readonly IBattleActionSelector _selector;
         private readonly IReadOnlyList<CatalogBattleActor> _actors;
         private readonly Dictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> _knowledge;
-        private readonly IBattleKnowledgeObservationTransitionService _observationTransitions =
-            new BattleKnowledgeObservationTransitionService();
-        private readonly IBattleAnalysisKnowledgeTransitionService _analysisTransitions =
-            new BattleAnalysisKnowledgeTransitionService();
+        private readonly IBattleKnowledgeExecutionTransitionService _knowledgeTransitions =
+            new BattleKnowledgeExecutionTransitionService();
         private readonly IAutomatedBattleTurnRestrictionResolver _restrictionResolver;
 
         public AutomatedBattleTurnHandler(
@@ -813,43 +811,20 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             out string? fault)
         {
             RuntimeEncounterKnowledgeSnapshot current = _knowledge[teamId];
-            foreach (EffectExecutionResult effect in effects)
+            BattleKnowledgeExecutionTransitionResult transition = _knowledgeTransitions.Apply(
+                new BattleKnowledgeExecutionTransitionRequest(
+                    NoPersistentKnowledge,
+                    current,
+                    effects,
+                    BattleKnowledgePersistenceScope.EncounterOnly));
+            if (transition.Status == BattleKnowledgeTransitionStatus.Rejected)
             {
-                if (effect.KnowledgeObservations.Count > 0)
-                {
-                    BattleKnowledgeObservationTransitionResult observation = _observationTransitions.Apply(
-                        new BattleKnowledgeObservationTransitionRequest(
-                            NoPersistentKnowledge,
-                            current,
-                            effect.KnowledgeObservations,
-                            BattleKnowledgePersistenceScope.EncounterOnly));
-                    if (observation.Status == BattleKnowledgeTransitionStatus.Rejected)
-                    {
-                        fault = "Automated knowledge observation was rejected: " +
-                            string.Join("; ", observation.Diagnostics.Select(item => item.Message));
-                        return false;
-                    }
-                    current = observation.EncounterAfter;
-                }
-
-                if (effect.Analysis is BattleAnalysisResult analysis)
-                {
-                    BattleAnalysisKnowledgeTransitionResult analyzed = _analysisTransitions.Apply(
-                        NoPersistentKnowledge,
-                        current,
-                        analysis,
-                        BattleKnowledgePersistenceScope.EncounterOnly);
-                    if (analyzed.Status == BattleKnowledgeTransitionStatus.Rejected)
-                    {
-                        fault = "Automated analysis knowledge was rejected: " +
-                            string.Join("; ", analyzed.Diagnostics.Select(item => item.Message));
-                        return false;
-                    }
-                    current = analyzed.EncounterAfter;
-                }
+                fault = "Automated battle knowledge was rejected: " +
+                    string.Join("; ", transition.Diagnostics.Select(item => item.Message));
+                return false;
             }
 
-            _knowledge[teamId] = current;
+            _knowledge[teamId] = transition.EncounterAfter;
             fault = null;
             return true;
         }
