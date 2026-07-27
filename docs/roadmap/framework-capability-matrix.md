@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`battle_knowledge` is `partial`. Persistent entity facts and encounter-local
+`battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and
 Analyze results pass through one atomic framework transition; automated teams
 share only their own encounter snapshot; familiar acquisition is optional and
@@ -31,8 +31,11 @@ target. O5-R10 now requires an immutable accepted-action authority and
 preflights all five provenance dimensions before any lower transition. O5-R11
 covers valid and hostile registered custom handlers, every mismatch, immutable
 authority construction, and whole-batch rollback. O5-R12 reconciles the public
-guidance. The capability remains partial only until O5-R13 independently
-re-reads the corrected source and passes the complete release gate.
+guidance. The
+[O5-R13 closure review](../reviews/battle-knowledge-order-5-provenance-closure-review-2026-07-27.md)
+independently re-read the corrected source and audience documents, passed the
+complete release gate, and found no unresolved realistic reachable Battle
+Knowledge defect.
 
 `status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

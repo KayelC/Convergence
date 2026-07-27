@@ -128,7 +128,7 @@
     },
     {
       "id": "battle_knowledge",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": [
         "PersistentBattleKnowledgeTests",
         "BattleKnowledgeObservationTransitionTests",
@@ -141,9 +141,7 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "The corrected custom-evidence provenance boundary awaits the independent O5-R13 source and release-gate review before the capability returns to complete."
-      ]
+      "knownGaps": []
     },
     {
       "id": "party_and_rosters",

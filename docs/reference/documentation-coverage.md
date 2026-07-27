@@ -101,8 +101,10 @@ immutable action, actor, and target-entity authority envelope and preflights the
 complete evidence batch before any lower transition. O5-R11 covers every
 mismatch, whole-batch rollback, and honest/hostile registered custom handlers.
 O5-R12 reconciles the developer and technical pages with that public contract,
-so all three Battle Knowledge audiences are `reviewed` again. O5-R13 remains
-the independent capability-closure gate.
+so all three Battle Knowledge audiences are `reviewed` again. The
+[O5-R13 closure review](../reviews/battle-knowledge-order-5-provenance-closure-review-2026-07-27.md)
+independently re-read the corrected source and documents and passed the complete
+release gate. Order 5 is formally complete.
 
 The review order and promotion gates for all capabilities are maintained in
 the active

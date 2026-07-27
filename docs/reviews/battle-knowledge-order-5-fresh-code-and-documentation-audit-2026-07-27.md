@@ -8,6 +8,9 @@
 
 **Disposition:** correction required before formal Order 5 closure
 
+**Current status:** corrected and closed by the
+[O5-R13 provenance closure review](battle-knowledge-order-5-provenance-closure-review-2026-07-27.md)
+
 ## Review Method
 
 This audit was performed from current source, executable tests, public contracts,
@@ -210,8 +213,8 @@ and DemoHost retention. The missing regression seam is focused:
 | O5-R9 | `verified` | Record this fresh source audit and honestly reopen affected status entries. |
 | O5-R10 | `verified` | Add authoritative action, actor, and target-entity context plus stable mismatch diagnostics. |
 | O5-R11 | `verified` | Add custom observation and Analyze provenance regressions, including aggregate rollback. |
-| O5-R12 | `implemented_pending_review` | Reconcile developer and technical guidance, public API evidence, and maturity matrices. |
-| O5-R13 | `open` | Re-read corrected source and run the complete release gate before closure is reconsidered. |
+| O5-R12 | `verified` | Reconcile developer and technical guidance, public API evidence, and maturity matrices. |
+| O5-R13 | `verified` | Re-read corrected source and run the complete release gate before closure is reconsidered. |
 
 ## Correction Progress
 
@@ -236,6 +239,12 @@ show authority construction and complete-batch preflight. The developer and
 technical documentation entries return to `reviewed`. The capability remains
 `partial` until O5-R13 performs a fresh source trace and complete release gate;
 this progress record does not pre-approve that closure.
+
+O5-R13 subsequently completed the independent source, documentation, host,
+coverage, and Godot review. The
+[provenance closure review](battle-knowledge-order-5-provenance-closure-review-2026-07-27.md)
+found no unresolved realistic reachable Battle Knowledge defect in the
+corrected revision. O5-F1 is closed and the capability is `complete`.
 
 ## Health Verdict
 

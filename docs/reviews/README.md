@@ -67,6 +67,7 @@ or implementation authority.
 - [Battle Knowledge Order 5 Source Review, 27 July 2026](battle-knowledge-order-5-source-review-2026-07-27.md)
 - [Battle Knowledge Order 5 R8 Final Review, 27 July 2026](battle-knowledge-order-5-r8-final-review-2026-07-27.md)
 - [Battle Knowledge Order 5 Fresh Code And Documentation Audit, 27 July 2026](battle-knowledge-order-5-fresh-code-and-documentation-audit-2026-07-27.md)
+- [Battle Knowledge Order 5 Provenance Closure Review, 27 July 2026](battle-knowledge-order-5-provenance-closure-review-2026-07-27.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.

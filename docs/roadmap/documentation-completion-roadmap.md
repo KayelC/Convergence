@@ -400,8 +400,11 @@ lower transition. O5-R11 covers each mismatch, missing authority, immutable
 authority construction, whole-batch rollback, and valid/forged registered
 custom handlers. O5-R12 reconciles the developer and technical audiences with
 that contract. The matrix therefore returns to 27 reviewed, 26
-`existing_unreviewed`, 15 missing, and 7 `not_applicable`; O5-R13 remains the
-independent capability-closure review.
+`existing_unreviewed`, 15 missing, and 7 `not_applicable`. The
+[O5-R13 provenance closure review](../reviews/battle-knowledge-order-5-provenance-closure-review-2026-07-27.md)
+then independently re-read the corrected source and all three audiences,
+passed the complete release gate, and found no unresolved realistic reachable
+Battle Knowledge defect. Order 5 is formally complete.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored

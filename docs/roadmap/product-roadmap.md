@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
@@ -187,9 +187,10 @@ provenance boundary: aggregate knowledge integration validates effect index and
 runtime target, but not authoritative source action, acting actor, or target
 entity. O5-R10 now adds and enforces that complete authority, O5-R11 supplies
 adversarial and valid-extension regression coverage, and O5-R12 reconciles the
-integration guidance. The capability remains `partial` only until O5-R13
-independently re-reads the corrected source and passes the complete release
-gate.
+integration guidance. The capability remained `partial` pending O5-R13.
+O5-R13 has now completed the independent source, documentation, host, coverage,
+and Godot verification without finding an unresolved realistic reachable
+defect. `battle_knowledge` is complete.
 
 ## Priority 2: Persistence Evolution
 

@@ -80,4 +80,6 @@ implemented O5-R1 through O5-R8, but a later fresh source audit reopened one
 custom-effect provenance boundary. O5-R10 now enforces action, actor, effect,
 runtime-target, and target-entity authority; O5-R11 adds adversarial extension
 coverage; and O5-R12 reconciles the developer and technical guidance. O5-R13 is
-the remaining fresh source and release-gate closure review.
+now complete: its fresh source and documentation review found no unresolved
+realistic reachable defect, and the full release gate passed. Order 5 is
+formally closed.
