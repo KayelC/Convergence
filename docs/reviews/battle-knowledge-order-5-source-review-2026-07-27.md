@@ -1,6 +1,6 @@
 # Battle Knowledge Order 5 Source Review
 
-Status: owner decisions confirmed; implementation pending
+Status: implementation in progress; O5-R1 and O5-R2 implemented and reviewed
 
 Date: 2026-07-27
 
@@ -230,8 +230,8 @@ diagnostics.
 
 | Checkpoint | State | Required outcome |
 |---|---|---|
-| O5-R1 | `pending` | Add immutable aggregate knowledge views, transitions, diagnostics, and immediate identifier validation. |
-| O5-R2 | `pending` | Add typed observation evidence that distinguishes contact, authored base defense, effective defense, and temporary modification. |
+| O5-R1 | `implemented_reviewed` | Add immutable aggregate knowledge views, transitions, diagnostics, and immediate identifier validation. |
+| O5-R2 | `implemented_reviewed` | Add typed observation evidence that distinguishes contact, authored base defense, effective defense, and temporary modification. |
 | O5-R3 | `pending` | Separate persistent entity knowledge from encounter analysis and define battle-end cleanup. |
 | O5-R4 | `pending` | Add policy-controlled Analyze disclosure, including typed restricted/unknown boss fields. |
 | O5-R5 | `pending` | Route automated AI through encounter-local aggregate read-only knowledge with optional explicit seeding. |
@@ -242,3 +242,24 @@ diagnostics.
 Each implementation checkpoint receives its own staged commit. Order 5 remains
 open until the final source review finds no unresolved realistic defect and the
 project owner confirms the documented player-facing rules.
+
+## Checkpoint Review Record
+
+### O5-R1
+
+`RuntimeKnowledgeSnapshot` now has a read-only aggregate view and an atomic
+persistent transition service. Invalid identifiers and duplicate discovery
+keys reject without changing the before snapshot. The checkpoint review found
+no unresolved realistic defect; 1,505 Framework tests passed with zero skips,
+and the Framework built nonincrementally with zero warnings.
+
+### O5-R2
+
+Typed effect results now carry immutable `BattleKnowledgeObservation` evidence
+for elemental contact, ailments, and instant defeat. The evidence keeps
+authored and effective defenses separate and names guard, shield, Break,
+override, and passive influence. An all-hit miss remains an explicit miss
+observation rather than a discovery. The checkpoint review corrected one
+pre-commit ambiguity by separating instant-defeat outcome from resistance
+bypass state. The reviewed implementation passed 1,506 Framework tests with
+zero skips and built nonincrementally with zero warnings.

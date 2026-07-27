@@ -1,5 +1,6 @@
 using Convergence.Content;
 using Convergence.Battle;
+using Convergence.Knowledge;
 using Convergence.Runtime;
 
 namespace Convergence.Execution;
@@ -331,6 +332,8 @@ public sealed record EffectExecutionResult
         Array.Empty<DamageHitExecutionEvidence>();
     private readonly IReadOnlyList<BattleStatusLifecycleEvent> _lifecycleEvents =
         Array.Empty<BattleStatusLifecycleEvent>();
+    private readonly IReadOnlyList<BattleKnowledgeObservation> _knowledgeObservations =
+        Array.Empty<BattleKnowledgeObservation>();
 
     public EffectExecutionResult(
         int EffectIndex,
@@ -547,6 +550,12 @@ public sealed record EffectExecutionResult
     {
         get => _lifecycleEvents;
         init => _lifecycleEvents = SnapshotReferences(value, nameof(LifecycleEvents));
+    }
+    /// <summary>Gets typed defense evidence established while resolving this effect.</summary>
+    public IReadOnlyList<BattleKnowledgeObservation> KnowledgeObservations
+    {
+        get => _knowledgeObservations;
+        init => _knowledgeObservations = SnapshotReferences(value, nameof(KnowledgeObservations));
     }
 
     private static IReadOnlyList<T> SnapshotReferences<T>(

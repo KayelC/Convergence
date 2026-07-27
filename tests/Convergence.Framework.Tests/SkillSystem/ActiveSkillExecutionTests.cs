@@ -3,6 +3,7 @@ using Convergence.Catalog;
 using Convergence.Battle;
 using Convergence.Execution;
 using Convergence.Hosting;
+using Convergence.Knowledge;
 using Convergence.Runtime;
 using Xunit;
 
@@ -213,8 +214,66 @@ public sealed class ActiveSkillExecutionTests
         Assert.Equal(Hp, damageChange.ResourceId);
         Assert.Equal(-25, damageChange.Delta);
         Assert.Empty(result.Effects[1].ResourceChanges);
+        BattleKnowledgeObservation damageObservation = Assert.Single(result.Effects[0].KnowledgeObservations);
+        Assert.Equal(BattleKnowledgeObservationKind.ElementalAffinity, damageObservation.Kind);
+        Assert.Equal(BattleKnowledgeObservationOutcome.Contacted, damageObservation.Outcome);
+        Assert.Equal(DamageElement.Ice, damageObservation.Element);
+        Assert.Equal(ElementalAffinity.Weak, damageObservation.AuthoredAffinity);
+        Assert.Equal(ElementalAffinity.Weak, damageObservation.EffectiveAffinity);
+        Assert.False(damageObservation.HasTemporaryInfluence);
+        BattleKnowledgeObservation ailmentObservation = Assert.Single(result.Effects[1].KnowledgeObservations);
+        Assert.Equal(BattleKnowledgeObservationKind.AilmentResistance, ailmentObservation.Kind);
+        Assert.Equal(BattleKnowledgeObservationOutcome.Applied, ailmentObservation.Outcome);
+        Assert.Equal(Poison, ailmentObservation.AilmentId);
+        Assert.Equal(ResistanceLevel.Normal, ailmentObservation.AuthoredResistance);
+        Assert.Equal(ResistanceLevel.Normal, ailmentObservation.EffectiveResistance);
         Assert.Equal(TurnEconomyOutcome.Weakness, result.TurnEconomy.Outcome);
         Assert.True(result.TurnEconomy.AnyCritical);
+    }
+
+    [Fact]
+    public void Execute_DamageObservationSeparatesMissAndTemporaryDefenseFromAuthoredAffinity()
+    {
+        RuntimeActorState actor = Actor("knowledge_actor", PlayerTeam);
+        RuntimeActorState target = Actor(
+            "knowledge_target",
+            EnemyTeam,
+            defense: new CombatDefenseProfile([new(DamageElement.Fire, ElementalAffinity.Weak)]));
+        target.SetGuarding(true);
+        target.GrantShield(ShieldKind.Magical, EncounterLifetime(new BattleDurationDefinition()));
+        target.BreakAffinity(DamageElement.Fire, EncounterLifetime(new BattleDurationDefinition()));
+        target.OverrideAffinity(
+            DamageElement.Fire,
+            ElementalAffinity.Resist,
+            EncounterLifetime(new BattleDurationDefinition()));
+        SkillDefinition skill = ActiveSkill(
+        [
+            new DamageEffectDefinition(
+                DamageElement.Fire,
+                10,
+                100,
+                new NeverCriticalDefinition(),
+                FixedHits())
+        ]);
+
+        SkillExecutionResult result = new SkillExecutor(Services(
+            damagePolicy: new FixedResolutionDamagePolicy(
+                new DamagePolicyResolution(
+                    [new DamageHitResolution(false, 0)],
+                    ElementalAffinity.Repel)))).Execute(
+            Request(skill, actor, [actor, target], [target.InstanceId]));
+
+        BattleKnowledgeObservation observation = Assert.Single(
+            Assert.Single(result.Effects).KnowledgeObservations);
+        Assert.Equal(BattleKnowledgeObservationOutcome.Missed, observation.Outcome);
+        Assert.Equal(ElementalAffinity.Weak, observation.AuthoredAffinity);
+        Assert.Equal(ElementalAffinity.Repel, observation.EffectiveAffinity);
+        Assert.Equal(
+            BattleDefenseInfluence.Guard |
+            BattleDefenseInfluence.Shield |
+            BattleDefenseInfluence.AffinityBreak |
+            BattleDefenseInfluence.AffinityOverride,
+            observation.TemporaryInfluences);
     }
 
     [Fact]
@@ -663,6 +722,10 @@ public sealed class ActiveSkillExecutionTests
         Assert.Equal(skill.Id, blocked.SourceId);
         Assert.Equal(BattleAilmentApplicationGateReason.Guarding, blocked.AilmentGateDecision!.Reason);
         Assert.Equal(effect.LifecycleEvents, result.LifecycleEvents);
+        BattleKnowledgeObservation observation = Assert.Single(effect.KnowledgeObservations);
+        Assert.Equal(BattleKnowledgeObservationOutcome.Blocked, observation.Outcome);
+        Assert.Equal(BattleDefenseInfluence.Guard, observation.TemporaryInfluences);
+        Assert.Null(observation.EffectiveResistance);
         Assert.False(target.HasAilment(Poison));
         Assert.True(target.IsGuarding);
     }
@@ -2064,6 +2127,11 @@ public sealed class ActiveSkillExecutionTests
         Assert.NotNull(observed);
         Assert.Equal(ResistanceLevel.Resistant, observed.Resistance.Resistance);
         Assert.Equal(25, observed.Effect.Chance);
+        BattleKnowledgeObservation observation = Assert.Single(result.Effects[0].KnowledgeObservations);
+        Assert.Equal(BattleKnowledgeObservationKind.InstantDeathResistance, observation.Kind);
+        Assert.Equal(BattleKnowledgeObservationOutcome.Defeated, observation.Outcome);
+        Assert.Equal(InstantDeathChannel.Dark, observation.InstantDeathChannel);
+        Assert.Equal(ResistanceLevel.Resistant, observation.AuthoredResistance);
     }
 
     [Fact]
@@ -2566,6 +2634,33 @@ public sealed class ActiveSkillExecutionTests
                 RuntimeInstanceId.Parse("replacement_target"),
                 ContentId.Parse("replacement_ailment"))
         };
+        var originalKnowledgeObservations = new List<BattleKnowledgeObservation>
+        {
+            BattleKnowledgeObservation.Elemental(
+                ContentId.Parse("original_action"),
+                RuntimeInstanceId.Parse("actor"),
+                RuntimeInstanceId.Parse("target"),
+                ContentId.Parse("target_entity"),
+                0,
+                DamageElement.Fire,
+                true,
+                ElementalAffinity.Weak,
+                ElementalAffinity.Weak)
+        };
+        var replacementKnowledgeObservations = new List<BattleKnowledgeObservation>
+        {
+            BattleKnowledgeObservation.Elemental(
+                ContentId.Parse("replacement_action"),
+                RuntimeInstanceId.Parse("actor"),
+                RuntimeInstanceId.Parse("target"),
+                ContentId.Parse("target_entity"),
+                0,
+                DamageElement.Ice,
+                true,
+                ElementalAffinity.Normal,
+                ElementalAffinity.Repel,
+                BattleDefenseInfluence.Shield)
+        };
         var original = new EffectExecutionResult(
             0,
             RuntimeInstanceId.Parse("target"),
@@ -2575,7 +2670,8 @@ public sealed class ActiveSkillExecutionTests
             DamageHits: originalDamageHits)
         {
             ResourceChanges = originalResourceChanges,
-            LifecycleEvents = originalLifecycleEvents
+            LifecycleEvents = originalLifecycleEvents,
+            KnowledgeObservations = originalKnowledgeObservations
         };
 
         EffectExecutionResult clone = original with
@@ -2585,7 +2681,8 @@ public sealed class ActiveSkillExecutionTests
             HostActionRequestIds = replacementHostRequests,
             ResourceChanges = replacementResourceChanges,
             DamageHits = replacementDamageHits,
-            LifecycleEvents = replacementLifecycleEvents
+            LifecycleEvents = replacementLifecycleEvents,
+            KnowledgeObservations = replacementKnowledgeObservations
         };
 
         originalActivations.Clear();
@@ -2598,6 +2695,8 @@ public sealed class ActiveSkillExecutionTests
         replacementDamageHits.Clear();
         originalLifecycleEvents.Clear();
         replacementLifecycleEvents.Clear();
+        originalKnowledgeObservations.Clear();
+        replacementKnowledgeObservations.Clear();
 
         Assert.Equal("cloned", clone.Detail);
         Assert.Equal(originalActivation, Assert.Single(original.PassiveActivations));
@@ -2614,6 +2713,8 @@ public sealed class ActiveSkillExecutionTests
         Assert.Equal(
             BattleStatusLifecycleEventKind.AilmentRemoved,
             Assert.Single(clone.LifecycleEvents).Kind);
+        Assert.Equal(DamageElement.Fire, Assert.Single(original.KnowledgeObservations).Element);
+        Assert.Equal(DamageElement.Ice, Assert.Single(clone.KnowledgeObservations).Element);
         Assert.NotSame(replacementActivations, clone.PassiveActivations);
         Assert.NotSame(replacementHostRequests, clone.HostActionRequestIds);
         Assert.Throws<NotSupportedException>(() =>
@@ -2628,6 +2729,9 @@ public sealed class ActiveSkillExecutionTests
         Assert.Throws<NotSupportedException>(() =>
             ((IList<BattleStatusLifecycleEvent>)clone.LifecycleEvents).Add(
                 Assert.Single(original.LifecycleEvents)));
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<BattleKnowledgeObservation>)clone.KnowledgeObservations).Add(
+                Assert.Single(original.KnowledgeObservations)));
     }
 
     [Fact]

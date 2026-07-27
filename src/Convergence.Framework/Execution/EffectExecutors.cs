@@ -1,5 +1,6 @@
 using Convergence.Content;
 using Convergence.Battle;
+using Convergence.Knowledge;
 using Convergence.Runtime;
 
 namespace Convergence.Execution;
@@ -130,10 +131,6 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             context.Request.MoonPhaseId,
             context.Services,
             [definition.Element]);
-        ElementalAffinity affinity = context.Services.RuleModifiers.ResolveElementalAffinity(
-            target,
-            definition.Element,
-            new RuleModifierContext(defenseConditionContext, context.Request.Skill));
         var attackConditionContext = new BattleConditionContext(
             context.Actor,
             target,
@@ -148,6 +145,17 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
         var defenseModifierContext = new RuleModifierContext(
             defenseConditionContext,
             context.Request.Skill);
+        ElementalAffinity authoredAffinity = target.DefenseProfile.GetElementalAffinity(definition.Element);
+        IReadOnlyList<ElementalAffinity> passiveReplacements =
+            context.Services.RuleModifiers.ResolveElementalAffinityReplacements(
+                target,
+                definition.Element,
+                defenseModifierContext);
+        BattleDefenseInfluence defenseInfluences = ResolveElementalDefenseInfluences(
+            target,
+            definition.Element,
+            passiveReplacements);
+        ElementalAffinity affinity = target.GetElementalAffinity(definition.Element, passiveReplacements);
         ChargeDamageModifier charge = context.Services.Charges.ResolveDamageModifier(
             context.Actor,
             definition.Element);
@@ -221,9 +229,63 @@ internal sealed class DamageEffectExecutor : TargetedEffectExecutor, IEffectExec
             };
         }
 
+        result = result with
+        {
+            KnowledgeObservations =
+            [
+                BattleKnowledgeObservation.Elemental(
+                    context.Request.SourceId,
+                    context.Actor.InstanceId,
+                    target.InstanceId,
+                    target.EntityId,
+                    context.EffectIndex,
+                    definition.Element,
+                    hits.Any(hit => hit.Hit),
+                    authoredAffinity,
+                    affinity,
+                    defenseInfluences)
+            ]
+        };
+
         return charge.IsCharged
             ? result with { ParticipatingCharge = charge }
             : result;
+    }
+
+    private static BattleDefenseInfluence ResolveElementalDefenseInfluences(
+        RuntimeActorState target,
+        DamageElement element,
+        IReadOnlyCollection<ElementalAffinity> passiveReplacements)
+    {
+        if (element == DamageElement.Almighty)
+        {
+            return BattleDefenseInfluence.None;
+        }
+
+        BattleDefenseInfluence influences = target.IsGuarding
+            ? BattleDefenseInfluence.Guard
+            : BattleDefenseInfluence.None;
+        ShieldKind matchingShield = element == DamageElement.Physical
+            ? ShieldKind.Physical
+            : ShieldKind.Magical;
+        if (target.Shields.ContainsKey(matchingShield))
+        {
+            influences |= BattleDefenseInfluence.Shield;
+        }
+        if (target.AffinityBreaks.ContainsKey(element))
+        {
+            influences |= BattleDefenseInfluence.AffinityBreak;
+        }
+        if (target.AffinityOverrides.ContainsKey(element))
+        {
+            influences |= BattleDefenseInfluence.AffinityOverride;
+        }
+        if (passiveReplacements.Count > 0)
+        {
+            influences |= BattleDefenseInfluence.PassiveModifier;
+        }
+
+        return influences;
     }
 
     private static EffectExecutionResult ResolveLandedHits(
@@ -486,7 +548,10 @@ internal sealed class InstantKillEffectExecutor : TargetedEffectExecutor, IEffec
             new InstantDeathPolicyRequest(context.Actor, target, definition, resistance));
         if (!success)
         {
-            return Failure(context, TurnEconomyOutcome.Normal, "The instant-death attempt had no effect.");
+            return Failure(context, TurnEconomyOutcome.Normal, "The instant-death attempt had no effect.") with
+            {
+                KnowledgeObservations = [InstantDeathObservation(context, target, resistance, defeated: false)]
+            };
         }
 
         decimal resourceDelta = target.SetResource(target.VitalResourceId, 0);
@@ -502,8 +567,28 @@ internal sealed class InstantKillEffectExecutor : TargetedEffectExecutor, IEffec
             context,
             removed,
             passiveActivations: activations,
-            resourceChanges: resourceChanges);
+            resourceChanges: resourceChanges) with
+        {
+            KnowledgeObservations = [InstantDeathObservation(context, target, resistance, defeated: true)]
+        };
     }
+
+    private static BattleKnowledgeObservation InstantDeathObservation(
+        EffectExecutionContext context,
+        RuntimeActorState target,
+        InstantDeathResistanceResolution resistance,
+        bool defeated) =>
+        BattleKnowledgeObservation.InstantDeath(
+            context.Request.SourceId,
+            context.Actor.InstanceId,
+            target.InstanceId,
+            target.EntityId,
+            context.EffectIndex,
+            resistance.Channel,
+            resistance.BypassesResistance,
+            defeated,
+            resistance.Resistance,
+            resistance.Resistance);
 }
 
 internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffectExecutor<ApplyAilmentEffectDefinition>
@@ -516,6 +601,19 @@ internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffe
             return Failure(context, detail: "The ailment target or definition is unavailable.", relatedId: definition.AilmentId);
         }
 
+        ResistanceLevel authoredResistance = target.DefenseProfile.GetAilmentResistance(definition.AilmentId);
+        var resistanceConditionContext = new BattleConditionContext(
+            target,
+            context.Actor,
+            context.Request.Participants,
+            context.Request.BattleKindId,
+            context.Request.MoonPhaseId,
+            context.Services);
+        ResistanceLevel effectiveResistance = context.Services.RuleModifiers.ResolveAilmentResistance(
+            target,
+            definition.AilmentId,
+            authoredResistance,
+            new RuleModifierContext(resistanceConditionContext, context.Request.Skill));
         BattleAilmentApplicationResult application = BattleAilmentApplicationTransaction.Execute(
             new BattleAilmentApplicationRequest(
                 context.Actor,
@@ -538,13 +636,66 @@ internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffe
                 TurnEconomyOutcome.Normal,
                 detail: $"The ailment application was {application.Status}.",
                 relatedId: definition.AilmentId,
-                lifecycleEvents: application.Events);
+                lifecycleEvents: application.Events) with
+            {
+                KnowledgeObservations =
+                [AilmentObservation(
+                    context,
+                    target,
+                    definition.AilmentId,
+                    application.Status,
+                    authoredResistance,
+                    effectiveResistance)]
+            };
         }
 
         return Success(
             context,
             relatedId: definition.AilmentId,
-            lifecycleEvents: application.Events);
+            lifecycleEvents: application.Events) with
+        {
+            KnowledgeObservations =
+            [AilmentObservation(
+                context,
+                target,
+                definition.AilmentId,
+                application.Status,
+                authoredResistance,
+                effectiveResistance)]
+        };
+    }
+
+    private static BattleKnowledgeObservation AilmentObservation(
+        EffectExecutionContext context,
+        RuntimeActorState target,
+        ContentId ailmentId,
+        BattleAilmentApplicationStatus status,
+        ResistanceLevel authoredResistance,
+        ResistanceLevel effectiveResistance)
+    {
+        BattleDefenseInfluence influences = BattleDefenseInfluence.None;
+        ResistanceLevel? observedResistance = effectiveResistance;
+        if (status == BattleAilmentApplicationStatus.GuardBlocked)
+        {
+            influences |= BattleDefenseInfluence.Guard;
+            observedResistance = null;
+        }
+        if (effectiveResistance != authoredResistance)
+        {
+            influences |= BattleDefenseInfluence.PassiveModifier;
+        }
+
+        return BattleKnowledgeObservation.Ailment(
+            context.Request.SourceId,
+            context.Actor.InstanceId,
+            target.InstanceId,
+            target.EntityId,
+            context.EffectIndex,
+            ailmentId,
+            status,
+            authoredResistance,
+            observedResistance,
+            influences);
     }
 }
 

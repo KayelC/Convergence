@@ -513,6 +513,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Knowledge/BattleKnowledgeObservations.cs",
+      "owner": "combat_knowledge",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Knowledge/PersistentBattleKnowledge.cs",
       "owner": "combat_knowledge",
       "publicSurface": "exported"

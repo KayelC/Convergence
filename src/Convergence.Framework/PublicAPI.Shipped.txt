@@ -11177,3 +11177,45 @@ Convergence.Knowledge.PersistentBattleKnowledgeView.PersistentBattleKnowledgeVie
 Convergence.Knowledge.PersistentBattleKnowledgeView.TryGetAilmentResistance(Convergence.Content.ContentId entityId, Convergence.Content.ContentId ailmentId, out Convergence.Content.ResistanceLevel resistance) -> bool
 Convergence.Knowledge.PersistentBattleKnowledgeView.TryGetElementalAffinity(Convergence.Content.ContentId entityId, Convergence.Content.DamageElement element, out Convergence.Content.ElementalAffinity affinity) -> bool
 Convergence.Knowledge.PersistentBattleKnowledgeView.TryGetInstantDeathResistance(Convergence.Content.ContentId entityId, Convergence.Content.InstantDeathChannel channel, out Convergence.Content.ResistanceLevel resistance) -> bool
+Convergence.Execution.EffectExecutionResult.KnowledgeObservations.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleKnowledgeObservation!>!
+Convergence.Execution.EffectExecutionResult.KnowledgeObservations.init -> void
+Convergence.Knowledge.BattleDefenseInfluence
+Convergence.Knowledge.BattleDefenseInfluence.AffinityBreak = 4 -> Convergence.Knowledge.BattleDefenseInfluence
+Convergence.Knowledge.BattleDefenseInfluence.AffinityOverride = 8 -> Convergence.Knowledge.BattleDefenseInfluence
+Convergence.Knowledge.BattleDefenseInfluence.Guard = 1 -> Convergence.Knowledge.BattleDefenseInfluence
+Convergence.Knowledge.BattleDefenseInfluence.None = 0 -> Convergence.Knowledge.BattleDefenseInfluence
+Convergence.Knowledge.BattleDefenseInfluence.PassiveModifier = 16 -> Convergence.Knowledge.BattleDefenseInfluence
+Convergence.Knowledge.BattleDefenseInfluence.Shield = 2 -> Convergence.Knowledge.BattleDefenseInfluence
+Convergence.Knowledge.BattleKnowledgeObservation
+Convergence.Knowledge.BattleKnowledgeObservation.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Knowledge.BattleKnowledgeObservation.AilmentId.get -> Convergence.Content.ContentId?
+Convergence.Knowledge.BattleKnowledgeObservation.AuthoredAffinity.get -> Convergence.Content.ElementalAffinity?
+Convergence.Knowledge.BattleKnowledgeObservation.AuthoredResistance.get -> Convergence.Content.ResistanceLevel?
+Convergence.Knowledge.BattleKnowledgeObservation.EffectIndex.get -> int
+Convergence.Knowledge.BattleKnowledgeObservation.EffectiveAffinity.get -> Convergence.Content.ElementalAffinity?
+Convergence.Knowledge.BattleKnowledgeObservation.EffectiveResistance.get -> Convergence.Content.ResistanceLevel?
+Convergence.Knowledge.BattleKnowledgeObservation.Element.get -> Convergence.Content.DamageElement?
+Convergence.Knowledge.BattleKnowledgeObservation.HasTemporaryInfluence.get -> bool
+Convergence.Knowledge.BattleKnowledgeObservation.InstantDeathChannel.get -> Convergence.Content.InstantDeathChannel?
+Convergence.Knowledge.BattleKnowledgeObservation.Kind.get -> Convergence.Knowledge.BattleKnowledgeObservationKind
+Convergence.Knowledge.BattleKnowledgeObservation.Outcome.get -> Convergence.Knowledge.BattleKnowledgeObservationOutcome
+Convergence.Knowledge.BattleKnowledgeObservation.ResistanceBypassed.get -> bool
+Convergence.Knowledge.BattleKnowledgeObservation.SourceActionId.get -> Convergence.Content.ContentId
+Convergence.Knowledge.BattleKnowledgeObservation.TargetEntityId.get -> Convergence.Content.ContentId
+Convergence.Knowledge.BattleKnowledgeObservation.TargetId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Knowledge.BattleKnowledgeObservation.TemporaryInfluences.get -> Convergence.Knowledge.BattleDefenseInfluence
+Convergence.Knowledge.BattleKnowledgeObservationKind
+Convergence.Knowledge.BattleKnowledgeObservationKind.AilmentResistance = 1 -> Convergence.Knowledge.BattleKnowledgeObservationKind
+Convergence.Knowledge.BattleKnowledgeObservationKind.ElementalAffinity = 0 -> Convergence.Knowledge.BattleKnowledgeObservationKind
+Convergence.Knowledge.BattleKnowledgeObservationKind.InstantDeathResistance = 2 -> Convergence.Knowledge.BattleKnowledgeObservationKind
+Convergence.Knowledge.BattleKnowledgeObservationOutcome
+Convergence.Knowledge.BattleKnowledgeObservationOutcome.Applied = 2 -> Convergence.Knowledge.BattleKnowledgeObservationOutcome
+Convergence.Knowledge.BattleKnowledgeObservationOutcome.Blocked = 4 -> Convergence.Knowledge.BattleKnowledgeObservationOutcome
+Convergence.Knowledge.BattleKnowledgeObservationOutcome.Contacted = 0 -> Convergence.Knowledge.BattleKnowledgeObservationOutcome
+Convergence.Knowledge.BattleKnowledgeObservationOutcome.Defeated = 6 -> Convergence.Knowledge.BattleKnowledgeObservationOutcome
+Convergence.Knowledge.BattleKnowledgeObservationOutcome.Failed = 5 -> Convergence.Knowledge.BattleKnowledgeObservationOutcome
+Convergence.Knowledge.BattleKnowledgeObservationOutcome.Immune = 3 -> Convergence.Knowledge.BattleKnowledgeObservationOutcome
+Convergence.Knowledge.BattleKnowledgeObservationOutcome.Missed = 1 -> Convergence.Knowledge.BattleKnowledgeObservationOutcome
+static Convergence.Knowledge.BattleKnowledgeObservation.Ailment(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, Convergence.Content.ContentId targetEntityId, int effectIndex, Convergence.Content.ContentId ailmentId, Convergence.Execution.BattleAilmentApplicationStatus applicationStatus, Convergence.Content.ResistanceLevel authoredResistance, Convergence.Content.ResistanceLevel? effectiveResistance, Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences = Convergence.Knowledge.BattleDefenseInfluence.None) -> Convergence.Knowledge.BattleKnowledgeObservation!
+static Convergence.Knowledge.BattleKnowledgeObservation.Elemental(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, Convergence.Content.ContentId targetEntityId, int effectIndex, Convergence.Content.DamageElement element, bool contacted, Convergence.Content.ElementalAffinity authoredAffinity, Convergence.Content.ElementalAffinity effectiveAffinity, Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences = Convergence.Knowledge.BattleDefenseInfluence.None) -> Convergence.Knowledge.BattleKnowledgeObservation!
+static Convergence.Knowledge.BattleKnowledgeObservation.InstantDeath(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, Convergence.Content.ContentId targetEntityId, int effectIndex, Convergence.Content.InstantDeathChannel? channel, bool resistanceBypassed, bool defeated, Convergence.Content.ResistanceLevel? authoredResistance, Convergence.Content.ResistanceLevel? effectiveResistance, Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences = Convergence.Knowledge.BattleDefenseInfluence.None) -> Convergence.Knowledge.BattleKnowledgeObservation!
