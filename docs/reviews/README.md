@@ -65,6 +65,7 @@ or implementation authority.
 - [Status And Passive Lifecycle Order 4 Certification Plan, 26 July 2026](status-passive-lifecycle-order-4-certification-plan-2026-07-26.md)
 - [Status And Passive Lifecycle Order 4 Final Certification, 26 July 2026](status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
 - [Battle Knowledge Order 5 Source Review, 27 July 2026](battle-knowledge-order-5-source-review-2026-07-27.md)
+- [Battle Knowledge Order 5 R8 Final Review, 27 July 2026](battle-knowledge-order-5-r8-final-review-2026-07-27.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.

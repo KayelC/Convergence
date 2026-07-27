@@ -87,7 +87,19 @@ O4-R43 and O4-R43A reconciled the current save-v13 guidance, and the
 [O4-R44 closure review](../reviews/status-passive-lifecycle-order-4-r44-closure-review-2026-07-26.md)
 independently re-read current source and all three audiences before passing the
 complete release gate. All three entries are `reviewed` again.
-Their review order and promotion gates are maintained in the active
+
+Order 5 completed O5-R1 through O5-R8. The
+[R8 Final Review](../reviews/battle-knowledge-order-5-r8-final-review-2026-07-27.md)
+independently traced current Battle Knowledge source and all three audience
+documents. Four reachable integration defects were corrected in isolated
+commits, and the final source trace found no unresolved realistic Battle
+Knowledge defect. The three entries remain `reviewed`. Formal owner closure
+still awaits confirmation and a successful real Godot headless smoke in a
+compatible environment; the local engine currently fails during native project
+startup before Convergence code runs.
+
+The review order and promotion gates for all capabilities are maintained in
+the active
 [Documentation Completion Roadmap](../roadmap/documentation-completion-roadmap.md).
 
 Order 2 documentation now also reflects O2-R18 bounded hit execution and

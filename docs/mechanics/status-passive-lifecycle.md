@@ -345,6 +345,6 @@ activation; under a per-target limit, each ally is counted separately.
 ## Related Documentation
 
 - [Stat Modifier Policies](stat-modifier-policies.md)
-- [Battle Knowledge](status-passives-and-knowledge.md)
+- [Battle Knowledge](battle-knowledge.md)
 - [Developer: Status And Passive Lifecycle](../developer-guide/status-passive-lifecycle.md)
 - [Technical: Status And Passive Lifecycle](../technical/status-passive-lifecycle.md)

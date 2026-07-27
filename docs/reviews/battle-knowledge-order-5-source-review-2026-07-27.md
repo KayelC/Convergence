@@ -1,6 +1,6 @@
 # Battle Knowledge Order 5 Source Review
 
-Status: implementation in progress; O5-R1 through O5-R7 implemented and reviewed
+Status: implementation and independent review complete; owner confirmation pending
 
 Date: 2026-07-27
 
@@ -237,7 +237,7 @@ diagnostics.
 | O5-R5 | `implemented_reviewed` | Route automated AI through encounter-local aggregate read-only knowledge with optional explicit seeding. |
 | O5-R6 | `implemented_reviewed` | Route familiar acquisition and Compendium imports through the approved persistent knowledge policy. |
 | O5-R7 | `implemented_reviewed` | Update save validation, DemoHost integration, capability evidence, mechanics, developer, and technical documentation. |
-| O5-R8 | `pending` | Perform a fresh source and documentation review, run the complete quality gate, and obtain owner confirmation before closure. |
+| O5-R8 | `implemented_reviewed_pending_owner_confirmation` | Freshly review current source and documentation, run the complete quality gate, and obtain owner confirmation before closure. |
 
 Each implementation checkpoint receives its own staged commit. Order 5 remains
 open until the final source review finds no unresolved realistic defect and the
@@ -374,6 +374,36 @@ The mechanics, developer, and technical audience pages now document the
 owner-confirmed discovery table, temporary-defense boundary, Analyze policy,
 boss restrictions, familiarity policy, team-local AI, save rules, Godot
 responsibilities, and transition atomicity. The capability and documentation
-matrices cite the concrete source and test evidence. R8 remains the independent
-closure gate and will record final test totals after running the complete release
-verification.
+matrices cite the concrete source and test evidence. R8 independently reviewed
+that completed implementation and records the final verification below.
+
+### O5-R8
+
+The final review independently traced the current persistent, encounter,
+observation, Analyze, aggregate execution, automated-team, familiarity, host,
+and save paths. It found and corrected four reachable integration defects in
+separate commits: malformed query keys, omitted Analyze markers in host save
+serialization, stale temporary observations influencing the supplied AI, and
+cross-target execution evidence. The final correction rejects invalid evidence
+without advancing either knowledge scope.
+
+The audience review renamed the mechanics page to the accurate
+`docs/mechanics/battle-knowledge.md` path and clarified partial familiarity
+imports: diagnostics make `IsSuccess` false, but valid imports may still appear
+in `After`; hosts choose whether to accept that partial batch or retain
+`Before` for atomic behavior.
+
+The strict .NET 8 build completed with zero warnings. The full suite passed
+1,731 tests with zero failures and zero skips. Framework coverage was 90.73%
+line and 76.38% branch. Content validation accepted 6 packs, 36 documents, and
+98 qualified definitions. All five DemoHost modes, formatting, trimming,
+dependency, boundary, link, and diff checks passed. Active content, schema, and
+configuration files were unchanged.
+
+The Godot sample builds and its contract tests pass, but the local Godot 4.7.1
+executable crashes in native startup with signal 11 even for a plain headless
+project bootstrap, before Convergence smoke code executes. The
+[R8 Final Review](battle-knowledge-order-5-r8-final-review-2026-07-27.md)
+therefore finds no unresolved Order 5 code or documentation defect while
+leaving formal closure pending owner confirmation and a successful Godot
+headless run in a compatible environment.

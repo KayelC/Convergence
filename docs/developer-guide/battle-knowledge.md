@@ -168,6 +168,18 @@ defenses, or implement `IFamiliarKnowledgeImportPolicy` for a game-specific
 rule. The import service does not acquire, recruit, register, or fuse an entity;
 the host calls it after the owning transaction succeeds.
 
+For a multi-entity request, `IsSuccess` means that the complete batch produced
+no diagnostics. It does not mean that `After` is unchanged when one requested
+entity fails. Valid requested entities are imported and listed in
+`ImportedEntityIds`; malformed or missing entries produce diagnostics. The
+example above chooses atomic host behavior by retaining `Before` whenever
+`IsSuccess` is false.
+
+A host that accepts valid entries from a partial batch may instead commit
+`imported.After` and then log or present every entry in `imported.Diagnostics`
+through its own event surface. Make that choice explicitly rather than assuming
+that a diagnostic always means an unchanged snapshot.
+
 ## Save And Restore
 
 - Save `RuntimeKnowledgeSnapshot` in `RuntimeSaveGameSnapshot.Knowledge`.
@@ -201,7 +213,7 @@ Godot should not:
 
 ## Related References
 
-- [Battle Knowledge](../mechanics/status-passives-and-knowledge.md)
+- [Battle Knowledge](../mechanics/battle-knowledge.md)
 - [Typed Actions And Effects](typed-actions-and-effects.md)
 - [Combat Resolution Policies](combat-resolution-policies.md)
 - [Battle Knowledge Runtime Authority](../technical/battle-knowledge-runtime.md)

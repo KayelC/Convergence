@@ -224,7 +224,7 @@ existing fields and does not change the serialized aggregate shape.
 
 ## Related Documentation
 
-- [Battle Knowledge](../mechanics/status-passives-and-knowledge.md)
+- [Battle Knowledge](../mechanics/battle-knowledge.md)
 - [Battle Knowledge Integration](../developer-guide/battle-knowledge.md)
 - [Typed Action And Effect Execution](typed-action-and-effect-execution.md)
 - [Combat Resolution Pipeline](combat-resolution-pipeline.md)

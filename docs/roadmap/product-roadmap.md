@@ -182,7 +182,9 @@ programmatic validation defect and save-version documentation drift. O4-R42,
 O4-R43, and O4-R43A corrected those paths, and O4-R44 independently closed the
 sequence. Order 5 (`battle_knowledge`) has implemented its framework authority,
 host integration, persistence validation, and three audience documents through
-O5-R7. O5-R8 remains its independent closure gate.
+O5-R8. Its independent review found no unresolved realistic Battle Knowledge
+defect. Formal owner closure and a successful compatible-environment Godot
+headless smoke remain pending.
 
 ## Priority 2: Persistence Evolution
 

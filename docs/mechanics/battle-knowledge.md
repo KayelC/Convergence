@@ -131,6 +131,12 @@ entries.
 
 Familiarity affects player knowledge only. It never trains ordinary enemy AI.
 
+A batch import may accept valid requested entities while reporting diagnostics
+for invalid or missing entries. The returned `After` snapshot contains every
+accepted import. A game that requires an all-or-nothing batch must reject that
+snapshot when diagnostics are present; a game that accepts partial batches may
+commit it after presenting or recording the diagnostics.
+
 ## AI Knowledge
 
 Every team in an ordinary automated battle starts with empty encounter

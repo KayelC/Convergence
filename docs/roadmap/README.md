@@ -76,5 +76,7 @@ The
 then added independent sequence-model and public-restore evidence, corrected
 the committed action-end save-checkpoint guidance, and found no qualifying
 runtime defect. Order 4 is formally closed. Order 5, `battle_knowledge`, has
-implemented O5-R1 through O5-R7; its independent O5-R8 review remains before
-formal owner closure.
+implemented and independently reviewed O5-R1 through O5-R8. The review found
+no unresolved realistic Battle Knowledge defect. Formal closure awaits owner
+confirmation and a successful real Godot headless smoke in a compatible
+environment.

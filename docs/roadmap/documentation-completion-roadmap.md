@@ -371,15 +371,21 @@ closure recorded 24 reviewed, 28 `existing_unreviewed`, 16 missing, and 7
 The source-backed opening review and owner-approved discovery rules are recorded
 in the
 [Battle Knowledge Order 5 Source Review](../reviews/battle-knowledge-order-5-source-review-2026-07-27.md).
-Order 5 has implemented checkpoints O5-R1 through O5-R7. Its confirmed scope separates
+Order 5 has implemented and independently reviewed checkpoints O5-R1 through
+O5-R8. Its confirmed scope separates
 persistent entity knowledge from encounter-instance observations, prevents
 temporary defenses from corrupting permanent records, keeps ordinary enemy AI
 knowledge encounter-local, imports all authored defenses after approved
 acquisition paths, and adds policy-controlled restricted Analyze disclosure for
 bosses and other special targets. The three audience entries are now reviewed,
 bringing the matrix to 27 reviewed, 26 `existing_unreviewed`, 15 missing, and 7
-`not_applicable`. O5-R8 remains the independent source, documentation, and full
-quality-gate review before owner closure.
+`not_applicable`. The
+[O5-R8 Final Review](../reviews/battle-knowledge-order-5-r8-final-review-2026-07-27.md)
+found and corrected four reachable integration defects, then found no remaining
+realistic Battle Knowledge defect. Owner confirmation and a successful real
+Godot headless run in a compatible environment remain before formal closure;
+the local Godot 4.7.1 executable crashes during native project startup before
+the Convergence smoke path executes.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored

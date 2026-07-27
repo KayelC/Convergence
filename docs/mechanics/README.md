@@ -34,7 +34,7 @@ promoted merely for existing.
 2. [Actions, Targeting, And Effects](actions-targeting-and-effects.md)
 3. [Combat, Defenses, And Turn Economy](combat-defenses-and-turns.md)
 4. [Status And Passive Lifecycle](status-passive-lifecycle.md)
-5. [Battle Knowledge](status-passives-and-knowledge.md)
+5. [Battle Knowledge](battle-knowledge.md)
 6. [Party, Rosters, Inventory, Equipment, And Economy](party-inventory-and-economy.md)
 7. [Navigation, Dungeons, Encounters, Negotiation, And Rewards](world-encounters-and-rewards.md)
 8. [Fusion, Inheritance, Acquisition, And Compendium](fusion-acquisition-and-compendium.md)

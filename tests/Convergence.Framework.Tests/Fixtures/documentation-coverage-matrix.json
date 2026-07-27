@@ -228,7 +228,7 @@
       "id": "battle_knowledge",
       "mechanics": {
         "state": "reviewed",
-        "documents": ["docs/mechanics/status-passives-and-knowledge.md"],
+        "documents": ["docs/mechanics/battle-knowledge.md"],
         "reason": "Owner-confirmed persistent and encounter scopes, conservative discovery, Analyze disclosure, boss restriction, familiarity, and AI lifetime rules are reconciled with current source."
       },
       "developerGuide": {
