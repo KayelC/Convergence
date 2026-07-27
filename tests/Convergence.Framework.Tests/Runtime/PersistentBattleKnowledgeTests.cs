@@ -27,6 +27,53 @@ public sealed class PersistentBattleKnowledgeTests
     }
 
     [Fact]
+    public void PublicKnowledgeQueries_RejectInvalidIdentifiersAndEnums()
+    {
+        var elemental = new ElementalAffinityKnowledge();
+        var ailments = new AilmentResistanceKnowledge();
+        var instantDeath = new InstantDeathResistanceKnowledge();
+
+        Assert.Throws<ArgumentException>(() => elemental.TryGet(default, DamageElement.Fire, out _));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            elemental.HasDiscovery(EntityId, (DamageElement)999));
+        Assert.Throws<ArgumentException>(() => ailments.TryGet(EntityId, default, out _));
+        Assert.Throws<ArgumentException>(() => ailments.HasDiscovery(default, AilmentId));
+        Assert.Throws<ArgumentException>(() =>
+            instantDeath.TryGet(default, InstantDeathChannel.Light, out _));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            instantDeath.HasDiscovery(EntityId, (InstantDeathChannel)999));
+    }
+
+    [Fact]
+    public void PersistentView_DoesNotTreatInvalidQueryKeysAsKnownNormalProfiles()
+    {
+        var snapshot = new RuntimeKnowledgeSnapshot(
+            elementalAffinities: null,
+            ailmentResistances: null,
+            instantDeathResistances: null,
+            analyzedDefenses:
+            [
+                new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+                    EntityId,
+                    [
+                        BattleAnalysisField.ElementalAffinities,
+                        BattleAnalysisField.AilmentResistances,
+                        BattleAnalysisField.InstantDeathResistances
+                    ])
+            ]);
+        var view = new PersistentBattleKnowledgeView(snapshot);
+
+        Assert.Throws<ArgumentException>(() =>
+            view.TryGetElementalAffinity(default, DamageElement.Fire, out _));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            view.TryGetElementalAffinity(EntityId, (DamageElement)999, out _));
+        Assert.Throws<ArgumentException>(() =>
+            view.TryGetAilmentResistance(EntityId, default, out _));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            view.TryGetInstantDeathResistance(EntityId, (InstantDeathChannel)999, out _));
+    }
+
+    [Fact]
     public void Apply_AtomicallyAddsAndReplacesAllTypedKnowledgeDomains()
     {
         var before = new RuntimeKnowledgeSnapshot(

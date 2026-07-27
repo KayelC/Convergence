@@ -30,11 +30,15 @@ public sealed class ElementalAffinityKnowledge
         DamageElement element,
         out ElementalAffinity affinity)
     {
+        RequireValid(entityId, nameof(entityId));
+        EnumDomain.RequireDefined(element, nameof(element));
         return _entries.TryGetValue(new ElementalAffinityKnowledgeKey(entityId, element), out affinity);
     }
 
     public bool HasDiscovery(ContentId entityId, DamageElement element)
     {
+        RequireValid(entityId, nameof(entityId));
+        EnumDomain.RequireDefined(element, nameof(element));
         return _entries.ContainsKey(new ElementalAffinityKnowledgeKey(entityId, element));
     }
 
@@ -72,11 +76,15 @@ public sealed class AilmentResistanceKnowledge
 
     public bool TryGet(ContentId entityId, ContentId ailmentId, out ResistanceLevel resistance)
     {
+        RequireValid(entityId, nameof(entityId), "Knowledge entity IDs must be valid.");
+        RequireValid(ailmentId, nameof(ailmentId), "Knowledge ailment IDs must be valid.");
         return _entries.TryGetValue(new AilmentResistanceKnowledgeKey(entityId, ailmentId), out resistance);
     }
 
     public bool HasDiscovery(ContentId entityId, ContentId ailmentId)
     {
+        RequireValid(entityId, nameof(entityId), "Knowledge entity IDs must be valid.");
+        RequireValid(ailmentId, nameof(ailmentId), "Knowledge ailment IDs must be valid.");
         return _entries.ContainsKey(new AilmentResistanceKnowledgeKey(entityId, ailmentId));
     }
 
@@ -113,11 +121,15 @@ public sealed class InstantDeathResistanceKnowledge
 
     public bool TryGet(ContentId entityId, InstantDeathChannel channel, out ResistanceLevel resistance)
     {
+        RequireValidEntityId(entityId);
+        EnumDomain.RequireDefined(channel, nameof(channel));
         return _entries.TryGetValue(new InstantDeathResistanceKnowledgeKey(entityId, channel), out resistance);
     }
 
     public bool HasDiscovery(ContentId entityId, InstantDeathChannel channel)
     {
+        RequireValidEntityId(entityId);
+        EnumDomain.RequireDefined(channel, nameof(channel));
         return _entries.ContainsKey(new InstantDeathResistanceKnowledgeKey(entityId, channel));
     }
 
@@ -125,5 +137,13 @@ public sealed class InstantDeathResistanceKnowledge
     {
         return new ReadOnlyDictionary<InstantDeathResistanceKnowledgeKey, ResistanceLevel>(
             new Dictionary<InstantDeathResistanceKnowledgeKey, ResistanceLevel>(_entries));
+    }
+
+    private static void RequireValidEntityId(ContentId entityId)
+    {
+        if (!entityId.IsValid)
+        {
+            throw new ArgumentException("Knowledge entity IDs must be valid.", nameof(entityId));
+        }
     }
 }

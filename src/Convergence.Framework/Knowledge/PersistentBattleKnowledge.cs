@@ -147,6 +147,8 @@ public sealed class PersistentBattleKnowledgeView : IPersistentBattleKnowledgeVi
         DamageElement element,
         out ElementalAffinity affinity)
     {
+        RequireValidEntityId(entityId);
+        EnumDomain.RequireDefined(element, nameof(element));
         if (_elemental.TryGetValue((entityId, element), out affinity))
         {
             return true;
@@ -161,6 +163,11 @@ public sealed class PersistentBattleKnowledgeView : IPersistentBattleKnowledgeVi
         ContentId ailmentId,
         out ResistanceLevel resistance)
     {
+        RequireValidEntityId(entityId);
+        if (!ailmentId.IsValid)
+        {
+            throw new ArgumentException("Knowledge queries require a valid ailment ID.", nameof(ailmentId));
+        }
         if (_ailments.TryGetValue((entityId, ailmentId), out resistance))
         {
             return true;
@@ -175,6 +182,8 @@ public sealed class PersistentBattleKnowledgeView : IPersistentBattleKnowledgeVi
         InstantDeathChannel channel,
         out ResistanceLevel resistance)
     {
+        RequireValidEntityId(entityId);
+        EnumDomain.RequireDefined(channel, nameof(channel));
         if (_instantDeath.TryGetValue((entityId, channel), out resistance))
         {
             return true;
@@ -186,10 +195,7 @@ public sealed class PersistentBattleKnowledgeView : IPersistentBattleKnowledgeVi
 
     public bool IsDefenseProfileDisclosed(ContentId entityId, BattleAnalysisField field)
     {
-        if (!entityId.IsValid)
-        {
-            throw new ArgumentException("Knowledge queries require a valid entity ID.", nameof(entityId));
-        }
+        RequireValidEntityId(entityId);
         if (!IsDefenseField(field))
         {
             throw new ArgumentOutOfRangeException(nameof(field), field, "The field is not persistent defense knowledge.");
@@ -197,6 +203,14 @@ public sealed class PersistentBattleKnowledgeView : IPersistentBattleKnowledgeVi
 
         return _analyzedDefenses.TryGetValue(entityId, out IReadOnlySet<BattleAnalysisField>? fields) &&
                fields.Contains(field);
+    }
+
+    private static void RequireValidEntityId(ContentId entityId)
+    {
+        if (!entityId.IsValid)
+        {
+            throw new ArgumentException("Knowledge queries require a valid entity ID.", nameof(entityId));
+        }
     }
 
     private static bool IsDefenseField(BattleAnalysisField field) => field is
