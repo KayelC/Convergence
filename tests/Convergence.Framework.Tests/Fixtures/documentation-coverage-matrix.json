@@ -232,14 +232,14 @@
         "reason": "Owner-confirmed persistent and encounter scopes, conservative discovery, Analyze disclosure, boss restriction, familiarity, and AI lifetime rules are reconciled with current source."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/battle-knowledge.md"],
-        "reason": "The reviewed guide covers state ownership, authority-envelope construction, fail-closed custom-evidence provenance, query precedence, Analyze composition, familiarity hooks, AI seeds, and persistence."
+        "reason": "The canonical integration path is documented, but exported actor-local Analyze state and mutable knowledge stores must be retired before the supported developer surface can be reviewed as one authority."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/battle-knowledge-runtime.md"],
-        "reason": "The reviewed runtime trace defines immutable scope authority, full-batch action/actor/effect/target/entity provenance preflight, atomic lower transitions, discovery, Analyze, AI sharing, familiarity, and save validation."
+        "reason": "The canonical runtime trace is accurate, but the exported competing stores and clone-mutated enum validation gap must be corrected and reconciled before technical review closes."
       }
     },
     {

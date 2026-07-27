@@ -404,7 +404,15 @@ that contract. The matrix therefore returns to 27 reviewed, 26
 [O5-R13 provenance closure review](../reviews/battle-knowledge-order-5-provenance-closure-review-2026-07-27.md)
 then independently re-read the corrected source and all three audiences,
 passed the complete release gate, and found no unresolved realistic reachable
-Battle Knowledge defect. Order 5 is formally complete.
+Battle Knowledge defect at that revision. The later
+[post-closure independent audit](../reviews/battle-knowledge-order-5-post-closure-independent-audit-2026-07-27.md)
+reopened Order 5 after a fresh exported-surface trace found actor-local analysis
+and mutable stores competing with the canonical snapshots, clone-bypassed enum
+validation, and incomplete instant-defeat evidence tuples. Mechanics remains
+`reviewed`; developer and technical return to `existing_unreviewed`. O5-R15
+through O5-R20 govern authority cleanup, validation, evidence hardening,
+documentation reconciliation, and fresh closure. The matrix therefore records
+25 reviewed, 28 `existing_unreviewed`, 15 missing, and 7 `not_applicable`.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored

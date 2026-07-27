@@ -82,4 +82,8 @@ runtime-target, and target-entity authority; O5-R11 adds adversarial extension
 coverage; and O5-R12 reconciles the developer and technical guidance. O5-R13 is
 now complete: its fresh source and documentation review found no unresolved
 realistic reachable defect, and the full release gate passed. Order 5 is
-formally closed.
+formally closed at that revision. A later
+[post-closure independent audit](../reviews/battle-knowledge-order-5-post-closure-independent-audit-2026-07-27.md)
+reopened it after finding two exported competing authorities, an incomplete
+standalone enum boundary, and an incomplete custom-evidence tuple. O5-R15
+through O5-R20 now govern correction and fresh closure.

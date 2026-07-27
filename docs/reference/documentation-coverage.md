@@ -104,7 +104,13 @@ O5-R12 reconciles the developer and technical pages with that public contract,
 so all three Battle Knowledge audiences are `reviewed` again. The
 [O5-R13 closure review](../reviews/battle-knowledge-order-5-provenance-closure-review-2026-07-27.md)
 independently re-read the corrected source and documents and passed the complete
-release gate. Order 5 is formally complete.
+release gate. Order 5 was formally complete at that revision. The later
+[post-closure independent audit](../reviews/battle-knowledge-order-5-post-closure-independent-audit-2026-07-27.md)
+found that the mechanics remain aligned, but two exported competing authorities
+and an incomplete standalone enum boundary make the developer and technical
+surfaces incomplete. Mechanics remains `reviewed`; developer and technical
+return to `existing_unreviewed`. The matrix now records 25 reviewed, 28
+`existing_unreviewed`, 15 missing, and 7 `not_applicable` entries.
 
 The review order and promotion gates for all capabilities are maintained in
 the active
@@ -134,8 +140,8 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-26 existing_unreviewed, 15 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 25 reviewed,
+28 existing_unreviewed, 15 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|

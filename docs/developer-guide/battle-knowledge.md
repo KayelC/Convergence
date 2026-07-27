@@ -11,6 +11,13 @@ Do not reconstruct knowledge from damage numbers, combat text, target
 definitions, animations, or action display names. Executed effects already
 carry the evidence that a knowledge policy is allowed to use.
 
+> **Order 5 pre-closure note:** use only the immutable persistent and encounter
+> snapshots described in this guide. The currently exported actor-local
+> `Reveal`/`GetAnalysis` methods and the three mutable `*Knowledge` stores are
+> older competing surfaces that canonical execution, querying, and persistence
+> do not consume. O5-R15 and O5-R16 will retire them before this integration
+> guide is promoted back to reviewed status.
+
 ## State To Keep
 
 A player-facing host normally keeps:
@@ -217,9 +224,10 @@ that a diagnostic always means an unchanged snapshot.
 
 Validation rejects duplicate facts, duplicate analyzed profiles, missing entity
 or ailment references, and actor-local analysis keyed by encounter runtime IDs.
-The older `RuntimeBattleStatusSnapshot.Analysis` shape can describe live actor
-state, but it is not a valid session-save field because the save aggregate does
-not restore an encounter containing those target IDs.
+Do not write actor-local analysis: canonical Analyze writes
+`RuntimeEncounterKnowledgeSnapshot`, while any non-empty
+`RuntimeBattleStatusSnapshot.Analysis` currently makes a session save invalid.
+That obsolete actor-local shape is scheduled for removal by O5-R15.
 
 ## Godot Responsibilities
 

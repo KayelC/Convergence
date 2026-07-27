@@ -128,7 +128,7 @@
     },
     {
       "id": "battle_knowledge",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "PersistentBattleKnowledgeTests",
         "BattleKnowledgeObservationTransitionTests",
@@ -141,7 +141,11 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Actor-local Analyze state and mutable knowledge stores remain exported as competing authorities.",
+        "Persistent knowledge transitions do not reject clone-mutated undefined enum values.",
+        "Instant-defeat observations accept incomplete checked-resistance evidence tuples."
+      ]
     },
     {
       "id": "party_and_rosters",
