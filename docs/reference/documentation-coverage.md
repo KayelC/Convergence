@@ -96,8 +96,13 @@ commits, and the final source trace found no unresolved realistic Battle
 Knowledge defect at that revision. A later fresh source audit found one bounded
 custom-effect provenance defect that the developer and technical pages currently
 overstate. Mechanics remains `reviewed`; developer and technical return to
-`existing_unreviewed` until O5-R10 through O5-R13 correct and independently
-recheck that boundary.
+`existing_unreviewed` until that boundary is corrected. O5-R10 now requires an
+immutable action, actor, and target-entity authority envelope and preflights the
+complete evidence batch before any lower transition. O5-R11 covers every
+mismatch, whole-batch rollback, and honest/hostile registered custom handlers.
+O5-R12 reconciles the developer and technical pages with that public contract,
+so all three Battle Knowledge audiences are `reviewed` again. O5-R13 remains
+the independent capability-closure gate.
 
 The review order and promotion gates for all capabilities are maintained in
 the active
@@ -127,13 +132,13 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 25 reviewed,
-28 existing_unreviewed, 15 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 27 reviewed,
+26 existing_unreviewed, 15 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 25 |
-| `existing_unreviewed` | 28 |
+| `reviewed` | 27 |
+| `existing_unreviewed` | 26 |
 | `missing` | 15 |
 | `not_applicable` | 7 |
 

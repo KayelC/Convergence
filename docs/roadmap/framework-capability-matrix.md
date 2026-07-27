@@ -25,10 +25,14 @@ share only their own encounter snapshot; familiar acquisition is optional and
 policy-controlled; and session-save validation rejects duplicate, missing, or
 encounter-only knowledge. Training Annex now exercises this path end to end
 without inspecting hidden target defenses in the host. A fresh source audit
-found that custom effect evidence can still substitute its source action,
-acting actor, or target entity because the aggregate transition currently
-validates only effect index and runtime target. The capability remains partial
-until that supported extension boundary and its regressions are corrected.
+found that custom effect evidence could substitute its source action, acting
+actor, or target entity while retaining a valid outer effect index and runtime
+target. O5-R10 now requires an immutable accepted-action authority and
+preflights all five provenance dimensions before any lower transition. O5-R11
+covers valid and hostile registered custom handlers, every mismatch, immutable
+authority construction, and whole-batch rollback. O5-R12 reconciles the public
+guidance. The capability remains partial only until O5-R13 independently
+re-reads the corrected source and passes the complete release gate.
 
 `status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

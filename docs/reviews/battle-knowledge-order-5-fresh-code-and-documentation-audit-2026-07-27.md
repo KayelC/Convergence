@@ -207,11 +207,35 @@ and DemoHost retention. The missing regression seam is focused:
 
 | Checkpoint | State | Outcome |
 |---|---|---|
-| O5-R9 | `implemented_pending_review` | Record this fresh source audit and honestly reopen affected status entries. |
-| O5-R10 | `open` | Add authoritative action, actor, and target-entity context plus stable mismatch diagnostics. |
-| O5-R11 | `open` | Add custom observation and Analyze provenance regressions, including aggregate rollback. |
-| O5-R12 | `open` | Reconcile developer and technical guidance, public API evidence, and maturity matrices. |
+| O5-R9 | `verified` | Record this fresh source audit and honestly reopen affected status entries. |
+| O5-R10 | `verified` | Add authoritative action, actor, and target-entity context plus stable mismatch diagnostics. |
+| O5-R11 | `verified` | Add custom observation and Analyze provenance regressions, including aggregate rollback. |
+| O5-R12 | `implemented_pending_review` | Reconcile developer and technical guidance, public API evidence, and maturity matrices. |
 | O5-R13 | `open` | Re-read corrected source and run the complete release gate before closure is reconsidered. |
+
+## Correction Progress
+
+O5-R10 introduced `BattleKnowledgeExecutionAuthority` as a required immutable
+request member. It binds the accepted action, acting runtime actor, and every
+runtime-target-to-entity identity that may appear in execution evidence. The
+aggregate transition preflights the complete ordered batch before invoking an
+observation or Analyze transition and returns stable diagnostics plus the
+original `Before` snapshots on any mismatch.
+
+O5-R11 added direct and registered-custom-handler regressions for:
+
+- invalid, duplicate, or externally mutated authority input;
+- substituted source action, acting actor, or target entity;
+- missing authoritative target bindings;
+- mismatched Analyze actor and entity identity;
+- a valid early observation followed by malformed later evidence; and
+- valid custom evidence that retains ordinary effect-result normalization.
+
+O5-R12 updates the public integration example and technical state machine to
+show authority construction and complete-batch preflight. The developer and
+technical documentation entries return to `reviewed`. The capability remains
+`partial` until O5-R13 performs a fresh source trace and complete release gate;
+this progress record does not pre-approve that closure.
 
 ## Health Verdict
 

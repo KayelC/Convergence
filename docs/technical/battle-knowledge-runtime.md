@@ -17,6 +17,7 @@ and encounter-runner responsibilities respectively.
 | Encounter facts | `RuntimeEncounterKnowledgeSnapshot` | Runtime target plus entity definition and defense-domain key | No |
 | Combined query | `IBattleKnowledgeView` / `BattleKnowledgeView` | Both identities | Read-only |
 | Execution evidence | `BattleKnowledgeObservation` and `BattleAnalysisResult` | Source action/effect and target identities | Result evidence only |
+| Accepted execution identity | `BattleKnowledgeExecutionAuthority` | Action, actor, and runtime-target-to-entity bindings | Request lifetime |
 
 `RuntimeKnowledgeSnapshot` is sparse. Its analyzed-defense markers indicate
 that an entire authored defense domain was disclosed, allowing a missing sparse
@@ -34,20 +35,23 @@ accepted action execution to knowledge state.
 
 ```mermaid
 flowchart TD
-    A["Immutable persistent and encounter Before snapshots"] --> B["Read ordered EffectExecutionResult list"]
-    B --> C{"Effect has typed observations?"}
-    C -->|"Yes"| D["Apply observation transition with selected scope"]
-    C -->|"No"| E{"Effect has typed Analyze result?"}
-    D --> F{"Observation accepted?"}
-    F -->|"No"| R["Reject entire batch; return original Before snapshots"]
-    F -->|"Yes"| E
-    E -->|"Yes"| G["Apply analysis transition with selected scope"]
-    E -->|"No"| H{"More effects?"}
-    G --> I{"Analysis accepted?"}
-    I -->|"No"| R
-    I -->|"Yes"| H
-    H -->|"Yes"| B
-    H -->|"No"| J["Return immutable After snapshots and accepted evidence"]
+    A["Before snapshots + execution authority + ordered effects"] --> B["Preflight all nested evidence"]
+    B --> C{"Every action, actor, effect, runtime target, and entity agrees?"}
+    C -->|"No"| R["Reject whole batch; return original Before snapshots"]
+    C -->|"Yes"| D["Read next EffectExecutionResult"]
+    D --> E{"Typed observations?"}
+    E -->|"Yes"| F["Apply observation transition with selected scope"]
+    E -->|"No"| G{"Typed Analyze result?"}
+    F --> H{"Observation transition accepted?"}
+    H -->|"No"| R
+    H -->|"Yes"| G
+    G -->|"Yes"| I["Apply analysis transition with selected scope"]
+    G -->|"No"| J{"More effects?"}
+    I --> K{"Analysis transition accepted?"}
+    K -->|"No"| R
+    K -->|"Yes"| J
+    J -->|"Yes"| D
+    J -->|"No"| L["Return immutable After snapshots and accepted evidence"]
 ```
 
 The transition is aggregate-atomic because every lower transition produces new
@@ -55,15 +59,23 @@ immutable snapshots. If any later effect rejects, no mutable persistent or
 encounter state has been committed and the aggregate result returns the
 original references as both `Before` and `After`.
 
-An observation's effect index and target must match the enclosing
-`EffectExecutionResult`, and an Analyze result must identify that same target.
-These checks prevent effect-index and runtime-target substitution. At revision
-`792d3863`, the request does not carry authoritative source-action,
-acting-actor, or target-entity context, so it cannot yet reject substitution of
-those fields by a custom handler. O5-F1 tracks that bounded contract defect. A
-rejecting custom transition that omits diagnostics is still converted into a
-deterministic typed aggregate diagnostic rather than escaping through
-diagnostic construction.
+`BattleKnowledgeExecutionAuthority` snapshots the accepted source action,
+acting runtime actor, and a read-only map from participant runtime IDs to
+entity-definition IDs. The aggregate transition validates the complete effect
+batch before invoking either lower transition:
+
+- observation effect index equals the enclosing result index;
+- observation and Analyze runtime target equal the enclosing result target;
+- observation source action equals the accepted action;
+- observation and Analyze actor equal the acting runtime actor; and
+- observation and Analyze entity identity equals the authoritative binding for
+  the runtime target.
+
+An absent target binding is a mismatch, not permission to trust the nested
+entity ID. Preflight means a valid early observation is never sent to a lower
+transition when later evidence is malformed. A rejecting custom transition
+that omits diagnostics is still converted into a deterministic typed aggregate
+diagnostic rather than escaping through diagnostic construction.
 
 Callers must not apply an intermediate snapshot themselves. They publish only
 the aggregate `After` snapshots when status is not `Rejected`.
@@ -196,6 +208,10 @@ existing fields and does not change the serialized aggregate shape.
   boundaries.
 - Duplicate or conflicting keys reject before dictionary materialization.
 - Transition results snapshot every public collection.
+- Execution authority defensively snapshots target identities and rejects
+  invalid or duplicate runtime bindings.
+- Every evidence batch passes full action, actor, effect, target, and entity
+  provenance preflight before a lower knowledge transition runs.
 - A later effect failure rolls the aggregate back to its original immutable
   snapshots.
 - Host presentation evidence is derived from accepted observations and typed

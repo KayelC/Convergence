@@ -393,6 +393,16 @@ records 25 reviewed, 28 `existing_unreviewed`, 15 missing, and 7
 `not_applicable`. O5-R10 through O5-R13 govern correction, regression coverage,
 documentation reconciliation, and fresh closure review.
 
+O5-R10 now adds a required immutable execution authority containing the
+accepted action, acting actor, and runtime-target-to-entity bindings. The
+aggregate preflights all observation and Analyze provenance before invoking a
+lower transition. O5-R11 covers each mismatch, missing authority, immutable
+authority construction, whole-batch rollback, and valid/forged registered
+custom handlers. O5-R12 reconciles the developer and technical audiences with
+that contract. The matrix therefore returns to 27 reviewed, 26
+`existing_unreviewed`, 15 missing, and 7 `not_applicable`; O5-R13 remains the
+independent capability-closure review.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

@@ -185,7 +185,11 @@ host integration, persistence validation, and three audience documents through
 O5-R8. A later fresh source audit reopened one supported custom-effect
 provenance boundary: aggregate knowledge integration validates effect index and
 runtime target, but not authoritative source action, acting actor, or target
-entity. The capability is therefore `partial`, with O5-R10 through O5-R13 next.
+entity. O5-R10 now adds and enforces that complete authority, O5-R11 supplies
+adversarial and valid-extension regression coverage, and O5-R12 reconciles the
+integration guidance. The capability remains `partial` only until O5-R13
+independently re-reads the corrected source and passes the complete release
+gate.
 
 ## Priority 2: Persistence Evolution
 

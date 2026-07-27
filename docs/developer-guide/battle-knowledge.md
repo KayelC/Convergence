@@ -28,15 +28,23 @@ of these two types that belongs in `RuntimeSaveGameSnapshot.Knowledge`.
 ## Apply Executed Evidence
 
 After an action has executed successfully, pass its complete ordered effect
-results to one coordinator:
+results to one coordinator. Build the authority envelope from the action the
+framework accepted and the live encounter participants, not from nested
+knowledge evidence:
 
 ```csharp
 var transitionService = new BattleKnowledgeExecutionTransitionService();
+var authority = new BattleKnowledgeExecutionAuthority(
+    acceptedActionId,
+    actingActor.InstanceId,
+    encounterParticipants.Select(participant =>
+        KeyValuePair.Create(participant.InstanceId, participant.EntityId)));
 
 BattleKnowledgeExecutionTransitionResult knowledge = transitionService.Apply(
     new BattleKnowledgeExecutionTransitionRequest(
         playerKnowledge,
         playerEncounterKnowledge,
+        authority,
         actionResult.Effects,
         BattleKnowledgePersistenceScope.EncounterAndPersistent));
 
@@ -59,13 +67,29 @@ with an earlier runtime-target identity, both `After` snapshots are the original
 
 Apply knowledge only after an execution result has been accepted. Assessment,
 menu selection, cancellation, and rejected execution do not teach anything.
-Custom effect evidence must report the same effect index as its enclosing
-`EffectExecutionResult`; mismatched provenance is rejected without changing
-either knowledge scope. At revision `792d3863`, the aggregate transition also
-checks the runtime target but does not yet receive authoritative source-action,
-acting-actor, or target-entity context. A custom handler must therefore preserve
-those values from its `EffectExecutionContext`; O5-F1 tracks fail-closed
-framework validation for this supported extension boundary.
+The target map should include every current participant that may appear in an
+effect result, including the acting actor when an action can affect itself. It
+is an identity authority, not a declaration that every participant was
+targeted.
+
+Before applying any lower transition, the coordinator preflights every
+observation and Analyze result against:
+
+- the enclosing effect index and runtime target;
+- the accepted source action;
+- the acting runtime actor; and
+- the authoritative entity definition for that runtime target.
+
+A mismatch returns a stable typed diagnostic and the original persistent and
+encounter snapshots. No earlier valid effect in the same batch is published.
+This protects the public `ICustomEffectHandler` extension boundary as well as
+ordinary framework executors.
+
+Custom handlers should still construct evidence from their
+`EffectExecutionContext`. The authority envelope is a fail-closed validation
+boundary, not a substitute for correct handler implementation. The
+`BattleKnowledgeExecutionTransitionRequest` constructor requires this envelope;
+there is no authority-free overload.
 
 ## Query For UI Or Strategy
 

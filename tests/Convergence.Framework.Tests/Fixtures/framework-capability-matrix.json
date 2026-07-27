@@ -142,7 +142,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "The aggregate execution transition does not yet validate custom observation and Analyze source-action, acting-actor, and target-entity provenance against authoritative execution context."
+        "The corrected custom-evidence provenance boundary awaits the independent O5-R13 source and release-gate review before the capability returns to complete."
       ]
     },
     {

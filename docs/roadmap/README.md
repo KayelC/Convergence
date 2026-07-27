@@ -77,5 +77,7 @@ then added independent sequence-model and public-restore evidence, corrected
 the committed action-end save-checkpoint guidance, and found no qualifying
 runtime defect. Order 4 is formally closed. Order 5, `battle_knowledge`, has
 implemented O5-R1 through O5-R8, but a later fresh source audit reopened one
-custom-effect provenance boundary. O5-R10 through O5-R13 now govern authority
-validation, regressions, audience reconciliation, and a new closure review.
+custom-effect provenance boundary. O5-R10 now enforces action, actor, effect,
+runtime-target, and target-entity authority; O5-R11 adds adversarial extension
+coverage; and O5-R12 reconciles the developer and technical guidance. O5-R13 is
+the remaining fresh source and release-gate closure review.
