@@ -11476,3 +11476,26 @@ static Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic.operator ==(Conve
 static Convergence.Knowledge.StandardBattleAnalysisDisclosurePolicy.Instance.get -> Convergence.Knowledge.StandardBattleAnalysisDisclosurePolicy!
 static Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.operator !=(Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot? left, Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.operator ==(Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot? left, Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot? right) -> bool
+Convergence.Fusion.DisabledFamiliarKnowledgeImportPolicy
+Convergence.Fusion.DisabledFamiliarKnowledgeImportPolicy.DisabledFamiliarKnowledgeImportPolicy() -> void
+Convergence.Fusion.DisabledFamiliarKnowledgeImportPolicy.SelectDefenseFields(Convergence.Fusion.FamiliarKnowledgeImportPolicyRequest! request) -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisField>!
+Convergence.Fusion.FamiliarEntityKnowledgeService.FamiliarEntityKnowledgeService(Convergence.Catalog.GameDataCatalog! catalog, Convergence.Fusion.IFamiliarKnowledgeImportPolicy! policy, Convergence.Knowledge.IPersistentBattleKnowledgeTransitionService? transitions = null) -> void
+Convergence.Fusion.FamiliarEntityKnowledgeService.Import(Convergence.Runtime.RuntimeKnowledgeSnapshot! current, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>! familiarEntityIds, Convergence.Fusion.FamiliarKnowledgeImportSource source) -> Convergence.Fusion.FamiliarKnowledgeImportResult!
+Convergence.Fusion.FamiliarKnowledgeImportDiagnosticCode.DuplicateAnalyzedDefenseKnowledge = 5 -> Convergence.Fusion.FamiliarKnowledgeImportDiagnosticCode
+Convergence.Fusion.FamiliarKnowledgeImportDiagnosticCode.InvalidPolicyDecision = 6 -> Convergence.Fusion.FamiliarKnowledgeImportDiagnosticCode
+Convergence.Fusion.FamiliarKnowledgeImportDiagnosticCode.KnowledgeTransitionRejected = 7 -> Convergence.Fusion.FamiliarKnowledgeImportDiagnosticCode
+Convergence.Fusion.FamiliarKnowledgeImportPolicyRequest
+Convergence.Fusion.FamiliarKnowledgeImportPolicyRequest.Entity.get -> Convergence.Content.EntityDefinition!
+Convergence.Fusion.FamiliarKnowledgeImportPolicyRequest.FamiliarKnowledgeImportPolicyRequest(Convergence.Content.EntityDefinition! entity, Convergence.Fusion.FamiliarKnowledgeImportSource source) -> void
+Convergence.Fusion.FamiliarKnowledgeImportPolicyRequest.Source.get -> Convergence.Fusion.FamiliarKnowledgeImportSource
+Convergence.Fusion.FamiliarKnowledgeImportSource
+Convergence.Fusion.FamiliarKnowledgeImportSource.Acquisition = 1 -> Convergence.Fusion.FamiliarKnowledgeImportSource
+Convergence.Fusion.FamiliarKnowledgeImportSource.CompendiumRegistration = 2 -> Convergence.Fusion.FamiliarKnowledgeImportSource
+Convergence.Fusion.FamiliarKnowledgeImportSource.ExplicitRequest = 0 -> Convergence.Fusion.FamiliarKnowledgeImportSource
+Convergence.Fusion.FamiliarKnowledgeImportSource.RegisteredCompendiumSync = 3 -> Convergence.Fusion.FamiliarKnowledgeImportSource
+Convergence.Fusion.IFamiliarEntityKnowledgeService.Import(Convergence.Runtime.RuntimeKnowledgeSnapshot! current, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>! familiarEntityIds, Convergence.Fusion.FamiliarKnowledgeImportSource source) -> Convergence.Fusion.FamiliarKnowledgeImportResult!
+Convergence.Fusion.IFamiliarKnowledgeImportPolicy
+Convergence.Fusion.IFamiliarKnowledgeImportPolicy.SelectDefenseFields(Convergence.Fusion.FamiliarKnowledgeImportPolicyRequest! request) -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisField>!
+Convergence.Fusion.StandardFamiliarKnowledgeImportPolicy
+Convergence.Fusion.StandardFamiliarKnowledgeImportPolicy.SelectDefenseFields(Convergence.Fusion.FamiliarKnowledgeImportPolicyRequest! request) -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisField>!
+Convergence.Fusion.StandardFamiliarKnowledgeImportPolicy.StandardFamiliarKnowledgeImportPolicy() -> void

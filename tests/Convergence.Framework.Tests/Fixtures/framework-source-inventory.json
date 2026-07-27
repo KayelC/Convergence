@@ -463,6 +463,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Fusion/FamiliarKnowledgeImportPolicies.cs",
+      "owner": "fusion_compendium",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Fusion/FusionRuntimeServices.cs",
       "owner": "fusion_compendium",
       "publicSurface": "exported"

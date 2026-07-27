@@ -422,7 +422,9 @@ internal sealed class CleanTrainingAnnexPlayHost
                 skillFactor: 200)),
             partyRoster: partyRosterTransitions,
             economy: economy);
-        var familiarKnowledge = new FamiliarEntityKnowledgeService(catalog);
+        var familiarKnowledge = new FamiliarEntityKnowledgeService(
+            catalog,
+            new StandardFamiliarKnowledgeImportPolicy());
         var acquisitionRegistrar = new TrainingAnnexAcquisitionRegistrar(
             compendiumRuntime,
             familiarKnowledge,

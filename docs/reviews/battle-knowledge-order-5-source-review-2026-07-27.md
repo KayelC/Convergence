@@ -1,6 +1,6 @@
 # Battle Knowledge Order 5 Source Review
 
-Status: implementation in progress; O5-R1 through O5-R5 implemented and reviewed
+Status: implementation in progress; O5-R1 through O5-R6 implemented and reviewed
 
 Date: 2026-07-27
 
@@ -235,7 +235,7 @@ diagnostics.
 | O5-R3 | `implemented_reviewed` | Separate persistent entity knowledge from encounter analysis and define battle-end cleanup. |
 | O5-R4 | `implemented_reviewed` | Add policy-controlled Analyze disclosure, including typed restricted/unknown boss fields. |
 | O5-R5 | `implemented_reviewed` | Route automated AI through encounter-local aggregate read-only knowledge with optional explicit seeding. |
-| O5-R6 | `pending` | Route familiar acquisition and Compendium imports through the approved persistent knowledge policy. |
+| O5-R6 | `implemented_reviewed` | Route familiar acquisition and Compendium imports through the approved persistent knowledge policy. |
 | O5-R7 | `pending` | Update save validation, DemoHost integration, capability evidence, mechanics, developer, and technical documentation. |
 | O5-R8 | `pending` | Perform a fresh source and documentation review, run the complete quality gate, and obtain owner confirmation before closure. |
 
@@ -324,3 +324,27 @@ fresh runs, explicit seeding, teammate sharing, missed attacks, restricted-turn
 actions, invalid seeds, and result immutability. The full Framework suite passed
 1,532 tests with zero skips, and the Framework built nonincrementally with zero
 warnings.
+
+### O5-R6
+
+Familiarity imports now pass through `IFamiliarKnowledgeImportPolicy`. The
+supplied standard policy discloses authored elemental, ailment, and
+instant-defeat defenses; the supplied disabled policy imports nothing. A custom
+policy receives a typed source distinguishing acquisition, explicit Compendium
+registration, registered-Compendium synchronization, and a direct request.
+Constructing or calling the familiarity service remains explicit, so acquisition
+and Compendium mechanics do not force this optional feature on a game.
+
+The importer now uses `PersistentBattleKnowledgeTransitionService` for the
+actual merge. This refreshes authored facts without mutating the input snapshot
+and, critically, preserves prior Analyze markers instead of rebuilding and
+silently dropping them. DemoHost labels recruitment/fusion acquisition and
+manual Compendium registration with their correct typed sources. Existing
+first-acquisition registration remains non-overwriting: an already registered
+entry is preserved while familiarity can still be refreshed.
+
+The checkpoint review verified the standard, disabled, source-selective, and
+malformed-policy paths; immutable preservation of Analyze knowledge; typed
+duplicate/identifier diagnostics; and existing recruitment, fusion, and manual
+Compendium behavior. The full Framework suite passed 1,536 tests with zero skips
+and built nonincrementally with zero warnings.

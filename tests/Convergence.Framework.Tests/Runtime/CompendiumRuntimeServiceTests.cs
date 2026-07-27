@@ -3,6 +3,7 @@ using Convergence.Catalog;
 using Convergence.Execution;
 using Convergence.Encounters;
 using Convergence.Fusion;
+using Convergence.Knowledge;
 using Convergence.Runtime;
 using Xunit;
 
@@ -554,7 +555,7 @@ public sealed class CompendiumRuntimeServiceTests
         TestContext context = CreateContext();
         RuntimeKnowledgeSnapshot playerKnowledge = new();
         RuntimeKnowledgeSnapshot encounterAiKnowledge = new();
-        var service = new FamiliarEntityKnowledgeService(context.Catalog);
+        var service = FamiliarKnowledgeService(context);
 
         FamiliarKnowledgeImportResult result = service.Import(
             playerKnowledge,
@@ -628,7 +629,7 @@ public sealed class CompendiumRuntimeServiceTests
                     ResistanceLevel.Immune)
             ]);
 
-        FamiliarKnowledgeImportResult result = new FamiliarEntityKnowledgeService(context.Catalog)
+        FamiliarKnowledgeImportResult result = FamiliarKnowledgeService(context)
             .Import(current, [context.Entity.Id]);
 
         Assert.False(result.IsSuccess);
@@ -673,7 +674,7 @@ public sealed class CompendiumRuntimeServiceTests
             new CompendiumEntrySnapshot(Id("missing.pack:entity"), "Missing", 1)
         ]);
 
-        FamiliarKnowledgeImportResult result = new FamiliarEntityKnowledgeService(context.Catalog)
+        FamiliarKnowledgeImportResult result = FamiliarKnowledgeService(context)
             .ImportRegistered(new RuntimeKnowledgeSnapshot(), state);
 
         Assert.Equal([context.Entity.Id], result.ImportedEntityIds);
@@ -686,7 +687,7 @@ public sealed class CompendiumRuntimeServiceTests
     public void FamiliarKnowledgeImport_DefaultIdentifiersRemainInsideTypedDiagnostics()
     {
         TestContext context = CreateContext();
-        var service = new FamiliarEntityKnowledgeService(context.Catalog);
+        var service = FamiliarKnowledgeService(context);
         var malformedCurrent = new RuntimeKnowledgeSnapshot(
             elementalAffinities:
             [
@@ -718,6 +719,111 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Equal(FamiliarKnowledgeImportDiagnosticCode.InvalidIdentifier, diagnostic.Code);
         Assert.Equal(0, diagnostic.Index);
     }
+
+    [Fact]
+    public void FamiliarKnowledgeImport_UsesTheCanonicalTransitionAndPreservesAnalyzeKnowledge()
+    {
+        TestContext context = CreateContext();
+        var current = new RuntimeKnowledgeSnapshot(
+            elementalAffinities: null,
+            ailmentResistances: null,
+            instantDeathResistances: null,
+            analyzedDefenses:
+            [
+                new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+                    context.Entity.Id,
+                    [BattleAnalysisField.ElementalAffinities])
+            ]);
+
+        FamiliarKnowledgeImportResult result = FamiliarKnowledgeService(context).Import(
+            current,
+            [context.Entity.Id],
+            FamiliarKnowledgeImportSource.Acquisition);
+
+        Assert.True(result.IsSuccess);
+        RuntimeAnalyzedDefenseKnowledgeSnapshot profile = Assert.Single(result.After.AnalyzedDefenses);
+        Assert.Equal(
+        [
+            BattleAnalysisField.ElementalAffinities,
+            BattleAnalysisField.AilmentResistances,
+            BattleAnalysisField.InstantDeathResistances
+        ],
+            profile.DisclosedFields);
+        Assert.NotSame(current, result.After);
+    }
+
+    [Fact]
+    public void FamiliarKnowledgeImport_DisabledPolicyLeavesKnowledgeUnchanged()
+    {
+        TestContext context = CreateContext();
+        var current = new RuntimeKnowledgeSnapshot();
+        var service = new FamiliarEntityKnowledgeService(
+            context.Catalog,
+            new DisabledFamiliarKnowledgeImportPolicy());
+
+        FamiliarKnowledgeImportResult result = service.Import(
+            current,
+            [context.Entity.Id],
+            FamiliarKnowledgeImportSource.Acquisition);
+
+        Assert.True(result.IsSuccess);
+        Assert.Same(current, result.After);
+        Assert.Empty(result.ImportedEntityIds);
+    }
+
+    [Fact]
+    public void FamiliarKnowledgeImport_PolicyCanDistinguishAcquisitionFromRegistration()
+    {
+        TestContext context = CreateContext();
+        var policy = new SourceSelectiveFamiliarKnowledgePolicy(
+            FamiliarKnowledgeImportSource.Acquisition);
+        var service = new FamiliarEntityKnowledgeService(context.Catalog, policy);
+        var current = new RuntimeKnowledgeSnapshot();
+
+        FamiliarKnowledgeImportResult registration = service.Import(
+            current,
+            [context.Entity.Id],
+            FamiliarKnowledgeImportSource.CompendiumRegistration);
+        FamiliarKnowledgeImportResult acquisition = service.Import(
+            current,
+            [context.Entity.Id],
+            FamiliarKnowledgeImportSource.Acquisition);
+
+        Assert.Same(current, registration.After);
+        Assert.Empty(registration.ImportedEntityIds);
+        Assert.Equal([context.Entity.Id], acquisition.ImportedEntityIds);
+        Assert.Equal(
+        [
+            FamiliarKnowledgeImportSource.CompendiumRegistration,
+            FamiliarKnowledgeImportSource.Acquisition
+        ],
+            policy.Sources);
+    }
+
+    [Fact]
+    public void FamiliarKnowledgeImport_InvalidPolicyDecisionRejectsWithoutMutation()
+    {
+        TestContext context = CreateContext();
+        var current = new RuntimeKnowledgeSnapshot();
+        var service = new FamiliarEntityKnowledgeService(
+            context.Catalog,
+            new InvalidFamiliarKnowledgePolicy());
+
+        FamiliarKnowledgeImportResult result = service.Import(
+            current,
+            [context.Entity.Id],
+            FamiliarKnowledgeImportSource.Acquisition);
+
+        Assert.False(result.IsSuccess);
+        Assert.Same(current, result.After);
+        Assert.Empty(result.ImportedEntityIds);
+        Assert.Equal(
+            FamiliarKnowledgeImportDiagnosticCode.InvalidPolicyDecision,
+            Assert.Single(result.Diagnostics).Code);
+    }
+
+    private static FamiliarEntityKnowledgeService FamiliarKnowledgeService(TestContext context) =>
+        new(context.Catalog, new StandardFamiliarKnowledgeImportPolicy());
 
     private static TestContext CreateContext(
         bool compendiumEligible = true,
@@ -895,6 +1001,30 @@ public sealed class CompendiumRuntimeServiceTests
         ActiveHostedEntity,
         HostedEntityRoster,
         CompanionRoster
+    }
+
+    private sealed class SourceSelectiveFamiliarKnowledgePolicy(
+        FamiliarKnowledgeImportSource allowedSource) : IFamiliarKnowledgeImportPolicy
+    {
+        private readonly List<FamiliarKnowledgeImportSource> _sources = [];
+
+        public IReadOnlyList<FamiliarKnowledgeImportSource> Sources => _sources.AsReadOnly();
+
+        public IReadOnlyList<BattleAnalysisField> SelectDefenseFields(
+            FamiliarKnowledgeImportPolicyRequest request)
+        {
+            _sources.Add(request.Source);
+            return request.Source == allowedSource
+                ? [BattleAnalysisField.ElementalAffinities]
+                : [];
+        }
+    }
+
+    private sealed class InvalidFamiliarKnowledgePolicy : IFamiliarKnowledgeImportPolicy
+    {
+        public IReadOnlyList<BattleAnalysisField> SelectDefenseFields(
+            FamiliarKnowledgeImportPolicyRequest request) =>
+            [BattleAnalysisField.CurrentHp];
     }
 
     private sealed class TestInitializationPolicy : IBattleActorInitializationPolicy

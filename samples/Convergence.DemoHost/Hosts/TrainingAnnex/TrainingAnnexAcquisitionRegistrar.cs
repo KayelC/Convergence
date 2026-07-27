@@ -70,7 +70,8 @@ internal sealed class TrainingAnnexAcquisitionRegistrar
 
         FamiliarKnowledgeImportResult imported = _familiarKnowledge.Import(
             playerKnowledge.ToSnapshot(),
-            [registration.Entry.EntityId]);
+            [registration.Entry.EntityId],
+            FamiliarKnowledgeImportSource.Acquisition);
         TrainingAnnexBattleKnowledgeState nextKnowledge =
             TrainingAnnexBattleKnowledgeState.FromSnapshot(imported.After);
 

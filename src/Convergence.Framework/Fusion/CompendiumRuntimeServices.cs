@@ -2,6 +2,7 @@ using Convergence.Content;
 using Convergence.Catalog;
 using Convergence.Battle;
 using Convergence.Encounters;
+using Convergence.Knowledge;
 using Convergence.Runtime;
 
 namespace Convergence.Fusion;
@@ -715,7 +716,10 @@ public enum FamiliarKnowledgeImportDiagnosticCode
     DuplicateElementalAffinityKnowledge,
     DuplicateAilmentResistanceKnowledge,
     DuplicateInstantDeathResistanceKnowledge,
-    InvalidIdentifier
+    InvalidIdentifier,
+    DuplicateAnalyzedDefenseKnowledge,
+    InvalidPolicyDecision,
+    KnowledgeTransitionRejected
 }
 
 public sealed record FamiliarKnowledgeImportDiagnostic(
@@ -751,6 +755,11 @@ public interface IFamiliarEntityKnowledgeService
         RuntimeKnowledgeSnapshot current,
         IEnumerable<ContentId> familiarEntityIds);
 
+    FamiliarKnowledgeImportResult Import(
+        RuntimeKnowledgeSnapshot current,
+        IEnumerable<ContentId> familiarEntityIds,
+        FamiliarKnowledgeImportSource source);
+
     FamiliarKnowledgeImportResult ImportRegistered(
         RuntimeKnowledgeSnapshot current,
         CompendiumStateSnapshot compendium);
@@ -759,10 +768,22 @@ public interface IFamiliarEntityKnowledgeService
 public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeService
 {
     private readonly GameDataCatalog _catalog;
+    private readonly IFamiliarKnowledgeImportPolicy _policy;
+    private readonly IPersistentBattleKnowledgeTransitionService _transitions;
 
     public FamiliarEntityKnowledgeService(GameDataCatalog catalog)
+        : this(catalog, new StandardFamiliarKnowledgeImportPolicy())
+    {
+    }
+
+    public FamiliarEntityKnowledgeService(
+        GameDataCatalog catalog,
+        IFamiliarKnowledgeImportPolicy policy,
+        IPersistentBattleKnowledgeTransitionService? transitions = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
+        _transitions = transitions ?? new PersistentBattleKnowledgeTransitionService();
     }
 
     public FamiliarKnowledgeImportResult ImportRegistered(
@@ -770,15 +791,28 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
         CompendiumStateSnapshot compendium)
     {
         ArgumentNullException.ThrowIfNull(compendium);
-        return Import(current, compendium.Entries.Select(entry => entry.EntityId));
+        return Import(
+            current,
+            compendium.Entries.Select(entry => entry.EntityId),
+            FamiliarKnowledgeImportSource.RegisteredCompendiumSync);
     }
 
     public FamiliarKnowledgeImportResult Import(
         RuntimeKnowledgeSnapshot current,
-        IEnumerable<ContentId> familiarEntityIds)
+        IEnumerable<ContentId> familiarEntityIds) =>
+        Import(current, familiarEntityIds, FamiliarKnowledgeImportSource.ExplicitRequest);
+
+    public FamiliarKnowledgeImportResult Import(
+        RuntimeKnowledgeSnapshot current,
+        IEnumerable<ContentId> familiarEntityIds,
+        FamiliarKnowledgeImportSource source)
     {
         ArgumentNullException.ThrowIfNull(current);
         ArgumentNullException.ThrowIfNull(familiarEntityIds);
+        if (!Enum.IsDefined(source))
+        {
+            throw new ArgumentOutOfRangeException(nameof(source));
+        }
 
         var currentDiagnostics = new List<FamiliarKnowledgeImportDiagnostic>();
         ValidateKnowledgeIdentifiers(current, currentDiagnostics);
@@ -798,6 +832,15 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
                 $"Current knowledge contains a duplicate key for {duplicate.KeyDescription}.",
                 duplicate.EntityId,
                 duplicate.Index)));
+        currentDiagnostics.AddRange(current.AnalyzedDefenses
+            .Select((entry, index) => (Entry: entry, Index: index))
+            .GroupBy(value => value.Entry.EntityId)
+            .SelectMany(group => group.Skip(1))
+            .Select(duplicate => new FamiliarKnowledgeImportDiagnostic(
+                FamiliarKnowledgeImportDiagnosticCode.DuplicateAnalyzedDefenseKnowledge,
+                $"Current knowledge contains a duplicate analyzed-defense profile for entity '{duplicate.Entry.EntityId}'.",
+                duplicate.Entry.EntityId,
+                duplicate.Index)));
         if (currentDiagnostics.Count > 0)
         {
             return new FamiliarKnowledgeImportResult(
@@ -806,15 +849,10 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
                 diagnostics: currentDiagnostics);
         }
 
-        var elemental = current.ElementalAffinities.ToDictionary(
-            entry => (entry.EntityId, entry.Element),
-            entry => entry.Affinity);
-        var ailments = current.AilmentResistances.ToDictionary(
-            entry => (entry.EntityId, entry.AilmentId),
-            entry => entry.Resistance);
-        var instantDeath = current.InstantDeathResistances.ToDictionary(
-            entry => (entry.EntityId, entry.Channel),
-            entry => entry.Resistance);
+        var elemental = new List<RuntimeElementalAffinityKnowledgeSnapshot>();
+        var ailments = new List<RuntimeAilmentResistanceKnowledgeSnapshot>();
+        var instantDeath = new List<RuntimeInstantDeathResistanceKnowledgeSnapshot>();
+        var analyzed = new List<RuntimeAnalyzedDefenseKnowledgeSnapshot>();
         var imported = new List<ContentId>();
         var diagnostics = new List<FamiliarKnowledgeImportDiagnostic>();
         var seenEntityIds = new HashSet<ContentId>();
@@ -846,49 +884,88 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
                 continue;
             }
 
+            IReadOnlyList<BattleAnalysisField>? selectedFields = _policy.SelectDefenseFields(
+                new FamiliarKnowledgeImportPolicyRequest(entity, source));
+            BattleAnalysisField[] fields = selectedFields?.ToArray() ?? [];
+            if (selectedFields is null ||
+                fields.Distinct().Count() != fields.Length ||
+                fields.Any(field => !IsDefenseField(field)))
+            {
+                diagnostics.Add(new FamiliarKnowledgeImportDiagnostic(
+                    FamiliarKnowledgeImportDiagnosticCode.InvalidPolicyDecision,
+                    $"Familiar-knowledge policy returned invalid defense fields for entity '{entityId}'.",
+                    entityId,
+                    index));
+                continue;
+            }
+            if (fields.Length == 0)
+            {
+                continue;
+            }
+
             CombatDefenseProfile defenses = CombatDefenseProfile.FromEntityDefinition(entity);
-            foreach (DamageElement element in Enum.GetValues<DamageElement>().Where(element => element != DamageElement.Almighty))
+            if (fields.Contains(BattleAnalysisField.ElementalAffinities))
             {
-                elemental[(entityId, element)] = defenses.GetElementalAffinity(element);
+                elemental.AddRange(Enum.GetValues<DamageElement>()
+                    .Where(element => element != DamageElement.Almighty)
+                    .Select(element => new RuntimeElementalAffinityKnowledgeSnapshot(
+                        entityId,
+                        element,
+                        defenses.GetElementalAffinity(element))));
             }
 
-            foreach (ContentId ailmentId in _catalog.Ailments.Keys)
+            if (fields.Contains(BattleAnalysisField.AilmentResistances))
             {
-                ailments[(entityId, ailmentId)] = defenses.GetAilmentResistance(ailmentId);
+                ailments.AddRange(_catalog.Ailments.Keys.Select(ailmentId =>
+                    new RuntimeAilmentResistanceKnowledgeSnapshot(
+                        entityId,
+                        ailmentId,
+                        defenses.GetAilmentResistance(ailmentId))));
             }
 
-            foreach (InstantDeathChannel channel in Enum.GetValues<InstantDeathChannel>())
+            if (fields.Contains(BattleAnalysisField.InstantDeathResistances))
             {
-                instantDeath[(entityId, channel)] = defenses.GetInstantDeathResistance(channel);
+                instantDeath.AddRange(Enum.GetValues<InstantDeathChannel>().Select(channel =>
+                    new RuntimeInstantDeathResistanceKnowledgeSnapshot(
+                        entityId,
+                        channel,
+                        defenses.GetInstantDeathResistance(channel))));
             }
 
+            analyzed.Add(new RuntimeAnalyzedDefenseKnowledgeSnapshot(entityId, fields));
             imported.Add(entityId);
         }
 
-        var after = new RuntimeKnowledgeSnapshot(
-            elemental
-                .OrderBy(entry => entry.Key.EntityId.ToString(), StringComparer.Ordinal)
-                .ThenBy(entry => entry.Key.Element)
-                .Select(entry => new RuntimeElementalAffinityKnowledgeSnapshot(
-                    entry.Key.EntityId,
-                    entry.Key.Element,
-                    entry.Value)),
-            ailments
-                .OrderBy(entry => entry.Key.EntityId.ToString(), StringComparer.Ordinal)
-                .ThenBy(entry => entry.Key.AilmentId.ToString(), StringComparer.Ordinal)
-                .Select(entry => new RuntimeAilmentResistanceKnowledgeSnapshot(
-                    entry.Key.EntityId,
-                    entry.Key.AilmentId,
-                    entry.Value)),
-            instantDeath
-                .OrderBy(entry => entry.Key.EntityId.ToString(), StringComparer.Ordinal)
-                .ThenBy(entry => entry.Key.Channel)
-                .Select(entry => new RuntimeInstantDeathResistanceKnowledgeSnapshot(
-                    entry.Key.EntityId,
-                    entry.Key.Channel,
-                    entry.Value)));
-        return new FamiliarKnowledgeImportResult(current, after, imported, diagnostics);
+        if (imported.Count == 0)
+        {
+            return new FamiliarKnowledgeImportResult(current, current, diagnostics: diagnostics);
+        }
+
+        BattleKnowledgeTransitionResult transition = _transitions.Apply(
+            new BattleKnowledgeTransitionRequest(
+                current,
+                new RuntimeKnowledgeSnapshot(elemental, ailments, instantDeath, analyzed)));
+        if (transition.Status == BattleKnowledgeTransitionStatus.Rejected)
+        {
+            diagnostics.AddRange(transition.Diagnostics.Select(diagnostic =>
+                new FamiliarKnowledgeImportDiagnostic(
+                    FamiliarKnowledgeImportDiagnosticCode.KnowledgeTransitionRejected,
+                    diagnostic.Message,
+                    default)));
+            return new FamiliarKnowledgeImportResult(current, current, diagnostics: diagnostics);
+        }
+
+        return new FamiliarKnowledgeImportResult(
+            current,
+            transition.After,
+            imported,
+            diagnostics);
     }
+
+    private static bool IsDefenseField(BattleAnalysisField field) => field is
+        BattleAnalysisField.ElementalAffinities or
+        BattleAnalysisField.AilmentResistances or
+        BattleAnalysisField.InstantDeathResistances;
 
     private static void ValidateKnowledgeIdentifiers(
         RuntimeKnowledgeSnapshot knowledge,
@@ -928,6 +1005,19 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
                 diagnostics.Add(new FamiliarKnowledgeImportDiagnostic(
                     FamiliarKnowledgeImportDiagnosticCode.InvalidIdentifier,
                     "Instant-death knowledge entity ID cannot be empty.",
+                    entityId,
+                    index));
+            }
+        }
+
+        for (int index = 0; index < knowledge.AnalyzedDefenses.Count; index++)
+        {
+            ContentId entityId = knowledge.AnalyzedDefenses[index].EntityId;
+            if (!entityId.IsValid)
+            {
+                diagnostics.Add(new FamiliarKnowledgeImportDiagnostic(
+                    FamiliarKnowledgeImportDiagnosticCode.InvalidIdentifier,
+                    "Analyzed-defense knowledge entity ID cannot be empty.",
                     entityId,
                     index));
             }

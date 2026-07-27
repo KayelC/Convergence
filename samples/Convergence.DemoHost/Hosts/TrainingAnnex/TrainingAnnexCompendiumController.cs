@@ -144,7 +144,8 @@ internal sealed class TrainingAnnexCompendiumController
 
         FamiliarKnowledgeImportResult imported = _familiarKnowledge.Import(
             playerKnowledge.ToSnapshot(),
-            [registration.Entry.EntityId]);
+            [registration.Entry.EntityId],
+            FamiliarKnowledgeImportSource.CompendiumRegistration);
         TrainingAnnexBattleKnowledgeState nextKnowledge =
             TrainingAnnexBattleKnowledgeState.FromSnapshot(imported.After);
         await _eventSink.PublishAsync(
