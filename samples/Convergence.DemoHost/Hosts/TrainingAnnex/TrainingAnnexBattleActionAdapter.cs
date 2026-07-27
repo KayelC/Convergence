@@ -689,6 +689,13 @@ internal sealed class TrainingAnnexBattleActionAdapter
                     playerOwnedAction
                         ? _playerEncounterKnowledge
                         : _enemyEncounterKnowledge,
+                    new BattleKnowledgeExecutionAuthority(
+                        actionId,
+                        actor.State.InstanceId,
+                        request.Participants.Select(participant =>
+                            KeyValuePair.Create(
+                                participant.InstanceId,
+                                participant.State.EntityId))),
                     execution.Effects,
                     playerOwnedAction
                         ? BattleKnowledgePersistenceScope.EncounterAndPersistent

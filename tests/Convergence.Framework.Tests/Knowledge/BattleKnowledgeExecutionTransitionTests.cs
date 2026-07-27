@@ -86,7 +86,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
     }
 
     [Fact]
-    public void LaterIdentityConflictRejectsTheWholeExecutionBatch()
+    public void LaterTargetEntityMismatchRejectsTheWholeExecutionBatch()
     {
         RuntimeKnowledgeSnapshot persistent = new();
         RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
@@ -108,7 +108,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         Assert.Empty(result.AcceptedObservations);
         Assert.Empty(result.ProcessedAnalyses);
         BattleKnowledgeExecutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
-        Assert.Equal(BattleKnowledgeExecutionDiagnosticCode.ObservationRejected, diagnostic.Code);
+        Assert.Equal(BattleKnowledgeExecutionDiagnosticCode.ObservationTargetEntityMismatch, diagnostic.Code);
         Assert.Equal(1, diagnostic.EffectIndex);
     }
 
@@ -122,6 +122,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         var request = new BattleKnowledgeExecutionTransitionRequest(
             new RuntimeKnowledgeSnapshot(),
             RuntimeEncounterKnowledgeSnapshot.Empty,
+            Authority(),
             source,
             BattleKnowledgePersistenceScope.EncounterOnly);
         source.Clear();
@@ -236,6 +237,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
             new BattleKnowledgeExecutionTransitionRequest(
                 persistent,
                 encounter,
+                Authority(),
                 [EffectWithObservation(0, Elemental(TargetEntity, 0))],
                 BattleKnowledgePersistenceScope.EncounterOnly));
 
@@ -256,8 +258,15 @@ public sealed class BattleKnowledgeExecutionTransitionTests
             new BattleKnowledgeExecutionTransitionRequest(
                 persistent,
                 encounter,
+                Authority(),
                 effects,
                 scope));
+
+    private static BattleKnowledgeExecutionAuthority Authority() =>
+        new(
+            Action,
+            Observer,
+            [KeyValuePair.Create(Target, TargetEntity)]);
 
     private static EffectExecutionResult EffectWithObservation(
         int effectIndex,

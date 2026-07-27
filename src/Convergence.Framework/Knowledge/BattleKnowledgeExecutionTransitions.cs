@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+using Convergence.Content;
 using Convergence.Execution;
 using Convergence.Internal;
 using Convergence.Runtime;
@@ -10,7 +12,12 @@ public enum BattleKnowledgeExecutionDiagnosticCode
     AnalysisRejected,
     ObservationEffectIndexMismatch,
     ObservationTargetMismatch,
-    AnalysisTargetMismatch
+    AnalysisTargetMismatch,
+    ObservationSourceActionMismatch,
+    ObservationActorMismatch,
+    ObservationTargetEntityMismatch,
+    AnalysisActorMismatch,
+    AnalysisTargetEntityMismatch
 }
 
 public sealed class BattleKnowledgeExecutionDiagnostic
@@ -46,16 +53,70 @@ public sealed class BattleKnowledgeAnalysisEvidence
     public BattleAnalysisResult Analysis { get; }
 }
 
+/// <summary>
+/// Identifies the accepted action, acting runtime actor, and target entities
+/// against which execution-produced knowledge evidence is validated.
+/// </summary>
+public sealed class BattleKnowledgeExecutionAuthority
+{
+    public BattleKnowledgeExecutionAuthority(
+        ContentId sourceActionId,
+        RuntimeInstanceId actorId,
+        IEnumerable<KeyValuePair<RuntimeInstanceId, ContentId>> targetEntityIds)
+    {
+        if (!sourceActionId.IsValid)
+        {
+            throw new ArgumentException("Knowledge execution authority requires a valid source action ID.", nameof(sourceActionId));
+        }
+        if (!actorId.IsValid)
+        {
+            throw new ArgumentException("Knowledge execution authority requires a valid acting runtime ID.", nameof(actorId));
+        }
+
+        KeyValuePair<RuntimeInstanceId, ContentId>[] targets =
+            (targetEntityIds ?? throw new ArgumentNullException(nameof(targetEntityIds))).ToArray();
+        if (targets.Any(target => !target.Key.IsValid || !target.Value.IsValid))
+        {
+            throw new ArgumentException(
+                "Knowledge execution target identities require valid runtime and entity IDs.",
+                nameof(targetEntityIds));
+        }
+
+        RuntimeInstanceId? duplicate = targets
+            .GroupBy(target => target.Key)
+            .Where(group => group.Count() > 1)
+            .Select(group => (RuntimeInstanceId?)group.Key)
+            .FirstOrDefault();
+        if (duplicate is RuntimeInstanceId duplicateId)
+        {
+            throw new ArgumentException(
+                $"Knowledge execution target runtime ID '{duplicateId}' is duplicated.",
+                nameof(targetEntityIds));
+        }
+
+        SourceActionId = sourceActionId;
+        ActorId = actorId;
+        TargetEntityIds = new ReadOnlyDictionary<RuntimeInstanceId, ContentId>(
+            targets.ToDictionary(target => target.Key, target => target.Value));
+    }
+
+    public ContentId SourceActionId { get; }
+    public RuntimeInstanceId ActorId { get; }
+    public IReadOnlyDictionary<RuntimeInstanceId, ContentId> TargetEntityIds { get; }
+}
+
 public sealed class BattleKnowledgeExecutionTransitionRequest
 {
     public BattleKnowledgeExecutionTransitionRequest(
         RuntimeKnowledgeSnapshot persistentBefore,
         RuntimeEncounterKnowledgeSnapshot encounterBefore,
+        BattleKnowledgeExecutionAuthority authority,
         IEnumerable<EffectExecutionResult> effects,
         BattleKnowledgePersistenceScope persistenceScope)
     {
         PersistentBefore = persistentBefore ?? throw new ArgumentNullException(nameof(persistentBefore));
         EncounterBefore = encounterBefore ?? throw new ArgumentNullException(nameof(encounterBefore));
+        Authority = authority ?? throw new ArgumentNullException(nameof(authority));
         EffectExecutionResult[] effectSnapshot =
             (effects ?? throw new ArgumentNullException(nameof(effects))).ToArray();
         if (effectSnapshot.Any(effect => effect is null))
@@ -68,6 +129,7 @@ public sealed class BattleKnowledgeExecutionTransitionRequest
 
     public RuntimeKnowledgeSnapshot PersistentBefore { get; }
     public RuntimeEncounterKnowledgeSnapshot EncounterBefore { get; }
+    public BattleKnowledgeExecutionAuthority Authority { get; }
     public IReadOnlyList<EffectExecutionResult> Effects { get; }
     public BattleKnowledgePersistenceScope PersistenceScope { get; }
 }
@@ -139,6 +201,12 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        BattleKnowledgeExecutionTransitionResult? provenanceFailure = ValidateProvenance(request);
+        if (provenanceFailure is not null)
+        {
+            return provenanceFailure;
+        }
+
         RuntimeKnowledgeSnapshot persistent = request.PersistentBefore;
         RuntimeEncounterKnowledgeSnapshot encounter = request.EncounterBefore;
         var acceptedObservations = new List<BattleKnowledgeObservation>();
@@ -149,36 +217,6 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
         {
             if (effect.KnowledgeObservations.Count > 0)
             {
-                BattleKnowledgeObservation? mismatchedObservation =
-                    effect.KnowledgeObservations.FirstOrDefault(
-                        observation => observation.EffectIndex != effect.EffectIndex);
-                if (mismatchedObservation is not null)
-                {
-                    return Rejected(
-                        request,
-                        BattleKnowledgeExecutionDiagnosticCode.ObservationEffectIndexMismatch,
-                        effect.EffectIndex,
-                        [
-                            $"Knowledge observation effect index {mismatchedObservation.EffectIndex} " +
-                            $"does not match enclosing execution effect index {effect.EffectIndex}."
-                        ]);
-                }
-
-                mismatchedObservation = effect.KnowledgeObservations.FirstOrDefault(
-                    observation => effect.TargetId is not RuntimeInstanceId targetId ||
-                                   observation.TargetId != targetId);
-                if (mismatchedObservation is not null)
-                {
-                    return Rejected(
-                        request,
-                        BattleKnowledgeExecutionDiagnosticCode.ObservationTargetMismatch,
-                        effect.EffectIndex,
-                        [
-                            $"Knowledge observation target '{mismatchedObservation.TargetId}' " +
-                            $"does not match enclosing execution target '{effect.TargetId}'."
-                        ]);
-                }
-
                 BattleKnowledgeObservationTransitionResult observation = _observations.Apply(
                     new BattleKnowledgeObservationTransitionRequest(
                         persistent,
@@ -202,18 +240,6 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
 
             if (effect.Analysis is BattleAnalysisResult analysis)
             {
-                if (effect.TargetId is not RuntimeInstanceId targetId || analysis.TargetId != targetId)
-                {
-                    return Rejected(
-                        request,
-                        BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetMismatch,
-                        effect.EffectIndex,
-                        [
-                            $"Analyze target '{analysis.TargetId}' does not match enclosing " +
-                            $"execution target '{effect.TargetId}'."
-                        ]);
-                }
-
                 BattleAnalysisKnowledgeTransitionResult analyzed = _analysis.Apply(
                     persistent,
                     encounter,
@@ -245,6 +271,129 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
             processedAnalyses);
     }
 
+    private static BattleKnowledgeExecutionTransitionResult? ValidateProvenance(
+        BattleKnowledgeExecutionTransitionRequest request)
+    {
+        foreach (EffectExecutionResult effect in request.Effects)
+        {
+            foreach (BattleKnowledgeObservation observation in effect.KnowledgeObservations)
+            {
+                if (observation.EffectIndex != effect.EffectIndex)
+                {
+                    return Rejected(
+                        request,
+                        BattleKnowledgeExecutionDiagnosticCode.ObservationEffectIndexMismatch,
+                        effect.EffectIndex,
+                        [
+                            $"Knowledge observation effect index {observation.EffectIndex} " +
+                            $"does not match enclosing execution effect index {effect.EffectIndex}."
+                        ]);
+                }
+                if (effect.TargetId is not RuntimeInstanceId targetId || observation.TargetId != targetId)
+                {
+                    return Rejected(
+                        request,
+                        BattleKnowledgeExecutionDiagnosticCode.ObservationTargetMismatch,
+                        effect.EffectIndex,
+                        [
+                            $"Knowledge observation target '{observation.TargetId}' " +
+                            $"does not match enclosing execution target '{effect.TargetId}'."
+                        ]);
+                }
+                if (observation.SourceActionId != request.Authority.SourceActionId)
+                {
+                    return Rejected(
+                        request,
+                        BattleKnowledgeExecutionDiagnosticCode.ObservationSourceActionMismatch,
+                        effect.EffectIndex,
+                        [
+                            $"Knowledge observation source action '{observation.SourceActionId}' " +
+                            $"does not match accepted action '{request.Authority.SourceActionId}'."
+                        ]);
+                }
+                if (observation.ActorId != request.Authority.ActorId)
+                {
+                    return Rejected(
+                        request,
+                        BattleKnowledgeExecutionDiagnosticCode.ObservationActorMismatch,
+                        effect.EffectIndex,
+                        [
+                            $"Knowledge observation actor '{observation.ActorId}' " +
+                            $"does not match acting runtime actor '{request.Authority.ActorId}'."
+                        ]);
+                }
+                bool targetIdentityKnown = request.Authority.TargetEntityIds.TryGetValue(
+                    targetId,
+                    out ContentId targetEntityId);
+                if (!targetIdentityKnown ||
+                    observation.TargetEntityId != targetEntityId)
+                {
+                    string expectedEntity = targetIdentityKnown
+                        ? targetEntityId.ToString()
+                        : "<unbound>";
+                    return Rejected(
+                        request,
+                        BattleKnowledgeExecutionDiagnosticCode.ObservationTargetEntityMismatch,
+                        effect.EffectIndex,
+                        [
+                            $"Knowledge observation target entity '{observation.TargetEntityId}' " +
+                            $"does not match authoritative entity '{expectedEntity}' " +
+                            $"for runtime target '{targetId}'."
+                        ]);
+                }
+            }
+
+            if (effect.Analysis is not BattleAnalysisResult analysis)
+            {
+                continue;
+            }
+            if (effect.TargetId is not RuntimeInstanceId analysisTargetId ||
+                analysis.TargetId != analysisTargetId)
+            {
+                return Rejected(
+                    request,
+                    BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetMismatch,
+                    effect.EffectIndex,
+                    [
+                        $"Analyze target '{analysis.TargetId}' does not match enclosing " +
+                        $"execution target '{effect.TargetId}'."
+                    ]);
+            }
+            if (analysis.ActorId != request.Authority.ActorId)
+            {
+                return Rejected(
+                    request,
+                    BattleKnowledgeExecutionDiagnosticCode.AnalysisActorMismatch,
+                    effect.EffectIndex,
+                    [
+                        $"Analyze actor '{analysis.ActorId}' does not match acting runtime actor " +
+                        $"'{request.Authority.ActorId}'."
+                    ]);
+            }
+            bool analysisTargetIdentityKnown = request.Authority.TargetEntityIds.TryGetValue(
+                analysisTargetId,
+                out ContentId analysisTargetEntityId);
+            if (!analysisTargetIdentityKnown ||
+                analysis.TargetEntityId != analysisTargetEntityId)
+            {
+                string expectedEntity = analysisTargetIdentityKnown
+                    ? analysisTargetEntityId.ToString()
+                    : "<unbound>";
+                return Rejected(
+                    request,
+                    BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetEntityMismatch,
+                    effect.EffectIndex,
+                    [
+                        $"Analyze target entity '{analysis.TargetEntityId}' does not match authoritative entity " +
+                        $"'{expectedEntity}' " +
+                        $"for runtime target '{analysisTargetId}'."
+                    ]);
+            }
+        }
+
+        return null;
+    }
+
     private static BattleKnowledgeExecutionTransitionResult Rejected(
         BattleKnowledgeExecutionTransitionRequest request,
         BattleKnowledgeExecutionDiagnosticCode code,
@@ -268,6 +417,16 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
                     "The executed effect contained knowledge evidence for a different target.",
                 BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetMismatch =>
                     "The executed effect contained Analyze evidence for a different target.",
+                BattleKnowledgeExecutionDiagnosticCode.ObservationSourceActionMismatch =>
+                    "The executed effect contained knowledge evidence for a different source action.",
+                BattleKnowledgeExecutionDiagnosticCode.ObservationActorMismatch =>
+                    "The executed effect contained knowledge evidence for a different acting runtime actor.",
+                BattleKnowledgeExecutionDiagnosticCode.ObservationTargetEntityMismatch =>
+                    "The executed effect contained knowledge evidence for a different target entity.",
+                BattleKnowledgeExecutionDiagnosticCode.AnalysisActorMismatch =>
+                    "The executed effect contained Analyze evidence for a different acting runtime actor.",
+                BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetEntityMismatch =>
+                    "The executed effect contained Analyze evidence for a different target entity.",
                 _ => "The battle-knowledge execution transition was rejected."
             };
         }

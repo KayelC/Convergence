@@ -695,7 +695,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             }
 
             RecordExecution(events, actor, selection.Skill, execution);
-            if (!TryApplyKnowledge(actor.State.TeamId, execution, out string? knowledgeFault))
+            if (!TryApplyKnowledge(actor, selection.Skill.Id, execution.Effects, out string? knowledgeFault))
             {
                 return FaultedAutomatedAction(actor, knowledgeFault!, events);
             }
@@ -789,36 +789,72 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 return result;
             }
 
-            EffectExecutionResult[] effects = result.Events
+            BattleEffectResolvedEventPayload[] resolvedEffects = result.Events
                 .Select(battleEvent => battleEvent.Payload)
                 .OfType<BattleEffectResolvedEventPayload>()
-                .Select(payload => payload.Result)
                 .ToArray();
-            if (TryApplyKnowledge(request.Actor.State.TeamId, effects, out string? fault))
+            if (resolvedEffects.Length == 0)
             {
                 return result;
             }
 
-            var events = result.Events.ToList();
-            return await FaultedAutomatedAction(request.Actor, fault!, events).ConfigureAwait(false);
+            ContentId[] selectedActionIds = result.Events
+                .Select(battleEvent => battleEvent.Payload)
+                .OfType<BattleCommandSelectedEventPayload>()
+                .Where(payload => payload.ActorId == request.Actor.State.InstanceId)
+                .Select(payload => payload.ActionId)
+                .Distinct()
+                .ToArray();
+            if (selectedActionIds.Length != 1)
+            {
+                var events = result.Events.ToList();
+                return await FaultedAutomatedAction(
+                    request.Actor,
+                    "Automated restricted-action evidence did not identify one selected action.",
+                    events).ConfigureAwait(false);
+            }
+
+            ContentId sourceActionId = selectedActionIds[0];
+            BattleEffectResolvedEventPayload[] actionEffects = resolvedEffects
+                .Where(payload =>
+                    payload.SourceActorId == request.Actor.State.InstanceId &&
+                    payload.SourceId == sourceActionId)
+                .ToArray();
+            if (actionEffects.Length == 0)
+            {
+                return result;
+            }
+            if (TryApplyKnowledge(
+                    request.Actor,
+                    sourceActionId,
+                    actionEffects.Select(payload => payload.Result),
+                    out string? fault))
+            {
+                return result;
+            }
+
+            var faultEvents = result.Events.ToList();
+            return await FaultedAutomatedAction(request.Actor, fault!, faultEvents).ConfigureAwait(false);
         }
 
         private bool TryApplyKnowledge(
-            ContentId teamId,
-            SkillExecutionResult execution,
-            out string? fault) =>
-            TryApplyKnowledge(teamId, execution.Effects, out fault);
-
-        private bool TryApplyKnowledge(
-            ContentId teamId,
+            CatalogBattleActor actor,
+            ContentId sourceActionId,
             IEnumerable<EffectExecutionResult> effects,
             out string? fault)
         {
-            RuntimeEncounterKnowledgeSnapshot current = _knowledge[teamId];
+            RuntimeEncounterKnowledgeSnapshot current = _knowledge[actor.State.TeamId];
             BattleKnowledgeExecutionTransitionResult transition = _knowledgeTransitions.Apply(
                 new BattleKnowledgeExecutionTransitionRequest(
                     NoPersistentKnowledge,
                     current,
+                    new BattleKnowledgeExecutionAuthority(
+                        sourceActionId,
+                        actor.State.InstanceId,
+                        _actors.Select(participant =>
+                            KeyValuePair.Create(
+                                participant.State.InstanceId,
+                                participant.State.EntityId))),
                     effects,
                     BattleKnowledgePersistenceScope.EncounterOnly));
             if (transition.Status == BattleKnowledgeTransitionStatus.Rejected)
@@ -828,7 +864,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 return false;
             }
 
-            _knowledge[teamId] = transition.EncounterAfter;
+            _knowledge[actor.State.TeamId] = transition.EncounterAfter;
             fault = null;
             return true;
         }
