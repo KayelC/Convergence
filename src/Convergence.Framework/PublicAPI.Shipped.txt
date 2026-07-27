@@ -11510,8 +11510,10 @@ Convergence.Knowledge.BattleKnowledgeExecutionDiagnostic.EffectIndex.get -> int
 Convergence.Knowledge.BattleKnowledgeExecutionDiagnostic.Message.get -> string!
 Convergence.Knowledge.BattleKnowledgeExecutionDiagnosticCode
 Convergence.Knowledge.BattleKnowledgeExecutionDiagnosticCode.AnalysisRejected = 1 -> Convergence.Knowledge.BattleKnowledgeExecutionDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetMismatch = 4 -> Convergence.Knowledge.BattleKnowledgeExecutionDiagnosticCode
 Convergence.Knowledge.BattleKnowledgeExecutionDiagnosticCode.ObservationEffectIndexMismatch = 2 -> Convergence.Knowledge.BattleKnowledgeExecutionDiagnosticCode
 Convergence.Knowledge.BattleKnowledgeExecutionDiagnosticCode.ObservationRejected = 0 -> Convergence.Knowledge.BattleKnowledgeExecutionDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeExecutionDiagnosticCode.ObservationTargetMismatch = 3 -> Convergence.Knowledge.BattleKnowledgeExecutionDiagnosticCode
 Convergence.Knowledge.BattleKnowledgeExecutionTransitionRequest
 Convergence.Knowledge.BattleKnowledgeExecutionTransitionRequest.BattleKnowledgeExecutionTransitionRequest(Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentBefore, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterBefore, System.Collections.Generic.IEnumerable<Convergence.Execution.EffectExecutionResult!>! effects, Convergence.Knowledge.BattleKnowledgePersistenceScope persistenceScope) -> void
 Convergence.Knowledge.BattleKnowledgeExecutionTransitionRequest.Effects.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.EffectExecutionResult!>!

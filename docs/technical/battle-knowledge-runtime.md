@@ -55,9 +55,10 @@ immutable snapshots. If any later effect rejects, no mutable persistent or
 encounter state has been committed and the aggregate result returns the
 original references as both `Before` and `After`.
 
-An observation's effect index must match the enclosing
-`EffectExecutionResult`. This prevents a custom effect handler from attributing
-knowledge to a different authored effect. A rejecting custom transition that
+An observation's effect index and target must match the enclosing
+`EffectExecutionResult`, and an Analyze result must identify that same target.
+These checks prevent a custom effect handler from attributing knowledge to a
+different authored effect or runtime actor. A rejecting custom transition that
 omits diagnostics is still converted into a deterministic typed aggregate
 diagnostic rather than escaping through diagnostic construction.
 

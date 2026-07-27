@@ -8,7 +8,9 @@ public enum BattleKnowledgeExecutionDiagnosticCode
 {
     ObservationRejected,
     AnalysisRejected,
-    ObservationEffectIndexMismatch
+    ObservationEffectIndexMismatch,
+    ObservationTargetMismatch,
+    AnalysisTargetMismatch
 }
 
 public sealed class BattleKnowledgeExecutionDiagnostic
@@ -162,6 +164,21 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
                         ]);
                 }
 
+                mismatchedObservation = effect.KnowledgeObservations.FirstOrDefault(
+                    observation => effect.TargetId is not RuntimeInstanceId targetId ||
+                                   observation.TargetId != targetId);
+                if (mismatchedObservation is not null)
+                {
+                    return Rejected(
+                        request,
+                        BattleKnowledgeExecutionDiagnosticCode.ObservationTargetMismatch,
+                        effect.EffectIndex,
+                        [
+                            $"Knowledge observation target '{mismatchedObservation.TargetId}' " +
+                            $"does not match enclosing execution target '{effect.TargetId}'."
+                        ]);
+                }
+
                 BattleKnowledgeObservationTransitionResult observation = _observations.Apply(
                     new BattleKnowledgeObservationTransitionRequest(
                         persistent,
@@ -185,6 +202,18 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
 
             if (effect.Analysis is BattleAnalysisResult analysis)
             {
+                if (effect.TargetId is not RuntimeInstanceId targetId || analysis.TargetId != targetId)
+                {
+                    return Rejected(
+                        request,
+                        BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetMismatch,
+                        effect.EffectIndex,
+                        [
+                            $"Analyze target '{analysis.TargetId}' does not match enclosing " +
+                            $"execution target '{effect.TargetId}'."
+                        ]);
+                }
+
                 BattleAnalysisKnowledgeTransitionResult analyzed = _analysis.Apply(
                     persistent,
                     encounter,
@@ -235,6 +264,10 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
                     "The analysis transition rejected the executed effect without diagnostics.",
                 BattleKnowledgeExecutionDiagnosticCode.ObservationEffectIndexMismatch =>
                     "The executed effect contained knowledge evidence with a mismatched effect index.",
+                BattleKnowledgeExecutionDiagnosticCode.ObservationTargetMismatch =>
+                    "The executed effect contained knowledge evidence for a different target.",
+                BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetMismatch =>
+                    "The executed effect contained Analyze evidence for a different target.",
                 _ => "The battle-knowledge execution transition was rejected."
             };
         }

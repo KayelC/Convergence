@@ -167,6 +167,64 @@ public sealed class BattleKnowledgeExecutionTransitionTests
     }
 
     [Fact]
+    public void RejectsObservationWhoseTargetDoesNotMatchItsExecutionResult()
+    {
+        RuntimeKnowledgeSnapshot persistent = new();
+        RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
+        BattleKnowledgeObservation mismatched = BattleKnowledgeObservation.Elemental(
+            Action,
+            Observer,
+            RuntimeInstanceId.Parse("different_target"),
+            TargetEntity,
+            effectIndex: 0,
+            DamageElement.Ice,
+            contacted: true,
+            ElementalAffinity.Weak,
+            ElementalAffinity.Weak);
+
+        BattleKnowledgeExecutionTransitionResult result = Apply(
+            persistent,
+            encounter,
+            [EffectWithObservation(0, mismatched)],
+            BattleKnowledgePersistenceScope.EncounterAndPersistent);
+
+        Assert.Equal(BattleKnowledgeTransitionStatus.Rejected, result.Status);
+        Assert.Same(persistent, result.PersistentAfter);
+        Assert.Same(encounter, result.EncounterAfter);
+        BattleKnowledgeExecutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(BattleKnowledgeExecutionDiagnosticCode.ObservationTargetMismatch, diagnostic.Code);
+        Assert.Equal(0, diagnostic.EffectIndex);
+    }
+
+    [Fact]
+    public void RejectsAnalysisWhoseTargetDoesNotMatchItsExecutionResult()
+    {
+        RuntimeKnowledgeSnapshot persistent = new();
+        RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
+        BattleAnalysisResult analysis = AnalyzeStats();
+        var effect = new EffectExecutionResult(
+            0,
+            RuntimeInstanceId.Parse("different_target"),
+            EffectExecutionOutcome.Success)
+        {
+            Analysis = analysis
+        };
+
+        BattleKnowledgeExecutionTransitionResult result = Apply(
+            persistent,
+            encounter,
+            [effect],
+            BattleKnowledgePersistenceScope.EncounterAndPersistent);
+
+        Assert.Equal(BattleKnowledgeTransitionStatus.Rejected, result.Status);
+        Assert.Same(persistent, result.PersistentAfter);
+        Assert.Same(encounter, result.EncounterAfter);
+        BattleKnowledgeExecutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetMismatch, diagnostic.Code);
+        Assert.Equal(0, diagnostic.EffectIndex);
+    }
+
+    [Fact]
     public void RejectedDependencyWithoutDiagnosticsProducesTypedFallbackDiagnostic()
     {
         RuntimeKnowledgeSnapshot persistent = new();
