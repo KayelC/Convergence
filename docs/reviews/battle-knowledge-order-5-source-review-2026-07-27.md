@@ -1,6 +1,6 @@
 # Battle Knowledge Order 5 Source Review
 
-Status: implementation in progress; O5-R1 and O5-R2 implemented and reviewed
+Status: implementation in progress; O5-R1 through O5-R3 implemented and reviewed
 
 Date: 2026-07-27
 
@@ -232,7 +232,7 @@ diagnostics.
 |---|---|---|
 | O5-R1 | `implemented_reviewed` | Add immutable aggregate knowledge views, transitions, diagnostics, and immediate identifier validation. |
 | O5-R2 | `implemented_reviewed` | Add typed observation evidence that distinguishes contact, authored base defense, effective defense, and temporary modification. |
-| O5-R3 | `pending` | Separate persistent entity knowledge from encounter analysis and define battle-end cleanup. |
+| O5-R3 | `implemented_reviewed` | Separate persistent entity knowledge from encounter analysis and define battle-end cleanup. |
 | O5-R4 | `pending` | Add policy-controlled Analyze disclosure, including typed restricted/unknown boss fields. |
 | O5-R5 | `pending` | Route automated AI through encounter-local aggregate read-only knowledge with optional explicit seeding. |
 | O5-R6 | `pending` | Route familiar acquisition and Compendium imports through the approved persistent knowledge policy. |
@@ -263,3 +263,24 @@ observation rather than a discovery. The checkpoint review corrected one
 pre-commit ambiguity by separating instant-defeat outcome from resistance
 bypass state. The reviewed implementation passed 1,506 Framework tests with
 zero skips and built nonincrementally with zero warnings.
+
+### O5-R3
+
+`RuntimeEncounterKnowledgeSnapshot` now owns runtime-instance-scoped defense and
+analysis visibility separately from save-facing entity knowledge. The standard
+observation transition learns landed effective elemental defenses for the
+encounter, promotes an unmodified authored defense only when permitted, and
+learns ailment or instant-defeat tiers from explicitly confirmed immunity only.
+Encounter facts retain temporary-influence metadata and take precedence in the
+aggregate view without overwriting persistent facts. Runtime-ID/entity-ID
+conflicts reject atomically, and battle-end cleanup returns an empty encounter
+snapshot.
+
+The checkpoint review found and corrected a typed-reason gap in the existing
+instant-defeat port: a random failure against an immune definition could not be
+distinguished from an explicit resistance block. `ProductionCombatRuleset` now
+implements `ITypedInstantDeathExecutionPolicy`; untyped custom policies remain
+conservative and cannot claim exact immunity. Duplicate observations are
+deduplicated with last-observation authority. The reviewed checkpoint passed
+1,517 Framework tests with zero skips and built nonincrementally with zero
+warnings.

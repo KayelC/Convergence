@@ -2135,6 +2135,29 @@ public sealed class ActiveSkillExecutionTests
     }
 
     [Fact]
+    public void Execute_UntypedInstantDeathFailureDoesNotClaimAnImmunityBlock()
+    {
+        RuntimeActorState actor = Actor("instant_actor", PlayerTeam);
+        RuntimeActorState target = Actor(
+            "instant_target",
+            EnemyTeam,
+            defense: new CombatDefenseProfile(
+                instantDeathResistances: [new(InstantDeathChannel.Light, ResistanceLevel.Immune)]));
+        var effect = new InstantKillEffectDefinition(
+            100,
+            new ChannelInstantDeathResistanceCheckDefinition(InstantDeathChannel.Light));
+
+        SkillExecutionResult result = new SkillExecutor(Services(instantDeath: _ => false)).Execute(
+            Request(ActiveSkill([effect]), actor, [actor, target], [target.InstanceId]));
+
+        BattleKnowledgeObservation observation = Assert.Single(
+            Assert.Single(result.Effects).KnowledgeObservations);
+        Assert.Equal(BattleKnowledgeObservationOutcome.Failed, observation.Outcome);
+        Assert.False(observation.ResistanceBlockConfirmed);
+        Assert.Equal(ResistanceLevel.Immune, observation.EffectiveResistance);
+    }
+
+    [Fact]
     public void Execute_ResourceAndRevivalEffectsMutateTypedResources()
     {
         RuntimeActorState actor = Actor("actor", PlayerTeam);

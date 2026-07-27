@@ -314,6 +314,33 @@ public interface IInstantDeathExecutionPolicy
     bool ShouldDefeat(InstantDeathPolicyRequest request);
 }
 
+/// <summary>Provides the typed reason behind an instant-defeat policy decision.</summary>
+public interface ITypedInstantDeathExecutionPolicy : IInstantDeathExecutionPolicy
+{
+    InstantDeathExecutionResolution Resolve(InstantDeathPolicyRequest request);
+}
+
+public sealed record InstantDeathExecutionResolution
+{
+    public InstantDeathExecutionResolution(bool defeated, InstantDefeatResolutionReason reason)
+    {
+        if (!Enum.IsDefined(reason))
+        {
+            throw new ArgumentOutOfRangeException(nameof(reason));
+        }
+        if (defeated != (reason == InstantDefeatResolutionReason.Defeated))
+        {
+            throw new ArgumentException("Instant-defeat outcome and reason must agree.", nameof(reason));
+        }
+
+        Defeated = defeated;
+        Reason = reason;
+    }
+
+    public bool Defeated { get; }
+    public InstantDefeatResolutionReason Reason { get; }
+}
+
 public sealed record AilmentApplicationPolicyRequest(
     RuntimeActorState Actor,
     RuntimeActorState Target,

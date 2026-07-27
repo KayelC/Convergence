@@ -544,13 +544,23 @@ internal sealed class InstantKillEffectExecutor : TargetedEffectExecutor, IEffec
         InstantDeathResistanceResolution resistance = InstantDeathResistanceResolver.Resolve(
             target.DefenseProfile,
             definition.ResistanceCheck);
-        bool success = context.Services.InstantDeathPolicy.ShouldDefeat(
-            new InstantDeathPolicyRequest(context.Actor, target, definition, resistance));
+        var request = new InstantDeathPolicyRequest(context.Actor, target, definition, resistance);
+        InstantDeathExecutionResolution? typedResolution =
+            (context.Services.InstantDeathPolicy as ITypedInstantDeathExecutionPolicy)?.Resolve(request);
+        bool success = typedResolution?.Defeated ?? context.Services.InstantDeathPolicy.ShouldDefeat(request);
         if (!success)
         {
             return Failure(context, TurnEconomyOutcome.Normal, "The instant-death attempt had no effect.") with
             {
-                KnowledgeObservations = [InstantDeathObservation(context, target, resistance, defeated: false)]
+                KnowledgeObservations =
+                [
+                    InstantDeathObservation(
+                        context,
+                        target,
+                        resistance,
+                        defeated: false,
+                        typedResolution?.Reason == InstantDefeatResolutionReason.ResistanceBlocked)
+                ]
             };
         }
 
@@ -569,7 +579,7 @@ internal sealed class InstantKillEffectExecutor : TargetedEffectExecutor, IEffec
             passiveActivations: activations,
             resourceChanges: resourceChanges) with
         {
-            KnowledgeObservations = [InstantDeathObservation(context, target, resistance, defeated: true)]
+            KnowledgeObservations = [InstantDeathObservation(context, target, resistance, defeated: true, resistanceBlocked: false)]
         };
     }
 
@@ -577,7 +587,8 @@ internal sealed class InstantKillEffectExecutor : TargetedEffectExecutor, IEffec
         EffectExecutionContext context,
         RuntimeActorState target,
         InstantDeathResistanceResolution resistance,
-        bool defeated) =>
+        bool defeated,
+        bool resistanceBlocked) =>
         BattleKnowledgeObservation.InstantDeath(
             context.Request.SourceId,
             context.Actor.InstanceId,
@@ -588,7 +599,8 @@ internal sealed class InstantKillEffectExecutor : TargetedEffectExecutor, IEffec
             resistance.BypassesResistance,
             defeated,
             resistance.Resistance,
-            resistance.Resistance);
+            resistance.Resistance,
+            resistanceBlocked);
 }
 
 internal sealed class ApplyAilmentEffectExecutor : TargetedEffectExecutor, IEffectExecutor<ApplyAilmentEffectDefinition>

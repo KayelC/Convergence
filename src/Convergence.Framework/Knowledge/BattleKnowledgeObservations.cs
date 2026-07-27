@@ -65,7 +65,8 @@ public sealed class BattleKnowledgeObservation
         ElementalAffinity? effectiveAffinity = null,
         ResistanceLevel? authoredResistance = null,
         ResistanceLevel? effectiveResistance = null,
-        bool resistanceBypassed = false)
+        bool resistanceBypassed = false,
+        bool resistanceBlockConfirmed = false)
     {
         if (!Enum.IsDefined(kind))
         {
@@ -116,6 +117,7 @@ public sealed class BattleKnowledgeObservation
         AuthoredResistance = authoredResistance;
         EffectiveResistance = effectiveResistance;
         ResistanceBypassed = resistanceBypassed;
+        ResistanceBlockConfirmed = resistanceBlockConfirmed;
     }
 
     public BattleKnowledgeObservationKind Kind { get; }
@@ -134,6 +136,7 @@ public sealed class BattleKnowledgeObservation
     public ResistanceLevel? AuthoredResistance { get; }
     public ResistanceLevel? EffectiveResistance { get; }
     public bool ResistanceBypassed { get; }
+    public bool ResistanceBlockConfirmed { get; }
     public bool HasTemporaryInfluence => TemporaryInfluences != BattleDefenseInfluence.None;
 
     /// <summary>Creates evidence for an attempted typed damage effect.</summary>
@@ -224,6 +227,7 @@ public sealed class BattleKnowledgeObservation
         bool defeated,
         ResistanceLevel? authoredResistance,
         ResistanceLevel? effectiveResistance,
+        bool resistanceBlockConfirmed = false,
         BattleDefenseInfluence temporaryInfluences = BattleDefenseInfluence.None)
     {
         if (channel is InstantDeathChannel instantDeathChannel)
@@ -244,10 +248,17 @@ public sealed class BattleKnowledgeObservation
                 "A bypassed resistance check cannot identify a channel or resistance, and a checked resistance must identify them.",
                 nameof(resistanceBypassed));
         }
+        if (resistanceBlockConfirmed &&
+            (resistanceBypassed || defeated || effectiveResistance != ResistanceLevel.Immune))
+        {
+            throw new ArgumentException(
+                "A confirmed resistance block requires a checked immune resistance and a failed attempt.",
+                nameof(resistanceBlockConfirmed));
+        }
 
         BattleKnowledgeObservationOutcome outcome = defeated
             ? BattleKnowledgeObservationOutcome.Defeated
-            : effectiveResistance == ResistanceLevel.Immune
+            : resistanceBlockConfirmed
                 ? BattleKnowledgeObservationOutcome.Immune
                 : BattleKnowledgeObservationOutcome.Failed;
         return new BattleKnowledgeObservation(
@@ -262,7 +273,8 @@ public sealed class BattleKnowledgeObservation
             instantDeathChannel: channel,
             authoredResistance: authoredResistance,
             effectiveResistance: effectiveResistance,
-            resistanceBypassed: resistanceBypassed);
+            resistanceBypassed: resistanceBypassed,
+            resistanceBlockConfirmed: resistanceBlockConfirmed);
     }
 
     private static void RequireDefined<T>(T value, string parameterName) where T : struct, Enum

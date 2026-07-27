@@ -638,6 +638,7 @@ public sealed record ProductionAilmentApplicationResult(bool Applied, int Chance
 public sealed class ProductionCombatRuleset :
     ICombatDamageExecutionPolicy,
     ICombatInstantDefeatExecutionPolicy,
+    ITypedInstantDeathExecutionPolicy,
     IAilmentApplicationPolicy,
     IChanceExecutionPolicy,
     IPowerAmountPolicy
@@ -739,7 +740,9 @@ public sealed class ProductionCombatRuleset :
             result.ResolvedAffinity);
     }
 
-    public bool ShouldDefeat(InstantDeathPolicyRequest request)
+    public bool ShouldDefeat(InstantDeathPolicyRequest request) => Resolve(request).Defeated;
+
+    public InstantDeathExecutionResolution Resolve(InstantDeathPolicyRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
         AuthoredPercentage.RequireValid(
@@ -753,7 +756,7 @@ public sealed class ProductionCombatRuleset :
             request.Effect.Chance,
             request.Resistance.Resistance,
             request.Resistance.BypassesResistance));
-        return result.Defeated;
+        return new InstantDeathExecutionResolution(result.Defeated, result.Reason);
     }
 
     public bool ShouldApply(AilmentApplicationPolicyRequest request)

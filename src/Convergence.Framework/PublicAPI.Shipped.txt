@@ -11218,4 +11218,153 @@ Convergence.Knowledge.BattleKnowledgeObservationOutcome.Immune = 3 -> Convergenc
 Convergence.Knowledge.BattleKnowledgeObservationOutcome.Missed = 1 -> Convergence.Knowledge.BattleKnowledgeObservationOutcome
 static Convergence.Knowledge.BattleKnowledgeObservation.Ailment(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, Convergence.Content.ContentId targetEntityId, int effectIndex, Convergence.Content.ContentId ailmentId, Convergence.Execution.BattleAilmentApplicationStatus applicationStatus, Convergence.Content.ResistanceLevel authoredResistance, Convergence.Content.ResistanceLevel? effectiveResistance, Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences = Convergence.Knowledge.BattleDefenseInfluence.None) -> Convergence.Knowledge.BattleKnowledgeObservation!
 static Convergence.Knowledge.BattleKnowledgeObservation.Elemental(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, Convergence.Content.ContentId targetEntityId, int effectIndex, Convergence.Content.DamageElement element, bool contacted, Convergence.Content.ElementalAffinity authoredAffinity, Convergence.Content.ElementalAffinity effectiveAffinity, Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences = Convergence.Knowledge.BattleDefenseInfluence.None) -> Convergence.Knowledge.BattleKnowledgeObservation!
-static Convergence.Knowledge.BattleKnowledgeObservation.InstantDeath(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, Convergence.Content.ContentId targetEntityId, int effectIndex, Convergence.Content.InstantDeathChannel? channel, bool resistanceBypassed, bool defeated, Convergence.Content.ResistanceLevel? authoredResistance, Convergence.Content.ResistanceLevel? effectiveResistance, Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences = Convergence.Knowledge.BattleDefenseInfluence.None) -> Convergence.Knowledge.BattleKnowledgeObservation!
+Convergence.Knowledge.BattleKnowledgeEncounterCleanupResult
+Convergence.Knowledge.BattleKnowledgeEncounterCleanupResult.After.get -> Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeEncounterCleanupResult.BattleKnowledgeEncounterCleanupResult(Convergence.Knowledge.BattleKnowledgeTransitionStatus status, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! before, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! after) -> void
+Convergence.Knowledge.BattleKnowledgeEncounterCleanupResult.Before.get -> Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeEncounterCleanupResult.Status.get -> Convergence.Knowledge.BattleKnowledgeTransitionStatus
+Convergence.Knowledge.BattleKnowledgeFactSource
+Convergence.Knowledge.BattleKnowledgeFactSource.Encounter = 0 -> Convergence.Knowledge.BattleKnowledgeFactSource
+Convergence.Knowledge.BattleKnowledgeFactSource.Persistent = 1 -> Convergence.Knowledge.BattleKnowledgeFactSource
+Convergence.Knowledge.BattleKnowledgeObservationDiagnostic
+Convergence.Knowledge.BattleKnowledgeObservationDiagnostic.<Clone>$() -> Convergence.Knowledge.BattleKnowledgeObservationDiagnostic!
+Convergence.Knowledge.BattleKnowledgeObservationDiagnostic.BattleKnowledgeObservationDiagnostic(Convergence.Knowledge.BattleKnowledgeObservationDiagnosticCode code, int observationIndex, string! message) -> void
+Convergence.Knowledge.BattleKnowledgeObservationDiagnostic.Code.get -> Convergence.Knowledge.BattleKnowledgeObservationDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeObservationDiagnostic.Equals(Convergence.Knowledge.BattleKnowledgeObservationDiagnostic? other) -> bool
+Convergence.Knowledge.BattleKnowledgeObservationDiagnostic.Message.get -> string!
+Convergence.Knowledge.BattleKnowledgeObservationDiagnostic.ObservationIndex.get -> int
+Convergence.Knowledge.BattleKnowledgeObservationDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeObservationDiagnosticCode.PersistentTransitionRejected = 1 -> Convergence.Knowledge.BattleKnowledgeObservationDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeObservationDiagnosticCode.TargetIdentityConflict = 0 -> Convergence.Knowledge.BattleKnowledgeObservationDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeObservationTransitionRequest
+Convergence.Knowledge.BattleKnowledgeObservationTransitionRequest.BattleKnowledgeObservationTransitionRequest(Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentBefore, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterBefore, System.Collections.Generic.IEnumerable<Convergence.Knowledge.BattleKnowledgeObservation!>! observations, Convergence.Knowledge.BattleKnowledgePersistenceScope persistenceScope) -> void
+Convergence.Knowledge.BattleKnowledgeObservationTransitionRequest.EncounterBefore.get -> Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeObservationTransitionRequest.Observations.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleKnowledgeObservation!>!
+Convergence.Knowledge.BattleKnowledgeObservationTransitionRequest.PersistenceScope.get -> Convergence.Knowledge.BattleKnowledgePersistenceScope
+Convergence.Knowledge.BattleKnowledgeObservationTransitionRequest.PersistentBefore.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeObservationTransitionResult
+Convergence.Knowledge.BattleKnowledgeObservationTransitionResult.AcceptedObservations.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleKnowledgeObservation!>!
+Convergence.Knowledge.BattleKnowledgeObservationTransitionResult.Applied.get -> bool
+Convergence.Knowledge.BattleKnowledgeObservationTransitionResult.BattleKnowledgeObservationTransitionResult(Convergence.Knowledge.BattleKnowledgeTransitionStatus status, Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentBefore, Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentAfter, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterBefore, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterAfter, System.Collections.Generic.IEnumerable<Convergence.Knowledge.BattleKnowledgeObservation!>? acceptedObservations = null, System.Collections.Generic.IEnumerable<Convergence.Knowledge.BattleKnowledgeObservationDiagnostic!>? diagnostics = null) -> void
+Convergence.Knowledge.BattleKnowledgeObservationTransitionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleKnowledgeObservationDiagnostic!>!
+Convergence.Knowledge.BattleKnowledgeObservationTransitionResult.EncounterAfter.get -> Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeObservationTransitionResult.EncounterBefore.get -> Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeObservationTransitionResult.PersistentAfter.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeObservationTransitionResult.PersistentBefore.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
+Convergence.Knowledge.BattleKnowledgeObservationTransitionResult.Status.get -> Convergence.Knowledge.BattleKnowledgeTransitionStatus
+Convergence.Knowledge.BattleKnowledgeObservationTransitionService
+Convergence.Knowledge.BattleKnowledgeObservationTransitionService.Apply(Convergence.Knowledge.BattleKnowledgeObservationTransitionRequest! request) -> Convergence.Knowledge.BattleKnowledgeObservationTransitionResult!
+Convergence.Knowledge.BattleKnowledgeObservationTransitionService.BattleKnowledgeObservationTransitionService(Convergence.Knowledge.IPersistentBattleKnowledgeTransitionService? persistentTransitions = null) -> void
+Convergence.Knowledge.BattleKnowledgeObservationTransitionService.ClearEncounter(Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! before) -> Convergence.Knowledge.BattleKnowledgeEncounterCleanupResult!
+Convergence.Knowledge.BattleKnowledgePersistenceScope
+Convergence.Knowledge.BattleKnowledgePersistenceScope.EncounterAndPersistent = 1 -> Convergence.Knowledge.BattleKnowledgePersistenceScope
+Convergence.Knowledge.BattleKnowledgePersistenceScope.EncounterOnly = 0 -> Convergence.Knowledge.BattleKnowledgePersistenceScope
+Convergence.Knowledge.BattleKnowledgeView
+Convergence.Knowledge.BattleKnowledgeView.BattleKnowledgeView(Convergence.Runtime.RuntimeKnowledgeSnapshot! persistent, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounter) -> void
+Convergence.Knowledge.BattleKnowledgeView.TryGetAilmentResistance(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.ContentId ailmentId, out Convergence.Content.ResistanceLevel resistance, out Convergence.Knowledge.BattleKnowledgeFactSource source, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.BattleKnowledgeView.TryGetElementalAffinity(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.DamageElement element, out Convergence.Content.ElementalAffinity affinity, out Convergence.Knowledge.BattleKnowledgeFactSource source, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.BattleKnowledgeView.TryGetInstantDeathResistance(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.InstantDeathChannel channel, out Convergence.Content.ResistanceLevel resistance, out Convergence.Knowledge.BattleKnowledgeFactSource source, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.EncounterAilmentKnowledgeEntry
+Convergence.Knowledge.EncounterAilmentKnowledgeEntry.<Clone>$() -> Convergence.Knowledge.EncounterAilmentKnowledgeEntry!
+Convergence.Knowledge.EncounterAilmentKnowledgeEntry.AilmentId.get -> Convergence.Content.ContentId
+Convergence.Knowledge.EncounterAilmentKnowledgeEntry.EncounterAilmentKnowledgeEntry(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.ContentId ailmentId, Convergence.Content.ResistanceLevel resistance, Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences = Convergence.Knowledge.BattleDefenseInfluence.None) -> void
+Convergence.Knowledge.EncounterAilmentKnowledgeEntry.Equals(Convergence.Knowledge.EncounterAilmentKnowledgeEntry? other) -> bool
+Convergence.Knowledge.EncounterAilmentKnowledgeEntry.Resistance.get -> Convergence.Content.ResistanceLevel
+Convergence.Knowledge.EncounterAilmentKnowledgeEntry.TargetEntityId.get -> Convergence.Content.ContentId
+Convergence.Knowledge.EncounterAilmentKnowledgeEntry.TargetInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Knowledge.EncounterAilmentKnowledgeEntry.TemporaryInfluences.get -> Convergence.Knowledge.BattleDefenseInfluence
+Convergence.Knowledge.EncounterBattleKnowledgeView
+Convergence.Knowledge.EncounterBattleKnowledgeView.EncounterBattleKnowledgeView(Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! snapshot) -> void
+Convergence.Knowledge.EncounterElementalKnowledgeEntry
+Convergence.Knowledge.EncounterElementalKnowledgeEntry.<Clone>$() -> Convergence.Knowledge.EncounterElementalKnowledgeEntry!
+Convergence.Knowledge.EncounterElementalKnowledgeEntry.Affinity.get -> Convergence.Content.ElementalAffinity
+Convergence.Knowledge.EncounterElementalKnowledgeEntry.Element.get -> Convergence.Content.DamageElement
+Convergence.Knowledge.EncounterElementalKnowledgeEntry.EncounterElementalKnowledgeEntry(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.DamageElement element, Convergence.Content.ElementalAffinity affinity, Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences = Convergence.Knowledge.BattleDefenseInfluence.None) -> void
+Convergence.Knowledge.EncounterElementalKnowledgeEntry.Equals(Convergence.Knowledge.EncounterElementalKnowledgeEntry? other) -> bool
+Convergence.Knowledge.EncounterElementalKnowledgeEntry.TargetEntityId.get -> Convergence.Content.ContentId
+Convergence.Knowledge.EncounterElementalKnowledgeEntry.TargetInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Knowledge.EncounterElementalKnowledgeEntry.TemporaryInfluences.get -> Convergence.Knowledge.BattleDefenseInfluence
+Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry
+Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.<Clone>$() -> Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry!
+Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.Channel.get -> Convergence.Content.InstantDeathChannel
+Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.EncounterInstantDeathKnowledgeEntry(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.InstantDeathChannel channel, Convergence.Content.ResistanceLevel resistance, Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences = Convergence.Knowledge.BattleDefenseInfluence.None) -> void
+Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.Equals(Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry? other) -> bool
+Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.Resistance.get -> Convergence.Content.ResistanceLevel
+Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.TargetEntityId.get -> Convergence.Content.ContentId
+Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.TargetInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.TemporaryInfluences.get -> Convergence.Knowledge.BattleDefenseInfluence
+Convergence.Knowledge.IBattleKnowledgeObservationTransitionService
+Convergence.Knowledge.IBattleKnowledgeObservationTransitionService.Apply(Convergence.Knowledge.BattleKnowledgeObservationTransitionRequest! request) -> Convergence.Knowledge.BattleKnowledgeObservationTransitionResult!
+Convergence.Knowledge.IBattleKnowledgeObservationTransitionService.ClearEncounter(Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! before) -> Convergence.Knowledge.BattleKnowledgeEncounterCleanupResult!
+Convergence.Knowledge.IBattleKnowledgeView
+Convergence.Knowledge.IBattleKnowledgeView.TryGetAilmentResistance(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.ContentId ailmentId, out Convergence.Content.ResistanceLevel resistance, out Convergence.Knowledge.BattleKnowledgeFactSource source, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.IBattleKnowledgeView.TryGetElementalAffinity(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.DamageElement element, out Convergence.Content.ElementalAffinity affinity, out Convergence.Knowledge.BattleKnowledgeFactSource source, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.IBattleKnowledgeView.TryGetInstantDeathResistance(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.InstantDeathChannel channel, out Convergence.Content.ResistanceLevel resistance, out Convergence.Knowledge.BattleKnowledgeFactSource source, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.IEncounterBattleKnowledgeView
+Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot
+Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot.Ailments.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.EncounterAilmentKnowledgeEntry!>!
+Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot.Elemental.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.EncounterElementalKnowledgeEntry!>!
+Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot.InstantDeath.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry!>!
+Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot.IsEmpty.get -> bool
+override Convergence.Knowledge.BattleKnowledgeObservationDiagnostic.Equals(object? obj) -> bool
+override Convergence.Knowledge.BattleKnowledgeObservationDiagnostic.GetHashCode() -> int
+override Convergence.Knowledge.BattleKnowledgeObservationDiagnostic.ToString() -> string!
+override Convergence.Knowledge.EncounterAilmentKnowledgeEntry.Equals(object? obj) -> bool
+override Convergence.Knowledge.EncounterAilmentKnowledgeEntry.GetHashCode() -> int
+override Convergence.Knowledge.EncounterAilmentKnowledgeEntry.ToString() -> string!
+override Convergence.Knowledge.EncounterElementalKnowledgeEntry.Equals(object? obj) -> bool
+override Convergence.Knowledge.EncounterElementalKnowledgeEntry.GetHashCode() -> int
+override Convergence.Knowledge.EncounterElementalKnowledgeEntry.ToString() -> string!
+override Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.Equals(object? obj) -> bool
+override Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.GetHashCode() -> int
+override Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.ToString() -> string!
+static Convergence.Knowledge.BattleKnowledgeObservationDiagnostic.operator !=(Convergence.Knowledge.BattleKnowledgeObservationDiagnostic? left, Convergence.Knowledge.BattleKnowledgeObservationDiagnostic? right) -> bool
+static Convergence.Knowledge.BattleKnowledgeObservationDiagnostic.operator ==(Convergence.Knowledge.BattleKnowledgeObservationDiagnostic? left, Convergence.Knowledge.BattleKnowledgeObservationDiagnostic? right) -> bool
+static Convergence.Knowledge.EncounterAilmentKnowledgeEntry.operator !=(Convergence.Knowledge.EncounterAilmentKnowledgeEntry? left, Convergence.Knowledge.EncounterAilmentKnowledgeEntry? right) -> bool
+static Convergence.Knowledge.EncounterAilmentKnowledgeEntry.operator ==(Convergence.Knowledge.EncounterAilmentKnowledgeEntry? left, Convergence.Knowledge.EncounterAilmentKnowledgeEntry? right) -> bool
+static Convergence.Knowledge.EncounterElementalKnowledgeEntry.operator !=(Convergence.Knowledge.EncounterElementalKnowledgeEntry? left, Convergence.Knowledge.EncounterElementalKnowledgeEntry? right) -> bool
+static Convergence.Knowledge.EncounterElementalKnowledgeEntry.operator ==(Convergence.Knowledge.EncounterElementalKnowledgeEntry? left, Convergence.Knowledge.EncounterElementalKnowledgeEntry? right) -> bool
+static Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.operator !=(Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry? left, Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry? right) -> bool
+static Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry.operator ==(Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry? left, Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry? right) -> bool
+static Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot.Empty.get -> Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!
+Convergence.Battle.ProductionCombatRuleset.Resolve(Convergence.Execution.InstantDeathPolicyRequest! request) -> Convergence.Execution.InstantDeathExecutionResolution!
+Convergence.Execution.InstantDeathExecutionResolution
+Convergence.Execution.InstantDeathExecutionResolution.<Clone>$() -> Convergence.Execution.InstantDeathExecutionResolution!
+Convergence.Execution.InstantDeathExecutionResolution.Defeated.get -> bool
+Convergence.Execution.InstantDeathExecutionResolution.Equals(Convergence.Execution.InstantDeathExecutionResolution? other) -> bool
+Convergence.Execution.InstantDeathExecutionResolution.InstantDeathExecutionResolution(bool defeated, Convergence.Battle.InstantDefeatResolutionReason reason) -> void
+Convergence.Execution.InstantDeathExecutionResolution.Reason.get -> Convergence.Battle.InstantDefeatResolutionReason
+Convergence.Execution.ITypedInstantDeathExecutionPolicy
+Convergence.Execution.ITypedInstantDeathExecutionPolicy.Resolve(Convergence.Execution.InstantDeathPolicyRequest! request) -> Convergence.Execution.InstantDeathExecutionResolution!
+Convergence.Knowledge.BattleKnowledgeObservation.ResistanceBlockConfirmed.get -> bool
+override Convergence.Execution.InstantDeathExecutionResolution.Equals(object? obj) -> bool
+override Convergence.Execution.InstantDeathExecutionResolution.GetHashCode() -> int
+override Convergence.Execution.InstantDeathExecutionResolution.ToString() -> string!
+static Convergence.Execution.InstantDeathExecutionResolution.operator !=(Convergence.Execution.InstantDeathExecutionResolution? left, Convergence.Execution.InstantDeathExecutionResolution? right) -> bool
+static Convergence.Execution.InstantDeathExecutionResolution.operator ==(Convergence.Execution.InstantDeathExecutionResolution? left, Convergence.Execution.InstantDeathExecutionResolution? right) -> bool
+static Convergence.Knowledge.BattleKnowledgeObservation.InstantDeath(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, Convergence.Content.ContentId targetEntityId, int effectIndex, Convergence.Content.InstantDeathChannel? channel, bool resistanceBypassed, bool defeated, Convergence.Content.ResistanceLevel? authoredResistance, Convergence.Content.ResistanceLevel? effectiveResistance, bool resistanceBlockConfirmed = false, Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences = Convergence.Knowledge.BattleDefenseInfluence.None) -> Convergence.Knowledge.BattleKnowledgeObservation!
+Convergence.Knowledge.EncounterBattleKnowledgeView.TryGetAilmentResistance(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.ContentId ailmentId, out Convergence.Content.ResistanceLevel resistance, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.EncounterBattleKnowledgeView.TryGetElementalAffinity(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.DamageElement element, out Convergence.Content.ElementalAffinity affinity, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.EncounterBattleKnowledgeView.TryGetInstantDeathResistance(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.InstantDeathChannel channel, out Convergence.Content.ResistanceLevel resistance, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.IEncounterBattleKnowledgeView.TryGetAilmentResistance(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.ContentId ailmentId, out Convergence.Content.ResistanceLevel resistance, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.IEncounterBattleKnowledgeView.TryGetElementalAffinity(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.DamageElement element, out Convergence.Content.ElementalAffinity affinity, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.IEncounterBattleKnowledgeView.TryGetInstantDeathResistance(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Content.InstantDeathChannel channel, out Convergence.Content.ResistanceLevel resistance, out Convergence.Knowledge.BattleDefenseInfluence temporaryInfluences) -> bool
+Convergence.Knowledge.BattleAnalysisField
+Convergence.Knowledge.BattleAnalysisField.AilmentResistances = 5 -> Convergence.Knowledge.BattleAnalysisField
+Convergence.Knowledge.BattleAnalysisField.CoreStats = 2 -> Convergence.Knowledge.BattleAnalysisField
+Convergence.Knowledge.BattleAnalysisField.CurrentHp = 0 -> Convergence.Knowledge.BattleAnalysisField
+Convergence.Knowledge.BattleAnalysisField.CurrentSp = 1 -> Convergence.Knowledge.BattleAnalysisField
+Convergence.Knowledge.BattleAnalysisField.ElementalAffinities = 4 -> Convergence.Knowledge.BattleAnalysisField
+Convergence.Knowledge.BattleAnalysisField.InstantDeathResistances = 6 -> Convergence.Knowledge.BattleAnalysisField
+Convergence.Knowledge.BattleAnalysisField.Skills = 3 -> Convergence.Knowledge.BattleAnalysisField
+Convergence.Knowledge.BattleKnowledgeView.IsAnalysisDisclosed(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Knowledge.BattleAnalysisField field) -> bool
+Convergence.Knowledge.EncounterAnalysisKnowledgeEntry
+Convergence.Knowledge.EncounterAnalysisKnowledgeEntry.DisclosedFields.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisField>!
+Convergence.Knowledge.EncounterAnalysisKnowledgeEntry.EncounterAnalysisKnowledgeEntry(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, System.Collections.Generic.IEnumerable<Convergence.Knowledge.BattleAnalysisField>! disclosedFields) -> void
+Convergence.Knowledge.EncounterAnalysisKnowledgeEntry.TargetEntityId.get -> Convergence.Content.ContentId
+Convergence.Knowledge.EncounterAnalysisKnowledgeEntry.TargetInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Knowledge.EncounterBattleKnowledgeView.IsAnalysisDisclosed(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Knowledge.BattleAnalysisField field) -> bool
+Convergence.Knowledge.IBattleKnowledgeView.IsAnalysisDisclosed(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Knowledge.BattleAnalysisField field) -> bool
+Convergence.Knowledge.IEncounterBattleKnowledgeView.IsAnalysisDisclosed(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Knowledge.BattleAnalysisField field) -> bool
+Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot.Analysis.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.EncounterAnalysisKnowledgeEntry!>!
+Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot.RuntimeEncounterKnowledgeSnapshot(System.Collections.Generic.IEnumerable<Convergence.Knowledge.EncounterElementalKnowledgeEntry!>? elemental = null, System.Collections.Generic.IEnumerable<Convergence.Knowledge.EncounterAilmentKnowledgeEntry!>? ailments = null, System.Collections.Generic.IEnumerable<Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry!>? instantDeath = null, System.Collections.Generic.IEnumerable<Convergence.Knowledge.EncounterAnalysisKnowledgeEntry!>? analysis = null) -> void

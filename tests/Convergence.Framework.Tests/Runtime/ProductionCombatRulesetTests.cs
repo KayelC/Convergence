@@ -288,6 +288,19 @@ public sealed class ProductionCombatRulesetTests
         Assert.Equal(100, bypass.Chance);
         Assert.True(bypass.BypassedResistance);
         Assert.Equal(InstantDefeatResolutionReason.Defeated, bypass.Reason);
+        var typedPolicy = Assert.IsAssignableFrom<ITypedInstantDeathExecutionPolicy>(immuneRuleset);
+        InstantDeathExecutionResolution typed = typedPolicy.Resolve(new InstantDeathPolicyRequest(
+            RuntimeActor("typed_actor"),
+            RuntimeActor("typed_target"),
+            new InstantKillEffectDefinition(
+                100,
+                new ChannelInstantDeathResistanceCheckDefinition(InstantDeathChannel.Light)),
+            new InstantDeathResistanceResolution(
+                InstantDeathResistanceMode.Channel,
+                InstantDeathChannel.Light,
+                ResistanceLevel.Immune)));
+        Assert.False(typed.Defeated);
+        Assert.Equal(InstantDefeatResolutionReason.ResistanceBlocked, typed.Reason);
     }
 
     [Fact]
