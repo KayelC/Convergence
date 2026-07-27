@@ -369,6 +369,16 @@ records 24 reviewed, 28 `existing_unreviewed`, 16 missing, and 7
 `not_applicable` entries. Order 5, `battle_knowledge`, is now the next
 collaborative documentation subject.
 
+The source-backed opening review and owner-approved discovery rules are recorded
+in the
+[Battle Knowledge Order 5 Source Review](../reviews/battle-knowledge-order-5-source-review-2026-07-27.md).
+Order 5 is now in implementation planning. Its confirmed scope separates
+persistent entity knowledge from encounter-instance observations, prevents
+temporary defenses from corrupting permanent records, keeps ordinary enemy AI
+knowledge encounter-local, imports all authored defenses after approved
+acquisition paths, and adds policy-controlled restricted Analyze disclosure for
+bosses and other special targets.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported
