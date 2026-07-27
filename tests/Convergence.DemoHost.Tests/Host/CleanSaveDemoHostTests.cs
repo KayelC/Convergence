@@ -4,6 +4,7 @@ using Convergence.DemoHost.Tests.TestSupport;
 using Convergence.Content;
 using Convergence.DemoHost;
 using Convergence.Execution;
+using Convergence.Knowledge;
 using Convergence.Runtime;
 using Xunit;
 
@@ -49,6 +50,62 @@ public sealed class CleanSaveDemoHostTests
             snapshot.Session.Counters.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)),
             restored.Session.Counters.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)));
         Assert.Equal(snapshot.Checkpoints.Entries.Select(entry => entry.Sequence), restored.Checkpoints.Entries.Select(entry => entry.Sequence));
+    }
+
+    [Fact]
+    public void HostOwnedJsonRoundTrip_PreservesAnalyzedDefenseProfilesAndKnownNormalSemantics()
+    {
+        ContentId entityId = ContentId.Parse("convergence.clean_battle_demo:ember_duelist_demo");
+        var knowledge = new RuntimeKnowledgeSnapshot(
+            elementalAffinities: null,
+            ailmentResistances: null,
+            instantDeathResistances: null,
+            analyzedDefenses:
+            [
+                new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+                    entityId,
+                    [
+                        BattleAnalysisField.ElementalAffinities,
+                        BattleAnalysisField.AilmentResistances,
+                        BattleAnalysisField.InstantDeathResistances
+                    ])
+            ]);
+        RuntimeSaveGameSnapshot snapshot = CleanSaveTestFixture.CreateSaveSnapshot(knowledge: knowledge);
+
+        string json = CleanSaveJsonCodec.Serialize(snapshot);
+        RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(json);
+
+        RuntimeAnalyzedDefenseKnowledgeSnapshot profile =
+            Assert.Single(restored.Knowledge.AnalyzedDefenses);
+        Assert.Equal(entityId, profile.EntityId);
+        Assert.Equal(
+            [
+                BattleAnalysisField.ElementalAffinities,
+                BattleAnalysisField.AilmentResistances,
+                BattleAnalysisField.InstantDeathResistances
+            ],
+            profile.DisclosedFields);
+        var view = new PersistentBattleKnowledgeView(restored.Knowledge);
+        Assert.True(view.TryGetElementalAffinity(
+            entityId,
+            DamageElement.Fire,
+            out ElementalAffinity affinity));
+        Assert.Equal(ElementalAffinity.Normal, affinity);
+    }
+
+    [Fact]
+    public void HostOwnedJsonWithoutAnalyzedProfiles_RemainsReadableAsEmptyKnowledge()
+    {
+        JsonObject root = JsonNode.Parse(CleanSaveJsonCodec.Serialize(
+            CleanSaveTestFixture.CreateSaveSnapshot()))?.AsObject()
+            ?? throw new InvalidOperationException("Expected a host save JSON object.");
+        JsonObject knowledge = root["Knowledge"]?.AsObject()
+            ?? throw new InvalidOperationException("Expected host-owned knowledge data.");
+        Assert.True(knowledge.Remove("AnalyzedDefenses"));
+
+        RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
+
+        Assert.Empty(restored.Knowledge.AnalyzedDefenses);
     }
 
     [Fact]

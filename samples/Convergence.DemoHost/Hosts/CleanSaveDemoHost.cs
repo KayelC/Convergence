@@ -6,6 +6,7 @@ using Convergence.Hosting;
 using Convergence.Fusion;
 using Convergence.Encounters;
 using Convergence.Execution;
+using Convergence.Knowledge;
 using Convergence.Runtime;
 
 namespace Convergence.DemoHost;
@@ -759,13 +760,19 @@ internal static class CleanSaveJsonCodec
         new(
             snapshot.ElementalAffinities.Select(entry => new HostElementalKnowledgeDto(entry.EntityId.ToString(), entry.Element.ToString(), entry.Affinity.ToString())).ToArray(),
             snapshot.AilmentResistances.Select(entry => new HostAilmentKnowledgeDto(entry.EntityId.ToString(), entry.AilmentId.ToString(), entry.Resistance.ToString())).ToArray(),
-            snapshot.InstantDeathResistances.Select(entry => new HostInstantDeathKnowledgeDto(entry.EntityId.ToString(), entry.Channel.ToString(), entry.Resistance.ToString())).ToArray());
+            snapshot.InstantDeathResistances.Select(entry => new HostInstantDeathKnowledgeDto(entry.EntityId.ToString(), entry.Channel.ToString(), entry.Resistance.ToString())).ToArray(),
+            snapshot.AnalyzedDefenses.Select(entry => new HostAnalyzedDefenseKnowledgeDto(
+                entry.EntityId.ToString(),
+                entry.DisclosedFields.Select(field => field.ToString()).ToArray())).ToArray());
 
     private static RuntimeKnowledgeSnapshot FromDto(HostKnowledgeDto dto) =>
         new(
             dto.ElementalAffinities.Select(entry => new RuntimeElementalAffinityKnowledgeSnapshot(Id(entry.EntityId), Enum.Parse<DamageElement>(entry.Element), Enum.Parse<ElementalAffinity>(entry.Affinity))),
             dto.AilmentResistances.Select(entry => new RuntimeAilmentResistanceKnowledgeSnapshot(Id(entry.EntityId), Id(entry.AilmentId), Enum.Parse<ResistanceLevel>(entry.Resistance))),
-            dto.InstantDeathResistances.Select(entry => new RuntimeInstantDeathResistanceKnowledgeSnapshot(Id(entry.EntityId), Enum.Parse<InstantDeathChannel>(entry.Channel), Enum.Parse<ResistanceLevel>(entry.Resistance))));
+            dto.InstantDeathResistances.Select(entry => new RuntimeInstantDeathResistanceKnowledgeSnapshot(Id(entry.EntityId), Enum.Parse<InstantDeathChannel>(entry.Channel), Enum.Parse<ResistanceLevel>(entry.Resistance))),
+            (dto.AnalyzedDefenses ?? []).Select(entry => new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+                Id(entry.EntityId),
+                entry.DisclosedFields.Select(Enum.Parse<BattleAnalysisField>))));
 
     private static HostSessionDto ToDto(RuntimeSessionProgressSnapshot snapshot) =>
         new(
@@ -916,10 +923,15 @@ internal static class CleanSaveJsonCodec
         long LifetimeExperience,
         int UnspentStatPoints,
         string[]? EquippedSkillIds);
-    private sealed record HostKnowledgeDto(HostElementalKnowledgeDto[] ElementalAffinities, HostAilmentKnowledgeDto[] AilmentResistances, HostInstantDeathKnowledgeDto[] InstantDeathResistances);
+    private sealed record HostKnowledgeDto(
+        HostElementalKnowledgeDto[] ElementalAffinities,
+        HostAilmentKnowledgeDto[] AilmentResistances,
+        HostInstantDeathKnowledgeDto[] InstantDeathResistances,
+        HostAnalyzedDefenseKnowledgeDto[]? AnalyzedDefenses);
     private sealed record HostElementalKnowledgeDto(string EntityId, string Element, string Affinity);
     private sealed record HostAilmentKnowledgeDto(string EntityId, string AilmentId, string Resistance);
     private sealed record HostInstantDeathKnowledgeDto(string EntityId, string Channel, string Resistance);
+    private sealed record HostAnalyzedDefenseKnowledgeDto(string EntityId, string[] DisclosedFields);
     private sealed record HostSessionDto(string? MoonPhaseId, long ElapsedTicks, Dictionary<string, long> Counters, string[] Flags);
     private sealed record HostCheckpointDto(long Sequence, string Kind, string Message, string? ActorId, string? ContentId);
 }
