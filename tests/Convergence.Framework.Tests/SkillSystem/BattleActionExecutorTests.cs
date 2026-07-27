@@ -2,6 +2,7 @@ using Convergence.Content;
 using Convergence.Catalog;
 using Convergence.Battle;
 using Convergence.Execution;
+using Convergence.Knowledge;
 using Convergence.Runtime;
 using Xunit;
 
@@ -1240,8 +1241,12 @@ public sealed class BattleActionExecutorTests
 
         Assert.Equal([target.InstanceId], assessment.TargetIds);
         Assert.Equal(0, randomTargets.CallCount);
-        Assert.Equal(target.InstanceId, Assert.Single(result.Effects).TargetId);
-        Assert.Contains(AnalysisLayer.Affinities, actor.GetAnalysis(target.InstanceId));
+        EffectExecutionResult effect = Assert.Single(result.Effects);
+        Assert.Equal(target.InstanceId, effect.TargetId);
+        Assert.Equal(
+            [BattleAnalysisField.ElementalAffinities],
+            Assert.IsType<BattleAnalysisResult>(effect.Analysis).DisclosedFields);
+        Assert.Empty(actor.GetAnalysis(target.InstanceId));
     }
 
     [Fact]
@@ -1675,7 +1680,14 @@ public sealed class BattleActionExecutorTests
             actor,
             [actor]);
 
-        Assert.Contains(AnalysisLayer.Stats, actor.GetAnalysis(target.InstanceId));
+        Assert.Equal(
+            [
+                BattleAnalysisField.CurrentHp,
+                BattleAnalysisField.CurrentSp,
+                BattleAnalysisField.CoreStats
+            ],
+            Assert.IsType<BattleAnalysisResult>(Assert.Single(analyze.Effects).Analysis).DisclosedFields);
+        Assert.Empty(actor.GetAnalysis(target.InstanceId));
         Assert.True(escape.EscapeRequested);
         Assert.Equal(ActionTurnConsumptionKind.None, escape.TurnConsumption.Kind);
         Assert.Equal([Id("change_strategy")], host.HostActionRequestIds);

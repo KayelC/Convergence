@@ -24,7 +24,8 @@ internal abstract class TargetedEffectExecutor
         IReadOnlyList<ExecutionResourceChange>? resourceChanges = null,
         IReadOnlyList<StatModifierTransitionResult>? statModifierTransitions = null,
         IReadOnlyList<DamageHitExecutionEvidence>? damageHits = null,
-        IReadOnlyList<BattleStatusLifecycleEvent>? lifecycleEvents = null) =>
+        IReadOnlyList<BattleStatusLifecycleEvent>? lifecycleEvents = null,
+        BattleAnalysisResult? analysis = null) =>
         new EffectExecutionResult(
             context.EffectIndex, context.Target?.InstanceId, EffectExecutionOutcome.Success,
             turnEconomy, critical, value, relatedId, detail, escape, passiveActivations, resolvedAffinity,
@@ -33,7 +34,8 @@ internal abstract class TargetedEffectExecutor
             DamageHits: damageHits)
         {
             ResourceChanges = resourceChanges ?? [],
-            LifecycleEvents = AggregateLifecycleEvents(passiveActivations, lifecycleEvents)
+            LifecycleEvents = AggregateLifecycleEvents(passiveActivations, lifecycleEvents),
+            Analysis = analysis
         };
 
     protected static EffectExecutionResult Failure(
@@ -1025,8 +1027,13 @@ internal sealed class AnalyzeEffectExecutor : TargetedEffectExecutor, IEffectExe
     public EffectExecutionResult Execute(AnalyzeEffectDefinition definition, EffectExecutionContext context)
     {
         RuntimeActorState target = Target(context);
-        context.Actor.Reveal(target.InstanceId, definition.Layers);
-        return Success(context, detail: string.Join(",", definition.Layers));
+        BattleAnalysisResult analysis = context.Services.BattleAnalysis.Analyze(
+            new BattleAnalysisRequest(
+                context.Actor,
+                target,
+                definition.Layers,
+                context.Services.SpResourceId));
+        return Success(context, detail: string.Join(",", definition.Layers), analysis: analysis);
     }
 }
 

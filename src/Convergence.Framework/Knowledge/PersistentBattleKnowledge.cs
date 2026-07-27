@@ -17,7 +17,8 @@ public enum BattleKnowledgeTransitionDiagnosticCode
     InvalidEntityId,
     InvalidAilmentId,
     DuplicateCurrentEntry,
-    DuplicateDiscoveryEntry
+    DuplicateDiscoveryEntry,
+    DuplicateAnalyzedDefenseEntity
 }
 
 public sealed class BattleKnowledgeTransitionDiagnostic
@@ -103,6 +104,8 @@ public interface IPersistentBattleKnowledgeView
         ContentId entityId,
         InstantDeathChannel channel,
         out ResistanceLevel resistance);
+
+    bool IsDefenseProfileDisclosed(ContentId entityId, BattleAnalysisField field);
 }
 
 public sealed class PersistentBattleKnowledgeView : IPersistentBattleKnowledgeView
@@ -110,6 +113,7 @@ public sealed class PersistentBattleKnowledgeView : IPersistentBattleKnowledgeVi
     private readonly IReadOnlyDictionary<(ContentId EntityId, DamageElement Element), ElementalAffinity> _elemental;
     private readonly IReadOnlyDictionary<(ContentId EntityId, ContentId AilmentId), ResistanceLevel> _ailments;
     private readonly IReadOnlyDictionary<(ContentId EntityId, InstantDeathChannel Channel), ResistanceLevel> _instantDeath;
+    private readonly IReadOnlyDictionary<ContentId, IReadOnlySet<BattleAnalysisField>> _analyzedDefenses;
 
     public PersistentBattleKnowledgeView(RuntimeKnowledgeSnapshot snapshot)
     {
@@ -132,25 +136,73 @@ public sealed class PersistentBattleKnowledgeView : IPersistentBattleKnowledgeVi
         _instantDeath = ReadOnly(snapshot.InstantDeathResistances.ToDictionary(
             entry => (entry.EntityId, entry.Channel),
             entry => entry.Resistance));
+        _analyzedDefenses = new ReadOnlyDictionary<ContentId, IReadOnlySet<BattleAnalysisField>>(
+            snapshot.AnalyzedDefenses.ToDictionary(
+                entry => entry.EntityId,
+                entry => (IReadOnlySet<BattleAnalysisField>)new HashSet<BattleAnalysisField>(entry.DisclosedFields)));
     }
 
     public bool TryGetElementalAffinity(
         ContentId entityId,
         DamageElement element,
-        out ElementalAffinity affinity) =>
-        _elemental.TryGetValue((entityId, element), out affinity);
+        out ElementalAffinity affinity)
+    {
+        if (_elemental.TryGetValue((entityId, element), out affinity))
+        {
+            return true;
+        }
+
+        affinity = ElementalAffinity.Normal;
+        return IsDefenseProfileDisclosed(entityId, BattleAnalysisField.ElementalAffinities);
+    }
 
     public bool TryGetAilmentResistance(
         ContentId entityId,
         ContentId ailmentId,
-        out ResistanceLevel resistance) =>
-        _ailments.TryGetValue((entityId, ailmentId), out resistance);
+        out ResistanceLevel resistance)
+    {
+        if (_ailments.TryGetValue((entityId, ailmentId), out resistance))
+        {
+            return true;
+        }
+
+        resistance = ResistanceLevel.Normal;
+        return IsDefenseProfileDisclosed(entityId, BattleAnalysisField.AilmentResistances);
+    }
 
     public bool TryGetInstantDeathResistance(
         ContentId entityId,
         InstantDeathChannel channel,
-        out ResistanceLevel resistance) =>
-        _instantDeath.TryGetValue((entityId, channel), out resistance);
+        out ResistanceLevel resistance)
+    {
+        if (_instantDeath.TryGetValue((entityId, channel), out resistance))
+        {
+            return true;
+        }
+
+        resistance = ResistanceLevel.Normal;
+        return IsDefenseProfileDisclosed(entityId, BattleAnalysisField.InstantDeathResistances);
+    }
+
+    public bool IsDefenseProfileDisclosed(ContentId entityId, BattleAnalysisField field)
+    {
+        if (!entityId.IsValid)
+        {
+            throw new ArgumentException("Knowledge queries require a valid entity ID.", nameof(entityId));
+        }
+        if (!IsDefenseField(field))
+        {
+            throw new ArgumentOutOfRangeException(nameof(field), field, "The field is not persistent defense knowledge.");
+        }
+
+        return _analyzedDefenses.TryGetValue(entityId, out IReadOnlySet<BattleAnalysisField>? fields) &&
+               fields.Contains(field);
+    }
+
+    private static bool IsDefenseField(BattleAnalysisField field) => field is
+        BattleAnalysisField.ElementalAffinities or
+        BattleAnalysisField.AilmentResistances or
+        BattleAnalysisField.InstantDeathResistances;
 
     private static IReadOnlyDictionary<TKey, TValue> ReadOnly<TKey, TValue>(Dictionary<TKey, TValue> values)
         where TKey : notnull =>
@@ -193,6 +245,10 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
             request.Before.InstantDeathResistances.ToDictionary(
                 entry => (entry.EntityId, entry.Channel),
                 entry => entry.Resistance);
+        Dictionary<ContentId, HashSet<BattleAnalysisField>> analyzedDefenses =
+            request.Before.AnalyzedDefenses.ToDictionary(
+                entry => entry.EntityId,
+                entry => entry.DisclosedFields.ToHashSet());
 
         var appliedElemental = new List<RuntimeElementalAffinityKnowledgeSnapshot>();
         foreach (RuntimeElementalAffinityKnowledgeSnapshot discovery in request.Discoveries.ElementalAffinities)
@@ -232,13 +288,37 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
             }
         }
 
+        var appliedAnalyzedDefenses = new List<RuntimeAnalyzedDefenseKnowledgeSnapshot>();
+        foreach (RuntimeAnalyzedDefenseKnowledgeSnapshot discovery in request.Discoveries.AnalyzedDefenses)
+        {
+            if (!analyzedDefenses.TryGetValue(discovery.EntityId, out HashSet<BattleAnalysisField>? current))
+            {
+                current = [];
+                analyzedDefenses.Add(discovery.EntityId, current);
+            }
+
+            BattleAnalysisField[] newlyDisclosed = discovery.DisclosedFields
+                .Where(current.Add)
+                .Order()
+                .ToArray();
+            if (newlyDisclosed.Length > 0)
+            {
+                appliedAnalyzedDefenses.Add(
+                    new RuntimeAnalyzedDefenseKnowledgeSnapshot(discovery.EntityId, newlyDisclosed));
+            }
+        }
+
         var applied = new RuntimeKnowledgeSnapshot(
             appliedElemental,
             appliedAilments,
-            appliedInstantDeath);
-        bool changed = appliedElemental.Count > 0 || appliedAilments.Count > 0 || appliedInstantDeath.Count > 0;
+            appliedInstantDeath,
+            appliedAnalyzedDefenses);
+        bool changed = appliedElemental.Count > 0 ||
+                       appliedAilments.Count > 0 ||
+                       appliedInstantDeath.Count > 0 ||
+                       appliedAnalyzedDefenses.Count > 0;
         RuntimeKnowledgeSnapshot after = changed
-            ? Snapshot(elemental, ailments, instantDeath)
+            ? Snapshot(elemental, ailments, instantDeath, analyzedDefenses)
             : request.Before;
         return new BattleKnowledgeTransitionResult(
             changed ? BattleKnowledgeTransitionStatus.Applied : BattleKnowledgeTransitionStatus.Unchanged,
@@ -308,6 +388,24 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
                 yield return Duplicate(duplicateCode, path);
             }
         }
+
+        var analyzedDefenseEntities = new HashSet<ContentId>();
+        for (int index = 0; index < snapshot.AnalyzedDefenses.Count; index++)
+        {
+            RuntimeAnalyzedDefenseKnowledgeSnapshot entry = snapshot.AnalyzedDefenses[index];
+            string path = $"{root}.analyzedDefenses[{index}]";
+            if (!entry.EntityId.IsValid)
+            {
+                yield return InvalidEntity(path);
+            }
+            if (!analyzedDefenseEntities.Add(entry.EntityId))
+            {
+                yield return new BattleKnowledgeTransitionDiagnostic(
+                    BattleKnowledgeTransitionDiagnosticCode.DuplicateAnalyzedDefenseEntity,
+                    "Analyzed defense entries must have unique entity IDs.",
+                    path);
+            }
+        }
     }
 
     private static BattleKnowledgeTransitionDiagnostic InvalidEntity(string path) =>
@@ -324,7 +422,8 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
     private static RuntimeKnowledgeSnapshot Snapshot(
         IReadOnlyDictionary<(ContentId EntityId, DamageElement Element), ElementalAffinity> elemental,
         IReadOnlyDictionary<(ContentId EntityId, ContentId AilmentId), ResistanceLevel> ailments,
-        IReadOnlyDictionary<(ContentId EntityId, InstantDeathChannel Channel), ResistanceLevel> instantDeath) =>
+        IReadOnlyDictionary<(ContentId EntityId, InstantDeathChannel Channel), ResistanceLevel> instantDeath,
+        IReadOnlyDictionary<ContentId, HashSet<BattleAnalysisField>> analyzedDefenses) =>
         new(
             elemental.OrderBy(entry => entry.Key.EntityId.ToString(), StringComparer.Ordinal)
                 .ThenBy(entry => entry.Key.Element)
@@ -343,5 +442,9 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
                 .Select(entry => new RuntimeInstantDeathResistanceKnowledgeSnapshot(
                     entry.Key.EntityId,
                     entry.Key.Channel,
-                    entry.Value)));
+                    entry.Value)),
+            analyzedDefenses.OrderBy(entry => entry.Key.ToString(), StringComparer.Ordinal)
+                .Select(entry => new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+                    entry.Key,
+                    entry.Value.Order())));
 }

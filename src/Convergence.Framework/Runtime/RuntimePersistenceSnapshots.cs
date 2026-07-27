@@ -152,15 +152,61 @@ public sealed record RuntimeKnowledgeSnapshot
         IEnumerable<RuntimeElementalAffinityKnowledgeSnapshot>? elementalAffinities = null,
         IEnumerable<RuntimeAilmentResistanceKnowledgeSnapshot>? ailmentResistances = null,
         IEnumerable<RuntimeInstantDeathResistanceKnowledgeSnapshot>? instantDeathResistances = null)
+        : this(elementalAffinities, ailmentResistances, instantDeathResistances, analyzedDefenses: null)
+    {
+    }
+
+    public RuntimeKnowledgeSnapshot(
+        IEnumerable<RuntimeElementalAffinityKnowledgeSnapshot>? elementalAffinities,
+        IEnumerable<RuntimeAilmentResistanceKnowledgeSnapshot>? ailmentResistances,
+        IEnumerable<RuntimeInstantDeathResistanceKnowledgeSnapshot>? instantDeathResistances,
+        IEnumerable<RuntimeAnalyzedDefenseKnowledgeSnapshot>? analyzedDefenses)
     {
         ElementalAffinities = RuntimePersistenceCollections.List(elementalAffinities);
         AilmentResistances = RuntimePersistenceCollections.List(ailmentResistances);
         InstantDeathResistances = RuntimePersistenceCollections.List(instantDeathResistances);
+        AnalyzedDefenses = RuntimePersistenceCollections.List(analyzedDefenses);
     }
 
     public IReadOnlyList<RuntimeElementalAffinityKnowledgeSnapshot> ElementalAffinities { get; }
     public IReadOnlyList<RuntimeAilmentResistanceKnowledgeSnapshot> AilmentResistances { get; }
     public IReadOnlyList<RuntimeInstantDeathResistanceKnowledgeSnapshot> InstantDeathResistances { get; }
+    public IReadOnlyList<RuntimeAnalyzedDefenseKnowledgeSnapshot> AnalyzedDefenses { get; }
+}
+
+public sealed record RuntimeAnalyzedDefenseKnowledgeSnapshot
+{
+    public RuntimeAnalyzedDefenseKnowledgeSnapshot(
+        ContentId entityId,
+        IEnumerable<BattleAnalysisField> disclosedFields)
+    {
+        if (!entityId.IsValid)
+        {
+            throw new ArgumentException("Analyzed defense knowledge requires a valid entity ID.", nameof(entityId));
+        }
+
+        BattleAnalysisField[] fields = (disclosedFields ??
+            throw new ArgumentNullException(nameof(disclosedFields))).ToArray();
+        if (fields.Length == 0 ||
+            fields.Any(field => !IsDefenseField(field)) ||
+            fields.Distinct().Count() != fields.Length)
+        {
+            throw new ArgumentException(
+                "Analyzed defense knowledge requires unique defense disclosure fields.",
+                nameof(disclosedFields));
+        }
+
+        EntityId = entityId;
+        DisclosedFields = RuntimePersistenceCollections.List(fields.Order());
+    }
+
+    public ContentId EntityId { get; }
+    public IReadOnlyList<BattleAnalysisField> DisclosedFields { get; }
+
+    private static bool IsDefenseField(BattleAnalysisField field) => field is
+        BattleAnalysisField.ElementalAffinities or
+        BattleAnalysisField.AilmentResistances or
+        BattleAnalysisField.InstantDeathResistances;
 }
 
 public sealed record RuntimeElementalAffinityKnowledgeSnapshot(

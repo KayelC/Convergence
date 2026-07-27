@@ -3,6 +3,7 @@ using Convergence.Battle;
 using Convergence.Content;
 using Convergence.Catalog;
 using Convergence.Internal;
+using Convergence.Knowledge;
 using Convergence.Runtime;
 
 namespace Convergence.Execution;
@@ -547,6 +548,7 @@ public sealed class BattleExecutionServices
         GuardBlocksAilmentsApplicationGatePolicy.Instance;
     private IBattleAilmentTransitionPolicy _ailmentTransitions =
         StandardBattleAilmentTransitionPolicy.Instance;
+    private IBattleAnalysisService _battleAnalysis = new BattleAnalysisService();
 
     public BattleExecutionServices(
         IAilmentDefinitionRepository ailments,
@@ -636,6 +638,11 @@ public sealed class BattleExecutionServices
     public IPassiveTriggerDispatcher PassiveTriggers { get; }
     public ContentId OwnerWouldBeDefeatedEventId { get; }
     public IActionOutcomeAggregationPolicy ActionOutcomes { get; }
+    public IBattleAnalysisService BattleAnalysis
+    {
+        get => _battleAnalysis;
+        init => _battleAnalysis = value ?? throw new ArgumentNullException(nameof(value));
+    }
 
     internal TurnEconomyResolution ResolveActionOutcome(
         IReadOnlyList<EffectExecutionResult> effects,

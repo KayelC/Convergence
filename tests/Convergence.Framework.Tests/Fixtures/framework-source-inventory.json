@@ -508,6 +508,11 @@
       "publicSurface": "internal_only"
     },
     {
+      "path": "Knowledge/BattleAnalysis.cs",
+      "owner": "combat_knowledge",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Knowledge/CombatKnowledgeStores.cs",
       "owner": "combat_knowledge",
       "publicSurface": "exported"

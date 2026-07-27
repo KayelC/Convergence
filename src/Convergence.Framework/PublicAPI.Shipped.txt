@@ -11368,3 +11368,106 @@ Convergence.Knowledge.IBattleKnowledgeView.IsAnalysisDisclosed(Convergence.Runti
 Convergence.Knowledge.IEncounterBattleKnowledgeView.IsAnalysisDisclosed(Convergence.Runtime.RuntimeInstanceId targetInstanceId, Convergence.Content.ContentId targetEntityId, Convergence.Knowledge.BattleAnalysisField field) -> bool
 Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot.Analysis.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.EncounterAnalysisKnowledgeEntry!>!
 Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot.RuntimeEncounterKnowledgeSnapshot(System.Collections.Generic.IEnumerable<Convergence.Knowledge.EncounterElementalKnowledgeEntry!>? elemental = null, System.Collections.Generic.IEnumerable<Convergence.Knowledge.EncounterAilmentKnowledgeEntry!>? ailments = null, System.Collections.Generic.IEnumerable<Convergence.Knowledge.EncounterInstantDeathKnowledgeEntry!>? instantDeath = null, System.Collections.Generic.IEnumerable<Convergence.Knowledge.EncounterAnalysisKnowledgeEntry!>? analysis = null) -> void
+Convergence.Execution.BattleExecutionServices.BattleAnalysis.get -> Convergence.Knowledge.IBattleAnalysisService!
+Convergence.Execution.BattleExecutionServices.BattleAnalysis.init -> void
+Convergence.Execution.EffectExecutionResult.Analysis.get -> Convergence.Knowledge.BattleAnalysisResult?
+Convergence.Execution.EffectExecutionResult.Analysis.init -> void
+Convergence.Knowledge.BattleAnalysisDataSnapshot
+Convergence.Knowledge.BattleAnalysisDataSnapshot.AilmentResistances.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Content.ResistanceLevel>!
+Convergence.Knowledge.BattleAnalysisDataSnapshot.CoreStats.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
+Convergence.Knowledge.BattleAnalysisDataSnapshot.CurrentHp.get -> decimal?
+Convergence.Knowledge.BattleAnalysisDataSnapshot.CurrentSp.get -> decimal?
+Convergence.Knowledge.BattleAnalysisDataSnapshot.ElementalAffinities.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.DamageElement, Convergence.Content.ElementalAffinity>!
+Convergence.Knowledge.BattleAnalysisDataSnapshot.InstantDeathResistances.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.InstantDeathChannel, Convergence.Content.ResistanceLevel>!
+Convergence.Knowledge.BattleAnalysisDataSnapshot.SkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest
+Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest.BattleAnalysisDisclosurePolicyRequest(Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, Convergence.Content.ContentId targetEntityId, System.Collections.Generic.IEnumerable<Convergence.Knowledge.BattleAnalysisField>! requestedFields) -> void
+Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest.RequestedFields.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisField>!
+Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest.TargetEntityId.get -> Convergence.Content.ContentId
+Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest.TargetId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Knowledge.BattleAnalysisDisclosureStatus
+Convergence.Knowledge.BattleAnalysisDisclosureStatus.Disclosed = 0 -> Convergence.Knowledge.BattleAnalysisDisclosureStatus
+Convergence.Knowledge.BattleAnalysisDisclosureStatus.Unavailable = 2 -> Convergence.Knowledge.BattleAnalysisDisclosureStatus
+Convergence.Knowledge.BattleAnalysisDisclosureStatus.Unknown = 1 -> Convergence.Knowledge.BattleAnalysisDisclosureStatus
+Convergence.Knowledge.BattleAnalysisFieldDisclosure
+Convergence.Knowledge.BattleAnalysisFieldDisclosure.<Clone>$() -> Convergence.Knowledge.BattleAnalysisFieldDisclosure!
+Convergence.Knowledge.BattleAnalysisFieldDisclosure.BattleAnalysisFieldDisclosure(Convergence.Knowledge.BattleAnalysisField field, Convergence.Knowledge.BattleAnalysisDisclosureStatus status) -> void
+Convergence.Knowledge.BattleAnalysisFieldDisclosure.Equals(Convergence.Knowledge.BattleAnalysisFieldDisclosure? other) -> bool
+Convergence.Knowledge.BattleAnalysisFieldDisclosure.Field.get -> Convergence.Knowledge.BattleAnalysisField
+Convergence.Knowledge.BattleAnalysisFieldDisclosure.Status.get -> Convergence.Knowledge.BattleAnalysisDisclosureStatus
+Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic
+Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic.<Clone>$() -> Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic!
+Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic.BattleAnalysisKnowledgeDiagnostic(Convergence.Knowledge.BattleAnalysisKnowledgeDiagnosticCode code, string! message) -> void
+Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic.Code.get -> Convergence.Knowledge.BattleAnalysisKnowledgeDiagnosticCode
+Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic.Equals(Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic? other) -> bool
+Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic.Message.get -> string!
+Convergence.Knowledge.BattleAnalysisKnowledgeDiagnosticCode
+Convergence.Knowledge.BattleAnalysisKnowledgeDiagnosticCode.PersistentTransitionRejected = 1 -> Convergence.Knowledge.BattleAnalysisKnowledgeDiagnosticCode
+Convergence.Knowledge.BattleAnalysisKnowledgeDiagnosticCode.TargetIdentityConflict = 0 -> Convergence.Knowledge.BattleAnalysisKnowledgeDiagnosticCode
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult.Applied.get -> bool
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult.BattleAnalysisKnowledgeTransitionResult(Convergence.Knowledge.BattleKnowledgeTransitionStatus status, Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentBefore, Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentAfter, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterBefore, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterAfter, System.Collections.Generic.IEnumerable<Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic!>? diagnostics = null) -> void
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic!>!
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult.EncounterAfter.get -> Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult.EncounterBefore.get -> Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult.PersistentAfter.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult.PersistentBefore.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult.Status.get -> Convergence.Knowledge.BattleKnowledgeTransitionStatus
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionService
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionService.Apply(Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentBefore, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterBefore, Convergence.Knowledge.BattleAnalysisResult! analysis) -> Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult!
+Convergence.Knowledge.BattleAnalysisKnowledgeTransitionService.BattleAnalysisKnowledgeTransitionService(Convergence.Knowledge.IPersistentBattleKnowledgeTransitionService? persistentTransitions = null) -> void
+Convergence.Knowledge.BattleAnalysisRequest
+Convergence.Knowledge.BattleAnalysisRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
+Convergence.Knowledge.BattleAnalysisRequest.BattleAnalysisRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Execution.RuntimeActorState! target, System.Collections.Generic.IEnumerable<Convergence.Content.AnalysisLayer>! layers, Convergence.Content.ContentId spResourceId) -> void
+Convergence.Knowledge.BattleAnalysisRequest.Layers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.AnalysisLayer>!
+Convergence.Knowledge.BattleAnalysisRequest.SpResourceId.get -> Convergence.Content.ContentId
+Convergence.Knowledge.BattleAnalysisRequest.Target.get -> Convergence.Execution.RuntimeActorState!
+Convergence.Knowledge.BattleAnalysisResult
+Convergence.Knowledge.BattleAnalysisResult.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Knowledge.BattleAnalysisResult.Data.get -> Convergence.Knowledge.BattleAnalysisDataSnapshot!
+Convergence.Knowledge.BattleAnalysisResult.DisclosedFields.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisField>!
+Convergence.Knowledge.BattleAnalysisResult.Disclosures.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisFieldDisclosure!>!
+Convergence.Knowledge.BattleAnalysisResult.TargetEntityId.get -> Convergence.Content.ContentId
+Convergence.Knowledge.BattleAnalysisResult.TargetId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Knowledge.BattleAnalysisService
+Convergence.Knowledge.BattleAnalysisService.Analyze(Convergence.Knowledge.BattleAnalysisRequest! request) -> Convergence.Knowledge.BattleAnalysisResult!
+Convergence.Knowledge.BattleAnalysisService.BattleAnalysisService(Convergence.Knowledge.IBattleAnalysisDisclosurePolicy? policy = null) -> void
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.DuplicateAnalyzedDefenseEntity = 4 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
+Convergence.Knowledge.IBattleAnalysisDisclosurePolicy
+Convergence.Knowledge.IBattleAnalysisDisclosurePolicy.Resolve(Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest! request) -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisFieldDisclosure!>!
+Convergence.Knowledge.IBattleAnalysisKnowledgeTransitionService
+Convergence.Knowledge.IBattleAnalysisKnowledgeTransitionService.Apply(Convergence.Runtime.RuntimeKnowledgeSnapshot! persistentBefore, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot! encounterBefore, Convergence.Knowledge.BattleAnalysisResult! analysis) -> Convergence.Knowledge.BattleAnalysisKnowledgeTransitionResult!
+Convergence.Knowledge.IBattleAnalysisService
+Convergence.Knowledge.IBattleAnalysisService.Analyze(Convergence.Knowledge.BattleAnalysisRequest! request) -> Convergence.Knowledge.BattleAnalysisResult!
+Convergence.Knowledge.IPersistentBattleKnowledgeView.IsDefenseProfileDisclosed(Convergence.Content.ContentId entityId, Convergence.Knowledge.BattleAnalysisField field) -> bool
+Convergence.Knowledge.PersistentBattleKnowledgeView.IsDefenseProfileDisclosed(Convergence.Content.ContentId entityId, Convergence.Knowledge.BattleAnalysisField field) -> bool
+Convergence.Knowledge.RestrictedBattleAnalysisDisclosurePolicy
+Convergence.Knowledge.RestrictedBattleAnalysisDisclosurePolicy.Resolve(Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest! request) -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisFieldDisclosure!>!
+Convergence.Knowledge.RestrictedBattleAnalysisDisclosurePolicy.RestrictedBattleAnalysisDisclosurePolicy(System.Collections.Generic.IEnumerable<Convergence.Knowledge.BattleAnalysisField>? hiddenFields = null) -> void
+Convergence.Knowledge.StandardBattleAnalysisDisclosurePolicy
+Convergence.Knowledge.StandardBattleAnalysisDisclosurePolicy.Resolve(Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest! request) -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisFieldDisclosure!>!
+Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot
+Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot!
+Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.DisclosedFields.get -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisField>!
+Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.EntityId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.Equals(Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot? other) -> bool
+Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.RuntimeAnalyzedDefenseKnowledgeSnapshot(Convergence.Content.ContentId entityId, System.Collections.Generic.IEnumerable<Convergence.Knowledge.BattleAnalysisField>! disclosedFields) -> void
+Convergence.Runtime.RuntimeKnowledgeSnapshot.AnalyzedDefenses.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot!>!
+Convergence.Runtime.RuntimeKnowledgeSnapshot.RuntimeKnowledgeSnapshot(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeElementalAffinityKnowledgeSnapshot!>? elementalAffinities, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot!>? ailmentResistances, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeInstantDeathResistanceKnowledgeSnapshot!>? instantDeathResistances, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot!>? analyzedDefenses) -> void
+override Convergence.Knowledge.BattleAnalysisFieldDisclosure.Equals(object? obj) -> bool
+override Convergence.Knowledge.BattleAnalysisFieldDisclosure.GetHashCode() -> int
+override Convergence.Knowledge.BattleAnalysisFieldDisclosure.ToString() -> string!
+override Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic.Equals(object? obj) -> bool
+override Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic.GetHashCode() -> int
+override Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic.ToString() -> string!
+override Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.GetHashCode() -> int
+override Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.ToString() -> string!
+static Convergence.Knowledge.BattleAnalysisFieldDisclosure.operator !=(Convergence.Knowledge.BattleAnalysisFieldDisclosure? left, Convergence.Knowledge.BattleAnalysisFieldDisclosure? right) -> bool
+static Convergence.Knowledge.BattleAnalysisFieldDisclosure.operator ==(Convergence.Knowledge.BattleAnalysisFieldDisclosure? left, Convergence.Knowledge.BattleAnalysisFieldDisclosure? right) -> bool
+static Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic.operator !=(Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic? left, Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic? right) -> bool
+static Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic.operator ==(Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic? left, Convergence.Knowledge.BattleAnalysisKnowledgeDiagnostic? right) -> bool
+static Convergence.Knowledge.StandardBattleAnalysisDisclosurePolicy.Instance.get -> Convergence.Knowledge.StandardBattleAnalysisDisclosurePolicy!
+static Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.operator !=(Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot? left, Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot? right) -> bool
+static Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot.operator ==(Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot? left, Convergence.Runtime.RuntimeAnalyzedDefenseKnowledgeSnapshot? right) -> bool

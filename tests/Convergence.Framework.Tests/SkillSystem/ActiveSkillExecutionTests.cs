@@ -2527,8 +2527,17 @@ public sealed class ActiveSkillExecutionTests
             actor,
             [actor]));
 
-        Assert.Equal([AnalysisLayer.Stats, AnalysisLayer.Skills], actor.GetAnalysis(target.InstanceId).Order());
-        Assert.Equal(EffectExecutionOutcome.Success, analyze.Effects[0].Outcome);
+        EffectExecutionResult analyzeEffect = Assert.Single(analyze.Effects);
+        Assert.Equal(
+            [
+                BattleAnalysisField.CurrentHp,
+                BattleAnalysisField.CurrentSp,
+                BattleAnalysisField.CoreStats,
+                BattleAnalysisField.Skills
+            ],
+            Assert.IsType<BattleAnalysisResult>(analyzeEffect.Analysis).DisclosedFields);
+        Assert.Empty(actor.GetAnalysis(target.InstanceId));
+        Assert.Equal(EffectExecutionOutcome.Success, analyzeEffect.Outcome);
         Assert.True(escape.EscapeRequested);
         Assert.Equal(13, actor.GetRequiredResource(Sp).Current);
         Assert.Equal(0, custom.Effects[0].EffectIndex);

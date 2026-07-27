@@ -557,6 +557,8 @@ public sealed record EffectExecutionResult
         get => _knowledgeObservations;
         init => _knowledgeObservations = SnapshotReferences(value, nameof(KnowledgeObservations));
     }
+    /// <summary>Gets the typed Analyze disclosure produced by this effect, when applicable.</summary>
+    public BattleAnalysisResult? Analysis { get; init; }
 
     private static IReadOnlyList<T> SnapshotReferences<T>(
         IEnumerable<T>? values,

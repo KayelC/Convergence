@@ -1,6 +1,6 @@
 # Battle Knowledge Order 5 Source Review
 
-Status: implementation in progress; O5-R1 through O5-R3 implemented and reviewed
+Status: implementation in progress; O5-R1 through O5-R4 implemented and reviewed
 
 Date: 2026-07-27
 
@@ -233,7 +233,7 @@ diagnostics.
 | O5-R1 | `implemented_reviewed` | Add immutable aggregate knowledge views, transitions, diagnostics, and immediate identifier validation. |
 | O5-R2 | `implemented_reviewed` | Add typed observation evidence that distinguishes contact, authored base defense, effective defense, and temporary modification. |
 | O5-R3 | `implemented_reviewed` | Separate persistent entity knowledge from encounter analysis and define battle-end cleanup. |
-| O5-R4 | `pending` | Add policy-controlled Analyze disclosure, including typed restricted/unknown boss fields. |
+| O5-R4 | `implemented_reviewed` | Add policy-controlled Analyze disclosure, including typed restricted/unknown boss fields. |
 | O5-R5 | `pending` | Route automated AI through encounter-local aggregate read-only knowledge with optional explicit seeding. |
 | O5-R6 | `pending` | Route familiar acquisition and Compendium imports through the approved persistent knowledge policy. |
 | O5-R7 | `pending` | Update save validation, DemoHost integration, capability evidence, mechanics, developer, and technical documentation. |
@@ -284,3 +284,21 @@ conservative and cannot claim exact immunity. Duplicate observations are
 deduplicated with last-observation authority. The reviewed checkpoint passed
 1,517 Framework tests with zero skips and built nonincrementally with zero
 warnings.
+
+### O5-R4
+
+Analyze now returns a typed `BattleAnalysisResult` rather than mutating the
+actor-local legacy reveal dictionary. An injected disclosure policy decides each
+requested field independently. The standard policy discloses available data;
+the restricted policy returns typed `Unknown` fields without exposing values or
+changing either knowledge scope. A missing SP resource is reported separately
+as `Unavailable`, so a host never has to infer whether information was hidden.
+
+Disclosed HP, SP, core stats, and skills remain encounter-only. Disclosed
+elemental, ailment, and instant-defeat defenses are promoted as exact persistent
+entity knowledge, including an analyzed-profile marker that makes omitted
+authored entries resolve as known `Normal` rather than unknown. The checkpoint
+review caught and corrected a cross-fact identity path so prior elemental,
+ailment, instant-defeat, or analysis evidence for a runtime ID can all trigger a
+typed atomic conflict rejection. The reviewed checkpoint passed 1,526 Framework
+tests with zero skips and built nonincrementally with zero warnings.
