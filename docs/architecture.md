@@ -114,7 +114,7 @@ orchestration policy rather than a disguised economy implementation. See
 
 Navigation, dungeon traversal, Action Token, ailments/passives, party and rosters, economy, negotiation, fusion, Compendium, and persistence are independently composable. A developer does not need to register or instantiate a module that their game does not use.
 
-Runtime save contract v14 is a deliberately broad interoperability aggregate,
+Runtime save contract v15 is a deliberately broad interoperability aggregate,
 not the module activation mechanism. When a host chooses to use it, required
 but unused components are represented by neutral snapshots. The minimal party
 roster still identifies the session owner while its placement and ownership
@@ -129,7 +129,7 @@ The supported distribution is a Git checkout, submodule, subtree, or copied sour
 
 ## Pre-Release Contract Boundary
 
-The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `8` and runtime save contract version `14` are deliberate pre-release breaks with no compatibility aliases. Save v14 retains the actor, move-list, canonical-roster, stat-modifier, charge-policy, typed status-lifetime, and per-target passive activation state established by v13 while removing the obsolete actor-local Analyze store. Persistent knowledge remains in `RuntimeKnowledgeSnapshot`; current-target analysis remains in `RuntimeEncounterKnowledgeSnapshot` and is not part of an ordinary session save. Save validation rejects a retained passive target that is absent from the aggregate actor set, missing enabled/disabled state for an equipped passive, and multiple active ailments in one exclusivity group. Save validation and aggregate restoration must bind retained stat-modifier and charge policies explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
+The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `8` and runtime save contract version `15` are deliberate pre-release breaks with no compatibility aliases. Save v15 adds the immutable source actor, source entity, and revision of each actor's current combat profile to the complete v14 actor state. Persistent knowledge remains in `RuntimeKnowledgeSnapshot`; current-target analysis remains in `RuntimeEncounterKnowledgeSnapshot` and is not part of an ordinary session save. Save validation rejects missing or contradictory combat-profile source references, a retained passive target that is absent from the aggregate actor set, missing enabled/disabled state for an equipped passive, and multiple active ailments in one exclusivity group. Save validation and aggregate restoration must bind retained stat-modifier and charge policies explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
 
 Assembly version `0.1.0` is guarded by a checked-in textual API baseline. The
 [Public API Contract](public-api-contract.md) identifies the supported

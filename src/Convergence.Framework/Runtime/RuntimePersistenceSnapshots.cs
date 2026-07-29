@@ -93,7 +93,9 @@ public enum RuntimeSaveValidationCode
     MissingPassiveSkillState = 83,
     ConflictingActorAilmentExclusivityGroup = 84,
     DuplicateAnalyzedDefenseKnowledge = 85,
-    InvalidAnalyzedDefenseField = 86
+    InvalidAnalyzedDefenseField = 86,
+    CombatProfileSourceMissing = 87,
+    CombatProfileSourceEntityMismatch = 88
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -317,7 +319,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 14;
+    public const int CurrentContractVersion = 15;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -450,6 +452,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         }
 
         ValidatePartyReferences(snapshot.PartyRoster, actors, _rosterCapacityPolicy, diagnostics);
+        ValidateCombatProfileReferences(snapshot.Actors, actors, diagnostics);
         ValidatePassiveActivationReferences(snapshot.Actors, actors, diagnostics);
         ValidateInventory(snapshot.Inventory, catalog, diagnostics);
         ValidateEquipment(
@@ -469,6 +472,48 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         ValidateCheckpoints(snapshot.Checkpoints, actors, diagnostics);
 
         return new RuntimeSaveValidationResult(snapshot, diagnostics);
+    }
+
+    private static void ValidateCombatProfileReferences(
+        IReadOnlyList<RuntimeActorSnapshot> actorSnapshots,
+        IReadOnlyDictionary<RuntimeInstanceId, RuntimeActorSnapshot> actors,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        for (int index = 0; index < actorSnapshots.Count; index++)
+        {
+            RuntimeActorSnapshot actor = actorSnapshots[index];
+            RuntimeCombatProfileIdentitySnapshot profile = actor.CombatProfileIdentity;
+            string root = $"$.actors[{index}].combatProfileIdentity";
+            if (!profile.SourceActorInstanceId.IsValid ||
+                !profile.SourceEntityDefinitionId.IsValid)
+            {
+                continue;
+            }
+
+            if (!actors.TryGetValue(profile.SourceActorInstanceId, out RuntimeActorSnapshot? source))
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.CombatProfileSourceMissing,
+                    $"Combat-profile source actor '{profile.SourceActorInstanceId}' is not " +
+                    "present in actors.",
+                    actor.Identity.InstanceId,
+                    profile.SourceEntityDefinitionId,
+                    root + ".sourceActorInstanceId"));
+                continue;
+            }
+
+            if (source.Identity.EntityDefinitionId != profile.SourceEntityDefinitionId)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.CombatProfileSourceEntityMismatch,
+                    $"Combat-profile source actor '{profile.SourceActorInstanceId}' is entity " +
+                    $"'{source.Identity.EntityDefinitionId}', not " +
+                    $"'{profile.SourceEntityDefinitionId}'.",
+                    actor.Identity.InstanceId,
+                    profile.SourceEntityDefinitionId,
+                    root + ".sourceEntityDefinitionId"));
+            }
+        }
     }
 
     private static void ValidatePassiveActivationReferences(

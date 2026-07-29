@@ -18,7 +18,7 @@ The source-based
 confirmed the composition, skill-choice, stage, and original save-v8
 transaction design. Subsequent corrections advanced actor restoration through
 save v9, later lifecycle work advanced it through v13, and Battle Knowledge
-authority cleanup advances the current contract to save v14.
+authority cleanup established save v14; combat-profile identity advances the current contract to save v15.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives

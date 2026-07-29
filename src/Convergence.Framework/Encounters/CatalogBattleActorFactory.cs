@@ -156,6 +156,7 @@ public enum CatalogBattleActorDiagnosticCode
     SnapshotMoveListCapacityRejected,
     SnapshotPendingSkillUnlockMismatch,
     SnapshotPendingSkillLevelUnavailable,
+    SnapshotCombatProfileIdentityMismatch,
 }
 
 public sealed record CatalogBattleActorDiagnostic(
@@ -722,6 +723,22 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                             entityId)));
                     return new CatalogBattleActorCreationResult(null, diagnostics);
                 }
+
+                RuntimeCombatProfileIdentitySnapshot savedProfileIdentity =
+                    snapshot.CombatProfileIdentity;
+                if (composition.SourceActorId != savedProfileIdentity.SourceActorInstanceId ||
+                    composition.SourceEntityId != savedProfileIdentity.SourceEntityDefinitionId)
+                {
+                    diagnostics.Add(new CatalogBattleActorDiagnostic(
+                        CatalogBattleActorDiagnosticCode.SnapshotCombatProfileIdentityMismatch,
+                        $"Saved combat profile '{savedProfileIdentity.SourceActorInstanceId}/" +
+                        $"{savedProfileIdentity.SourceEntityDefinitionId}' does not match resolved " +
+                        $"source '{composition.SourceActorId}/{composition.SourceEntityId}'.",
+                        entityId));
+                    return new CatalogBattleActorCreationResult(null, diagnostics);
+                }
+
+                state.RestoreCombatProfileIdentity(savedProfileIdentity);
             }
 
             return new CatalogBattleActorCreationResult(

@@ -293,6 +293,7 @@ public sealed class RuntimeActorGrowthCompositionTests
 
     private static void AssertActorStateEqual(RuntimeActorSnapshot expected, RuntimeActorSnapshot actual)
     {
+        Assert.Equal(expected.CombatProfileIdentity, actual.CombatProfileIdentity);
         Assert.Equal(expected.Progression, actual.Progression);
         Assert.Equal(expected.Resources.ToArray(), actual.Resources.ToArray());
         Assert.Equal(expected.BaseResourceValues.OrderBy(pair => pair.Key.ToString()).ToArray(),

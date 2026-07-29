@@ -74,7 +74,9 @@ public sealed class CatalogBattleRuntimeTests
             new RuntimeSkillStateSnapshot(
                 [first.Id, second.Id],
                 [second.Id]),
-            [second]);
+            [second],
+            actor.State.InstanceId,
+            actor.State.EntityId);
 
         Assert.Equal([second.Id], actor.SkillLoadout.Select(skill => skill.Id));
         Assert.Equal([second.Id], actor.ActiveSkills.Select(skill => skill.Id));
@@ -562,7 +564,11 @@ public sealed class CatalogBattleRuntimeTests
             "saved_vessel",
             vesselEntity,
             CoreStats(5m),
-            effectiveStats: CoreStats(999m));
+            effectiveStats: CoreStats(999m),
+            combatProfileIdentity: new RuntimeCombatProfileIdentitySnapshot(
+                hostedSnapshot.Identity.InstanceId,
+                hostedSnapshot.Identity.EntityDefinitionId,
+                revision: 4));
         RuntimePartyRosterSnapshot partyRoster = PartyRoster(vesselSnapshot, hostedReference);
 
         CatalogBattleActorCreationResult vesselRestore = factory.Restore(
@@ -2606,7 +2612,8 @@ public sealed class CatalogBattleRuntimeTests
         string instanceId,
         EntityDefinition entity,
         IReadOnlyDictionary<ContentId, decimal> baseStats,
-        IReadOnlyDictionary<ContentId, decimal>? effectiveStats = null) =>
+        IReadOnlyDictionary<ContentId, decimal>? effectiveStats = null,
+        RuntimeCombatProfileIdentitySnapshot? combatProfileIdentity = null) =>
         new(
             new RuntimeActorIdentitySnapshot(
                 RuntimeInstanceId.Parse(instanceId),
@@ -2629,7 +2636,8 @@ public sealed class CatalogBattleRuntimeTests
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Hp, 20m),
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Sp, 6m)
             ],
-            StandardProgressionIds.Hp);
+            StandardProgressionIds.Hp,
+            combatProfileIdentity: combatProfileIdentity);
 
     private static RuntimeActorSnapshot WithPendingSkill(
         RuntimeActorSnapshot source,
@@ -2656,7 +2664,8 @@ public sealed class CatalogBattleRuntimeTests
             source.BattleActivations,
             source.BaseResourceValues,
             source.VitalResourceId,
-            source.CapabilityIds);
+            source.CapabilityIds,
+            source.CombatProfileIdentity);
 
     private static RuntimePartyRosterSnapshot PartyRoster(
         RuntimeActorSnapshot owner,

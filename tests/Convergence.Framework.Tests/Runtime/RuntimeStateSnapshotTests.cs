@@ -142,6 +142,12 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal(Id("vessel"), roundTrip.Identity.ActorKindId);
         Assert.Equal("Hero", roundTrip.Identity.DisplayName);
         Assert.Equal("Training Team", roundTrip.Identity.DisplaySubtitle);
+        Assert.Equal(
+            new RuntimeCombatProfileIdentitySnapshot(
+                RuntimeInstanceId.Parse("actor:hero_0001"),
+                Id("convergence.demo:hero"),
+                revision: 7),
+            roundTrip.CombatProfileIdentity);
         Assert.Equal(Id("player"), roundTrip.Affiliation.CommandAuthorityId);
         Assert.Equal(Id("party"), roundTrip.Affiliation.TeamId);
         Assert.True(roundTrip.EncounterPresence.IsDeployed);
@@ -566,7 +572,11 @@ public sealed class RuntimeStateSnapshotTests
                 [new RuntimePassiveSkillStateSnapshot(Id("last_stand"), IsEnabled: false)]),
             [new KeyValuePair<ContentId, decimal>(Id("hp"), 120)],
             Id("hp"),
-            capabilityIds ?? [Id("analyze"), Id("swap_hosted_entity")]);
+            capabilityIds ?? [Id("analyze"), Id("swap_hosted_entity")],
+            new RuntimeCombatProfileIdentitySnapshot(
+                RuntimeInstanceId.Parse("actor:hero_0001"),
+                Id("convergence.demo:hero"),
+                revision: 7));
     }
 
     private static RuntimeActorState Restore(RuntimeActorSnapshot snapshot) =>

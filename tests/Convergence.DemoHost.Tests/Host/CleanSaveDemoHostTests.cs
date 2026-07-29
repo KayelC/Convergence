@@ -26,6 +26,9 @@ public sealed class CleanSaveDemoHostTests
         Assert.Equal(snapshot.ContractVersion, restored.ContractVersion);
         Assert.Equal(snapshot.FrameworkVersion, restored.FrameworkVersion);
         Assert.Equal(snapshot.Actors.Select(actor => actor.Identity.InstanceId), restored.Actors.Select(actor => actor.Identity.InstanceId));
+        Assert.Equal(
+            snapshot.Actors.Select(actor => actor.CombatProfileIdentity),
+            restored.Actors.Select(actor => actor.CombatProfileIdentity));
         Assert.Equal(snapshot.Actors[0].CapabilityIds, restored.Actors[0].CapabilityIds);
         Assert.Equal(
             snapshot.Actors[0].BattleActivations.PassiveSkillStates,
@@ -303,6 +306,29 @@ public sealed class CleanSaveDemoHostTests
     public void CleanSaveJsonCodec_RejectsMalformedHostOwnedJson()
     {
         Assert.Throws<JsonException>(() => CleanSaveJsonCodec.Deserialize("{"));
+    }
+
+    [Fact]
+    public void CleanSaveJsonCodec_RejectsPreProfileIdentitySaveBeforeActorDecoding()
+    {
+        JsonObject root = JsonNode.Parse(CleanSaveJsonCodec.Serialize(
+            CleanSaveTestFixture.CreateSaveSnapshot()))?.AsObject()
+            ?? throw new InvalidOperationException("Expected a host save JSON object.");
+        root["ContractVersion"] = RuntimeSaveGameSnapshot.CurrentContractVersion - 1;
+        JsonObject actor = root["Actors"]?.AsArray()[0]?.AsObject()
+            ?? throw new InvalidOperationException("Expected an actor record.");
+        actor.Remove("CombatProfileSourceActorInstanceId");
+        actor.Remove("CombatProfileSourceEntityDefinitionId");
+        actor.Remove("CombatProfileRevision");
+
+        InvalidDataException exception = Assert.Throws<InvalidDataException>(() =>
+            CleanSaveJsonCodec.Deserialize(root.ToJsonString()));
+
+        Assert.Contains("unsupported", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            RuntimeSaveGameSnapshot.CurrentContractVersion.ToString(),
+            exception.Message,
+            StringComparison.Ordinal);
     }
 
     [Fact]

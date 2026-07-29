@@ -8,7 +8,7 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 
 ## Save Contents
 
-The current runtime save contract is version `14`.
+The current runtime save contract is version `15`.
 
 `RuntimeSaveGameSnapshot` contains:
 

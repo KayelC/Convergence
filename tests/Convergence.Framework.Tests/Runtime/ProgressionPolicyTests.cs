@@ -351,6 +351,9 @@ public sealed class ProgressionPolicyTests
             hpCurrent: 90m,
             skills: [vesselSkill],
             equipment: equipment);
+        RuntimeCombatProfileIdentitySnapshot originalProfile = vessel.CombatProfileIdentity;
+        Assert.Equal(vessel.InstanceId, originalProfile.SourceActorInstanceId);
+        Assert.Equal(vessel.EntityId, originalProfile.SourceEntityDefinitionId);
         vessel.SetGuarding(true);
         ContentId focusStatus = ContentId.Parse("focus_status");
         vessel.AddOtherStatus(focusStatus);
@@ -368,6 +371,13 @@ public sealed class ProgressionPolicyTests
 
         Assert.True(first.Applied);
         Assert.Equal(firstHostedEntity.InstanceId, first.SourceActorId);
+        Assert.Equal(firstHostedEntity.EntityId, first.SourceEntityId);
+        Assert.Equal(
+            new RuntimeCombatProfileIdentitySnapshot(
+                firstHostedEntity.InstanceId,
+                firstHostedEntity.EntityId,
+                originalProfile.Revision + 1),
+            vessel.CombatProfileIdentity);
         Assert.Equal(20m, vessel.Stats[StandardProgressionIds.Strength]);
         Assert.Equal(ElementalAffinity.Weak, vessel.GetElementalAffinity(DamageElement.Ice));
         Assert.Equal(
@@ -403,6 +413,13 @@ public sealed class ProgressionPolicyTests
 
         Assert.True(second.Applied);
         Assert.Equal(secondHostedEntity.InstanceId, second.SourceActorId);
+        Assert.Equal(secondHostedEntity.EntityId, second.SourceEntityId);
+        Assert.Equal(
+            new RuntimeCombatProfileIdentitySnapshot(
+                secondHostedEntity.InstanceId,
+                secondHostedEntity.EntityId,
+                originalProfile.Revision + 2),
+            vessel.CombatProfileIdentity);
         Assert.Equal(30m, vessel.Stats[StandardProgressionIds.Strength]);
         Assert.Equal(ElementalAffinity.Null, vessel.GetElementalAffinity(DamageElement.Fire));
         Assert.Equal([fireSkill.Id], vessel.Skills.EquippedSkillIds);
@@ -448,6 +465,35 @@ public sealed class ProgressionPolicyTests
             diagnostic.Code);
         Assert.Equal(missing.Id, diagnostic.SkillId);
         Assert.Same(defenseBefore, vessel.DefenseProfile);
+        AssertCompositionStateUnchanged(before, vessel.ToSnapshot());
+    }
+
+    [Fact]
+    public void ActorCombatProfileComposition_RevisionOverflowRejectsAtomically()
+    {
+        RuntimeActorState hostedEntity = CreateActor("revision_hosted", 20m);
+        RuntimeActorState vessel = CreateActor(
+            "revision_vessel",
+            5m,
+            combatProfileIdentity: new RuntimeCombatProfileIdentitySnapshot(
+                RuntimeInstanceId.Parse("revision_vessel"),
+                ContentId.Parse("revision_vessel_entity"),
+                long.MaxValue));
+        RuntimeActorSnapshot before = vessel.ToSnapshot();
+
+        RuntimeActorCombatProfileCompositionResult result =
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository()).Compose(
+                new RuntimeActorCombatProfileCompositionRequest(
+                    vessel,
+                    RuntimeStatSourceKind.ActiveHostedEntity,
+                    MissingHostedEntityBehavior.RejectStatResolution,
+                    PartyRoster(vessel, hostedEntity),
+                    [hostedEntity]));
+
+        Assert.False(result.Applied);
+        Assert.Equal(
+            RuntimeActorCombatProfileCompositionDiagnosticCode.CommitFailed,
+            Assert.Single(result.Diagnostics).Code);
         AssertCompositionStateUnchanged(before, vessel.ToSnapshot());
     }
 
@@ -814,7 +860,8 @@ public sealed class ProgressionPolicyTests
         string? entityId = null,
         CombatDefenseProfile? defenseProfile = null,
         IEnumerable<SkillDefinition>? skills = null,
-        RuntimeEquipmentSnapshot? equipment = null)
+        RuntimeEquipmentSnapshot? equipment = null,
+        RuntimeCombatProfileIdentitySnapshot? combatProfileIdentity = null)
     {
         ContentId resolvedEntityId = ContentId.Parse(entityId ?? $"{id}_entity");
         SkillDefinition[] skillDefinitions = (skills ?? []).ToArray();
@@ -848,7 +895,8 @@ public sealed class ProgressionPolicyTests
             skillState: new RuntimeSkillStateSnapshot(
                 skillDefinitions.Select(skill => skill.Id),
                 skillDefinitions.Select(skill => skill.Id)),
-            equipment: equipment);
+            equipment: equipment,
+            combatProfileIdentity: combatProfileIdentity);
     }
 
     private static RuntimePartyRosterSnapshot PartyRoster(
@@ -882,6 +930,7 @@ public sealed class ProgressionPolicyTests
         Assert.Equal(expected.Affiliation, actual.Affiliation);
         Assert.Equal(expected.EncounterPresence, actual.EncounterPresence);
         Assert.Equal(expected.Progression, actual.Progression);
+        Assert.Equal(expected.CombatProfileIdentity, actual.CombatProfileIdentity);
         Assert.Equal(expected.VitalResourceId, actual.VitalResourceId);
         Assert.Equal(expected.Resources.ToArray(), actual.Resources.ToArray());
         Assert.Equal(

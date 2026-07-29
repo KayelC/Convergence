@@ -115,6 +115,39 @@ public sealed record RuntimeActorIdentitySnapshot
 }
 
 /// <summary>
+/// Identifies the authored entity profile currently supplying an actor's combat-facing
+/// stats, defenses, skills, and passives.
+/// </summary>
+public sealed record RuntimeCombatProfileIdentitySnapshot
+{
+    public RuntimeCombatProfileIdentitySnapshot(
+        RuntimeInstanceId sourceActorInstanceId,
+        ContentId sourceEntityDefinitionId,
+        long revision = 0)
+    {
+        if (revision < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(revision),
+                "Combat-profile revision cannot be negative.");
+        }
+
+        SourceActorInstanceId = sourceActorInstanceId;
+        SourceEntityDefinitionId = sourceEntityDefinitionId;
+        Revision = revision;
+    }
+
+    public RuntimeInstanceId SourceActorInstanceId { get; }
+    public ContentId SourceEntityDefinitionId { get; }
+    public long Revision { get; }
+
+    internal RuntimeCombatProfileIdentitySnapshot Advance(
+        RuntimeInstanceId sourceActorInstanceId,
+        ContentId sourceEntityDefinitionId) =>
+        new(sourceActorInstanceId, sourceEntityDefinitionId, checked(Revision + 1));
+}
+
+/// <summary>
 /// Identifies who may issue commands for an actor and which battle team the actor belongs to.
 /// </summary>
 /// <param name="CommandAuthorityId">
@@ -501,7 +534,8 @@ public sealed record RuntimeActorSnapshot
         RuntimeBattleActivationSnapshot battleActivations,
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues,
         ContentId vitalResourceId,
-        IEnumerable<ContentId>? capabilityIds = null)
+        IEnumerable<ContentId>? capabilityIds = null,
+        RuntimeCombatProfileIdentitySnapshot? combatProfileIdentity = null)
     {
         Identity = identity ?? throw new ArgumentNullException(nameof(identity));
         Affiliation = affiliation ?? throw new ArgumentNullException(nameof(affiliation));
@@ -515,6 +549,10 @@ public sealed record RuntimeActorSnapshot
         BattleStatus = battleStatus ?? throw new ArgumentNullException(nameof(battleStatus));
         BattleActivations = battleActivations ?? throw new ArgumentNullException(nameof(battleActivations));
         CapabilityIds = RuntimeSnapshotCollections.List(capabilityIds);
+        CombatProfileIdentity = combatProfileIdentity ??
+            new RuntimeCombatProfileIdentitySnapshot(
+                Identity.InstanceId,
+                Identity.EntityDefinitionId);
         VitalResourceId = vitalResourceId;
         if (!Resources.Any(resource => resource.ResourceId == vitalResourceId))
         {
@@ -534,6 +572,7 @@ public sealed record RuntimeActorSnapshot
     public RuntimeBattleStatusSnapshot BattleStatus { get; }
     public RuntimeBattleActivationSnapshot BattleActivations { get; }
     public IReadOnlyList<ContentId> CapabilityIds { get; }
+    public RuntimeCombatProfileIdentitySnapshot CombatProfileIdentity { get; }
     public ContentId VitalResourceId { get; }
 
     public RuntimeActorSnapshot WithResources(IEnumerable<RuntimeResourceSnapshot> resources) =>
@@ -550,7 +589,8 @@ public sealed record RuntimeActorSnapshot
             BattleActivations,
             BaseResourceValues,
             VitalResourceId,
-            CapabilityIds);
+            CapabilityIds,
+            CombatProfileIdentity);
 
     public RuntimeActorSnapshot WithProgression(
         RuntimeProgressionSnapshot progression,
@@ -570,7 +610,8 @@ public sealed record RuntimeActorSnapshot
             BattleActivations,
             baseResourceValues ?? BaseResourceValues,
             VitalResourceId,
-            CapabilityIds);
+            CapabilityIds,
+            CombatProfileIdentity);
 }
 
 public sealed record RuntimeMutationDiagnostic(

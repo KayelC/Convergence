@@ -177,7 +177,11 @@ public sealed class RuntimePersistenceSnapshotTests
                     new RuntimePassiveSkillStateSnapshot(
                         iceBoost,
                         IsEnabled: false)
-                ]));
+                ]),
+            combatProfileIdentity: new RuntimeCombatProfileIdentitySnapshot(
+                savedEmber.Identity.InstanceId,
+                savedEmber.Identity.EntityDefinitionId,
+                revision: 9));
         RuntimeSaveGameSnapshot snapshot = Copy(baseline, actors: [vessel, ember]);
         var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
             catalog,
@@ -221,6 +225,7 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Single(restoredHostedEntity.State.Skills.PendingChoices);
         Assert.Equal(7, restoredVessel.State.Skills.Revision);
         Assert.Empty(restoredVessel.State.Skills.PendingChoices);
+        Assert.Equal(vessel.CombatProfileIdentity, restoredVessel.State.CombatProfileIdentity);
         Assert.False(Assert.Single(
             restoredVessel.State.ToSnapshot()
                 .BattleActivations.PassiveSkillStates).IsEnabled);
@@ -241,11 +246,53 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Equal(
             restoredHostedEntity.State.Skills.Revision,
             normalizedHostedEntity.Skills.Revision);
+        Assert.Equal(vessel.CombatProfileIdentity, normalizedVessel.CombatProfileIdentity);
         Assert.Throws<NotSupportedException>(() =>
             ((IList<CatalogBattleActor>)session.Actors).Add(session.Actors[0]));
         Assert.Throws<NotSupportedException>(() =>
             ((IDictionary<RuntimeInstanceId, CatalogBattleActor>)session.ActorsByInstanceId)
             .Add(RuntimeInstanceId.Parse("late_actor"), session.Actors[0]));
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_RejectsMissingAndMismatchedCombatProfileSources()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot frost = baseline.Actors[0];
+        RuntimeActorSnapshot ember = baseline.Actors[1];
+        RuntimeActorSnapshot missing = CopyActor(
+            frost,
+            combatProfileIdentity: new RuntimeCombatProfileIdentitySnapshot(
+                RuntimeInstanceId.Parse("missing_profile_source"),
+                ember.Identity.EntityDefinitionId,
+                revision: 1));
+
+        RuntimeSaveValidationResult missingResult = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [missing, ember]),
+            catalog);
+
+        Assert.Contains(
+            missingResult.Diagnostics,
+            diagnostic =>
+                diagnostic.Code == RuntimeSaveValidationCode.CombatProfileSourceMissing &&
+                diagnostic.Path == "$.actors[0].combatProfileIdentity.sourceActorInstanceId");
+
+        RuntimeActorSnapshot mismatched = CopyActor(
+            frost,
+            combatProfileIdentity: new RuntimeCombatProfileIdentitySnapshot(
+                ember.Identity.InstanceId,
+                frost.Identity.EntityDefinitionId,
+                revision: 1));
+        RuntimeSaveValidationResult mismatchResult = new RuntimeSaveValidator().Validate(
+            Copy(baseline, actors: [mismatched, ember]),
+            catalog);
+
+        Assert.Contains(
+            mismatchResult.Diagnostics,
+            diagnostic =>
+                diagnostic.Code == RuntimeSaveValidationCode.CombatProfileSourceEntityMismatch &&
+                diagnostic.Path == "$.actors[0].combatProfileIdentity.sourceEntityDefinitionId");
     }
 
     [Fact]
@@ -2815,7 +2862,8 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeBattleStatusSnapshot? battleStatus = null,
         RuntimeBattleActivationSnapshot? battleActivations = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null,
-        IEnumerable<ContentId>? capabilityIds = null) =>
+        IEnumerable<ContentId>? capabilityIds = null,
+        RuntimeCombatProfileIdentitySnapshot? combatProfileIdentity = null) =>
         new(
             identity ?? snapshot.Identity,
             snapshot.Affiliation,
@@ -2829,7 +2877,8 @@ public sealed class RuntimePersistenceSnapshotTests
             battleActivations ?? snapshot.BattleActivations,
             baseResourceValues ?? snapshot.BaseResourceValues,
             snapshot.VitalResourceId,
-            capabilityIds ?? snapshot.CapabilityIds);
+            capabilityIds ?? snapshot.CapabilityIds,
+            combatProfileIdentity ?? snapshot.CombatProfileIdentity);
 
     private static RuntimeActorSnapshot WithRegeneratePassive(
         RuntimeActorSnapshot actor,

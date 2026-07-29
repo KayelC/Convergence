@@ -349,6 +349,14 @@ internal static class RuntimeActorSnapshotIntegrity
         ValidateRuntimeInstanceId(snapshot.Identity.InstanceId, "$.identity.instanceId", diagnostics);
         ValidateContentId(snapshot.Identity.EntityDefinitionId, "$.identity.entityDefinitionId", diagnostics);
         ValidateContentId(snapshot.Identity.ActorKindId, "$.identity.actorKindId", diagnostics);
+        ValidateRuntimeInstanceId(
+            snapshot.CombatProfileIdentity.SourceActorInstanceId,
+            "$.combatProfileIdentity.sourceActorInstanceId",
+            diagnostics);
+        ValidateContentId(
+            snapshot.CombatProfileIdentity.SourceEntityDefinitionId,
+            "$.combatProfileIdentity.sourceEntityDefinitionId",
+            diagnostics);
         ValidateContentId(
             snapshot.Affiliation.CommandAuthorityId,
             "$.affiliation.commandAuthorityId",

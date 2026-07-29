@@ -201,7 +201,8 @@ public sealed class RuntimeActorState
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseResourceValues = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? baseStats = null,
         RuntimeSkillStateSnapshot? skillState = null,
-        RuntimeEquipmentSnapshot? equipment = null)
+        RuntimeEquipmentSnapshot? equipment = null,
+        RuntimeCombatProfileIdentitySnapshot? combatProfileIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(defenseProfile);
         ArgumentNullException.ThrowIfNull(resources);
@@ -258,6 +259,14 @@ public sealed class RuntimeActorState
         RequireValid(_skillIds, nameof(skillIds));
         RequireValid(_capabilityIds, nameof(capabilityIds));
         Equipment = equipment ?? new RuntimeEquipmentSnapshot();
+        CombatProfileIdentity = combatProfileIdentity ??
+            new RuntimeCombatProfileIdentitySnapshot(InstanceId, EntityId);
+        RequireValid(
+            CombatProfileIdentity.SourceActorInstanceId,
+            nameof(combatProfileIdentity));
+        RequireValid(
+            CombatProfileIdentity.SourceEntityDefinitionId,
+            nameof(combatProfileIdentity));
         RequireValid(Skills.LearnedSkillIds, nameof(skillState));
         RequireValid(Skills.EquippedSkillIds, nameof(skillState));
         if (Skills.LearnedSkillIds.Distinct().Count() != Skills.LearnedSkillIds.Count ||
@@ -331,7 +340,8 @@ public sealed class RuntimeActorState
             snapshot.BaseResourceValues,
             snapshot.Stats.BaseStats,
             snapshot.Skills,
-            snapshot.Equipment);
+            snapshot.Equipment,
+            snapshot.CombatProfileIdentity);
         state.RestoreBattleStatus(
             snapshot.BattleStatus,
             ailmentDefinitions.ToDictionary(ailment => ailment.Id),
@@ -350,6 +360,7 @@ public sealed class RuntimeActorState
     public RuntimeProgressionSnapshot Progression { get; private set; }
     public RuntimeSkillStateSnapshot Skills { get; private set; }
     public RuntimeEquipmentSnapshot Equipment { get; private set; }
+    public RuntimeCombatProfileIdentitySnapshot CombatProfileIdentity { get; private set; }
     public ContentId VitalResourceId { get; }
     public CombatDefenseProfile DefenseProfile { get; private set; }
     public BattlePassiveCollection Passives { get; }
@@ -1016,7 +1027,8 @@ public sealed class RuntimeActorState
                 Passives.CaptureStates()),
             _baseResourceValues,
             VitalResourceId,
-            _capabilityIds.OrderBy(id => id.ToString(), StringComparer.Ordinal));
+            _capabilityIds.OrderBy(id => id.ToString(), StringComparer.Ordinal),
+            CombatProfileIdentity);
 
     internal RuntimeActorState CreateExecutionClone()
     {
@@ -1038,7 +1050,8 @@ public sealed class RuntimeActorState
             _baseResourceValues,
             _baseStats,
             Skills,
-            Equipment);
+            Equipment,
+            CombatProfileIdentity);
         clone.ApplyExecutionStateFrom(this);
         return clone;
     }
@@ -1102,6 +1115,7 @@ public sealed class RuntimeActorState
         Progression = source.Progression;
         Skills = source.Skills;
         Equipment = source.Equipment;
+        CombatProfileIdentity = source.CombatProfileIdentity;
         DefenseProfile = source.DefenseProfile;
         IsGuarding = source.IsGuarding;
         Passives.ReplaceFrom(source.Passives);
@@ -1135,7 +1149,9 @@ public sealed class RuntimeActorState
         IEnumerable<RuntimeResourceSnapshot> resources,
         CombatDefenseProfile defenseProfile,
         RuntimeSkillStateSnapshot skills,
-        IEnumerable<SkillDefinition> equippedSkillDefinitions)
+        IEnumerable<SkillDefinition> equippedSkillDefinitions,
+        RuntimeInstanceId sourceActorInstanceId,
+        ContentId sourceEntityDefinitionId)
     {
         ArgumentNullException.ThrowIfNull(defenseProfile);
         ArgumentNullException.ThrowIfNull(skills);
@@ -1165,6 +1181,10 @@ public sealed class RuntimeActorState
             out ContentId[] equippedSkillIds,
             out BattlePassiveCollection nextPassives);
         PreservePassiveRuntimeState(Passives, nextPassives);
+        RuntimeCombatProfileIdentitySnapshot nextProfileIdentity =
+            CombatProfileIdentity.Advance(
+                sourceActorInstanceId,
+                sourceEntityDefinitionId);
 
         _resources.Clear();
         foreach (BattleResourceState resource in nextResources)
@@ -1178,6 +1198,14 @@ public sealed class RuntimeActorState
         _skillIds.Clear();
         _skillIds.UnionWith(equippedSkillIds);
         Passives.ReplaceFrom(nextPassives);
+        CombatProfileIdentity = nextProfileIdentity;
+    }
+
+    internal void RestoreCombatProfileIdentity(
+        RuntimeCombatProfileIdentitySnapshot combatProfileIdentity)
+    {
+        CombatProfileIdentity = combatProfileIdentity ??
+            throw new ArgumentNullException(nameof(combatProfileIdentity));
     }
 
     internal void ApplySkillState(

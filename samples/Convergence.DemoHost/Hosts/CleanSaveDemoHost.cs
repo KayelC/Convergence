@@ -423,8 +423,16 @@ internal static class CleanSaveJsonCodec
             snapshot.Checkpoints.Entries.Select(ToDto).ToArray(),
             snapshot.HostContext.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value));
 
-    private static RuntimeSaveGameSnapshot FromDto(HostSaveGameDto dto) =>
-        new(
+    private static RuntimeSaveGameSnapshot FromDto(HostSaveGameDto dto)
+    {
+        if (dto.ContractVersion != RuntimeSaveGameSnapshot.CurrentContractVersion)
+        {
+            throw new InvalidDataException(
+                $"Save contract {dto.ContractVersion} is unsupported; expected " +
+                $"{RuntimeSaveGameSnapshot.CurrentContractVersion}.");
+        }
+
+        return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse(dto.FrameworkVersion),
             (dto.ContentPacks ?? [])
                 .Select(pack => new ContentPackIdentity(pack.Id, SemanticVersion.Parse(pack.Version))),
@@ -440,6 +448,7 @@ internal static class CleanSaveJsonCodec
             new RuntimeCheckpointLogSnapshot(dto.Checkpoints.Select(FromDto)),
             dto.HostContext.Select(pair => new KeyValuePair<ContentId, string>(Id(pair.Key), pair.Value)),
             dto.ContractVersion);
+    }
 
     private static HostActorDto ToDto(RuntimeActorSnapshot actor) =>
         new(
@@ -448,6 +457,9 @@ internal static class CleanSaveJsonCodec
             actor.Identity.ActorKindId.ToString(),
             actor.Identity.DisplayName,
             actor.Identity.DisplaySubtitle,
+            actor.CombatProfileIdentity.SourceActorInstanceId.ToString(),
+            actor.CombatProfileIdentity.SourceEntityDefinitionId.ToString(),
+            actor.CombatProfileIdentity.Revision,
             actor.Affiliation.CommandAuthorityId.ToString(),
             actor.Affiliation.TeamId.ToString(),
             actor.EncounterPresence.IsDeployed,
@@ -539,7 +551,11 @@ internal static class CleanSaveJsonCodec
                     passive.IsEnabled))),
             ToDecimalDictionary(dto.BaseResourceValues),
             Id(dto.VitalResourceId),
-            (dto.CapabilityIds ?? []).Select(Id));
+            (dto.CapabilityIds ?? []).Select(Id),
+            new RuntimeCombatProfileIdentitySnapshot(
+                Instance(dto.CombatProfileSourceActorInstanceId),
+                Id(dto.CombatProfileSourceEntityDefinitionId),
+                dto.CombatProfileRevision));
 
     private static HostReferenceDto ToDto(RuntimeActorReferenceSnapshot reference) =>
         new(reference.InstanceId.ToString(), reference.EntityDefinitionId.ToString(), reference.DisplayName);
@@ -833,6 +849,9 @@ internal static class CleanSaveJsonCodec
         string ActorKindId,
         string DisplayName,
         string? DisplaySubtitle,
+        string CombatProfileSourceActorInstanceId,
+        string CombatProfileSourceEntityDefinitionId,
+        long CombatProfileRevision,
         string CommandAuthorityId,
         string TeamId,
         bool IsDeployed,

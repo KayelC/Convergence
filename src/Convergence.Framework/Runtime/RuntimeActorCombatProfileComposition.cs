@@ -85,7 +85,8 @@ public sealed record RuntimeActorCombatProfileCompositionResult
         RuntimeStatSourceKind resolvedSourceKind,
         RuntimeInstanceId sourceActorId,
         IEnumerable<StatResolutionResult>? statResolutions = null,
-        IEnumerable<RuntimeActorCombatProfileCompositionDiagnostic>? diagnostics = null)
+        IEnumerable<RuntimeActorCombatProfileCompositionDiagnostic>? diagnostics = null,
+        ContentId? sourceEntityId = null)
     {
         if (!sourceActorId.IsValid)
         {
@@ -97,6 +98,11 @@ public sealed record RuntimeActorCombatProfileCompositionResult
         After = after ?? throw new ArgumentNullException(nameof(after));
         ResolvedSourceKind = resolvedSourceKind;
         SourceActorId = sourceActorId;
+        SourceEntityId = sourceEntityId ?? Before.Identity.EntityDefinitionId;
+        if (!SourceEntityId.IsValid)
+        {
+            throw new ArgumentException("Composition source entity ID cannot be empty.", nameof(sourceEntityId));
+        }
         StatResolutions = RuntimeSnapshotCollections.List(statResolutions);
         Diagnostics = RuntimeSnapshotCollections.List(diagnostics);
     }
@@ -107,6 +113,7 @@ public sealed record RuntimeActorCombatProfileCompositionResult
     public RuntimeActorSnapshot After { get; }
     public RuntimeStatSourceKind ResolvedSourceKind { get; }
     public RuntimeInstanceId SourceActorId { get; }
+    public ContentId SourceEntityId { get; }
     public IReadOnlyList<StatResolutionResult> StatResolutions { get; }
     public IReadOnlyList<RuntimeActorCombatProfileCompositionDiagnostic> Diagnostics { get; }
 }
@@ -398,9 +405,12 @@ public sealed class RuntimeActorCombatProfileCompositionService :
                 resources.Resources,
                 sourceActor.DefenseProfile,
                 composedSkills,
-                resolvedSkills);
+                resolvedSkills,
+                sourceActor.InstanceId,
+                sourceActor.EntityId);
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+        catch (Exception exception) when (
+            exception is ArgumentException or InvalidOperationException or OverflowException)
         {
             return Rejected(
                 before,
@@ -416,7 +426,8 @@ public sealed class RuntimeActorCombatProfileCompositionService :
             actor.ToSnapshot(),
             resolvedSource,
             sourceActor.InstanceId,
-            resolutions);
+            resolutions,
+            sourceEntityId: sourceActor.EntityId);
     }
 
     private IReadOnlyList<RuntimeActorCombatProfileCompositionDiagnostic> ValidateSkillState(
@@ -513,5 +524,6 @@ public sealed class RuntimeActorCombatProfileCompositionService :
                     statId,
                     instanceId,
                     skillId)
-            ]);
+            ],
+            sourceEntityId: before.Identity.EntityDefinitionId);
 }

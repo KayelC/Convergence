@@ -79,6 +79,9 @@ internal sealed record GodotSaveActor(
     string ActorKindId,
     string DisplayName,
     string? DisplaySubtitle,
+    string CombatProfileSourceActorInstanceId,
+    string CombatProfileSourceEntityDefinitionId,
+    long CombatProfileRevision,
     string TeamId,
     string CommandAuthorityId,
     int Level,
@@ -252,6 +255,9 @@ internal static class GodotSaveCodec
             actor.Identity.ActorKindId.ToString(),
             actor.Identity.DisplayName,
             actor.Identity.DisplaySubtitle,
+            actor.CombatProfileIdentity.SourceActorInstanceId.ToString(),
+            actor.CombatProfileIdentity.SourceEntityDefinitionId.ToString(),
+            actor.CombatProfileIdentity.Revision,
             actor.Affiliation.TeamId.ToString(),
             actor.Affiliation.CommandAuthorityId.ToString(),
             actor.Progression.Level,
@@ -381,7 +387,11 @@ internal static class GodotSaveCodec
                         passive.IsEnabled))),
             DecimalPairs(actor.BaseResourceValues),
             Id(actor.VitalResourceId),
-            actor.CapabilityIds.Select(Id));
+            actor.CapabilityIds.Select(Id),
+            new RuntimeCombatProfileIdentitySnapshot(
+                Instance(actor.CombatProfileSourceActorInstanceId),
+                Id(actor.CombatProfileSourceEntityDefinitionId),
+                actor.CombatProfileRevision));
 
     private static GodotSaveStatModifierState? ToDto(RuntimeStatModifierStateSnapshot? state) =>
         state is null
