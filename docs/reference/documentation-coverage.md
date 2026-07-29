@@ -113,10 +113,13 @@ return to `existing_unreviewed`. O5-R15 removed actor-local Analyze state,
 O5-R16 removed the disconnected mutable stores, and O5-R17 closed the
 standalone enum boundary. O5-R18 closed the instant-defeat evidence-shape
 defect, and O5-R19 reconciled the public contract and all three audience pages.
-Developer and technical remain `existing_unreviewed` until O5-R20 independently
-rechecks that final wording against source. The matrix
-records 25 reviewed, 28
-`existing_unreviewed`, 15 missing, and 7 `not_applicable` entries.
+O5-R20 independently rechecked that wording against source, found and corrected
+one sibling ailment-evidence coherence defect, and passed every locally
+executable release gate. The online dependency lookup was unavailable in the
+restricted local environment; connected CI remains authoritative for that
+release check. Developer and technical return to `reviewed`. The matrix records
+27 reviewed, 26 `existing_unreviewed`, 15 missing, and 7 `not_applicable`
+entries.
 
 The review order and promotion gates for all capabilities are maintained in
 the active
@@ -146,8 +149,8 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
-The documentation matrix currently records 75 audience entries: 25 reviewed,
-28 existing_unreviewed, 15 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 27 reviewed,
+26 existing_unreviewed, 15 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|

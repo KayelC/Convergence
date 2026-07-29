@@ -109,6 +109,11 @@ an explicit immune result establishes an exact tier. Encounter knowledge stores
 effective immunity. Persistent promotion additionally requires no temporary
 influence and authored immunity.
 
+The observation factory requires an `Immune` application status to carry an
+effective immune resistance. A missing or non-immune effective value is an
+invalid extension receipt and rejects at construction rather than entering the
+transition as unusable evidence.
+
 ### Instant defeat
 
 Execution distinguishes bypassed checks, random failure, defeat, and confirmed

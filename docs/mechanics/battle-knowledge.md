@@ -62,7 +62,9 @@ The framework derives knowledge only from typed execution evidence.
 A success does not prove whether an ailment target was vulnerable, normal, or
 resistant. Likewise, an ordinary random failure does not prove resistance.
 Convergence records an exact tier only when typed evidence establishes that
-tier.
+tier. A claimed ailment immunity is valid only when the application result and
+the resolved effective resistance both identify immunity; contradictory custom
+evidence is rejected instead of being silently ignored.
 
 ### Temporary Defense Example
 

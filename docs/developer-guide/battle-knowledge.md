@@ -102,6 +102,11 @@ effect must omit the channel, authored resistance, and effective resistance. A
 checked effect must provide all three. Supplying only part of a checked tuple is
 an integration error rejected by `BattleKnowledgeObservation.InstantDeath`.
 
+For ailment evidence, an `Immune` application status must carry
+`ResistanceLevel.Immune` as its effective resistance. The public evidence
+factory rejects a missing or contradictory effective value before a knowledge
+transition can silently discard the observation.
+
 ## Query For UI Or Strategy
 
 Use `BattleKnowledgeView` to combine the two scopes:

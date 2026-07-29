@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`battle_knowledge` is `partial`. Persistent entity facts and encounter-local
+`battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and
 Analyze results pass through one atomic framework transition; automated teams
 share only their own encounter snapshot; familiar acquisition is optional and
@@ -43,8 +43,13 @@ shape. O5-R15 removed actor-local Analyze state and advanced the unreleased
 save contract to v14; O5-R16 removed the disconnected mutable stores; O5-R17
 closed the clone-bypassed enum boundary; O5-R18 enforced coherent
 instant-defeat evidence; O5-R19 reconciled the public API and audience
-documentation. O5-R20 is the remaining fresh closure gate, so the capability
-remains `partial` until that independent review passes.
+documentation. O5-R20's source-first review found and corrected one sibling
+custom ailment-evidence coherence defect, then passed every locally executable
+code, content, host, coverage, and Godot gate without another realistic
+reachable finding. The online dependency audit could not be refreshed in the
+restricted local environment and remains a connected CI release gate. The
+[O5-R20 closure review](../reviews/battle-knowledge-order-5-r20-final-closure-review-2026-07-29.md)
+formally returns the capability to `complete`.
 
 `status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

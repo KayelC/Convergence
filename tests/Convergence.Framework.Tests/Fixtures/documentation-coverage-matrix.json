@@ -232,14 +232,14 @@
         "reason": "Owner-confirmed persistent and encounter scopes, conservative discovery, Analyze disclosure, boss restriction, familiarity, and AI lifetime rules are reconciled with current source."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/battle-knowledge.md"],
-        "reason": "O5-R15 removed actor-local Analyze state; disconnected mutable knowledge stores must still be retired before the supported developer surface can be reviewed as one authority."
+        "reason": "The reviewed guide defines the two canonical scopes, execution authority, Analyze composition, familiar imports, save ownership, and Godot responsibilities against the corrected public surface."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/battle-knowledge-runtime.md"],
-        "reason": "O5-R15 established canonical encounter Analyze authority and save v14; the exported competing stores and clone-mutated enum validation gap must still be corrected before technical review closes."
+        "reason": "The reviewed authority reference traces immutable persistent and encounter state, complete execution provenance, conservative evidence, AI lifetime, familiar imports, and save-v14 validation."
       }
     },
     {

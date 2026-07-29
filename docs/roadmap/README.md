@@ -89,5 +89,8 @@ standalone enum boundary, and an incomplete custom-evidence tuple. O5-R15
 removed actor-local Analyze state and the corresponding save field; O5-R16
 removed the disconnected mutable stores; O5-R17 closed the clone-bypassed enum
 boundary; O5-R18 enforced coherent instant-defeat evidence. O5-R19 and O5-R20
-were reserved for documentation reconciliation and fresh closure; O5-R19 is now
-complete, leaving O5-R20 as the only open gate.
+were reserved for documentation reconciliation and fresh closure. O5-R20 found
+and corrected one sibling ailment-evidence coherence defect, then passed its
+source-first closure review and every locally executable gate. The online
+dependency audit remains a connected CI release gate. Order 5 is formally
+closed.
