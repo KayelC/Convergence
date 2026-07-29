@@ -25,8 +25,6 @@ internal enum RuntimeActorSnapshotIntegrityCode
     DuplicateAffinityBreak,
     InvalidAffinityBreakElement,
     DuplicateAffinityOverride,
-    DuplicateAnalysisTarget,
-    DuplicateAnalysisLayer,
     DuplicatePassiveSkillState,
     MissingPassiveSkillState,
     PassiveSkillStateNotLoaded,
@@ -271,7 +269,6 @@ internal static class RuntimeActorSnapshotIntegrity
             registeredEventIds,
             registeredPhaseIds,
             diagnostics);
-        ValidateAnalysis(snapshot.BattleStatus.Analysis, diagnostics);
         ValidatePassives(snapshot.BattleActivations, loadedPassiveSkills, diagnostics);
 
         return Array.AsReadOnly(diagnostics.ToArray());
@@ -326,17 +323,6 @@ internal static class RuntimeActorSnapshotIntegrity
                 diagnostics);
         }
 
-        for (int analysisIndex = 0; analysisIndex < snapshot.BattleStatus.Analysis.Count; analysisIndex++)
-        {
-            RuntimeAnalysisSnapshot analysis = snapshot.BattleStatus.Analysis[analysisIndex];
-            for (int layerIndex = 0; layerIndex < analysis.Layers.Count; layerIndex++)
-            {
-                ValidateEnumValue(
-                    analysis.Layers[layerIndex],
-                    $"$.battleStatus.analysis[{analysisIndex}].layers[{layerIndex}]",
-                    diagnostics);
-            }
-        }
     }
 
     private static void ValidateEnumValue<TEnum>(
@@ -441,12 +427,6 @@ internal static class RuntimeActorSnapshotIntegrity
                 "$.battleStatus.chargeState.policyId",
                 diagnostics);
         }
-        for (int index = 0; index < snapshot.BattleStatus.Analysis.Count; index++)
-        {
-            ValidateRuntimeInstanceId(snapshot.BattleStatus.Analysis[index].TargetInstanceId,
-                $"$.battleStatus.analysis[{index}].targetInstanceId", diagnostics);
-        }
-
         for (int index = 0; index < snapshot.BattleActivations.PassiveSkillStates.Count; index++)
         {
             ValidateContentId(snapshot.BattleActivations.PassiveSkillStates[index].SkillId,
@@ -775,39 +755,6 @@ internal static class RuntimeActorSnapshotIntegrity
                 $"Base resource '{resourceId}' cannot be negative.",
                 $"$.baseResourceValues.{resourceId}",
                 resourceId));
-        }
-    }
-
-    private static void ValidateAnalysis(
-        IReadOnlyList<RuntimeAnalysisSnapshot> analysisEntries,
-        ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
-    {
-        var seenTargets = new HashSet<RuntimeInstanceId>();
-        for (int index = 0; index < analysisEntries.Count; index++)
-        {
-            RuntimeAnalysisSnapshot analysis = analysisEntries[index];
-            if (!seenTargets.Add(analysis.TargetInstanceId))
-            {
-                diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
-                    RuntimeActorSnapshotIntegrityCode.DuplicateAnalysisTarget,
-                    $"Analysis target '{analysis.TargetInstanceId}' appears more than once.",
-                    $"$.battleStatus.analysis[{index}]"));
-            }
-
-            var seenLayers = new HashSet<AnalysisLayer>();
-            for (int layerIndex = 0; layerIndex < analysis.Layers.Count; layerIndex++)
-            {
-                AnalysisLayer layer = analysis.Layers[layerIndex];
-                if (seenLayers.Add(layer))
-                {
-                    continue;
-                }
-
-                diagnostics.Add(new RuntimeActorSnapshotIntegrityDiagnostic(
-                    RuntimeActorSnapshotIntegrityCode.DuplicateAnalysisLayer,
-                    $"Analysis layer '{layer}' appears more than once for target '{analysis.TargetInstanceId}'.",
-                    $"$.battleStatus.analysis[{index}].layers[{layerIndex}]"));
-            }
         }
     }
 

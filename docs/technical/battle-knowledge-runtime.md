@@ -28,11 +28,11 @@ unknown.
 target across elemental, ailment, instant-defeat, and analysis collections. A
 runtime ID cannot silently change entity meaning within one encounter.
 
-> **Order 5 pre-closure discrepancy:** the assembly still exports actor-local
-> Analyze state and three mutable dictionary-backed knowledge stores. They are
-> not part of the canonical authorities above and are not consumed by execution,
-> combined queries, or persistence. O5-R15 and O5-R16 will remove those
-> competing surfaces. O5-R17 will also make the standalone persistent
+> **Order 5 correction status:** O5-R15 removed actor-local Analyze state from
+> runtime actors and save v14. The assembly still exports three mutable
+> dictionary-backed knowledge stores that are not consumed by execution,
+> combined queries, or persistence; O5-R16 will remove that remaining competing
+> surface. O5-R17 will also make the standalone persistent
 > transition reject record-cloned undefined enum values rather than accepting
 > them until result reconstruction.
 
@@ -200,15 +200,13 @@ call sites; the service does not observe ownership transactions implicitly.
 - catalog existence for every referenced ailment; and
 - valid enum and content-ID domains.
 
-Actor-local `RuntimeBattleStatusSnapshot.Analysis` is rejected by
-`ActorEncounterAnalysisCannotPersist`. Canonical Analyze does not populate that
-shape. Persistent defense disclosure belongs only in
-`RuntimeSaveGameSnapshot.Knowledge`; current-target analysis belongs only in
-`RuntimeEncounterKnowledgeSnapshot`. O5-R15 will remove the obsolete actor-local
-shape instead of asking hosts to maintain an unsaveable third authority.
+Save v14 contains no actor-local Analyze field. Persistent defense disclosure
+belongs only in `RuntimeSaveGameSnapshot.Knowledge`; current-target analysis
+belongs only in `RuntimeEncounterKnowledgeSnapshot` and ends with its
+encounter.
 
-The save contract version remains 13 because R7 closes validation of already
-existing fields and does not change the serialized aggregate shape.
+The save contract advances to version 14 because O5-R15 removes the obsolete
+actor-local field from the serialized aggregate shape.
 
 ## Failure Containment
 

@@ -35,7 +35,7 @@ Technical pages focus on:
   containment, and the boundary with actor scheduling.
 - [Status And Passive Lifecycle Runtime](status-passive-lifecycle.md): lifetime
   authority, staged application, explicit clocks, cleanup, passive dispatch,
-  event evidence, startup atomicity, and save-v13 restoration.
+  event evidence, startup atomicity, and save-v14 restoration.
 - [Battle Knowledge Runtime Authority](battle-knowledge-runtime.md): persistent
   and encounter authorities, evidence transitions, Analyze disclosure, AI team
   sharing, familiarity, atomicity, and session-save validation.

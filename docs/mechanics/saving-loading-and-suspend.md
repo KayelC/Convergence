@@ -8,7 +8,7 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 
 ## Save Contents
 
-The current runtime save contract is version `13`.
+The current runtime save contract is version `14`.
 
 `RuntimeSaveGameSnapshot` contains:
 
@@ -105,6 +105,12 @@ Save contract v8 has no built-in conversion to v9. Version 9 removes the
 duplicated roster owner level and derives capacity from the saved owner actor.
 A host that intentionally retains pre-release v8 or earlier data must provide
 and test an explicit migration step.
+
+Version 14 removes the obsolete actor-local Analyze field from actor snapshots.
+Persistent player knowledge remains in `RuntimeKnowledgeSnapshot`; current
+target analysis remains encounter-local and is discarded at encounter end.
+Convergence supplies no automatic v13-to-v14 migration for these unreleased
+formats.
 
 ## Related Guidance
 

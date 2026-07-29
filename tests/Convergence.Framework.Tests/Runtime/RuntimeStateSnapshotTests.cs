@@ -178,7 +178,6 @@ public sealed class RuntimeStateSnapshotTests
         Assert.IsType<TurnDurationDefinition>(Assert.Single(roundTrip.BattleStatus.AffinityOverrides).Duration);
         Assert.Equal(Id("hp"), roundTrip.VitalResourceId);
         Assert.True(roundTrip.BattleStatus.IsGuarding);
-        Assert.Equal([AnalysisLayer.Stats, AnalysisLayer.Affinities], Assert.Single(roundTrip.BattleStatus.Analysis).Layers);
         Assert.Equal(1, Assert.Single(roundTrip.BattleActivations.PassiveActivations).ActivationCount);
         RuntimePassiveSkillStateSnapshot passiveState =
             Assert.Single(roundTrip.BattleActivations.PassiveSkillStates);
@@ -559,13 +558,7 @@ public sealed class RuntimeStateSnapshotTests
                 [
                     new RuntimeAffinityBreakSnapshot(DamageElement.Ice, EncounterLifetime(Turns(2)))
                 ],
-                isGuarding: true,
-                analysis:
-                [
-                    new RuntimeAnalysisSnapshot(
-                        RuntimeInstanceId.Parse("enemy:shadow_1"),
-                        [AnalysisLayer.Stats, AnalysisLayer.Affinities])
-                ]),
+                isGuarding: true),
             new RuntimeBattleActivationSnapshot(
                 [
                     new RuntimePassiveActivationSnapshot(Id("last_stand"), Id("owner_would_be_defeated"), triggerIndex: 0, activationCount: 1)

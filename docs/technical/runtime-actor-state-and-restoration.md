@@ -17,8 +17,8 @@ The source-based
 [Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md)
 confirmed the composition, skill-choice, stage, and original save-v8
 transaction design. Subsequent corrections advanced actor restoration through
-save v9, and the stat-modifier policy migration advances the current contract
-to save v13.
+save v9, later lifecycle work advanced it through v13, and Battle Knowledge
+authority cleanup advances the current contract to save v14.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives
@@ -290,13 +290,15 @@ Key invariants:
 Transition services do not mutate `RuntimeActorState.IsDeployed`. Encounter
 orchestration owns presence changes.
 
-## Save Contract V13
+## Save Contract V14
 
-`RuntimeSaveGameSnapshot.CurrentContractVersion` is `13`. Version 13 retains
+`RuntimeSaveGameSnapshot.CurrentContractVersion` is `14`. Version 14 retains
 the canonical roster, complete move-list state, policy-owned stat modifiers,
 charge-policy identity, and typed status lifetimes established by earlier
-pre-release contracts. It additionally preserves the optional target runtime
-ID used when a passive event counts activations per target.
+pre-release contracts, including the optional target runtime ID used when a
+passive event counts activations per target. It removes actor-local Analyze
+state: persistent knowledge and encounter analysis already have separate
+canonical snapshots.
 
 The save aggregate contains:
 

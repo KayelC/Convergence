@@ -1884,7 +1884,6 @@ public sealed class ActiveSkillExecutionTests
         Assert.Empty(target.Shields);
         Assert.Empty(target.AffinityBreaks);
         Assert.Empty(target.AffinityOverrides);
-        Assert.Empty(actor.GetAnalysis(target.InstanceId));
         Assert.Empty(result.Effects);
         Assert.Empty(result.Effects.SelectMany(effect => effect.DamageHits));
     }
@@ -1909,7 +1908,6 @@ public sealed class ActiveSkillExecutionTests
             SkillExecutionDiagnosticCode.ExecutionFailed,
             Assert.Single(result.Diagnostics).Code);
         Assert.Equal(20, actor.GetRequiredResource(Sp).Current);
-        Assert.Empty(actor.GetAnalysis(target.InstanceId));
     }
 
     [Fact]
@@ -2536,7 +2534,6 @@ public sealed class ActiveSkillExecutionTests
                 BattleAnalysisField.Skills
             ],
             Assert.IsType<BattleAnalysisResult>(analyzeEffect.Analysis).DisclosedFields);
-        Assert.Empty(actor.GetAnalysis(target.InstanceId));
         Assert.Equal(EffectExecutionOutcome.Success, analyzeEffect.Outcome);
         Assert.True(escape.EscapeRequested);
         Assert.Equal(13, actor.GetRequiredResource(Sp).Current);

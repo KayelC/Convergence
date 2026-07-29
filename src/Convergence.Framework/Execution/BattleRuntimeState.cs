@@ -178,7 +178,6 @@ public sealed class RuntimeActorState
     private readonly Dictionary<ContentId, BattleOtherStatusState> _otherStatuses = [];
     private readonly HashSet<ContentId> _skillIds;
     private readonly HashSet<ContentId> _capabilityIds;
-    private readonly Dictionary<RuntimeInstanceId, HashSet<AnalysisLayer>> _analysis = [];
     private IReadOnlyDictionary<ContentId, decimal> _baseStats;
     private IReadOnlyDictionary<ContentId, decimal> _effectiveStats;
     private IReadOnlyDictionary<ContentId, decimal> _baseResourceValues;
@@ -423,13 +422,6 @@ public sealed class RuntimeActorState
             activeShields: _shields.Keys,
             isBroken: _affinityBreaks.ContainsKey(element),
             activeOverride: activeOverride?.Affinity);
-    }
-
-    public IReadOnlySet<AnalysisLayer> GetAnalysis(RuntimeInstanceId targetInstanceId)
-    {
-        return _analysis.TryGetValue(targetInstanceId, out HashSet<AnalysisLayer>? layers)
-            ? new ReadOnlySet<AnalysisLayer>(layers)
-            : new ReadOnlySet<AnalysisLayer>([]);
     }
 
     public decimal SetResource(ContentId id, decimal value) => GetRequiredResource(id).Set(value);
@@ -1005,34 +997,6 @@ public sealed class RuntimeActorState
         return Array.AsReadOnly(removed.ToArray());
     }
 
-    public void Reveal(RuntimeInstanceId targetInstanceId, IEnumerable<AnalysisLayer> layers)
-    {
-        AnalysisLayer[] requestedLayers =
-            (layers ?? throw new ArgumentNullException(nameof(layers))).ToArray();
-        foreach (AnalysisLayer layer in requestedLayers)
-        {
-            EnumDomain.RequireDefined(layer, nameof(layers));
-        }
-
-        if (!_analysis.TryGetValue(targetInstanceId, out HashSet<AnalysisLayer>? known))
-        {
-            known = [];
-            _analysis.Add(targetInstanceId, known);
-        }
-
-        foreach (AnalysisLayer layer in requestedLayers)
-        {
-            if (layer == AnalysisLayer.Full)
-            {
-                known.UnionWith(Enum.GetValues<AnalysisLayer>());
-            }
-            else
-            {
-                known.Add(layer);
-            }
-        }
-    }
-
     public RuntimeActorSnapshot ToSnapshot() =>
         new(
             Identity,
@@ -1107,8 +1071,6 @@ public sealed class RuntimeActorState
             new(source._otherStatuses);
         ContentId[] skillIds = source._skillIds.ToArray();
         ContentId[] capabilityIds = source._capabilityIds.ToArray();
-        Dictionary<RuntimeInstanceId, HashSet<AnalysisLayer>> analysis = source._analysis
-            .ToDictionary(pair => pair.Key, pair => new HashSet<AnalysisLayer>(pair.Value));
         IReadOnlyDictionary<ContentId, decimal> baseStats = Snapshot(source._baseStats);
         IReadOnlyDictionary<ContentId, decimal> effectiveStats = Snapshot(source._effectiveStats);
         IReadOnlyDictionary<ContentId, decimal> baseResourceValues =
@@ -1133,8 +1095,6 @@ public sealed class RuntimeActorState
         _skillIds.UnionWith(skillIds);
         _capabilityIds.Clear();
         _capabilityIds.UnionWith(capabilityIds);
-        ReplaceDictionary(_analysis, analysis);
-
         _baseStats = baseStats;
         _effectiveStats = effectiveStats;
         _baseResourceValues = baseResourceValues;
@@ -1424,11 +1384,6 @@ public sealed class RuntimeActorState
         }
 
         IsGuarding = status.IsGuarding;
-        _analysis.Clear();
-        foreach (RuntimeAnalysisSnapshot analysis in status.Analysis)
-        {
-            _analysis.Add(analysis.TargetInstanceId, new HashSet<AnalysisLayer>(analysis.Layers));
-        }
     }
 
     internal void RestoreBattleActivations(RuntimeBattleActivationSnapshot activations)
@@ -1461,7 +1416,6 @@ public sealed class RuntimeActorState
                 pair.Value.Affinity,
                 pair.Value.Lifetime)),
             IsGuarding,
-            _analysis.Select(pair => new RuntimeAnalysisSnapshot(pair.Key, pair.Value)),
             _affinityBreaks.Select(pair => new RuntimeAffinityBreakSnapshot(
                 pair.Key,
                 pair.Value.Lifetime)));

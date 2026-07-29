@@ -234,12 +234,12 @@
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/battle-knowledge.md"],
-        "reason": "The canonical integration path is documented, but exported actor-local Analyze state and mutable knowledge stores must be retired before the supported developer surface can be reviewed as one authority."
+        "reason": "O5-R15 removed actor-local Analyze state; disconnected mutable knowledge stores must still be retired before the supported developer surface can be reviewed as one authority."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/battle-knowledge-runtime.md"],
-        "reason": "The canonical runtime trace is accurate, but the exported competing stores and clone-mutated enum validation gap must be corrected and reconciled before technical review closes."
+        "reason": "O5-R15 established canonical encounter Analyze authority and save v14; the exported competing stores and clone-mutated enum validation gap must still be corrected before technical review closes."
       }
     },
     {
@@ -381,7 +381,7 @@
           "docs/developer-guide/actors-and-runtime-state.md",
           "docs/godot-integration-contract.md"
         ],
-        "reason": "The reviewed guides cover host-owned encoding, save v13 actor state, restore profiles, aggregate restore, and scene application."
+        "reason": "The reviewed guides cover host-owned encoding, save v14 actor state, restore profiles, aggregate restore, and scene application."
       },
       "technical": {
         "state": "reviewed",

@@ -410,8 +410,9 @@ reopened Order 5 after a fresh exported-surface trace found actor-local analysis
 and mutable stores competing with the canonical snapshots, clone-bypassed enum
 validation, and incomplete instant-defeat evidence tuples. Mechanics remains
 `reviewed`; developer and technical return to `existing_unreviewed`. O5-R15
-through O5-R20 govern authority cleanup, validation, evidence hardening,
-documentation reconciliation, and fresh closure. The matrix therefore records
+has now removed actor-local Analyze state and established save v14. O5-R16
+through O5-R20 govern the remaining authority cleanup, validation, evidence
+hardening, documentation reconciliation, and fresh closure. The matrix records
 25 reviewed, 28 `existing_unreviewed`, 15 missing, and 7 `not_applicable`.
 
 A final bounded certification subsequently exercised 1,536 deterministic

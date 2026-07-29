@@ -39,7 +39,9 @@ Knowledge defect at that revision. A later
 [post-closure independent audit](../reviews/battle-knowledge-order-5-post-closure-independent-audit-2026-07-27.md)
 reopened the capability after tracing two exported competing authorities, a
 clone-bypassed enum-validation path, and an incomplete instant-defeat evidence
-shape. O5-R15 through O5-R20 govern correction and fresh closure.
+shape. O5-R15 removes actor-local Analyze state and advances the unreleased
+save contract to v14. O5-R16 through O5-R20 govern the remaining authority
+cleanup, validation, evidence hardening, documentation, and fresh closure.
 
 `status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
@@ -141,7 +143,7 @@ unchanged. O3-R17 re-read the corrected source and all three audience
 documents. `turn_economy` is complete again with no named gap.
 
 The actor composition correction established the intended source and ownership
-model, stage scaling, live skill choices, and save v13 restoration. Its
+model, stage scaling, live skill choices, and save v14 restoration. Its
 independent completion review found six reachable integration gaps; all are
 corrected with isolated regression coverage. The only deferred capabilities
 remain save-version migration between released contracts and full
@@ -151,7 +153,7 @@ Exactly-one item reservations, reservation validation, mandatory inventory
 authority, and Framework-owned canonical skill, item, and basic-attack
 authorization are implemented and covered by focused tests. The stat-modifier
 migration has one canonical actor authority, three supplied policies, typed
-effect and lifecycle integration, authored ruleset binding, save-v13
+effect and lifecycle integration, authored ruleset binding, save-v14
 restoration, and cross-policy host evidence. The final source-first review found
 no remaining reachable Order 1 defect, and the project owner confirmed the
 public mechanics on 18 July 2026.

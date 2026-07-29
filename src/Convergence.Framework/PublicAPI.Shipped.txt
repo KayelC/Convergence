@@ -3543,7 +3543,6 @@ Convergence.Execution.RuntimeActorState.EntityId.get -> Convergence.Content.Cont
 Convergence.Execution.RuntimeActorState.Equipment.get -> Convergence.Runtime.RuntimeEquipmentSnapshot!
 Convergence.Execution.RuntimeActorState.ExpireInstantDurations() -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleDurationTickResult!>!
 Convergence.Execution.RuntimeActorState.ExpirePhaseDurations(Convergence.Content.ContentId phaseId) -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleDurationTickResult!>!
-Convergence.Execution.RuntimeActorState.GetAnalysis(Convergence.Runtime.RuntimeInstanceId targetInstanceId) -> System.Collections.Generic.IReadOnlySet<Convergence.Content.AnalysisLayer>!
 Convergence.Execution.RuntimeActorState.GetElementalAffinity(Convergence.Content.DamageElement element, System.Collections.Generic.IEnumerable<Convergence.Content.ElementalAffinity>? passiveReplacements = null) -> Convergence.Content.ElementalAffinity
 Convergence.Execution.RuntimeActorState.GetRequiredResource(Convergence.Content.ContentId id) -> Convergence.Execution.BattleResourceState!
 Convergence.Execution.RuntimeActorState.HasAilment(Convergence.Content.ContentId id) -> bool
@@ -3560,7 +3559,6 @@ Convergence.Execution.RuntimeActorState.Passives.get -> Convergence.Execution.Ba
 Convergence.Execution.RuntimeActorState.Progression.get -> Convergence.Runtime.RuntimeProgressionSnapshot!
 Convergence.Execution.RuntimeActorState.ReplaceEquipment(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment) -> void
 Convergence.Execution.RuntimeActorState.Resources.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Execution.BattleResourceState!>!
-Convergence.Execution.RuntimeActorState.Reveal(Convergence.Runtime.RuntimeInstanceId targetInstanceId, System.Collections.Generic.IEnumerable<Convergence.Content.AnalysisLayer>! layers) -> void
 Convergence.Execution.RuntimeActorState.RuntimeActorState(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.ContentId entityId, Convergence.Content.ContentId teamId, Convergence.Content.ContentId vitalResourceId, Convergence.Battle.CombatDefenseProfile! defenseProfile, System.Collections.Generic.IEnumerable<Convergence.Execution.BattleResourceState!>! resources, Convergence.Runtime.RuntimeEncounterPresenceSnapshot! encounterPresence, Convergence.Runtime.RuntimeActorAffiliationSnapshot! affiliation, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? stats = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? skillIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? capabilityIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.SkillDefinition!>? passiveSkills = null, Convergence.Runtime.RuntimeActorIdentitySnapshot? identity = null, Convergence.Runtime.RuntimeProgressionSnapshot? progression = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseStats = null, Convergence.Runtime.RuntimeSkillStateSnapshot? skillState = null, Convergence.Runtime.RuntimeEquipmentSnapshot? equipment = null) -> void
 Convergence.Execution.RuntimeActorState.SetEncounterPresence(bool isDeployed, bool hasSwappedThisTurn = false) -> void
 Convergence.Execution.RuntimeActorState.SetGuarding(bool isGuarding) -> void
@@ -5497,12 +5495,6 @@ Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot.Equals(Convergence
 Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot.Resistance.get -> Convergence.Content.ResistanceLevel
 Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot.Resistance.init -> void
 Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot.RuntimeAilmentResistanceKnowledgeSnapshot(Convergence.Content.ContentId EntityId, Convergence.Content.ContentId AilmentId, Convergence.Content.ResistanceLevel Resistance) -> void
-Convergence.Runtime.RuntimeAnalysisSnapshot
-Convergence.Runtime.RuntimeAnalysisSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeAnalysisSnapshot!
-Convergence.Runtime.RuntimeAnalysisSnapshot.Equals(Convergence.Runtime.RuntimeAnalysisSnapshot? other) -> bool
-Convergence.Runtime.RuntimeAnalysisSnapshot.Layers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.AnalysisLayer>!
-Convergence.Runtime.RuntimeAnalysisSnapshot.RuntimeAnalysisSnapshot(Convergence.Runtime.RuntimeInstanceId targetInstanceId, System.Collections.Generic.IEnumerable<Convergence.Content.AnalysisLayer>! layers) -> void
-Convergence.Runtime.RuntimeAnalysisSnapshot.TargetInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.RuntimeBasicAttackProfile
 Convergence.Runtime.RuntimeBasicAttackProfile.<Clone>$() -> Convergence.Runtime.RuntimeBasicAttackProfile!
 Convergence.Runtime.RuntimeBasicAttackProfile.BasicAttack.get -> Convergence.Content.EquipmentBasicAttackDefinition!
@@ -5523,7 +5515,6 @@ Convergence.Runtime.RuntimeBattleStatusSnapshot.<Clone>$() -> Convergence.Runtim
 Convergence.Runtime.RuntimeBattleStatusSnapshot.AffinityBreaks.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeAffinityBreakSnapshot!>!
 Convergence.Runtime.RuntimeBattleStatusSnapshot.AffinityOverrides.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeAffinityOverrideSnapshot!>!
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Ailments.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeTimedStateSnapshot!>!
-Convergence.Runtime.RuntimeBattleStatusSnapshot.Analysis.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeAnalysisSnapshot!>!
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Charges.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeChargeSnapshot!>!
 Convergence.Runtime.RuntimeBattleStatusSnapshot.Equals(Convergence.Runtime.RuntimeBattleStatusSnapshot? other) -> bool
 Convergence.Runtime.RuntimeBattleStatusSnapshot.IsGuarding.get -> bool
@@ -6171,8 +6162,6 @@ Convergence.Runtime.RuntimeSaveValidationCode.ContractVersionUnsupported = 0 -> 
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAffinityBreak = 46 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAffinityOverride = 48 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAilment = 41 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAnalysisLayer = 50 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorAnalysisTarget = 49 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorCapability = 40 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorCharge = 44 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateActorEquippedSkill = 38 -> Convergence.Runtime.RuntimeSaveValidationCode
@@ -8215,9 +8204,6 @@ override Convergence.Runtime.RuntimeAffinityOverrideSnapshot.ToString() -> strin
 override Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot.ToString() -> string!
-override Convergence.Runtime.RuntimeAnalysisSnapshot.Equals(object? obj) -> bool
-override Convergence.Runtime.RuntimeAnalysisSnapshot.GetHashCode() -> int
-override Convergence.Runtime.RuntimeAnalysisSnapshot.ToString() -> string!
 override Convergence.Runtime.RuntimeBasicAttackProfile.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeBasicAttackProfile.GetHashCode() -> int
 override Convergence.Runtime.RuntimeBasicAttackProfile.ToString() -> string!
@@ -9479,8 +9465,6 @@ static Convergence.Runtime.RuntimeAffinityOverrideSnapshot.operator !=(Convergen
 static Convergence.Runtime.RuntimeAffinityOverrideSnapshot.operator ==(Convergence.Runtime.RuntimeAffinityOverrideSnapshot? left, Convergence.Runtime.RuntimeAffinityOverrideSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot.operator !=(Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot? left, Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot.operator ==(Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot? left, Convergence.Runtime.RuntimeAilmentResistanceKnowledgeSnapshot? right) -> bool
-static Convergence.Runtime.RuntimeAnalysisSnapshot.operator !=(Convergence.Runtime.RuntimeAnalysisSnapshot? left, Convergence.Runtime.RuntimeAnalysisSnapshot? right) -> bool
-static Convergence.Runtime.RuntimeAnalysisSnapshot.operator ==(Convergence.Runtime.RuntimeAnalysisSnapshot? left, Convergence.Runtime.RuntimeAnalysisSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeBasicAttackProfile.operator !=(Convergence.Runtime.RuntimeBasicAttackProfile? left, Convergence.Runtime.RuntimeBasicAttackProfile? right) -> bool
 static Convergence.Runtime.RuntimeBasicAttackProfile.operator ==(Convergence.Runtime.RuntimeBasicAttackProfile? left, Convergence.Runtime.RuntimeBasicAttackProfile? right) -> bool
 static Convergence.Runtime.RuntimeBattleActivationSnapshot.operator !=(Convergence.Runtime.RuntimeBattleActivationSnapshot? left, Convergence.Runtime.RuntimeBattleActivationSnapshot? right) -> bool
@@ -10062,7 +10046,7 @@ Convergence.Execution.StandardChargePolicyIds
 Convergence.Execution.UnifiedChargePolicy
 Convergence.Execution.UnifiedChargePolicy.UnifiedChargePolicy(Convergence.Content.ContentId? policyId = null) -> void
 Convergence.Runtime.RuntimeBattleStatusSnapshot.ChargeState.get -> Convergence.Runtime.RuntimeChargeStateSnapshot?
-Convergence.Runtime.RuntimeBattleStatusSnapshot.RuntimeBattleStatusSnapshot(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? ailments = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? statuses = null, Convergence.Runtime.RuntimeStatModifierStateSnapshot? statModifiers = null, Convergence.Runtime.RuntimeChargeStateSnapshot? chargeState = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeShieldSnapshot!>? shields = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityOverrideSnapshot!>? affinityOverrides = null, bool isGuarding = false, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAnalysisSnapshot!>? analysis = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityBreakSnapshot!>? affinityBreaks = null) -> void
+Convergence.Runtime.RuntimeBattleStatusSnapshot.RuntimeBattleStatusSnapshot(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? ailments = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeTimedStateSnapshot!>? statuses = null, Convergence.Runtime.RuntimeStatModifierStateSnapshot? statModifiers = null, Convergence.Runtime.RuntimeChargeStateSnapshot? chargeState = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeShieldSnapshot!>? shields = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityOverrideSnapshot!>? affinityOverrides = null, bool isGuarding = false, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeAffinityBreakSnapshot!>? affinityBreaks = null) -> void
 Convergence.Runtime.RuntimeChargeStateSnapshot
 Convergence.Runtime.RuntimeChargeStateSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeChargeStateSnapshot!
 Convergence.Runtime.RuntimeChargeStateSnapshot.Charges.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeChargeSnapshot!>!
@@ -10692,7 +10676,7 @@ Convergence.Content.EquipmentBasicAttackDefinition.PrimaryEffectId.init -> void
 Convergence.Content.EquipmentBasicAttackDefinition.SecondaryEffects.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.EffectDefinition!>!
 Convergence.Content.EquipmentBasicAttackDefinition.SecondaryEffects.init -> void
 Convergence.Execution.SkillExecutionDiagnosticCode.DuplicateResourceCost = 17 -> Convergence.Execution.SkillExecutionDiagnosticCode
-const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 13 -> int
+const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 14 -> int
 Convergence.Content.AilmentDefinition.AilmentDefinition(Convergence.Content.ContentId id, string! displayName, string! description, Convergence.Content.StatusLifetimeDefinition! defaultLifetime, Convergence.Content.AilmentTurnBehaviorDefinition! turnBehavior, Convergence.Content.AilmentModifiersDefinition! modifiers, Convergence.Content.AilmentRecoveryDefinition! recovery, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? groupIds = null, Convergence.Content.ContentId? exclusivityGroupId = null, System.Collections.Generic.IEnumerable<Convergence.Content.PassiveTriggerDefinition!>? triggers = null) -> void
 Convergence.Content.AilmentDefinition.DefaultLifetime.get -> Convergence.Content.StatusLifetimeDefinition!
 Convergence.Content.ApplyAilmentEffectDefinition.ApplyAilmentEffectDefinition(Convergence.Content.ContentId AilmentId, int Chance, Convergence.Content.StatusLifetimeDefinition? Lifetime = null, Convergence.Content.ConditionDefinition? When = null, Convergence.Content.EffectFailurePolicy OnFailure = Convergence.Content.EffectFailurePolicy.Continue) -> void
@@ -10808,7 +10792,7 @@ Convergence.Runtime.RuntimeAffinityOverrideSnapshot.RuntimeAffinityOverrideSnaps
 Convergence.Runtime.RuntimeChargeSnapshot.Duration.get -> Convergence.Content.DurationDefinition!
 Convergence.Runtime.RuntimeChargeSnapshot.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
 Convergence.Runtime.RuntimeChargeSnapshot.RuntimeChargeSnapshot(Convergence.Content.ChargeKind kind, decimal multiplier, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
-Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 13) -> void
+Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 14) -> void
 Convergence.Runtime.RuntimeShieldSnapshot.Duration.get -> Convergence.Content.DurationDefinition!
 Convergence.Runtime.RuntimeShieldSnapshot.Lifetime.get -> Convergence.Content.StatusLifetimeDefinition!
 Convergence.Runtime.RuntimeShieldSnapshot.RuntimeShieldSnapshot(Convergence.Content.ShieldKind kind, Convergence.Content.StatusLifetimeDefinition! lifetime) -> void
@@ -11547,5 +11531,4 @@ Convergence.Knowledge.BattleKnowledgeExecutionTransitionService.Apply(Convergenc
 Convergence.Knowledge.BattleKnowledgeExecutionTransitionService.BattleKnowledgeExecutionTransitionService(Convergence.Knowledge.IBattleKnowledgeObservationTransitionService? observations = null, Convergence.Knowledge.IBattleAnalysisKnowledgeTransitionService? analysis = null) -> void
 Convergence.Knowledge.IBattleKnowledgeExecutionTransitionService
 Convergence.Knowledge.IBattleKnowledgeExecutionTransitionService.Apply(Convergence.Knowledge.BattleKnowledgeExecutionTransitionRequest! request) -> Convergence.Knowledge.BattleKnowledgeExecutionTransitionResult!
-Convergence.Runtime.RuntimeSaveValidationCode.ActorEncounterAnalysisCannotPersist = 86 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateAnalyzedDefenseKnowledge = 85 -> Convergence.Runtime.RuntimeSaveValidationCode

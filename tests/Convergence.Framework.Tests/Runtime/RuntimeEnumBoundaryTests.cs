@@ -39,9 +39,6 @@ public sealed class RuntimeEnumBoundaryTests
             DamageElement.Fire,
             Undefined<ElementalAffinity>(),
             duration));
-        AssertUndefined("layers", () => new RuntimeAnalysisSnapshot(
-            RuntimeInstanceId.Parse("target"),
-            [Undefined<AnalysisLayer>()]));
     }
 
     [Fact]
@@ -107,17 +104,12 @@ public sealed class RuntimeEnumBoundaryTests
             DamageElement.Fire,
             Undefined<ElementalAffinity>(),
             duration));
-        AssertUndefined("layers", () => actor.Reveal(
-            RuntimeInstanceId.Parse("target"),
-            [Undefined<AnalysisLayer>()]));
-
         RuntimeBattleStatusSnapshot status = actor.ToSnapshot().BattleStatus;
         Assert.True(actor.IsDeployed);
         Assert.Empty(status.Charges);
         Assert.Empty(status.Shields);
         Assert.Empty(status.AffinityBreaks);
         Assert.Empty(status.AffinityOverrides);
-        Assert.Empty(status.Analysis);
     }
 
     [Fact]
@@ -161,10 +153,6 @@ public sealed class RuntimeEnumBoundaryTests
         RuntimeSaveGameSnapshot baseline = RuntimePersistenceSnapshotTests.CreateSaveSnapshot();
         RuntimeActorSnapshot source = baseline.Actors[0];
         StatusLifetimeDefinition duration = StandardStatusLifetimes.Persistent;
-        RuntimeAnalysisSnapshot malformedAnalysis = CloneWithProperty(
-            new RuntimeAnalysisSnapshot(RuntimeInstanceId.Parse("target"), [AnalysisLayer.Stats]),
-            nameof(RuntimeAnalysisSnapshot.Layers),
-            (IReadOnlyList<AnalysisLayer>)Array.AsReadOnly([Undefined<AnalysisLayer>()]));
         RuntimeEquipmentSnapshot malformedEquipment = CloneWithProperty(
             new RuntimeEquipmentSnapshot(),
             nameof(RuntimeEquipmentSnapshot.EquippedItemIds),
@@ -211,8 +199,7 @@ public sealed class RuntimeEnumBoundaryTests
                         duration),
                     nameof(RuntimeAffinityOverrideSnapshot.Affinity),
                     Undefined<ElementalAffinity>())
-            ],
-            analysis: [malformedAnalysis]);
+            ]);
         RuntimeActorSnapshot malformed = CopyActor(source, malformedEquipment, malformedStatus);
         RuntimeActorSnapshot[] actors = baseline.Actors.ToArray();
         actors[0] = malformed;
@@ -228,7 +215,6 @@ public sealed class RuntimeEnumBoundaryTests
         AssertUndefinedDiagnostic(validation, "$.actors[0].battleStatus.affinityBreaks[0].element");
         AssertUndefinedDiagnostic(validation, "$.actors[0].battleStatus.affinityOverrides[0].element");
         AssertUndefinedDiagnostic(validation, "$.actors[0].battleStatus.affinityOverrides[1].affinity");
-        AssertUndefinedDiagnostic(validation, "$.actors[0].battleStatus.analysis[0].layers[0]");
 
         ArgumentException restore = Assert.Throws<ArgumentException>(() => RuntimeActorState.Restore(
             malformed,

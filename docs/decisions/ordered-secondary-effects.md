@@ -132,7 +132,7 @@ poison_rider:
 - Execution results expose typed skipped/dependency evidence for engine hosts.
 - Complete-action aggregation and Action Token pricing must use committed facts
   from the whole action rather than effect-local shortcuts.
-- Save contract v13 remains unaffected because definitions and transient execution
+- Save contract v14 remains unaffected because definitions and transient execution
   evidence are not persisted runtime state.
 
 ## Evidence And Affected Documentation

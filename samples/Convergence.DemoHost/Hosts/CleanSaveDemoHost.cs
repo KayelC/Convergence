@@ -484,7 +484,6 @@ internal static class CleanSaveJsonCodec
             actor.BattleStatus.AffinityOverrides.Select(affinity => new HostAffinityOverrideDto(
                 affinity.Element.ToString(), affinity.Affinity.ToString(), ToLifetimeDto(affinity.Lifetime))).ToArray(),
             actor.BattleStatus.IsGuarding,
-            actor.BattleStatus.Analysis.Select(analysis => new HostAnalysisDto(analysis.TargetInstanceId.ToString(), analysis.Layers.Select(layer => layer.ToString()).ToArray())).ToArray(),
             actor.BattleActivations.PassiveSkillStates.Select(passive => new HostPassiveSkillStateDto(
                 passive.SkillId.ToString(),
                 passive.IsEnabled)).ToArray(),
@@ -525,9 +524,6 @@ internal static class CleanSaveJsonCodec
                     Enum.Parse<ElementalAffinity>(affinity.Affinity),
                     FromLifetimeDto(affinity.Lifetime))),
                 dto.IsGuarding,
-                dto.Analysis.Select(analysis => new RuntimeAnalysisSnapshot(
-                    Instance(analysis.TargetInstanceId),
-                    analysis.Layers.Select(layer => Enum.Parse<AnalysisLayer>(layer)))),
                 (dto.AffinityBreaks ?? []).Select(affinityBreak => new RuntimeAffinityBreakSnapshot(
                     Enum.Parse<DamageElement>(affinityBreak.Element),
                     FromLifetimeDto(affinityBreak.Lifetime)))),
@@ -865,7 +861,6 @@ internal static class CleanSaveJsonCodec
         HostAffinityBreakDto[]? AffinityBreaks,
         HostAffinityOverrideDto[] AffinityOverrides,
         bool IsGuarding,
-        HostAnalysisDto[] Analysis,
         HostPassiveSkillStateDto[]? PassiveSkillStates,
         HostPassiveActivationDto[]? PassiveActivations);
 
@@ -899,7 +894,6 @@ internal static class CleanSaveJsonCodec
         string? TickEventId = null,
         bool? SuspendWhileReserve = null,
         string? PhaseId = null);
-    private sealed record HostAnalysisDto(string TargetInstanceId, string[] Layers);
     private sealed record HostPassiveSkillStateDto(string SkillId, bool IsEnabled);
     private sealed record HostPassiveActivationDto(
         string SkillId,

@@ -238,7 +238,7 @@ whole scaling policy.
 
 ## Persistence
 
-Save contract version `13` retains the selected policy ID, every ordered track,
+Save contract version `14` retains the selected policy ID, every ordered track,
 every contribution identity and magnitude, remaining duration, reserve flag,
 and lifecycle cursor. Restore validates the state against the authored policy
 before any actor or aggregate session becomes live. A mismatch rejects the

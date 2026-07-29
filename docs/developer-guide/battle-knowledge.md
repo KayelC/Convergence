@@ -11,12 +11,10 @@ Do not reconstruct knowledge from damage numbers, combat text, target
 definitions, animations, or action display names. Executed effects already
 carry the evidence that a knowledge policy is allowed to use.
 
-> **Order 5 pre-closure note:** use only the immutable persistent and encounter
-> snapshots described in this guide. The currently exported actor-local
-> `Reveal`/`GetAnalysis` methods and the three mutable `*Knowledge` stores are
-> older competing surfaces that canonical execution, querying, and persistence
-> do not consume. O5-R15 and O5-R16 will retire them before this integration
-> guide is promoted back to reviewed status.
+> **Order 5 correction status:** use only the immutable persistent and encounter
+> snapshots described in this guide. O5-R15 removed actor-local Analyze state
+> from runtime actors and save v14. Three older mutable `*Knowledge` stores still
+> remain outside this canonical path and are scheduled for removal by O5-R16.
 
 ## State To Keep
 
@@ -222,12 +220,10 @@ that a diagnostic always means an unchanged snapshot.
 - Clear or discard encounter snapshots at battle end.
 - Validate before restore with `RuntimeSaveValidator`.
 
-Validation rejects duplicate facts, duplicate analyzed profiles, missing entity
-or ailment references, and actor-local analysis keyed by encounter runtime IDs.
-Do not write actor-local analysis: canonical Analyze writes
-`RuntimeEncounterKnowledgeSnapshot`, while any non-empty
-`RuntimeBattleStatusSnapshot.Analysis` currently makes a session save invalid.
-That obsolete actor-local shape is scheduled for removal by O5-R15.
+Validation rejects duplicate facts, duplicate analyzed profiles, and missing
+entity or ailment references. Actor snapshots no longer contain Analyze state:
+canonical Analyze writes `RuntimeEncounterKnowledgeSnapshot`, which an ordinary
+session save intentionally discards at encounter end.
 
 ## Godot Responsibilities
 

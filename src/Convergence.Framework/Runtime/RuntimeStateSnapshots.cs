@@ -395,24 +395,6 @@ public sealed record RuntimeAffinityBreakSnapshot
     public DurationDefinition Duration => Lifetime.Expiration;
 }
 
-public sealed record RuntimeAnalysisSnapshot
-{
-    public RuntimeAnalysisSnapshot(RuntimeInstanceId targetInstanceId, IEnumerable<AnalysisLayer> layers)
-    {
-        AnalysisLayer[] layerSnapshot = (layers ?? throw new ArgumentNullException(nameof(layers))).ToArray();
-        foreach (AnalysisLayer layer in layerSnapshot)
-        {
-            EnumDomain.RequireDefined(layer, nameof(layers));
-        }
-
-        TargetInstanceId = targetInstanceId;
-        Layers = RuntimeSnapshotCollections.List(layerSnapshot);
-    }
-
-    public RuntimeInstanceId TargetInstanceId { get; }
-    public IReadOnlyList<AnalysisLayer> Layers { get; }
-}
-
 public sealed record RuntimeBattleStatusSnapshot
 {
     public RuntimeBattleStatusSnapshot(
@@ -423,7 +405,6 @@ public sealed record RuntimeBattleStatusSnapshot
         IEnumerable<RuntimeShieldSnapshot>? shields = null,
         IEnumerable<RuntimeAffinityOverrideSnapshot>? affinityOverrides = null,
         bool isGuarding = false,
-        IEnumerable<RuntimeAnalysisSnapshot>? analysis = null,
         IEnumerable<RuntimeAffinityBreakSnapshot>? affinityBreaks = null)
     {
         Ailments = RuntimeSnapshotCollections.List(ailments);
@@ -434,7 +415,6 @@ public sealed record RuntimeBattleStatusSnapshot
         AffinityOverrides = RuntimeSnapshotCollections.List(affinityOverrides);
         AffinityBreaks = RuntimeSnapshotCollections.List(affinityBreaks);
         IsGuarding = isGuarding;
-        Analysis = RuntimeSnapshotCollections.List(analysis);
     }
 
     public IReadOnlyList<RuntimeTimedStateSnapshot> Ailments { get; }
@@ -447,7 +427,6 @@ public sealed record RuntimeBattleStatusSnapshot
     public IReadOnlyList<RuntimeAffinityOverrideSnapshot> AffinityOverrides { get; }
     public IReadOnlyList<RuntimeAffinityBreakSnapshot> AffinityBreaks { get; }
     public bool IsGuarding { get; }
-    public IReadOnlyList<RuntimeAnalysisSnapshot> Analysis { get; }
 }
 
 public sealed record RuntimePassiveActivationSnapshot

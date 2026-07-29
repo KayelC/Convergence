@@ -86,4 +86,5 @@ formally closed at that revision. A later
 [post-closure independent audit](../reviews/battle-knowledge-order-5-post-closure-independent-audit-2026-07-27.md)
 reopened it after finding two exported competing authorities, an incomplete
 standalone enum boundary, and an incomplete custom-evidence tuple. O5-R15
-through O5-R20 now govern correction and fresh closure.
+now removes actor-local Analyze state and the corresponding save field. O5-R16
+through O5-R20 govern the remaining correction and fresh closure.

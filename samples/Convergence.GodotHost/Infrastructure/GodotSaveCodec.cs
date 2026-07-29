@@ -64,10 +64,6 @@ internal sealed record GodotSaveDuration(
     bool? SuspendWhileReserve = null,
     string? PhaseId = null);
 
-internal sealed record GodotSaveAnalysis(
-    string TargetInstanceId,
-    IReadOnlyList<string> Layers);
-
 internal sealed record GodotSavePassiveSkillState(string SkillId, bool IsEnabled);
 
 internal sealed record GodotSavePassiveActivation(
@@ -111,7 +107,6 @@ internal sealed record GodotSaveActor(
     IReadOnlyList<GodotSaveAffinityBreak> AffinityBreaks,
     IReadOnlyList<GodotSaveAffinityOverride> AffinityOverrides,
     bool IsGuarding,
-    IReadOnlyList<GodotSaveAnalysis> Analysis,
     IReadOnlyList<GodotSavePassiveSkillState> PassiveSkillStates,
     IReadOnlyList<GodotSavePassiveActivation> PassiveActivations);
 
@@ -305,9 +300,6 @@ internal static class GodotSaveCodec
                     affinity.Affinity.ToString(),
                     ToLifetimeDto(affinity.Lifetime))).ToArray(),
             actor.BattleStatus.IsGuarding,
-            actor.BattleStatus.Analysis.Select(analysis => new GodotSaveAnalysis(
-                analysis.TargetInstanceId.ToString(),
-                analysis.Layers.Select(layer => layer.ToString()).ToArray())).ToArray(),
             actor.BattleActivations.PassiveSkillStates.Select(passive =>
                 new GodotSavePassiveSkillState(
                     passive.SkillId.ToString(),
@@ -372,9 +364,6 @@ internal static class GodotSaveCodec
                     Enum.Parse<ElementalAffinity>(affinity.Affinity),
                     FromLifetimeDto(affinity.Lifetime))),
                 actor.IsGuarding,
-                actor.Analysis.Select(analysis => new RuntimeAnalysisSnapshot(
-                    Instance(analysis.TargetInstanceId),
-                    analysis.Layers.Select(layer => Enum.Parse<AnalysisLayer>(layer)))),
                 actor.AffinityBreaks.Select(affinityBreak => new RuntimeAffinityBreakSnapshot(
                     Enum.Parse<DamageElement>(affinityBreak.Element),
                     FromLifetimeDto(affinityBreak.Lifetime)))),

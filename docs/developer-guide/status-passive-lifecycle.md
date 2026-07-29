@@ -359,7 +359,7 @@ is published.
 
 ## Persistence
 
-Save contract v13 preserves:
+Save contract v14 preserves:
 
 - active ailments and other timed state with expiration and removal profile;
 - stat-modifier and charge-policy state;

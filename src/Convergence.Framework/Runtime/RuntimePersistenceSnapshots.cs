@@ -59,9 +59,7 @@ public enum RuntimeSaveValidationCode
     DuplicateActorAffinityBreak,
     InvalidActorAffinityBreakElement,
     DuplicateActorAffinityOverride,
-    DuplicateActorAnalysisTarget,
-    DuplicateActorAnalysisLayer,
-    DuplicatePassiveSkillState,
+    DuplicatePassiveSkillState = 51,
     PassiveStateSkillNotLoaded,
     DuplicatePassiveActivation,
     PassiveActivationSkillNotLoaded,
@@ -94,8 +92,7 @@ public enum RuntimeSaveValidationCode
     PassiveActivationEventMismatch,
     MissingPassiveSkillState = 83,
     ConflictingActorAilmentExclusivityGroup = 84,
-    DuplicateAnalyzedDefenseKnowledge = 85,
-    ActorEncounterAnalysisCannotPersist = 86
+    DuplicateAnalyzedDefenseKnowledge = 85
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -319,7 +316,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 13;
+    public const int CurrentContractVersion = 14;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -837,14 +834,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 
         ValidateActorStatModifiers(actor, catalog, diagnostics, actorIndex);
         ValidateActorCharges(actor, diagnostics, actorIndex);
-        if (actor.BattleStatus.Analysis.Count > 0)
-        {
-            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                RuntimeSaveValidationCode.ActorEncounterAnalysisCannotPersist,
-                "Actor-local analysis refers to encounter runtime IDs and cannot enter a session save.",
-                actor.Identity.InstanceId,
-                Path: $"$.actors[{actorIndex}].battleStatus.analysis"));
-        }
 
         ValidateActorSkillCatalogReferences(
             actor.Skills.LearnedSkillIds,
@@ -994,8 +983,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             RuntimeActorSnapshotIntegrityCode.DuplicateAffinityBreak => RuntimeSaveValidationCode.DuplicateActorAffinityBreak,
             RuntimeActorSnapshotIntegrityCode.InvalidAffinityBreakElement => RuntimeSaveValidationCode.InvalidActorAffinityBreakElement,
             RuntimeActorSnapshotIntegrityCode.DuplicateAffinityOverride => RuntimeSaveValidationCode.DuplicateActorAffinityOverride,
-            RuntimeActorSnapshotIntegrityCode.DuplicateAnalysisTarget => RuntimeSaveValidationCode.DuplicateActorAnalysisTarget,
-            RuntimeActorSnapshotIntegrityCode.DuplicateAnalysisLayer => RuntimeSaveValidationCode.DuplicateActorAnalysisLayer,
             RuntimeActorSnapshotIntegrityCode.DuplicatePassiveSkillState => RuntimeSaveValidationCode.DuplicatePassiveSkillState,
             RuntimeActorSnapshotIntegrityCode.MissingPassiveSkillState => RuntimeSaveValidationCode.MissingPassiveSkillState,
             RuntimeActorSnapshotIntegrityCode.PassiveSkillStateNotLoaded => RuntimeSaveValidationCode.PassiveStateSkillNotLoaded,

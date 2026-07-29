@@ -91,7 +91,7 @@ stat-modifier family supplies persistent staged, timed exclusive, and
 independently timed contribution policies. The closure record is maintained
 under [Completed Order 1](documentation-completion-roadmap.md#completed-order-1).
 
-The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v8, and save-v13 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, aggregate restoration derives the Active Hosted Entity from the canonical party roster, and retained stat modifiers, charges, and per-target passive activation keys bind to their authored policies during validation and restore.
+The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v8, and save-v14 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, aggregate restoration derives the Active Hosted Entity from the canonical party roster, and retained stat modifiers, charges, and per-target passive activation keys bind to their authored policies during validation and restore.
 
 ## Completed Actor Design Correction
 
@@ -196,7 +196,9 @@ then re-read the current exported surface and reopened `battle_knowledge` as
 `partial`: actor-local analysis and three mutable stores compete with the
 canonical snapshots, record-cloned enum values escape one standalone boundary,
 and custom instant-defeat evidence permits incomplete checked tuples. O5-R15
-through O5-R20 are the active correction and closure sequence.
+now removes actor-local Analyze state and advances the unreleased save contract
+to v14. O5-R16 through O5-R20 are the remaining correction and closure
+sequence.
 
 ## Priority 2: Persistence Evolution
 

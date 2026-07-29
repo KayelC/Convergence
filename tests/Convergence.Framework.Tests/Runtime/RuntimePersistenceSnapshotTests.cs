@@ -686,15 +686,6 @@ public sealed class RuntimePersistenceSnapshotTests
                 [
                     new RuntimeAffinityOverrideSnapshot(DamageElement.Fire, ElementalAffinity.Resist, duration),
                     new RuntimeAffinityOverrideSnapshot(DamageElement.Fire, ElementalAffinity.Resist, duration)
-                ],
-                analysis:
-                [
-                    new RuntimeAnalysisSnapshot(
-                        RuntimeInstanceId.Parse("analysis_target"),
-                        [AnalysisLayer.Stats, AnalysisLayer.Stats]),
-                    new RuntimeAnalysisSnapshot(
-                        RuntimeInstanceId.Parse("analysis_target"),
-                        [AnalysisLayer.Affinities])
                 ]),
             battleActivations: new RuntimeBattleActivationSnapshot(
                 [activation, activation],
@@ -722,8 +713,6 @@ public sealed class RuntimePersistenceSnapshotTests
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAffinityBreak, "$.actors[0].battleStatus.affinityBreaks[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.InvalidActorAffinityBreakElement, "$.actors[0].battleStatus.affinityBreaks[2].element");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAffinityOverride, "$.actors[0].battleStatus.affinityOverrides[1]");
-        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAnalysisLayer, "$.actors[0].battleStatus.analysis[0].layers[1]");
-        AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicateActorAnalysisTarget, "$.actors[0].battleStatus.analysis[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicatePassiveSkillState, "$.actors[0].battleActivations.passiveSkillStates[1]");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicatePassiveActivation, "$.actors[0].battleActivations.passiveActivations[1]");
 
@@ -1999,30 +1988,6 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Equal(RuntimeSaveValidationCode.KnowledgeTargetMissing, diagnostic.Code);
         Assert.Equal("$.knowledge.analyzedDefenses", diagnostic.Path);
         Assert.Equal(missing, diagnostic.ContentId);
-    }
-
-    [Fact]
-    public void RuntimeSaveValidator_RejectsActorLocalEncounterAnalysis()
-    {
-        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
-        RuntimeActorSnapshot actor = CopyActor(
-            baseline.Actors[0],
-            battleStatus: new RuntimeBattleStatusSnapshot(
-                analysis:
-                [
-                    new RuntimeAnalysisSnapshot(
-                        RuntimeInstanceId.Parse("encounter_target"),
-                        [AnalysisLayer.Affinities])
-                ]));
-
-        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(
-            CreateSaveSnapshot(actors: [actor, baseline.Actors[1]]),
-            LoadCatalog());
-
-        AssertDiagnostic(
-            result,
-            RuntimeSaveValidationCode.ActorEncounterAnalysisCannotPersist,
-            "$.actors[0].battleStatus.analysis");
     }
 
     [Fact]

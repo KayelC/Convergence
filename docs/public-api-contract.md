@@ -88,7 +88,8 @@ status cleanup to fabricate behavior.
 `RuntimeSaveValidationCode` appends `MissingPassiveSkillState` and
 `ConflictingActorAilmentExclusivityGroup`. These guarded `0.1.0` diagnostics
 reject incomplete passive enabled-state coverage and mutually exclusive active
-ailments before aggregate restore. They do not change save contract v13's wire
+ailments before aggregate restore. They did not change then-current save
+contract v13's wire
 shape; they close validation paths for state that the existing contract already
 expresses.
 
@@ -144,6 +145,16 @@ passive, lifecycle, removal, and cleanup execution through the selected policy;
 external callers must not replace it with reflection or another mutable stage
 store. Retained modifier save state is completed separately by M1-7.
 
+### Battle Knowledge Authority Migration
+
+O5-R15 removes `RuntimeActorState.Reveal`, `RuntimeActorState.GetAnalysis`,
+`RuntimeAnalysisSnapshot`, and `RuntimeBattleStatusSnapshot.Analysis`. Canonical
+Analyze execution already returns `BattleAnalysisResult` and commits it through
+`RuntimeEncounterKnowledgeSnapshot`; durable defense facts already belong to
+`RuntimeKnowledgeSnapshot`. Save contract v14 removes the actor-local field so
+a host cannot create an unsaveable third knowledge authority. This is a
+reviewed pre-release baseline correction with no compatibility alias.
+
 M1-3 adds `StatModifierLifecycleBoundary` and the supplied
 `TimedExclusiveStatModifierPolicy`. Counted contributions retain their latest
 observed boundary so same-boundary application is protected, duplicate ticks
@@ -156,7 +167,7 @@ application as an independently timed signed contribution, derives a bounded
 aggregate, refreshes the oldest same-sign contribution at a configured cap,
 and uses the same typed lifecycle-boundary contract per contribution.
 
-Save contract v13 retains the canonical roster and pending skill-choice
+Save contract v14 retains the canonical roster and pending skill-choice
 authorities established by v9 and stores complete stat-modifier policy state.
 `RuntimeSessionRestoreService` binds retained modifier policies explicitly,
 derives the Active Hosted Entity dependency from `RuntimePartyRosterSnapshot`,

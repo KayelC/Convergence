@@ -321,7 +321,7 @@ domain. `StandardStatStageScalingPolicy` remains table-defined for `-4..+4`.
 
 ## Save And Aggregate Restore
 
-Save contract v13 serializes canonical state under
+Save contract v14 serializes canonical state under
 `RuntimeBattleStatusSnapshot.StatModifiers`. Validation performs neutral checks,
 catalog lookup of the saved qualified policy ID, authored factory binding, and
 selected-policy compatibility validation.

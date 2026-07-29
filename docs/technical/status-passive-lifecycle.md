@@ -435,7 +435,7 @@ results instead of being discarded.
 
 ## Persistence And Restore
 
-Runtime save contract v13 serializes the status lifetime rather than only the
+Runtime save contract v14 serializes the status lifetime rather than only the
 remaining number. This preserves expiration kind, event or phase identity,
 reserve behavior, and allowed removal causes.
 

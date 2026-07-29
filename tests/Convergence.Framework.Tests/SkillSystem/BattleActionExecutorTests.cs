@@ -1246,7 +1246,6 @@ public sealed class BattleActionExecutorTests
         Assert.Equal(
             [BattleAnalysisField.ElementalAffinities],
             Assert.IsType<BattleAnalysisResult>(effect.Analysis).DisclosedFields);
-        Assert.Empty(actor.GetAnalysis(target.InstanceId));
     }
 
     [Fact]
@@ -1687,7 +1686,6 @@ public sealed class BattleActionExecutorTests
                 BattleAnalysisField.CoreStats
             ],
             Assert.IsType<BattleAnalysisResult>(Assert.Single(analyze.Effects).Analysis).DisclosedFields);
-        Assert.Empty(actor.GetAnalysis(target.InstanceId));
         Assert.True(escape.EscapeRequested);
         Assert.Equal(ActionTurnConsumptionKind.None, escape.TurnConsumption.Kind);
         Assert.Equal([Id("change_strategy")], host.HostActionRequestIds);

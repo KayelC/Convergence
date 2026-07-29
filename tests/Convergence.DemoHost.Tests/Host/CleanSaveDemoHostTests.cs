@@ -224,13 +224,7 @@ public sealed class CleanSaveDemoHostTests
                                 ContentId.Parse("owner_turn_end"),
                                 true)))
                 ],
-                isGuarding: true,
-                analysis:
-                [
-                    new RuntimeAnalysisSnapshot(
-                        RuntimeInstanceId.Parse("enemy_1"),
-                        [AnalysisLayer.Affinities])
-                ]),
+                isGuarding: true),
             new RuntimeBattleActivationSnapshot(
                 passiveActivations:
                 [
@@ -278,7 +272,6 @@ public sealed class CleanSaveDemoHostTests
         Assert.False(restoredBreak.Lifetime.Allows(StatusRemovalCause.DeploymentSwap));
         Assert.IsType<BattleDurationDefinition>(Assert.Single(restoredActor.BattleStatus.AffinityOverrides).Duration);
         Assert.True(restoredActor.BattleStatus.IsGuarding);
-        Assert.Equal(RuntimeInstanceId.Parse("enemy_1"), Assert.Single(restoredActor.BattleStatus.Analysis).TargetInstanceId);
         Assert.Equal(
             [ContentId.Parse("analyze"), ContentId.Parse("swap_hosted_entity")],
             restoredActor.CapabilityIds);

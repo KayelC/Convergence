@@ -17,6 +17,17 @@ public sealed class BattleKnowledgeExecutionTransitionTests
     private static readonly ContentId TargetEntity = ContentId.Parse("target_entity");
 
     [Fact]
+    public void ActorAndSaveContractsExposeNoEncounterAnalysisAuthority()
+    {
+        Assert.Null(typeof(RuntimeActorState).GetMethod("Reveal"));
+        Assert.Null(typeof(RuntimeActorState).GetMethod("GetAnalysis"));
+        Assert.Null(typeof(RuntimeBattleStatusSnapshot).GetProperty("Analysis"));
+        Assert.Null(typeof(RuntimeBattleStatusSnapshot).Assembly.GetType(
+            "Convergence.Runtime.RuntimeAnalysisSnapshot"));
+        Assert.Equal(14, RuntimeSaveGameSnapshot.CurrentContractVersion);
+    }
+
+    [Fact]
     public void AppliesObservationAndAnalysisThroughOneAtomicTransition()
     {
         RuntimeKnowledgeSnapshot persistent = new();
