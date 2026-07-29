@@ -688,7 +688,7 @@ public sealed class CatalogBattleRuntimeTests
                         [
                             new EncounterElementalKnowledgeEntry(
                                 ember.State.InstanceId,
-                                ember.Entity.Id,
+                                ember.State.CombatProfileIdentity,
                                 DamageElement.Fire,
                                 ElementalAffinity.Resist,
                                 influences)
@@ -944,7 +944,7 @@ public sealed class CatalogBattleRuntimeTests
             [
                 new EncounterAilmentKnowledgeEntry(
                     target.State.InstanceId,
-                    target.Entity.Id,
+                    target.State.CombatProfileIdentity,
                     ailmentId,
                     ResistanceLevel.Resistant)
             ],
@@ -952,14 +952,14 @@ public sealed class CatalogBattleRuntimeTests
             [
                 new EncounterInstantDeathKnowledgeEntry(
                     target.State.InstanceId,
-                    target.Entity.Id,
+                    target.State.CombatProfileIdentity,
                     InstantDeathChannel.Light,
                     ResistanceLevel.Immune)
             ]);
         var selector = new RecordingAggregateKnowledgeSelector(
             actor.State.InstanceId,
             target.State.InstanceId,
-            target.Entity.Id,
+            target.State.CombatProfileIdentity,
             ailmentId);
         BattleExecutionServices services = Services(catalog);
 
@@ -989,7 +989,7 @@ public sealed class CatalogBattleRuntimeTests
             [
                 new EncounterElementalKnowledgeEntry(
                     RuntimeInstanceId.Parse("missing_target"),
-                    target.Entity.Id,
+                    target.State.CombatProfileIdentity,
                     DamageElement.Fire,
                     ElementalAffinity.Weak)
             ]);
@@ -2808,7 +2808,7 @@ public sealed class CatalogBattleRuntimeTests
     private sealed class RecordingAggregateKnowledgeSelector(
         RuntimeInstanceId observedActorId,
         RuntimeInstanceId targetId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         ContentId ailmentId) : IBattleActionSelector
     {
         public bool ObservedAilment { get; private set; }
@@ -2820,7 +2820,7 @@ public sealed class CatalogBattleRuntimeTests
             {
                 ObservedAilment = request.Knowledge.TryGetAilmentResistance(
                     targetId,
-                    targetEntityId,
+                    targetProfileIdentity,
                     ailmentId,
                     out ResistanceLevel ailmentResistance,
                     out BattleKnowledgeFactSource ailmentSource,
@@ -2829,7 +2829,7 @@ public sealed class CatalogBattleRuntimeTests
                     ailmentSource == BattleKnowledgeFactSource.Encounter;
                 ObservedInstantDeath = request.Knowledge.TryGetInstantDeathResistance(
                     targetId,
-                    targetEntityId,
+                    targetProfileIdentity,
                     InstantDeathChannel.Light,
                     out ResistanceLevel instantDeathResistance,
                     out BattleKnowledgeFactSource instantDeathSource,

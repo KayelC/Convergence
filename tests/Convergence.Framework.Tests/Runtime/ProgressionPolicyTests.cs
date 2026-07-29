@@ -4,6 +4,7 @@ using Convergence.Catalog;
 using Convergence.Content;
 using Convergence.Execution;
 using Convergence.Hosting;
+using Convergence.Knowledge;
 using Convergence.Runtime;
 using Xunit;
 
@@ -431,6 +432,94 @@ public sealed class ProgressionPolicyTests
         Assert.Contains(focusStatus, vessel.OtherStatuses);
         Assert.Equal(affiliation, vessel.Affiliation);
         Assert.Equal(encounterPresence, vessel.EncounterPresence);
+    }
+
+    [Fact]
+    public void HostedProfileKnowledgePersistsForItsSourceAndInvalidatesWhenTheVesselSwitches()
+    {
+        RuntimeActorState observer = CreateActor("knowledge_observer", 10m);
+        RuntimeActorState firstHostedEntity = CreateActor(
+            "knowledge_first_hosted",
+            20m,
+            defenseProfile: new CombatDefenseProfile(
+                [KeyValuePair.Create(DamageElement.Ice, ElementalAffinity.Weak)]));
+        RuntimeActorState secondHostedEntity = CreateActor(
+            "knowledge_second_hosted",
+            25m,
+            defenseProfile: new CombatDefenseProfile(
+                [KeyValuePair.Create(DamageElement.Fire, ElementalAffinity.Null)]));
+        RuntimeActorState vessel = CreateActor("knowledge_vessel", 5m);
+        var composition = new RuntimeActorCombatProfileCompositionService(
+            _stats,
+            _resources,
+            new SkillRepository());
+
+        RuntimeActorCombatProfileCompositionResult first = composition.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                PartyRoster(vessel, firstHostedEntity),
+                [firstHostedEntity, secondHostedEntity]));
+        Assert.True(first.Applied);
+
+        BattleAnalysisResult analysis = new BattleAnalysisService().Analyze(
+            new BattleAnalysisRequest(
+                observer,
+                vessel,
+                [AnalysisLayer.Full],
+                StandardProgressionIds.Sp));
+        BattleAnalysisKnowledgeTransitionResult learned =
+            new BattleAnalysisKnowledgeTransitionService().Apply(
+                new RuntimeKnowledgeSnapshot(),
+                RuntimeEncounterKnowledgeSnapshot.Empty,
+                analysis);
+
+        Assert.Equal(vessel.CombatProfileIdentity, analysis.TargetProfileIdentity);
+        Assert.Equal(
+            firstHostedEntity.EntityId,
+            Assert.Single(
+                learned.PersistentAfter.ElementalAffinities,
+                entry => entry.Element == DamageElement.Ice).EntityId);
+        Assert.True(new BattleKnowledgeView(learned.PersistentAfter, learned.EncounterAfter)
+            .IsAnalysisDisclosed(
+                vessel.InstanceId,
+                vessel.CombatProfileIdentity,
+                BattleAnalysisField.Skills));
+
+        RuntimeActorCombatProfileCompositionResult second = composition.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                PartyRoster(vessel, secondHostedEntity),
+                [firstHostedEntity, secondHostedEntity]));
+        Assert.True(second.Applied);
+        BattleKnowledgeTargetProfileChangeResult rebound =
+            new BattleKnowledgeTargetProfileTransitionService().RebindTargetProfile(
+                learned.EncounterAfter,
+                vessel.InstanceId,
+                vessel.CombatProfileIdentity);
+
+        Assert.True(rebound.Invalidated);
+        Assert.True(rebound.After.IsEmpty);
+        Assert.Contains(
+            learned.PersistentAfter.ElementalAffinities,
+            entry => entry.EntityId == firstHostedEntity.EntityId &&
+                     entry.Element == DamageElement.Ice &&
+                     entry.Affinity == ElementalAffinity.Weak);
+        var currentView = new BattleKnowledgeView(learned.PersistentAfter, rebound.After);
+        Assert.False(currentView.IsAnalysisDisclosed(
+            vessel.InstanceId,
+            vessel.CombatProfileIdentity,
+            BattleAnalysisField.Skills));
+        Assert.False(currentView.TryGetElementalAffinity(
+            vessel.InstanceId,
+            vessel.CombatProfileIdentity,
+            DamageElement.Ice,
+            out _,
+            out _,
+            out _));
     }
 
     [Fact]

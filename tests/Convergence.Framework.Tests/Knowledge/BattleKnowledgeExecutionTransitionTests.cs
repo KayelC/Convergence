@@ -15,6 +15,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
     private static readonly RuntimeInstanceId Observer = RuntimeInstanceId.Parse("observer");
     private static readonly RuntimeInstanceId Target = RuntimeInstanceId.Parse("target");
     private static readonly ContentId TargetEntity = ContentId.Parse("target_entity");
+    private static readonly RuntimeCombatProfileIdentitySnapshot TargetProfile = new(Target, TargetEntity);
 
     [Fact]
     public void ActorAndSaveContractsExposeNoEncounterAnalysisAuthority()
@@ -35,7 +36,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         BattleAnalysisResult analysis = AnalyzeStats();
         EffectExecutionResult[] effects =
         [
-            EffectWithObservation(0, Elemental(TargetEntity, 0)),
+            EffectWithObservation(0, Elemental(TargetProfile, 0)),
             new EffectExecutionResult(
                 1,
                 Target,
@@ -75,7 +76,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         BattleAnalysisResult analysis = AnalyzeAffinities();
         EffectExecutionResult[] effects =
         [
-            EffectWithObservation(0, Elemental(TargetEntity, 0)),
+            EffectWithObservation(0, Elemental(TargetProfile, 0)),
             new EffectExecutionResult(1, Target, EffectExecutionOutcome.Success)
             {
                 Analysis = analysis
@@ -97,14 +98,16 @@ public sealed class BattleKnowledgeExecutionTransitionTests
     }
 
     [Fact]
-    public void LaterTargetEntityMismatchRejectsTheWholeExecutionBatch()
+    public void LaterTargetProfileMismatchRejectsTheWholeExecutionBatch()
     {
         RuntimeKnowledgeSnapshot persistent = new();
         RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
         EffectExecutionResult[] effects =
         [
-            EffectWithObservation(0, Elemental(TargetEntity, 0)),
-            EffectWithObservation(1, Elemental(ContentId.Parse("different_entity"), 1))
+            EffectWithObservation(0, Elemental(TargetProfile, 0)),
+            EffectWithObservation(1, Elemental(
+                new RuntimeCombatProfileIdentitySnapshot(Target, TargetEntity, revision: 1),
+                1))
         ];
 
         BattleKnowledgeExecutionTransitionResult result = Apply(
@@ -119,8 +122,37 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         Assert.Empty(result.AcceptedObservations);
         Assert.Empty(result.ProcessedAnalyses);
         BattleKnowledgeExecutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
-        Assert.Equal(BattleKnowledgeExecutionDiagnosticCode.ObservationTargetEntityMismatch, diagnostic.Code);
+        Assert.Equal(BattleKnowledgeExecutionDiagnosticCode.ObservationTargetProfileMismatch, diagnostic.Code);
         Assert.Equal(1, diagnostic.EffectIndex);
+    }
+
+    [Fact]
+    public void CurrentExecutionAuthorityInvalidatesStaleTargetProfileBeforeSelectionStateContinues()
+    {
+        var staleProfile = new RuntimeCombatProfileIdentitySnapshot(Target, TargetEntity, revision: 3);
+        var encounter = new RuntimeEncounterKnowledgeSnapshot(
+            [new EncounterElementalKnowledgeEntry(
+                Target,
+                staleProfile,
+                DamageElement.Ice,
+                ElementalAffinity.Weak)],
+            analysis:
+            [
+                new EncounterAnalysisKnowledgeEntry(
+                    Target,
+                    staleProfile,
+                    [BattleAnalysisField.Skills])
+            ]);
+
+        BattleKnowledgeExecutionTransitionResult result = Apply(
+            new RuntimeKnowledgeSnapshot(),
+            encounter,
+            effects: [],
+            BattleKnowledgePersistenceScope.EncounterOnly);
+
+        Assert.True(result.Applied);
+        Assert.True(result.EncounterAfter.IsEmpty);
+        Assert.Same(encounter, result.EncounterBefore);
     }
 
     [Fact]
@@ -128,7 +160,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
     {
         var source = new List<EffectExecutionResult>
         {
-            EffectWithObservation(0, Elemental(TargetEntity, 0))
+            EffectWithObservation(0, Elemental(TargetProfile, 0))
         };
         var request = new BattleKnowledgeExecutionTransitionRequest(
             new RuntimeKnowledgeSnapshot(),
@@ -153,24 +185,26 @@ public sealed class BattleKnowledgeExecutionTransitionTests
     }
 
     [Fact]
-    public void ExecutionAuthorityDefensivelyCopiesAndProtectsTargetIdentityMappings()
+    public void ExecutionAuthorityDefensivelyCopiesAndProtectsTargetProfileMappings()
     {
-        var targetIdentities = new List<KeyValuePair<RuntimeInstanceId, ContentId>>
+        var targetProfiles = new List<KeyValuePair<RuntimeInstanceId, RuntimeCombatProfileIdentitySnapshot>>
         {
-            KeyValuePair.Create(Target, TargetEntity)
+            KeyValuePair.Create(Target, TargetProfile)
         };
 
         var authority = new BattleKnowledgeExecutionAuthority(
             Action,
             Observer,
-            targetIdentities);
-        targetIdentities.Clear();
+            targetProfiles);
+        targetProfiles.Clear();
 
-        Assert.Equal(TargetEntity, authority.TargetEntityIds[Target]);
+        Assert.Equal(TargetProfile, authority.TargetProfiles[Target]);
         Assert.Throws<NotSupportedException>(() =>
-            ((IDictionary<RuntimeInstanceId, ContentId>)authority.TargetEntityIds).Add(
+            ((IDictionary<RuntimeInstanceId, RuntimeCombatProfileIdentitySnapshot>)authority.TargetProfiles).Add(
                 RuntimeInstanceId.Parse("other_target"),
-                ContentId.Parse("other_entity")));
+                new RuntimeCombatProfileIdentitySnapshot(
+                    RuntimeInstanceId.Parse("other_source"),
+                    ContentId.Parse("other_entity"))));
     }
 
     [Fact]
@@ -184,19 +218,23 @@ public sealed class BattleKnowledgeExecutionTransitionTests
             new BattleKnowledgeExecutionAuthority(
                 Action,
                 Observer,
-                [KeyValuePair.Create(default(RuntimeInstanceId), TargetEntity)]));
+                [KeyValuePair.Create(default(RuntimeInstanceId), TargetProfile)]));
         Assert.Throws<ArgumentException>(() =>
             new BattleKnowledgeExecutionAuthority(
                 Action,
                 Observer,
-                [KeyValuePair.Create(Target, default(ContentId))]));
+                [KeyValuePair.Create(Target, (RuntimeCombatProfileIdentitySnapshot)null!)]));
         Assert.Throws<ArgumentException>(() =>
             new BattleKnowledgeExecutionAuthority(
                 Action,
                 Observer,
                 [
-                    KeyValuePair.Create(Target, TargetEntity),
-                    KeyValuePair.Create(Target, ContentId.Parse("other_entity"))
+                    KeyValuePair.Create(Target, TargetProfile),
+                    KeyValuePair.Create(
+                        Target,
+                        new RuntimeCombatProfileIdentitySnapshot(
+                            RuntimeInstanceId.Parse("other_source"),
+                            ContentId.Parse("other_entity")))
                 ]));
     }
 
@@ -207,7 +245,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
         EffectExecutionResult effect = EffectWithObservation(
             0,
-            Elemental(TargetEntity, effectIndex: 1));
+            Elemental(TargetProfile, effectIndex: 1));
 
         BattleKnowledgeExecutionTransitionResult result = Apply(
             persistent,
@@ -235,7 +273,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
             Action,
             Observer,
             RuntimeInstanceId.Parse("different_target"),
-            TargetEntity,
+            TargetProfile,
             effectIndex: 0,
             DamageElement.Ice,
             contacted: true,
@@ -262,7 +300,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         RuntimeKnowledgeSnapshot persistent = new();
         RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
         BattleKnowledgeObservation mismatched = Elemental(
-            TargetEntity,
+            TargetProfile,
             effectIndex: 0,
             sourceActionId: ContentId.Parse("different_action"));
 
@@ -285,7 +323,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         RuntimeKnowledgeSnapshot persistent = new();
         RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
         BattleKnowledgeObservation mismatched = Elemental(
-            TargetEntity,
+            TargetProfile,
             effectIndex: 0,
             actorId: RuntimeInstanceId.Parse("different_observer"));
 
@@ -303,7 +341,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
     }
 
     [Fact]
-    public void RejectsObservationWhenExecutionAuthorityDoesNotBindItsTargetEntity()
+    public void RejectsObservationWhenExecutionAuthorityDoesNotBindItsTargetProfile()
     {
         RuntimeKnowledgeSnapshot persistent = new();
         RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
@@ -315,14 +353,14 @@ public sealed class BattleKnowledgeExecutionTransitionTests
                     persistent,
                     encounter,
                     authority,
-                    [EffectWithObservation(0, Elemental(TargetEntity, 0))],
+                    [EffectWithObservation(0, Elemental(TargetProfile, 0))],
                     BattleKnowledgePersistenceScope.EncounterAndPersistent));
 
         BattleKnowledgeExecutionDiagnostic diagnostic = AssertRejectedWithoutMutation(
             result,
             persistent,
             encounter,
-            BattleKnowledgeExecutionDiagnosticCode.ObservationTargetEntityMismatch);
+            BattleKnowledgeExecutionDiagnosticCode.ObservationTargetProfileMismatch);
         Assert.Contains("<unbound>", diagnostic.Message, StringComparison.Ordinal);
     }
 
@@ -384,7 +422,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
     }
 
     [Fact]
-    public void RejectsAnalysisWhoseEntityDoesNotMatchExecutionAuthority()
+    public void RejectsAnalysisWhoseProfileDoesNotMatchExecutionAuthority()
     {
         RuntimeKnowledgeSnapshot persistent = new();
         RuntimeEncounterKnowledgeSnapshot encounter = RuntimeEncounterKnowledgeSnapshot.Empty;
@@ -411,7 +449,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
             result,
             persistent,
             encounter,
-            BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetEntityMismatch);
+            BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetProfileMismatch);
     }
 
     [Fact]
@@ -423,11 +461,11 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         var service = new BattleKnowledgeExecutionTransitionService(observations);
         EffectExecutionResult[] effects =
         [
-            EffectWithObservation(0, Elemental(TargetEntity, 0)),
+            EffectWithObservation(0, Elemental(TargetProfile, 0)),
             EffectWithObservation(
                 1,
                 Elemental(
-                    TargetEntity,
+                    TargetProfile,
                     effectIndex: 1,
                     sourceActionId: ContentId.Parse("different_action")))
         ];
@@ -461,7 +499,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
                 persistent,
                 encounter,
                 Authority(),
-                [EffectWithObservation(0, Elemental(TargetEntity, 0))],
+                [EffectWithObservation(0, Elemental(TargetProfile, 0))],
                 BattleKnowledgePersistenceScope.EncounterOnly));
 
         Assert.Equal(BattleKnowledgeTransitionStatus.Rejected, result.Status);
@@ -489,7 +527,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         new(
             Action,
             Observer,
-            [KeyValuePair.Create(Target, TargetEntity)]);
+            [KeyValuePair.Create(Target, TargetProfile)]);
 
     private static EffectExecutionResult EffectWithObservation(
         int effectIndex,
@@ -500,7 +538,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         };
 
     private static BattleKnowledgeObservation Elemental(
-        ContentId entityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfile,
         int effectIndex,
         ContentId? sourceActionId = null,
         RuntimeInstanceId? actorId = null) =>
@@ -508,7 +546,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
             sourceActionId ?? Action,
             actorId ?? Observer,
             Target,
-            entityId,
+            targetProfile,
             effectIndex,
             DamageElement.Ice,
             contacted: true,

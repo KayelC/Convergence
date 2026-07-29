@@ -15,9 +15,9 @@ public enum BattleKnowledgeExecutionDiagnosticCode
     AnalysisTargetMismatch,
     ObservationSourceActionMismatch,
     ObservationActorMismatch,
-    ObservationTargetEntityMismatch,
+    ObservationTargetProfileMismatch,
     AnalysisActorMismatch,
-    AnalysisTargetEntityMismatch
+    AnalysisTargetProfileMismatch
 }
 
 public sealed class BattleKnowledgeExecutionDiagnostic
@@ -54,7 +54,7 @@ public sealed class BattleKnowledgeAnalysisEvidence
 }
 
 /// <summary>
-/// Identifies the accepted action, acting runtime actor, and target entities
+/// Identifies the accepted action, acting runtime actor, and target combat profiles
 /// against which execution-produced knowledge evidence is validated.
 /// </summary>
 public sealed class BattleKnowledgeExecutionAuthority
@@ -62,7 +62,7 @@ public sealed class BattleKnowledgeExecutionAuthority
     public BattleKnowledgeExecutionAuthority(
         ContentId sourceActionId,
         RuntimeInstanceId actorId,
-        IEnumerable<KeyValuePair<RuntimeInstanceId, ContentId>> targetEntityIds)
+        IEnumerable<KeyValuePair<RuntimeInstanceId, RuntimeCombatProfileIdentitySnapshot>> targetProfiles)
     {
         if (!sourceActionId.IsValid)
         {
@@ -73,13 +73,17 @@ public sealed class BattleKnowledgeExecutionAuthority
             throw new ArgumentException("Knowledge execution authority requires a valid acting runtime ID.", nameof(actorId));
         }
 
-        KeyValuePair<RuntimeInstanceId, ContentId>[] targets =
-            (targetEntityIds ?? throw new ArgumentNullException(nameof(targetEntityIds))).ToArray();
-        if (targets.Any(target => !target.Key.IsValid || !target.Value.IsValid))
+        KeyValuePair<RuntimeInstanceId, RuntimeCombatProfileIdentitySnapshot>[] targets =
+            (targetProfiles ?? throw new ArgumentNullException(nameof(targetProfiles))).ToArray();
+        if (targets.Any(target =>
+                !target.Key.IsValid ||
+                target.Value is null ||
+                !target.Value.SourceActorInstanceId.IsValid ||
+                !target.Value.SourceEntityDefinitionId.IsValid))
         {
             throw new ArgumentException(
-                "Knowledge execution target identities require valid runtime and entity IDs.",
-                nameof(targetEntityIds));
+                "Knowledge execution targets require valid runtime and combat-profile IDs.",
+                nameof(targetProfiles));
         }
 
         RuntimeInstanceId? duplicate = targets
@@ -91,18 +95,18 @@ public sealed class BattleKnowledgeExecutionAuthority
         {
             throw new ArgumentException(
                 $"Knowledge execution target runtime ID '{duplicateId}' is duplicated.",
-                nameof(targetEntityIds));
+                nameof(targetProfiles));
         }
 
         SourceActionId = sourceActionId;
         ActorId = actorId;
-        TargetEntityIds = new ReadOnlyDictionary<RuntimeInstanceId, ContentId>(
+        TargetProfiles = new ReadOnlyDictionary<RuntimeInstanceId, RuntimeCombatProfileIdentitySnapshot>(
             targets.ToDictionary(target => target.Key, target => target.Value));
     }
 
     public ContentId SourceActionId { get; }
     public RuntimeInstanceId ActorId { get; }
-    public IReadOnlyDictionary<RuntimeInstanceId, ContentId> TargetEntityIds { get; }
+    public IReadOnlyDictionary<RuntimeInstanceId, RuntimeCombatProfileIdentitySnapshot> TargetProfiles { get; }
 }
 
 public sealed class BattleKnowledgeExecutionTransitionRequest
@@ -187,13 +191,18 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
 {
     private readonly IBattleKnowledgeObservationTransitionService _observations;
     private readonly IBattleAnalysisKnowledgeTransitionService _analysis;
+    private readonly IBattleKnowledgeTargetProfileTransitionService _profiles;
 
     public BattleKnowledgeExecutionTransitionService(
         IBattleKnowledgeObservationTransitionService? observations = null,
-        IBattleAnalysisKnowledgeTransitionService? analysis = null)
+        IBattleAnalysisKnowledgeTransitionService? analysis = null,
+        IBattleKnowledgeTargetProfileTransitionService? profiles = null)
     {
-        _observations = observations ?? new BattleKnowledgeObservationTransitionService();
-        _analysis = analysis ?? new BattleAnalysisKnowledgeTransitionService();
+        _profiles = profiles ?? new BattleKnowledgeTargetProfileTransitionService();
+        _observations = observations ?? new BattleKnowledgeObservationTransitionService(
+            profileTransitions: _profiles);
+        _analysis = analysis ?? new BattleAnalysisKnowledgeTransitionService(
+            profileTransitions: _profiles);
     }
 
     public BattleKnowledgeExecutionTransitionResult Apply(
@@ -212,6 +221,17 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
         var acceptedObservations = new List<BattleKnowledgeObservation>();
         var processedAnalyses = new List<BattleKnowledgeAnalysisEvidence>();
         bool changed = false;
+
+        foreach ((RuntimeInstanceId targetId, RuntimeCombatProfileIdentitySnapshot profile) in
+                 request.Authority.TargetProfiles)
+        {
+            BattleKnowledgeTargetProfileChangeResult rebound = _profiles.RebindTargetProfile(
+                encounter,
+                targetId,
+                profile);
+            encounter = rebound.After;
+            changed |= rebound.Invalidated;
+        }
 
         foreach (EffectExecutionResult effect in request.Effects)
         {
@@ -322,22 +342,23 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
                             $"does not match acting runtime actor '{request.Authority.ActorId}'."
                         ]);
                 }
-                bool targetIdentityKnown = request.Authority.TargetEntityIds.TryGetValue(
+                bool targetProfileKnown = request.Authority.TargetProfiles.TryGetValue(
                     targetId,
-                    out ContentId targetEntityId);
-                if (!targetIdentityKnown ||
-                    observation.TargetEntityId != targetEntityId)
+                    out RuntimeCombatProfileIdentitySnapshot? targetProfile);
+                if (!targetProfileKnown ||
+                    observation.TargetProfileIdentity != targetProfile)
                 {
-                    string expectedEntity = targetIdentityKnown
-                        ? targetEntityId.ToString()
+                    string expectedProfile = targetProfileKnown
+                        ? Describe(targetProfile!)
                         : "<unbound>";
                     return Rejected(
                         request,
-                        BattleKnowledgeExecutionDiagnosticCode.ObservationTargetEntityMismatch,
+                        BattleKnowledgeExecutionDiagnosticCode.ObservationTargetProfileMismatch,
                         effect.EffectIndex,
                         [
-                            $"Knowledge observation target entity '{observation.TargetEntityId}' " +
-                            $"does not match authoritative entity '{expectedEntity}' " +
+                            $"Knowledge observation target profile " +
+                            $"'{Describe(observation.TargetProfileIdentity)}' does not match " +
+                            $"authoritative profile '{expectedProfile}' " +
                             $"for runtime target '{targetId}'."
                         ]);
                 }
@@ -370,22 +391,22 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
                         $"'{request.Authority.ActorId}'."
                     ]);
             }
-            bool analysisTargetIdentityKnown = request.Authority.TargetEntityIds.TryGetValue(
+            bool analysisTargetProfileKnown = request.Authority.TargetProfiles.TryGetValue(
                 analysisTargetId,
-                out ContentId analysisTargetEntityId);
-            if (!analysisTargetIdentityKnown ||
-                analysis.TargetEntityId != analysisTargetEntityId)
+                out RuntimeCombatProfileIdentitySnapshot? analysisTargetProfile);
+            if (!analysisTargetProfileKnown ||
+                analysis.TargetProfileIdentity != analysisTargetProfile)
             {
-                string expectedEntity = analysisTargetIdentityKnown
-                    ? analysisTargetEntityId.ToString()
+                string expectedProfile = analysisTargetProfileKnown
+                    ? Describe(analysisTargetProfile!)
                     : "<unbound>";
                 return Rejected(
                     request,
-                    BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetEntityMismatch,
+                    BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetProfileMismatch,
                     effect.EffectIndex,
                     [
-                        $"Analyze target entity '{analysis.TargetEntityId}' does not match authoritative entity " +
-                        $"'{expectedEntity}' " +
+                        $"Analyze target profile '{Describe(analysis.TargetProfileIdentity)}' does not match " +
+                        $"authoritative profile '{expectedProfile}' " +
                         $"for runtime target '{analysisTargetId}'."
                     ]);
             }
@@ -421,12 +442,12 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
                     "The executed effect contained knowledge evidence for a different source action.",
                 BattleKnowledgeExecutionDiagnosticCode.ObservationActorMismatch =>
                     "The executed effect contained knowledge evidence for a different acting runtime actor.",
-                BattleKnowledgeExecutionDiagnosticCode.ObservationTargetEntityMismatch =>
-                    "The executed effect contained knowledge evidence for a different target entity.",
+                BattleKnowledgeExecutionDiagnosticCode.ObservationTargetProfileMismatch =>
+                    "The executed effect contained knowledge evidence for a different target combat profile.",
                 BattleKnowledgeExecutionDiagnosticCode.AnalysisActorMismatch =>
                     "The executed effect contained Analyze evidence for a different acting runtime actor.",
-                BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetEntityMismatch =>
-                    "The executed effect contained Analyze evidence for a different target entity.",
+                BattleKnowledgeExecutionDiagnosticCode.AnalysisTargetProfileMismatch =>
+                    "The executed effect contained Analyze evidence for a different target combat profile.",
                 _ => "The battle-knowledge execution transition was rejected."
             };
         }
@@ -445,4 +466,7 @@ public sealed class BattleKnowledgeExecutionTransitionService : IBattleKnowledge
                     message)
             ]);
     }
+
+    private static string Describe(RuntimeCombatProfileIdentitySnapshot profile) =>
+        $"{profile.SourceActorInstanceId}/{profile.SourceEntityDefinitionId}@{profile.Revision}";
 }

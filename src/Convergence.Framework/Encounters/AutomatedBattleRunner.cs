@@ -197,7 +197,7 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
             {
                 if (!knowledge.TryGetElementalAffinity(
                         target.State.InstanceId,
-                        target.State.EntityId,
+                        target.State.CombatProfileIdentity,
                         element,
                         out ElementalAffinity affinity,
                         out _,
@@ -375,12 +375,14 @@ public sealed record AutomatedBattleRequest
                     nameof(seeds));
             }
 
-            foreach ((RuntimeInstanceId instanceId, ContentId entityId) in TargetIdentities(snapshot))
+            foreach ((RuntimeInstanceId instanceId, RuntimeCombatProfileIdentitySnapshot profile) in
+                     TargetProfiles(snapshot))
             {
-                if (!actors.TryGetValue(instanceId, out CatalogBattleActor? actor) || actor.State.EntityId != entityId)
+                if (!actors.TryGetValue(instanceId, out CatalogBattleActor? actor) ||
+                    actor.State.CombatProfileIdentity != profile)
                 {
                     throw new ArgumentException(
-                        $"Knowledge seed target '{instanceId}' does not match an encounter participant.",
+                        $"Knowledge seed target '{instanceId}' does not match the participant's current combat profile.",
                         nameof(seeds));
                 }
             }
@@ -389,12 +391,14 @@ public sealed record AutomatedBattleRequest
         return new ReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot>(result);
     }
 
-    private static IEnumerable<(RuntimeInstanceId InstanceId, ContentId EntityId)> TargetIdentities(
+    private static IEnumerable<(
+        RuntimeInstanceId InstanceId,
+        RuntimeCombatProfileIdentitySnapshot Profile)> TargetProfiles(
         RuntimeEncounterKnowledgeSnapshot snapshot) =>
-        snapshot.Elemental.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId))
-            .Concat(snapshot.Ailments.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-            .Concat(snapshot.InstantDeath.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-            .Concat(snapshot.Analysis.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
+        snapshot.Elemental.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity))
+            .Concat(snapshot.Ailments.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity)))
+            .Concat(snapshot.InstantDeath.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity)))
+            .Concat(snapshot.Analysis.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity)))
             .Distinct();
 }
 
@@ -854,7 +858,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                         _actors.Select(participant =>
                             KeyValuePair.Create(
                                 participant.State.InstanceId,
-                                participant.State.EntityId))),
+                                participant.State.CombatProfileIdentity))),
                     effects,
                     BattleKnowledgePersistenceScope.EncounterOnly));
             if (transition.Status == BattleKnowledgeTransitionStatus.Rejected)

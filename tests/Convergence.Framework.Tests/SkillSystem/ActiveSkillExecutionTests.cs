@@ -2563,7 +2563,7 @@ public sealed class ActiveSkillExecutionTests
         var authority = new BattleKnowledgeExecutionAuthority(
             skill.Id,
             actor.InstanceId,
-            [KeyValuePair.Create(target.InstanceId, target.EntityId)]);
+            [KeyValuePair.Create(target.InstanceId, target.CombatProfileIdentity)]);
         BattleKnowledgeExecutionTransitionResult knowledge =
             new BattleKnowledgeExecutionTransitionService().Apply(
                 new BattleKnowledgeExecutionTransitionRequest(
@@ -2607,7 +2607,7 @@ public sealed class ActiveSkillExecutionTests
         var authority = new BattleKnowledgeExecutionAuthority(
             skill.Id,
             actor.InstanceId,
-            [KeyValuePair.Create(target.InstanceId, target.EntityId)]);
+            [KeyValuePair.Create(target.InstanceId, target.CombatProfileIdentity)]);
         BattleKnowledgeExecutionTransitionResult knowledge =
             new BattleKnowledgeExecutionTransitionService().Apply(
                 new BattleKnowledgeExecutionTransitionRequest(
@@ -2754,7 +2754,9 @@ public sealed class ActiveSkillExecutionTests
                 ContentId.Parse("original_action"),
                 RuntimeInstanceId.Parse("actor"),
                 RuntimeInstanceId.Parse("target"),
-                ContentId.Parse("target_entity"),
+                new RuntimeCombatProfileIdentitySnapshot(
+                    RuntimeInstanceId.Parse("target"),
+                    ContentId.Parse("target_entity")),
                 0,
                 DamageElement.Fire,
                 true,
@@ -2767,7 +2769,9 @@ public sealed class ActiveSkillExecutionTests
                 ContentId.Parse("replacement_action"),
                 RuntimeInstanceId.Parse("actor"),
                 RuntimeInstanceId.Parse("target"),
-                ContentId.Parse("target_entity"),
+                new RuntimeCombatProfileIdentitySnapshot(
+                    RuntimeInstanceId.Parse("target"),
+                    ContentId.Parse("target_entity")),
                 0,
                 DamageElement.Ice,
                 true,
@@ -3411,7 +3415,7 @@ public sealed class ActiveSkillExecutionTests
                 context.Request.SourceId,
                 context.Actor.InstanceId,
                 target.InstanceId,
-                target.EntityId,
+                target.CombatProfileIdentity,
                 context.EffectIndex,
                 DamageElement.Ice,
                 contacted: true,
@@ -3439,7 +3443,7 @@ public sealed class ActiveSkillExecutionTests
                 ContentId.Parse("forged_action"),
                 context.Actor.InstanceId,
                 target.InstanceId,
-                target.EntityId,
+                target.CombatProfileIdentity,
                 context.EffectIndex,
                 DamageElement.Ice,
                 contacted: true,

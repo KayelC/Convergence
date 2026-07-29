@@ -137,7 +137,7 @@ public sealed class BattleAnalysisTests
         var view = new BattleKnowledgeView(transition.PersistentAfter, transition.EncounterAfter);
         Assert.True(view.TryGetElementalAffinity(
             target.InstanceId,
-            target.EntityId,
+            target.CombatProfileIdentity,
             DamageElement.Ice,
             out ElementalAffinity ice,
             out BattleKnowledgeFactSource iceSource,
@@ -151,7 +151,7 @@ public sealed class BattleAnalysisTests
                      entry.Affinity == ElementalAffinity.Weak);
         Assert.True(view.TryGetElementalAffinity(
             target.InstanceId,
-            target.EntityId,
+            target.CombatProfileIdentity,
             DamageElement.Fire,
             out ElementalAffinity fire,
             out _,
@@ -159,7 +159,7 @@ public sealed class BattleAnalysisTests
         Assert.Equal(ElementalAffinity.Normal, fire);
         Assert.True(view.TryGetAilmentResistance(
             target.InstanceId,
-            target.EntityId,
+            target.CombatProfileIdentity,
             ContentId.Parse("unlisted_ailment"),
             out ResistanceLevel unlisted,
             out _,
@@ -167,7 +167,7 @@ public sealed class BattleAnalysisTests
         Assert.Equal(ResistanceLevel.Normal, unlisted);
         Assert.True(view.IsAnalysisDisclosed(
             target.InstanceId,
-            target.EntityId,
+            target.CombatProfileIdentity,
             BattleAnalysisField.CurrentHp));
         Assert.DoesNotContain(
             transition.PersistentAfter.AnalyzedDefenses.SelectMany(entry => entry.DisclosedFields),
@@ -195,7 +195,7 @@ public sealed class BattleAnalysisTests
     }
 
     [Fact]
-    public void AnalyzeIdentityConflictWithObservedKnowledgeRejectsAtomically()
+    public void AnalyzeAfterProfileReplacementInvalidatesPriorEncounterKnowledge()
     {
         BattleAnalysisResult analysis = new BattleAnalysisService().Analyze(new BattleAnalysisRequest(
             Actor("observer"),
@@ -205,7 +205,10 @@ public sealed class BattleAnalysisTests
         var encounter = new RuntimeEncounterKnowledgeSnapshot(
             [new EncounterElementalKnowledgeEntry(
                 analysis.TargetId,
-                ContentId.Parse("different_entity"),
+                new RuntimeCombatProfileIdentitySnapshot(
+                    RuntimeInstanceId.Parse("different_source"),
+                    ContentId.Parse("different_entity"),
+                    revision: 1),
                 DamageElement.Fire,
                 ElementalAffinity.Weak)]);
         var persistent = new RuntimeKnowledgeSnapshot();
@@ -213,12 +216,18 @@ public sealed class BattleAnalysisTests
         BattleAnalysisKnowledgeTransitionResult transition =
             new BattleAnalysisKnowledgeTransitionService().Apply(persistent, encounter, analysis);
 
-        Assert.Equal(BattleKnowledgeTransitionStatus.Rejected, transition.Status);
-        Assert.Same(persistent, transition.PersistentAfter);
-        Assert.Same(encounter, transition.EncounterAfter);
+        Assert.Equal(BattleKnowledgeTransitionStatus.Applied, transition.Status);
+        Assert.NotSame(persistent, transition.PersistentAfter);
+        Assert.DoesNotContain(
+            transition.EncounterAfter.Elemental,
+            entry => entry.Element == DamageElement.Fire && entry.Affinity == ElementalAffinity.Weak);
+        Assert.All(
+            transition.EncounterAfter.Elemental,
+            entry => Assert.Equal(analysis.TargetProfileIdentity, entry.TargetProfileIdentity));
         Assert.Equal(
-            BattleAnalysisKnowledgeDiagnosticCode.TargetIdentityConflict,
-            Assert.Single(transition.Diagnostics).Code);
+            analysis.TargetProfileIdentity,
+            Assert.Single(transition.EncounterAfter.Analysis).TargetProfileIdentity);
+        Assert.Empty(transition.Diagnostics);
     }
 
     [Fact]

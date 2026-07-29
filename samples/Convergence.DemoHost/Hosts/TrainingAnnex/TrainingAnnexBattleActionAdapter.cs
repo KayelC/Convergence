@@ -695,7 +695,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                         request.Participants.Select(participant =>
                             KeyValuePair.Create(
                                 participant.InstanceId,
-                                participant.State.EntityId))),
+                                participant.State.CombatProfileIdentity))),
                     execution.Effects,
                     playerOwnedAction
                         ? BattleKnowledgePersistenceScope.EncounterAndPersistent
@@ -863,7 +863,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                     observation.EffectiveAffinity is ElementalAffinity affinity =>
                     before.TryGetElementalAffinity(
                         observation.TargetId,
-                        observation.TargetEntityId,
+                        observation.TargetProfileIdentity,
                         element,
                         out ElementalAffinity known,
                         out _,
@@ -873,7 +873,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                     observation.EffectiveResistance is ResistanceLevel resistance =>
                     before.TryGetAilmentResistance(
                         observation.TargetId,
-                        observation.TargetEntityId,
+                        observation.TargetProfileIdentity,
                         ailmentId,
                         out ResistanceLevel known,
                         out _,
@@ -883,7 +883,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                     observation.EffectiveResistance is ResistanceLevel resistance =>
                     before.TryGetInstantDeathResistance(
                         observation.TargetId,
-                        observation.TargetEntityId,
+                        observation.TargetProfileIdentity,
                         channel,
                         out ResistanceLevel known,
                         out _,
@@ -900,7 +900,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             new BattleKnowledgeView(transition.PersistentBefore, transition.EncounterBefore)
                 .TryGetElementalAffinity(
                     analysis.TargetId,
-                    analysis.TargetEntityId,
+                    analysis.TargetProfileIdentity,
                     element,
                     out ElementalAffinity known,
                     out _,
@@ -914,7 +914,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             new BattleKnowledgeView(transition.PersistentBefore, transition.EncounterBefore)
                 .TryGetAilmentResistance(
                     analysis.TargetId,
-                    analysis.TargetEntityId,
+                    analysis.TargetProfileIdentity,
                     ailmentId,
                     out ResistanceLevel known,
                     out _,
@@ -928,7 +928,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             new BattleKnowledgeView(transition.PersistentBefore, transition.EncounterBefore)
                 .TryGetInstantDeathResistance(
                     analysis.TargetId,
-                    analysis.TargetEntityId,
+                    analysis.TargetProfileIdentity,
                     channel,
                     out ResistanceLevel known,
                     out _,

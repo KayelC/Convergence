@@ -17,7 +17,7 @@ public enum BattleKnowledgeFactSource
 
 public enum BattleKnowledgeObservationDiagnosticCode
 {
-    TargetIdentityConflict,
+    TargetProfileConflict,
     PersistentTransitionRejected
 }
 
@@ -37,10 +37,13 @@ public sealed class EncounterAnalysisKnowledgeEntry
 {
     public EncounterAnalysisKnowledgeEntry(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         IEnumerable<BattleAnalysisField> disclosedFields)
     {
-        if (!targetInstanceId.IsValid || !targetEntityId.IsValid)
+        ArgumentNullException.ThrowIfNull(targetProfileIdentity);
+        if (!targetInstanceId.IsValid ||
+            !targetProfileIdentity.SourceActorInstanceId.IsValid ||
+            !targetProfileIdentity.SourceEntityDefinitionId.IsValid)
         {
             throw new ArgumentException("Encounter analysis requires valid target IDs.");
         }
@@ -55,12 +58,13 @@ public sealed class EncounterAnalysisKnowledgeEntry
         }
 
         TargetInstanceId = targetInstanceId;
-        TargetEntityId = targetEntityId;
+        TargetProfileIdentity = targetProfileIdentity;
         DisclosedFields = Array.AsReadOnly(fields.Order().ToArray());
     }
 
     public RuntimeInstanceId TargetInstanceId { get; }
-    public ContentId TargetEntityId { get; }
+    public RuntimeCombatProfileIdentitySnapshot TargetProfileIdentity { get; }
+    public ContentId TargetEntityId => TargetProfileIdentity.SourceEntityDefinitionId;
     public IReadOnlyList<BattleAnalysisField> DisclosedFields { get; }
 }
 
@@ -68,30 +72,36 @@ public sealed record EncounterElementalKnowledgeEntry
 {
     public EncounterElementalKnowledgeEntry(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         DamageElement element,
         ElementalAffinity affinity,
         BattleDefenseInfluence temporaryInfluences = BattleDefenseInfluence.None)
     {
-        RequireIdentity(targetInstanceId, targetEntityId);
+        RequireIdentity(targetInstanceId, targetProfileIdentity);
         RequireDefined(element, nameof(element));
         RequireDefined(affinity, nameof(affinity));
         TargetInstanceId = targetInstanceId;
-        TargetEntityId = targetEntityId;
+        TargetProfileIdentity = targetProfileIdentity;
         Element = element;
         Affinity = affinity;
         TemporaryInfluences = RequireInfluences(temporaryInfluences);
     }
 
     public RuntimeInstanceId TargetInstanceId { get; }
-    public ContentId TargetEntityId { get; }
+    public RuntimeCombatProfileIdentitySnapshot TargetProfileIdentity { get; }
+    public ContentId TargetEntityId => TargetProfileIdentity.SourceEntityDefinitionId;
     public DamageElement Element { get; }
     public ElementalAffinity Affinity { get; }
     public BattleDefenseInfluence TemporaryInfluences { get; }
 
-    private static void RequireIdentity(RuntimeInstanceId instanceId, ContentId entityId)
+    private static void RequireIdentity(
+        RuntimeInstanceId instanceId,
+        RuntimeCombatProfileIdentitySnapshot profileIdentity)
     {
-        if (!instanceId.IsValid || !entityId.IsValid)
+        ArgumentNullException.ThrowIfNull(profileIdentity);
+        if (!instanceId.IsValid ||
+            !profileIdentity.SourceActorInstanceId.IsValid ||
+            !profileIdentity.SourceEntityDefinitionId.IsValid)
         {
             throw new ArgumentException("Encounter knowledge requires valid runtime and entity IDs.");
         }
@@ -125,12 +135,16 @@ public sealed record EncounterAilmentKnowledgeEntry
 {
     public EncounterAilmentKnowledgeEntry(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         ContentId ailmentId,
         ResistanceLevel resistance,
         BattleDefenseInfluence temporaryInfluences = BattleDefenseInfluence.None)
     {
-        if (!targetInstanceId.IsValid || !targetEntityId.IsValid || !ailmentId.IsValid)
+        ArgumentNullException.ThrowIfNull(targetProfileIdentity);
+        if (!targetInstanceId.IsValid ||
+            !targetProfileIdentity.SourceActorInstanceId.IsValid ||
+            !targetProfileIdentity.SourceEntityDefinitionId.IsValid ||
+            !ailmentId.IsValid)
         {
             throw new ArgumentException("Encounter ailment knowledge requires valid IDs.");
         }
@@ -140,14 +154,15 @@ public sealed record EncounterAilmentKnowledgeEntry
         }
 
         TargetInstanceId = targetInstanceId;
-        TargetEntityId = targetEntityId;
+        TargetProfileIdentity = targetProfileIdentity;
         AilmentId = ailmentId;
         Resistance = resistance;
         TemporaryInfluences = RequireInfluences(temporaryInfluences);
     }
 
     public RuntimeInstanceId TargetInstanceId { get; }
-    public ContentId TargetEntityId { get; }
+    public RuntimeCombatProfileIdentitySnapshot TargetProfileIdentity { get; }
+    public ContentId TargetEntityId => TargetProfileIdentity.SourceEntityDefinitionId;
     public ContentId AilmentId { get; }
     public ResistanceLevel Resistance { get; }
     public BattleDefenseInfluence TemporaryInfluences { get; }
@@ -169,12 +184,15 @@ public sealed record EncounterInstantDeathKnowledgeEntry
 {
     public EncounterInstantDeathKnowledgeEntry(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         InstantDeathChannel channel,
         ResistanceLevel resistance,
         BattleDefenseInfluence temporaryInfluences = BattleDefenseInfluence.None)
     {
-        if (!targetInstanceId.IsValid || !targetEntityId.IsValid)
+        ArgumentNullException.ThrowIfNull(targetProfileIdentity);
+        if (!targetInstanceId.IsValid ||
+            !targetProfileIdentity.SourceActorInstanceId.IsValid ||
+            !targetProfileIdentity.SourceEntityDefinitionId.IsValid)
         {
             throw new ArgumentException("Encounter instant-death knowledge requires valid IDs.");
         }
@@ -184,14 +202,15 @@ public sealed record EncounterInstantDeathKnowledgeEntry
         }
 
         TargetInstanceId = targetInstanceId;
-        TargetEntityId = targetEntityId;
+        TargetProfileIdentity = targetProfileIdentity;
         Channel = channel;
         Resistance = resistance;
         TemporaryInfluences = RequireInfluences(temporaryInfluences);
     }
 
     public RuntimeInstanceId TargetInstanceId { get; }
-    public ContentId TargetEntityId { get; }
+    public RuntimeCombatProfileIdentitySnapshot TargetProfileIdentity { get; }
+    public ContentId TargetEntityId => TargetProfileIdentity.SourceEntityDefinitionId;
     public InstantDeathChannel Channel { get; }
     public ResistanceLevel Resistance { get; }
     public BattleDefenseInfluence TemporaryInfluences { get; }
@@ -228,10 +247,10 @@ public sealed class RuntimeEncounterKnowledgeSnapshot
         RequireUnique(instantDeathSnapshot, entry => (entry.TargetInstanceId, entry.Channel), nameof(instantDeath));
         RequireUnique(analysisSnapshot, entry => entry.TargetInstanceId, nameof(analysis));
         RequireConsistentTargetIdentities(
-            elementalSnapshot.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId))
-                .Concat(ailmentSnapshot.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-                .Concat(instantDeathSnapshot.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-                .Concat(analysisSnapshot.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId))));
+            elementalSnapshot.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity))
+                .Concat(ailmentSnapshot.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity)))
+                .Concat(instantDeathSnapshot.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity)))
+                .Concat(analysisSnapshot.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity))));
 
         Elemental = Array.AsReadOnly(elementalSnapshot.OrderBy(entry => $"{entry.TargetInstanceId}|{entry.Element}", StringComparer.Ordinal).ToArray());
         Ailments = Array.AsReadOnly(ailmentSnapshot.OrderBy(entry => $"{entry.TargetInstanceId}|{entry.AilmentId}", StringComparer.Ordinal).ToArray());
@@ -268,15 +287,15 @@ public sealed class RuntimeEncounterKnowledgeSnapshot
     }
 
     private static void RequireConsistentTargetIdentities(
-        IEnumerable<(RuntimeInstanceId InstanceId, ContentId EntityId)> identities)
+        IEnumerable<(RuntimeInstanceId InstanceId, RuntimeCombatProfileIdentitySnapshot Profile)> identities)
     {
         bool conflict = identities
             .GroupBy(identity => identity.InstanceId)
-            .Any(group => group.Select(identity => identity.EntityId).Distinct().Skip(1).Any());
+            .Any(group => group.Select(identity => identity.Profile).Distinct().Skip(1).Any());
         if (conflict)
         {
             throw new ArgumentException(
-                "One runtime target cannot identify multiple entity definitions in encounter knowledge.");
+                "One runtime target cannot identify multiple combat profiles in encounter knowledge.");
         }
     }
 }
@@ -285,28 +304,28 @@ public interface IEncounterBattleKnowledgeView
 {
     bool TryGetElementalAffinity(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         DamageElement element,
         out ElementalAffinity affinity,
         out BattleDefenseInfluence temporaryInfluences);
 
     bool TryGetAilmentResistance(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         ContentId ailmentId,
         out ResistanceLevel resistance,
         out BattleDefenseInfluence temporaryInfluences);
 
     bool TryGetInstantDeathResistance(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         InstantDeathChannel channel,
         out ResistanceLevel resistance,
         out BattleDefenseInfluence temporaryInfluences);
 
     bool IsAnalysisDisclosed(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         BattleAnalysisField field);
 }
 
@@ -315,7 +334,7 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
     private readonly IReadOnlyDictionary<(RuntimeInstanceId, DamageElement), EncounterElementalKnowledgeEntry> _elemental;
     private readonly IReadOnlyDictionary<(RuntimeInstanceId, ContentId), EncounterAilmentKnowledgeEntry> _ailments;
     private readonly IReadOnlyDictionary<(RuntimeInstanceId, InstantDeathChannel), EncounterInstantDeathKnowledgeEntry> _instantDeath;
-    private readonly IReadOnlyDictionary<RuntimeInstanceId, ContentId> _targetEntities;
+    private readonly IReadOnlyDictionary<RuntimeInstanceId, RuntimeCombatProfileIdentitySnapshot> _targetProfiles;
     private readonly IReadOnlyDictionary<RuntimeInstanceId, EncounterAnalysisKnowledgeEntry> _analysis;
 
     public EncounterBattleKnowledgeView(RuntimeEncounterKnowledgeSnapshot snapshot)
@@ -330,24 +349,29 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
         _instantDeath = snapshot.InstantDeath.ToDictionary(
             entry => (entry.TargetInstanceId, entry.Channel),
             entry => entry);
-        _targetEntities = snapshot.Elemental.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId))
-            .Concat(snapshot.Ailments.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-            .Concat(snapshot.InstantDeath.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-            .Concat(snapshot.Analysis.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
+        _targetProfiles = snapshot.Elemental.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity))
+            .Concat(snapshot.Ailments.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity)))
+            .Concat(snapshot.InstantDeath.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity)))
+            .Concat(snapshot.Analysis.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity)))
             .Distinct()
-            .ToDictionary(pair => pair.TargetInstanceId, pair => pair.TargetEntityId);
+            .ToDictionary(pair => pair.TargetInstanceId, pair => pair.TargetProfileIdentity);
         _analysis = snapshot.Analysis.ToDictionary(entry => entry.TargetInstanceId);
     }
 
     public bool TryGetElementalAffinity(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         DamageElement element,
         out ElementalAffinity affinity,
         out BattleDefenseInfluence temporaryInfluences)
     {
-        RequireQuery(targetInstanceId, targetEntityId);
         RequireDefined(element, nameof(element));
+        if (!ProfileMatches(targetInstanceId, targetProfileIdentity))
+        {
+            affinity = default;
+            temporaryInfluences = BattleDefenseInfluence.None;
+            return false;
+        }
         if (_elemental.TryGetValue((targetInstanceId, element), out EncounterElementalKnowledgeEntry? entry))
         {
             affinity = entry.Affinity;
@@ -359,7 +383,7 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
         temporaryInfluences = BattleDefenseInfluence.None;
         if (IsAnalysisDisclosed(
                 targetInstanceId,
-                targetEntityId,
+                targetProfileIdentity,
                 BattleAnalysisField.ElementalAffinities))
         {
             affinity = ElementalAffinity.Normal;
@@ -370,15 +394,20 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
 
     public bool TryGetAilmentResistance(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         ContentId ailmentId,
         out ResistanceLevel resistance,
         out BattleDefenseInfluence temporaryInfluences)
     {
-        RequireQuery(targetInstanceId, targetEntityId);
         if (!ailmentId.IsValid)
         {
             throw new ArgumentException("Ailment ID must be valid.", nameof(ailmentId));
+        }
+        if (!ProfileMatches(targetInstanceId, targetProfileIdentity))
+        {
+            resistance = default;
+            temporaryInfluences = BattleDefenseInfluence.None;
+            return false;
         }
         if (_ailments.TryGetValue((targetInstanceId, ailmentId), out EncounterAilmentKnowledgeEntry? entry))
         {
@@ -391,7 +420,7 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
         temporaryInfluences = BattleDefenseInfluence.None;
         if (IsAnalysisDisclosed(
                 targetInstanceId,
-                targetEntityId,
+                targetProfileIdentity,
                 BattleAnalysisField.AilmentResistances))
         {
             resistance = ResistanceLevel.Normal;
@@ -402,13 +431,18 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
 
     public bool TryGetInstantDeathResistance(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         InstantDeathChannel channel,
         out ResistanceLevel resistance,
         out BattleDefenseInfluence temporaryInfluences)
     {
-        RequireQuery(targetInstanceId, targetEntityId);
         RequireDefined(channel, nameof(channel));
+        if (!ProfileMatches(targetInstanceId, targetProfileIdentity))
+        {
+            resistance = default;
+            temporaryInfluences = BattleDefenseInfluence.None;
+            return false;
+        }
         if (_instantDeath.TryGetValue((targetInstanceId, channel), out EncounterInstantDeathKnowledgeEntry? entry))
         {
             resistance = entry.Resistance;
@@ -420,7 +454,7 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
         temporaryInfluences = BattleDefenseInfluence.None;
         if (IsAnalysisDisclosed(
                 targetInstanceId,
-                targetEntityId,
+                targetProfileIdentity,
                 BattleAnalysisField.InstantDeathResistances))
         {
             resistance = ResistanceLevel.Normal;
@@ -431,27 +465,32 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
 
     public bool IsAnalysisDisclosed(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         BattleAnalysisField field)
     {
-        RequireQuery(targetInstanceId, targetEntityId);
         RequireDefined(field, nameof(field));
-        return _analysis.TryGetValue(targetInstanceId, out EncounterAnalysisKnowledgeEntry? entry) &&
+        return ProfileMatches(targetInstanceId, targetProfileIdentity) &&
+               _analysis.TryGetValue(targetInstanceId, out EncounterAnalysisKnowledgeEntry? entry) &&
                entry.DisclosedFields.Contains(field);
     }
 
-    private void RequireQuery(RuntimeInstanceId targetInstanceId, ContentId targetEntityId)
+    private bool ProfileMatches(
+        RuntimeInstanceId targetInstanceId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity)
     {
-        if (!targetInstanceId.IsValid || !targetEntityId.IsValid)
+        ArgumentNullException.ThrowIfNull(targetProfileIdentity);
+        if (!targetInstanceId.IsValid ||
+            !targetProfileIdentity.SourceActorInstanceId.IsValid ||
+            !targetProfileIdentity.SourceEntityDefinitionId.IsValid)
         {
-            throw new ArgumentException("Knowledge queries require valid target runtime and entity IDs.");
+            throw new ArgumentException(
+                "Knowledge queries require valid target runtime and combat-profile IDs.");
         }
-        if (_targetEntities.TryGetValue(targetInstanceId, out ContentId knownEntityId) &&
-            knownEntityId != targetEntityId)
-        {
-            throw new InvalidOperationException(
-                $"Target '{targetInstanceId}' belongs to entity '{knownEntityId}', not '{targetEntityId}'.");
-        }
+
+        return !_targetProfiles.TryGetValue(
+                   targetInstanceId,
+                   out RuntimeCombatProfileIdentitySnapshot? knownProfile) ||
+               knownProfile == targetProfileIdentity;
     }
 
     private static void RequireDefined<T>(T value, string name) where T : struct, Enum
@@ -467,7 +506,7 @@ public interface IBattleKnowledgeView
 {
     bool TryGetElementalAffinity(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         DamageElement element,
         out ElementalAffinity affinity,
         out BattleKnowledgeFactSource source,
@@ -475,7 +514,7 @@ public interface IBattleKnowledgeView
 
     bool TryGetAilmentResistance(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         ContentId ailmentId,
         out ResistanceLevel resistance,
         out BattleKnowledgeFactSource source,
@@ -483,7 +522,7 @@ public interface IBattleKnowledgeView
 
     bool TryGetInstantDeathResistance(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         InstantDeathChannel channel,
         out ResistanceLevel resistance,
         out BattleKnowledgeFactSource source,
@@ -491,7 +530,7 @@ public interface IBattleKnowledgeView
 
     bool IsAnalysisDisclosed(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         BattleAnalysisField field);
 }
 
@@ -512,7 +551,7 @@ public sealed class BattleKnowledgeView : IBattleKnowledgeView
 
     public bool TryGetElementalAffinity(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         DamageElement element,
         out ElementalAffinity affinity,
         out BattleKnowledgeFactSource source,
@@ -520,7 +559,7 @@ public sealed class BattleKnowledgeView : IBattleKnowledgeView
     {
         if (_encounter.TryGetElementalAffinity(
                 targetInstanceId,
-                targetEntityId,
+                targetProfileIdentity,
                 element,
                 out affinity,
                 out temporaryInfluences))
@@ -531,12 +570,15 @@ public sealed class BattleKnowledgeView : IBattleKnowledgeView
 
         source = BattleKnowledgeFactSource.Persistent;
         temporaryInfluences = BattleDefenseInfluence.None;
-        return _persistent.TryGetElementalAffinity(targetEntityId, element, out affinity);
+        return _persistent.TryGetElementalAffinity(
+            targetProfileIdentity.SourceEntityDefinitionId,
+            element,
+            out affinity);
     }
 
     public bool TryGetAilmentResistance(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         ContentId ailmentId,
         out ResistanceLevel resistance,
         out BattleKnowledgeFactSource source,
@@ -544,7 +586,7 @@ public sealed class BattleKnowledgeView : IBattleKnowledgeView
     {
         if (_encounter.TryGetAilmentResistance(
                 targetInstanceId,
-                targetEntityId,
+                targetProfileIdentity,
                 ailmentId,
                 out resistance,
                 out temporaryInfluences))
@@ -555,12 +597,15 @@ public sealed class BattleKnowledgeView : IBattleKnowledgeView
 
         source = BattleKnowledgeFactSource.Persistent;
         temporaryInfluences = BattleDefenseInfluence.None;
-        return _persistent.TryGetAilmentResistance(targetEntityId, ailmentId, out resistance);
+        return _persistent.TryGetAilmentResistance(
+            targetProfileIdentity.SourceEntityDefinitionId,
+            ailmentId,
+            out resistance);
     }
 
     public bool TryGetInstantDeathResistance(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         InstantDeathChannel channel,
         out ResistanceLevel resistance,
         out BattleKnowledgeFactSource source,
@@ -568,7 +613,7 @@ public sealed class BattleKnowledgeView : IBattleKnowledgeView
     {
         if (_encounter.TryGetInstantDeathResistance(
                 targetInstanceId,
-                targetEntityId,
+                targetProfileIdentity,
                 channel,
                 out resistance,
                 out temporaryInfluences))
@@ -579,14 +624,17 @@ public sealed class BattleKnowledgeView : IBattleKnowledgeView
 
         source = BattleKnowledgeFactSource.Persistent;
         temporaryInfluences = BattleDefenseInfluence.None;
-        return _persistent.TryGetInstantDeathResistance(targetEntityId, channel, out resistance);
+        return _persistent.TryGetInstantDeathResistance(
+            targetProfileIdentity.SourceEntityDefinitionId,
+            channel,
+            out resistance);
     }
 
     public bool IsAnalysisDisclosed(
         RuntimeInstanceId targetInstanceId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         BattleAnalysisField field) =>
-        _encounter.IsAnalysisDisclosed(targetInstanceId, targetEntityId, field);
+        _encounter.IsAnalysisDisclosed(targetInstanceId, targetProfileIdentity, field);
 }
 
 public sealed record BattleKnowledgeObservationDiagnostic
@@ -729,48 +777,118 @@ public sealed class BattleKnowledgeEncounterCleanupResult
     public RuntimeEncounterKnowledgeSnapshot After { get; }
 }
 
+public sealed class BattleKnowledgeTargetProfileChangeResult
+{
+    public BattleKnowledgeTargetProfileChangeResult(
+        BattleKnowledgeTransitionStatus status,
+        RuntimeEncounterKnowledgeSnapshot before,
+        RuntimeEncounterKnowledgeSnapshot after,
+        RuntimeInstanceId targetInstanceId,
+        RuntimeCombatProfileIdentitySnapshot? previousProfileIdentity,
+        RuntimeCombatProfileIdentitySnapshot currentProfileIdentity)
+    {
+        if (!Enum.IsDefined(status))
+        {
+            throw new ArgumentOutOfRangeException(nameof(status));
+        }
+        if (!targetInstanceId.IsValid)
+        {
+            throw new ArgumentException("Profile changes require a valid target runtime ID.", nameof(targetInstanceId));
+        }
+        ArgumentNullException.ThrowIfNull(currentProfileIdentity);
+        if (!currentProfileIdentity.SourceActorInstanceId.IsValid ||
+            !currentProfileIdentity.SourceEntityDefinitionId.IsValid ||
+            previousProfileIdentity is not null &&
+            (!previousProfileIdentity.SourceActorInstanceId.IsValid ||
+             !previousProfileIdentity.SourceEntityDefinitionId.IsValid))
+        {
+            throw new ArgumentException(
+                "Profile-change results require valid source profile IDs.");
+        }
+
+        Status = status;
+        Before = before ?? throw new ArgumentNullException(nameof(before));
+        After = after ?? throw new ArgumentNullException(nameof(after));
+        TargetInstanceId = targetInstanceId;
+        PreviousProfileIdentity = previousProfileIdentity;
+        CurrentProfileIdentity = currentProfileIdentity;
+    }
+
+    public BattleKnowledgeTransitionStatus Status { get; }
+    public RuntimeEncounterKnowledgeSnapshot Before { get; }
+    public RuntimeEncounterKnowledgeSnapshot After { get; }
+    public RuntimeInstanceId TargetInstanceId { get; }
+    public RuntimeCombatProfileIdentitySnapshot? PreviousProfileIdentity { get; }
+    public RuntimeCombatProfileIdentitySnapshot CurrentProfileIdentity { get; }
+    public bool Invalidated => Status == BattleKnowledgeTransitionStatus.Applied;
+}
+
 public interface IBattleKnowledgeObservationTransitionService
 {
     BattleKnowledgeObservationTransitionResult Apply(BattleKnowledgeObservationTransitionRequest request);
     BattleKnowledgeEncounterCleanupResult ClearEncounter(RuntimeEncounterKnowledgeSnapshot before);
 }
 
+public interface IBattleKnowledgeTargetProfileTransitionService
+{
+    BattleKnowledgeTargetProfileChangeResult RebindTargetProfile(
+        RuntimeEncounterKnowledgeSnapshot before,
+        RuntimeInstanceId targetInstanceId,
+        RuntimeCombatProfileIdentitySnapshot currentProfileIdentity);
+}
+
 public sealed class BattleKnowledgeObservationTransitionService : IBattleKnowledgeObservationTransitionService
 {
     private readonly IPersistentBattleKnowledgeTransitionService _persistentTransitions;
+    private readonly IBattleKnowledgeTargetProfileTransitionService _profileTransitions;
 
     public BattleKnowledgeObservationTransitionService(
-        IPersistentBattleKnowledgeTransitionService? persistentTransitions = null)
+        IPersistentBattleKnowledgeTransitionService? persistentTransitions = null,
+        IBattleKnowledgeTargetProfileTransitionService? profileTransitions = null)
     {
         _persistentTransitions = persistentTransitions ?? new PersistentBattleKnowledgeTransitionService();
+        _profileTransitions = profileTransitions ?? new BattleKnowledgeTargetProfileTransitionService();
     }
 
     public BattleKnowledgeObservationTransitionResult Apply(BattleKnowledgeObservationTransitionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        Dictionary<RuntimeInstanceId, ContentId> identities = TargetIdentities(request.EncounterBefore);
+        RuntimeEncounterKnowledgeSnapshot encounterBaseline = request.EncounterBefore;
+        var requestProfiles = new Dictionary<RuntimeInstanceId, RuntimeCombatProfileIdentitySnapshot>();
         for (int index = 0; index < request.Observations.Count; index++)
         {
             BattleKnowledgeObservation observation = request.Observations[index];
-            if (identities.TryGetValue(observation.TargetId, out ContentId existing) &&
-                existing != observation.TargetEntityId)
+            if (requestProfiles.TryGetValue(
+                    observation.TargetId,
+                    out RuntimeCombatProfileIdentitySnapshot? existing) &&
+                existing != observation.TargetProfileIdentity)
             {
                 return Rejected(
                     request,
                     new BattleKnowledgeObservationDiagnostic(
-                        BattleKnowledgeObservationDiagnosticCode.TargetIdentityConflict,
+                        BattleKnowledgeObservationDiagnosticCode.TargetProfileConflict,
                         index,
-                        $"Target '{observation.TargetId}' was already associated with entity '{existing}'."));
+                        $"One execution supplied multiple combat profiles for target " +
+                        $"'{observation.TargetId}'."));
             }
 
-            identities[observation.TargetId] = observation.TargetEntityId;
+            requestProfiles[observation.TargetId] = observation.TargetProfileIdentity;
         }
 
-        var elemental = request.EncounterBefore.Elemental.ToDictionary(
+        foreach ((RuntimeInstanceId targetId, RuntimeCombatProfileIdentitySnapshot profile) in
+                 requestProfiles)
+        {
+            encounterBaseline = _profileTransitions.RebindTargetProfile(
+                encounterBaseline,
+                targetId,
+                profile).After;
+        }
+
+        var elemental = encounterBaseline.Elemental.ToDictionary(
             entry => (entry.TargetInstanceId, entry.Element));
-        var ailments = request.EncounterBefore.Ailments.ToDictionary(
+        var ailments = encounterBaseline.Ailments.ToDictionary(
             entry => (entry.TargetInstanceId, entry.AilmentId));
-        var instantDeath = request.EncounterBefore.InstantDeath.ToDictionary(
+        var instantDeath = encounterBaseline.InstantDeath.ToDictionary(
             entry => (entry.TargetInstanceId, entry.Channel));
         var persistentElemental = new Dictionary<(ContentId, DamageElement), RuntimeElementalAffinityKnowledgeSnapshot>();
         var persistentAilments = new Dictionary<(ContentId, ContentId), RuntimeAilmentResistanceKnowledgeSnapshot>();
@@ -808,7 +926,7 @@ public sealed class BattleKnowledgeObservationTransitionService : IBattleKnowled
             elemental.Values.OrderBy(EntrySortKey),
             ailments.Values.OrderBy(EntrySortKey),
             instantDeath.Values.OrderBy(EntrySortKey),
-            request.EncounterBefore.Analysis);
+            encounterBaseline.Analysis);
         var discovery = new RuntimeKnowledgeSnapshot(
             persistentElemental.Values,
             persistentAilments.Values,
@@ -864,7 +982,7 @@ public sealed class BattleKnowledgeObservationTransitionService : IBattleKnowled
 
         var entry = new EncounterElementalKnowledgeEntry(
             observation.TargetId,
-            observation.TargetEntityId,
+            observation.TargetProfileIdentity,
             element,
             effective,
             observation.TemporaryInfluences);
@@ -897,7 +1015,7 @@ public sealed class BattleKnowledgeObservationTransitionService : IBattleKnowled
 
         var entry = new EncounterAilmentKnowledgeEntry(
             observation.TargetId,
-            observation.TargetEntityId,
+            observation.TargetProfileIdentity,
             ailmentId,
             ResistanceLevel.Immune,
             observation.TemporaryInfluences);
@@ -936,7 +1054,7 @@ public sealed class BattleKnowledgeObservationTransitionService : IBattleKnowled
 
         var entry = new EncounterInstantDeathKnowledgeEntry(
             observation.TargetId,
-            observation.TargetEntityId,
+            observation.TargetProfileIdentity,
             channel,
             ResistanceLevel.Immune,
             observation.TemporaryInfluences);
@@ -970,15 +1088,6 @@ public sealed class BattleKnowledgeObservationTransitionService : IBattleKnowled
             request.EncounterBefore,
             diagnostics: [diagnostic]);
 
-    private static Dictionary<RuntimeInstanceId, ContentId> TargetIdentities(
-        RuntimeEncounterKnowledgeSnapshot snapshot) =>
-        snapshot.Elemental.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId))
-            .Concat(snapshot.Ailments.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-            .Concat(snapshot.InstantDeath.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-            .Concat(snapshot.Analysis.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-            .Distinct()
-            .ToDictionary(pair => pair.TargetInstanceId, pair => pair.TargetEntityId);
-
     private static string EntrySortKey(EncounterElementalKnowledgeEntry entry) =>
         $"{entry.TargetInstanceId}|{entry.Element}";
 
@@ -995,4 +1104,59 @@ public sealed class BattleKnowledgeObservationTransitionService : IBattleKnowled
         left.Ailments.SequenceEqual(right.Ailments) &&
         left.InstantDeath.SequenceEqual(right.InstantDeath) &&
         left.Analysis.SequenceEqual(right.Analysis);
+}
+
+public sealed class BattleKnowledgeTargetProfileTransitionService :
+    IBattleKnowledgeTargetProfileTransitionService
+{
+    public BattleKnowledgeTargetProfileChangeResult RebindTargetProfile(
+        RuntimeEncounterKnowledgeSnapshot before,
+        RuntimeInstanceId targetInstanceId,
+        RuntimeCombatProfileIdentitySnapshot currentProfileIdentity)
+    {
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentNullException.ThrowIfNull(currentProfileIdentity);
+        if (!targetInstanceId.IsValid ||
+            !currentProfileIdentity.SourceActorInstanceId.IsValid ||
+            !currentProfileIdentity.SourceEntityDefinitionId.IsValid)
+        {
+            throw new ArgumentException(
+                "Profile rebinding requires valid target and source IDs.");
+        }
+
+        RuntimeCombatProfileIdentitySnapshot? previous = TargetProfiles(before)
+            .GetValueOrDefault(targetInstanceId);
+        if (previous is null || previous == currentProfileIdentity)
+        {
+            return new BattleKnowledgeTargetProfileChangeResult(
+                BattleKnowledgeTransitionStatus.Unchanged,
+                before,
+                before,
+                targetInstanceId,
+                previous,
+                currentProfileIdentity);
+        }
+
+        var after = new RuntimeEncounterKnowledgeSnapshot(
+            before.Elemental.Where(entry => entry.TargetInstanceId != targetInstanceId),
+            before.Ailments.Where(entry => entry.TargetInstanceId != targetInstanceId),
+            before.InstantDeath.Where(entry => entry.TargetInstanceId != targetInstanceId),
+            before.Analysis.Where(entry => entry.TargetInstanceId != targetInstanceId));
+        return new BattleKnowledgeTargetProfileChangeResult(
+            BattleKnowledgeTransitionStatus.Applied,
+            before,
+            after,
+            targetInstanceId,
+            previous,
+            currentProfileIdentity);
+    }
+
+    private static Dictionary<RuntimeInstanceId, RuntimeCombatProfileIdentitySnapshot> TargetProfiles(
+        RuntimeEncounterKnowledgeSnapshot snapshot) =>
+        snapshot.Elemental.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity))
+            .Concat(snapshot.Ailments.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity)))
+            .Concat(snapshot.InstantDeath.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity)))
+            .Concat(snapshot.Analysis.Select(entry => (entry.TargetInstanceId, entry.TargetProfileIdentity)))
+            .Distinct()
+            .ToDictionary(pair => pair.TargetInstanceId, pair => pair.TargetProfileIdentity);
 }

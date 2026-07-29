@@ -55,7 +55,7 @@ public sealed class BattleKnowledgeObservation
         ContentId sourceActionId,
         RuntimeInstanceId actorId,
         RuntimeInstanceId targetId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         int effectIndex,
         BattleDefenseInfluence temporaryInfluences,
         DamageElement? element = null,
@@ -88,9 +88,13 @@ public sealed class BattleKnowledgeObservation
         {
             throw new ArgumentException("Target runtime ID must be valid.", nameof(targetId));
         }
-        if (!targetEntityId.IsValid)
+        ArgumentNullException.ThrowIfNull(targetProfileIdentity);
+        if (!targetProfileIdentity.SourceActorInstanceId.IsValid ||
+            !targetProfileIdentity.SourceEntityDefinitionId.IsValid)
         {
-            throw new ArgumentException("Target entity ID must be valid.", nameof(targetEntityId));
+            throw new ArgumentException(
+                "Target combat-profile identity must contain valid source IDs.",
+                nameof(targetProfileIdentity));
         }
         ArgumentOutOfRangeException.ThrowIfNegative(effectIndex);
         if ((temporaryInfluences & ~AllInfluences) != 0)
@@ -106,7 +110,7 @@ public sealed class BattleKnowledgeObservation
         SourceActionId = sourceActionId;
         ActorId = actorId;
         TargetId = targetId;
-        TargetEntityId = targetEntityId;
+        TargetProfileIdentity = targetProfileIdentity;
         EffectIndex = effectIndex;
         TemporaryInfluences = temporaryInfluences;
         Element = element;
@@ -125,7 +129,8 @@ public sealed class BattleKnowledgeObservation
     public ContentId SourceActionId { get; }
     public RuntimeInstanceId ActorId { get; }
     public RuntimeInstanceId TargetId { get; }
-    public ContentId TargetEntityId { get; }
+    public RuntimeCombatProfileIdentitySnapshot TargetProfileIdentity { get; }
+    public ContentId TargetEntityId => TargetProfileIdentity.SourceEntityDefinitionId;
     public int EffectIndex { get; }
     public BattleDefenseInfluence TemporaryInfluences { get; }
     public DamageElement? Element { get; }
@@ -144,7 +149,7 @@ public sealed class BattleKnowledgeObservation
         ContentId sourceActionId,
         RuntimeInstanceId actorId,
         RuntimeInstanceId targetId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         int effectIndex,
         DamageElement element,
         bool contacted,
@@ -161,7 +166,7 @@ public sealed class BattleKnowledgeObservation
             sourceActionId,
             actorId,
             targetId,
-            targetEntityId,
+            targetProfileIdentity,
             effectIndex,
             temporaryInfluences,
             element: element,
@@ -174,7 +179,7 @@ public sealed class BattleKnowledgeObservation
         ContentId sourceActionId,
         RuntimeInstanceId actorId,
         RuntimeInstanceId targetId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         int effectIndex,
         ContentId ailmentId,
         BattleAilmentApplicationStatus applicationStatus,
@@ -214,7 +219,7 @@ public sealed class BattleKnowledgeObservation
             sourceActionId,
             actorId,
             targetId,
-            targetEntityId,
+            targetProfileIdentity,
             effectIndex,
             temporaryInfluences,
             ailmentId: ailmentId,
@@ -227,7 +232,7 @@ public sealed class BattleKnowledgeObservation
         ContentId sourceActionId,
         RuntimeInstanceId actorId,
         RuntimeInstanceId targetId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         int effectIndex,
         InstantDeathChannel? channel,
         bool resistanceBypassed,
@@ -279,7 +284,7 @@ public sealed class BattleKnowledgeObservation
             sourceActionId,
             actorId,
             targetId,
-            targetEntityId,
+            targetProfileIdentity,
             effectIndex,
             temporaryInfluences,
             instantDeathChannel: channel,

@@ -40,24 +40,30 @@ public sealed class BattleAnalysisDisclosurePolicyRequest
     public BattleAnalysisDisclosurePolicyRequest(
         RuntimeInstanceId actorId,
         RuntimeInstanceId targetId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         IEnumerable<BattleAnalysisField> requestedFields)
     {
-        if (!actorId.IsValid || !targetId.IsValid || !targetEntityId.IsValid)
+        ArgumentNullException.ThrowIfNull(targetProfileIdentity);
+        if (!actorId.IsValid ||
+            !targetId.IsValid ||
+            !targetProfileIdentity.SourceActorInstanceId.IsValid ||
+            !targetProfileIdentity.SourceEntityDefinitionId.IsValid)
         {
-            throw new ArgumentException("Analysis policy requests require valid actor and target IDs.");
+            throw new ArgumentException(
+                "Analysis policy requests require valid actor, target, and combat-profile IDs.");
         }
 
         BattleAnalysisField[] fields = SnapshotFields(requestedFields, nameof(requestedFields));
         ActorId = actorId;
         TargetId = targetId;
-        TargetEntityId = targetEntityId;
+        TargetProfileIdentity = targetProfileIdentity;
         RequestedFields = Array.AsReadOnly(fields);
     }
 
     public RuntimeInstanceId ActorId { get; }
     public RuntimeInstanceId TargetId { get; }
-    public ContentId TargetEntityId { get; }
+    public RuntimeCombatProfileIdentitySnapshot TargetProfileIdentity { get; }
+    public ContentId TargetEntityId => TargetProfileIdentity.SourceEntityDefinitionId;
     public IReadOnlyList<BattleAnalysisField> RequestedFields { get; }
 
     internal static BattleAnalysisField[] SnapshotFields(
@@ -175,13 +181,18 @@ public sealed class BattleAnalysisResult
     internal BattleAnalysisResult(
         RuntimeInstanceId actorId,
         RuntimeInstanceId targetId,
-        ContentId targetEntityId,
+        RuntimeCombatProfileIdentitySnapshot targetProfileIdentity,
         IEnumerable<BattleAnalysisFieldDisclosure> disclosures,
         BattleAnalysisDataSnapshot data)
     {
-        if (!actorId.IsValid || !targetId.IsValid || !targetEntityId.IsValid)
+        ArgumentNullException.ThrowIfNull(targetProfileIdentity);
+        if (!actorId.IsValid ||
+            !targetId.IsValid ||
+            !targetProfileIdentity.SourceActorInstanceId.IsValid ||
+            !targetProfileIdentity.SourceEntityDefinitionId.IsValid)
         {
-            throw new ArgumentException("Analysis results require valid actor and target IDs.");
+            throw new ArgumentException(
+                "Analysis results require valid actor, target, and combat-profile IDs.");
         }
 
         BattleAnalysisFieldDisclosure[] snapshot = (disclosures ??
@@ -194,14 +205,15 @@ public sealed class BattleAnalysisResult
 
         ActorId = actorId;
         TargetId = targetId;
-        TargetEntityId = targetEntityId;
+        TargetProfileIdentity = targetProfileIdentity;
         Disclosures = Array.AsReadOnly(snapshot.OrderBy(disclosure => disclosure.Field).ToArray());
         Data = data ?? throw new ArgumentNullException(nameof(data));
     }
 
     public RuntimeInstanceId ActorId { get; }
     public RuntimeInstanceId TargetId { get; }
-    public ContentId TargetEntityId { get; }
+    public RuntimeCombatProfileIdentitySnapshot TargetProfileIdentity { get; }
+    public ContentId TargetEntityId => TargetProfileIdentity.SourceEntityDefinitionId;
     public IReadOnlyList<BattleAnalysisFieldDisclosure> Disclosures { get; }
     public BattleAnalysisDataSnapshot Data { get; }
     public IReadOnlyList<BattleAnalysisField> DisclosedFields => Array.AsReadOnly(
@@ -262,7 +274,7 @@ public sealed class BattleAnalysisService : IBattleAnalysisService
         var policyRequest = new BattleAnalysisDisclosurePolicyRequest(
             request.Actor.InstanceId,
             request.Target.InstanceId,
-            request.Target.EntityId,
+            request.Target.CombatProfileIdentity,
             requestedFields);
         BattleAnalysisFieldDisclosure[] decisions = (_policy.Resolve(policyRequest) ??
             throw new InvalidOperationException("The analysis policy returned no decisions.")).ToArray();
@@ -310,7 +322,7 @@ public sealed class BattleAnalysisService : IBattleAnalysisService
         return new BattleAnalysisResult(
             request.Actor.InstanceId,
             target.InstanceId,
-            target.EntityId,
+            target.CombatProfileIdentity,
             resolved,
             data);
     }
@@ -367,7 +379,6 @@ public sealed class BattleAnalysisService : IBattleAnalysisService
 
 public enum BattleAnalysisKnowledgeDiagnosticCode
 {
-    TargetIdentityConflict,
     PersistentTransitionRejected
 }
 
@@ -441,11 +452,14 @@ public interface IBattleAnalysisKnowledgeTransitionService
 public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKnowledgeTransitionService
 {
     private readonly IPersistentBattleKnowledgeTransitionService _persistentTransitions;
+    private readonly IBattleKnowledgeTargetProfileTransitionService _profileTransitions;
 
     public BattleAnalysisKnowledgeTransitionService(
-        IPersistentBattleKnowledgeTransitionService? persistentTransitions = null)
+        IPersistentBattleKnowledgeTransitionService? persistentTransitions = null,
+        IBattleKnowledgeTargetProfileTransitionService? profileTransitions = null)
     {
         _persistentTransitions = persistentTransitions ?? new PersistentBattleKnowledgeTransitionService();
+        _profileTransitions = profileTransitions ?? new BattleKnowledgeTargetProfileTransitionService();
     }
 
     public BattleAnalysisKnowledgeTransitionResult Apply(
@@ -472,30 +486,22 @@ public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKn
             throw new ArgumentOutOfRangeException(nameof(persistenceScope));
         }
 
-        EncounterAnalysisKnowledgeEntry? existing = encounterBefore.Analysis
+        RuntimeEncounterKnowledgeSnapshot encounterBaseline = _profileTransitions.RebindTargetProfile(
+            encounterBefore,
+            analysis.TargetId,
+            analysis.TargetProfileIdentity).After;
+        EncounterAnalysisKnowledgeEntry? existing = encounterBaseline.Analysis
             .SingleOrDefault(entry => entry.TargetInstanceId == analysis.TargetId);
-        ContentId? knownEntityId = TargetIdentities(encounterBefore)
-            .Where(identity => identity.InstanceId == analysis.TargetId)
-            .Select(identity => (ContentId?)identity.EntityId)
-            .FirstOrDefault();
-        if (knownEntityId is ContentId known && known != analysis.TargetEntityId)
-        {
-            return Rejected(
-                persistentBefore,
-                encounterBefore,
-                BattleAnalysisKnowledgeDiagnosticCode.TargetIdentityConflict,
-                $"Target '{analysis.TargetId}' was already associated with entity '{known}'.");
-        }
 
         BattleAnalysisField[] disclosed = analysis.DisclosedFields.ToArray();
-        RuntimeEncounterKnowledgeSnapshot encounterAfter = encounterBefore;
+        RuntimeEncounterKnowledgeSnapshot encounterAfter = encounterBaseline;
         if (disclosed.Length > 0)
         {
-            var elemental = encounterBefore.Elemental.ToDictionary(
+            var elemental = encounterBaseline.Elemental.ToDictionary(
                 entry => (entry.TargetInstanceId, entry.Element));
-            var ailments = encounterBefore.Ailments.ToDictionary(
+            var ailments = encounterBaseline.Ailments.ToDictionary(
                 entry => (entry.TargetInstanceId, entry.AilmentId));
-            var instantDeath = encounterBefore.InstantDeath.ToDictionary(
+            var instantDeath = encounterBaseline.InstantDeath.ToDictionary(
                 entry => (entry.TargetInstanceId, entry.Channel));
             if (disclosed.Contains(BattleAnalysisField.ElementalAffinities))
             {
@@ -507,7 +513,7 @@ public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKn
                             (analysis.TargetId, element),
                             new EncounterElementalKnowledgeEntry(
                                 analysis.TargetId,
-                                analysis.TargetEntityId,
+                                analysis.TargetProfileIdentity,
                                 element,
                                 affinity));
                     }
@@ -521,7 +527,7 @@ public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKn
                         (analysis.TargetId, ailmentId),
                         new EncounterAilmentKnowledgeEntry(
                             analysis.TargetId,
-                            analysis.TargetEntityId,
+                            analysis.TargetProfileIdentity,
                             ailmentId,
                             resistance));
                 }
@@ -534,7 +540,7 @@ public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKn
                         (analysis.TargetId, channel),
                         new EncounterInstantDeathKnowledgeEntry(
                             analysis.TargetId,
-                            analysis.TargetEntityId,
+                            analysis.TargetProfileIdentity,
                             channel,
                             resistance));
                 }
@@ -545,11 +551,11 @@ public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKn
                 .Distinct()
                 .Order()
                 .ToArray();
-            IEnumerable<EncounterAnalysisKnowledgeEntry> analysisEntries = encounterBefore.Analysis
+            IEnumerable<EncounterAnalysisKnowledgeEntry> analysisEntries = encounterBaseline.Analysis
                 .Where(entry => entry.TargetInstanceId != analysis.TargetId)
                 .Append(new EncounterAnalysisKnowledgeEntry(
                     analysis.TargetId,
-                    analysis.TargetEntityId,
+                    analysis.TargetProfileIdentity,
                     merged));
             encounterAfter = new RuntimeEncounterKnowledgeSnapshot(
                 elemental.Values,
@@ -624,14 +630,6 @@ public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKn
         BattleAnalysisField.AilmentResistances or
         BattleAnalysisField.InstantDeathResistances;
 
-    private static IEnumerable<(RuntimeInstanceId InstanceId, ContentId EntityId)> TargetIdentities(
-        RuntimeEncounterKnowledgeSnapshot snapshot) =>
-        snapshot.Elemental.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId))
-            .Concat(snapshot.Ailments.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-            .Concat(snapshot.InstantDeath.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-            .Concat(snapshot.Analysis.Select(entry => (entry.TargetInstanceId, entry.TargetEntityId)))
-            .Distinct();
-
     private static BattleAnalysisKnowledgeTransitionResult Rejected(
         RuntimeKnowledgeSnapshot persistent,
         RuntimeEncounterKnowledgeSnapshot encounter,
@@ -658,6 +656,6 @@ public sealed class BattleAnalysisKnowledgeTransitionService : IBattleAnalysisKn
         IReadOnlyList<EncounterAnalysisKnowledgeEntry> right) =>
         left.Count == right.Count && left.Zip(right).All(pair =>
             pair.First.TargetInstanceId == pair.Second.TargetInstanceId &&
-            pair.First.TargetEntityId == pair.Second.TargetEntityId &&
+            pair.First.TargetProfileIdentity == pair.Second.TargetProfileIdentity &&
             pair.First.DisclosedFields.SequenceEqual(pair.Second.DisclosedFields));
 }

@@ -2079,21 +2079,21 @@ public sealed class CleanTrainingAnnexPlayHostTests
             IsElementalKnowledge(
                 evidence,
                 Qualified("ash_spark"),
-                Qualified("echo_adept"),
+                Qualified("annex_mentor"),
                 DamageElement.Fire,
                 ElementalAffinity.Resist));
         Assert.Contains(summary.EncounterAiKnowledgeEvidence, evidence =>
             IsElementalKnowledge(
                 evidence,
                 Qualified("ash_spark"),
-                Qualified("echo_adept"),
+                Qualified("annex_mentor"),
                 DamageElement.Fire,
                 ElementalAffinity.Resist));
         Assert.DoesNotContain(summary.BattleKnowledge.ElementalAffinities, knowledge =>
             knowledge.EntityId == Qualified("echo_adept") &&
             knowledge.Element == DamageElement.Fire);
         Assert.Contains(summary.EncounterAiKnowledge.Elemental, knowledge =>
-            knowledge.TargetEntityId == Qualified("echo_adept") &&
+            knowledge.TargetEntityId == Qualified("annex_mentor") &&
             knowledge.Element == DamageElement.Fire &&
             knowledge.Affinity == ElementalAffinity.Resist);
         Assert.Contains("Framework AI selected: Ashling -> Ash Spark.", output.ToString(), StringComparison.Ordinal);

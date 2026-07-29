@@ -13,6 +13,7 @@ public sealed class BattleKnowledgeObservationTransitionTests
     private static readonly RuntimeInstanceId Target = RuntimeInstanceId.Parse("target");
     private static readonly ContentId Entity = ContentId.Parse("target_entity");
     private static readonly ContentId Poison = ContentId.Parse("poison");
+    private static readonly RuntimeCombatProfileIdentitySnapshot Profile = new(Target, Entity);
 
     [Fact]
     public void ContactWithoutTemporaryDefenseUpdatesEncounterAndPersistentKnowledge()
@@ -75,7 +76,7 @@ public sealed class BattleKnowledgeObservationTransitionTests
         var view = new BattleKnowledgeView(result.PersistentAfter, result.EncounterAfter);
         Assert.True(view.TryGetElementalAffinity(
             Target,
-            Entity,
+            Profile,
             DamageElement.Fire,
             out ElementalAffinity affinity,
             out BattleKnowledgeFactSource source,
@@ -83,9 +84,9 @@ public sealed class BattleKnowledgeObservationTransitionTests
         Assert.Equal(ElementalAffinity.Repel, affinity);
         Assert.Equal(BattleKnowledgeFactSource.Encounter, source);
         Assert.Equal(BattleDefenseInfluence.Shield, influences);
-        Assert.Throws<InvalidOperationException>(() => view.TryGetElementalAffinity(
+        Assert.False(view.TryGetElementalAffinity(
             Target,
-            ContentId.Parse("wrong_entity"),
+            new RuntimeCombatProfileIdentitySnapshot(Target, ContentId.Parse("wrong_entity")),
             DamageElement.Fire,
             out _,
             out _,
@@ -96,17 +97,17 @@ public sealed class BattleKnowledgeObservationTransitionTests
     public void AilmentSuccessAndRandomMissRevealNoTierWhileImmunityDoes()
     {
         BattleKnowledgeObservation applied = BattleKnowledgeObservation.Ailment(
-            Action, Actor, Target, Entity, 0, Poison,
+            Action, Actor, Target, Profile, 0, Poison,
             BattleAilmentApplicationStatus.Applied,
             ResistanceLevel.Vulnerable,
             ResistanceLevel.Vulnerable);
         BattleKnowledgeObservation missed = BattleKnowledgeObservation.Ailment(
-            Action, Actor, Target, Entity, 1, Poison,
+            Action, Actor, Target, Profile, 1, Poison,
             BattleAilmentApplicationStatus.Missed,
             ResistanceLevel.Resistant,
             ResistanceLevel.Resistant);
         BattleKnowledgeObservation immune = BattleKnowledgeObservation.Ailment(
-            Action, Actor, Target, Entity, 2, Poison,
+            Action, Actor, Target, Profile, 2, Poison,
             BattleAilmentApplicationStatus.Immune,
             ResistanceLevel.Immune,
             ResistanceLevel.Immune);
@@ -132,7 +133,7 @@ public sealed class BattleKnowledgeObservationTransitionTests
                     ResistanceLevel.Normal)
             ]);
         BattleKnowledgeObservation observation = BattleKnowledgeObservation.Ailment(
-            Action, Actor, Target, Entity, 0, Poison,
+            Action, Actor, Target, Profile, 0, Poison,
             BattleAilmentApplicationStatus.Immune,
             ResistanceLevel.Normal,
             ResistanceLevel.Immune,
@@ -162,7 +163,7 @@ public sealed class BattleKnowledgeObservationTransitionTests
                 Action,
                 Actor,
                 Target,
-                Entity,
+                Profile,
                 0,
                 Poison,
                 BattleAilmentApplicationStatus.Immune,
@@ -176,21 +177,21 @@ public sealed class BattleKnowledgeObservationTransitionTests
     public void InstantDeathLearnsOnlyExplicitCheckedImmunity()
     {
         BattleKnowledgeObservation bypassed = BattleKnowledgeObservation.InstantDeath(
-            Action, Actor, Target, Entity, 0,
+            Action, Actor, Target, Profile, 0,
             channel: null,
             resistanceBypassed: true,
             defeated: true,
             authoredResistance: null,
             effectiveResistance: null);
         BattleKnowledgeObservation failedRoll = BattleKnowledgeObservation.InstantDeath(
-            Action, Actor, Target, Entity, 1,
+            Action, Actor, Target, Profile, 1,
             InstantDeathChannel.Light,
             resistanceBypassed: false,
             defeated: false,
             authoredResistance: ResistanceLevel.Resistant,
             effectiveResistance: ResistanceLevel.Resistant);
         BattleKnowledgeObservation immune = BattleKnowledgeObservation.InstantDeath(
-            Action, Actor, Target, Entity, 2,
+            Action, Actor, Target, Profile, 2,
             InstantDeathChannel.Dark,
             resistanceBypassed: false,
             defeated: false,
@@ -227,7 +228,7 @@ public sealed class BattleKnowledgeObservationTransitionTests
                     Action,
                     Actor,
                     Target,
-                    Entity,
+                    Profile,
                     0,
                     tuple.Channel,
                     resistanceBypassed: false,
@@ -241,7 +242,7 @@ public sealed class BattleKnowledgeObservationTransitionTests
             Action,
             Actor,
             Target,
-            Entity,
+            Profile,
             0,
             channel: null,
             resistanceBypassed: true,
@@ -252,7 +253,7 @@ public sealed class BattleKnowledgeObservationTransitionTests
             Action,
             Actor,
             Target,
-            Entity,
+            Profile,
             1,
             InstantDeathChannel.Dark,
             resistanceBypassed: false,
@@ -281,15 +282,19 @@ public sealed class BattleKnowledgeObservationTransitionTests
     }
 
     [Fact]
-    public void RuntimeIdentityConflictRejectsAtomically()
+    public void ChangedProfileInvalidatesPriorFactsBeforeApplyingNewEvidence()
     {
         var before = new RuntimeEncounterKnowledgeSnapshot(
-            [new EncounterElementalKnowledgeEntry(Target, Entity, DamageElement.Fire, ElementalAffinity.Weak)]);
-        BattleKnowledgeObservation conflicting = BattleKnowledgeObservation.Elemental(
+            [new EncounterElementalKnowledgeEntry(Target, Profile, DamageElement.Fire, ElementalAffinity.Weak)]);
+        var changedProfile = new RuntimeCombatProfileIdentitySnapshot(
+            RuntimeInstanceId.Parse("different_source"),
+            ContentId.Parse("different_entity"),
+            revision: 1);
+        BattleKnowledgeObservation replacement = BattleKnowledgeObservation.Elemental(
             Action,
             Actor,
             Target,
-            ContentId.Parse("different_entity"),
+            changedProfile,
             0,
             DamageElement.Ice,
             true,
@@ -297,35 +302,186 @@ public sealed class BattleKnowledgeObservationTransitionTests
             ElementalAffinity.Normal);
 
         BattleKnowledgeObservationTransitionResult result = Apply(
-            [conflicting],
+            [replacement],
             BattleKnowledgePersistenceScope.EncounterAndPersistent,
             encounter: before);
 
+        Assert.True(result.Applied);
+        EncounterElementalKnowledgeEntry current = Assert.Single(result.EncounterAfter.Elemental);
+        Assert.Equal(DamageElement.Ice, current.Element);
+        Assert.Equal(changedProfile, current.TargetProfileIdentity);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void ContradictoryProfilesWithinOneExecutionRejectAtomically()
+    {
+        RuntimeKnowledgeSnapshot persistent = EmptyPersistent();
+        var encounter = new RuntimeEncounterKnowledgeSnapshot(
+            [new EncounterElementalKnowledgeEntry(Target, Profile, DamageElement.Fire, ElementalAffinity.Weak)]);
+        BattleKnowledgeObservation first = Elemental(true, ElementalAffinity.Weak, ElementalAffinity.Weak);
+        BattleKnowledgeObservation conflicting = BattleKnowledgeObservation.Elemental(
+            Action,
+            Actor,
+            Target,
+            new RuntimeCombatProfileIdentitySnapshot(Target, Entity, revision: 1),
+            1,
+            DamageElement.Ice,
+            true,
+            ElementalAffinity.Normal,
+            ElementalAffinity.Normal);
+
+        BattleKnowledgeObservationTransitionResult result = Apply(
+            [first, conflicting],
+            BattleKnowledgePersistenceScope.EncounterAndPersistent,
+            persistent,
+            encounter);
+
         Assert.Equal(BattleKnowledgeTransitionStatus.Rejected, result.Status);
-        Assert.Same(result.PersistentBefore, result.PersistentAfter);
-        Assert.Same(before, result.EncounterAfter);
+        Assert.Same(persistent, result.PersistentAfter);
+        Assert.Same(encounter, result.EncounterAfter);
         Assert.Equal(
-            BattleKnowledgeObservationDiagnosticCode.TargetIdentityConflict,
+            BattleKnowledgeObservationDiagnosticCode.TargetProfileConflict,
             Assert.Single(result.Diagnostics).Code);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ProfileRevisionOrSourceInstanceChangeInvalidatesEveryEncounterDomain(
+        bool changeSourceInstance)
+    {
+        var before = new RuntimeEncounterKnowledgeSnapshot(
+            [new EncounterElementalKnowledgeEntry(Target, Profile, DamageElement.Fire, ElementalAffinity.Weak)],
+            [new EncounterAilmentKnowledgeEntry(Target, Profile, Poison, ResistanceLevel.Immune)],
+            [new EncounterInstantDeathKnowledgeEntry(
+                Target,
+                Profile,
+                InstantDeathChannel.Dark,
+                ResistanceLevel.Immune)],
+            [new EncounterAnalysisKnowledgeEntry(Target, Profile, [BattleAnalysisField.CurrentHp])]);
+        var current = new RuntimeCombatProfileIdentitySnapshot(
+            changeSourceInstance ? RuntimeInstanceId.Parse("replacement_source") : Target,
+            Entity,
+            revision: 1);
+
+        BattleKnowledgeTargetProfileChangeResult result =
+            new BattleKnowledgeTargetProfileTransitionService().RebindTargetProfile(
+                before,
+                Target,
+                current);
+
+        Assert.True(result.Invalidated);
+        Assert.Same(before, result.Before);
+        Assert.Equal(Profile, result.PreviousProfileIdentity);
+        Assert.Equal(current, result.CurrentProfileIdentity);
+        Assert.True(result.After.IsEmpty);
+    }
+
+    [Fact]
+    public void ExactProfileRebindingPreservesEncounterSnapshotIdentity()
+    {
+        var before = new RuntimeEncounterKnowledgeSnapshot(
+            [new EncounterElementalKnowledgeEntry(Target, Profile, DamageElement.Fire, ElementalAffinity.Weak)]);
+
+        BattleKnowledgeTargetProfileChangeResult result =
+            new BattleKnowledgeTargetProfileTransitionService().RebindTargetProfile(
+                before,
+                Target,
+                Profile);
+
+        Assert.False(result.Invalidated);
+        Assert.Same(before, result.After);
+        Assert.Equal(Profile, result.PreviousProfileIdentity);
+    }
+
+    [Fact]
+    public void StaleEncounterProfileCannotMaskDurableKnowledgeForTheCurrentProfile()
+    {
+        var persistent = new RuntimeKnowledgeSnapshot(
+            [new RuntimeElementalAffinityKnowledgeSnapshot(
+                Entity,
+                DamageElement.Fire,
+                ElementalAffinity.Weak)]);
+        var encounter = new RuntimeEncounterKnowledgeSnapshot(
+            [new EncounterElementalKnowledgeEntry(
+                Target,
+                Profile,
+                DamageElement.Fire,
+                ElementalAffinity.Repel,
+                BattleDefenseInfluence.Shield)],
+            analysis:
+            [
+                new EncounterAnalysisKnowledgeEntry(
+                    Target,
+                    Profile,
+                    [BattleAnalysisField.ElementalAffinities])
+            ]);
+        var current = new RuntimeCombatProfileIdentitySnapshot(Target, Entity, revision: 1);
+        var view = new BattleKnowledgeView(persistent, encounter);
+
+        Assert.True(view.TryGetElementalAffinity(
+            Target,
+            current,
+            DamageElement.Fire,
+            out ElementalAffinity affinity,
+            out BattleKnowledgeFactSource source,
+            out BattleDefenseInfluence influences));
+        Assert.Equal(ElementalAffinity.Weak, affinity);
+        Assert.Equal(BattleKnowledgeFactSource.Persistent, source);
+        Assert.Equal(BattleDefenseInfluence.None, influences);
+        Assert.False(view.IsAnalysisDisclosed(
+            Target,
+            current,
+            BattleAnalysisField.ElementalAffinities));
+    }
+
+    [Fact]
+    public void PersistentDiscoveryUsesCombatProfileSourceEntityRatherThanOwnerDefinition()
+    {
+        ContentId hostedEntity = ContentId.Parse("hosted_entity");
+        var hostedProfile = new RuntimeCombatProfileIdentitySnapshot(
+            RuntimeInstanceId.Parse("hosted_entity_instance"),
+            hostedEntity,
+            revision: 4);
+        BattleKnowledgeObservation observation = BattleKnowledgeObservation.Elemental(
+            Action,
+            Actor,
+            Target,
+            hostedProfile,
+            0,
+            DamageElement.Ice,
+            contacted: true,
+            ElementalAffinity.Weak,
+            ElementalAffinity.Weak);
+
+        BattleKnowledgeObservationTransitionResult result = Apply(
+            [observation],
+            BattleKnowledgePersistenceScope.EncounterAndPersistent);
+
+        RuntimeElementalAffinityKnowledgeSnapshot persistent =
+            Assert.Single(result.PersistentAfter.ElementalAffinities);
+        Assert.Equal(hostedEntity, persistent.EntityId);
+        Assert.Equal(hostedProfile, Assert.Single(result.EncounterAfter.Elemental).TargetProfileIdentity);
     }
 
     [Fact]
     public void BattleEndCleanupDiscardsEncounterKnowledgeOnly()
     {
         var before = new RuntimeEncounterKnowledgeSnapshot(
-            [new EncounterElementalKnowledgeEntry(Target, Entity, DamageElement.Fire, ElementalAffinity.Weak)],
+            [new EncounterElementalKnowledgeEntry(Target, Profile, DamageElement.Fire, ElementalAffinity.Weak)],
             analysis:
             [
                 new EncounterAnalysisKnowledgeEntry(
                     Target,
-                    Entity,
+                    Profile,
                     [BattleAnalysisField.CurrentHp, BattleAnalysisField.Skills])
             ]);
         var service = new BattleKnowledgeObservationTransitionService();
 
         var view = new EncounterBattleKnowledgeView(before);
-        Assert.True(view.IsAnalysisDisclosed(Target, Entity, BattleAnalysisField.CurrentHp));
-        Assert.False(view.IsAnalysisDisclosed(Target, Entity, BattleAnalysisField.CurrentSp));
+        Assert.True(view.IsAnalysisDisclosed(Target, Profile, BattleAnalysisField.CurrentHp));
+        Assert.False(view.IsAnalysisDisclosed(Target, Profile, BattleAnalysisField.CurrentSp));
 
         BattleKnowledgeEncounterCleanupResult result = service.ClearEncounter(before);
 
@@ -340,7 +496,7 @@ public sealed class BattleKnowledgeObservationTransitionTests
     {
         var source = new List<EncounterElementalKnowledgeEntry>
         {
-            new(Target, Entity, DamageElement.Fire, ElementalAffinity.Weak)
+            new(Target, Profile, DamageElement.Fire, ElementalAffinity.Weak)
         };
         var snapshot = new RuntimeEncounterKnowledgeSnapshot(source);
         source.Clear();
@@ -350,15 +506,19 @@ public sealed class BattleKnowledgeObservationTransitionTests
             ((IList<EncounterElementalKnowledgeEntry>)snapshot.Elemental).Clear());
         Assert.Throws<ArgumentException>(() => new RuntimeEncounterKnowledgeSnapshot(
         [
-            new(Target, Entity, DamageElement.Fire, ElementalAffinity.Weak),
-            new(Target, Entity, DamageElement.Fire, ElementalAffinity.Resist)
+            new(Target, Profile, DamageElement.Fire, ElementalAffinity.Weak),
+            new(Target, Profile, DamageElement.Fire, ElementalAffinity.Resist)
         ]));
         Assert.Throws<ArgumentException>(() => new RuntimeEncounterKnowledgeSnapshot(
-            [new(Target, Entity, DamageElement.Fire, ElementalAffinity.Weak)],
-            [new(Target, ContentId.Parse("other_entity"), Poison, ResistanceLevel.Immune)]));
+            [new(Target, Profile, DamageElement.Fire, ElementalAffinity.Weak)],
+            [new(
+                Target,
+                new RuntimeCombatProfileIdentitySnapshot(Target, ContentId.Parse("other_entity")),
+                Poison,
+                ResistanceLevel.Immune)]));
         Assert.Throws<ArgumentException>(() => new EncounterAnalysisKnowledgeEntry(
             Target,
-            Entity,
+            Profile,
             [BattleAnalysisField.Skills, BattleAnalysisField.Skills]));
     }
 
@@ -371,7 +531,7 @@ public sealed class BattleKnowledgeObservationTransitionTests
             Action,
             Actor,
             Target,
-            Entity,
+            Profile,
             0,
             DamageElement.Fire,
             contacted,
