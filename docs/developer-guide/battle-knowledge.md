@@ -31,6 +31,11 @@ Each AI team receives its own `RuntimeEncounterKnowledgeSnapshot`. Never share
 one snapshot between opposing teams. `RuntimeKnowledgeSnapshot` is the only one
 of these two types that belongs in `RuntimeSaveGameSnapshot.Knowledge`.
 
+Every live actor also exposes `CombatProfileIdentity`. It identifies the
+runtime source actor, authored source entity, and profile revision currently
+supplying combat-facing stats, defenses, skills, and passives. A self-sourced
+actor points to itself. A composed Vessel points to its Active Hosted Entity.
+
 ## Apply Executed Evidence
 
 After an action has executed successfully, pass its complete ordered effect
@@ -44,7 +49,9 @@ var authority = new BattleKnowledgeExecutionAuthority(
     acceptedActionId,
     actingActor.InstanceId,
     encounterParticipants.Select(participant =>
-        KeyValuePair.Create(participant.InstanceId, participant.EntityId)));
+        KeyValuePair.Create(
+            participant.InstanceId,
+            participant.State.CombatProfileIdentity)));
 
 BattleKnowledgeExecutionTransitionResult knowledge = transitionService.Apply(
     new BattleKnowledgeExecutionTransitionRequest(
@@ -84,7 +91,7 @@ observation and Analyze result against:
 - the enclosing effect index and runtime target;
 - the accepted source action;
 - the acting runtime actor; and
-- the authoritative entity definition for that runtime target.
+- the authoritative combat-profile source and revision for that runtime target.
 
 A mismatch returns a stable typed diagnostic and the original persistent and
 encounter snapshots. No earlier valid effect in the same batch is published.
@@ -118,7 +125,7 @@ IBattleKnowledgeView view = new BattleKnowledgeView(
 
 if (view.TryGetElementalAffinity(
         targetInstanceId,
-        targetEntityId,
+        targetActor.State.CombatProfileIdentity,
         DamageElement.Ice,
         out ElementalAffinity affinity,
         out BattleKnowledgeFactSource source,
@@ -132,9 +139,18 @@ else
 }
 ```
 
-The encounter value takes precedence. Always supply both runtime and entity
-identity; a mismatch is an integration error rather than permission to reuse a
-fact for another entity.
+The encounter value takes precedence. Always supply the target runtime ID and
+its current `RuntimeCombatProfileIdentitySnapshot`. A stale profile never
+reuses encounter facts. If no current encounter fact exists, the combined view
+falls back to persistent knowledge keyed by the profile's source entity ID.
+
+`BattleKnowledgeExecutionTransitionService` rebinds every authoritative target
+profile before applying execution evidence. If a host needs target panels or AI
+state cleared immediately after a successful Hosted Entity swap, before another
+action executes, call `IBattleKnowledgeTargetProfileTransitionService` with the
+new live profile and replace the encounter snapshot with its `After` result.
+That transition removes the target's elemental, ailment, instant-defeat, and
+Analyze entries as one immutable update.
 
 ## Configure Analyze
 
@@ -176,9 +192,11 @@ knowledge unless `TeamKnowledgeSeeds` are supplied. The runner:
 3. shares the updated snapshot with later teammates on that team; and
 4. returns immutable final snapshots in `AutomatedBattleResult.TeamKnowledge`.
 
-Seeds must use a participating team ID and target runtime/entity identities
-that match current participants. The runner never adds those snapshots to a
-save.
+Seeds must use a participating team ID and exact target combat-profile
+identities that match current participants. A different source instance,
+source entity, or revision is stale and rejects. Stored Almighty affinity facts
+also reject before a selector receives the seed. The runner never adds those
+snapshots to a save.
 
 The supplied deterministic selector scores only facts with
 `BattleDefenseInfluence.None`. A temporary encounter observation remains useful
@@ -232,7 +250,8 @@ that a diagnostic always means an unchanged snapshot.
 - Validate before restore with `RuntimeSaveValidator`.
 
 Validation rejects duplicate facts, duplicate analyzed profiles, malformed
-enum or analysis-field domains, and missing entity or ailment references.
+enum or analysis-field domains, stored Almighty affinity facts, and missing
+entity or ailment references.
 Actor snapshots contain no Analyze state: canonical Analyze writes
 `RuntimeEncounterKnowledgeSnapshot`, which an ordinary session save
 intentionally discards at encounter end.

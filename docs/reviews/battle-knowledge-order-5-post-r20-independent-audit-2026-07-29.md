@@ -251,3 +251,18 @@ Order 5 should **not** be formally closed at revision `aa97cd87`. The core is
 well-factored and substantially correct, but H1 violates the central meaning of
 entity knowledge in the now-supported Vessel/Hosted Entity model, and M1 leaves
 an intrinsic combat rule unenforced at public state boundaries.
+
+## Correction Progress
+
+- **O5-R21 implemented:** runtime actors and save v15 now retain an immutable
+  combat-profile source actor, source entity, and revision.
+- **O5-R22 implemented:** observations, Analyze, queries, execution authority,
+  and automated seeds use exact profile identity; durable facts use the source
+  entity; profile replacement invalidates every encounter domain.
+- **O5-R23 implemented:** Almighty cannot be stored as affinity knowledge;
+  constructors, transitions, views, automated seeds, host JSON decoding, and
+  save validation reject malformed input before strategy or presentation.
+- **O5-R24 implemented:** the mechanics, developer, technical, actor, save,
+  public API, and progress documents now describe the corrected contracts.
+- **O5-R25 pending:** a fresh source-first closure review and complete release
+  gate are still required before `battle_knowledge` returns to `complete`.

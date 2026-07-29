@@ -198,6 +198,14 @@ authority. It receives the source actor's:
 - equipped active skills;
 - equipped passive skills.
 
+The same atomic commit advances the Vessel's
+`RuntimeCombatProfileIdentitySnapshot`. Its source runtime ID and source entity
+ID identify the Hosted Entity supplying that profile; its revision distinguishes
+this composition from every earlier profile on the same Vessel. Pass this exact
+identity to profile-sensitive systems such as Battle Knowledge. After a
+successful source change, invalidate that target's prior encounter knowledge
+before presenting another target panel or requesting another command.
+
 The acting Vessel's battle stages remain its own. Current resources are
 preserved and capped when recalculated maxima become smaller.
 
@@ -214,7 +222,7 @@ flowchart LR
     Equipment["Equipment stat modifiers"] --> Stage
     Stage --> Decision{"All checks pass?"}
     Decision -->|No| Before["Return rejection and original snapshot"]
-    Decision -->|Yes| Commit["Commit stats, resources, defense, skills, passives"]
+    Decision -->|Yes| Commit["Commit stats, resources, defense, skills, passives, and profile identity"]
 ```
 
 `MissingHostedEntityBehavior.UseActorBaseStats` is available for an explicitly
@@ -318,9 +326,9 @@ for later loadout editing.
 ## Save And Restore
 
 The host serializes `RuntimeSaveGameSnapshot`; Framework does not own the file
-format. Save contract v14 includes actors, the canonical party roster, pending
-skill choices, complete selected-policy stat-modifier state, and the remaining
-session modules.
+format. Save contract v15 includes actors, the canonical party roster, pending
+skill choices, complete selected-policy stat-modifier state, combat-profile
+source/revision identity, and the remaining session modules.
 
 Restore through `RuntimeSessionRestoreService`:
 

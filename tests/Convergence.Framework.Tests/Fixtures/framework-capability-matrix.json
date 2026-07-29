@@ -142,8 +142,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Composed Vessels expose their owner entity ID to Battle Knowledge even when a Hosted Entity supplies the observed defenses, skills, and stats; profile changes do not invalidate encounter disclosures.",
-        "Public encounter and persistent snapshots can represent an impossible non-Normal Almighty affinity."
+        "The corrected profile-aware and intrinsic-element boundaries await the independent O5-R25 closure review before maturity returns to complete."
       ]
     },
     {

@@ -14,7 +14,8 @@ The current runtime save contract is version `15`.
 
 - runtime actors, including learned skills, equipped skills, pending
   skill-choice tokens, skill revisions, and complete selected-policy
-  stat-modifier state and retained charge-policy identity;
+  stat-modifier state, retained charge-policy identity, and combat-profile
+  source/revision identity;
 - party, reserve, Active Hosted Entity, Hosted Entity Roster, and Companion Roster references;
 - inventory and equipped items;
 - wallet;
@@ -60,7 +61,14 @@ to exist in the aggregate actor list.
 
 ## Validation Before Restore
 
-The save validator aggregates diagnostics for unsupported contract version, duplicate runtime IDs, missing references, role collisions, capacity violations, invalid actor numeric state, invalid timed state, missing content, malformed inventory/equipment, invalid Compendium entries, duplicate knowledge, navigation/traversal inconsistencies, and invalid identifiers. When an actor retains stat modifiers or charge state, validation also requires the corresponding explicit policy resolver and checks the complete state against its authored policy.
+The save validator aggregates diagnostics for unsupported contract version,
+duplicate runtime IDs, missing references, combat-profile source mismatch, role
+collisions, capacity violations, invalid actor numeric state, invalid timed
+state, missing content, malformed inventory/equipment, invalid Compendium
+entries, duplicate or impossible Almighty knowledge, navigation/traversal
+inconsistencies, and invalid identifiers. When an actor retains stat modifiers
+or charge state, validation also requires the corresponding explicit policy
+resolver and checks the complete state against its authored policy.
 
 An invalid snapshot cannot produce a valid restore token.
 `IRuntimeSessionRestoreService` first runs an explicit migration service,
@@ -110,6 +118,12 @@ Version 14 removes the obsolete actor-local Analyze field from actor snapshots.
 Persistent player knowledge remains in `RuntimeKnowledgeSnapshot`; current
 target analysis remains encounter-local and is discarded at encounter end.
 Convergence supplies no automatic v13-to-v14 migration for these unreleased
+formats.
+
+Version 15 adds the combat-profile source actor, source entity, and revision to
+each actor snapshot. This lets restore validate and reconstruct a Vessel's
+derived profile before profile-sensitive systems such as Battle Knowledge use
+it. Convergence supplies no automatic v14-to-v15 migration for these unreleased
 formats.
 
 ## Related Guidance

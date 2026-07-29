@@ -13,20 +13,29 @@ and encounter-runner responsibilities respectively.
 
 | Authority | Type | Key | Durable |
 |---|---|---|---|
-| Persistent facts | `RuntimeKnowledgeSnapshot` | Entity definition plus defense-domain key | Yes |
-| Encounter facts | `RuntimeEncounterKnowledgeSnapshot` | Runtime target plus entity definition and defense-domain key | No |
+| Persistent facts | `RuntimeKnowledgeSnapshot` | Combat-profile source entity plus defense-domain key | Yes |
+| Encounter facts | `RuntimeEncounterKnowledgeSnapshot` | Runtime target plus exact combat-profile identity and defense-domain key | No |
 | Combined query | `IBattleKnowledgeView` / `BattleKnowledgeView` | Both identities | Read-only |
 | Execution evidence | `BattleKnowledgeObservation` and `BattleAnalysisResult` | Source action/effect and target identities | Result evidence only |
-| Accepted execution identity | `BattleKnowledgeExecutionAuthority` | Action, actor, and runtime-target-to-entity bindings | Request lifetime |
+| Accepted execution identity | `BattleKnowledgeExecutionAuthority` | Action, actor, and runtime-target-to-profile bindings | Request lifetime |
 
 `RuntimeKnowledgeSnapshot` is sparse. Its analyzed-defense markers indicate
 that an entire authored defense domain was disclosed, allowing a missing sparse
 entry to resolve as known `Normal`. Without that marker, a missing entry means
 unknown.
 
-`RuntimeEncounterKnowledgeSnapshot` validates one entity identity per runtime
-target across elemental, ailment, instant-defeat, and analysis collections. A
-runtime ID cannot silently change entity meaning within one encounter.
+`RuntimeCombatProfileIdentitySnapshot` contains the source runtime actor ID,
+source entity definition ID, and a nonnegative revision. Self-sourced actors
+start with their own IDs. Every successful combat-profile composition advances
+the target actor's revision while atomically replacing the profile source with
+the actor that supplied stats, defenses, skills, and passives.
+
+`RuntimeEncounterKnowledgeSnapshot` validates one exact profile identity per
+runtime target across elemental, ailment, instant-defeat, and analysis
+collections. `BattleKnowledgeTargetProfileTransitionService` removes every
+entry for a runtime target when its source instance, source entity, or revision
+changes. Persistent facts survive because they belong to the source entity,
+not to the transient actor/profile pairing.
 
 Runtime actors contain no third Analyze authority, and the assembly exports no
 independent mutable discovery store. The immutable persistent snapshot and its
@@ -66,15 +75,17 @@ encounter state has been committed and the aggregate result returns the
 original references as both `Before` and `After`.
 
 `BattleKnowledgeExecutionAuthority` snapshots the accepted source action,
-acting runtime actor, and a read-only map from participant runtime IDs to
-entity-definition IDs. The aggregate transition validates the complete effect
-batch before invoking either lower transition:
+acting runtime actor, and a read-only map from participant runtime IDs to exact
+combat-profile identities. Before processing effects, the aggregate transition
+rebinds each target to the authority profile, invalidating stale encounter
+state. It then validates the complete effect batch before invoking either lower
+transition:
 
 - observation effect index equals the enclosing result index;
 - observation and Analyze runtime target equal the enclosing result target;
 - observation source action equals the accepted action;
 - observation and Analyze actor equal the acting runtime actor; and
-- observation and Analyze entity identity equals the authoritative binding for
+- observation and Analyze profile identity equals the authoritative binding for
   the runtime target.
 
 An absent target binding is a mismatch, not permission to trust the nested
@@ -101,6 +112,13 @@ Persistent promotion requires:
 4. `BattleDefenseInfluence.None`.
 
 Persistent promotion uses the authored value, never the effective value.
+
+Almighty is an intrinsic Normal affinity and is not a sparse knowledge key.
+Direct encounter and persistent-entry construction reject it. Persistent
+transition validation and aggregate save validation also reject malformed
+record-cloned state with stable diagnostics. Encounter snapshot construction,
+direct views, and automated seed validation reject forged Almighty entries
+before they can reach selection or presentation.
 
 ### Ailment
 
@@ -150,13 +168,15 @@ Unknown and unavailable fields mutate neither scope.
 
 ## Query Precedence
 
-`BattleKnowledgeView` queries encounter knowledge first. If the current target
-has no encounter fact, it queries persistent knowledge by entity definition.
+`BattleKnowledgeView` queries encounter knowledge for the exact current profile
+first. If the target has no matching encounter fact, it queries persistent
+knowledge by the current profile's source entity definition.
 The returned `BattleKnowledgeFactSource` identifies which scope answered, and
 the encounter result includes any `BattleDefenseInfluence` flags.
 
-Every combined query supplies both runtime and entity identity. Encounter
-identity conflict throws rather than returning knowledge for the wrong entity.
+Every combined query supplies both the runtime target and current combat-profile
+identity. A stale encounter profile is ignored rather than being returned for a
+new profile; persistent fallback still applies when its source entity matches.
 
 ## Automated Team Knowledge
 
@@ -171,7 +191,8 @@ Consequences:
 - teammates share discoveries during that run;
 - opposing teams never share snapshots;
 - every unseeded run starts empty;
-- an explicit seed must match participating teams and runtime/entity pairs;
+- an explicit seed must match participating teams and exact runtime/profile
+  pairs and cannot contain an Almighty affinity entry;
 - final snapshots are returned in `AutomatedBattleResult.TeamKnowledge`; and
 - no automated path writes persistent player knowledge.
 
@@ -208,13 +229,17 @@ call sites; the service does not observe ownership transactions implicitly.
 - catalog existence for every referenced ailment; and
 - valid enum and content-ID domains.
 
-Save v14 contains no actor-local Analyze field. Persistent defense disclosure
+Save v15 contains no actor-local Analyze field. Persistent defense disclosure
 belongs only in `RuntimeSaveGameSnapshot.Knowledge`; current-target analysis
 belongs only in `RuntimeEncounterKnowledgeSnapshot` and ends with its
-encounter.
+encounter. Actor snapshots retain the exact combat-profile identity used to
+restore and validate the source relationship. Save validation requires that
+the source runtime actor exists and that its authored entity matches the stored
+source entity ID.
 
-The save contract advances to version 14 because O5-R15 removes the obsolete
-actor-local field from the serialized aggregate shape.
+Version 14 removed the obsolete actor-local field. Version 15 adds canonical
+combat-profile source and revision identity so restored Vessels cannot
+reattribute or reuse knowledge under an ambiguous profile.
 
 ## Failure Containment
 

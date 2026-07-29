@@ -119,7 +119,8 @@ host orchestration must establish presence.
 6. recalculate resources with `PreserveCurrent`;
 7. validate learned, equipped, and pending skill state;
 8. resolve every equipped skill definition;
-9. stage stats, resources, defense, move list, and passives;
+9. stage stats, resources, defense, move list, passives, and the source profile
+   identity;
 10. commit the complete staged profile.
 
 For `RuntimeStatSourceKind.ActiveHostedEntity`, the request must provide the
@@ -145,7 +146,11 @@ The target Vessel retains:
 - passive runtime counters for passive IDs that remain in the new profile.
 
 `RuntimeActorState.ApplyCombatProfile` preserves retained passive runtime state
-instead of resetting activation counts whenever a profile is recomposed.
+instead of resetting activation counts whenever a profile is recomposed. It
+also advances `RuntimeCombatProfileIdentitySnapshot.Revision` and records the
+source actor/runtime entity that supplied the profile. Knowledge and other
+profile-sensitive consumers therefore distinguish two successful compositions
+even when they used the same source entity.
 
 ### Atomicity
 
@@ -290,15 +295,16 @@ Key invariants:
 Transition services do not mutate `RuntimeActorState.IsDeployed`. Encounter
 orchestration owns presence changes.
 
-## Save Contract V14
+## Save Contract V15
 
-`RuntimeSaveGameSnapshot.CurrentContractVersion` is `14`. Version 14 retains
+`RuntimeSaveGameSnapshot.CurrentContractVersion` is `15`. Version 15 retains
 the canonical roster, complete move-list state, policy-owned stat modifiers,
 charge-policy identity, and typed status lifetimes established by earlier
 pre-release contracts, including the optional target runtime ID used when a
-passive event counts activations per target. It removes actor-local Analyze
-state: persistent knowledge and encounter analysis already have separate
-canonical snapshots.
+passive event counts activations per target. It also retains each actor's
+combat-profile source actor, source entity, and revision. Version 14 removed
+actor-local Analyze state because persistent knowledge and encounter analysis
+already have separate canonical snapshots.
 
 The save aggregate contains:
 
@@ -325,6 +331,7 @@ revision. Roster ownership is not copied into actor snapshots.
 - party and roster role invariants;
 - roster capacities;
 - active Hosted Entity ownership and identity;
+- combat-profile source existence and source-entity agreement;
 - pending skill tokens, IDs, levels, and revisions;
 - passive activation target references when per-target counting is retained;
 - inventory, equipment, field, Compendium, and knowledge references.

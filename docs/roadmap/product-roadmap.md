@@ -205,6 +205,11 @@ audience documents. It was complete at that revision. The later
 found a reachable composed-profile identity defect and an impossible Almighty
 snapshot boundary. `battle_knowledge` is therefore partial pending O5-R21
 through O5-R25.
+O5-R21 through O5-R23 have now implemented canonical combat-profile identity,
+source-entity persistence with exact-profile encounter invalidation, and the
+intrinsic-Almighty storage boundary. O5-R24 reconciles mechanics, developer,
+technical, public-API, actor, and save guidance. O5-R25 remains the independent
+closure and full release gate; Order 6 does not begin before that decision.
 
 ## Priority 2: Persistence Evolution
 

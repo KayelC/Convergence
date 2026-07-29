@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 24 reviewed,
-29 existing_unreviewed, 15 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 27 reviewed,
+26 existing_unreviewed, 15 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -31,8 +31,9 @@ precedence, finite liveness, typed phase evidence, and the explicit boundary
 between opportunity counting and actor scheduling. Order 5 now additionally
 covers persistent entity knowledge, encounter-local team knowledge,
 conservative contact discovery, policy-controlled Analyze, familiarity imports,
-and save boundaries. Other subsystem entries remain unreviewed until they
-complete the same process.
+combat-profile source/revision identity, profile-switch invalidation,
+intrinsic-Almighty enforcement, and save boundaries. Other subsystem entries
+remain unreviewed until they complete the same process.
 O3-R7 independently verified the source and audience documents at that
 revision. A later source-first recheck reopened the developer and technical
 entries while three command-boundary defects were corrected. O3-R8 through
@@ -100,7 +101,7 @@ Knowledge defect at that revision. A later fresh source audit found one bounded
 custom-effect provenance defect that the developer and technical pages currently
 overstate. Mechanics remains `reviewed`; developer and technical return to
 `existing_unreviewed` until that boundary is corrected. O5-R10 now requires an
-immutable action, actor, and target-entity authority envelope and preflights the
+immutable action, actor, and target authority envelope and preflights the
 complete evidence batch before any lower transition. O5-R11 covers every
 mismatch, whole-batch rollback, and honest/hostile registered custom handlers.
 O5-R12 reconciles the developer and technical pages with that public contract,
@@ -132,6 +133,14 @@ documented Almighty-storage invariant unenforced by public snapshots and save
 validation. All three Battle Knowledge audiences return to
 `existing_unreviewed`; the matrix now records 24 reviewed, 29
 `existing_unreviewed`, 15 missing, and 7 `not_applicable` entries.
+
+O5-R21 through O5-R23 correct that later audit: actor state now carries exact
+combat-profile identity, durable facts use the source entity, encounter facts
+invalidate on source or revision replacement, and every public ingestion path
+rejects stored Almighty affinity knowledge. O5-R24 reconciles all three
+audience pages and save-v15 guidance, so the Battle Knowledge entries return to
+`reviewed` and the current matrix totals return to 27 reviewed and 26
+`existing_unreviewed`. O5-R25 remains the independent capability-closure gate.
 
 The review order and promotion gates for all capabilities are maintained in
 the active

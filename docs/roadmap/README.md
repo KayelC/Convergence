@@ -77,8 +77,8 @@ then added independent sequence-model and public-restore evidence, corrected
 the committed action-end save-checkpoint guidance, and found no qualifying
 runtime defect. Order 4 is formally closed. Order 5, `battle_knowledge`, has
 implemented O5-R1 through O5-R8, but a later fresh source audit reopened one
-custom-effect provenance boundary. O5-R10 now enforces action, actor, effect,
-runtime-target, and target-entity authority; O5-R11 adds adversarial extension
+custom-effect provenance boundary. O5-R10 established action, actor, effect,
+runtime-target, and then-current target-entity authority; O5-R11 adds adversarial extension
 coverage; and O5-R12 reconciles the developer and technical guidance. O5-R13 is
 now complete: its fresh source and documentation review found no unresolved
 realistic reachable defect, and the full release gate passed. Order 5 is
@@ -98,3 +98,7 @@ closed at that revision. The later
 reopens it for composed-profile identity and impossible Almighty snapshot
 boundaries. O5-R21 through O5-R25 must close before Order 6 becomes the next
 collaborative documentation subject.
+O5-R21 through O5-R23 now correct combat-profile identity, profile-aware
+knowledge invalidation, and impossible Almighty snapshot input. O5-R24
+reconciles all active audience and save-contract guidance. O5-R25 remains the
+required independent closure review.

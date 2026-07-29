@@ -18,8 +18,8 @@ Convergence has two deliberately separate knowledge scopes.
 
 | Scope | Identity | Typical owner | Lifetime |
 |---|---|---|---|
-| Persistent entity knowledge | Entity definition ID | Player session | Included in a save until a game replaces or removes it |
-| Encounter knowledge | Runtime target ID plus entity definition ID | One battle team | Discarded after the encounter unless a host explicitly retains diagnostic evidence |
+| Persistent entity knowledge | Combat-profile source entity definition ID | Player session | Included in a save until a game replaces or removes it |
+| Encounter knowledge | Runtime target ID plus exact combat-profile identity | One battle team | Discarded after the encounter unless a host explicitly retains diagnostic evidence |
 
 Persistent knowledge answers a question such as, "What did the player learn
 about Ashling as an entity type?" Encounter knowledge answers, "What does this
@@ -28,6 +28,25 @@ team know about this particular Ashling right now?"
 This distinction prevents a temporary shield, affinity override, Break,
 guarding state, or passive replacement from rewriting a permanent entity
 record.
+
+### Vessels And Changing Combat Profiles
+
+The actor visible on the battlefield is not always the entity supplying its
+combat rules. A Vessel may use an Active Hosted Entity's stats, defenses,
+skills, and passives. In that case:
+
+- the Vessel runtime ID still identifies the target on the battlefield;
+- encounter facts are bound to that runtime target's exact Hosted Entity
+  profile, including its profile revision; and
+- persistent facts are credited to the Hosted Entity definition that supplied
+  the observed defense, not to the Vessel definition.
+
+Selecting another Hosted Entity, restoring another source instance, or
+successfully recomposing the profile invalidates that target's prior encounter
+facts and Analyze disclosures. Persistent facts about the old source entity
+remain valid for that entity. This prevents knowledge about one Hosted Entity
+from being displayed as knowledge about another merely because both appeared
+through the same Vessel.
 
 ## Knowledge Domains
 
@@ -41,8 +60,12 @@ Encounter analysis may additionally disclose current HP, current SP, core
 stats, and skills. Those values belong to the current runtime target and never
 become persistent entity knowledge.
 
-`Almighty` is not stored as an elemental discovery because it always resolves
-as normal in the supplied rules.
+`Almighty` always resolves as `Normal` and is never a stored affinity fact.
+Public encounter entries reject it, persistent transitions reject malformed
+or cloned entries, save validation reports a typed diagnostic, and host-owned
+save decoding cannot construct it through the standard snapshot constructor.
+Analyze may still report its intrinsic `Normal` result without adding an
+elemental entry.
 
 ## What Ordinary Actions Teach
 
@@ -147,8 +170,10 @@ can use it during the same encounter. The final team snapshots are diagnostic
 results; they are not automatically saved.
 
 A boss or scripted encounter may receive an explicit team seed. The seed must
-reference participating teams and matching runtime targets. Supplying a seed
-does not promote it into player knowledge and does not make it survive a later
+reference participating teams and match each target's current combat-profile
+source and revision exactly. A seed containing stored Almighty affinity
+knowledge is rejected before strategy selection. Supplying a valid seed does
+not promote it into player knowledge and does not make it survive a later
 ordinary encounter.
 
 ## Battle End
@@ -161,6 +186,8 @@ starting state unless it deliberately supplies it as a new seed.
 ## Presentation Rules
 
 - Query typed knowledge; never parse damage messages or animations.
+- Query with the target's current combat-profile identity, not merely the
+  battlefield actor's entity definition.
 - Prefer an encounter fact over a persistent fact for the same current target.
 - Treat a missing fact as unknown, not normal, unless a complete analyzed
   profile explicitly establishes the default.

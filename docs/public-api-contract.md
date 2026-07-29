@@ -151,8 +151,17 @@ Battle Knowledge has two state authorities. Durable entity-defense facts use
 `RuntimeKnowledgeSnapshot`; current-target facts and Analyze disclosures use
 `RuntimeEncounterKnowledgeSnapshot`. Canonical Analyze returns
 `BattleAnalysisResult` and commits through the encounter transition. Save
-contract v14 contains only the durable snapshot and deliberately omits current
-encounter analysis.
+contract v15 contains only the durable knowledge snapshot and deliberately
+omits current encounter analysis.
+
+Every runtime actor exposes one immutable `RuntimeCombatProfileIdentitySnapshot`
+containing the source runtime actor, source entity definition, and revision
+currently supplying combat-facing stats, defenses, skills, and passives.
+Persistent observations use that source entity as their durable key. Encounter
+facts, Analyze results, execution authority, queries, and automated seeds use
+the exact profile identity. Rebinding a target to another source or revision
+invalidates all of its encounter facts and current Analyze disclosures before
+later evidence is accepted.
 
 Public discovery writes pass through
 `IPersistentBattleKnowledgeTransitionService`; the API exposes no independent
@@ -161,6 +170,11 @@ resistance levels, instant-defeat channels, and analysis fields return stable
 typed diagnostics without mutation. `PersistentBattleKnowledgeView` rejects
 the same malformed input immediately with its exact diagnostic path, and
 aggregate save validation applies the same analyzed-defense field rules.
+Almighty remains a valid damage element but is an intrinsic Normal affinity,
+not a storable knowledge key. Public entry construction, standalone
+transitions/views, encounter seeds, host decoding, and save validation reject
+impossible stored Almighty facts before strategy or presentation can consume
+them.
 
 Instant-defeat observations have exactly two legal resistance shapes: bypassed
 evidence omits the channel and both resistance values, while checked evidence
@@ -179,8 +193,9 @@ application as an independently timed signed contribution, derives a bounded
 aggregate, refreshes the oldest same-sign contribution at a configured cap,
 and uses the same typed lifecycle-boundary contract per contribution.
 
-Save contract v14 retains the canonical roster and pending skill-choice
+Save contract v15 retains the canonical roster and pending skill-choice
 authorities established by v9 and stores complete stat-modifier policy state.
+It also stores and validates each actor's combat-profile source and revision.
 `RuntimeSessionRestoreService` binds retained modifier policies explicitly,
 derives the Active Hosted Entity dependency from `RuntimePartyRosterSnapshot`,
 restores owned actors first, and returns a normalized aggregate whose derived

@@ -56,6 +56,14 @@ also found that public snapshots accept impossible Almighty affinity facts.
 The
 [post-R20 audit](../reviews/battle-knowledge-order-5-post-r20-independent-audit-2026-07-29.md)
 therefore reopens the capability pending O5-R21 through O5-R25.
+O5-R21 now gives every actor a canonical combat-profile source and revision;
+O5-R22 keys durable facts to the source entity and invalidates every encounter
+domain on profile replacement; O5-R23 rejects stored Almighty facts at
+construction, transition, view, automated-seed, host-decoding, and
+save-validation boundaries. O5-R24 reconciles the three reviewed audience
+documents and save-v15 guidance. The implementation remains `partial` only
+until O5-R25 independently re-reads the corrected source and completes the
+release gate.
 
 `status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

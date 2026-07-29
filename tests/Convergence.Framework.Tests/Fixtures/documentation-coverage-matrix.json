@@ -227,19 +227,19 @@
     {
       "id": "battle_knowledge",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/battle-knowledge.md"],
-        "reason": "The approved discovery rules remain sound, but the page does not yet distinguish actor identity from a composed Hosted Entity profile and overstates the enforced Almighty-storage boundary."
+        "reason": "The owner-confirmed discovery, Analyze, familiarity, profile-switch invalidation, and intrinsic-Almighty rules agree with the corrected source and adversarial tests."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/battle-knowledge.md"],
-        "reason": "The authority example still binds knowledge to participant.EntityId and does not describe profile-revision invalidation for composed Vessels."
+        "reason": "The integration guide uses exact combat-profile authority, documents explicit swap invalidation, and covers malformed seeds and saves."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/battle-knowledge-runtime.md"],
-        "reason": "The runtime reference lacks a combat-profile identity/revision authority and claims an Almighty invariant that public snapshots and save validation do not fully enforce."
+        "reason": "The runtime authority, revision invalidation, source-entity persistence, intrinsic-element boundary, and save-v15 contract were verified against current source."
       }
     },
     {

@@ -315,7 +315,7 @@ basic attacks must declare critical behavior. One authored damage effect is
 limited to `1..1024` hits; the supplied standard policy defaults to a stricter
 `64`-hit execution ceiling. Authored probabilities are inclusive `0..100` and
 are rejected before execution, while only policy-derived chances may clamp.
-Save contract v14 retains charge policy identity and rejects restoration under
+Save contract v15 retains charge policy identity and rejects restoration under
 incompatible charge semantics.
 
 The final source-first review corrected active schema validation, normalized

@@ -189,7 +189,7 @@ supplied policies preserve swap state and clear on the other terminal scopes.
 
 ## Persistence And Restore
 
-Save contract v14 stores canonical modifier state in
+Save contract v15 stores canonical modifier state in
 `RuntimeBattleStatusSnapshot.StatModifiers`. Host JSON DTOs must preserve:
 
 - the qualified policy ID;
