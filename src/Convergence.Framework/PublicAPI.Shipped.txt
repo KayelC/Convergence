@@ -11362,6 +11362,8 @@ Convergence.Knowledge.BattleAnalysisService
 Convergence.Knowledge.BattleAnalysisService.Analyze(Convergence.Knowledge.BattleAnalysisRequest! request) -> Convergence.Knowledge.BattleAnalysisResult!
 Convergence.Knowledge.BattleAnalysisService.BattleAnalysisService(Convergence.Knowledge.IBattleAnalysisDisclosurePolicy? policy = null) -> void
 Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.DuplicateAnalyzedDefenseEntity = 4 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.InvalidAnalyzedDefenseField = 6 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.UndefinedEnumValue = 5 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
 Convergence.Knowledge.IBattleAnalysisDisclosurePolicy
 Convergence.Knowledge.IBattleAnalysisDisclosurePolicy.Resolve(Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest! request) -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisFieldDisclosure!>!
 Convergence.Knowledge.IBattleAnalysisKnowledgeTransitionService
@@ -11472,3 +11474,4 @@ Convergence.Knowledge.BattleKnowledgeExecutionTransitionService.BattleKnowledgeE
 Convergence.Knowledge.IBattleKnowledgeExecutionTransitionService
 Convergence.Knowledge.IBattleKnowledgeExecutionTransitionService.Apply(Convergence.Knowledge.BattleKnowledgeExecutionTransitionRequest! request) -> Convergence.Knowledge.BattleKnowledgeExecutionTransitionResult!
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateAnalyzedDefenseKnowledge = 85 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.InvalidAnalyzedDefenseField = 86 -> Convergence.Runtime.RuntimeSaveValidationCode

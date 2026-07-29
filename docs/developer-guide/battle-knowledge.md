@@ -15,7 +15,9 @@ carry the evidence that a knowledge policy is allowed to use.
 > snapshots described in this guide. O5-R15 removed actor-local Analyze state
 > from runtime actors and save v14. O5-R16 removed the three disconnected
 > mutable `*Knowledge` stores. No supported discovery write now bypasses the
-> canonical persistent transition service.
+> canonical persistent transition service. O5-R17 also rejects malformed
+> record-cloned enum values through typed transition diagnostics before any
+> knowledge dictionary or result snapshot is constructed.
 
 ## State To Keep
 

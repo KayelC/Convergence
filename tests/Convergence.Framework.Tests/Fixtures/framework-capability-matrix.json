@@ -142,7 +142,6 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Persistent knowledge transitions do not reject clone-mutated undefined enum values.",
         "Instant-defeat observations accept incomplete checked-resistance evidence tuples."
       ]
     },

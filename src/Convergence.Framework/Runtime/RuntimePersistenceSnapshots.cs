@@ -92,7 +92,8 @@ public enum RuntimeSaveValidationCode
     PassiveActivationEventMismatch,
     MissingPassiveSkillState = 83,
     ConflictingActorAilmentExclusivityGroup = 84,
-    DuplicateAnalyzedDefenseKnowledge = 85
+    DuplicateAnalyzedDefenseKnowledge = 85,
+    InvalidAnalyzedDefenseField = 86
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -646,6 +647,24 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 diagnostics);
         }
 
+        for (int index = 0; index < snapshot.Knowledge.AnalyzedDefenses.Count; index++)
+        {
+            RuntimeAnalyzedDefenseKnowledgeSnapshot entry = snapshot.Knowledge.AnalyzedDefenses[index];
+            for (int fieldIndex = 0; fieldIndex < entry.DisclosedFields.Count; fieldIndex++)
+            {
+                BattleAnalysisField field = entry.DisclosedFields[fieldIndex];
+                string path = $"$.knowledge.analyzedDefenses[{index}].disclosedFields[{fieldIndex}]";
+                ValidateEnumValue(field, path, diagnostics);
+                if (EnumDomain.IsDefined(field) && !IsPersistentDefenseField(field))
+                {
+                    diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                        RuntimeSaveValidationCode.InvalidAnalyzedDefenseField,
+                        $"Analysis field '{field}' is not persistent defense knowledge.",
+                        Path: path));
+                }
+            }
+        }
+
         for (int index = 0; index < snapshot.Checkpoints.Entries.Count; index++)
         {
             ValidateEnumValue(
@@ -671,6 +690,11 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             $"Value '{value}' is not defined for {typeof(TEnum).Name}.",
             Path: path));
     }
+
+    private static bool IsPersistentDefenseField(BattleAnalysisField field) => field is
+        BattleAnalysisField.ElementalAffinities or
+        BattleAnalysisField.AilmentResistances or
+        BattleAnalysisField.InstantDeathResistances;
 
     private static void ValidateActorReferenceIdentifiers(
         IReadOnlyList<RuntimeActorReferenceSnapshot> references,

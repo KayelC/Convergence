@@ -31,9 +31,9 @@ runtime ID cannot silently change entity meaning within one encounter.
 > **Order 5 correction status:** O5-R15 removed actor-local Analyze state from
 > runtime actors and save v14. O5-R16 removed the three disconnected mutable
 > dictionary-backed stores. The immutable persistent snapshot and transition
-> service are now the only durable discovery authority. O5-R17 will make the standalone persistent
-> transition reject record-cloned undefined enum values rather than accepting
-> them until result reconstruction.
+> service are now the only durable discovery authority. O5-R17 makes the
+> standalone transition and view reject record-cloned undefined enum values and
+> invalid persistent analysis fields before dictionary or result construction.
 
 ## Execution Transition
 
@@ -210,9 +210,10 @@ actor-local field from the serialized aggregate shape.
 ## Failure Containment
 
 - Invalid content and runtime IDs reject at public construction or transition
-  boundaries. Undefined knowledge enums reject at ordinary construction and
-  aggregate save validation; O5-R17 remains open because record cloning can
-  currently bypass the standalone persistent transition's enum checks.
+  boundaries. Undefined knowledge enums and invalid persistent analysis fields
+  reject at ordinary construction, standalone view/transition boundaries, and
+  aggregate save validation even when a host-supplied record clone bypassed a
+  validating constructor.
 - Duplicate or conflicting keys reject before dictionary materialization.
 - Transition results snapshot every public collection.
 - Execution authority defensively snapshots target identities and rejects

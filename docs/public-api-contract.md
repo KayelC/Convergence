@@ -161,6 +161,13 @@ stores and their key types. Public discovery writes now have one supported
 destination: a validated `RuntimeKnowledgeSnapshot` produced through the
 persistent Battle Knowledge transition service.
 
+O5-R17 makes that standalone transition boundary authoritative for malformed
+snapshot domains as well. Record-cloned undefined elements, affinities,
+resistance levels, instant-defeat channels, and analysis fields return stable
+typed diagnostics without mutation. `PersistentBattleKnowledgeView` rejects
+the same malformed input immediately with its exact diagnostic path, and
+aggregate save validation applies the same analyzed-defense field rules.
+
 M1-3 adds `StatModifierLifecycleBoundary` and the supplied
 `TimedExclusiveStatModifierPolicy`. Counted contributions retain their latest
 observed boundary so same-boundary application is protected, duplicate ticks

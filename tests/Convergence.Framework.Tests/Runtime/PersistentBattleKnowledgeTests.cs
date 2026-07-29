@@ -1,3 +1,4 @@
+using System.Reflection;
 using Convergence.Content;
 using Convergence.Knowledge;
 using Convergence.Runtime;
@@ -140,6 +141,99 @@ public sealed class PersistentBattleKnowledgeTests
     }
 
     [Fact]
+    public void TransitionAndView_RejectEveryMalformedPersistentKnowledgeEnumAtTheirBoundary()
+    {
+        var before = new RuntimeKnowledgeSnapshot(
+            elementalAffinities:
+            [
+                new RuntimeElementalAffinityKnowledgeSnapshot(
+                    EntityId,
+                    DamageElement.Ice,
+                    ElementalAffinity.Weak)
+            ]);
+        var validElemental = new RuntimeElementalAffinityKnowledgeSnapshot(
+            EntityId,
+            DamageElement.Fire,
+            ElementalAffinity.Normal);
+        var validAilment = new RuntimeAilmentResistanceKnowledgeSnapshot(
+            EntityId,
+            AilmentId,
+            ResistanceLevel.Normal);
+        var validInstantDeath = new RuntimeInstantDeathResistanceKnowledgeSnapshot(
+            EntityId,
+            InstantDeathChannel.Light,
+            ResistanceLevel.Normal);
+        var validAnalyzedDefense = new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+            EntityId,
+            [BattleAnalysisField.ElementalAffinities]);
+        RuntimeAnalyzedDefenseKnowledgeSnapshot undefinedAnalyzedDefense = CloneWithProperty(
+            validAnalyzedDefense,
+            nameof(RuntimeAnalyzedDefenseKnowledgeSnapshot.DisclosedFields),
+            (IReadOnlyList<BattleAnalysisField>)Array.AsReadOnly(
+                [Undefined<BattleAnalysisField>()]));
+        RuntimeAnalyzedDefenseKnowledgeSnapshot nonDefenseAnalysis = CloneWithProperty(
+            validAnalyzedDefense,
+            nameof(RuntimeAnalyzedDefenseKnowledgeSnapshot.DisclosedFields),
+            (IReadOnlyList<BattleAnalysisField>)Array.AsReadOnly(
+                [BattleAnalysisField.CurrentHp]));
+        var cases = new[]
+        {
+            new MalformedKnowledgeCase(
+                new RuntimeKnowledgeSnapshot(elementalAffinities:
+                    [validElemental with { Element = Undefined<DamageElement>() }]),
+                BattleKnowledgeTransitionDiagnosticCode.UndefinedEnumValue,
+                "elementalAffinities[0].element"),
+            new MalformedKnowledgeCase(
+                new RuntimeKnowledgeSnapshot(elementalAffinities:
+                    [validElemental with { Affinity = Undefined<ElementalAffinity>() }]),
+                BattleKnowledgeTransitionDiagnosticCode.UndefinedEnumValue,
+                "elementalAffinities[0].affinity"),
+            new MalformedKnowledgeCase(
+                new RuntimeKnowledgeSnapshot(ailmentResistances:
+                    [validAilment with { Resistance = Undefined<ResistanceLevel>() }]),
+                BattleKnowledgeTransitionDiagnosticCode.UndefinedEnumValue,
+                "ailmentResistances[0].resistance"),
+            new MalformedKnowledgeCase(
+                new RuntimeKnowledgeSnapshot(instantDeathResistances:
+                    [validInstantDeath with { Channel = Undefined<InstantDeathChannel>() }]),
+                BattleKnowledgeTransitionDiagnosticCode.UndefinedEnumValue,
+                "instantDeathResistances[0].channel"),
+            new MalformedKnowledgeCase(
+                new RuntimeKnowledgeSnapshot(instantDeathResistances:
+                    [validInstantDeath with { Resistance = Undefined<ResistanceLevel>() }]),
+                BattleKnowledgeTransitionDiagnosticCode.UndefinedEnumValue,
+                "instantDeathResistances[0].resistance"),
+            new MalformedKnowledgeCase(
+                KnowledgeWithAnalyzedDefense(undefinedAnalyzedDefense),
+                BattleKnowledgeTransitionDiagnosticCode.UndefinedEnumValue,
+                "analyzedDefenses[0].disclosedFields[0]"),
+            new MalformedKnowledgeCase(
+                KnowledgeWithAnalyzedDefense(nonDefenseAnalysis),
+                BattleKnowledgeTransitionDiagnosticCode.InvalidAnalyzedDefenseField,
+                "analyzedDefenses[0].disclosedFields[0]")
+        };
+        var service = new PersistentBattleKnowledgeTransitionService();
+
+        foreach (MalformedKnowledgeCase testCase in cases)
+        {
+            BattleKnowledgeTransitionResult result = service.Apply(
+                new BattleKnowledgeTransitionRequest(before, testCase.Snapshot));
+
+            Assert.Equal(BattleKnowledgeTransitionStatus.Rejected, result.Status);
+            Assert.Same(before, result.Before);
+            Assert.Same(before, result.After);
+            Assert.Empty(result.AppliedDiscoveries.ElementalAffinities);
+            Assert.Contains(result.Diagnostics, issue =>
+                issue.Code == testCase.Code &&
+                issue.Path == "$.discoveries." + testCase.RelativePath);
+
+            ArgumentException exception = Assert.Throws<ArgumentException>(() =>
+                new PersistentBattleKnowledgeView(testCase.Snapshot));
+            Assert.Contains("$.before." + testCase.RelativePath, exception.Message, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void Apply_UnchangedResultPreservesOriginalSnapshotAndIgnoresAlmighty()
     {
         var before = new RuntimeKnowledgeSnapshot(
@@ -217,4 +311,40 @@ public sealed class PersistentBattleKnowledgeTests
             " ",
             "$.x"));
     }
+
+    private static RuntimeKnowledgeSnapshot KnowledgeWithAnalyzedDefense(
+        RuntimeAnalyzedDefenseKnowledgeSnapshot analyzedDefense) =>
+        new(
+            elementalAffinities: null,
+            ailmentResistances: null,
+            instantDeathResistances: null,
+            analyzedDefenses: [analyzedDefense]);
+
+    private static TSnapshot CloneWithProperty<TSnapshot, TValue>(
+        TSnapshot source,
+        string propertyName,
+        TValue value)
+        where TSnapshot : class
+    {
+        MethodInfo memberwiseClone = typeof(object).GetMethod(
+            "MemberwiseClone",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var clone = (TSnapshot)memberwiseClone.Invoke(source, null)!;
+        FieldInfo field = typeof(TSnapshot).GetField(
+            $"<{propertyName}>k__BackingField",
+            BindingFlags.Instance | BindingFlags.NonPublic) ??
+            throw new InvalidOperationException(
+                $"Snapshot property '{typeof(TSnapshot).Name}.{propertyName}' has no backing field.");
+        field.SetValue(clone, value);
+        return clone;
+    }
+
+    private static TEnum Undefined<TEnum>()
+        where TEnum : struct, Enum =>
+        (TEnum)Enum.ToObject(typeof(TEnum), 999);
+
+    private sealed record MalformedKnowledgeCase(
+        RuntimeKnowledgeSnapshot Snapshot,
+        BattleKnowledgeTransitionDiagnosticCode Code,
+        string RelativePath);
 }

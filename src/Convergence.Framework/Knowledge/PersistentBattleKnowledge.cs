@@ -18,7 +18,9 @@ public enum BattleKnowledgeTransitionDiagnosticCode
     InvalidAilmentId,
     DuplicateCurrentEntry,
     DuplicateDiscoveryEntry,
-    DuplicateAnalyzedDefenseEntity
+    DuplicateAnalyzedDefenseEntity,
+    UndefinedEnumValue,
+    InvalidAnalyzedDefenseField
 }
 
 public sealed class BattleKnowledgeTransitionDiagnostic
@@ -123,7 +125,7 @@ public sealed class PersistentBattleKnowledgeView : IPersistentBattleKnowledgeVi
         if (diagnostics.Length > 0)
         {
             throw new ArgumentException(
-                "Persistent battle knowledge must contain valid unique entries.",
+                $"Persistent battle knowledge is invalid: {string.Join("; ", diagnostics.Select(issue => $"{issue.Path}: {issue.Message}"))}",
                 nameof(snapshot));
         }
 
@@ -360,6 +362,14 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
             {
                 yield return InvalidEntity(path);
             }
+            if (!EnumDomain.IsDefined(entry.Element))
+            {
+                yield return UndefinedEnum(entry.Element, path + ".element");
+            }
+            if (!EnumDomain.IsDefined(entry.Affinity))
+            {
+                yield return UndefinedEnum(entry.Affinity, path + ".affinity");
+            }
             if (!elemental.Add((entry.EntityId, entry.Element)))
             {
                 yield return Duplicate(duplicateCode, path);
@@ -382,6 +392,10 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
                     "Knowledge ailment IDs must be valid.",
                     path + ".ailmentId");
             }
+            if (!EnumDomain.IsDefined(entry.Resistance))
+            {
+                yield return UndefinedEnum(entry.Resistance, path + ".resistance");
+            }
             if (!ailments.Add((entry.EntityId, entry.AilmentId)))
             {
                 yield return Duplicate(duplicateCode, path);
@@ -397,6 +411,14 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
             {
                 yield return InvalidEntity(path);
             }
+            if (!EnumDomain.IsDefined(entry.Channel))
+            {
+                yield return UndefinedEnum(entry.Channel, path + ".channel");
+            }
+            if (!EnumDomain.IsDefined(entry.Resistance))
+            {
+                yield return UndefinedEnum(entry.Resistance, path + ".resistance");
+            }
             if (!instantDeath.Add((entry.EntityId, entry.Channel)))
             {
                 yield return Duplicate(duplicateCode, path);
@@ -411,6 +433,22 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
             if (!entry.EntityId.IsValid)
             {
                 yield return InvalidEntity(path);
+            }
+            for (int fieldIndex = 0; fieldIndex < entry.DisclosedFields.Count; fieldIndex++)
+            {
+                BattleAnalysisField field = entry.DisclosedFields[fieldIndex];
+                string fieldPath = $"{path}.disclosedFields[{fieldIndex}]";
+                if (!EnumDomain.IsDefined(field))
+                {
+                    yield return UndefinedEnum(field, fieldPath);
+                }
+                else if (!IsDefenseField(field))
+                {
+                    yield return new BattleKnowledgeTransitionDiagnostic(
+                        BattleKnowledgeTransitionDiagnosticCode.InvalidAnalyzedDefenseField,
+                        $"Analysis field '{field}' is not persistent defense knowledge.",
+                        fieldPath);
+                }
             }
             if (!analyzedDefenseEntities.Add(entry.EntityId))
             {
@@ -432,6 +470,20 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
         BattleKnowledgeTransitionDiagnosticCode code,
         string path) =>
         new(code, "Knowledge entries must have unique typed keys.", path);
+
+    private static BattleKnowledgeTransitionDiagnostic UndefinedEnum<TEnum>(
+        TEnum value,
+        string path)
+        where TEnum : struct, Enum =>
+        new(
+            BattleKnowledgeTransitionDiagnosticCode.UndefinedEnumValue,
+            $"Value '{value}' is not defined for {typeof(TEnum).Name}.",
+            path);
+
+    private static bool IsDefenseField(BattleAnalysisField field) => field is
+        BattleAnalysisField.ElementalAffinities or
+        BattleAnalysisField.AilmentResistances or
+        BattleAnalysisField.InstantDeathResistances;
 
     private static RuntimeKnowledgeSnapshot Snapshot(
         IReadOnlyDictionary<(ContentId EntityId, DamageElement Element), ElementalAffinity> elemental,

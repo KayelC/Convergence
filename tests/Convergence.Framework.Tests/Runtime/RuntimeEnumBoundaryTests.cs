@@ -221,6 +221,13 @@ public sealed class RuntimeEnumBoundaryTests
             entityId,
             InstantDeathChannel.Light,
             ResistanceLevel.Normal);
+        RuntimeAnalyzedDefenseKnowledgeSnapshot malformedAnalyzedDefense = CloneWithProperty(
+            new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+                entityId,
+                [BattleAnalysisField.ElementalAffinities]),
+            nameof(RuntimeAnalyzedDefenseKnowledgeSnapshot.DisclosedFields),
+            (IReadOnlyList<BattleAnalysisField>)Array.AsReadOnly(
+                [Undefined<BattleAnalysisField>(), BattleAnalysisField.CurrentHp]));
         var knowledge = new RuntimeKnowledgeSnapshot(
             elementalAffinities:
             [
@@ -235,7 +242,8 @@ public sealed class RuntimeEnumBoundaryTests
             [
                 validInstantDeath with { Channel = Undefined<InstantDeathChannel>() },
                 validInstantDeath with { Resistance = Undefined<ResistanceLevel>() }
-            ]);
+            ],
+            analyzedDefenses: [malformedAnalyzedDefense]);
         RuntimeCheckpointEntrySnapshot malformedCheckpoint = CloneWithProperty(
             new RuntimeCheckpointEntrySnapshot(0, RuntimeCheckpointKind.HostAction, "Malformed."),
             nameof(RuntimeCheckpointEntrySnapshot.Kind),
@@ -258,6 +266,10 @@ public sealed class RuntimeEnumBoundaryTests
         AssertUndefinedDiagnostic(validation, "$.knowledge.ailmentResistances[0].resistance");
         AssertUndefinedDiagnostic(validation, "$.knowledge.instantDeathResistances[0].channel");
         AssertUndefinedDiagnostic(validation, "$.knowledge.instantDeathResistances[1].resistance");
+        AssertUndefinedDiagnostic(validation, "$.knowledge.analyzedDefenses[0].disclosedFields[0]");
+        Assert.Contains(validation.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.InvalidAnalyzedDefenseField &&
+            diagnostic.Path == "$.knowledge.analyzedDefenses[0].disclosedFields[1]");
         AssertUndefinedDiagnostic(validation, "$.checkpoints.entries[0].kind");
         Assert.Throws<RuntimeSaveValidationException>(() => validation.RequireValidSnapshot());
     }
