@@ -192,6 +192,13 @@ public sealed class BattleKnowledgeObservation
         {
             RequireDefined(resolved, nameof(effectiveResistance));
         }
+        if (applicationStatus == BattleAilmentApplicationStatus.Immune &&
+            effectiveResistance != ResistanceLevel.Immune)
+        {
+            throw new ArgumentException(
+                "A confirmed ailment immunity requires an effective immune resistance.",
+                nameof(effectiveResistance));
+        }
 
         BattleKnowledgeObservationOutcome outcome = applicationStatus switch
         {

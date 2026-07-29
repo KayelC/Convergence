@@ -149,6 +149,29 @@ public sealed class BattleKnowledgeObservationTransitionTests
         Assert.Equal(BattleDefenseInfluence.PassiveModifier, encounter.TemporaryInfluences);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData(ResistanceLevel.Vulnerable)]
+    [InlineData(ResistanceLevel.Normal)]
+    [InlineData(ResistanceLevel.Resistant)]
+    public void AilmentImmunityRequiresCoherentEffectiveResistance(
+        ResistanceLevel? effectiveResistance)
+    {
+        ArgumentException exception = Assert.Throws<ArgumentException>(() =>
+            BattleKnowledgeObservation.Ailment(
+                Action,
+                Actor,
+                Target,
+                Entity,
+                0,
+                Poison,
+                BattleAilmentApplicationStatus.Immune,
+                ResistanceLevel.Immune,
+                effectiveResistance));
+
+        Assert.Equal("effectiveResistance", exception.ParamName);
+    }
+
     [Fact]
     public void InstantDeathLearnsOnlyExplicitCheckedImmunity()
     {
