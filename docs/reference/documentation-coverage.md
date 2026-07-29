@@ -13,6 +13,9 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
+The documentation matrix currently records 75 audience entries: 24 reviewed,
+29 existing_unreviewed, 15 missing, and 7 not_applicable.
+
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
 Order 1 review includes canonical action authority, prepared targets,
@@ -120,6 +123,15 @@ restricted local environment; connected CI remains authoritative for that
 release check. Developer and technical return to `reviewed`. The matrix records
 27 reviewed, 26 `existing_unreviewed`, 15 missing, and 7 `not_applicable`
 entries.
+
+The later
+[post-R20 independent audit](../reviews/battle-knowledge-order-5-post-r20-independent-audit-2026-07-29.md)
+traced current source across combat-profile composition and found that all three
+audiences omit profile identity and replacement invalidation. It also found the
+documented Almighty-storage invariant unenforced by public snapshots and save
+validation. All three Battle Knowledge audiences return to
+`existing_unreviewed`; the matrix now records 24 reviewed, 29
+`existing_unreviewed`, 15 missing, and 7 `not_applicable` entries.
 
 The review order and promotion gates for all capabilities are maintained in
 the active

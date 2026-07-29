@@ -417,7 +417,12 @@ remaining documentation reconciliation and fresh closure. O5-R20 found and
 corrected one sibling ailment-evidence coherence defect before independently
 passing the source, documentation, host, coverage, Godot, and all other locally
 executable release gates. The online dependency lookup remains a connected CI
-release check. Order 5 is formally closed. The matrix records 27 reviewed, 26
+release check. Order 5 was formally closed at that revision. The later
+[post-R20 independent audit](../reviews/battle-knowledge-order-5-post-r20-independent-audit-2026-07-29.md)
+found that all three audiences omit the distinction between actor identity and
+the active composed-profile identity, and that the documented Almighty-storage
+rule is not enforced at every public state boundary. Order 5 is reopened under
+O5-R21 through O5-R25. The matrix records 24 reviewed, 29
 `existing_unreviewed`, 15 missing, and 7 `not_applicable`.
 
 A final bounded certification subsequently exercised 1,536 deterministic

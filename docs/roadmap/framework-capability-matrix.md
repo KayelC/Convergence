@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
-`battle_knowledge` is `complete`. Persistent entity facts and encounter-local
+`battle_knowledge` is `partial`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and
 Analyze results pass through one atomic framework transition; automated teams
 share only their own encounter snapshot; familiar acquisition is optional and
@@ -49,7 +49,13 @@ code, content, host, coverage, and Godot gate without another realistic
 reachable finding. The online dependency audit could not be refreshed in the
 restricted local environment and remains a connected CI release gate. The
 [O5-R20 closure review](../reviews/battle-knowledge-order-5-r20-final-closure-review-2026-07-29.md)
-formally returns the capability to `complete`.
+returned the capability to `complete` at that revision. A later independent
+source trace found that composed Vessels attribute Hosted Entity defenses to the
+owner entity and retain encounter disclosure across profile replacement. It
+also found that public snapshots accept impossible Almighty affinity facts.
+The
+[post-R20 audit](../reviews/battle-knowledge-order-5-post-r20-independent-audit-2026-07-29.md)
+therefore reopens the capability pending O5-R21 through O5-R25.
 
 `status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

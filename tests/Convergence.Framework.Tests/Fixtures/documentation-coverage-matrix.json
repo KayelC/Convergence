@@ -227,19 +227,19 @@
     {
       "id": "battle_knowledge",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/mechanics/battle-knowledge.md"],
-        "reason": "Owner-confirmed persistent and encounter scopes, conservative discovery, Analyze disclosure, boss restriction, familiarity, and AI lifetime rules are reconciled with current source."
+        "reason": "The approved discovery rules remain sound, but the page does not yet distinguish actor identity from a composed Hosted Entity profile and overstates the enforced Almighty-storage boundary."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/battle-knowledge.md"],
-        "reason": "The reviewed guide defines the two canonical scopes, execution authority, Analyze composition, familiar imports, save ownership, and Godot responsibilities against the corrected public surface."
+        "reason": "The authority example still binds knowledge to participant.EntityId and does not describe profile-revision invalidation for composed Vessels."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/battle-knowledge-runtime.md"],
-        "reason": "The reviewed authority reference traces immutable persistent and encounter state, complete execution provenance, conservative evidence, AI lifetime, familiar imports, and save-v14 validation."
+        "reason": "The runtime reference lacks a combat-profile identity/revision authority and claims an Almighty invariant that public snapshots and save validation do not fully enforce."
       }
     },
     {

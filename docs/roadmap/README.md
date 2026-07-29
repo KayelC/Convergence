@@ -93,4 +93,8 @@ were reserved for documentation reconciliation and fresh closure. O5-R20 found
 and corrected one sibling ailment-evidence coherence defect, then passed its
 source-first closure review and every locally executable gate. The online
 dependency audit remains a connected CI release gate. Order 5 is formally
-closed.
+closed at that revision. The later
+[post-R20 independent audit](../reviews/battle-knowledge-order-5-post-r20-independent-audit-2026-07-29.md)
+reopens it for composed-profile identity and impossible Almighty snapshot
+boundaries. O5-R21 through O5-R25 must close before Order 6 becomes the next
+collaborative documentation subject.

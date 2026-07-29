@@ -128,7 +128,7 @@
     },
     {
       "id": "battle_knowledge",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "PersistentBattleKnowledgeTests",
         "BattleKnowledgeObservationTransitionTests",
@@ -141,7 +141,10 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Composed Vessels expose their owner entity ID to Battle Knowledge even when a Hosted Entity supplies the observed defenses, skills, and stats; profile changes do not invalidate encounter disclosures.",
+        "Public encounter and persistent snapshots can represent an impossible non-Normal Almighty affinity."
+      ]
     },
     {
       "id": "party_and_rosters",

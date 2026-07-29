@@ -70,6 +70,7 @@ or implementation authority.
 - [Battle Knowledge Order 5 Provenance Closure Review, 27 July 2026](battle-knowledge-order-5-provenance-closure-review-2026-07-27.md)
 - [Battle Knowledge Order 5 Post-Closure Independent Audit, 27 July 2026](battle-knowledge-order-5-post-closure-independent-audit-2026-07-27.md)
 - [Battle Knowledge Order 5 R20 Final Closure Review, 29 July 2026](battle-knowledge-order-5-r20-final-closure-review-2026-07-29.md)
+- [Battle Knowledge Order 5 Post-R20 Independent Audit, 29 July 2026](battle-knowledge-order-5-post-r20-independent-audit-2026-07-29.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.

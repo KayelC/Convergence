@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
@@ -200,7 +200,11 @@ clone-bypassed enum boundary; O5-R18 enforced coherent instant-defeat evidence.
 O5-R19 reconciled the public API and audience documentation. O5-R20 found and
 corrected one sibling ailment-evidence coherence defect, then independently
 rechecked the corrected source, host integration, saves, tests, and all three
-audience documents. `battle_knowledge` is complete.
+audience documents. It was complete at that revision. The later
+[post-R20 independent audit](../reviews/battle-knowledge-order-5-post-r20-independent-audit-2026-07-29.md)
+found a reachable composed-profile identity defect and an impossible Almighty
+snapshot boundary. `battle_knowledge` is therefore partial pending O5-R21
+through O5-R25.
 
 ## Priority 2: Persistence Evolution
 
