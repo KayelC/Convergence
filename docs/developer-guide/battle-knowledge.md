@@ -99,6 +99,11 @@ boundary, not a substitute for correct handler implementation. The
 `BattleKnowledgeExecutionTransitionRequest` constructor requires this envelope;
 there is no authority-free overload.
 
+For instant-defeat evidence, report one complete resistance shape. A bypassed
+effect must omit the channel, authored resistance, and effective resistance. A
+checked effect must provide all three. Supplying only part of a checked tuple is
+an integration error rejected by `BattleKnowledgeObservation.InstantDeath`.
+
 ## Query For UI Or Strategy
 
 Use `BattleKnowledgeView` to combine the two scopes:

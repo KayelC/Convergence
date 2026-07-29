@@ -168,6 +168,12 @@ typed diagnostics without mutation. `PersistentBattleKnowledgeView` rejects
 the same malformed input immediately with its exact diagnostic path, and
 aggregate save validation applies the same analyzed-defense field rules.
 
+O5-R18 tightens the public custom-effect evidence contract. An instant-defeat
+observation now has exactly two legal resistance shapes: bypassed evidence
+omits the channel and both resistance values, while checked evidence supplies
+all three. Partial tuples reject during construction and cannot be silently
+discarded by a later knowledge transition.
+
 M1-3 adds `StatModifierLifecycleBoundary` and the supplied
 `TimedExclusiveStatModifierPolicy`. Counted contributions retain their latest
 observed boundary so same-boundary application is protected, duplicate ticks

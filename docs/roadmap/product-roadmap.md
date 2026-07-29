@@ -193,12 +193,12 @@ and Godot verification without finding an unresolved realistic reachable
 defect at that revision. The
 [post-closure independent audit](../reviews/battle-knowledge-order-5-post-closure-independent-audit-2026-07-27.md)
 then re-read the current exported surface and reopened `battle_knowledge` as
-`partial`: custom instant-defeat evidence permits incomplete checked tuples.
-O5-R15 removed
+`partial`. O5-R15 removed
 actor-local Analyze state and advanced the unreleased save contract to v14;
 O5-R16 removed the disconnected mutable stores; O5-R17 closed the
-clone-bypassed enum boundary. O5-R18 through O5-R20 are the remaining
-correction and closure sequence.
+clone-bypassed enum boundary; O5-R18 enforced coherent instant-defeat evidence.
+O5-R19 documentation reconciliation and O5-R20 fresh closure are the remaining
+gates before the capability returns to `complete`.
 
 ## Priority 2: Persistence Evolution
 

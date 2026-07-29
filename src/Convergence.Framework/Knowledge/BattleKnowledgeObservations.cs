@@ -242,10 +242,15 @@ public sealed class BattleKnowledgeObservation
         {
             RequireDefined(effective, nameof(effectiveResistance));
         }
-        if (resistanceBypassed != (channel is null && authoredResistance is null && effectiveResistance is null))
+        bool hasNoResistanceTuple =
+            channel is null && authoredResistance is null && effectiveResistance is null;
+        bool hasCompleteResistanceTuple =
+            channel is not null && authoredResistance is not null && effectiveResistance is not null;
+        if ((resistanceBypassed && !hasNoResistanceTuple) ||
+            (!resistanceBypassed && !hasCompleteResistanceTuple))
         {
             throw new ArgumentException(
-                "A bypassed resistance check cannot identify a channel or resistance, and a checked resistance must identify them.",
+                "A bypassed resistance check must omit its channel and resistances, while a checked resistance must provide all three values.",
                 nameof(resistanceBypassed));
         }
         if (resistanceBlockConfirmed &&

@@ -88,5 +88,5 @@ reopened it after finding two exported competing authorities, an incomplete
 standalone enum boundary, and an incomplete custom-evidence tuple. O5-R15
 removed actor-local Analyze state and the corresponding save field; O5-R16
 removed the disconnected mutable stores; O5-R17 closed the clone-bypassed enum
-boundary. O5-R18 through O5-R20 govern the remaining correction and fresh
-closure.
+boundary; O5-R18 enforced coherent instant-defeat evidence. O5-R19 and O5-R20
+govern documentation reconciliation and fresh closure.

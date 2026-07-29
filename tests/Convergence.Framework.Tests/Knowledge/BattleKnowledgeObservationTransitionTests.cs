@@ -185,6 +185,64 @@ public sealed class BattleKnowledgeObservationTransitionTests
     }
 
     [Fact]
+    public void InstantDeathEvidence_RequiresACompleteCheckedOrBypassedResistanceTuple()
+    {
+        var partialCheckedTuples = new[]
+        {
+            new InstantDeathTuple(InstantDeathChannel.Light, null, null),
+            new InstantDeathTuple(null, ResistanceLevel.Normal, null),
+            new InstantDeathTuple(null, null, ResistanceLevel.Normal),
+            new InstantDeathTuple(InstantDeathChannel.Light, ResistanceLevel.Normal, null),
+            new InstantDeathTuple(InstantDeathChannel.Light, null, ResistanceLevel.Normal),
+            new InstantDeathTuple(null, ResistanceLevel.Normal, ResistanceLevel.Normal)
+        };
+
+        foreach (InstantDeathTuple tuple in partialCheckedTuples)
+        {
+            ArgumentException exception = Assert.Throws<ArgumentException>(() =>
+                BattleKnowledgeObservation.InstantDeath(
+                    Action,
+                    Actor,
+                    Target,
+                    Entity,
+                    0,
+                    tuple.Channel,
+                    resistanceBypassed: false,
+                    defeated: false,
+                    tuple.AuthoredResistance,
+                    tuple.EffectiveResistance));
+            Assert.Equal("resistanceBypassed", exception.ParamName);
+        }
+
+        BattleKnowledgeObservation bypassed = BattleKnowledgeObservation.InstantDeath(
+            Action,
+            Actor,
+            Target,
+            Entity,
+            0,
+            channel: null,
+            resistanceBypassed: true,
+            defeated: true,
+            authoredResistance: null,
+            effectiveResistance: null);
+        BattleKnowledgeObservation checkedResistance = BattleKnowledgeObservation.InstantDeath(
+            Action,
+            Actor,
+            Target,
+            Entity,
+            1,
+            InstantDeathChannel.Dark,
+            resistanceBypassed: false,
+            defeated: false,
+            ResistanceLevel.Resistant,
+            ResistanceLevel.Resistant);
+
+        Assert.True(bypassed.ResistanceBypassed);
+        Assert.False(checkedResistance.ResistanceBypassed);
+        Assert.Equal(InstantDeathChannel.Dark, checkedResistance.InstantDeathChannel);
+    }
+
+    [Fact]
     public void RepeatedFactsAreDeduplicatedWithLastObservationWinning()
     {
         BattleKnowledgeObservation first = Elemental(true, ElementalAffinity.Weak, ElementalAffinity.Weak);
@@ -297,6 +355,11 @@ public sealed class BattleKnowledgeObservationTransitionTests
             authored,
             effective,
             influences);
+
+    private sealed record InstantDeathTuple(
+        InstantDeathChannel? Channel,
+        ResistanceLevel? AuthoredResistance,
+        ResistanceLevel? EffectiveResistance);
 
     private static BattleKnowledgeObservationTransitionResult Apply(
         IEnumerable<BattleKnowledgeObservation> observations,

@@ -412,8 +412,8 @@ validation, and incomplete instant-defeat evidence tuples. Mechanics remains
 `reviewed`; developer and technical return to `existing_unreviewed`. O5-R15
 removed actor-local Analyze state and established save v14; O5-R16 removed the
 disconnected mutable stores; O5-R17 closed the clone-bypassed enum boundary.
-O5-R18 through O5-R20 govern the remaining evidence hardening, documentation
-reconciliation, and fresh closure. The matrix records
+O5-R18 closed the instant-defeat evidence shape. O5-R19 and O5-R20 govern the
+remaining documentation reconciliation and fresh closure. The matrix records
 25 reviewed, 28 `existing_unreviewed`, 15 missing, and 7 `not_applicable`.
 
 A final bounded certification subsequently exercised 1,536 deterministic

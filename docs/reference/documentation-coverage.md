@@ -111,7 +111,9 @@ and an incomplete standalone enum boundary make the developer and technical
 surfaces incomplete. Mechanics remains `reviewed`; developer and technical
 return to `existing_unreviewed`. O5-R15 removed actor-local Analyze state,
 O5-R16 removed the disconnected mutable stores, and O5-R17 closed the
-standalone enum boundary. The evidence-shape correction remains open. The matrix
+standalone enum boundary. O5-R18 closed the instant-defeat evidence-shape
+defect; O5-R19 documentation reconciliation and O5-R20 fresh closure remain.
+The matrix
 records 25 reviewed, 28
 `existing_unreviewed`, 15 missing, and 7 `not_applicable` entries.
 

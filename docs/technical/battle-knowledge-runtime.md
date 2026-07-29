@@ -117,6 +117,11 @@ resistance blocking. Only a confirmed checked immunity establishes an exact
 tier. Untyped custom instant-defeat policies cannot claim a typed immunity
 block.
 
+`BattleKnowledgeObservation.InstantDeath` accepts two and only two resistance
+evidence shapes. Bypassed checks carry no channel or resistance values; checked
+resistance carries a channel plus authored and effective resistance. Every
+partial checked tuple rejects at construction before transition processing.
+
 ## Analyze Transition
 
 `BattleAnalysisService` expands requested layers to independent
