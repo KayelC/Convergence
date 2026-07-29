@@ -13,8 +13,9 @@ carry the evidence that a knowledge policy is allowed to use.
 
 > **Order 5 correction status:** use only the immutable persistent and encounter
 > snapshots described in this guide. O5-R15 removed actor-local Analyze state
-> from runtime actors and save v14. Three older mutable `*Knowledge` stores still
-> remain outside this canonical path and are scheduled for removal by O5-R16.
+> from runtime actors and save v14. O5-R16 removed the three disconnected
+> mutable `*Knowledge` stores. No supported discovery write now bypasses the
+> canonical persistent transition service.
 
 ## State To Keep
 

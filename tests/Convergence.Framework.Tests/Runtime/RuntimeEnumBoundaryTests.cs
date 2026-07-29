@@ -113,41 +113,6 @@ public sealed class RuntimeEnumBoundaryTests
     }
 
     [Fact]
-    public void KnowledgeStores_RejectUndefinedEnumValuesBeforeMutation()
-    {
-        ContentId entityId = Id("test.pack:entity");
-        ContentId ailmentId = Id("test.pack:ailment");
-        var affinities = new ElementalAffinityKnowledge();
-        var ailments = new AilmentResistanceKnowledge();
-        var instantDeath = new InstantDeathResistanceKnowledge();
-
-        AssertUndefined("element", () => affinities.Learn(
-            entityId,
-            Undefined<DamageElement>(),
-            ElementalAffinity.Normal));
-        AssertUndefined("affinity", () => affinities.Learn(
-            entityId,
-            DamageElement.Fire,
-            Undefined<ElementalAffinity>()));
-        AssertUndefined("resistance", () => ailments.Learn(
-            entityId,
-            ailmentId,
-            Undefined<ResistanceLevel>()));
-        AssertUndefined("channel", () => instantDeath.Learn(
-            entityId,
-            Undefined<InstantDeathChannel>(),
-            ResistanceLevel.Normal));
-        AssertUndefined("resistance", () => instantDeath.Learn(
-            entityId,
-            InstantDeathChannel.Light,
-            Undefined<ResistanceLevel>()));
-
-        Assert.Empty(affinities.Snapshot());
-        Assert.Empty(ailments.Snapshot());
-        Assert.Empty(instantDeath.Snapshot());
-    }
-
-    [Fact]
     public void ActorRestoreAndSaveValidation_RejectEveryMalformedActorEnumPath()
     {
         RuntimeSaveGameSnapshot baseline = RuntimePersistenceSnapshotTests.CreateSaveSnapshot();

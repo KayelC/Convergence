@@ -85,8 +85,9 @@ methods.
 
 **Evidence:**
 
-- [`CombatKnowledgeStores.cs`](../../src/Convergence.Framework/Knowledge/CombatKnowledgeStores.cs)
-  lines 7-149 exports three mutable stores and their key types.
+- `src/Convergence.Framework/Knowledge/CombatKnowledgeStores.cs` at reviewed
+  revision `b5c4cdb4` lines 7-149 exported three mutable stores and their key
+  types. O5-R16 subsequently retired that source file.
 - Those types remain part of
   [`PublicAPI.Shipped.txt`](../../src/Convergence.Framework/PublicAPI.Shipped.txt).
 - Product-source searches find no adapter from these dictionaries into

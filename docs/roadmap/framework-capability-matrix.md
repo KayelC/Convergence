@@ -39,9 +39,10 @@ Knowledge defect at that revision. A later
 [post-closure independent audit](../reviews/battle-knowledge-order-5-post-closure-independent-audit-2026-07-27.md)
 reopened the capability after tracing two exported competing authorities, a
 clone-bypassed enum-validation path, and an incomplete instant-defeat evidence
-shape. O5-R15 removes actor-local Analyze state and advances the unreleased
-save contract to v14. O5-R16 through O5-R20 govern the remaining authority
-cleanup, validation, evidence hardening, documentation, and fresh closure.
+shape. O5-R15 removed actor-local Analyze state and advanced the unreleased
+save contract to v14; O5-R16 removed the disconnected mutable stores. O5-R17
+through O5-R20 govern validation, evidence hardening, documentation, and fresh
+closure.
 
 `status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

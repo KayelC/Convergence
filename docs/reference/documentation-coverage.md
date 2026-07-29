@@ -109,8 +109,9 @@ release gate. Order 5 was formally complete at that revision. The later
 found that the mechanics remain aligned, but two exported competing authorities
 and an incomplete standalone enum boundary make the developer and technical
 surfaces incomplete. Mechanics remains `reviewed`; developer and technical
-return to `existing_unreviewed`. O5-R15 has removed actor-local Analyze state;
-the disconnected mutable stores and enum boundary remain open. The matrix
+return to `existing_unreviewed`. O5-R15 removed actor-local Analyze state and
+O5-R16 removed the disconnected mutable stores; the standalone enum boundary
+and evidence-shape correction remain open. The matrix
 records 25 reviewed, 28
 `existing_unreviewed`, 15 missing, and 7 `not_applicable` entries.
 

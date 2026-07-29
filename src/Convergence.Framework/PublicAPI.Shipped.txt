@@ -90,12 +90,6 @@ static Convergence.Execution.GuardBlocksAilmentsApplicationGatePolicy.Instance.g
 ~Convergence.Runtime.RulesetBindingResult<TService>.Equals(Convergence.Runtime.RulesetBindingResult<TService>? other) -> bool
 ~override Convergence.Content.ContentId.Equals(object obj) -> bool
 ~override Convergence.Content.SemanticVersion.Equals(object obj) -> bool
-~override Convergence.Knowledge.AilmentResistanceKnowledgeKey.Equals(object obj) -> bool
-~override Convergence.Knowledge.AilmentResistanceKnowledgeKey.ToString() -> string
-~override Convergence.Knowledge.ElementalAffinityKnowledgeKey.Equals(object obj) -> bool
-~override Convergence.Knowledge.ElementalAffinityKnowledgeKey.ToString() -> string
-~override Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.Equals(object obj) -> bool
-~override Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.ToString() -> string
 ~override Convergence.Runtime.RuntimeInstanceId.Equals(object obj) -> bool
 ~override Convergence.Runtime.RuntimeSkillChoiceToken.Equals(object obj) -> bool
 ~static Convergence.Runtime.RulesetBindingResult<TService>.operator !=(Convergence.Runtime.RulesetBindingResult<TService>? left, Convergence.Runtime.RulesetBindingResult<TService>? right) -> bool
@@ -4569,51 +4563,6 @@ Convergence.Inheritance.ValidatedFusionInheritanceSelection.MaximumSelections.ge
 Convergence.Inheritance.ValidatedFusionInheritanceSelection.ReceivingEntityId.get -> Convergence.Content.ContentId
 Convergence.Inheritance.ValidatedFusionInheritanceSelection.SelectedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
 Convergence.Inheritance.ValidatedFusionInheritanceSelection.SelectedSkills.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.SkillDefinition!>!
-Convergence.Knowledge.AilmentResistanceKnowledge
-Convergence.Knowledge.AilmentResistanceKnowledge.AilmentResistanceKnowledge() -> void
-Convergence.Knowledge.AilmentResistanceKnowledge.HasDiscovery(Convergence.Content.ContentId entityId, Convergence.Content.ContentId ailmentId) -> bool
-Convergence.Knowledge.AilmentResistanceKnowledge.Learn(Convergence.Content.ContentId entityId, Convergence.Content.ContentId ailmentId, Convergence.Content.ResistanceLevel resistance) -> void
-Convergence.Knowledge.AilmentResistanceKnowledge.Snapshot() -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Knowledge.AilmentResistanceKnowledgeKey, Convergence.Content.ResistanceLevel>!
-Convergence.Knowledge.AilmentResistanceKnowledge.TryGet(Convergence.Content.ContentId entityId, Convergence.Content.ContentId ailmentId, out Convergence.Content.ResistanceLevel resistance) -> bool
-Convergence.Knowledge.AilmentResistanceKnowledgeKey
-Convergence.Knowledge.AilmentResistanceKnowledgeKey.AilmentId.get -> Convergence.Content.ContentId
-Convergence.Knowledge.AilmentResistanceKnowledgeKey.AilmentId.init -> void
-Convergence.Knowledge.AilmentResistanceKnowledgeKey.AilmentResistanceKnowledgeKey() -> void
-Convergence.Knowledge.AilmentResistanceKnowledgeKey.AilmentResistanceKnowledgeKey(Convergence.Content.ContentId EntityId, Convergence.Content.ContentId AilmentId) -> void
-Convergence.Knowledge.AilmentResistanceKnowledgeKey.Deconstruct(out Convergence.Content.ContentId EntityId, out Convergence.Content.ContentId AilmentId) -> void
-Convergence.Knowledge.AilmentResistanceKnowledgeKey.EntityId.get -> Convergence.Content.ContentId
-Convergence.Knowledge.AilmentResistanceKnowledgeKey.EntityId.init -> void
-Convergence.Knowledge.AilmentResistanceKnowledgeKey.Equals(Convergence.Knowledge.AilmentResistanceKnowledgeKey other) -> bool
-Convergence.Knowledge.ElementalAffinityKnowledge
-Convergence.Knowledge.ElementalAffinityKnowledge.ElementalAffinityKnowledge() -> void
-Convergence.Knowledge.ElementalAffinityKnowledge.HasDiscovery(Convergence.Content.ContentId entityId, Convergence.Content.DamageElement element) -> bool
-Convergence.Knowledge.ElementalAffinityKnowledge.Learn(Convergence.Content.ContentId entityId, Convergence.Content.DamageElement element, Convergence.Content.ElementalAffinity affinity) -> void
-Convergence.Knowledge.ElementalAffinityKnowledge.Snapshot() -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Knowledge.ElementalAffinityKnowledgeKey, Convergence.Content.ElementalAffinity>!
-Convergence.Knowledge.ElementalAffinityKnowledge.TryGet(Convergence.Content.ContentId entityId, Convergence.Content.DamageElement element, out Convergence.Content.ElementalAffinity affinity) -> bool
-Convergence.Knowledge.ElementalAffinityKnowledgeKey
-Convergence.Knowledge.ElementalAffinityKnowledgeKey.Deconstruct(out Convergence.Content.ContentId EntityId, out Convergence.Content.DamageElement Element) -> void
-Convergence.Knowledge.ElementalAffinityKnowledgeKey.Element.get -> Convergence.Content.DamageElement
-Convergence.Knowledge.ElementalAffinityKnowledgeKey.Element.init -> void
-Convergence.Knowledge.ElementalAffinityKnowledgeKey.ElementalAffinityKnowledgeKey() -> void
-Convergence.Knowledge.ElementalAffinityKnowledgeKey.ElementalAffinityKnowledgeKey(Convergence.Content.ContentId EntityId, Convergence.Content.DamageElement Element) -> void
-Convergence.Knowledge.ElementalAffinityKnowledgeKey.EntityId.get -> Convergence.Content.ContentId
-Convergence.Knowledge.ElementalAffinityKnowledgeKey.EntityId.init -> void
-Convergence.Knowledge.ElementalAffinityKnowledgeKey.Equals(Convergence.Knowledge.ElementalAffinityKnowledgeKey other) -> bool
-Convergence.Knowledge.InstantDeathResistanceKnowledge
-Convergence.Knowledge.InstantDeathResistanceKnowledge.HasDiscovery(Convergence.Content.ContentId entityId, Convergence.Content.InstantDeathChannel channel) -> bool
-Convergence.Knowledge.InstantDeathResistanceKnowledge.InstantDeathResistanceKnowledge() -> void
-Convergence.Knowledge.InstantDeathResistanceKnowledge.Learn(Convergence.Content.ContentId entityId, Convergence.Content.InstantDeathChannel channel, Convergence.Content.ResistanceLevel resistance) -> void
-Convergence.Knowledge.InstantDeathResistanceKnowledge.Snapshot() -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Knowledge.InstantDeathResistanceKnowledgeKey, Convergence.Content.ResistanceLevel>!
-Convergence.Knowledge.InstantDeathResistanceKnowledge.TryGet(Convergence.Content.ContentId entityId, Convergence.Content.InstantDeathChannel channel, out Convergence.Content.ResistanceLevel resistance) -> bool
-Convergence.Knowledge.InstantDeathResistanceKnowledgeKey
-Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.Channel.get -> Convergence.Content.InstantDeathChannel
-Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.Channel.init -> void
-Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.Deconstruct(out Convergence.Content.ContentId EntityId, out Convergence.Content.InstantDeathChannel Channel) -> void
-Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.EntityId.get -> Convergence.Content.ContentId
-Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.EntityId.init -> void
-Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.Equals(Convergence.Knowledge.InstantDeathResistanceKnowledgeKey other) -> bool
-Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.InstantDeathResistanceKnowledgeKey() -> void
-Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.InstantDeathResistanceKnowledgeKey(Convergence.Content.ContentId EntityId, Convergence.Content.InstantDeathChannel Channel) -> void
 Convergence.Runtime.AddCompanionToRosterRequest
 Convergence.Runtime.AddCompanionToRosterRequest.<Clone>$() -> Convergence.Runtime.AddCompanionToRosterRequest!
 Convergence.Runtime.AddCompanionToRosterRequest.AddCompanionToRosterRequest(Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, Convergence.Runtime.RuntimeActorReferenceSnapshot! Companion) -> void
@@ -8026,9 +7975,6 @@ override Convergence.Inheritance.FusionInheritanceSelectionResult.ToString() -> 
 override Convergence.Inheritance.ValidatedFusionInheritanceSelection.Equals(object? obj) -> bool
 override Convergence.Inheritance.ValidatedFusionInheritanceSelection.GetHashCode() -> int
 override Convergence.Inheritance.ValidatedFusionInheritanceSelection.ToString() -> string!
-override Convergence.Knowledge.AilmentResistanceKnowledgeKey.GetHashCode() -> int
-override Convergence.Knowledge.ElementalAffinityKnowledgeKey.GetHashCode() -> int
-override Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.GetHashCode() -> int
 override Convergence.Runtime.AddCompanionToRosterRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.AddCompanionToRosterRequest.GetHashCode() -> int
 override Convergence.Runtime.AddCompanionToRosterRequest.ToString() -> string!
@@ -9344,12 +9290,6 @@ static Convergence.Inheritance.FusionInheritanceSelectionResult.operator !=(Conv
 static Convergence.Inheritance.FusionInheritanceSelectionResult.operator ==(Convergence.Inheritance.FusionInheritanceSelectionResult? left, Convergence.Inheritance.FusionInheritanceSelectionResult? right) -> bool
 static Convergence.Inheritance.ValidatedFusionInheritanceSelection.operator !=(Convergence.Inheritance.ValidatedFusionInheritanceSelection? left, Convergence.Inheritance.ValidatedFusionInheritanceSelection? right) -> bool
 static Convergence.Inheritance.ValidatedFusionInheritanceSelection.operator ==(Convergence.Inheritance.ValidatedFusionInheritanceSelection? left, Convergence.Inheritance.ValidatedFusionInheritanceSelection? right) -> bool
-static Convergence.Knowledge.AilmentResistanceKnowledgeKey.operator !=(Convergence.Knowledge.AilmentResistanceKnowledgeKey left, Convergence.Knowledge.AilmentResistanceKnowledgeKey right) -> bool
-static Convergence.Knowledge.AilmentResistanceKnowledgeKey.operator ==(Convergence.Knowledge.AilmentResistanceKnowledgeKey left, Convergence.Knowledge.AilmentResistanceKnowledgeKey right) -> bool
-static Convergence.Knowledge.ElementalAffinityKnowledgeKey.operator !=(Convergence.Knowledge.ElementalAffinityKnowledgeKey left, Convergence.Knowledge.ElementalAffinityKnowledgeKey right) -> bool
-static Convergence.Knowledge.ElementalAffinityKnowledgeKey.operator ==(Convergence.Knowledge.ElementalAffinityKnowledgeKey left, Convergence.Knowledge.ElementalAffinityKnowledgeKey right) -> bool
-static Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.operator !=(Convergence.Knowledge.InstantDeathResistanceKnowledgeKey left, Convergence.Knowledge.InstantDeathResistanceKnowledgeKey right) -> bool
-static Convergence.Knowledge.InstantDeathResistanceKnowledgeKey.operator ==(Convergence.Knowledge.InstantDeathResistanceKnowledgeKey left, Convergence.Knowledge.InstantDeathResistanceKnowledgeKey right) -> bool
 static Convergence.Runtime.AddCompanionToRosterRequest.operator !=(Convergence.Runtime.AddCompanionToRosterRequest? left, Convergence.Runtime.AddCompanionToRosterRequest? right) -> bool
 static Convergence.Runtime.AddCompanionToRosterRequest.operator ==(Convergence.Runtime.AddCompanionToRosterRequest? left, Convergence.Runtime.AddCompanionToRosterRequest? right) -> bool
 static Convergence.Runtime.AddHostedEntityToRosterRequest.operator !=(Convergence.Runtime.AddHostedEntityToRosterRequest? left, Convergence.Runtime.AddHostedEntityToRosterRequest? right) -> bool

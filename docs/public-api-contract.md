@@ -155,6 +155,12 @@ Analyze execution already returns `BattleAnalysisResult` and commits it through
 a host cannot create an unsaveable third knowledge authority. This is a
 reviewed pre-release baseline correction with no compatibility alias.
 
+O5-R16 removes the disconnected `ElementalAffinityKnowledge`,
+`AilmentResistanceKnowledge`, and `InstantDeathResistanceKnowledge` mutable
+stores and their key types. Public discovery writes now have one supported
+destination: a validated `RuntimeKnowledgeSnapshot` produced through the
+persistent Battle Knowledge transition service.
+
 M1-3 adds `StatModifierLifecycleBoundary` and the supplied
 `TimedExclusiveStatModifierPolicy`. Counted contributions retain their latest
 observed boundary so same-boundary application is protected, duplicate ticks

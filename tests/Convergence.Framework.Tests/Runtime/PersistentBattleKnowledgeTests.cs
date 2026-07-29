@@ -11,37 +11,13 @@ public sealed class PersistentBattleKnowledgeTests
     private static readonly ContentId AilmentId = ContentId.Parse("knowledge.tests:poison");
 
     [Fact]
-    public void MutableStores_RejectInvalidIdentifiersAtTheLearningBoundary()
+    public void PublicSurface_ExposesNoDisconnectedMutableKnowledgeStores()
     {
-        Assert.Throws<ArgumentException>(() =>
-            new ElementalAffinityKnowledge().Learn(default, DamageElement.Fire, ElementalAffinity.Weak));
-        Assert.Throws<ArgumentException>(() =>
-            new AilmentResistanceKnowledge().Learn(default, AilmentId, ResistanceLevel.Normal));
-        Assert.Throws<ArgumentException>(() =>
-            new AilmentResistanceKnowledge().Learn(EntityId, default, ResistanceLevel.Normal));
-        Assert.Throws<ArgumentException>(() =>
-            new InstantDeathResistanceKnowledge().Learn(
-                default,
-                InstantDeathChannel.Light,
-                ResistanceLevel.Normal));
-    }
+        System.Reflection.Assembly assembly = typeof(RuntimeKnowledgeSnapshot).Assembly;
 
-    [Fact]
-    public void PublicKnowledgeQueries_RejectInvalidIdentifiersAndEnums()
-    {
-        var elemental = new ElementalAffinityKnowledge();
-        var ailments = new AilmentResistanceKnowledge();
-        var instantDeath = new InstantDeathResistanceKnowledge();
-
-        Assert.Throws<ArgumentException>(() => elemental.TryGet(default, DamageElement.Fire, out _));
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            elemental.HasDiscovery(EntityId, (DamageElement)999));
-        Assert.Throws<ArgumentException>(() => ailments.TryGet(EntityId, default, out _));
-        Assert.Throws<ArgumentException>(() => ailments.HasDiscovery(default, AilmentId));
-        Assert.Throws<ArgumentException>(() =>
-            instantDeath.TryGet(default, InstantDeathChannel.Light, out _));
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            instantDeath.HasDiscovery(EntityId, (InstantDeathChannel)999));
+        Assert.Null(assembly.GetType("Convergence.Knowledge.ElementalAffinityKnowledge"));
+        Assert.Null(assembly.GetType("Convergence.Knowledge.AilmentResistanceKnowledge"));
+        Assert.Null(assembly.GetType("Convergence.Knowledge.InstantDeathResistanceKnowledge"));
     }
 
     [Fact]
