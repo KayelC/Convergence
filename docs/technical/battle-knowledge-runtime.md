@@ -28,12 +28,11 @@ unknown.
 target across elemental, ailment, instant-defeat, and analysis collections. A
 runtime ID cannot silently change entity meaning within one encounter.
 
-> **Order 5 correction status:** O5-R15 removed actor-local Analyze state from
-> runtime actors and save v14. O5-R16 removed the three disconnected mutable
-> dictionary-backed stores. The immutable persistent snapshot and transition
-> service are now the only durable discovery authority. O5-R17 makes the
-> standalone transition and view reject record-cloned undefined enum values and
-> invalid persistent analysis fields before dictionary or result construction.
+Runtime actors contain no third Analyze authority, and the assembly exports no
+independent mutable discovery store. The immutable persistent snapshot and its
+transition service are the only durable discovery authority. The standalone
+transition and view reject record-cloned undefined enum values and invalid
+persistent analysis fields before dictionary or result construction.
 
 ## Execution Transition
 

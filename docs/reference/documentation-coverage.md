@@ -112,8 +112,9 @@ surfaces incomplete. Mechanics remains `reviewed`; developer and technical
 return to `existing_unreviewed`. O5-R15 removed actor-local Analyze state,
 O5-R16 removed the disconnected mutable stores, and O5-R17 closed the
 standalone enum boundary. O5-R18 closed the instant-defeat evidence-shape
-defect; O5-R19 documentation reconciliation and O5-R20 fresh closure remain.
-The matrix
+defect, and O5-R19 reconciled the public contract and all three audience pages.
+Developer and technical remain `existing_unreviewed` until O5-R20 independently
+rechecks that final wording against source. The matrix
 records 25 reviewed, 28
 `existing_unreviewed`, 15 missing, and 7 `not_applicable` entries.
 

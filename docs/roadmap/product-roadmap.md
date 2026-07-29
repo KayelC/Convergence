@@ -197,8 +197,8 @@ then re-read the current exported surface and reopened `battle_knowledge` as
 actor-local Analyze state and advanced the unreleased save contract to v14;
 O5-R16 removed the disconnected mutable stores; O5-R17 closed the
 clone-bypassed enum boundary; O5-R18 enforced coherent instant-defeat evidence.
-O5-R19 documentation reconciliation and O5-R20 fresh closure are the remaining
-gates before the capability returns to `complete`.
+O5-R19 reconciled the public API and audience documentation. O5-R20 fresh
+closure is the remaining gate before the capability returns to `complete`.
 
 ## Priority 2: Persistence Evolution
 

@@ -11,13 +11,11 @@ Do not reconstruct knowledge from damage numbers, combat text, target
 definitions, animations, or action display names. Executed effects already
 carry the evidence that a knowledge policy is allowed to use.
 
-> **Order 5 correction status:** use only the immutable persistent and encounter
-> snapshots described in this guide. O5-R15 removed actor-local Analyze state
-> from runtime actors and save v14. O5-R16 removed the three disconnected
-> mutable `*Knowledge` stores. No supported discovery write now bypasses the
-> canonical persistent transition service. O5-R17 also rejects malformed
-> record-cloned enum values through typed transition diagnostics before any
-> knowledge dictionary or result snapshot is constructed.
+Use only the immutable persistent and encounter snapshots described in this
+guide. Runtime actors contain no separate Analyze store, and the public API
+exposes no independent mutable discovery dictionary. Malformed host-supplied
+snapshot domains reject through typed transition diagnostics before any
+knowledge dictionary or result snapshot is constructed.
 
 ## State To Keep
 
@@ -228,10 +226,11 @@ that a diagnostic always means an unchanged snapshot.
 - Clear or discard encounter snapshots at battle end.
 - Validate before restore with `RuntimeSaveValidator`.
 
-Validation rejects duplicate facts, duplicate analyzed profiles, and missing
-entity or ailment references. Actor snapshots no longer contain Analyze state:
-canonical Analyze writes `RuntimeEncounterKnowledgeSnapshot`, which an ordinary
-session save intentionally discards at encounter end.
+Validation rejects duplicate facts, duplicate analyzed profiles, malformed
+enum or analysis-field domains, and missing entity or ailment references.
+Actor snapshots contain no Analyze state: canonical Analyze writes
+`RuntimeEncounterKnowledgeSnapshot`, which an ordinary session save
+intentionally discards at encounter end.
 
 ## Godot Responsibilities
 

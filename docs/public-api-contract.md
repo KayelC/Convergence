@@ -145,34 +145,27 @@ passive, lifecycle, removal, and cleanup execution through the selected policy;
 external callers must not replace it with reflection or another mutable stage
 store. Retained modifier save state is completed separately by M1-7.
 
-### Battle Knowledge Authority Migration
+### Battle Knowledge Authority
 
-O5-R15 removes `RuntimeActorState.Reveal`, `RuntimeActorState.GetAnalysis`,
-`RuntimeAnalysisSnapshot`, and `RuntimeBattleStatusSnapshot.Analysis`. Canonical
-Analyze execution already returns `BattleAnalysisResult` and commits it through
-`RuntimeEncounterKnowledgeSnapshot`; durable defense facts already belong to
-`RuntimeKnowledgeSnapshot`. Save contract v14 removes the actor-local field so
-a host cannot create an unsaveable third knowledge authority. This is a
-reviewed pre-release baseline correction with no compatibility alias.
+Battle Knowledge has two state authorities. Durable entity-defense facts use
+`RuntimeKnowledgeSnapshot`; current-target facts and Analyze disclosures use
+`RuntimeEncounterKnowledgeSnapshot`. Canonical Analyze returns
+`BattleAnalysisResult` and commits through the encounter transition. Save
+contract v14 contains only the durable snapshot and deliberately omits current
+encounter analysis.
 
-O5-R16 removes the disconnected `ElementalAffinityKnowledge`,
-`AilmentResistanceKnowledge`, and `InstantDeathResistanceKnowledge` mutable
-stores and their key types. Public discovery writes now have one supported
-destination: a validated `RuntimeKnowledgeSnapshot` produced through the
-persistent Battle Knowledge transition service.
-
-O5-R17 makes that standalone transition boundary authoritative for malformed
-snapshot domains as well. Record-cloned undefined elements, affinities,
+Public discovery writes pass through
+`IPersistentBattleKnowledgeTransitionService`; the API exposes no independent
+mutable dictionary store. Record-cloned undefined elements, affinities,
 resistance levels, instant-defeat channels, and analysis fields return stable
 typed diagnostics without mutation. `PersistentBattleKnowledgeView` rejects
 the same malformed input immediately with its exact diagnostic path, and
 aggregate save validation applies the same analyzed-defense field rules.
 
-O5-R18 tightens the public custom-effect evidence contract. An instant-defeat
-observation now has exactly two legal resistance shapes: bypassed evidence
-omits the channel and both resistance values, while checked evidence supplies
-all three. Partial tuples reject during construction and cannot be silently
-discarded by a later knowledge transition.
+Instant-defeat observations have exactly two legal resistance shapes: bypassed
+evidence omits the channel and both resistance values, while checked evidence
+supplies all three. Partial tuples reject during construction and cannot be
+silently discarded by a later knowledge transition.
 
 M1-3 adds `StatModifierLifecycleBoundary` and the supplied
 `TimedExclusiveStatModifierPolicy`. Counted contributions retain their latest

@@ -42,8 +42,9 @@ clone-bypassed enum-validation path, and an incomplete instant-defeat evidence
 shape. O5-R15 removed actor-local Analyze state and advanced the unreleased
 save contract to v14; O5-R16 removed the disconnected mutable stores; O5-R17
 closed the clone-bypassed enum boundary; O5-R18 enforced coherent
-instant-defeat evidence. O5-R19 and O5-R20 govern documentation reconciliation
-and fresh closure, so the capability remains `partial` until that review gate.
+instant-defeat evidence; O5-R19 reconciled the public API and audience
+documentation. O5-R20 is the remaining fresh closure gate, so the capability
+remains `partial` until that independent review passes.
 
 `status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
