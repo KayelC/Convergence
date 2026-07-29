@@ -1,3 +1,4 @@
+using System.Reflection;
 using Convergence.Content;
 using Convergence.Execution;
 using Convergence.Knowledge;
@@ -522,6 +523,37 @@ public sealed class BattleKnowledgeObservationTransitionTests
             [BattleAnalysisField.Skills, BattleAnalysisField.Skills]));
     }
 
+    [Fact]
+    public void EncounterKnowledge_RejectsStoredAlmightyBeforeAViewCanConsumeIt()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new EncounterElementalKnowledgeEntry(
+            Target,
+            Profile,
+            DamageElement.Almighty,
+            ElementalAffinity.Normal));
+
+        var valid = new EncounterElementalKnowledgeEntry(
+            Target,
+            Profile,
+            DamageElement.Fire,
+            ElementalAffinity.Weak);
+        EncounterElementalKnowledgeEntry malformed = CloneWithProperty(
+            valid,
+            nameof(EncounterElementalKnowledgeEntry.Element),
+            DamageElement.Almighty);
+
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeEncounterKnowledgeSnapshot([malformed]));
+
+        var validSnapshot = new RuntimeEncounterKnowledgeSnapshot([valid]);
+        RuntimeEncounterKnowledgeSnapshot malformedSnapshot = CloneWithProperty(
+            validSnapshot,
+            nameof(RuntimeEncounterKnowledgeSnapshot.Elemental),
+            (IReadOnlyList<EncounterElementalKnowledgeEntry>)Array.AsReadOnly([malformed]));
+
+        Assert.Throws<ArgumentException>(() => new EncounterBattleKnowledgeView(malformedSnapshot));
+    }
+
     private static BattleKnowledgeObservation Elemental(
         bool contacted,
         ElementalAffinity authored,
@@ -560,4 +592,23 @@ public sealed class BattleKnowledgeObservationTransitionTests
     }
 
     private static RuntimeKnowledgeSnapshot EmptyPersistent() => new();
+
+    private static TSnapshot CloneWithProperty<TSnapshot, TValue>(
+        TSnapshot source,
+        string propertyName,
+        TValue value)
+        where TSnapshot : class
+    {
+        MethodInfo memberwiseClone = typeof(object).GetMethod(
+            "MemberwiseClone",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var clone = (TSnapshot)memberwiseClone.Invoke(source, null)!;
+        FieldInfo field = typeof(TSnapshot).GetField(
+            $"<{propertyName}>k__BackingField",
+            BindingFlags.Instance | BindingFlags.NonPublic) ??
+            throw new InvalidOperationException(
+                $"Snapshot property '{typeof(TSnapshot).Name}.{propertyName}' has no backing field.");
+        field.SetValue(clone, value);
+        return clone;
+    }
 }

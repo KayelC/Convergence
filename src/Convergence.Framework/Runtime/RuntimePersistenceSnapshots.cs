@@ -95,7 +95,8 @@ public enum RuntimeSaveValidationCode
     DuplicateAnalyzedDefenseKnowledge = 85,
     InvalidAnalyzedDefenseField = 86,
     CombatProfileSourceMissing = 87,
-    CombatProfileSourceEntityMismatch = 88
+    CombatProfileSourceEntityMismatch = 88,
+    IntrinsicElementKnowledgeNotStorable = 89
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -217,9 +218,20 @@ public sealed record RuntimeElementalAffinityKnowledgeSnapshot(
     ElementalAffinity Affinity)
 {
     public DamageElement Element { get; init; } =
-        EnumDomain.RequireDefined(Element, nameof(Element));
+        RequireStorableElement(Element);
     public ElementalAffinity Affinity { get; init; } =
         EnumDomain.RequireDefined(Affinity, nameof(Affinity));
+
+    private static DamageElement RequireStorableElement(DamageElement element)
+    {
+        EnumDomain.RequireDefined(element, nameof(Element));
+        return element == DamageElement.Almighty
+            ? throw new ArgumentOutOfRangeException(
+                nameof(Element),
+                element,
+                "Almighty always has Normal affinity and cannot be stored as affinity knowledge.")
+            : element;
+    }
 }
 
 public sealed record RuntimeAilmentResistanceKnowledgeSnapshot(
@@ -664,6 +676,14 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 entry.Element,
                 $"$.knowledge.elementalAffinities[{index}].element",
                 diagnostics);
+            if (EnumDomain.IsDefined(entry.Element) && entry.Element == DamageElement.Almighty)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.IntrinsicElementKnowledgeNotStorable,
+                    "Almighty always has Normal affinity and cannot be stored as affinity knowledge.",
+                    ContentId: entry.EntityId,
+                    Path: $"$.knowledge.elementalAffinities[{index}].element"));
+            }
             ValidateEnumValue(
                 entry.Affinity,
                 $"$.knowledge.elementalAffinities[{index}].affinity",

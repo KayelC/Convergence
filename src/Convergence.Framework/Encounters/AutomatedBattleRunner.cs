@@ -375,6 +375,8 @@ public sealed record AutomatedBattleRequest
                     nameof(seeds));
             }
 
+            RuntimeEncounterKnowledgeSnapshot.RequireNoStoredIntrinsicElement(snapshot, nameof(seeds));
+
             foreach ((RuntimeInstanceId instanceId, RuntimeCombatProfileIdentitySnapshot profile) in
                      TargetProfiles(snapshot))
             {

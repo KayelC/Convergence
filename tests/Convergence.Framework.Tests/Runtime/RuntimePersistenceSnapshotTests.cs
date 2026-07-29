@@ -2013,6 +2013,31 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_RejectsClonedIntrinsicElementKnowledgeWithStableDiagnostic()
+    {
+        ContentId entityId = Id("convergence.clean_battle_demo:ember_duelist_demo");
+        var valid = new RuntimeElementalAffinityKnowledgeSnapshot(
+            entityId,
+            DamageElement.Ice,
+            ElementalAffinity.Weak);
+        RuntimeElementalAffinityKnowledgeSnapshot malformed = CloneWithProperty(
+            valid,
+            nameof(RuntimeElementalAffinityKnowledgeSnapshot.Element),
+            DamageElement.Almighty);
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
+            knowledge: new RuntimeKnowledgeSnapshot(elementalAffinities: [malformed]));
+
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, LoadCatalog());
+
+        Assert.False(result.IsValid);
+        RuntimeSaveValidationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(RuntimeSaveValidationCode.IntrinsicElementKnowledgeNotStorable, diagnostic.Code);
+        Assert.Equal("$.knowledge.elementalAffinities[0].element", diagnostic.Path);
+        Assert.Equal(entityId, diagnostic.ContentId);
+        Assert.Throws<RuntimeSaveValidationException>(() => result.RequireValidSnapshot());
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_RejectsMissingAnalyzedDefenseTarget()
     {
         ContentId missing = Id("missing.pack:unknown_entity");
@@ -3193,6 +3218,25 @@ public sealed class RuntimePersistenceSnapshotTests
         string path) =>
         Assert.Contains(result.Diagnostics, diagnostic =>
             diagnostic.Code == code && diagnostic.Path == path);
+
+    private static TSnapshot CloneWithProperty<TSnapshot, TValue>(
+        TSnapshot source,
+        string propertyName,
+        TValue value)
+        where TSnapshot : class
+    {
+        MethodInfo memberwiseClone = typeof(object).GetMethod(
+            "MemberwiseClone",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var clone = (TSnapshot)memberwiseClone.Invoke(source, null)!;
+        FieldInfo field = typeof(TSnapshot).GetField(
+            $"<{propertyName}>k__BackingField",
+            BindingFlags.Instance | BindingFlags.NonPublic) ??
+            throw new InvalidOperationException(
+                $"Snapshot property '{typeof(TSnapshot).Name}.{propertyName}' has no backing field.");
+        field.SetValue(clone, value);
+        return clone;
+    }
 
     private static string FindRepositoryRoot()
     {

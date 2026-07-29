@@ -11366,6 +11366,7 @@ Convergence.Knowledge.BattleAnalysisService.Analyze(Convergence.Knowledge.Battle
 Convergence.Knowledge.BattleAnalysisService.BattleAnalysisService(Convergence.Knowledge.IBattleAnalysisDisclosurePolicy? policy = null) -> void
 Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.DuplicateAnalyzedDefenseEntity = 4 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
 Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.InvalidAnalyzedDefenseField = 6 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
+Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.IntrinsicElementKnowledgeNotStorable = 7 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
 Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode.UndefinedEnumValue = 5 -> Convergence.Knowledge.BattleKnowledgeTransitionDiagnosticCode
 Convergence.Knowledge.IBattleAnalysisDisclosurePolicy
 Convergence.Knowledge.IBattleAnalysisDisclosurePolicy.Resolve(Convergence.Knowledge.BattleAnalysisDisclosurePolicyRequest! request) -> System.Collections.Generic.IReadOnlyList<Convergence.Knowledge.BattleAnalysisFieldDisclosure!>!
@@ -11480,6 +11481,7 @@ Convergence.Runtime.RuntimeSaveValidationCode.DuplicateAnalyzedDefenseKnowledge 
 Convergence.Runtime.RuntimeSaveValidationCode.InvalidAnalyzedDefenseField = 86 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.CombatProfileSourceMissing = 87 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.CombatProfileSourceEntityMismatch = 88 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.IntrinsicElementKnowledgeNotStorable = 89 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeCombatProfileIdentitySnapshot
 Convergence.Runtime.RuntimeCombatProfileIdentitySnapshot.<Clone>$() -> Convergence.Runtime.RuntimeCombatProfileIdentitySnapshot!
 Convergence.Runtime.RuntimeCombatProfileIdentitySnapshot.Equals(Convergence.Runtime.RuntimeCombatProfileIdentitySnapshot? other) -> bool

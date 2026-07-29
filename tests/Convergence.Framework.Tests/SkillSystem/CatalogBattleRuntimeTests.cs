@@ -1013,6 +1013,37 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void AutomatedBattleRequest_RejectsMalformedIntrinsicElementSeedBeforeSelection()
+    {
+        CatalogBattleActor actor = RuntimeCatalogActor("almighty_seed_actor", "almighty_seed_actor", PlayerTeam);
+        CatalogBattleActor target = RuntimeCatalogActor("almighty_seed_target", "almighty_seed_target", EnemyTeam);
+        var validEntry = new EncounterElementalKnowledgeEntry(
+            target.State.InstanceId,
+            target.State.CombatProfileIdentity,
+            DamageElement.Fire,
+            ElementalAffinity.Weak);
+        EncounterElementalKnowledgeEntry malformedEntry = CloneWithProperty(
+            validEntry,
+            nameof(EncounterElementalKnowledgeEntry.Element),
+            DamageElement.Almighty);
+        var validSnapshot = new RuntimeEncounterKnowledgeSnapshot([validEntry]);
+        RuntimeEncounterKnowledgeSnapshot malformedSnapshot = CloneWithProperty(
+            validSnapshot,
+            nameof(RuntimeEncounterKnowledgeSnapshot.Elemental),
+            (IReadOnlyList<EncounterElementalKnowledgeEntry>)Array.AsReadOnly([malformedEntry]));
+
+        Assert.Throws<ArgumentException>(() => new AutomatedBattleRequest(
+            [actor, target],
+            Battle,
+            NormalBattle,
+            null,
+            1,
+            [new KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>(
+                PlayerTeam,
+                malformedSnapshot)]));
+    }
+
+    [Fact]
     public void Runner_ReportsSignedResourceChangesForCostsDamageAndReflection()
     {
         GameDataCatalog catalog = LoadDemoCatalog();
@@ -3097,6 +3128,25 @@ public sealed class CatalogBattleRuntimeTests
             RuntimeActorState actor,
             BattleActionCommand command) =>
             BattleActionAuthorizationResult.Authorized;
+    }
+
+    private static TSnapshot CloneWithProperty<TSnapshot, TValue>(
+        TSnapshot source,
+        string propertyName,
+        TValue value)
+        where TSnapshot : class
+    {
+        MethodInfo memberwiseClone = typeof(object).GetMethod(
+            "MemberwiseClone",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var clone = (TSnapshot)memberwiseClone.Invoke(source, null)!;
+        FieldInfo field = typeof(TSnapshot).GetField(
+            $"<{propertyName}>k__BackingField",
+            BindingFlags.Instance | BindingFlags.NonPublic) ??
+            throw new InvalidOperationException(
+                $"Snapshot property '{typeof(TSnapshot).Name}.{propertyName}' has no backing field.");
+        field.SetValue(clone, value);
+        return clone;
     }
 
     private sealed record LifecycleScenario(

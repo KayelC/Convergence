@@ -20,7 +20,8 @@ public enum BattleKnowledgeTransitionDiagnosticCode
     DuplicateDiscoveryEntry,
     DuplicateAnalyzedDefenseEntity,
     UndefinedEnumValue,
-    InvalidAnalyzedDefenseField
+    InvalidAnalyzedDefenseField,
+    IntrinsicElementKnowledgeNotStorable
 }
 
 public sealed class BattleKnowledgeTransitionDiagnostic
@@ -269,11 +270,6 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
         var appliedElemental = new List<RuntimeElementalAffinityKnowledgeSnapshot>();
         foreach (RuntimeElementalAffinityKnowledgeSnapshot discovery in request.Discoveries.ElementalAffinities)
         {
-            if (discovery.Element == DamageElement.Almighty)
-            {
-                continue;
-            }
-
             var key = (discovery.EntityId, discovery.Element);
             if (!elemental.TryGetValue(key, out ElementalAffinity current) || current != discovery.Affinity)
             {
@@ -365,6 +361,13 @@ public sealed class PersistentBattleKnowledgeTransitionService : IPersistentBatt
             if (!EnumDomain.IsDefined(entry.Element))
             {
                 yield return UndefinedEnum(entry.Element, path + ".element");
+            }
+            else if (entry.Element == DamageElement.Almighty)
+            {
+                yield return new BattleKnowledgeTransitionDiagnostic(
+                    BattleKnowledgeTransitionDiagnosticCode.IntrinsicElementKnowledgeNotStorable,
+                    "Almighty always has Normal affinity and cannot be stored as affinity knowledge.",
+                    path + ".element");
             }
             if (!EnumDomain.IsDefined(entry.Affinity))
             {

@@ -79,6 +79,13 @@ public sealed record EncounterElementalKnowledgeEntry
     {
         RequireIdentity(targetInstanceId, targetProfileIdentity);
         RequireDefined(element, nameof(element));
+        if (element == DamageElement.Almighty)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(element),
+                element,
+                "Almighty always has Normal affinity and cannot be stored as encounter knowledge.");
+        }
         RequireDefined(affinity, nameof(affinity));
         TargetInstanceId = targetInstanceId;
         TargetProfileIdentity = targetProfileIdentity;
@@ -242,6 +249,7 @@ public sealed class RuntimeEncounterKnowledgeSnapshot
         EncounterAilmentKnowledgeEntry[] ailmentSnapshot = Snapshot(ailments, nameof(ailments));
         EncounterInstantDeathKnowledgeEntry[] instantDeathSnapshot = Snapshot(instantDeath, nameof(instantDeath));
         EncounterAnalysisKnowledgeEntry[] analysisSnapshot = Snapshot(analysis, nameof(analysis));
+        RequireNoStoredIntrinsicElement(elementalSnapshot, nameof(elemental));
         RequireUnique(elementalSnapshot, entry => (entry.TargetInstanceId, entry.Element), nameof(elemental));
         RequireUnique(ailmentSnapshot, entry => (entry.TargetInstanceId, entry.AilmentId), nameof(ailments));
         RequireUnique(instantDeathSnapshot, entry => (entry.TargetInstanceId, entry.Channel), nameof(instantDeath));
@@ -264,6 +272,14 @@ public sealed class RuntimeEncounterKnowledgeSnapshot
     public IReadOnlyList<EncounterAnalysisKnowledgeEntry> Analysis { get; }
     public bool IsEmpty => Elemental.Count == 0 && Ailments.Count == 0 && InstantDeath.Count == 0 && Analysis.Count == 0;
 
+    internal static void RequireNoStoredIntrinsicElement(
+        RuntimeEncounterKnowledgeSnapshot snapshot,
+        string parameterName)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        RequireNoStoredIntrinsicElement(snapshot.Elemental, parameterName);
+    }
+
     private static T[] Snapshot<T>(IEnumerable<T>? source, string name) where T : class
     {
         T[] snapshot = source?.ToArray() ?? [];
@@ -283,6 +299,18 @@ public sealed class RuntimeEncounterKnowledgeSnapshot
         if (entries.Select(key).Distinct().Count() != entries.Count())
         {
             throw new ArgumentException("Encounter knowledge cannot contain duplicate fact keys.", name);
+        }
+    }
+
+    private static void RequireNoStoredIntrinsicElement(
+        IEnumerable<EncounterElementalKnowledgeEntry> entries,
+        string parameterName)
+    {
+        if (entries.Any(entry => entry.Element == DamageElement.Almighty))
+        {
+            throw new ArgumentException(
+                "Almighty always has Normal affinity and cannot be stored as encounter knowledge.",
+                parameterName);
         }
     }
 
@@ -340,6 +368,7 @@ public sealed class EncounterBattleKnowledgeView : IEncounterBattleKnowledgeView
     public EncounterBattleKnowledgeView(RuntimeEncounterKnowledgeSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
+        RuntimeEncounterKnowledgeSnapshot.RequireNoStoredIntrinsicElement(snapshot, nameof(snapshot));
         _elemental = snapshot.Elemental.ToDictionary(
             entry => (entry.TargetInstanceId, entry.Element),
             entry => entry);

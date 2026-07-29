@@ -483,6 +483,25 @@ public sealed class CleanSaveDemoHostTests
     }
 
     [Fact]
+    public void HostOwnedJsonCorruption_RejectsStoredIntrinsicElementDuringDecoding()
+    {
+        JsonObject root = JsonNode.Parse(CleanSaveJsonCodec.Serialize(
+            CleanSaveTestFixture.CreateSaveSnapshot()))?.AsObject()
+            ?? throw new InvalidOperationException("Expected a host save JSON object.");
+        JsonArray elemental = root["Knowledge"]?["ElementalAffinities"]?.AsArray()
+            ?? throw new InvalidOperationException("Expected elemental knowledge data.");
+        JsonObject entry = elemental[0]?.AsObject()
+            ?? throw new InvalidOperationException("Expected an elemental knowledge entry.");
+        entry["Element"] = DamageElement.Almighty.ToString();
+        entry["Affinity"] = ElementalAffinity.Weak.ToString();
+
+        ArgumentOutOfRangeException exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            CleanSaveJsonCodec.Deserialize(root.ToJsonString()));
+
+        Assert.Contains("cannot be stored", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HostOwnedJsonRoundTrip_PreservesSaveRecordMetadata()
     {
         RuntimeSaveRecord record = new(

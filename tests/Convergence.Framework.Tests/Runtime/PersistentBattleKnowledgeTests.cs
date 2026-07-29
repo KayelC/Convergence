@@ -234,7 +234,7 @@ public sealed class PersistentBattleKnowledgeTests
     }
 
     [Fact]
-    public void Apply_UnchangedResultPreservesOriginalSnapshotAndIgnoresAlmighty()
+    public void PersistentKnowledge_RejectsStoredAlmightyEvenWhenConstructionWasBypassed()
     {
         var before = new RuntimeKnowledgeSnapshot(
             elementalAffinities:
@@ -244,25 +244,54 @@ public sealed class PersistentBattleKnowledgeTests
                     DamageElement.Fire,
                     ElementalAffinity.Weak)
             ]);
-        var discoveries = new RuntimeKnowledgeSnapshot(
-            elementalAffinities:
-            [
-                new RuntimeElementalAffinityKnowledgeSnapshot(
-                    EntityId,
-                    DamageElement.Fire,
-                    ElementalAffinity.Weak),
-                new RuntimeElementalAffinityKnowledgeSnapshot(
-                    EntityId,
-                    DamageElement.Almighty,
-                    ElementalAffinity.Normal)
-            ]);
+        var valid = new RuntimeElementalAffinityKnowledgeSnapshot(
+            EntityId,
+            DamageElement.Ice,
+            ElementalAffinity.Weak);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new RuntimeElementalAffinityKnowledgeSnapshot(
+                EntityId,
+                DamageElement.Almighty,
+                ElementalAffinity.Normal));
+        RuntimeElementalAffinityKnowledgeSnapshot malformed =
+            valid with { Element = DamageElement.Almighty };
+        var discoveries = new RuntimeKnowledgeSnapshot(elementalAffinities: [malformed]);
 
         BattleKnowledgeTransitionResult result = new PersistentBattleKnowledgeTransitionService().Apply(
             new BattleKnowledgeTransitionRequest(before, discoveries));
 
-        Assert.Equal(BattleKnowledgeTransitionStatus.Unchanged, result.Status);
+        Assert.Equal(BattleKnowledgeTransitionStatus.Rejected, result.Status);
         Assert.Same(before, result.After);
-        Assert.Empty(result.AppliedDiscoveries.ElementalAffinities);
+        BattleKnowledgeTransitionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            BattleKnowledgeTransitionDiagnosticCode.IntrinsicElementKnowledgeNotStorable,
+            diagnostic.Code);
+        Assert.Equal("$.discoveries.elementalAffinities[0].element", diagnostic.Path);
+        Assert.Throws<ArgumentException>(() => new PersistentBattleKnowledgeView(discoveries));
+    }
+
+    [Fact]
+    public void PersistentView_ReportsAnalyzedAlmightyAsIntrinsicNormalWithoutStoringIt()
+    {
+        var snapshot = new RuntimeKnowledgeSnapshot(
+            elementalAffinities: null,
+            ailmentResistances: null,
+            instantDeathResistances: null,
+            analyzedDefenses:
+            [
+                new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+                    EntityId,
+                    [BattleAnalysisField.ElementalAffinities])
+            ]);
+        var view = new PersistentBattleKnowledgeView(snapshot);
+
+        Assert.True(view.TryGetElementalAffinity(
+            EntityId,
+            DamageElement.Almighty,
+            out ElementalAffinity affinity));
+        Assert.Equal(ElementalAffinity.Normal, affinity);
+        Assert.Empty(snapshot.ElementalAffinities);
     }
 
     [Fact]
