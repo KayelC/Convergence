@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`battle_knowledge` is `partial`. Persistent entity facts and encounter-local
+`battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and
 Analyze results pass through one atomic framework transition; automated teams
 share only their own encounter snapshot; familiar acquisition is optional and
@@ -55,15 +55,18 @@ owner entity and retain encounter disclosure across profile replacement. It
 also found that public snapshots accept impossible Almighty affinity facts.
 The
 [post-R20 audit](../reviews/battle-knowledge-order-5-post-r20-independent-audit-2026-07-29.md)
-therefore reopens the capability pending O5-R21 through O5-R25.
+therefore reopened the capability for O5-R21 through O5-R25.
 O5-R21 now gives every actor a canonical combat-profile source and revision;
 O5-R22 keys durable facts to the source entity and invalidates every encounter
 domain on profile replacement; O5-R23 rejects stored Almighty facts at
 construction, transition, view, automated-seed, host-decoding, and
 save-validation boundaries. O5-R24 reconciles the three reviewed audience
-documents and save-v15 guidance. The implementation remains `partial` only
-until O5-R25 independently re-reads the corrected source and completes the
-release gate.
+documents and save-v15 guidance. The
+[O5-R25 independent closure review](../reviews/battle-knowledge-order-5-r25-independent-closure-review-2026-07-29.md)
+then re-read the corrected source, adversarial boundaries, host integration,
+and all active audience documents without finding an unresolved realistic
+reachable defect. The complete local release gate passed, so Order 5 is
+formally closed.
 
 `status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

@@ -264,5 +264,8 @@ an intrinsic combat rule unenforced at public state boundaries.
   save validation reject malformed input before strategy or presentation.
 - **O5-R24 implemented:** the mechanics, developer, technical, actor, save,
   public API, and progress documents now describe the corrected contracts.
-- **O5-R25 pending:** a fresh source-first closure review and complete release
-  gate are still required before `battle_knowledge` returns to `complete`.
+- **O5-R25 verified:** the
+  [independent closure review](battle-knowledge-order-5-r25-independent-closure-review-2026-07-29.md)
+  re-read the corrected implementation and integrations, found no unresolved
+  realistic reachable defect, passed every locally executable release gate,
+  and returned `battle_knowledge` to `complete`.

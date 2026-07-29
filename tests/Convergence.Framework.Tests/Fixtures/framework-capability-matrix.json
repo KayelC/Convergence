@@ -128,7 +128,7 @@
     },
     {
       "id": "battle_knowledge",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": [
         "PersistentBattleKnowledgeTests",
         "BattleKnowledgeObservationTransitionTests",
@@ -141,9 +141,7 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "The corrected profile-aware and intrinsic-element boundaries await the independent O5-R25 closure review before maturity returns to complete."
-      ]
+      "knownGaps": []
     },
     {
       "id": "party_and_rosters",

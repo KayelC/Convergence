@@ -431,8 +431,13 @@ the intrinsic-Almighty storage boundary. O5-R24 reconciles mechanics,
 developer, technical, public-API, actor-restoration, and save-v15 guidance.
 The three Battle Knowledge audience entries return to `reviewed`; the matrix
 records 27 reviewed, 26 `existing_unreviewed`, 15 missing, and 7
-`not_applicable`. Capability closure still awaits O5-R25's independent source
-review and complete release gate.
+`not_applicable`. The
+[O5-R25 independent closure review](../reviews/battle-knowledge-order-5-r25-independent-closure-review-2026-07-29.md)
+then re-read the corrected source, host integration, adversarial boundaries,
+and all three audience documents without finding an unresolved realistic
+reachable defect. The complete locally executable release gate passed. Order
+5 is formally closed, and Order 6 (`encounter_orchestration`) is now the next
+collaborative subject.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored

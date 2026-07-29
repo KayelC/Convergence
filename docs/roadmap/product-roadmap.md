@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
@@ -203,13 +203,17 @@ rechecked the corrected source, host integration, saves, tests, and all three
 audience documents. It was complete at that revision. The later
 [post-R20 independent audit](../reviews/battle-knowledge-order-5-post-r20-independent-audit-2026-07-29.md)
 found a reachable composed-profile identity defect and an impossible Almighty
-snapshot boundary. `battle_knowledge` is therefore partial pending O5-R21
+snapshot boundary. `battle_knowledge` was therefore reopened for O5-R21
 through O5-R25.
 O5-R21 through O5-R23 have now implemented canonical combat-profile identity,
 source-entity persistence with exact-profile encounter invalidation, and the
 intrinsic-Almighty storage boundary. O5-R24 reconciles mechanics, developer,
-technical, public-API, actor, and save guidance. O5-R25 remains the independent
-closure and full release gate; Order 6 does not begin before that decision.
+technical, public-API, actor, and save guidance. The
+[O5-R25 independent closure review](../reviews/battle-knowledge-order-5-r25-independent-closure-review-2026-07-29.md)
+then traced the corrected source and integrations without finding an unresolved
+realistic reachable defect and passed the complete locally executable release
+gate. `battle_knowledge` is complete, Order 5 is formally closed, and Order 6
+is now the next collaborative subject.
 
 ## Priority 2: Persistence Evolution
 

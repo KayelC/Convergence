@@ -100,5 +100,8 @@ boundaries. O5-R21 through O5-R25 must close before Order 6 becomes the next
 collaborative documentation subject.
 O5-R21 through O5-R23 now correct combat-profile identity, profile-aware
 knowledge invalidation, and impossible Almighty snapshot input. O5-R24
-reconciles all active audience and save-contract guidance. O5-R25 remains the
-required independent closure review.
+reconciles all active audience and save-contract guidance. The
+[O5-R25 independent closure review](../reviews/battle-knowledge-order-5-r25-independent-closure-review-2026-07-29.md)
+found no unresolved realistic reachable defect and passed every locally
+executable release gate. Order 5 is formally closed; Order 6, encounter
+orchestration, is the next collaborative documentation subject.

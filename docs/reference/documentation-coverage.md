@@ -140,7 +140,11 @@ invalidate on source or revision replacement, and every public ingestion path
 rejects stored Almighty affinity knowledge. O5-R24 reconciles all three
 audience pages and save-v15 guidance, so the Battle Knowledge entries return to
 `reviewed` and the current matrix totals return to 27 reviewed and 26
-`existing_unreviewed`. O5-R25 remains the independent capability-closure gate.
+`existing_unreviewed`. The
+[O5-R25 independent closure review](../reviews/battle-knowledge-order-5-r25-independent-closure-review-2026-07-29.md)
+subsequently re-read the corrected implementation and all three audience
+documents, found no unresolved realistic reachable defect, and closed the
+capability. Order 6 is now the next collaborative documentation subject.
 
 The review order and promotion gates for all capabilities are maintained in
 the active
