@@ -76,6 +76,18 @@ public sealed class BattleStatusLifecycleEventMapperTests
         Assert.Equal(2, passivePayload.TriggerIndex);
         Assert.Equal(eventId, passivePayload.EventId);
         Assert.Same(activation, passivePayload.Result);
+        Assert.False(
+            typeof(BattlePassiveActivatedEventPayload)
+                .GetProperty(nameof(BattlePassiveActivatedEventPayload.Result))!
+                .CanWrite);
+        Assert.Throws<ArgumentException>(() =>
+            new BattlePassiveActivatedEventPayload(
+                RuntimeInstanceId.Parse("different_actor"),
+                passive,
+                activation.Outcome,
+                activation.TriggerIndex,
+                activation.EventId,
+                activation));
 
         BattleEncounterEvent passiveEffect = mapped[2];
         Assert.Equal(BattleEncounterEventKind.EffectResolved, passiveEffect.Kind);

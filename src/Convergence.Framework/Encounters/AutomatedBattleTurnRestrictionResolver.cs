@@ -437,10 +437,8 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
                         passive.SkillId,
                         passive.Outcome,
                         passive.TriggerIndex,
-                        passive.EventId)
-                    {
-                        Result = passive
-                    },
+                        passive.EventId,
+                        passive),
                     $"Passive {passive.SkillId} resolved as {passive.Outcome}."));
             }
         }

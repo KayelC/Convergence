@@ -1869,7 +1869,6 @@ Convergence.Encounters.BattleEncounterEvent.FaultCode.get -> Convergence.Encount
 Convergence.Encounters.BattleEncounterEvent.Kind.get -> Convergence.Encounters.BattleEncounterEventKind
 Convergence.Encounters.BattleEncounterEvent.Payload.get -> Convergence.Encounters.BattleEncounterEventPayload!
 Convergence.Encounters.BattleEncounterEvent.Sequence.get -> int
-Convergence.Encounters.BattleEncounterEvent.Sequence.init -> void
 Convergence.Encounters.BattleEncounterEvent.SourceId.get -> Convergence.Content.ContentId?
 Convergence.Encounters.BattleEncounterEvent.TargetId.get -> Convergence.Runtime.RuntimeInstanceId?
 Convergence.Encounters.BattleEncounterEvent.TurnEconomyState.get -> Convergence.Execution.BattleTurnEconomySnapshot?
@@ -2066,34 +2065,25 @@ Convergence.Encounters.BattleInitiativeRolledEventPayload.Equals(Convergence.Enc
 Convergence.Encounters.BattleInitiativeRolledEventPayload.TeamOrder.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
 Convergence.Encounters.BattlePassiveActivatedEventPayload
 Convergence.Encounters.BattlePassiveActivatedEventPayload.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
-Convergence.Encounters.BattlePassiveActivatedEventPayload.ActorId.init -> void
-Convergence.Encounters.BattlePassiveActivatedEventPayload.BattlePassiveActivatedEventPayload(Convergence.Runtime.RuntimeInstanceId ActorId, Convergence.Content.ContentId SkillId, Convergence.Execution.PassiveTriggerOutcome? Outcome = null, int? TriggerIndex = null, Convergence.Content.ContentId? EventId = null) -> void
-Convergence.Encounters.BattlePassiveActivatedEventPayload.Deconstruct(out Convergence.Runtime.RuntimeInstanceId ActorId, out Convergence.Content.ContentId SkillId, out Convergence.Execution.PassiveTriggerOutcome? Outcome, out int? TriggerIndex, out Convergence.Content.ContentId? EventId) -> void
+Convergence.Encounters.BattlePassiveActivatedEventPayload.BattlePassiveActivatedEventPayload(Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Content.ContentId skillId, Convergence.Execution.PassiveTriggerOutcome? outcome = null, int? triggerIndex = null, Convergence.Content.ContentId? eventId = null, Convergence.Execution.PassiveTriggerExecutionResult? result = null) -> void
+Convergence.Encounters.BattlePassiveActivatedEventPayload.Deconstruct(out Convergence.Runtime.RuntimeInstanceId actorId, out Convergence.Content.ContentId skillId, out Convergence.Execution.PassiveTriggerOutcome? outcome, out int? triggerIndex, out Convergence.Content.ContentId? eventId) -> void
 Convergence.Encounters.BattlePassiveActivatedEventPayload.Equals(Convergence.Encounters.BattlePassiveActivatedEventPayload? other) -> bool
 Convergence.Encounters.BattlePassiveActivatedEventPayload.EventId.get -> Convergence.Content.ContentId?
-Convergence.Encounters.BattlePassiveActivatedEventPayload.EventId.init -> void
 Convergence.Encounters.BattlePassiveActivatedEventPayload.Outcome.get -> Convergence.Execution.PassiveTriggerOutcome?
-Convergence.Encounters.BattlePassiveActivatedEventPayload.Outcome.init -> void
 Convergence.Encounters.BattlePassiveActivatedEventPayload.SkillId.get -> Convergence.Content.ContentId
-Convergence.Encounters.BattlePassiveActivatedEventPayload.SkillId.init -> void
 Convergence.Encounters.BattlePassiveActivatedEventPayload.TriggerIndex.get -> int?
-Convergence.Encounters.BattlePassiveActivatedEventPayload.TriggerIndex.init -> void
 Convergence.Encounters.BattlePhaseEndedEventPayload
 Convergence.Encounters.BattlePhaseEndedEventPayload.BattlePhaseEndedEventPayload(Convergence.Content.ContentId TeamId, Convergence.Execution.BattleTurnEconomySnapshot! TurnEconomyState) -> void
 Convergence.Encounters.BattlePhaseEndedEventPayload.Deconstruct(out Convergence.Content.ContentId TeamId, out Convergence.Execution.BattleTurnEconomySnapshot! TurnEconomyState) -> void
 Convergence.Encounters.BattlePhaseEndedEventPayload.Equals(Convergence.Encounters.BattlePhaseEndedEventPayload? other) -> bool
 Convergence.Encounters.BattlePhaseEndedEventPayload.TeamId.get -> Convergence.Content.ContentId
-Convergence.Encounters.BattlePhaseEndedEventPayload.TeamId.init -> void
 Convergence.Encounters.BattlePhaseEndedEventPayload.TurnEconomyState.get -> Convergence.Execution.BattleTurnEconomySnapshot!
-Convergence.Encounters.BattlePhaseEndedEventPayload.TurnEconomyState.init -> void
 Convergence.Encounters.BattlePhaseStartedEventPayload
 Convergence.Encounters.BattlePhaseStartedEventPayload.BattlePhaseStartedEventPayload(Convergence.Content.ContentId TeamId, Convergence.Execution.BattleTurnEconomySnapshot! TurnEconomyState) -> void
 Convergence.Encounters.BattlePhaseStartedEventPayload.Deconstruct(out Convergence.Content.ContentId TeamId, out Convergence.Execution.BattleTurnEconomySnapshot! TurnEconomyState) -> void
 Convergence.Encounters.BattlePhaseStartedEventPayload.Equals(Convergence.Encounters.BattlePhaseStartedEventPayload? other) -> bool
 Convergence.Encounters.BattlePhaseStartedEventPayload.TeamId.get -> Convergence.Content.ContentId
-Convergence.Encounters.BattlePhaseStartedEventPayload.TeamId.init -> void
 Convergence.Encounters.BattlePhaseStartedEventPayload.TurnEconomyState.get -> Convergence.Execution.BattleTurnEconomySnapshot!
-Convergence.Encounters.BattlePhaseStartedEventPayload.TurnEconomyState.init -> void
 Convergence.Encounters.BattleResourceChangedEventPayload
 Convergence.Encounters.BattleResourceChangedEventPayload.AffectedActorId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Encounters.BattleResourceChangedEventPayload.AffectedActorId.init -> void
@@ -2198,14 +2188,10 @@ Convergence.Encounters.BattleStatusEncounterLifecyclePort.ProcessTurnEndAsync(Co
 Convergence.Encounters.BattleStatusEncounterLifecyclePort.ProcessTurnStartAsync(Convergence.Encounters.BattleEncounterTurnLifecycleRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Convergence.Execution.BattleTurnStartLifecycleResult!>
 Convergence.Encounters.BattleTurnEconomyChangedEventPayload
 Convergence.Encounters.BattleTurnEconomyChangedEventPayload.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
-Convergence.Encounters.BattleTurnEconomyChangedEventPayload.ActorId.init -> void
 Convergence.Encounters.BattleTurnEconomyChangedEventPayload.After.get -> Convergence.Execution.BattleTurnEconomySnapshot!
-Convergence.Encounters.BattleTurnEconomyChangedEventPayload.After.init -> void
 Convergence.Encounters.BattleTurnEconomyChangedEventPayload.BattleTurnEconomyChangedEventPayload(Convergence.Runtime.RuntimeInstanceId ActorId, Convergence.Execution.BattleTurnEconomySnapshot! Before, Convergence.Execution.BattleTurnEconomySnapshot! After, Convergence.Execution.ActionTurnConsumption! Consumption) -> void
 Convergence.Encounters.BattleTurnEconomyChangedEventPayload.Before.get -> Convergence.Execution.BattleTurnEconomySnapshot!
-Convergence.Encounters.BattleTurnEconomyChangedEventPayload.Before.init -> void
 Convergence.Encounters.BattleTurnEconomyChangedEventPayload.Consumption.get -> Convergence.Execution.ActionTurnConsumption!
-Convergence.Encounters.BattleTurnEconomyChangedEventPayload.Consumption.init -> void
 Convergence.Encounters.BattleTurnEconomyChangedEventPayload.Deconstruct(out Convergence.Runtime.RuntimeInstanceId ActorId, out Convergence.Execution.BattleTurnEconomySnapshot! Before, out Convergence.Execution.BattleTurnEconomySnapshot! After, out Convergence.Execution.ActionTurnConsumption! Consumption) -> void
 Convergence.Encounters.BattleTurnEconomyChangedEventPayload.Equals(Convergence.Encounters.BattleTurnEconomyChangedEventPayload? other) -> bool
 Convergence.Encounters.BattleTurnRestrictedEventPayload
@@ -10855,7 +10841,6 @@ virtual Convergence.Execution.BattleLifecycleClockBoundary.Equals(Convergence.Ex
 virtual Convergence.Execution.BattleLifecycleClockBoundary.EventId.get -> Convergence.Content.ContentId?
 virtual Convergence.Execution.BattleLifecycleClockBoundary.PrintMembers(System.Text.StringBuilder! builder) -> bool
 Convergence.Encounters.BattlePassiveActivatedEventPayload.Result.get -> Convergence.Execution.PassiveTriggerExecutionResult?
-Convergence.Encounters.BattlePassiveActivatedEventPayload.Result.init -> void
 Convergence.Encounters.BattleStatusLifecycleEventMapper
 Convergence.Execution.BattleActionExecutionResult.LifecycleEvents.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.BattleStatusLifecycleEvent!>!
 Convergence.Execution.BattleAilmentApplicationRequest.SourceId.get -> Convergence.Content.ContentId?

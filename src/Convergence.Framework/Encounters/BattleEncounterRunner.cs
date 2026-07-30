@@ -960,7 +960,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             foreach (BattleEncounterEvent battleEvent in unsequenced)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var sequenced = battleEvent with { Sequence = ++sequence };
+                BattleEncounterEvent sequenced = battleEvent.WithSequence(++sequence);
                 await PublishAndRecordAsync(sequenced).ConfigureAwait(false);
             }
         }
@@ -2208,7 +2208,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             async ValueTask AppendFinalEventAsync(BattleEncounterEvent unsequenced)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var sequenced = unsequenced with { Sequence = ++sequence };
+                BattleEncounterEvent sequenced = unsequenced.WithSequence(++sequence);
                 events.Add(sequenced);
                 if (!publishDuringFinalization)
                 {

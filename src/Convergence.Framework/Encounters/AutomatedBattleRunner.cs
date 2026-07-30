@@ -855,10 +855,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                         passive.SkillId,
                         passive.Outcome,
                         passive.TriggerIndex,
-                        passive.EventId)
-                    {
-                        Result = passive
-                    },
+                        passive.EventId,
+                        passive),
                     $"Passive {passive.SkillId} resolved as {passive.Outcome}."));
             }
         }

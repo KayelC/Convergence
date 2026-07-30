@@ -213,7 +213,7 @@ public sealed class TurnEconomyContractTests
     }
 
     [Fact]
-    public void EncounterEvent_RejectsMalformedTurnEconomyPayloadClones()
+    public void EncounterEvent_ExposesGetOnlyValidatedEventAndEconomyPayloadState()
     {
         var standard = new StandardActionTurnEconomySnapshot(1);
         var validPhase = new BattlePhaseStartedEventPayload(
@@ -225,22 +225,66 @@ public sealed class TurnEconomyContractTests
             new StandardActionTurnEconomySnapshot(0),
             ActionTurnConsumption.Normal);
 
-        Assert.Throws<ArgumentException>(() => new BattleEncounterEvent(
+        Assert.False(
+            typeof(BattleEncounterEvent)
+                .GetProperty(nameof(BattleEncounterEvent.Sequence))!
+                .CanWrite);
+        Assert.All(
+            new[]
+            {
+                nameof(BattlePhaseStartedEventPayload.TeamId),
+                nameof(BattlePhaseStartedEventPayload.TurnEconomyState)
+            },
+            propertyName => Assert.False(
+                typeof(BattlePhaseStartedEventPayload)
+                    .GetProperty(propertyName)!
+                    .CanWrite));
+        Assert.All(
+            new[]
+            {
+                nameof(BattleTurnEconomyChangedEventPayload.ActorId),
+                nameof(BattleTurnEconomyChangedEventPayload.Before),
+                nameof(BattleTurnEconomyChangedEventPayload.After),
+                nameof(BattleTurnEconomyChangedEventPayload.Consumption)
+            },
+            propertyName => Assert.False(
+                typeof(BattleTurnEconomyChangedEventPayload)
+                    .GetProperty(propertyName)!
+                    .CanWrite));
+
+        _ = new BattleEncounterEvent(
             0,
             BattleEncounterEventKind.PhaseStarted,
-            validPhase with { TeamId = default }));
-        Assert.Throws<ArgumentNullException>(() => new BattleEncounterEvent(
-            0,
-            BattleEncounterEventKind.PhaseStarted,
-            validPhase with { TurnEconomyState = null! }));
-        Assert.Throws<ArgumentException>(() => new BattleEncounterEvent(
+            validPhase);
+        _ = new BattleEncounterEvent(
             0,
             BattleEncounterEventKind.TurnEconomyChanged,
-            validTransition with { ActorId = default }));
+            validTransition);
+    }
+
+    [Fact]
+    public void EncounterEvent_RejectsMalformedClonedPortPayloads()
+    {
+        var created = new BattleActorCreatedEventPayload(
+            RuntimeInstanceId.Parse("event_actor"),
+            ContentId.Parse("event_entity"),
+            ContentId.Parse("event_team"));
+        var command = new BattleCommandSelectedEventPayload(
+            RuntimeInstanceId.Parse("event_actor"),
+            ContentId.Parse("event_action"));
+
         Assert.Throws<ArgumentException>(() => new BattleEncounterEvent(
             0,
-            BattleEncounterEventKind.TurnEconomyChanged,
-            validTransition with { After = new ActionTokenTurnEconomySnapshot(0, 0) }));
+            BattleEncounterEventKind.ActorCreated,
+            created with { ActorId = default }));
+        Assert.Throws<ArgumentException>(() => new BattleEncounterEvent(
+            0,
+            BattleEncounterEventKind.CommandSelected,
+            command with { ActionId = default }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BattleEncounterEvent(
+            0,
+            (BattleEncounterEventKind)int.MaxValue,
+            command));
     }
 
     [Theory]

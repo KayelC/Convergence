@@ -71,10 +71,8 @@ public static class BattleStatusLifecycleEventMapper
                 skillId,
                 activation.Outcome,
                 activation.TriggerIndex,
-                activation.EventId)
-            {
-                Result = activation
-            },
+                activation.EventId,
+                activation),
             debugText);
     }
 }

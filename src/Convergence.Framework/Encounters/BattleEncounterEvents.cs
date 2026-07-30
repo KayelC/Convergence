@@ -114,8 +114,8 @@ public sealed record BattlePhaseStartedEventPayload : BattleEncounterEventPayloa
         this.TurnEconomyState = TurnEconomyState;
     }
 
-    public ContentId TeamId { get; init; }
-    public BattleTurnEconomySnapshot TurnEconomyState { get; init; }
+    public ContentId TeamId { get; }
+    public BattleTurnEconomySnapshot TurnEconomyState { get; }
 
     public void Deconstruct(out ContentId TeamId, out BattleTurnEconomySnapshot TurnEconomyState)
     {
@@ -158,14 +158,84 @@ public sealed record BattleEffectResolvedEventPayload(
     ContentId SourceId,
     EffectExecutionResult Result) : BattleEncounterEventPayload;
 
-public sealed record BattlePassiveActivatedEventPayload(
-    RuntimeInstanceId ActorId,
-    ContentId SkillId,
-    PassiveTriggerOutcome? Outcome = null,
-    int? TriggerIndex = null,
-    ContentId? EventId = null) : BattleEncounterEventPayload
+public sealed record BattlePassiveActivatedEventPayload : BattleEncounterEventPayload
 {
-    public PassiveTriggerExecutionResult? Result { get; init; }
+    public BattlePassiveActivatedEventPayload(
+        RuntimeInstanceId actorId,
+        ContentId skillId,
+        PassiveTriggerOutcome? outcome = null,
+        int? triggerIndex = null,
+        ContentId? eventId = null,
+        PassiveTriggerExecutionResult? result = null)
+    {
+        if (!actorId.IsValid)
+        {
+            throw new ArgumentException("Passive actor ID must be valid.", nameof(actorId));
+        }
+
+        if (!skillId.IsValid)
+        {
+            throw new ArgumentException("Passive skill ID must be valid.", nameof(skillId));
+        }
+
+        if (outcome is PassiveTriggerOutcome suppliedOutcome &&
+            !Enum.IsDefined(suppliedOutcome))
+        {
+            throw new ArgumentOutOfRangeException(nameof(outcome));
+        }
+
+        if (triggerIndex is < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(triggerIndex));
+        }
+
+        if (eventId is ContentId suppliedEventId && !suppliedEventId.IsValid)
+        {
+            throw new ArgumentException(
+                "Passive event ID must be valid when supplied.",
+                nameof(eventId));
+        }
+
+        if (result is not null &&
+            (result.TargetId != actorId ||
+             result.SkillId != skillId ||
+             outcome != result.Outcome ||
+             triggerIndex != result.TriggerIndex ||
+             eventId != result.EventId))
+        {
+            throw new ArgumentException(
+                "Passive result evidence must match the projected activation fields.",
+                nameof(result));
+        }
+
+        ActorId = actorId;
+        SkillId = skillId;
+        Outcome = outcome;
+        TriggerIndex = triggerIndex;
+        EventId = eventId;
+        Result = result;
+    }
+
+    public RuntimeInstanceId ActorId { get; }
+    public ContentId SkillId { get; }
+    public PassiveTriggerOutcome? Outcome { get; }
+    public int? TriggerIndex { get; }
+    public ContentId? EventId { get; }
+    public PassiveTriggerExecutionResult? Result { get; }
+
+    public void Deconstruct(
+        out RuntimeInstanceId actorId,
+        out ContentId skillId,
+        out PassiveTriggerOutcome? outcome,
+        out int? triggerIndex,
+        out ContentId? eventId)
+    {
+        actorId = ActorId;
+        skillId = SkillId;
+        outcome = Outcome;
+        triggerIndex = TriggerIndex;
+        eventId = EventId;
+    }
 }
 
 public sealed record BattleStatusChangedEventPayload(
@@ -193,10 +263,10 @@ public sealed record BattleTurnEconomyChangedEventPayload : BattleEncounterEvent
         this.Consumption = Consumption;
     }
 
-    public RuntimeInstanceId ActorId { get; init; }
-    public BattleTurnEconomySnapshot Before { get; init; }
-    public BattleTurnEconomySnapshot After { get; init; }
-    public ActionTurnConsumption Consumption { get; init; }
+    public RuntimeInstanceId ActorId { get; }
+    public BattleTurnEconomySnapshot Before { get; }
+    public BattleTurnEconomySnapshot After { get; }
+    public ActionTurnConsumption Consumption { get; }
 
     public void Deconstruct(
         out RuntimeInstanceId ActorId,
@@ -278,8 +348,8 @@ public sealed record BattlePhaseEndedEventPayload : BattleEncounterEventPayload
         this.TurnEconomyState = TurnEconomyState;
     }
 
-    public ContentId TeamId { get; init; }
-    public BattleTurnEconomySnapshot TurnEconomyState { get; init; }
+    public ContentId TeamId { get; }
+    public BattleTurnEconomySnapshot TurnEconomyState { get; }
 
     public void Deconstruct(out ContentId TeamId, out BattleTurnEconomySnapshot TurnEconomyState)
     {
@@ -429,6 +499,11 @@ public sealed record BattleEncounterEvent
             throw new ArgumentOutOfRangeException(nameof(sequence), "Event sequence cannot be negative.");
         }
 
+        if (!Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+
         Sequence = sequence;
         Kind = kind;
         Payload = payload ?? throw new ArgumentNullException(nameof(payload));
@@ -440,10 +515,10 @@ public sealed record BattleEncounterEvent
                 nameof(payload));
         }
 
-        ValidateTurnEconomyPayload(payload);
+        ValidatePayload(payload);
     }
 
-    public int Sequence { get; init; }
+    public int Sequence { get; }
     public BattleEncounterEventKind Kind { get; }
     public BattleEncounterEventPayload Payload { get; }
     public string? DebugText { get; }
@@ -519,6 +594,9 @@ public sealed record BattleEncounterEvent
         _ => null
     };
 
+    internal BattleEncounterEvent WithSequence(int sequence) =>
+        new(sequence, Kind, Payload, DebugText);
+
     private static bool PayloadMatchesKind(
         BattleEncounterEventKind kind,
         BattleEncounterEventPayload payload) =>
@@ -551,14 +629,95 @@ public sealed record BattleEncounterEvent
             _ => false
         };
 
-    private static void ValidateTurnEconomyPayload(BattleEncounterEventPayload payload)
+    private static void ValidatePayload(BattleEncounterEventPayload payload)
     {
         switch (payload)
         {
+            case BattleActorCreatedEventPayload created:
+                RequireActorId(created.ActorId, nameof(created.ActorId));
+                RequireContentId(created.EntityId, nameof(created.EntityId));
+                RequireContentId(created.TeamId, nameof(created.TeamId));
+                break;
+            case BattleStartedEventPayload started:
+                RequireContentId(started.ContextId, nameof(started.ContextId));
+                RequireContentId(started.BattleKindId, nameof(started.BattleKindId));
+                RequireOptionalContentId(started.MoonPhaseId, nameof(started.MoonPhaseId));
+                RequireActorIds(started.ActorIds, nameof(started.ActorIds));
+                RequireTeamIds(started.TeamIds, nameof(started.TeamIds));
+                break;
+            case BattleInitiativeRolledEventPayload initiative:
+                RequireTeamIds(initiative.TeamOrder, nameof(initiative.TeamOrder));
+                break;
             case BattlePhaseStartedEventPayload started:
                 BattleTurnEconomyEventPayloadValidator.ValidateTeamSnapshot(
                     started.TeamId,
                     started.TurnEconomyState);
+                break;
+            case BattleTurnStartedEventPayload turnStarted:
+                RequireActorId(turnStarted.ActorId, nameof(turnStarted.ActorId));
+                RequireContentId(turnStarted.TeamId, nameof(turnStarted.TeamId));
+                break;
+            case BattleTurnRestrictedEventPayload restricted:
+                RequireActorId(restricted.ActorId, nameof(restricted.ActorId));
+                ArgumentNullException.ThrowIfNull(restricted.Restriction);
+                break;
+            case BattleCommandSelectedEventPayload selected:
+                RequireActorId(selected.ActorId, nameof(selected.ActorId));
+                RequireContentId(selected.ActionId, nameof(selected.ActionId));
+                RequireOptionalActorId(selected.TargetId, nameof(selected.TargetId));
+                break;
+            case BattleCommandPassedEventPayload passed:
+                RequireActorId(passed.ActorId, nameof(passed.ActorId));
+                if (passed.RestrictionOutcome is BattleTurnStartOutcome restrictionOutcome &&
+                    !Enum.IsDefined(restrictionOutcome))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(passed.RestrictionOutcome));
+                }
+                break;
+            case BattleActionExecutedEventPayload executed:
+                if (!Enum.IsDefined(executed.ActionEventKind))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(executed.ActionEventKind));
+                }
+                RequireOptionalActorId(executed.ActorId, nameof(executed.ActorId));
+                RequireOptionalActorId(executed.TargetId, nameof(executed.TargetId));
+                RequireOptionalContentId(executed.SourceId, nameof(executed.SourceId));
+                break;
+            case BattleActionRejectedEventPayload rejected:
+                RequireActorId(rejected.ActorId, nameof(rejected.ActorId));
+                if (!Enum.IsDefined(rejected.Status))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(rejected.Status));
+                }
+                RequireOptionalContentId(rejected.ActionId, nameof(rejected.ActionId));
+                break;
+            case BattleEffectResolvedEventPayload resolved:
+                RequireActorId(resolved.SourceActorId, nameof(resolved.SourceActorId));
+                RequireContentId(resolved.SourceId, nameof(resolved.SourceId));
+                ArgumentNullException.ThrowIfNull(resolved.Result);
+                break;
+            case BattlePassiveActivatedEventPayload passive:
+                _ = new BattlePassiveActivatedEventPayload(
+                    passive.ActorId,
+                    passive.SkillId,
+                    passive.Outcome,
+                    passive.TriggerIndex,
+                    passive.EventId,
+                    passive.Result);
+                break;
+            case BattleStatusChangedEventPayload status:
+                ArgumentNullException.ThrowIfNull(status.StatusEvent);
+                if (!Enum.IsDefined(status.StatusEvent.Kind))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(status.StatusEvent.Kind));
+                }
+                RequireActorId(status.StatusEvent.ActorId, nameof(status.StatusEvent.ActorId));
+                break;
+            case BattleResourceChangedEventPayload resource:
+                RequireActorId(resource.SourceActorId, nameof(resource.SourceActorId));
+                RequireActorId(resource.AffectedActorId, nameof(resource.AffectedActorId));
+                RequireOptionalContentId(resource.ResourceId, nameof(resource.ResourceId));
+                RequireOptionalContentId(resource.SourceId, nameof(resource.SourceId));
                 break;
             case BattleTurnEconomyChangedEventPayload changed:
                 BattleTurnEconomyEventPayloadValidator.ValidateTransition(
@@ -572,11 +731,105 @@ public sealed record BattleEncounterEvent
                     ended.TeamId,
                     ended.TurnEconomyState);
                 break;
+            case BattleEncounterPresenceChangedEventPayload presence:
+                RequireActorId(presence.ActorId, nameof(presence.ActorId));
+                RequireContentId(presence.TeamId, nameof(presence.TeamId));
+                break;
+            case BattleActorDefeatedEventPayload defeated:
+                RequireActorId(defeated.ActorId, nameof(defeated.ActorId));
+                RequireContentId(defeated.TeamId, nameof(defeated.TeamId));
+                break;
             case BattlePhaseEndedEventPayload ended:
                 BattleTurnEconomyEventPayloadValidator.ValidateTeamSnapshot(
                     ended.TeamId,
                     ended.TurnEconomyState);
                 break;
+            case BattleFaultedEventPayload faulted:
+                if (!Enum.IsDefined(faulted.FaultCode))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(faulted.FaultCode));
+                }
+                RequireOptionalActorId(faulted.ActorId, nameof(faulted.ActorId));
+                RequireOptionalContentId(faulted.TeamId, nameof(faulted.TeamId));
+                if (faulted.PortName is not null &&
+                    string.IsNullOrWhiteSpace(faulted.PortName))
+                {
+                    throw new ArgumentException(
+                        "Fault port name cannot be empty when supplied.",
+                        nameof(faulted.PortName));
+                }
+                break;
+            case BattleHostActionRequestedEventPayload hostAction:
+                RequireActorId(hostAction.ActorId, nameof(hostAction.ActorId));
+                RequireContentId(hostAction.ActionId, nameof(hostAction.ActionId));
+                RequireOptionalActorId(hostAction.TargetId, nameof(hostAction.TargetId));
+                break;
+        }
+    }
+
+    private static void RequireActorIds(
+        IReadOnlyList<RuntimeInstanceId> actorIds,
+        string parameterName)
+    {
+        ArgumentNullException.ThrowIfNull(actorIds, parameterName);
+        if (actorIds.Count == 0 ||
+            actorIds.Any(actorId => !actorId.IsValid) ||
+            actorIds.Distinct().Count() != actorIds.Count)
+        {
+            throw new ArgumentException(
+                "Encounter actor IDs must be non-empty, valid, and unique.",
+                parameterName);
+        }
+    }
+
+    private static void RequireTeamIds(
+        IReadOnlyList<ContentId> teamIds,
+        string parameterName)
+    {
+        ArgumentNullException.ThrowIfNull(teamIds, parameterName);
+        if (teamIds.Count == 0 ||
+            teamIds.Any(teamId => !teamId.IsValid) ||
+            teamIds.Distinct().Count() != teamIds.Count)
+        {
+            throw new ArgumentException(
+                "Encounter team IDs must be non-empty, valid, and unique.",
+                parameterName);
+        }
+    }
+
+    private static void RequireActorId(RuntimeInstanceId actorId, string parameterName)
+    {
+        if (!actorId.IsValid)
+        {
+            throw new ArgumentException("Actor runtime ID must be valid.", parameterName);
+        }
+    }
+
+    private static void RequireOptionalActorId(
+        RuntimeInstanceId? actorId,
+        string parameterName)
+    {
+        if (actorId is RuntimeInstanceId suppliedActorId)
+        {
+            RequireActorId(suppliedActorId, parameterName);
+        }
+    }
+
+    private static void RequireContentId(ContentId contentId, string parameterName)
+    {
+        if (!contentId.IsValid)
+        {
+            throw new ArgumentException("Content ID must be valid.", parameterName);
+        }
+    }
+
+    private static void RequireOptionalContentId(
+        ContentId? contentId,
+        string parameterName)
+    {
+        if (contentId is ContentId suppliedContentId)
+        {
+            RequireContentId(suppliedContentId, parameterName);
         }
     }
 }
