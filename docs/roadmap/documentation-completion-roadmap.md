@@ -447,7 +447,14 @@ from bypassing transition validation. The
 confirmed the corrected source and all three audience documents, found no
 remaining realistic reachable defect, and passed the complete local gate.
 Order 5 is formally closed, and Order 6 (`encounter_orchestration`) is now the
-next collaborative subject.
+next collaborative subject. The owner has approved all eight decisions in the
+source-based
+[Order 6 encounter-orchestration review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
+That record governs O6-R1 through O6-R13: scheduler modularity, lifecycle
+reconciliation, structural event completion, completion validation,
+cancellation and rejection semantics, automated-runner modernization, the
+three audience documents, and independent closure. Order 6 remains open until
+those checkpoints are implemented and verified.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
