@@ -278,6 +278,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Encounters/AgilityOrderedBattleEncounterScheduling.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Encounters/AutomatedBattleRunner.cs",
       "owner": "encounter_runtime",
       "publicSurface": "exported"

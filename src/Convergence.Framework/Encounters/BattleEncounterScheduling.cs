@@ -35,12 +35,15 @@ public enum BattleEncounterScheduleTransitionStatus
 /// <summary>Stable diagnostic codes returned when a scheduling policy rejects a transition.</summary>
 public enum BattleEncounterScheduleDiagnosticCode
 {
-    InvalidRequest,
-    InvalidState,
-    InvalidStep,
-    InvalidStepOutcome,
-    NoEligibleActor,
-    PolicyRejected
+    InvalidRequest = 0,
+    InvalidState = 1,
+    InvalidStep = 2,
+    InvalidStepOutcome = 3,
+    NoEligibleActor = 4,
+    PolicyRejected = 5,
+    MissingOrderingStat = 6,
+    InvalidOrderingStat = 7,
+    InvalidTieBreakOrder = 8
 }
 
 /// <summary>Explains why an encounter scheduling policy rejected a transition.</summary>

@@ -82,6 +82,40 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_ExecutesCrossTeamAgilityOrderFromTheInjectedScheduler()
+    {
+        BattleEncounterParticipant player = ParticipantWithAgility(
+            "agility_player",
+            PlayerTeam,
+            agility: 7m);
+        BattleEncounterParticipant ally = ParticipantWithAgility(
+            "agility_ally",
+            PlayerTeam,
+            agility: 3m);
+        BattleEncounterParticipant enemy = ParticipantWithAgility(
+            "agility_enemy",
+            EnemyTeam,
+            agility: 11m);
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [player, ally, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(3),
+            schedule: new AgilityOrderedBattleEncounterSchedulePolicy(
+                Id("agility"),
+                new EncounterOrderBattleEncounterScheduleTieBreakPolicy()));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Equal(
+            [enemy.InstanceId, player.InstanceId, ally.InstanceId],
+            handler.Requests.Select(request => request.Actor.InstanceId));
+    }
+
+    [Fact]
     public void Runner_ConvertsSchedulerExceptionsAndRejectedStartsToTypedFaults()
     {
         BattleEncounterParticipant player = Participant("schedule_fault_player", PlayerTeam);
@@ -2056,6 +2090,27 @@ public sealed class BattleEncounterRunnerTests
             ],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), teamId));
+        return new BattleEncounterParticipant(state, id);
+    }
+
+    private static BattleEncounterParticipant ParticipantWithAgility(
+        string id,
+        ContentId teamId,
+        decimal agility)
+    {
+        var state = new RuntimeActorState(
+            RuntimeInstanceId.Parse(id),
+            Id(id + "_entity"),
+            teamId,
+            Hp,
+            CombatDefenseProfile.Empty,
+            [
+                new BattleResourceState(Hp, 10, 10),
+                new BattleResourceState(Sp, 5, 5)
+            ],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+            new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), teamId),
+            [new KeyValuePair<ContentId, decimal>(Id("agility"), agility)]);
         return new BattleEncounterParticipant(state, id);
     }
 
