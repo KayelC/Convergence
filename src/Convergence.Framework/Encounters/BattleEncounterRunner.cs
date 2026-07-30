@@ -883,7 +883,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             }
         }
 
-        async ValueTask ProcessPendingDeparturesAsync(
+        async ValueTask<(bool HadDepartures, bool StateMutated)> ProcessPendingDeparturesAsync(
             BattleEncounterParticipant? explicitActor = null,
             BattleStatusDepartureReason? explicitReason = null)
         {
@@ -913,9 +913,10 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
             if (reasonsByActor.Count == 0)
             {
-                return;
+                return (false, false);
             }
 
+            bool stateMutated = false;
             if (services.Lifecycle is IBattleEncounterDepartureLifecyclePort departureLifecycle)
             {
                 var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
@@ -953,6 +954,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                 cancellationToken.ThrowIfCancellationRequested();
                 transaction.Commit();
+                stateMutated = true;
                 await AddRangeAsync(departureEvents).ConfigureAwait(false);
             }
 
@@ -963,6 +965,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     processedDefeatDepartures.Add(actorId);
                 }
             }
+
+            return (true, stateMutated);
         }
 
         BattleEncounterScheduleCursor StartSchedule()
@@ -1119,9 +1123,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         }
 
         await AddRangeAsync(battleStartEvents).ConfigureAwait(false);
-        await ProcessPendingDeparturesAsync().ConfigureAwait(false);
-
-        BattleEncounterCompletion initial = EvaluateCompletion(null);
+        BattleEncounterCompletion initial = await ReconcileAsync(null).ConfigureAwait(false);
         if (initial.IsComplete)
         {
             return await FinishAsync(initial.Outcome, initial.WinningTeamId, initial.Message).ConfigureAwait(false);
@@ -1316,6 +1318,40 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                 new BattleTurnRestrictedEventPayload(actor.InstanceId, turnStart.Restriction),
                                 $"{actor.DisplayName} turn restriction: {turnStart.Outcome}.")
                             .ConfigureAwait(false);
+                    }
+
+                    BattleStatusDepartureReason? turnStartDepartureReason =
+                        turnStart.Outcome switch
+                        {
+                            BattleTurnStartOutcome.FleeBattle =>
+                                BattleStatusDepartureReason.Flee,
+                            BattleTurnStartOutcome.RecallToRoster =>
+                                BattleStatusDepartureReason.RosterRecall,
+                            _ => null
+                        };
+                    BattleEncounterCompletion turnStartCompletion = await ReconcileAsync(
+                            lastActor: null,
+                            explicitDepartureActor:
+                                turnStartDepartureReason.HasValue ? actor : null,
+                            explicitDepartureReason: turnStartDepartureReason)
+                        .ConfigureAwait(false);
+                    if (turnStartCompletion.IsComplete)
+                    {
+                        return await FinishAsync(
+                                turnStartCompletion.Outcome,
+                                turnStartCompletion.WinningTeamId,
+                                turnStartCompletion.Message)
+                            .ConfigureAwait(false);
+                    }
+
+                    if (!actor.State.IsDeployed || actor.State.IsDefeated)
+                    {
+                        schedule = AdvanceSchedule(
+                            schedule,
+                            BattleEncounterScheduleStepOutcome.ActorUnavailable(
+                                actor.InstanceId),
+                            actor.InstanceId);
+                        continue;
                     }
 
                     IReadOnlyList<StatModifierLifecycleBoundary> activeStatModifierBoundaries =
@@ -1558,29 +1594,10 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             command.TurnConsumption)
                         .ConfigureAwait(false);
 
-                    Synchronize();
-                    BattleStatusDepartureReason? explicitDepartureReason =
-                        !actor.State.IsDeployed
-                            ? turnStart.Outcome switch
-                            {
-                                BattleTurnStartOutcome.FleeBattle =>
-                                    BattleStatusDepartureReason.Flee,
-                                BattleTurnStartOutcome.RecallToRoster =>
-                                    BattleStatusDepartureReason.RosterRecall,
-                                _ => null
-                            }
-                            : null;
-                    if (explicitDepartureReason is BattleStatusDepartureReason departureReason)
-                    {
-                        await ProcessPendingDeparturesAsync(actor, departureReason)
-                            .ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        await ProcessPendingDeparturesAsync().ConfigureAwait(false);
-                    }
-
-                    await AnnounceNewDefeatsAsync(request.Participants, defeatedAnnouncements, AddAsync)
+                    BattleEncounterCompletion completion = await ReconcileAsync(
+                            actor,
+                            turnStartDepartureReason.HasValue ? actor : null,
+                            turnStartDepartureReason)
                         .ConfigureAwait(false);
 
                     string? postCommandEconomyFault = CurrentEconomyAuthorityFault(
@@ -1602,7 +1619,6 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             .ConfigureAwait(false);
                     }
 
-                    BattleEncounterCompletion completion = EvaluateCompletion(actor);
                     if (completion.IsComplete)
                     {
                         return await FinishAsync(completion.Outcome, completion.WinningTeamId, completion.Message)
@@ -1694,7 +1710,17 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         $"Team {teamId} phase ended.")
                     .ConfigureAwait(false);
 
-                Synchronize();
+                BattleEncounterCompletion phaseCompletion =
+                    await ReconcileAsync(null).ConfigureAwait(false);
+                if (phaseCompletion.IsComplete)
+                {
+                    return await FinishAsync(
+                            phaseCompletion.Outcome,
+                            phaseCompletion.WinningTeamId,
+                            phaseCompletion.Message)
+                        .ConfigureAwait(false);
+                }
+
                 schedule = AdvanceSchedule(
                     schedule,
                     BattleEncounterScheduleStepOutcome.BoundaryCompleted());
@@ -1742,6 +1768,17 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             cancellationToken.ThrowIfCancellationRequested();
             roundEndTransaction.Commit();
             await AddRangeAsync(roundEndEvents).ConfigureAwait(false);
+            BattleEncounterCompletion roundCompletion =
+                await ReconcileAsync(null).ConfigureAwait(false);
+            if (roundCompletion.IsComplete)
+            {
+                return await FinishAsync(
+                        roundCompletion.Outcome,
+                        roundCompletion.WinningTeamId,
+                        roundCompletion.Message)
+                    .ConfigureAwait(false);
+            }
+
             schedule = AdvanceSchedule(
                 schedule,
                 BattleEncounterScheduleStepOutcome.BoundaryCompleted());
@@ -1753,9 +1790,57 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 $"Battle ended in a draw after {request.RoundLimit} round(s).")
             .ConfigureAwait(false);
 
-        BattleEncounterCompletion EvaluateCompletion(BattleEncounterParticipant? lastActor)
+        async ValueTask<BattleEncounterCompletion> ReconcileAsync(
+            BattleEncounterParticipant? lastActor,
+            BattleEncounterParticipant? explicitDepartureActor = null,
+            BattleStatusDepartureReason? explicitDepartureReason = null)
         {
             Synchronize();
+            BattleEncounterParticipant? pendingExplicitActor = explicitDepartureActor;
+            BattleStatusDepartureReason? pendingExplicitReason = explicitDepartureReason;
+            if (pendingExplicitActor?.State.IsDeployed == true)
+            {
+                pendingExplicitActor = null;
+                pendingExplicitReason = null;
+            }
+
+            for (int pass = 0; pass <= request.Participants.Count; pass++)
+            {
+                (bool hadDepartures, bool stateMutated) =
+                    await ProcessPendingDeparturesAsync(
+                            pendingExplicitActor,
+                            pendingExplicitReason)
+                        .ConfigureAwait(false);
+                pendingExplicitActor = null;
+                pendingExplicitReason = null;
+
+                if (stateMutated)
+                {
+                    Synchronize();
+                }
+
+                if (!hadDepartures)
+                {
+                    break;
+                }
+
+                if (pass == request.Participants.Count)
+                {
+                    InvokePortAction(
+                        BattleEncounterFaultCode.LifecycleExecutionFailed,
+                        "departure-reconciliation",
+                        () => throw new InvalidOperationException(
+                            "Encounter departure reconciliation did not reach a stable state."),
+                        lastActor?.InstanceId);
+                }
+            }
+
+            await AnnounceNewDefeatsAsync(
+                    request.Participants,
+                    defeatedAnnouncements,
+                    AddAsync)
+                .ConfigureAwait(false);
+
             return InvokePort(
                 BattleEncounterFaultCode.CompletionEvaluationFailed,
                 "completion-evaluation",

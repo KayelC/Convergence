@@ -1071,6 +1071,178 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_ReconcilesBattleStartMutationBeforeOpeningARound()
+    {
+        BattleEncounterParticipant player = Participant("battle_start_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("battle_start_enemy", EnemyTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleStartAction = request =>
+                request.Participants
+                    .Single(participant => participant.InstanceId == enemy.InstanceId)
+                    .State.SetResource(Hp, 0m)
+        };
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new LastTeamStandingCompletionPolicy());
+
+        Assert.Equal(BattleEncounterOutcome.Victory, result.Outcome);
+        Assert.Equal(PlayerTeam, result.WinningTeamId);
+        Assert.Empty(handler.Requests);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.RoundStarted);
+        AssertDefeatPrecedesBattleEnd(result, enemy.InstanceId);
+    }
+
+    [Fact]
+    public void Runner_ReconcilesTurnStartMutationBeforeCallingTheTurnHandler()
+    {
+        BattleEncounterParticipant player = Participant("turn_start_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("turn_start_enemy", EnemyTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            TurnStartAction = request =>
+                request.Participants
+                    .Single(participant => participant.InstanceId == enemy.InstanceId)
+                    .State.SetResource(Hp, 0m)
+        };
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new LastTeamStandingCompletionPolicy());
+
+        Assert.Equal(BattleEncounterOutcome.Victory, result.Outcome);
+        Assert.Empty(handler.Requests);
+        AssertDefeatPrecedesBattleEnd(result, enemy.InstanceId);
+    }
+
+    [Fact]
+    public void Runner_SkipsAnActorUndeployedByTurnStartLifecycle()
+    {
+        BattleEncounterParticipant first = Participant("turn_start_first", PlayerTeam);
+        BattleEncounterParticipant second = Participant("turn_start_second", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("turn_start_enemy_skip", EnemyTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            TurnStartAction = request =>
+            {
+                if (request.Actor.InstanceId == first.InstanceId)
+                {
+                    request.Actor.State.SetEncounterPresence(isDeployed: false);
+                }
+            }
+        };
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        Run(
+            [first, second, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(1));
+
+        Assert.Equal(second.InstanceId, Assert.Single(handler.Requests).Actor.InstanceId);
+    }
+
+    [Fact]
+    public void Runner_ReconcilesTurnEndMutationBeforeSchedulingAnotherCommand()
+    {
+        BattleEncounterParticipant player = Participant("turn_end_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("turn_end_enemy", EnemyTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            TurnEndAction = request =>
+                request.Participants
+                    .Single(participant => participant.InstanceId == enemy.InstanceId)
+                    .State.SetResource(Hp, 0m)
+        };
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new LastTeamStandingCompletionPolicy());
+
+        Assert.Equal(BattleEncounterOutcome.Victory, result.Outcome);
+        Assert.Single(handler.Requests);
+        AssertDefeatPrecedesBattleEnd(result, enemy.InstanceId);
+    }
+
+    [Fact]
+    public void Runner_ReconcilesPhaseEndMutationBeforeStartingTheNextPhase()
+    {
+        BattleEncounterParticipant player = Participant("phase_end_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("phase_end_enemy", EnemyTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            PhaseEndAction = request =>
+                request.Participants
+                    .Single(participant => participant.InstanceId == enemy.InstanceId)
+                    .State.SetResource(Hp, 0m)
+        };
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new LastTeamStandingCompletionPolicy());
+
+        Assert.Equal(BattleEncounterOutcome.Victory, result.Outcome);
+        Assert.Equal(player.InstanceId, Assert.Single(handler.Requests).Actor.InstanceId);
+        AssertDefeatPrecedesBattleEnd(result, enemy.InstanceId);
+    }
+
+    [Fact]
+    public void Runner_ReconcilesRoundEndMutationBeforeStartingAnotherRound()
+    {
+        BattleEncounterParticipant player = Participant("round_end_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("round_end_enemy", EnemyTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            RoundEndAction = request =>
+                request.Participants
+                    .Single(participant => participant.InstanceId == enemy.InstanceId)
+                    .State.SetResource(Hp, 0m)
+        };
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new LastTeamStandingCompletionPolicy());
+
+        Assert.Equal(BattleEncounterOutcome.Victory, result.Outcome);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal(1, lifecycle.RoundEndCalls);
+        Assert.Equal(
+            1,
+            result.Events.Count(battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.RoundStarted));
+        AssertDefeatPrecedesBattleEnd(result, enemy.InstanceId);
+    }
+
+    [Fact]
     public void Runner_StopsOnFaultCancellationAndEscape()
     {
         BattleEncounterParticipant player = Participant("player", PlayerTeam);
@@ -2076,6 +2248,18 @@ public sealed class BattleEncounterRunnerTests
         Assert.Equal(expectedCode, fault.FaultCode);
     }
 
+    private static void AssertDefeatPrecedesBattleEnd(
+        BattleEncounterResult result,
+        RuntimeInstanceId actorId)
+    {
+        BattleEncounterEvent defeat = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.ActorDefeated &&
+            battleEvent.ActorId == actorId);
+        BattleEncounterEvent battleEnd = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.BattleEnded);
+        Assert.True(defeat.Sequence < battleEnd.Sequence);
+    }
+
     private static BattleEncounterParticipant Participant(string id, ContentId teamId)
     {
         var state = new RuntimeActorState(
@@ -2467,6 +2651,7 @@ public sealed class BattleEncounterRunnerTests
         public IReadOnlyList<ContentId> BattleStartTeamOrder { get; private set; } = [];
         public BattleTurnStartOutcome TurnStartOutcome { get; init; } = BattleTurnStartOutcome.CanAct;
         public BattleTurnStartRestriction? Restriction { get; init; }
+        public Action<BattleEncounterLifecycleRequest>? BattleStartAction { get; init; }
         public Action<BattleEncounterTurnLifecycleRequest>? TurnStartAction { get; init; }
         public Action<BattleEncounterTurnLifecycleRequest>? TurnEndAction { get; init; }
         public Action<BattleEncounterLifecycleRequest>? PhaseEndAction { get; init; }
@@ -2487,6 +2672,7 @@ public sealed class BattleEncounterRunnerTests
         {
             BattleStartCalls++;
             BattleStartTeamOrder = request.TeamOrder;
+            BattleStartAction?.Invoke(request);
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(BattleStartEvents);
         }
 
