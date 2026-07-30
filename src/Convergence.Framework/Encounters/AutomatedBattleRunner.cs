@@ -307,7 +307,51 @@ public sealed record AutomatedBattleRequest
         int roundLimit,
         IEnumerable<KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>>? teamKnowledgeSeeds)
     {
-        Participants = Array.AsReadOnly(participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants)));
+        CatalogBattleActor[] participantSnapshot =
+            participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants));
+        if (participantSnapshot.Length == 0)
+        {
+            throw new ArgumentException(
+                "An automated battle requires at least one participant.",
+                nameof(participants));
+        }
+
+        if (participantSnapshot.Any(participant => participant is null))
+        {
+            throw new ArgumentException(
+                "Automated battle participants cannot contain null entries.",
+                nameof(participants));
+        }
+
+        if (!contextId.IsValid)
+        {
+            throw new ArgumentException(
+                "Automated battle context ID must be valid.",
+                nameof(contextId));
+        }
+
+        if (!battleKindId.IsValid)
+        {
+            throw new ArgumentException(
+                "Automated battle kind ID must be valid.",
+                nameof(battleKindId));
+        }
+
+        if (moonPhaseId is ContentId moonPhase && !moonPhase.IsValid)
+        {
+            throw new ArgumentException(
+                "Automated battle moon-phase ID must be valid when supplied.",
+                nameof(moonPhaseId));
+        }
+
+        if (roundLimit <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(roundLimit),
+                "Automated battle round limit must be positive.");
+        }
+
+        Participants = Array.AsReadOnly(participantSnapshot);
         ContextId = contextId;
         BattleKindId = battleKindId;
         MoonPhaseId = moonPhaseId;

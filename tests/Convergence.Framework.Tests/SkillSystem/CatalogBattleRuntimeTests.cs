@@ -1133,6 +1133,63 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void AutomatedBattleRequest_RejectsMissingOrNullParticipantsAtConstruction()
+    {
+        Assert.Throws<ArgumentNullException>(() => new AutomatedBattleRequest(
+            null!,
+            Battle,
+            NormalBattle,
+            null,
+            1));
+        Assert.Throws<ArgumentException>(() => new AutomatedBattleRequest(
+            [],
+            Battle,
+            NormalBattle,
+            null,
+            1));
+        Assert.Throws<ArgumentException>(() => new AutomatedBattleRequest(
+            [null!],
+            Battle,
+            NormalBattle,
+            null,
+            1));
+    }
+
+    [Fact]
+    public void AutomatedBattleRequest_RejectsInvalidEncounterMetadataAtConstruction()
+    {
+        CatalogBattleActor actor = RuntimeCatalogActor(
+            "invalid_request_actor",
+            "invalid_request_actor",
+            PlayerTeam);
+
+        Assert.Throws<ArgumentException>(() => new AutomatedBattleRequest(
+            [actor],
+            default,
+            NormalBattle,
+            null,
+            1));
+        Assert.Throws<ArgumentException>(() => new AutomatedBattleRequest(
+            [actor],
+            Battle,
+            default,
+            null,
+            1));
+        Assert.Throws<ArgumentException>(() => new AutomatedBattleRequest(
+            [actor],
+            Battle,
+            NormalBattle,
+            (ContentId?)default(ContentId),
+            1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new AutomatedBattleRequest(
+            [actor],
+            Battle,
+            NormalBattle,
+            null,
+            0));
+    }
+
+    [Fact]
     public void AutomatedBattleRequest_RejectsMalformedIntrinsicElementSeedBeforeSelection()
     {
         CatalogBattleActor actor = RuntimeCatalogActor("almighty_seed_actor", "almighty_seed_actor", PlayerTeam);
