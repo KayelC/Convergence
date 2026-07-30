@@ -138,7 +138,8 @@ public sealed class GodotIntegrationContractTests
             services,
             lifecycle,
             turnEconomy,
-            new AutomatedBattleTurnRestrictionResolver()).Run(new AutomatedBattleRequest(
+            new AutomatedBattleTurnRestrictionResolver(),
+            new BattleEncounterProgressPolicy(4096)).Run(new AutomatedBattleRequest(
             [frost, ember],
             Battle,
             NormalBattle,
@@ -183,6 +184,7 @@ public sealed class GodotIntegrationContractTests
                  new LastTeamStandingCompletionPolicy(),
                  () => new StandardActionTurnEconomy(),
                  new BattlePhaseProgressPolicy(8, 1),
+                 new BattleEncounterProgressPolicy(256),
                  events: eventSink));
 
         Assert.Equal(BattleEncounterOutcome.Draw, encounter.Outcome);

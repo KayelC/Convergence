@@ -148,6 +148,42 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_BoundsStructuralScheduleTransitionsWithoutACommandWindow()
+    {
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [Participant("schedule_loop_player", PlayerTeam),
+             Participant("schedule_loop_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            encounterProgress: new BattleEncounterProgressPolicy(4),
+            schedule: new EmptyPhaseLoopSchedulePolicy());
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(
+            BattleEncounterFaultCode.ScheduleTransitionLimitExceeded,
+            result.FaultCode);
+        Assert.Empty(handler.Requests);
+        Assert.Contains(
+            "structural transition limit of 4",
+            result.FaultMessage,
+            StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void EncounterProgressPolicy_RejectsNonPositiveLimits(int maximumTransitions)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new BattleEncounterProgressPolicy(maximumTransitions));
+    }
+
+    [Fact]
     public void Runner_DispatchesOneRoundClockAfterEveryTeamPhaseNotAfterEveryAction()
     {
         var lifecycle = new RecordingLifecycle();
@@ -438,6 +474,7 @@ public sealed class BattleEncounterRunnerTests
                     return new StandardActionTurnEconomy();
                 },
                 new BattlePhaseProgressPolicy(8, 1),
+                new BattleEncounterProgressPolicy(256),
                 synchronizer,
                 eventSink));
 
@@ -496,6 +533,7 @@ public sealed class BattleEncounterRunnerTests
                         new CompleteAfterTurnsPolicy(1),
                         () => new StandardActionTurnEconomy(),
                         new BattlePhaseProgressPolicy(8, 1),
+                        new BattleEncounterProgressPolicy(256),
                         events: ports));
                 contextWasRestored = ReferenceEquals(SynchronizationContext.Current, context);
             }
@@ -545,6 +583,7 @@ public sealed class BattleEncounterRunnerTests
                     new CompleteAfterTurnsPolicy(1),
                     () => new StandardActionTurnEconomy(),
                     new BattlePhaseProgressPolicy(8, 1),
+                    new BattleEncounterProgressPolicy(256),
                     events: ports)).AsTask();
         }
         finally
@@ -1659,6 +1698,7 @@ public sealed class BattleEncounterRunnerTests
                 new CompleteAfterTurnsPolicy(1),
                 () => new StandardActionTurnEconomy(),
                 new BattlePhaseProgressPolicy(8, 1),
+                new BattleEncounterProgressPolicy(256),
                 synchronizer,
                 eventSink),
             cancellation.Token);
@@ -1692,6 +1732,7 @@ public sealed class BattleEncounterRunnerTests
                 new CompleteAfterTurnsPolicy(1),
                 () => new StandardActionTurnEconomy(),
                 new BattlePhaseProgressPolicy(8, 1),
+                new BattleEncounterProgressPolicy(256),
                 events: eventSink),
             cancellation.Token);
 
@@ -1743,6 +1784,7 @@ public sealed class BattleEncounterRunnerTests
                 new CompleteAfterTurnsPolicy(1),
                 () => new StandardActionTurnEconomy(),
                 new BattlePhaseProgressPolicy(8, 1),
+                new BattleEncounterProgressPolicy(256),
                 events: eventSink),
             cancellation.Token);
 
@@ -1795,6 +1837,7 @@ public sealed class BattleEncounterRunnerTests
                 new CompleteAfterTurnsPolicy(1),
                 () => new StandardActionTurnEconomy(),
                 new BattlePhaseProgressPolicy(8, 1),
+                new BattleEncounterProgressPolicy(256),
                 events: new ThrowingEventSink(BattleEncounterEventKind.ActorCreated)));
 
         Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
@@ -1830,7 +1873,8 @@ public sealed class BattleEncounterRunnerTests
                     cancellation.Cancel();
                     return economy;
                 },
-                new BattlePhaseProgressPolicy(8, 1)),
+                new BattlePhaseProgressPolicy(8, 1),
+                new BattleEncounterProgressPolicy(256)),
             cancellation.Token);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
@@ -1864,6 +1908,7 @@ public sealed class BattleEncounterRunnerTests
                 new CompleteAfterTurnsPolicy(1),
                 () => economy,
                 new BattlePhaseProgressPolicy(8, 1),
+                new BattleEncounterProgressPolicy(256),
                 events: events),
             cancellation.Token);
 
@@ -1901,7 +1946,8 @@ public sealed class BattleEncounterRunnerTests
                 new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
                 new CompleteAfterTurnsPolicy(99),
                 () => new StandardActionTurnEconomy(),
-                new BattlePhaseProgressPolicy(8, 1)),
+                new BattlePhaseProgressPolicy(8, 1),
+                new BattleEncounterProgressPolicy(256)),
             cancellation.Token);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
@@ -1934,7 +1980,8 @@ public sealed class BattleEncounterRunnerTests
                 new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
                 new CompleteAfterTurnsPolicy(1),
                 () => new StandardActionTurnEconomy(),
-                new BattlePhaseProgressPolicy(8, 1)),
+                new BattlePhaseProgressPolicy(8, 1),
+                new BattleEncounterProgressPolicy(256)),
             cancellation.Token);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
@@ -2406,6 +2453,7 @@ public sealed class BattleEncounterRunnerTests
         IBattleEncounterCompletionPolicy completion,
         Func<IBattleTurnEconomy>? turnEconomyFactory = null,
         BattlePhaseProgressPolicy? phaseProgress = null,
+        BattleEncounterProgressPolicy? encounterProgress = null,
         IBattleEncounterStateSynchronizer? synchronizer = null,
         IBattleEncounterEventSink? events = null,
         IBattleEncounterSchedulePolicy? schedule = null) =>
@@ -2419,6 +2467,7 @@ public sealed class BattleEncounterRunnerTests
                 completion,
                 turnEconomyFactory ?? (() => new StandardActionTurnEconomy()),
                 phaseProgress ?? new BattlePhaseProgressPolicy(32, 4),
+                encounterProgress ?? new BattleEncounterProgressPolicy(4096),
                 synchronizer,
                 events));
 
@@ -2694,6 +2743,59 @@ public sealed class BattleEncounterRunnerTests
                 [new BattleEncounterScheduleDiagnostic(
                     BattleEncounterScheduleDiagnosticCode.PolicyRejected,
                     "Deliberate schedule rejection.")]);
+    }
+
+    private sealed class EmptyPhaseLoopSchedulePolicy : IBattleEncounterSchedulePolicy
+    {
+        public ContentId PolicyId { get; } = ContentId.Parse("empty_phase_loop_schedule");
+
+        public BattleEncounterScheduleTransitionResult Start(
+            BattleEncounterScheduleStartRequest request)
+        {
+            var state = new ScriptedScheduleState(
+                PolicyId,
+                revision: 0,
+                nextStepSequence: 0,
+                completedRounds: 0,
+                request.Participants.Select(participant => participant.InstanceId),
+                request.TeamOrder,
+                request.RoundLimit);
+            return BattleEncounterScheduleTransitionResult.Start(
+                state,
+                new BattleEncounterRoundStartedScheduleStep(PolicyId, 0, 1));
+        }
+
+        public BattleEncounterScheduleTransitionResult Advance(
+            BattleEncounterScheduleAdvanceRequest request)
+        {
+            ScriptedScheduleState state = Assert.IsType<ScriptedScheduleState>(request.State);
+            BattleEncounterScheduleStateSnapshot after = state.Advance();
+            return request.CompletedStep switch
+            {
+                BattleEncounterRoundStartedScheduleStep or
+                BattleEncounterPhaseEndedScheduleStep =>
+                    BattleEncounterScheduleTransitionResult.Advance(
+                        state,
+                        after,
+                        new BattleEncounterPhaseStartedScheduleStep(
+                            PolicyId,
+                            after.NextStepSequence,
+                            1,
+                            PlayerTeam,
+                            new BattleEncounterTurnEconomyStart(1))),
+                BattleEncounterPhaseStartedScheduleStep =>
+                    BattleEncounterScheduleTransitionResult.Advance(
+                        state,
+                        after,
+                        new BattleEncounterPhaseEndedScheduleStep(
+                            PolicyId,
+                            after.NextStepSequence,
+                            1,
+                            PlayerTeam)),
+                _ => throw new InvalidOperationException(
+                    "Unexpected empty-phase loop schedule step.")
+            };
+        }
     }
 
     private sealed class ScriptedScheduleState : BattleEncounterScheduleStateSnapshot

@@ -246,6 +246,7 @@ public partial class ConvergenceSmokeRoot : Node
                 new LastTeamStandingCompletionPolicy(),
                 turnEconomy.CreateEconomy,
                 turnEconomy.PhaseProgress,
+                new BattleEncounterProgressPolicy(256),
                 events: eventSink));
         if (encounter.Outcome != BattleEncounterOutcome.Draw || eventSink.Events.Count == 0)
         {

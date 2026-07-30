@@ -1686,7 +1686,7 @@ Convergence.Encounters.AutomatedBattleResult.Outcome.get -> Convergence.Encounte
 Convergence.Encounters.AutomatedBattleResult.TeamKnowledge.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!>!
 Convergence.Encounters.AutomatedBattleResult.WinningTeamId.get -> Convergence.Content.ContentId?
 Convergence.Encounters.AutomatedBattleRunner
-Convergence.Encounters.AutomatedBattleRunner.AutomatedBattleRunner(Convergence.Execution.ISkillExecutor! executor, Convergence.Encounters.IBattleActionSelector! selector, Convergence.Execution.BattleExecutionServices! services, Convergence.Encounters.IBattleEncounterLifecyclePort! lifecycle, Convergence.Runtime.BattleTurnEconomyRuleset! turnEconomy, Convergence.Encounters.IAutomatedBattleTurnRestrictionResolver! restrictionResolver) -> void
+Convergence.Encounters.AutomatedBattleRunner.AutomatedBattleRunner(Convergence.Execution.ISkillExecutor! executor, Convergence.Encounters.IBattleActionSelector! selector, Convergence.Execution.BattleExecutionServices! services, Convergence.Encounters.IBattleEncounterLifecyclePort! lifecycle, Convergence.Runtime.BattleTurnEconomyRuleset! turnEconomy, Convergence.Encounters.IAutomatedBattleTurnRestrictionResolver! restrictionResolver, Convergence.Encounters.BattleEncounterProgressPolicy! encounterProgress) -> void
 Convergence.Encounters.AutomatedBattleRunner.Run(Convergence.Encounters.AutomatedBattleRequest! request) -> Convergence.Encounters.AutomatedBattleResult!
 Convergence.Encounters.AutomatedBattleRunner.RunAsync(Convergence.Encounters.AutomatedBattleRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Convergence.Encounters.AutomatedBattleResult!>
 Convergence.Encounters.AutomatedBattleTurnRestrictionRequest
@@ -1917,6 +1917,7 @@ Convergence.Encounters.BattleEncounterFaultCode.LifecycleExecutionFailed = 1 -> 
 Convergence.Encounters.BattleEncounterFaultCode.PhaseCommandLimitExceeded = 8 -> Convergence.Encounters.BattleEncounterFaultCode
 Convergence.Encounters.BattleEncounterFaultCode.ScheduleExecutionFailed = 13 -> Convergence.Encounters.BattleEncounterFaultCode
 Convergence.Encounters.BattleEncounterFaultCode.ScheduleTransitionInvalid = 14 -> Convergence.Encounters.BattleEncounterFaultCode
+Convergence.Encounters.BattleEncounterFaultCode.ScheduleTransitionLimitExceeded = 15 -> Convergence.Encounters.BattleEncounterFaultCode
 Convergence.Encounters.BattleEncounterFaultCode.StateSynchronizationFailed = 3 -> Convergence.Encounters.BattleEncounterFaultCode
 Convergence.Encounters.BattleEncounterFaultCode.TurnEconomyExecutionFailed = 4 -> Convergence.Encounters.BattleEncounterFaultCode
 Convergence.Encounters.BattleEncounterFaultCode.TurnEconomyTransitionInvalid = 10 -> Convergence.Encounters.BattleEncounterFaultCode
@@ -1964,6 +1965,9 @@ Convergence.Encounters.BattleEncounterParticipantSnapshot.IsDefeated.get -> bool
 Convergence.Encounters.BattleEncounterParticipantSnapshot.IsDeployed.get -> bool
 Convergence.Encounters.BattleEncounterParticipantSnapshot.State.get -> Convergence.Runtime.RuntimeActorSnapshot!
 Convergence.Encounters.BattleEncounterParticipantSnapshot.TeamId.get -> Convergence.Content.ContentId
+Convergence.Encounters.BattleEncounterProgressPolicy
+Convergence.Encounters.BattleEncounterProgressPolicy.BattleEncounterProgressPolicy(int maximumScheduleTransitions) -> void
+Convergence.Encounters.BattleEncounterProgressPolicy.MaximumScheduleTransitions.get -> int
 Convergence.Encounters.BattleEncounterPresenceChangedEventPayload
 Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Encounters.BattleEncounterPresenceChangedEventPayload.ActorId.init -> void
@@ -1997,8 +2001,9 @@ Convergence.Encounters.BattleEncounterRunner.BattleEncounterRunner() -> void
 Convergence.Encounters.BattleEncounterRunner.Run(Convergence.Encounters.BattleEncounterRequest! request, Convergence.Encounters.BattleEncounterServices! services) -> Convergence.Encounters.BattleEncounterResult!
 Convergence.Encounters.BattleEncounterRunner.RunAsync(Convergence.Encounters.BattleEncounterRequest! request, Convergence.Encounters.BattleEncounterServices! services, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Convergence.Encounters.BattleEncounterResult!>
 Convergence.Encounters.BattleEncounterServices
-Convergence.Encounters.BattleEncounterServices.BattleEncounterServices(Convergence.Encounters.IBattleEncounterInitiativePolicy! initiative, Convergence.Encounters.IBattleEncounterSchedulePolicy! schedule, Convergence.Encounters.IBattleEncounterLifecyclePort! lifecycle, Convergence.Encounters.IBattleEncounterTurnHandler! turnHandler, Convergence.Encounters.IBattleEncounterCompletionPolicy! completion, System.Func<Convergence.Execution.IBattleTurnEconomy!>! turnEconomyFactory, Convergence.Execution.BattlePhaseProgressPolicy! phaseProgress, Convergence.Encounters.IBattleEncounterStateSynchronizer? synchronizer = null, Convergence.Encounters.IBattleEncounterEventSink? events = null) -> void
+Convergence.Encounters.BattleEncounterServices.BattleEncounterServices(Convergence.Encounters.IBattleEncounterInitiativePolicy! initiative, Convergence.Encounters.IBattleEncounterSchedulePolicy! schedule, Convergence.Encounters.IBattleEncounterLifecyclePort! lifecycle, Convergence.Encounters.IBattleEncounterTurnHandler! turnHandler, Convergence.Encounters.IBattleEncounterCompletionPolicy! completion, System.Func<Convergence.Execution.IBattleTurnEconomy!>! turnEconomyFactory, Convergence.Execution.BattlePhaseProgressPolicy! phaseProgress, Convergence.Encounters.BattleEncounterProgressPolicy! encounterProgress, Convergence.Encounters.IBattleEncounterStateSynchronizer? synchronizer = null, Convergence.Encounters.IBattleEncounterEventSink? events = null) -> void
 Convergence.Encounters.BattleEncounterServices.Completion.get -> Convergence.Encounters.IBattleEncounterCompletionPolicy!
+Convergence.Encounters.BattleEncounterServices.EncounterProgress.get -> Convergence.Encounters.BattleEncounterProgressPolicy!
 Convergence.Encounters.BattleEncounterServices.Events.get -> Convergence.Encounters.IBattleEncounterEventSink!
 Convergence.Encounters.BattleEncounterServices.Initiative.get -> Convergence.Encounters.IBattleEncounterInitiativePolicy!
 Convergence.Encounters.BattleEncounterServices.Lifecycle.get -> Convergence.Encounters.IBattleEncounterLifecyclePort!

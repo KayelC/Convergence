@@ -260,7 +260,8 @@ internal sealed class CleanTrainingAnnexDemoHost
                 executionServices,
                 lifecycle,
                 turnEconomy,
-                new AutomatedBattleTurnRestrictionResolver())
+                new AutomatedBattleTurnRestrictionResolver(),
+                new BattleEncounterProgressPolicy(4096))
             .RunAsync(
                 new AutomatedBattleRequest(
                     [echo, ashling],

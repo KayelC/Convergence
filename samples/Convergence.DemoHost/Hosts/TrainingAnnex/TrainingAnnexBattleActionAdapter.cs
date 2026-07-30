@@ -225,6 +225,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             new LastTeamStandingCompletionPolicy(),
             _turnEconomy.CreateEconomy,
             _turnEconomy.PhaseProgress,
+            new BattleEncounterProgressPolicy(4096),
             events: new TrainingAnnexTurnEconomyEventSink(_events, turnEconomys));
 
         await _events.PublishAsync(

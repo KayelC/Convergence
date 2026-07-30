@@ -62,7 +62,8 @@ public sealed class StatModifierExecutionIntegrationTests
                 turnHandler,
                 completion,
                 () => new StandardActionTurnEconomy(),
-                new BattlePhaseProgressPolicy(16, 4)));
+                new BattlePhaseProgressPolicy(16, 4),
+                new BattleEncounterProgressPolicy(256)));
 
         Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
         Assert.Equal([3, 2], completion.RemainingDurations);

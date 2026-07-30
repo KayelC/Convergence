@@ -2045,7 +2045,8 @@ public sealed class CatalogBattleRuntimeTests
                 new RestrictedPassTurnHandler(),
                 new LastTeamStandingCompletionPolicy(),
                 directEconomy.CreateEconomy,
-                directEconomy.PhaseProgress));
+                directEconomy.PhaseProgress,
+                new BattleEncounterProgressPolicy(4096)));
 
         Assert.Equal(AutomatedBattleOutcome.Draw, automatedResult.Outcome);
         Assert.Equal(BattleEncounterOutcome.Draw, directResult.Outcome);
@@ -2466,7 +2467,8 @@ public sealed class CatalogBattleRuntimeTests
                 Id("owner_turn_end"),
                 TestEncounterClocks.Standard(PlayerTeam, EnemyTeam)),
             turnEconomy ?? StandardTurnEconomy(),
-            restrictionResolver ?? new AutomatedBattleTurnRestrictionResolver());
+            restrictionResolver ?? new AutomatedBattleTurnRestrictionResolver(),
+            new BattleEncounterProgressPolicy(4096));
 
     private static BattleActionSelection PrepareSelection(
         ISkillExecutor executor,

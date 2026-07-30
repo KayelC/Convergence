@@ -215,7 +215,8 @@ internal sealed class CleanBattleDemoHost
             services,
             lifecycle,
             turnEconomy,
-            new AutomatedBattleTurnRestrictionResolver());
+            new AutomatedBattleTurnRestrictionResolver(),
+            new BattleEncounterProgressPolicy(4096));
         AutomatedBattleResult battle = await runner.RunAsync(
             new AutomatedBattleRequest(
                 [frostResult.RequireActor(), emberResult.RequireActor()],

@@ -38,7 +38,8 @@ public enum BattleEncounterFaultCode
     CommandExecutionFaulted = 11,
     CommandRejected = 12,
     ScheduleExecutionFailed = 13,
-    ScheduleTransitionInvalid = 14
+    ScheduleTransitionInvalid = 14,
+    ScheduleTransitionLimitExceeded = 15
 }
 
 public sealed record BattleEncounterParticipant
@@ -656,6 +657,7 @@ public sealed class BattleEncounterServices
         IBattleEncounterCompletionPolicy completion,
         Func<IBattleTurnEconomy> turnEconomyFactory,
         BattlePhaseProgressPolicy phaseProgress,
+        BattleEncounterProgressPolicy encounterProgress,
         IBattleEncounterStateSynchronizer? synchronizer = null,
         IBattleEncounterEventSink? events = null)
     {
@@ -666,6 +668,7 @@ public sealed class BattleEncounterServices
         Completion = completion ?? throw new ArgumentNullException(nameof(completion));
         TurnEconomyFactory = turnEconomyFactory ?? throw new ArgumentNullException(nameof(turnEconomyFactory));
         PhaseProgress = phaseProgress ?? throw new ArgumentNullException(nameof(phaseProgress));
+        EncounterProgress = encounterProgress ?? throw new ArgumentNullException(nameof(encounterProgress));
         Synchronizer = synchronizer ?? NoopBattleEncounterStateSynchronizer.Instance;
         Events = events ?? NoopBattleEncounterEventSink.Instance;
     }
@@ -677,6 +680,7 @@ public sealed class BattleEncounterServices
     public IBattleEncounterCompletionPolicy Completion { get; }
     public Func<IBattleTurnEconomy> TurnEconomyFactory { get; }
     public BattlePhaseProgressPolicy PhaseProgress { get; }
+    public BattleEncounterProgressPolicy EncounterProgress { get; }
     public IBattleEncounterStateSynchronizer Synchronizer { get; }
     public IBattleEncounterEventSink Events { get; }
 }
@@ -749,6 +753,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         int completedRounds = 0;
         bool battleStarted = false;
         bool battleEndLifecycleAttempted = false;
+        int scheduleTransitionCount = 0;
         IReadOnlyList<ContentId> teamOrder = Array.Empty<ContentId>();
 
         T InvokePort<T>(
@@ -986,6 +991,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         BattleEncounterScheduleCursor StartSchedule()
         {
+            ConsumeScheduleTransitionBudget();
             var scheduleRequest = new BattleEncounterScheduleStartRequest(
                 CaptureScheduleParticipants(request.Participants),
                 teamOrder,
@@ -1012,6 +1018,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         {
             ArgumentNullException.ThrowIfNull(cursor);
             ArgumentNullException.ThrowIfNull(outcome);
+            ConsumeScheduleTransitionBudget(actorId);
             BattleEncounterScheduleStep completedStep = cursor.Step
                 ?? throw new InvalidOperationException(
                     "A completed encounter schedule cannot be advanced.");
@@ -1031,6 +1038,27 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 BattleEncounterFaultCode.ScheduleTransitionInvalid,
                 "schedule-transition-validation",
                 () => cursor.Advance(services.Schedule, transition),
+                actorId);
+        }
+
+        void ConsumeScheduleTransitionBudget(RuntimeInstanceId? actorId = null)
+        {
+            InvokePortAction(
+                BattleEncounterFaultCode.ScheduleTransitionLimitExceeded,
+                "schedule-progress",
+                () =>
+                {
+                    if (scheduleTransitionCount >=
+                        services.EncounterProgress.MaximumScheduleTransitions)
+                    {
+                        throw new InvalidOperationException(
+                            "The encounter schedule exceeded the configured structural " +
+                            $"transition limit of " +
+                            $"{services.EncounterProgress.MaximumScheduleTransitions}.");
+                    }
+
+                    scheduleTransitionCount = checked(scheduleTransitionCount + 1);
+                },
                 actorId);
         }
 

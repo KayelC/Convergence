@@ -48,6 +48,28 @@ public enum BattleEncounterScheduleDiagnosticCode
     ImmediateRepeatLimitExceeded = 10
 }
 
+/// <summary>
+/// Bounds accepted structural transitions across one encounter schedule.
+/// This guard prevents a malformed custom scheduler from remaining forever in
+/// round or phase boundaries without opening a command window or completing.
+/// </summary>
+public sealed class BattleEncounterProgressPolicy
+{
+    public BattleEncounterProgressPolicy(int maximumScheduleTransitions)
+    {
+        if (maximumScheduleTransitions <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumScheduleTransitions),
+                "The maximum schedule-transition count must be positive.");
+        }
+
+        MaximumScheduleTransitions = maximumScheduleTransitions;
+    }
+
+    public int MaximumScheduleTransitions { get; }
+}
+
 /// <summary>Explains why an encounter scheduling policy rejected a transition.</summary>
 public sealed class BattleEncounterScheduleDiagnostic
 {

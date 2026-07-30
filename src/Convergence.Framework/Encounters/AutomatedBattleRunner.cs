@@ -416,6 +416,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
     private readonly IBattleEncounterLifecyclePort _lifecycle;
     private readonly BattleTurnEconomyRuleset _turnEconomy;
     private readonly IAutomatedBattleTurnRestrictionResolver _restrictionResolver;
+    private readonly BattleEncounterProgressPolicy _encounterProgress;
 
     public AutomatedBattleRunner(
         ISkillExecutor executor,
@@ -423,7 +424,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         BattleExecutionServices services,
         IBattleEncounterLifecyclePort lifecycle,
         BattleTurnEconomyRuleset turnEconomy,
-        IAutomatedBattleTurnRestrictionResolver restrictionResolver)
+        IAutomatedBattleTurnRestrictionResolver restrictionResolver,
+        BattleEncounterProgressPolicy encounterProgress)
     {
         _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         _selector = selector ?? throw new ArgumentNullException(nameof(selector));
@@ -431,6 +433,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         _lifecycle = lifecycle ?? throw new ArgumentNullException(nameof(lifecycle));
         _turnEconomy = turnEconomy ?? throw new ArgumentNullException(nameof(turnEconomy));
         _restrictionResolver = restrictionResolver ?? throw new ArgumentNullException(nameof(restrictionResolver));
+        _encounterProgress = encounterProgress ?? throw new ArgumentNullException(nameof(encounterProgress));
     }
 
     /// <summary>
@@ -478,7 +481,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             turnHandler,
             new LastTeamStandingCompletionPolicy(),
             _turnEconomy.CreateEconomy,
-            _turnEconomy.PhaseProgress);
+            _turnEconomy.PhaseProgress,
+            _encounterProgress);
         BattleEncounterResult result = await new BattleEncounterRunner().RunAsync(
                 new BattleEncounterRequest(
                     participants,
