@@ -193,6 +193,13 @@ public sealed class BattleEncounterScheduleStartRequest
                 nameof(participants));
         }
 
+        if (snapshot.Any(participant => participant is null))
+        {
+            throw new ArgumentException(
+                "Encounter schedule participants cannot contain null entries.",
+                nameof(participants));
+        }
+
         if (snapshot.Select(participant => participant.InstanceId).Distinct().Count() != snapshot.Count)
         {
             throw new ArgumentException(

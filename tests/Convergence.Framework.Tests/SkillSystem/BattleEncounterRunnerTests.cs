@@ -467,6 +467,44 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void EncounterRequest_RejectsMalformedHostInputAtConstruction()
+    {
+        BattleEncounterParticipant player = Participant("request_player", PlayerTeam);
+        ContentId invalidId = default;
+
+        Assert.Throws<ArgumentNullException>(() =>
+            new BattleEncounterRequest(null!, Battle, Kind, Moon, 1));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleEncounterRequest([], Battle, Kind, Moon, 1));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleEncounterRequest([player, null!], Battle, Kind, Moon, 1));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleEncounterRequest([player], invalidId, Kind, Moon, 1));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleEncounterRequest([player], Battle, invalidId, Moon, 1));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleEncounterRequest([player], Battle, Kind, invalidId, 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new BattleEncounterRequest([player], Battle, Kind, Moon, 0));
+    }
+
+    [Fact]
+    public void EncounterRequest_PreservesDuplicateIdsForTheRunnersTypedFault()
+    {
+        BattleEncounterParticipant first = Participant("request_duplicate", PlayerTeam);
+        BattleEncounterParticipant second = Participant("request_duplicate", EnemyTeam);
+
+        var request = new BattleEncounterRequest(
+            [first, second],
+            Battle,
+            Kind,
+            Moon,
+            1);
+
+        Assert.Equal([first, second], request.Participants);
+    }
+
+    [Fact]
     public void Runner_ResultCapturesImmutableFinalParticipantSnapshots()
     {
         BattleEncounterParticipant player = Participant("snapshot_player", PlayerTeam);

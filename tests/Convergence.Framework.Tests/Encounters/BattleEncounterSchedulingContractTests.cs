@@ -45,10 +45,16 @@ public sealed class BattleEncounterSchedulingContractTests
     }
 
     [Fact]
-    public void StartRequest_RejectsDuplicateActorsAndIncompleteTeamOrder()
+    public void StartRequest_RejectsMalformedParticipantsActorsAndTeamOrder()
     {
         BattleEncounterScheduleParticipantSnapshot player = Participant(Player, PlayerTeam);
 
+        Assert.Throws<ArgumentNullException>(() =>
+            new BattleEncounterScheduleStartRequest(null!, [PlayerTeam], 1));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleEncounterScheduleStartRequest([], [PlayerTeam], 1));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleEncounterScheduleStartRequest([player, null!], [PlayerTeam], 1));
         Assert.Throws<ArgumentException>(() =>
             new BattleEncounterScheduleStartRequest([player, player], [PlayerTeam], 1));
         Assert.Throws<ArgumentException>(() =>
@@ -56,6 +62,10 @@ public sealed class BattleEncounterSchedulingContractTests
                 [player, Participant(Enemy, EnemyTeam)],
                 [PlayerTeam],
                 1));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleEncounterScheduleStartRequest([player], [], 1));
+        Assert.Throws<ArgumentException>(() =>
+            new BattleEncounterScheduleStartRequest([player], [default], 1));
         Assert.Throws<ArgumentException>(() =>
             new BattleEncounterScheduleStartRequest([player], [PlayerTeam, PlayerTeam], 1));
         Assert.Throws<ArgumentOutOfRangeException>(() =>
