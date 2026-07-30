@@ -374,7 +374,8 @@ At each applicable checkpoint:
 |---|---|---|
 | O6-R1 | Complete | This approved source review is indexed by the active review and roadmap documents. |
 | O6-R2 | Complete | The executable capability matrix records `encounter_orchestration` as `partial`, names all four approved gaps, and the active matrix summaries report 22 complete, 1 partial, and 2 deferred capabilities. |
-| O6-R3 through O6-R13 | Pending | Runtime, documentation, and independent closure work has not yet been promoted by this record. |
+| O6-R3 | Complete | Immutable scheduling start/advance requests, detached participant projections, policy-owned state, structural steps, command outcomes, stable rejection diagnostics, and transition validation establish the host-extensible scheduling boundary without granting it action or turn-economy mutation authority. Eight focused contract tests and the existing encounter suite verify collection immutability, graph identity, sequence continuity, and outcome-shape rejection. |
+| O6-R4 through O6-R13 | Pending | Scheduler implementations, runner integration, lifecycle/event/completion corrections, automated-battle modernization, documentation, and independent closure review have not yet been promoted by this record. |
 
 ## Closure Rule
 
