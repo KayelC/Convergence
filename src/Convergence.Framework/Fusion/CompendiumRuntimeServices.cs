@@ -834,6 +834,13 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
                 $"Current knowledge contains a duplicate key for {duplicate.KeyDescription}.",
                 duplicate.EntityId,
                 duplicate.Index)));
+        currentDiagnostics.AddRange(PersistentBattleKnowledgeTransitionService
+            .ValidateSnapshot(current, isDiscovery: false)
+            .Where(diagnostic => !HasDedicatedCurrentKnowledgeDiagnostic(diagnostic.Code))
+            .Select(diagnostic => new FamiliarKnowledgeImportDiagnostic(
+                FamiliarKnowledgeImportDiagnosticCode.KnowledgeTransitionRejected,
+                $"{diagnostic.Path}: {diagnostic.Message}",
+                default)));
         if (currentDiagnostics.Count > 0)
         {
             return new FamiliarKnowledgeImportResult(
@@ -929,11 +936,6 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
             imported.Add(entityId);
         }
 
-        if (imported.Count == 0)
-        {
-            return new FamiliarKnowledgeImportResult(current, current, diagnostics: diagnostics);
-        }
-
         BattleKnowledgeTransitionResult transition = _transitions.Apply(
             new BattleKnowledgeTransitionRequest(
                 current,
@@ -959,6 +961,13 @@ public sealed class FamiliarEntityKnowledgeService : IFamiliarEntityKnowledgeSer
         BattleAnalysisField.ElementalAffinities or
         BattleAnalysisField.AilmentResistances or
         BattleAnalysisField.InstantDeathResistances;
+
+    private static bool HasDedicatedCurrentKnowledgeDiagnostic(
+        BattleKnowledgeTransitionDiagnosticCode code) => code is
+        BattleKnowledgeTransitionDiagnosticCode.InvalidEntityId or
+        BattleKnowledgeTransitionDiagnosticCode.InvalidAilmentId or
+        BattleKnowledgeTransitionDiagnosticCode.DuplicateCurrentEntry or
+        BattleKnowledgeTransitionDiagnosticCode.DuplicateAnalyzedDefenseEntity;
 
     private static void ValidateKnowledgeIdentifiers(
         RuntimeKnowledgeSnapshot knowledge,

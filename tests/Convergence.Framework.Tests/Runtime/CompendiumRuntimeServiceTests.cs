@@ -1,3 +1,4 @@
+using System.Reflection;
 using Convergence.Content;
 using Convergence.Catalog;
 using Convergence.Execution;
@@ -772,6 +773,91 @@ public sealed class CompendiumRuntimeServiceTests
     }
 
     [Fact]
+    public void FamiliarKnowledgeImport_RejectsEveryMalformedCurrentDomainBeforeNoOpPaths()
+    {
+        TestContext context = CreateContext();
+        var validElemental = new RuntimeElementalAffinityKnowledgeSnapshot(
+            context.Entity.Id,
+            DamageElement.Ice,
+            ElementalAffinity.Weak);
+        var validAilment = new RuntimeAilmentResistanceKnowledgeSnapshot(
+            context.Entity.Id,
+            context.Ailment.Id,
+            ResistanceLevel.Normal);
+        var validInstantDeath = new RuntimeInstantDeathResistanceKnowledgeSnapshot(
+            context.Entity.Id,
+            InstantDeathChannel.Light,
+            ResistanceLevel.Normal);
+        var validAnalyzedDefense = new RuntimeAnalyzedDefenseKnowledgeSnapshot(
+            context.Entity.Id,
+            [BattleAnalysisField.ElementalAffinities]);
+        RuntimeAnalyzedDefenseKnowledgeSnapshot undefinedAnalyzedDefense = CloneWithProperty(
+            validAnalyzedDefense,
+            nameof(RuntimeAnalyzedDefenseKnowledgeSnapshot.DisclosedFields),
+            (IReadOnlyList<BattleAnalysisField>)Array.AsReadOnly(
+                [Undefined<BattleAnalysisField>()]));
+        RuntimeAnalyzedDefenseKnowledgeSnapshot nonDefenseAnalysis = CloneWithProperty(
+            validAnalyzedDefense,
+            nameof(RuntimeAnalyzedDefenseKnowledgeSnapshot.DisclosedFields),
+            (IReadOnlyList<BattleAnalysisField>)Array.AsReadOnly(
+                [BattleAnalysisField.CurrentHp]));
+        RuntimeKnowledgeSnapshot[] malformedCases =
+        [
+            new(elementalAffinities:
+                [validElemental with { Element = Undefined<DamageElement>() }]),
+            new(elementalAffinities:
+                [validElemental with { Affinity = Undefined<ElementalAffinity>() }]),
+            new(elementalAffinities:
+                [validElemental with { Element = DamageElement.Almighty }]),
+            new(ailmentResistances:
+                [validAilment with { Resistance = Undefined<ResistanceLevel>() }]),
+            new(instantDeathResistances:
+                [validInstantDeath with { Channel = Undefined<InstantDeathChannel>() }]),
+            new(instantDeathResistances:
+                [validInstantDeath with { Resistance = Undefined<ResistanceLevel>() }]),
+            new(
+                elementalAffinities: null,
+                ailmentResistances: null,
+                instantDeathResistances: null,
+                analyzedDefenses: [undefinedAnalyzedDefense]),
+            new(
+                elementalAffinities: null,
+                ailmentResistances: null,
+                instantDeathResistances: null,
+                analyzedDefenses: [nonDefenseAnalysis])
+        ];
+
+        foreach (RuntimeKnowledgeSnapshot malformed in malformedCases)
+        {
+            var failIfCalled = new FailIfCalledFamiliarKnowledgePolicy();
+            AssertMalformedCurrentKnowledgeRejected(
+                new FamiliarEntityKnowledgeService(context.Catalog, failIfCalled).Import(
+                    malformed,
+                    [context.Entity.Id],
+                    FamiliarKnowledgeImportSource.Acquisition),
+                malformed);
+            Assert.Equal(0, failIfCalled.CallCount);
+
+            AssertMalformedCurrentKnowledgeRejected(
+                new FamiliarEntityKnowledgeService(
+                    context.Catalog,
+                    new DisabledFamiliarKnowledgeImportPolicy()).Import(
+                        malformed,
+                        [context.Entity.Id],
+                        FamiliarKnowledgeImportSource.Acquisition),
+                malformed);
+            AssertMalformedCurrentKnowledgeRejected(
+                FamiliarKnowledgeService(context).Import(malformed, []),
+                malformed);
+            AssertMalformedCurrentKnowledgeRejected(
+                FamiliarKnowledgeService(context).Import(
+                    malformed,
+                    [Id("missing.pack:entity")]),
+                malformed);
+        }
+    }
+
+    [Fact]
     public void FamiliarKnowledgeImport_PolicyCanDistinguishAcquisitionFromRegistration()
     {
         TestContext context = CreateContext();
@@ -824,6 +910,19 @@ public sealed class CompendiumRuntimeServiceTests
 
     private static FamiliarEntityKnowledgeService FamiliarKnowledgeService(TestContext context) =>
         new(context.Catalog, new StandardFamiliarKnowledgeImportPolicy());
+
+    private static void AssertMalformedCurrentKnowledgeRejected(
+        FamiliarKnowledgeImportResult result,
+        RuntimeKnowledgeSnapshot expectedCurrent)
+    {
+        Assert.False(result.IsSuccess);
+        Assert.Same(expectedCurrent, result.Before);
+        Assert.Same(expectedCurrent, result.After);
+        Assert.Empty(result.ImportedEntityIds);
+        Assert.Equal(
+            FamiliarKnowledgeImportDiagnosticCode.KnowledgeTransitionRejected,
+            Assert.Single(result.Diagnostics).Code);
+    }
 
     private static TestContext CreateContext(
         bool compendiumEligible = true,
@@ -963,6 +1062,29 @@ public sealed class CompendiumRuntimeServiceTests
 
     private static ContentId Id(string value) => ContentId.Parse(value);
 
+    private static TSnapshot CloneWithProperty<TSnapshot, TValue>(
+        TSnapshot source,
+        string propertyName,
+        TValue value)
+        where TSnapshot : class
+    {
+        MethodInfo memberwiseClone = typeof(object).GetMethod(
+            "MemberwiseClone",
+            BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var clone = (TSnapshot)memberwiseClone.Invoke(source, null)!;
+        FieldInfo field = typeof(TSnapshot).GetField(
+            $"<{propertyName}>k__BackingField",
+            BindingFlags.Instance | BindingFlags.NonPublic) ??
+            throw new InvalidOperationException(
+                $"Snapshot property '{typeof(TSnapshot).Name}.{propertyName}' has no backing field.");
+        field.SetValue(clone, value);
+        return clone;
+    }
+
+    private static TEnum Undefined<TEnum>()
+        where TEnum : struct, Enum =>
+        (TEnum)Enum.ToObject(typeof(TEnum), 999);
+
     private sealed record TestContext(
         EntityDefinition Entity,
         AilmentDefinition Ailment,
@@ -1025,6 +1147,18 @@ public sealed class CompendiumRuntimeServiceTests
         public IReadOnlyList<BattleAnalysisField> SelectDefenseFields(
             FamiliarKnowledgeImportPolicyRequest request) =>
             [BattleAnalysisField.CurrentHp];
+    }
+
+    private sealed class FailIfCalledFamiliarKnowledgePolicy : IFamiliarKnowledgeImportPolicy
+    {
+        public int CallCount { get; private set; }
+
+        public IReadOnlyList<BattleAnalysisField> SelectDefenseFields(
+            FamiliarKnowledgeImportPolicyRequest request)
+        {
+            CallCount++;
+            throw new InvalidOperationException("Policy must not run for malformed current knowledge.");
+        }
     }
 
     private sealed class TestInitializationPolicy : IBattleActorInitializationPolicy
