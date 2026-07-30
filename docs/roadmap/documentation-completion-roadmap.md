@@ -460,6 +460,16 @@ implemented. The dedicated
 [technical](../technical/encounter-orchestration-runtime.md) pages remain
 `existing_unreviewed` until O6-R13 independently rereads current source,
 cross-checks all three audiences, and passes the complete release gate.
+The resulting
+[independent closure audit](../reviews/encounter-orchestration-order-6-independent-closure-audit-2026-07-30.md)
+passed a 278-test focused baseline but found six reachable contract defects:
+unbounded structural scheduling, unknown schedule-team acceptance, live actor
+leakage into decision policies, clone-bypassable event invariants,
+cancellation-nonatomic lifecycle clocks, and late malformed-request failures.
+O6-R13A through O6-R13G now govern those isolated corrections and a fresh
+closure review. The capability remains `partial`, and all three audience
+entries remain `existing_unreviewed`, until that work and the complete gate
+finish.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored

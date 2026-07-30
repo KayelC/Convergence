@@ -76,6 +76,7 @@ or implementation authority.
 - [Battle Knowledge Order 5 R27 Final Closure Review, 30 July 2026](battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
 - [Battle Knowledge Order 5 Owner-Closure Audit, 30 July 2026](battle-knowledge-order-5-owner-closure-audit-2026-07-30.md)
 - [Encounter Orchestration Order 6 Source Review And Approved Roadmap, 30 July 2026](encounter-orchestration-order-6-source-review-2026-07-30.md)
+- [Encounter Orchestration Order 6 Independent Closure Audit, 30 July 2026](encounter-orchestration-order-6-independent-closure-audit-2026-07-30.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.
