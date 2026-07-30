@@ -117,4 +117,8 @@ ordered O6-R1 through O6-R13 checkpoints are recorded in the
 O6-R1 through O6-R12 are now implemented. Both supplied schedulers, lifecycle
 reconciliation, structural events, terminal validation, cancellation,
 canonical automated execution, and the three audience documents are present;
-O6-R13 remains the independent closure gate.
+O6-R13A through O6-R13K corrected every defect found by the independent
+closure passes. The
+[O6-R13L final closure review](../reviews/encounter-orchestration-order-6-final-closure-review-2026-07-30.md)
+then reconciled current source, tests, and all three audience documents,
+returning `encounter_orchestration` to `complete`.

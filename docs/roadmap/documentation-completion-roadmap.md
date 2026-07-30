@@ -471,6 +471,17 @@ closure review. The capability remains `partial`, and all three audience
 entries remain `existing_unreviewed`, until that work and the complete gate
 finish.
 
+O6-R13A through O6-R13K subsequently closed the scheduler-liveness, schedule
+identity, decision-policy isolation, event-shape and event-identity,
+lifecycle-atomicity, request-boundary, and automated-outcome defects found by
+the independent audits. O6-R13L then independently reread current source,
+focused tests, and all three audience documents. The
+[final closure review](../reviews/encounter-orchestration-order-6-final-closure-review-2026-07-30.md)
+found no unresolved realistic reachable defect and passed the complete local
+gate. Order 6 is formally closed. Its mechanics, developer, and technical
+entries are `reviewed`; the matrix now records 30 reviewed, 24
+`existing_unreviewed`, 14 missing, and 7 `not_applicable` entries.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

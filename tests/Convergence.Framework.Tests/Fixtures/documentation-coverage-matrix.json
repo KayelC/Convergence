@@ -209,19 +209,19 @@
     {
       "id": "encounter_orchestration",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "The dedicated mechanics page covers both supplied schedulers, lifecycle order, cancellation, outcomes, and canonical evidence; independent closure review remains."
+        "reason": "O6-R13L independently reconciled the player-visible scheduler, lifecycle, liveness, cancellation, outcome, and typed-evidence rules with current source."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "The integration guide covers scheduling, command, lifecycle, completion, event, cancellation, fault, automated, and Godot composition; independent closure review remains."
+        "reason": "O6-R13L independently verified the required composition, two liveness policies, event identity boundary, lifecycle authority, automated outcomes, and Godot integration guidance."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "The technical page traces scheduler protocol, lifecycle transactions, reconciliation, structural event order, result snapshots, and fault containment; independent closure review remains."
+        "reason": "O6-R13L independently traced the scheduler protocol, transaction and reconciliation boundaries, structural event and identity authority, terminal mapping, cancellation, and automated composition."
       }
     },
     {

@@ -121,6 +121,14 @@ Rejected scheduling transitions become `ScheduleTransitionInvalid`; policy
 exceptions become `ScheduleExecutionFailed`. Neither route executes another
 command.
 
+Accepted scheduler transitions increment one encounter-wide counter before the
+next step is interpreted. `BattleEncounterProgressPolicy` faults the encounter
+before accepting a transition that would exceed its configured maximum. This
+closes structural loops that can cycle through round or phase boundaries
+without opening a command window. It is independent from
+`BattlePhaseProgressPolicy`, which bounds commands and consecutive free actions
+only inside the current phase.
+
 ### Supplied Team Scheduler
 
 `TeamPhaseRoundRobinBattleEncounterSchedulePolicy` stores team index, actor
@@ -197,6 +205,13 @@ guards the boundaries it owns:
 Action-level atomicity remains owned by `BattleActionExecutor` and its staged
 actor graph.
 
+The supplied `BattleStatusEncounterLifecyclePort` retains one committed
+sequence counter per lifecycle event ID. It is mutable lifecycle authority, not
+a stateless singleton: overlapping encounters must not share one instance.
+Sequential reuse deliberately continues the same event-keyed sequence stream.
+Replacing the port starts a new clock stream and must coincide with a lifecycle
+boundary that does not retain modifier cursors from the previous authority.
+
 ## Reconciliation Fixed Point
 
 `ReconcileAsync` runs after:
@@ -260,6 +275,15 @@ Ports may publish only command, action, effect, passive, status, resource,
 presence, and host-request events. Structural event forgery is rejected before
 the returned batch is added.
 
+Port evidence is also correlated with the frozen participant graph before
+publication. Top-level and nested actor or target IDs in effect, damage,
+resource, knowledge, analysis, passive, and lifecycle evidence must identify
+encounter participants. Command evidence must identify the scheduled actor, and
+presence evidence must use that participant's encounter team. A combat-profile
+source ID is retained as provenance and is not treated as a deployed routing
+target, allowing a Vessel to derive its profile from a Hosted Entity outside
+the encounter graph.
+
 ## Terminal Shape Validation
 
 Completion and command terminal outputs are validated before acceptance:
@@ -317,6 +341,15 @@ participant from the result.
 `AutomatedBattleRunner.RunAsync` adapts catalog actors to
 `BattleEncounterParticipant`, supplies the canonical runner services, and
 returns canonical events directly.
+
+`AutomatedBattleRequest` rejects an empty or null-containing participant set,
+invalid context or battle-kind IDs, an invalid optional moon-phase ID, and a
+non-positive round limit at construction. Duplicate runtime IDs intentionally
+flow to the canonical encounter runner so callers receive its typed
+`DuplicateParticipantInstanceId` fault.
+
+The automated result preserves every canonical terminal outcome:
+`Victory`, `Defeat`, `Escape`, `Draw`, `Faulted`, and `Cancelled`.
 
 Its deterministic selector:
 

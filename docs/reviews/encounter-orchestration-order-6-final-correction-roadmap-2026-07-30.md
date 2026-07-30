@@ -4,7 +4,7 @@
 **Capability:** `encounter_orchestration`  
 **Review basis:** fresh inspection of current active source, tests, and the
 three encounter-orchestration audience documents  
-**Status:** corrections required before closure
+**Status:** complete through O6-R13L
 
 ## Purpose
 
@@ -147,15 +147,15 @@ Each correction receives its own focused tests, review, and commit.
 
 | Checkpoint | Work | Exit condition |
 |---|---|---|
-| O6-R13H | Preflight turn-start lifecycle events before commit. | Malformed status evidence returns `LifecycleExecutionFailed`, leaves actors and clock checkpoints unchanged, and does not escape as a raw exception. |
-| O6-R13I | Correlate all port events with the frozen encounter graph. | Unknown actors or targets, mismatched presence teams, wrong command actors, and impossible rejection statuses are rejected before publication. |
-| O6-R13J | Harden `AutomatedBattleRequest`. | Empty, null, invalid-ID, and invalid-round inputs fail at construction; duplicate IDs still reach the canonical typed runner fault. |
-| O6-R13K | Preserve all automated terminal outcomes. | Escape, cancellation, draw, victory, defeat, and fault map without semantic loss while existing enum values remain stable. |
-| O6-R13L | Reconcile documentation and perform one final fresh review. | Source, tests, API baseline, all three audience pages, matrices, and the full gate agree. |
+| O6-R13H | Complete: preflight turn-start lifecycle events before commit. | Malformed status evidence returns `LifecycleExecutionFailed`, leaves actors and clock checkpoints unchanged, and does not escape as a raw exception. |
+| O6-R13I | Complete: correlate all port events with the frozen encounter graph. | Unknown actors or targets, mismatched presence teams, wrong command actors, and impossible rejection statuses are rejected before publication. |
+| O6-R13J | Complete: harden `AutomatedBattleRequest`. | Empty, null, invalid-ID, and invalid-round inputs fail at construction; duplicate IDs still reach the canonical typed runner fault. |
+| O6-R13K | Complete: preserve all automated terminal outcomes. | Escape, cancellation, draw, victory, defeat, and fault map without semantic loss while existing enum values remain stable. |
+| O6-R13L | Complete: reconcile documentation and perform one final fresh review. | Source, tests, API baseline, all three audience pages, matrices, and the full gate agree. |
 
 ## Closure Rule
 
-Order 6 remains open until O6-R13H through O6-R13L are complete. The capability
-remains `partial`, and its documentation coverage remains
-`existing_unreviewed`, until a fresh post-correction read finds no realistic
-reachable defect and the complete local release gate passes.
+O6-R13H through O6-R13L are complete. The fresh post-correction review found no
+unresolved realistic reachable defect, the complete local release gate passed,
+`encounter_orchestration` is `complete`, and its three audience entries are
+`reviewed`.

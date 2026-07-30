@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-27 existing_unreviewed, 14 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -178,17 +178,20 @@ found no unresolved reachable defect. The audience entries remain reviewed and
 Order 6 now has dedicated mechanics, developer, and technical encounter
 orchestration pages. They trace the implemented team-phase and Agility
 schedulers, lifecycle transactions, reconciliation, cancellation, terminal
-validation, structural events, and canonical automated runner. All three remain
-`existing_unreviewed` until O6-R13 independently rereads current source and
-documentation.
+validation, structural events, frozen-graph event identity, and canonical
+automated runner. O6-R13L independently reread current source, tests, and all
+three pages after the correction sequence. The
+[final closure review](../reviews/encounter-orchestration-order-6-final-closure-review-2026-07-30.md)
+found no unresolved realistic reachable defect and promoted all three entries
+to `reviewed`.
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-27 existing_unreviewed, 14 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 27 |
-| `existing_unreviewed` | 27 |
+| `reviewed` | 30 |
+| `existing_unreviewed` | 24 |
 | `missing` | 14 |
 | `not_applicable` | 7 |
 

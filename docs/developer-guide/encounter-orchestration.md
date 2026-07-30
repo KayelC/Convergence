@@ -22,6 +22,7 @@ Create a `BattleEncounterServices` instance with:
 | `IBattleEncounterCompletionPolicy` | Evaluates terminal state after every reconciliation boundary. |
 | `Func<IBattleTurnEconomy>` | Creates a fresh economy for each scheduled phase. |
 | `BattlePhaseProgressPolicy` | Bounds total commands and consecutive free actions per phase. |
+| `BattleEncounterProgressPolicy` | Bounds accepted structural scheduler transitions across the encounter. |
 | `IBattleEncounterStateSynchronizer` | Optional host adapter for synchronizing external state with canonical participants. |
 | `IBattleEncounterEventSink` | Optional asynchronous destination for animation, UI, logs, or telemetry. |
 
@@ -42,6 +43,8 @@ var services = new BattleEncounterServices(
     phaseProgress: new BattlePhaseProgressPolicy(
         maximumCommands: 256,
         maximumConsecutiveFreeActions: 32),
+    encounterProgress: new BattleEncounterProgressPolicy(
+        maximumScheduleTransitions: 4096),
     synchronizer: NoopBattleEncounterStateSynchronizer.Instance,
     events: eventSink);
 
@@ -118,6 +121,12 @@ revision continuity, step sequence, and legal step/outcome pairings. An invalid
 transition becomes `ScheduleTransitionInvalid`; an exception becomes
 `ScheduleExecutionFailed`.
 
+`BattleEncounterProgressPolicy` is a separate encounter-wide liveness guard.
+It limits accepted scheduler transitions, including round and phase boundaries
+that do not open a command window. `BattlePhaseProgressPolicy` instead limits
+commands and consecutive free actions inside one phase. Supply both policies:
+neither can replace the other.
+
 ## Implementing The Turn Handler
 
 `IBattleEncounterTurnHandler.ExecuteTurnAsync` receives:
@@ -148,6 +157,12 @@ The handler must not mutate the encounter economy. It returns
 For the standard status and passive module, use
 `BattleStatusEncounterLifecyclePort`. It stages lifecycle operations and
 commits only after cancellation and returned-event validation.
+
+The standard port also retains committed lifecycle sequence counters. Do not
+share one instance between concurrently running encounters. Give each active
+encounter exclusive access to its sequence authority. Sequential reuse
+deliberately continues that authority; replacing it deliberately starts a new
+clock stream and must agree with the lifetime of retained modifier state.
 
 The runner calls lifecycle at these boundaries:
 
@@ -197,6 +212,14 @@ Returning a runner-owned kind such as `TurnStarted`, `TurnEconomyChanged`,
 `BattleFaulted`, or `BattleEnded` faults the encounter. This preserves one
 auditable source for structural ordering.
 
+Every runtime actor or target ID in a port event must belong to the encounter's
+frozen participant graph, including IDs nested inside effect, damage, resource,
+knowledge, analysis, passive, and lifecycle evidence. Command events must name
+the actor who owns the current command window, and presence-change events must
+report that actor's actual encounter team. Combat-profile source identity is
+provenance rather than a routing target, so a Vessel may still identify a
+non-deployed Hosted Entity as its profile source.
+
 An event-sink exception becomes `EventPublicationFailed`. During fault
 finalization, a second sink failure stops further publication but preserves
 the immutable returned event evidence.
@@ -242,6 +265,11 @@ canonical encounter runner. It:
 - applies the configured lifecycle and turn economy;
 - returns the complete `IReadOnlyList<BattleEncounterEvent>`.
 
+Its top-level outcome preserves the canonical result exactly as `Victory`,
+`Defeat`, `Escape`, `Draw`, `Faulted`, or `Cancelled`. Hosts do not need to
+infer terminal meaning from event text or collapse escape/cancellation into a
+draw.
+
 `DeterministicBattleActionSelector` uses authored skill order, assessments, and
 available knowledge. It is reference behavior, not a full game AI.
 
@@ -265,11 +293,12 @@ after `Victory`, `Escape`, or `Draw` remain host-owned.
 - Runtime participant IDs are unique.
 - Initiative returns an exact team permutation.
 - Scheduler and turn economy are selected independently.
+- Phase and encounter progress policies are both configured.
 - Command Back remains inside the host selection loop.
 - The handler returns consumption but never applies it.
 - Lifecycle and command events use only port-owned kinds.
+- Port event identities belong to the frozen participant graph.
 - The sink consumes typed payloads, not debug text.
 - UI and engine code awaits `RunAsync`.
 - Rewards and recruitment run after the encounter result through their own
   services.
-

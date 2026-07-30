@@ -301,6 +301,12 @@ public sealed class DocumentationFoundationTests
         string technical = File.ReadAllText(
             RepositoryPath("docs", "technical", "encounter-orchestration-runtime.md"))
             .ReplaceLineEndings(" ");
+        string closureReview = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "encounter-orchestration-order-6-final-closure-review-2026-07-30.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -311,6 +317,7 @@ public sealed class DocumentationFoundationTests
             "**Menu Back:**",
             "**Typed encounter cancellation:**",
             "**Operational cancellation:**",
+            "encounter-wide structural-transition bound",
             "last round that was reached",
             "number of rounds whose round-end lifecycle fully committed"
         ];
@@ -326,6 +333,8 @@ public sealed class DocumentationFoundationTests
             "Do not return `Cancelled` for submenu Back.",
             "The handler must not mutate the encounter economy.",
             "The runner owns structural events.",
+            "BattleEncounterProgressPolicy",
+            "frozen participant graph",
             "OperationCanceledException",
             "AutomatedBattleRunner.RunAsync",
             "RuntimeInstanceId -> Node"
@@ -342,6 +351,8 @@ public sealed class DocumentationFoundationTests
             "## Command Transaction",
             "## Reconciliation Fixed Point",
             "## Canonical Event Authority",
+            "BattleEncounterProgressPolicy",
+            "frozen participant graph",
             "PhaseEnded` follows committed phase-end lifecycle events; reconciliation then",
             "RoundEnded` follows committed round-end lifecycle events and reconciliation",
             "OperationCanceledException",
@@ -351,12 +362,17 @@ public sealed class DocumentationFoundationTests
         Assert.All(
             technicalTokens,
             token => Assert.Contains(token, technical, StringComparison.Ordinal));
+        Assert.Contains(
+            "**Result:** no unresolved realistic reachable defect found",
+            closureReview,
+            StringComparison.Ordinal);
+        Assert.Contains("## Invariants Rechecked", closureReview, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
-        Assert.Equal("existing_unreviewed", encounter.Mechanics.State);
-        Assert.Equal("existing_unreviewed", encounter.DeveloperGuide.State);
-        Assert.Equal("existing_unreviewed", encounter.Technical.State);
+        Assert.Equal("reviewed", encounter.Mechanics.State);
+        Assert.Equal("reviewed", encounter.DeveloperGuide.State);
+        Assert.Equal("reviewed", encounter.Technical.State);
     }
 
     [Fact]

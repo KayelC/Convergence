@@ -102,6 +102,12 @@ A free action still closes its current command window, but it does not run
 owner-turn-end lifecycle and does not spend the turn economy. Phase liveness
 limits prevent an unlimited stream of free actions.
 
+Encounter liveness has a second independent limit. A custom scheduler cannot
+loop forever through empty round or phase boundaries without ever offering a
+command: the configured encounter-wide structural-transition bound ends that
+run as a typed fault. Games configure both limits rather than relying on one to
+cover both responsibilities.
+
 Turn-start restrictions may:
 
 - allow ordinary action;
@@ -179,6 +185,11 @@ rejections, and host-mediated requests.
 Typed payloads are authoritative. Optional debug text is only useful for logs;
 a UI must not parse it to decide mechanics.
 
+The runner verifies that command, effect, status, resource, knowledge, and
+presence evidence refers to participants in this encounter. A command cannot
+claim to belong to a different actor, and a presence event cannot silently
+move an actor to a team that does not own them.
+
 ## What The Framework Does Not Force
 
 The encounter module does not force:
@@ -198,4 +209,3 @@ Those choices remain explicit policy or host composition.
 - [Status And Passive Lifecycle](status-passive-lifecycle.md)
 - [Battle Knowledge](battle-knowledge.md)
 - [Actions, Targeting, And Effects](actions-targeting-and-effects.md)
-
