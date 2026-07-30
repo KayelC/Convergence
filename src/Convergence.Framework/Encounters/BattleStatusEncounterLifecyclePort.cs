@@ -11,7 +11,8 @@ namespace Convergence.Encounters;
 public sealed class BattleStatusEncounterLifecyclePort :
     IBattleEncounterLifecyclePort,
     IBattleEncounterDepartureLifecyclePort,
-    IBattleEncounterStatModifierBoundarySource
+    IBattleEncounterStatModifierBoundarySource,
+    IBattleEncounterLifecycleStateCheckpointPort
 {
     private readonly IBattleStatusLifecycleService _lifecycle;
     private readonly BattleExecutionServices _executionServices;
@@ -50,7 +51,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
                 Array.Empty<BattleEncounterEvent>());
         }
 
-        var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
+        using var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
         RuntimeActorState[] participants = transaction.Participants
             .Select(participant => participant.State)
             .ToArray();
@@ -72,6 +73,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
         }
 
         IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(statusEvents);
+        cancellationToken.ThrowIfCancellationRequested();
         transaction.Commit();
         return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(mappedEvents);
     }
@@ -82,8 +84,13 @@ public sealed class BattleStatusEncounterLifecyclePort :
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
-        return new ValueTask<BattleTurnStartLifecycleResult>(_lifecycle.ProcessTurnStart(
-            new BattleTurnStartLifecycleRequest(request.Actor.State, request.CanRecallToRoster)));
+        using var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
+        BattleEncounterParticipant actor = transaction.GetStaged(request.Actor);
+        BattleTurnStartLifecycleResult result = _lifecycle.ProcessTurnStart(
+            new BattleTurnStartLifecycleRequest(actor.State, request.CanRecallToRoster));
+        cancellationToken.ThrowIfCancellationRequested();
+        transaction.Commit();
+        return new ValueTask<BattleTurnStartLifecycleResult>(result);
     }
 
     public IReadOnlyList<StatModifierLifecycleBoundary> GetActiveStatModifierBoundaries(
@@ -101,13 +108,15 @@ public sealed class BattleStatusEncounterLifecyclePort :
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
-        RuntimeActorState[] participants = request.Participants
+        using var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
+        BattleEncounterParticipant actor = transaction.GetStaged(request.Actor);
+        RuntimeActorState[] participants = transaction.Participants
             .Select(participant => participant.State)
             .ToArray();
         long sequence = GetNextLifecycleEventSequence(_ownerTurnEndEventId);
         BattleTurnEndLifecycleResult result = _lifecycle.ProcessTurnEnd(
             new BattleTurnEndLifecycleRequest(
-                request.Actor.State,
+                actor.State,
                 participants,
                 request.Encounter.ContextId,
                 _ownerTurnEndEventId,
@@ -115,8 +124,12 @@ public sealed class BattleStatusEncounterLifecyclePort :
                 request.Encounter.MoonPhaseId,
                 new StatModifierLifecycleBoundary(_ownerTurnEndEventId, sequence)),
             _executionServices);
-        CommitLifecycleEventSequence(_ownerTurnEndEventId, sequence);
-        return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(MapStatusEvents(result.Events));
+        IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(result.Events);
+        cancellationToken.ThrowIfCancellationRequested();
+        ValidateLifecycleEventSequence(_ownerTurnEndEventId, sequence);
+        transaction.Commit();
+        SetLifecycleEventSequence(_ownerTurnEndEventId, sequence);
+        return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(mappedEvents);
     }
 
     public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
@@ -132,7 +145,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
                 Array.Empty<BattleEncounterEvent>());
         }
 
-        var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
+        using var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
         BattleTeamPhaseClockDefinition definition = _clockPolicy.ResolveTeamPhase(teamId);
         if (definition.TeamId != teamId)
         {
@@ -152,8 +165,10 @@ public sealed class BattleStatusEncounterLifecyclePort :
                 [new StatModifierLifecycleBoundary(definition.EventId, sequence)]),
             _executionServices.StatModifiers);
         IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(result.Events);
+        cancellationToken.ThrowIfCancellationRequested();
+        ValidateLifecycleEventSequence(definition.EventId, sequence);
         transaction.Commit();
-        CommitLifecycleEventSequence(definition.EventId, sequence);
+        SetLifecycleEventSequence(definition.EventId, sequence);
         return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(mappedEvents);
     }
 
@@ -174,7 +189,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
                 Array.Empty<BattleEncounterEvent>());
         }
 
-        var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
+        using var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
         ContentId eventId = _clockPolicy.RoundEndEventId;
         long sequence = GetNextLifecycleEventSequence(eventId);
         var boundary = new RoundLifecycleClockBoundary(eventId, roundNumber);
@@ -185,8 +200,10 @@ public sealed class BattleStatusEncounterLifecyclePort :
                 [new StatModifierLifecycleBoundary(eventId, sequence)]),
             _executionServices.StatModifiers);
         IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(result.Events);
+        cancellationToken.ThrowIfCancellationRequested();
+        ValidateLifecycleEventSequence(eventId, sequence);
         transaction.Commit();
-        CommitLifecycleEventSequence(eventId, sequence);
+        SetLifecycleEventSequence(eventId, sequence);
         return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(mappedEvents);
     }
 
@@ -203,7 +220,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
                 Array.Empty<BattleEncounterEvent>());
         }
 
-        var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
+        using var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
         var statusEvents = new List<BattleStatusLifecycleEvent>();
         foreach (BattleEncounterParticipant participant in transaction.Participants)
         {
@@ -216,6 +233,7 @@ public sealed class BattleStatusEncounterLifecyclePort :
         }
 
         IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(statusEvents);
+        cancellationToken.ThrowIfCancellationRequested();
         transaction.Commit();
         return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(mappedEvents);
     }
@@ -226,13 +244,17 @@ public sealed class BattleStatusEncounterLifecyclePort :
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
+        using var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
+        BattleEncounterParticipant actor = transaction.GetStaged(request.Actor);
         BattleStatusLifecycleResult result = _lifecycle.Cleanup(
             new BattleStatusCleanupRequest(
-                request.Actor.State,
+                actor.State,
                 request.Reason),
             _executionServices.StatModifiers);
-        return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
-            MapStatusEvents(result.Events));
+        IReadOnlyList<BattleEncounterEvent> mappedEvents = MapStatusEvents(result.Events);
+        cancellationToken.ThrowIfCancellationRequested();
+        transaction.Commit();
+        return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(mappedEvents);
     }
 
     private static IReadOnlyList<BattleEncounterEvent> MapStatusEvents(
@@ -242,7 +264,10 @@ public sealed class BattleStatusEncounterLifecyclePort :
     private long GetNextLifecycleEventSequence(ContentId eventId) =>
         checked(_lifecycleEventSequences.GetValueOrDefault(eventId) + 1);
 
-    private void CommitLifecycleEventSequence(ContentId eventId, long sequence)
+    private void SetLifecycleEventSequence(ContentId eventId, long sequence) =>
+        _lifecycleEventSequences[eventId] = sequence;
+
+    private void ValidateLifecycleEventSequence(ContentId eventId, long sequence)
     {
         long expected = GetNextLifecycleEventSequence(eventId);
         if (sequence != expected)
@@ -250,8 +275,26 @@ public sealed class BattleStatusEncounterLifecyclePort :
             throw new InvalidOperationException(
                 $"Lifecycle event '{eventId}' expected sequence {expected}, but received {sequence}.");
         }
+    }
 
-        _lifecycleEventSequences[eventId] = sequence;
+    object IBattleEncounterLifecycleStateCheckpointPort.CaptureLifecycleState() =>
+        new Dictionary<ContentId, long>(_lifecycleEventSequences);
+
+    void IBattleEncounterLifecycleStateCheckpointPort.RestoreLifecycleState(
+        object checkpoint)
+    {
+        if (checkpoint is not IReadOnlyDictionary<ContentId, long> sequences)
+        {
+            throw new ArgumentException(
+                "Lifecycle checkpoint has an incompatible shape.",
+                nameof(checkpoint));
+        }
+
+        _lifecycleEventSequences.Clear();
+        foreach ((ContentId eventId, long sequence) in sequences)
+        {
+            _lifecycleEventSequences.Add(eventId, sequence);
+        }
     }
 
     private static string StatusMessage(BattleStatusLifecycleEvent statusEvent) =>

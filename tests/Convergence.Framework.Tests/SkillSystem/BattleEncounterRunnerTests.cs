@@ -2046,6 +2046,7 @@ public sealed class BattleEncounterRunnerTests
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
         Assert.Equal(1, lifecycle.RoundEndCalls);
+        Assert.Equal(0, lifecycle.LifecycleSequence);
         Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
         Assert.Equal(10, enemy.State.GetRequiredResource(Hp).Current);
     }
@@ -3227,7 +3228,9 @@ public sealed class BattleEncounterRunnerTests
             result;
     }
 
-    private sealed class RecordingLifecycle : IBattleEncounterLifecyclePort
+    private sealed class RecordingLifecycle :
+        IBattleEncounterLifecyclePort,
+        IBattleEncounterLifecycleStateCheckpointPort
     {
         public IReadOnlyList<ContentId> BattleStartTeamOrder { get; private set; } = [];
         public BattleTurnStartOutcome TurnStartOutcome { get; init; } = BattleTurnStartOutcome.CanAct;
@@ -3246,6 +3249,7 @@ public sealed class BattleEncounterRunnerTests
         public int PhaseEndCalls { get; private set; }
         public int RoundEndCalls { get; private set; }
         public int BattleEndCalls { get; private set; }
+        public int LifecycleSequence { get; private set; }
 
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
             BattleEncounterLifecycleRequest request,
@@ -3295,6 +3299,7 @@ public sealed class BattleEncounterRunnerTests
             CancellationToken cancellationToken = default)
         {
             RoundEndCalls++;
+            LifecycleSequence++;
             RoundEndAction?.Invoke(request);
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
                 Array.Empty<BattleEncounterEvent>());
@@ -3308,6 +3313,22 @@ public sealed class BattleEncounterRunnerTests
             BattleEndCalls++;
             BattleEndAction?.Invoke(request);
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(BattleEndEvents);
+        }
+
+        object IBattleEncounterLifecycleStateCheckpointPort.CaptureLifecycleState() =>
+            LifecycleSequence;
+
+        void IBattleEncounterLifecycleStateCheckpointPort.RestoreLifecycleState(
+            object checkpoint)
+        {
+            if (checkpoint is not int sequence)
+            {
+                throw new ArgumentException(
+                    "Lifecycle checkpoint must contain an integer sequence.",
+                    nameof(checkpoint));
+            }
+
+            LifecycleSequence = sequence;
         }
     }
 

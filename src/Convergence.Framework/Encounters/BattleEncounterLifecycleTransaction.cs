@@ -3,12 +3,23 @@ using Convergence.Runtime;
 
 namespace Convergence.Encounters;
 
-internal sealed class BattleEncounterLifecycleTransaction
+internal interface IBattleEncounterLifecycleStateCheckpointPort
+{
+    object CaptureLifecycleState();
+    void RestoreLifecycleState(object checkpoint);
+}
+
+internal sealed class BattleEncounterLifecycleTransaction : IDisposable
 {
     private readonly RuntimeActorExecutionTransaction _states;
     private readonly IReadOnlyDictionary<RuntimeInstanceId, BattleEncounterParticipant> _participantsById;
+    private readonly IBattleEncounterLifecycleStateCheckpointPort? _checkpointPort;
+    private readonly object? _lifecycleCheckpoint;
+    private bool _committed;
 
-    public BattleEncounterLifecycleTransaction(IReadOnlyList<BattleEncounterParticipant> participants)
+    public BattleEncounterLifecycleTransaction(
+        IReadOnlyList<BattleEncounterParticipant> participants,
+        IBattleEncounterLifecyclePort? lifecyclePort = null)
     {
         ArgumentNullException.ThrowIfNull(participants);
         if (participants.Count == 0)
@@ -27,6 +38,8 @@ internal sealed class BattleEncounterLifecycleTransaction
         _participantsById = new System.Collections.ObjectModel.ReadOnlyDictionary<
             RuntimeInstanceId,
             BattleEncounterParticipant>(staged.ToDictionary(participant => participant.InstanceId));
+        _checkpointPort = lifecyclePort as IBattleEncounterLifecycleStateCheckpointPort;
+        _lifecycleCheckpoint = _checkpointPort?.CaptureLifecycleState();
     }
 
     public IReadOnlyList<BattleEncounterParticipant> Participants { get; }
@@ -55,5 +68,25 @@ internal sealed class BattleEncounterLifecycleTransaction
         return staged;
     }
 
-    public void Commit() => _states.Commit();
+    public void Commit()
+    {
+        if (_committed)
+        {
+            throw new InvalidOperationException(
+                "The encounter lifecycle transaction has already committed.");
+        }
+
+        _states.Commit();
+        _committed = true;
+    }
+
+    public void Dispose()
+    {
+        if (!_committed &&
+            _checkpointPort is not null &&
+            _lifecycleCheckpoint is not null)
+        {
+            _checkpointPort.RestoreLifecycleState(_lifecycleCheckpoint);
+        }
+    }
 }

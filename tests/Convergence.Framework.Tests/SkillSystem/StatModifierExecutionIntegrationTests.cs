@@ -314,6 +314,182 @@ public sealed class StatModifierExecutionIntegrationTests
     }
 
     [Theory]
+    [InlineData(SuppliedPolicyKind.TimedExclusive)]
+    [InlineData(SuppliedPolicyKind.TimedContribution)]
+    public async Task EncounterLifecycle_CancellationDuringProcessingRollsBackActorAndClock(
+        SuppliedPolicyKind policyKind)
+    {
+        IStatModifierPolicyService policy = Policy(policyKind);
+        RuntimeActorState actor = Actor("mid_processing_cancel_actor");
+        BattleExecutionServices services = Services(policy);
+        using var cancellation = new CancellationTokenSource();
+        var lifecycle = new CancellingLifecycleService(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            cancellation,
+            LifecycleCancellationPoint.TurnEnd);
+        var port = new BattleStatusEncounterLifecyclePort(
+            lifecycle,
+            services,
+            ContentId.Parse("battle_start"),
+            OwnerTurnEnd,
+            TestEncounterClocks.Standard(
+                PlayerTeam,
+                ContentId.Parse("enemy_team")));
+        BattleEncounterParticipant[] participants =
+            [new(actor, "Mid Processing Cancel Actor")];
+        var encounter = new BattleEncounterRequest(
+            participants,
+            Battle,
+            NormalBattle,
+            moonPhaseId: null,
+            roundLimit: 3);
+        BattleEncounterTurnLifecycleRequest request = TurnRequest(
+            encounter,
+            participants[0],
+            participants);
+        StatModifierLifecycleBoundary boundary = Assert.Single(
+            port.GetActiveStatModifierBoundaries(request));
+        ApplyModifier(actor, policy, Turns(3), boundary);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            port.ProcessTurnEndAsync(request, cancellation.Token).AsTask());
+
+        Assert.Equal(3, RemainingDuration(actor));
+        StatModifierLifecycleBoundary afterCancellation = Assert.Single(
+            port.GetActiveStatModifierBoundaries(request));
+        Assert.Equal(boundary.EventId, afterCancellation.EventId);
+        Assert.Equal(boundary.Sequence, afterCancellation.Sequence);
+
+        await port.ProcessTurnEndAsync(request);
+
+        Assert.Equal(3, RemainingDuration(actor));
+        Assert.Equal(
+            2,
+            Assert.Single(port.GetActiveStatModifierBoundaries(request)).Sequence);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EncounterLifecycle_CancellationDuringClockProcessingRollsBackActorAndSequence(
+        bool processRound)
+    {
+        IStatModifierPolicyService policy = TimedExclusivePolicy();
+        ContentId playerPhaseEnd = ContentId.Parse("cancel_player_phase_end");
+        ContentId roundEnd = ContentId.Parse("cancel_round_end");
+        ContentId tickEvent = processRound ? roundEnd : playerPhaseEnd;
+        RuntimeActorState actor = Actor("mid_clock_cancel_actor");
+        ApplyModifier(
+            actor,
+            policy,
+            new TurnDurationDefinition(3, tickEvent, SuspendWhileReserve: false));
+        BattleExecutionServices services = Services(policy);
+        using var cancellation = new CancellationTokenSource();
+        var lifecycle = new CancellingLifecycleService(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            cancellation,
+            LifecycleCancellationPoint.Clock);
+        var port = new BattleStatusEncounterLifecyclePort(
+            lifecycle,
+            services,
+            ContentId.Parse("battle_start"),
+            OwnerTurnEnd,
+            new ExplicitBattleEncounterLifecycleClockPolicy(
+            [
+                new BattleTeamPhaseClockDefinition(
+                    PlayerTeam,
+                    PlayerPhase,
+                    playerPhaseEnd)
+            ],
+            roundEnd));
+        BattleEncounterParticipant[] participants =
+            [new(actor, "Mid Clock Cancel Actor")];
+        var encounter = new BattleEncounterRequest(
+            participants,
+            Battle,
+            NormalBattle,
+            moonPhaseId: null,
+            roundLimit: 3);
+        var request = new BattleEncounterLifecycleRequest(
+            encounter,
+            participants,
+            [PlayerTeam]);
+
+        async ValueTask ProcessAsync(CancellationToken token)
+        {
+            if (processRound)
+            {
+                await port.ProcessRoundEndAsync(request, roundNumber: 1, token);
+            }
+            else
+            {
+                await port.ProcessPhaseEndAsync(request, PlayerTeam, token);
+            }
+        }
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            ProcessAsync(cancellation.Token).AsTask());
+
+        Assert.Equal(3, RemainingDuration(actor));
+        Assert.Null(LastModifierBoundary(actor));
+
+        await ProcessAsync(CancellationToken.None);
+
+        Assert.Equal(2, RemainingDuration(actor));
+        StatModifierLifecycleBoundary appliedBoundary =
+            Assert.IsType<StatModifierLifecycleBoundary>(LastModifierBoundary(actor));
+        Assert.Equal(tickEvent, appliedBoundary.EventId);
+        Assert.Equal(1, appliedBoundary.Sequence);
+    }
+
+    [Fact]
+    public async Task EncounterLifecycle_CancellationDuringBattleCleanupRollsBackActor()
+    {
+        IStatModifierPolicyService policy = TimedExclusivePolicy();
+        RuntimeActorState actor = Actor("mid_battle_cleanup_cancel_actor");
+        ApplyModifier(actor, policy, Turns(3));
+        BattleExecutionServices services = Services(policy);
+        using var cancellation = new CancellationTokenSource();
+        var lifecycle = new CancellingLifecycleService(
+            new BattleStatusLifecycleService(new MinimumRandomSource()),
+            cancellation,
+            LifecycleCancellationPoint.Cleanup);
+        var port = new BattleStatusEncounterLifecyclePort(
+            lifecycle,
+            services,
+            ContentId.Parse("battle_start"),
+            OwnerTurnEnd,
+            TestEncounterClocks.Standard(
+                PlayerTeam,
+                ContentId.Parse("enemy_team")));
+        BattleEncounterParticipant[] participants =
+            [new(actor, "Mid Battle Cleanup Cancel Actor")];
+        var encounter = new BattleEncounterRequest(
+            participants,
+            Battle,
+            NormalBattle,
+            moonPhaseId: null,
+            roundLimit: 3);
+        var request = new BattleEncounterLifecycleRequest(
+            encounter,
+            participants,
+            [PlayerTeam]);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            port.ProcessBattleEndAsync(
+                    request,
+                    BattleEncounterOutcome.Victory,
+                    cancellation.Token)
+                .AsTask());
+
+        Assert.Equal(3, RemainingDuration(actor));
+
+        await port.ProcessBattleEndAsync(request, BattleEncounterOutcome.Victory);
+
+        Assert.Empty(actor.StatStages);
+    }
+
+    [Theory]
     [InlineData(SuppliedPolicyKind.PersistentStaged)]
     [InlineData(SuppliedPolicyKind.TimedExclusive)]
     [InlineData(SuppliedPolicyKind.TimedContribution)]
@@ -1090,6 +1266,11 @@ public sealed class StatModifierExecutionIntegrationTests
                 Assert.Single(actor.StatModifierState!.Tracks)
                     .Contributions).Duration).Value;
 
+    private static StatModifierLifecycleBoundary? LastModifierBoundary(RuntimeActorState actor) =>
+        Assert.Single(
+            Assert.Single(actor.StatModifierState!.Tracks)
+                .Contributions).LastLifecycleBoundary;
+
     private static int RemainingDuration(RuntimeActorSnapshot actor) =>
         Assert.IsType<TurnDurationDefinition>(
             Assert.Single(
@@ -1100,6 +1281,83 @@ public sealed class StatModifierExecutionIntegrationTests
     {
         public int NextInt32(int minimumInclusive, int maximumExclusive) => minimumInclusive;
         public decimal NextUnitDecimal() => 0m;
+    }
+
+    private sealed class CancellingLifecycleService(
+        IBattleStatusLifecycleService inner,
+        CancellationTokenSource cancellation,
+        LifecycleCancellationPoint cancellationPoint) : IBattleStatusLifecycleService
+    {
+        public BattleTurnStartLifecycleResult ProcessTurnStart(
+            BattleTurnStartLifecycleRequest request) =>
+            inner.ProcessTurnStart(request);
+
+        public BattleTurnEndLifecycleResult ProcessTurnEnd(
+            BattleTurnEndLifecycleRequest request,
+            BattleExecutionServices services)
+        {
+            BattleTurnEndLifecycleResult result = inner.ProcessTurnEnd(request, services);
+            CancelAt(LifecycleCancellationPoint.TurnEnd);
+            return result;
+        }
+
+        public BattleAilmentApplicationResult TryApplyAilment(
+            BattleAilmentApplicationRequest request,
+            BattleExecutionServices services) =>
+            inner.TryApplyAilment(request, services);
+
+        public BattleStatusLifecycleResult ApplyStatStage(
+            RuntimeActorState target,
+            ContentId modifierTrackId,
+            int delta,
+            BattleExecutionServices services,
+            DurationDefinition? duration = null,
+            StatModifierLifecycleBoundary? activeBoundary = null) =>
+            inner.ApplyStatStage(
+                target,
+                modifierTrackId,
+                delta,
+                services,
+                duration,
+                activeBoundary);
+
+        public BattleStatusLifecycleResult ProcessClock(
+            BattleLifecycleClockRequest request,
+            IStatModifierPolicyService statModifiers)
+        {
+            BattleStatusLifecycleResult result = inner.ProcessClock(request, statModifiers);
+            CancelAt(LifecycleCancellationPoint.Clock);
+            return result;
+        }
+
+        public BattleStatusLifecycleResult ProcessActionEnd(
+            BattleActionEndLifecycleRequest request,
+            IStatModifierPolicyService statModifiers) =>
+            inner.ProcessActionEnd(request, statModifiers);
+
+        public BattleStatusLifecycleResult Cleanup(
+            BattleStatusCleanupRequest request,
+            IStatModifierPolicyService statModifiers)
+        {
+            BattleStatusLifecycleResult result = inner.Cleanup(request, statModifiers);
+            CancelAt(LifecycleCancellationPoint.Cleanup);
+            return result;
+        }
+
+        private void CancelAt(LifecycleCancellationPoint currentPoint)
+        {
+            if (cancellationPoint == currentPoint)
+            {
+                cancellation.Cancel();
+            }
+        }
+    }
+
+    private enum LifecycleCancellationPoint
+    {
+        TurnEnd,
+        Clock,
+        Cleanup
     }
 
     private sealed class SkillRepository : ISkillDefinitionRepository

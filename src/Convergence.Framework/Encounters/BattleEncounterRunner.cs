@@ -1001,7 +1001,9 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             bool stateMutated = false;
             if (services.Lifecycle is IBattleEncounterDepartureLifecyclePort departureLifecycle)
             {
-                var transaction = new BattleEncounterLifecycleTransaction(request.Participants);
+                using var transaction = new BattleEncounterLifecycleTransaction(
+                    request.Participants,
+                    services.Lifecycle);
                 var departureEvents = new List<BattleEncounterEvent>();
                 foreach (BattleEncounterParticipant participant in transaction.Participants)
                 {
@@ -1169,7 +1171,9 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         teamOrder = Array.AsReadOnly(proposedTeamOrder!.ToArray());
         Synchronize();
-        var battleStartTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
+        using var battleStartTransaction = new BattleEncounterLifecycleTransaction(
+            request.Participants,
+            services.Lifecycle);
         foreach (BattleEncounterParticipant participant in battleStartTransaction.Participants)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -1370,10 +1374,11 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                     cancellationToken.ThrowIfCancellationRequested();
                     BattleTurnStartLifecycleResult turnStart;
-                    BattleEncounterLifecycleTransaction turnStartTransaction;
+                    using var turnStartTransaction = new BattleEncounterLifecycleTransaction(
+                        request.Participants,
+                        services.Lifecycle);
                     try
                     {
-                        turnStartTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
                         BattleEncounterParticipant stagedActor = turnStartTransaction.GetStaged(actor);
                         turnStart = await services.Lifecycle.ProcessTurnStartAsync(
                                 new BattleEncounterTurnLifecycleRequest(
@@ -1705,10 +1710,11 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         IReadOnlyList<BattleEncounterEvent> turnEndEvents;
-                        BattleEncounterLifecycleTransaction turnEndTransaction;
+                        using var turnEndTransaction = new BattleEncounterLifecycleTransaction(
+                            request.Participants,
+                            services.Lifecycle);
                         try
                         {
-                            turnEndTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
                             BattleEncounterParticipant stagedActor = turnEndTransaction.GetStaged(actor);
                             IReadOnlyList<BattleEncounterEvent> returnedEvents =
                                 await services.Lifecycle.ProcessTurnEndAsync(
@@ -1852,10 +1858,11 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 }
 
                 IReadOnlyList<BattleEncounterEvent> phaseEndEvents;
-                BattleEncounterLifecycleTransaction phaseEndTransaction;
+                using var phaseEndTransaction = new BattleEncounterLifecycleTransaction(
+                    request.Participants,
+                    services.Lifecycle);
                 try
                 {
-                    phaseEndTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
                     IReadOnlyList<BattleEncounterEvent> returnedEvents =
                         await services.Lifecycle.ProcessPhaseEndAsync(
                             new BattleEncounterLifecycleRequest(
@@ -1927,11 +1934,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             }
 
             IReadOnlyList<BattleEncounterEvent> roundEndEvents;
-            BattleEncounterLifecycleTransaction roundEndTransaction;
+            using var roundEndTransaction = new BattleEncounterLifecycleTransaction(
+                request.Participants,
+                services.Lifecycle);
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                roundEndTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
                 IReadOnlyList<BattleEncounterEvent> returnedEvents =
                     await services.Lifecycle.ProcessRoundEndAsync(
                             new BattleEncounterLifecycleRequest(
@@ -2144,7 +2152,9 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var lifecycleTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
+                    using var lifecycleTransaction = new BattleEncounterLifecycleTransaction(
+                        request.Participants,
+                        services.Lifecycle);
                     IReadOnlyList<BattleEncounterEvent> returnedEvents =
                         await services.Lifecycle.ProcessBattleEndAsync(
                                 new BattleEncounterLifecycleRequest(
@@ -2254,7 +2264,9 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             IReadOnlyList<BattleEncounterEvent> battleEndEvents;
             try
             {
-                var lifecycleTransaction = new BattleEncounterLifecycleTransaction(request.Participants);
+                using var lifecycleTransaction = new BattleEncounterLifecycleTransaction(
+                    request.Participants,
+                    services.Lifecycle);
                 IReadOnlyList<BattleEncounterEvent> returnedEvents =
                     await services.Lifecycle.ProcessBattleEndAsync(
                         new BattleEncounterLifecycleRequest(
