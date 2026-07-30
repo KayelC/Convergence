@@ -1306,6 +1306,77 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Null(result.WinningTeamId);
     }
 
+    [Theory]
+    [InlineData(BattleEncounterOutcome.Defeat, AutomatedBattleOutcome.Defeat)]
+    [InlineData(BattleEncounterOutcome.Escape, AutomatedBattleOutcome.Escape)]
+    [InlineData(BattleEncounterOutcome.Cancelled, AutomatedBattleOutcome.Cancelled)]
+    public void Runner_PreservesEveryCanonicalTerminalOutcome(
+        BattleEncounterOutcome encounterOutcome,
+        AutomatedBattleOutcome expectedOutcome)
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "terminal_outcome_player",
+            "terminal_outcome_player",
+            PlayerTeam);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "terminal_outcome_enemy",
+            "terminal_outcome_enemy",
+            EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        var lifecycle = new FixedTurnRestrictionLifecyclePort(
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.Skip));
+        BattleEncounterCommandResult terminalResult = encounterOutcome switch
+        {
+            BattleEncounterOutcome.Defeat => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                requestedOutcome: BattleEncounterOutcome.Defeat,
+                winningTeamId: EnemyTeam),
+            BattleEncounterOutcome.Escape => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                requestedOutcome: BattleEncounterOutcome.Escape),
+            BattleEncounterOutcome.Cancelled => BattleEncounterCommandResult.Cancelled(),
+            _ => throw new InvalidOperationException(
+                $"Unsupported test outcome '{encounterOutcome}'.")
+        };
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services,
+            lifecycle,
+            restrictionResolver: new FixedRestrictionResultResolver(terminalResult)).Run(
+            new AutomatedBattleRequest(
+                [player, enemy],
+                Battle,
+                NormalBattle,
+                NewMoon,
+                1));
+
+        Assert.Equal(expectedOutcome, result.Outcome);
+        Assert.Equal(
+            encounterOutcome == BattleEncounterOutcome.Defeat ? EnemyTeam : null,
+            result.WinningTeamId);
+        Assert.Equal(
+            encounterOutcome,
+            Assert.IsType<BattleEndedEventPayload>(
+                Assert.Single(result.Events, battleEvent =>
+                    battleEvent.Kind == BattleEncounterEventKind.BattleEnded).Payload).Outcome);
+    }
+
+    [Fact]
+    public void AutomatedBattleOutcome_PreservesPublishedNumericValues()
+    {
+        Assert.Equal(0, (int)AutomatedBattleOutcome.Victory);
+        Assert.Equal(1, (int)AutomatedBattleOutcome.Draw);
+        Assert.Equal(2, (int)AutomatedBattleOutcome.Faulted);
+        Assert.Equal(3, (int)AutomatedBattleOutcome.Defeat);
+        Assert.Equal(4, (int)AutomatedBattleOutcome.Escape);
+        Assert.Equal(5, (int)AutomatedBattleOutcome.Cancelled);
+    }
+
     [Fact]
     public void Runner_PropagatesDuplicateParticipantFaultBeforeAutomatedActorLookup()
     {
@@ -3278,6 +3349,19 @@ public sealed class CatalogBattleRuntimeTests
             cancellationToken.ThrowIfCancellationRequested();
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
                 Array.Empty<BattleEncounterEvent>());
+        }
+    }
+
+    private sealed class FixedRestrictionResultResolver(
+        BattleEncounterCommandResult result) : IAutomatedBattleTurnRestrictionResolver
+    {
+        public ValueTask<BattleEncounterCommandResult> ResolveAsync(
+            AutomatedBattleTurnRestrictionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            cancellationToken.ThrowIfCancellationRequested();
+            return new ValueTask<BattleEncounterCommandResult>(result);
         }
     }
 

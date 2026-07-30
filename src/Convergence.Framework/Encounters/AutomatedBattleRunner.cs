@@ -255,9 +255,12 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
 
 public enum AutomatedBattleOutcome
 {
-    Victory,
-    Draw,
-    Faulted
+    Victory = 0,
+    Draw = 1,
+    Faulted = 2,
+    Defeat = 3,
+    Escape = 4,
+    Cancelled = 5
 }
 
 public sealed record BattleActorFinalSnapshot
@@ -542,8 +545,13 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             result.Outcome switch
             {
                 BattleEncounterOutcome.Victory => AutomatedBattleOutcome.Victory,
+                BattleEncounterOutcome.Defeat => AutomatedBattleOutcome.Defeat,
+                BattleEncounterOutcome.Escape => AutomatedBattleOutcome.Escape,
+                BattleEncounterOutcome.Draw => AutomatedBattleOutcome.Draw,
                 BattleEncounterOutcome.Faulted => AutomatedBattleOutcome.Faulted,
-                _ => AutomatedBattleOutcome.Draw
+                BattleEncounterOutcome.Cancelled => AutomatedBattleOutcome.Cancelled,
+                _ => throw new InvalidOperationException(
+                    $"Unsupported encounter outcome '{result.Outcome}'.")
             },
             result.WinningTeamId,
             result.Participants,

@@ -1654,7 +1654,10 @@ Convergence.Content.UnlimitedShopStockDefinition
 Convergence.Content.UnlimitedShopStockDefinition.Equals(Convergence.Content.UnlimitedShopStockDefinition? other) -> bool
 Convergence.Content.UnlimitedShopStockDefinition.UnlimitedShopStockDefinition() -> void
 Convergence.Encounters.AutomatedBattleOutcome
+Convergence.Encounters.AutomatedBattleOutcome.Cancelled = 5 -> Convergence.Encounters.AutomatedBattleOutcome
+Convergence.Encounters.AutomatedBattleOutcome.Defeat = 3 -> Convergence.Encounters.AutomatedBattleOutcome
 Convergence.Encounters.AutomatedBattleOutcome.Draw = 1 -> Convergence.Encounters.AutomatedBattleOutcome
+Convergence.Encounters.AutomatedBattleOutcome.Escape = 4 -> Convergence.Encounters.AutomatedBattleOutcome
 Convergence.Encounters.AutomatedBattleOutcome.Faulted = 2 -> Convergence.Encounters.AutomatedBattleOutcome
 Convergence.Encounters.AutomatedBattleOutcome.Victory = 0 -> Convergence.Encounters.AutomatedBattleOutcome
 Convergence.Encounters.AutomatedBattleRequest
