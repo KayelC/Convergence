@@ -1472,12 +1472,58 @@ public sealed class BattleEncounterRunnerTests
 
         Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
         Assert.Equal("selection became invalid", result.FaultMessage);
+        Assert.Equal(BattleEncounterFaultCode.CommandRejected, result.FaultCode);
         Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.Equal(1, lifecycle.BattleEndCalls);
         Assert.Contains(result.Events, battleEvent =>
             battleEvent.Kind == BattleEncounterEventKind.ActionRejected &&
             battleEvent.DebugText == "selection became invalid");
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.BattleFaulted &&
+            battleEvent.FaultCode == BattleEncounterFaultCode.CommandRejected);
+        BattleTurnEndedEventPayload turnEnded = Assert.IsType<BattleTurnEndedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.TurnEnded).Payload);
+        Assert.Equal(BattleEncounterTurnEndReason.EncounterTerminated, turnEnded.Reason);
         Assert.DoesNotContain(result.Events, battleEvent =>
             battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Fact]
+    public void Runner_TypedCancellationRunsBattleEndCleanupWithoutSpendingATurn()
+    {
+        BattleEncounterParticipant player = Participant("typed_cancel_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("typed_cancel_enemy", EnemyTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleEndAction = request =>
+                request.Participants
+                    .Single(participant => participant.InstanceId == player.InstanceId)
+                    .State.SetResource(Hp, 8m)
+        };
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Cancelled()),
+            new CompleteAfterTurnsPolicy(99));
+
+        Assert.Equal(BattleEncounterOutcome.Cancelled, result.Outcome);
+        Assert.Null(result.FaultCode);
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.Equal(8m, player.State.GetRequiredResource(Hp).Current);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+        BattleTurnEndedEventPayload turnEnded = Assert.IsType<BattleTurnEndedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.TurnEnded).Payload);
+        Assert.Equal(BattleEncounterTurnEndReason.EncounterTerminated, turnEnded.Reason);
+        BattleEndedEventPayload battleEnded = Assert.IsType<BattleEndedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.BattleEnded).Payload);
+        Assert.Equal(BattleEncounterOutcome.Cancelled, battleEnded.Outcome);
     }
 
     [Fact]
@@ -1801,6 +1847,7 @@ public sealed class BattleEncounterRunnerTests
         var lifecycle = new RecordingLifecycle();
         var economy = new RecordingTurnEconomy();
         using var cancellation = new CancellationTokenSource();
+        var events = new RecordingEventSink();
         var handler = new QueueTurnHandler(_ =>
         {
             cancellation.Cancel();
@@ -1816,7 +1863,8 @@ public sealed class BattleEncounterRunnerTests
                 handler,
                 new CompleteAfterTurnsPolicy(1),
                 () => economy,
-                new BattlePhaseProgressPolicy(8, 1)),
+                new BattlePhaseProgressPolicy(8, 1),
+                events: events),
             cancellation.Token);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => run.AsTask());
@@ -1824,6 +1872,9 @@ public sealed class BattleEncounterRunnerTests
         Assert.Equal(0, economy.ApplyCalls);
         Assert.Equal(0, lifecycle.TurnEndCalls);
         Assert.Single(handler.Requests);
+        Assert.DoesNotContain(events.Events, battleEvent =>
+            battleEvent.Kind is BattleEncounterEventKind.TurnEnded
+                or BattleEncounterEventKind.BattleEnded);
     }
 
     [Fact]

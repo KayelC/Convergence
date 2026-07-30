@@ -3500,6 +3500,37 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_BattleBackRetriesTheSameTurnBeforeExecutingACommand()
+    {
+        var io = new ScriptedGameIO().QueueMenu(
+            6, 6, 9, 10,
+            1, 5,
+            5, 0,
+            -1,
+            5, 13);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary =
+            Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Contains(ContentId.Parse("analyze"), summary.ExecutedBattleActionIds);
+        Assert.DoesNotContain(Qualified("frost_tip"), summary.ExecutedBattleActionIds);
+        Assert.DoesNotContain(Qualified("echo_strike"), summary.ExecutedBattleActionIds);
+        Assert.Equal(2, summary.CancelledBattleCommandSelections);
+        Assert.DoesNotContain(summary.TurnEconomyEvidence, evidence =>
+            evidence.ActionId == Qualified("frost_tip") ||
+            evidence.ActionId == Qualified("echo_strike"));
+        Assert.Contains(
+            "Battle action executed: Echo Adept used Analyze.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_HostedEntitySelectionGrowthAndRestoreShareCanonicalPlayerState()
     {
         var io = new ScriptedGameIO().QueueMenu(15, 0, 10, 0, 4, 10, 1, 9);

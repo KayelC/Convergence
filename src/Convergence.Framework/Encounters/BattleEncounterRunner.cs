@@ -1540,6 +1540,15 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                     beforeEconomy),
                                 $"{actor.DisplayName}'s turn ended with a rejected command.")
                             .ConfigureAwait(false);
+                        await AddAsync(
+                                BattleEncounterEventKind.BattleFaulted,
+                                new BattleFaultedEventPayload(
+                                    BattleEncounterFaultCode.CommandRejected,
+                                    actor.InstanceId,
+                                    actor.TeamId,
+                                    "turn-handler"),
+                                rejection)
+                            .ConfigureAwait(false);
                         return await FinishAsync(
                                 BattleEncounterOutcome.Faulted,
                                 null,
