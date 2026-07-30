@@ -482,6 +482,7 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             request.TeamKnowledgeSeeds);
         var services = new BattleEncounterServices(
             new ParticipantOrderInitiativePolicy(),
+            new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
             _lifecycle,
             turnHandler,
             new LastTeamStandingCompletionPolicy(),

@@ -62,6 +62,56 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_UsesTheInjectedSchedulerAsActorOrderAuthority()
+    {
+        BattleEncounterParticipant player = Participant("scheduled_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("scheduled_enemy", EnemyTeam);
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(1),
+            schedule: new EnemyFirstSchedulePolicy(enemy.InstanceId));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Equal(enemy.InstanceId, Assert.Single(handler.Requests).Actor.InstanceId);
+    }
+
+    [Fact]
+    public void Runner_ConvertsSchedulerExceptionsAndRejectedStartsToTypedFaults()
+    {
+        BattleEncounterParticipant player = Participant("schedule_fault_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("schedule_fault_enemy", EnemyTeam);
+
+        BattleEncounterResult exception = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ =>
+                BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(99),
+            schedule: new ThrowingSchedulePolicy());
+        BattleEncounterResult rejected = Run(
+            [Participant("schedule_reject_player", PlayerTeam),
+             Participant("schedule_reject_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ =>
+                BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(99),
+            schedule: new RejectingSchedulePolicy());
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, exception.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.ScheduleExecutionFailed, exception.FaultCode);
+        Assert.Equal(BattleEncounterOutcome.Faulted, rejected.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.ScheduleTransitionInvalid, rejected.FaultCode);
+    }
+
+    [Fact]
     public void Runner_DispatchesOneRoundClockAfterEveryTeamPhaseNotAfterEveryAction()
     {
         var lifecycle = new RecordingLifecycle();
@@ -240,6 +290,7 @@ public sealed class BattleEncounterRunnerTests
             new BattleEncounterRequest(participants, Battle, Kind, Moon, 5),
             new BattleEncounterServices(
                 initiative,
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 lifecycle,
                 handler,
                 new CompleteAfterTurnsPolicy(1),
@@ -301,6 +352,7 @@ public sealed class BattleEncounterRunnerTests
                     new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 1),
                     new BattleEncounterServices(
                         initiative,
+                        new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                         ports,
                         ports,
                         new CompleteAfterTurnsPolicy(1),
@@ -349,6 +401,7 @@ public sealed class BattleEncounterRunnerTests
                 new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 1),
                 new BattleEncounterServices(
                     new FixedInitiative(PlayerTeam, EnemyTeam),
+                    new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                     ports,
                     ports,
                     new CompleteAfterTurnsPolicy(1),
@@ -1144,6 +1197,7 @@ public sealed class BattleEncounterRunnerTests
             new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
             new BattleEncounterServices(
                 initiative,
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 lifecycle,
                 handler,
                 new CompleteAfterTurnsPolicy(1),
@@ -1176,6 +1230,7 @@ public sealed class BattleEncounterRunnerTests
             new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
             new BattleEncounterServices(
                 new FixedInitiative(PlayerTeam, EnemyTeam),
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 lifecycle,
                 new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
                 new CompleteAfterTurnsPolicy(1),
@@ -1226,6 +1281,7 @@ public sealed class BattleEncounterRunnerTests
             new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
             new BattleEncounterServices(
                 new FixedInitiative(PlayerTeam, EnemyTeam),
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 new RecordingLifecycle(),
                 new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
                 new CompleteAfterTurnsPolicy(1),
@@ -1277,6 +1333,7 @@ public sealed class BattleEncounterRunnerTests
             new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
             new BattleEncounterServices(
                 new FixedInitiative(PlayerTeam, EnemyTeam),
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 new RecordingLifecycle(),
                 new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
                 new CompleteAfterTurnsPolicy(1),
@@ -1308,6 +1365,7 @@ public sealed class BattleEncounterRunnerTests
             new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
             new BattleEncounterServices(
                 new FixedInitiative(PlayerTeam, EnemyTeam),
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 lifecycle,
                 handler,
                 new CompleteAfterTurnsPolicy(1),
@@ -1343,6 +1401,7 @@ public sealed class BattleEncounterRunnerTests
             new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 5),
             new BattleEncounterServices(
                 new FixedInitiative(PlayerTeam, EnemyTeam),
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 lifecycle,
                 handler,
                 new CompleteAfterTurnsPolicy(1),
@@ -1376,6 +1435,7 @@ public sealed class BattleEncounterRunnerTests
             new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 1),
             new BattleEncounterServices(
                 new FixedInitiative(PlayerTeam, EnemyTeam),
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 lifecycle,
                 new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
                 new CompleteAfterTurnsPolicy(99),
@@ -1408,6 +1468,7 @@ public sealed class BattleEncounterRunnerTests
             new BattleEncounterRequest([player, enemy], Battle, Kind, Moon, 1),
             new BattleEncounterServices(
                 new FixedInitiative(PlayerTeam, EnemyTeam),
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 lifecycle,
                 new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
                 new CompleteAfterTurnsPolicy(1),
@@ -1885,11 +1946,13 @@ public sealed class BattleEncounterRunnerTests
         Func<IBattleTurnEconomy>? turnEconomyFactory = null,
         BattlePhaseProgressPolicy? phaseProgress = null,
         IBattleEncounterStateSynchronizer? synchronizer = null,
-        IBattleEncounterEventSink? events = null) =>
+        IBattleEncounterEventSink? events = null,
+        IBattleEncounterSchedulePolicy? schedule = null) =>
         new BattleEncounterRunner().Run(
             new BattleEncounterRequest(participants, Battle, Kind, Moon, 5),
             new BattleEncounterServices(
                 initiative,
+                schedule ?? new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 lifecycle,
                 handler,
                 completion,
@@ -2040,6 +2103,129 @@ public sealed class BattleEncounterRunnerTests
     private sealed class FixedInitiative(params ContentId[] teamOrder) : IBattleEncounterInitiativePolicy
     {
         public IReadOnlyList<ContentId> DetermineTeamOrder(BattleEncounterInitiativeRequest request) => teamOrder;
+    }
+
+    private sealed class EnemyFirstSchedulePolicy(RuntimeInstanceId enemyId) :
+        IBattleEncounterSchedulePolicy
+    {
+        private static readonly ContentId Id = ContentId.Parse("enemy_first_test_schedule");
+
+        public ContentId PolicyId => Id;
+
+        public BattleEncounterScheduleTransitionResult Start(
+            BattleEncounterScheduleStartRequest request)
+        {
+            var state = new ScriptedScheduleState(
+                PolicyId,
+                revision: 0,
+                nextStepSequence: 0,
+                completedRounds: 0,
+                request.Participants.Select(participant => participant.InstanceId),
+                request.TeamOrder,
+                request.RoundLimit);
+            return BattleEncounterScheduleTransitionResult.Start(
+                state,
+                new BattleEncounterRoundStartedScheduleStep(PolicyId, 0, 1));
+        }
+
+        public BattleEncounterScheduleTransitionResult Advance(
+            BattleEncounterScheduleAdvanceRequest request)
+        {
+            ScriptedScheduleState state = Assert.IsType<ScriptedScheduleState>(request.State);
+            BattleEncounterScheduleStateSnapshot after = state.Advance();
+            return request.CompletedStep switch
+            {
+                BattleEncounterRoundStartedScheduleStep =>
+                    BattleEncounterScheduleTransitionResult.Advance(
+                        state,
+                        after,
+                        new BattleEncounterPhaseStartedScheduleStep(
+                            PolicyId,
+                            after.NextStepSequence,
+                            1,
+                            EnemyTeam,
+                            new BattleEncounterTurnEconomyStart(1))),
+                BattleEncounterPhaseStartedScheduleStep =>
+                    BattleEncounterScheduleTransitionResult.Advance(
+                        state,
+                        after,
+                        new BattleEncounterCommandWindowScheduleStep(
+                            PolicyId,
+                            after.NextStepSequence,
+                            1,
+                            enemyId,
+                            EnemyTeam)),
+                BattleEncounterCommandWindowScheduleStep =>
+                    BattleEncounterScheduleTransitionResult.Complete(state, after),
+                _ => throw new InvalidOperationException("Unexpected scripted schedule step.")
+            };
+        }
+    }
+
+    private sealed class ThrowingSchedulePolicy : IBattleEncounterSchedulePolicy
+    {
+        public ContentId PolicyId { get; } = ContentId.Parse("throwing_test_schedule");
+
+        public BattleEncounterScheduleTransitionResult Start(
+            BattleEncounterScheduleStartRequest request) =>
+            throw new InvalidOperationException("Deliberate schedule failure.");
+
+        public BattleEncounterScheduleTransitionResult Advance(
+            BattleEncounterScheduleAdvanceRequest request) =>
+            throw new InvalidOperationException("Deliberate schedule failure.");
+    }
+
+    private sealed class RejectingSchedulePolicy : IBattleEncounterSchedulePolicy
+    {
+        public ContentId PolicyId { get; } = ContentId.Parse("rejecting_test_schedule");
+
+        public BattleEncounterScheduleTransitionResult Start(
+            BattleEncounterScheduleStartRequest request) =>
+            BattleEncounterScheduleTransitionResult.RejectStart(
+                [new BattleEncounterScheduleDiagnostic(
+                    BattleEncounterScheduleDiagnosticCode.PolicyRejected,
+                    "Deliberate schedule rejection.")]);
+
+        public BattleEncounterScheduleTransitionResult Advance(
+            BattleEncounterScheduleAdvanceRequest request) =>
+            BattleEncounterScheduleTransitionResult.RejectAdvance(
+                request.State,
+                [new BattleEncounterScheduleDiagnostic(
+                    BattleEncounterScheduleDiagnosticCode.PolicyRejected,
+                    "Deliberate schedule rejection.")]);
+    }
+
+    private sealed class ScriptedScheduleState : BattleEncounterScheduleStateSnapshot
+    {
+        public ScriptedScheduleState(
+            ContentId policyId,
+            long revision,
+            long nextStepSequence,
+            int completedRounds,
+            IEnumerable<RuntimeInstanceId> participantIds,
+            IEnumerable<ContentId> teamOrder,
+            int roundLimit)
+            : base(
+                policyId,
+                revision,
+                currentRound: 1,
+                completedRounds,
+                nextStepSequence,
+                participantIds,
+                teamOrder,
+                roundLimit)
+        {
+        }
+
+        public ScriptedScheduleState Advance() =>
+            new(
+                PolicyId,
+                checked(Revision + 1),
+                checked(NextStepSequence + 1),
+                CompletedRounds,
+                ParticipantIds,
+                TeamOrder,
+                RoundLimit);
     }
 
     private sealed class ThrowingInitiative : IBattleEncounterInitiativePolicy

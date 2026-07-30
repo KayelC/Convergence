@@ -175,6 +175,7 @@ public sealed class GodotIntegrationContractTests
                 roundLimit: 1),
             new BattleEncounterServices(
                 new ParticipantOrderInitiativePolicy(),
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                  NoopBattleEncounterLifecyclePort.Instance,
                  new PassTurnHandler(),
                  new LastTeamStandingCompletionPolicy(),

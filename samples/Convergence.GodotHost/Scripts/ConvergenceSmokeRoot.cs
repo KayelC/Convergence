@@ -240,6 +240,7 @@ public partial class ConvergenceSmokeRoot : Node
                 roundLimit: 1),
             new BattleEncounterServices(
                 new ParticipantOrderInitiativePolicy(),
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 NoopBattleEncounterLifecyclePort.Instance,
                 new PassTurnHandler(),
                 new LastTeamStandingCompletionPolicy(),

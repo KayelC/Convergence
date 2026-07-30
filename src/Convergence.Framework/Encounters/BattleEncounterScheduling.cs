@@ -17,9 +17,10 @@ public enum BattleEncounterScheduleStepKind
 /// <summary>Describes how the runner completed a scheduled structural boundary.</summary>
 public enum BattleEncounterScheduleStepOutcomeKind
 {
-    BoundaryCompleted,
-    CommandCommitted,
-    ActorUnavailable
+    BoundaryCompleted = 0,
+    CommandCommitted = 1,
+    ActorUnavailable = 2,
+    TurnEconomyStarted = 3
 }
 
 /// <summary>Describes the result of starting or advancing a scheduling policy.</summary>
@@ -475,6 +476,17 @@ public sealed class BattleEncounterScheduleStepOutcome
             null,
             null);
 
+    public static BattleEncounterScheduleStepOutcome TurnEconomyStarted(
+        BattleTurnEconomySnapshot economyState,
+        bool hasRemainingOpportunities) =>
+        new(
+            BattleEncounterScheduleStepOutcomeKind.TurnEconomyStarted,
+            null,
+            null,
+            null,
+            economyState ?? throw new ArgumentNullException(nameof(economyState)),
+            hasRemainingOpportunities);
+
     public static BattleEncounterScheduleStepOutcome CommandCommitted(
         RuntimeInstanceId actorId,
         ActionTurnConsumption turnConsumption,
@@ -569,17 +581,22 @@ public sealed class BattleEncounterScheduleAdvanceRequest
     {
         if (completedStep is not BattleEncounterCommandWindowScheduleStep commandWindow)
         {
-            if (outcome.Kind != BattleEncounterScheduleStepOutcomeKind.BoundaryCompleted)
+            BattleEncounterScheduleStepOutcomeKind expectedKind =
+                completedStep.TurnEconomyStart is null
+                    ? BattleEncounterScheduleStepOutcomeKind.BoundaryCompleted
+                    : BattleEncounterScheduleStepOutcomeKind.TurnEconomyStarted;
+            if (outcome.Kind != expectedKind)
             {
                 throw new ArgumentException(
-                    "Structural schedule steps require a boundary-completed outcome.",
+                    $"Schedule step '{completedStep.Kind}' requires a '{expectedKind}' outcome.",
                     nameof(outcome));
             }
 
             return;
         }
 
-        if (outcome.Kind == BattleEncounterScheduleStepOutcomeKind.BoundaryCompleted)
+        if (outcome.Kind is BattleEncounterScheduleStepOutcomeKind.BoundaryCompleted
+            or BattleEncounterScheduleStepOutcomeKind.TurnEconomyStarted)
         {
             throw new ArgumentException(
                 "Command-window steps require a committed-command or actor-unavailable outcome.",
@@ -799,4 +816,286 @@ public interface IBattleEncounterSchedulePolicy
     BattleEncounterScheduleTransitionResult Start(BattleEncounterScheduleStartRequest request);
 
     BattleEncounterScheduleTransitionResult Advance(BattleEncounterScheduleAdvanceRequest request);
+}
+
+/// <summary>
+/// Supplied scheduler that preserves team phases and rotates through the
+/// currently available actors on the active team.
+/// </summary>
+public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
+    IBattleEncounterSchedulePolicy
+{
+    public static ContentId ScheduleId { get; } = ContentId.Parse("team_phase_round_robin");
+
+    public ContentId PolicyId => ScheduleId;
+
+    public BattleEncounterScheduleTransitionResult Start(
+        BattleEncounterScheduleStartRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var state = new TeamPhaseRoundRobinScheduleState(
+            revision: 0,
+            currentRound: 1,
+            completedRounds: 0,
+            nextStepSequence: 0,
+            request.Participants.Select(participant => participant.InstanceId),
+            request.TeamOrder,
+            request.RoundLimit,
+            currentTeamIndex: -1,
+            nextActorOffset: 0);
+        return BattleEncounterScheduleTransitionResult.Start(
+            state,
+            new BattleEncounterRoundStartedScheduleStep(PolicyId, 0, 1));
+    }
+
+    public BattleEncounterScheduleTransitionResult Advance(
+        BattleEncounterScheduleAdvanceRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (request.State is not TeamPhaseRoundRobinScheduleState state)
+        {
+            return BattleEncounterScheduleTransitionResult.RejectAdvance(
+                request.State,
+                [new BattleEncounterScheduleDiagnostic(
+                    BattleEncounterScheduleDiagnosticCode.InvalidState,
+                    $"Scheduling policy '{PolicyId}' cannot advance state type " +
+                    $"'{request.State.GetType().Name}'.")]);
+        }
+
+        return request.CompletedStep switch
+        {
+            BattleEncounterRoundStartedScheduleStep =>
+                SelectNextPhaseOrRoundEnd(state, request.Participants, firstTeamIndex: 0),
+            BattleEncounterPhaseStartedScheduleStep phase =>
+                request.Outcome.HasRemainingOpportunities == true
+                    ? SelectCommandOrPhaseEnd(state, phase.TeamId, request.Participants)
+                    : SelectPhaseEnd(state, phase.TeamId),
+            BattleEncounterCommandWindowScheduleStep command =>
+                AdvanceCommand(state, command, request.Outcome, request.Participants),
+            BattleEncounterPhaseEndedScheduleStep =>
+                SelectNextPhaseOrRoundEnd(
+                    state,
+                    request.Participants,
+                    firstTeamIndex: checked(state.CurrentTeamIndex + 1)),
+            BattleEncounterRoundEndedScheduleStep =>
+                AdvanceRound(state),
+            _ => BattleEncounterScheduleTransitionResult.RejectAdvance(
+                state,
+                [new BattleEncounterScheduleDiagnostic(
+                    BattleEncounterScheduleDiagnosticCode.InvalidStep,
+                    $"Scheduling policy '{PolicyId}' does not support step type " +
+                    $"'{request.CompletedStep.GetType().Name}'.")])
+        };
+    }
+
+    private static BattleEncounterScheduleTransitionResult AdvanceCommand(
+        TeamPhaseRoundRobinScheduleState state,
+        BattleEncounterCommandWindowScheduleStep command,
+        BattleEncounterScheduleStepOutcome outcome,
+        IReadOnlyList<BattleEncounterScheduleParticipantSnapshot> participants)
+    {
+        if (command.TeamId != state.TeamOrder[state.CurrentTeamIndex])
+        {
+            return Reject(
+                state,
+                BattleEncounterScheduleDiagnosticCode.InvalidStep,
+                "The command-window team does not match the active team-phase cursor.");
+        }
+
+        bool continuePhase = outcome.Kind switch
+        {
+            BattleEncounterScheduleStepOutcomeKind.CommandCommitted =>
+                outcome.HasRemainingOpportunities == true,
+            BattleEncounterScheduleStepOutcomeKind.ActorUnavailable => true,
+            _ => false
+        };
+        return continuePhase
+            ? SelectCommandOrPhaseEnd(state, command.TeamId, participants)
+            : SelectPhaseEnd(state, command.TeamId);
+    }
+
+    private static BattleEncounterScheduleTransitionResult SelectCommandOrPhaseEnd(
+        TeamPhaseRoundRobinScheduleState state,
+        ContentId teamId,
+        IReadOnlyList<BattleEncounterScheduleParticipantSnapshot> participants)
+    {
+        BattleEncounterScheduleParticipantSnapshot[] activeActors =
+            ActiveTeam(participants, teamId);
+        if (activeActors.Length == 0)
+        {
+            return SelectPhaseEnd(state, teamId);
+        }
+
+        int actorIndex = (int)(state.NextActorOffset % activeActors.Length);
+        BattleEncounterScheduleParticipantSnapshot actor = activeActors[actorIndex];
+        TeamPhaseRoundRobinScheduleState after = state.Advance(
+            currentTeamIndex: state.CurrentTeamIndex,
+            nextActorOffset: checked(state.NextActorOffset + 1));
+        return BattleEncounterScheduleTransitionResult.Advance(
+            state,
+            after,
+            new BattleEncounterCommandWindowScheduleStep(
+                ScheduleId,
+                after.NextStepSequence,
+                after.CurrentRound,
+                actor.InstanceId,
+                actor.TeamId));
+    }
+
+    private static BattleEncounterScheduleTransitionResult SelectPhaseEnd(
+        TeamPhaseRoundRobinScheduleState state,
+        ContentId teamId)
+    {
+        TeamPhaseRoundRobinScheduleState after = state.Advance(
+            currentTeamIndex: state.CurrentTeamIndex,
+            nextActorOffset: state.NextActorOffset);
+        return BattleEncounterScheduleTransitionResult.Advance(
+            state,
+            after,
+            new BattleEncounterPhaseEndedScheduleStep(
+                ScheduleId,
+                after.NextStepSequence,
+                after.CurrentRound,
+                teamId));
+    }
+
+    private static BattleEncounterScheduleTransitionResult SelectNextPhaseOrRoundEnd(
+        TeamPhaseRoundRobinScheduleState state,
+        IReadOnlyList<BattleEncounterScheduleParticipantSnapshot> participants,
+        int firstTeamIndex)
+    {
+        for (int teamIndex = firstTeamIndex; teamIndex < state.TeamOrder.Count; teamIndex++)
+        {
+            ContentId teamId = state.TeamOrder[teamIndex];
+            BattleEncounterScheduleParticipantSnapshot[] activeActors =
+                ActiveTeam(participants, teamId);
+            if (activeActors.Length == 0)
+            {
+                continue;
+            }
+
+            TeamPhaseRoundRobinScheduleState phaseState = state.Advance(
+                currentTeamIndex: teamIndex,
+                nextActorOffset: 0);
+            return BattleEncounterScheduleTransitionResult.Advance(
+                state,
+                phaseState,
+                new BattleEncounterPhaseStartedScheduleStep(
+                    ScheduleId,
+                    phaseState.NextStepSequence,
+                    phaseState.CurrentRound,
+                    teamId,
+                    new BattleEncounterTurnEconomyStart(activeActors.Length)));
+        }
+
+        TeamPhaseRoundRobinScheduleState roundEndState = state.Advance(
+            currentTeamIndex: -1,
+            nextActorOffset: 0);
+        return BattleEncounterScheduleTransitionResult.Advance(
+            state,
+            roundEndState,
+            new BattleEncounterRoundEndedScheduleStep(
+                ScheduleId,
+                roundEndState.NextStepSequence,
+                roundEndState.CurrentRound));
+    }
+
+    private static BattleEncounterScheduleTransitionResult AdvanceRound(
+        TeamPhaseRoundRobinScheduleState state)
+    {
+        if (state.CurrentRound >= state.RoundLimit)
+        {
+            TeamPhaseRoundRobinScheduleState completed = state.Advance(
+                currentRound: state.CurrentRound,
+                completedRounds: state.CurrentRound,
+                currentTeamIndex: -1,
+                nextActorOffset: 0);
+            return BattleEncounterScheduleTransitionResult.Complete(state, completed);
+        }
+
+        TeamPhaseRoundRobinScheduleState nextRound = state.Advance(
+            currentRound: checked(state.CurrentRound + 1),
+            completedRounds: state.CurrentRound,
+            currentTeamIndex: -1,
+            nextActorOffset: 0);
+        return BattleEncounterScheduleTransitionResult.Advance(
+            state,
+            nextRound,
+            new BattleEncounterRoundStartedScheduleStep(
+                ScheduleId,
+                nextRound.NextStepSequence,
+                nextRound.CurrentRound));
+    }
+
+    private static BattleEncounterScheduleTransitionResult Reject(
+        TeamPhaseRoundRobinScheduleState state,
+        BattleEncounterScheduleDiagnosticCode code,
+        string message) =>
+        BattleEncounterScheduleTransitionResult.RejectAdvance(
+            state,
+            [new BattleEncounterScheduleDiagnostic(code, message)]);
+
+    private static BattleEncounterScheduleParticipantSnapshot[] ActiveTeam(
+        IReadOnlyList<BattleEncounterScheduleParticipantSnapshot> participants,
+        ContentId teamId) =>
+        participants
+            .Where(participant => participant.TeamId == teamId && participant.IsAvailable)
+            .ToArray();
+
+    private sealed class TeamPhaseRoundRobinScheduleState :
+        BattleEncounterScheduleStateSnapshot
+    {
+        public TeamPhaseRoundRobinScheduleState(
+            long revision,
+            int currentRound,
+            int completedRounds,
+            long nextStepSequence,
+            IEnumerable<RuntimeInstanceId> participantIds,
+            IEnumerable<ContentId> teamOrder,
+            int roundLimit,
+            int currentTeamIndex,
+            long nextActorOffset)
+            : base(
+                ScheduleId,
+                revision,
+                currentRound,
+                completedRounds,
+                nextStepSequence,
+                participantIds,
+                teamOrder,
+                roundLimit)
+        {
+            if (currentTeamIndex < -1 || currentTeamIndex >= TeamOrder.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(currentTeamIndex));
+            }
+
+            if (nextActorOffset < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(nextActorOffset));
+            }
+
+            CurrentTeamIndex = currentTeamIndex;
+            NextActorOffset = nextActorOffset;
+        }
+
+        public int CurrentTeamIndex { get; }
+        public long NextActorOffset { get; }
+
+        public TeamPhaseRoundRobinScheduleState Advance(
+            int? currentRound = null,
+            int? completedRounds = null,
+            int? currentTeamIndex = null,
+            long? nextActorOffset = null) =>
+            new(
+                checked(Revision + 1),
+                currentRound ?? CurrentRound,
+                completedRounds ?? CompletedRounds,
+                checked(NextStepSequence + 1),
+                ParticipantIds,
+                TeamOrder,
+                RoundLimit,
+                currentTeamIndex ?? CurrentTeamIndex,
+                nextActorOffset ?? NextActorOffset);
+    }
 }

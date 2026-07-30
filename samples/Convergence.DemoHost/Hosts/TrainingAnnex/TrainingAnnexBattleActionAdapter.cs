@@ -219,6 +219,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             lifecycle);
         var services = new BattleEncounterServices(
             new ParticipantOrderInitiativePolicy(),
+            new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
             lifecyclePort,
             turnHandler,
             new LastTeamStandingCompletionPolicy(),

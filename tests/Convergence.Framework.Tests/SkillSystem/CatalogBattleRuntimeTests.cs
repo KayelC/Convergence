@@ -1918,6 +1918,7 @@ public sealed class CatalogBattleRuntimeTests
                 1),
             new BattleEncounterServices(
                 new ParticipantOrderInitiativePolicy(),
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 direct.Lifecycle,
                 new RestrictedPassTurnHandler(),
                 new LastTeamStandingCompletionPolicy(),

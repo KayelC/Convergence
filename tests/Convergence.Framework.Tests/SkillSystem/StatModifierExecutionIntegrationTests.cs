@@ -57,6 +57,7 @@ public sealed class StatModifierExecutionIntegrationTests
             new BattleEncounterRequest([participant], Battle, NormalBattle, null, roundLimit: 3),
             new BattleEncounterServices(
                 new ParticipantOrderInitiativePolicy(),
+                new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
                 lifecycle,
                 turnHandler,
                 completion,

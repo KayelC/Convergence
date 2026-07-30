@@ -152,6 +152,16 @@ public sealed class BattleEncounterSchedulingContractTests
             command,
             BattleEncounterScheduleStepOutcome.ActorUnavailable(Enemy),
             participants));
+        Assert.Throws<ArgumentException>(() => new BattleEncounterScheduleAdvanceRequest(
+            state,
+            new BattleEncounterPhaseStartedScheduleStep(
+                Policy,
+                0,
+                1,
+                PlayerTeam,
+                new BattleEncounterTurnEconomyStart(1)),
+            BattleEncounterScheduleStepOutcome.BoundaryCompleted(),
+            participants));
     }
 
     [Fact]

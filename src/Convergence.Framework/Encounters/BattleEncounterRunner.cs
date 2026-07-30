@@ -24,19 +24,21 @@ public enum BattleEncounterCommandStatus
 
 public enum BattleEncounterFaultCode
 {
-    DuplicateParticipantInstanceId,
-    LifecycleExecutionFailed,
-    InitiativeExecutionFailed,
-    StateSynchronizationFailed,
-    TurnEconomyExecutionFailed,
-    TurnHandlerExecutionFailed,
-    CompletionEvaluationFailed,
-    EventPublicationFailed,
-    PhaseCommandLimitExceeded,
-    ConsecutiveFreeActionLimitExceeded,
-    TurnEconomyTransitionInvalid,
-    CommandExecutionFaulted,
-    CommandRejected
+    DuplicateParticipantInstanceId = 0,
+    LifecycleExecutionFailed = 1,
+    InitiativeExecutionFailed = 2,
+    StateSynchronizationFailed = 3,
+    TurnEconomyExecutionFailed = 4,
+    TurnHandlerExecutionFailed = 5,
+    CompletionEvaluationFailed = 6,
+    EventPublicationFailed = 7,
+    PhaseCommandLimitExceeded = 8,
+    ConsecutiveFreeActionLimitExceeded = 9,
+    TurnEconomyTransitionInvalid = 10,
+    CommandExecutionFaulted = 11,
+    CommandRejected = 12,
+    ScheduleExecutionFailed = 13,
+    ScheduleTransitionInvalid = 14
 }
 
 public sealed record BattleEncounterParticipant
@@ -634,6 +636,7 @@ public sealed class BattleEncounterServices
 {
     public BattleEncounterServices(
         IBattleEncounterInitiativePolicy initiative,
+        IBattleEncounterSchedulePolicy schedule,
         IBattleEncounterLifecyclePort lifecycle,
         IBattleEncounterTurnHandler turnHandler,
         IBattleEncounterCompletionPolicy completion,
@@ -643,6 +646,7 @@ public sealed class BattleEncounterServices
         IBattleEncounterEventSink? events = null)
     {
         Initiative = initiative ?? throw new ArgumentNullException(nameof(initiative));
+        Schedule = schedule ?? throw new ArgumentNullException(nameof(schedule));
         Lifecycle = lifecycle ?? throw new ArgumentNullException(nameof(lifecycle));
         TurnHandler = turnHandler ?? throw new ArgumentNullException(nameof(turnHandler));
         Completion = completion ?? throw new ArgumentNullException(nameof(completion));
@@ -653,6 +657,7 @@ public sealed class BattleEncounterServices
     }
 
     public IBattleEncounterInitiativePolicy Initiative { get; }
+    public IBattleEncounterSchedulePolicy Schedule { get; }
     public IBattleEncounterLifecyclePort Lifecycle { get; }
     public IBattleEncounterTurnHandler TurnHandler { get; }
     public IBattleEncounterCompletionPolicy Completion { get; }
@@ -960,6 +965,56 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             }
         }
 
+        BattleEncounterScheduleCursor StartSchedule()
+        {
+            var scheduleRequest = new BattleEncounterScheduleStartRequest(
+                CaptureScheduleParticipants(request.Participants),
+                teamOrder,
+                request.RoundLimit);
+            BattleEncounterScheduleTransitionResult transition = InvokePort(
+                BattleEncounterFaultCode.ScheduleExecutionFailed,
+                "schedule-start",
+                () => services.Schedule.Start(scheduleRequest)
+                      ?? throw new InvalidOperationException(
+                          "The encounter scheduling policy returned null while starting."));
+            return InvokePort(
+                BattleEncounterFaultCode.ScheduleTransitionInvalid,
+                "schedule-transition-validation",
+                () => BattleEncounterScheduleCursor.Start(
+                    services.Schedule,
+                    scheduleRequest,
+                    transition));
+        }
+
+        BattleEncounterScheduleCursor AdvanceSchedule(
+            BattleEncounterScheduleCursor cursor,
+            BattleEncounterScheduleStepOutcome outcome,
+            RuntimeInstanceId? actorId = null)
+        {
+            ArgumentNullException.ThrowIfNull(cursor);
+            ArgumentNullException.ThrowIfNull(outcome);
+            BattleEncounterScheduleStep completedStep = cursor.Step
+                ?? throw new InvalidOperationException(
+                    "A completed encounter schedule cannot be advanced.");
+            var advanceRequest = new BattleEncounterScheduleAdvanceRequest(
+                cursor.State,
+                completedStep,
+                outcome,
+                CaptureScheduleParticipants(request.Participants));
+            BattleEncounterScheduleTransitionResult transition = InvokePort(
+                BattleEncounterFaultCode.ScheduleExecutionFailed,
+                "schedule-advance",
+                () => services.Schedule.Advance(advanceRequest)
+                      ?? throw new InvalidOperationException(
+                          "The encounter scheduling policy returned null while advancing."),
+                actorId);
+            return InvokePort(
+                BattleEncounterFaultCode.ScheduleTransitionInvalid,
+                "schedule-transition-validation",
+                () => cursor.Advance(services.Schedule, transition),
+                actorId);
+        }
+
         RuntimeInstanceId[] duplicateParticipantIds = request.Participants
             .GroupBy(participant => participant.InstanceId)
             .Where(group => group.Skip(1).Any())
@@ -1072,9 +1127,20 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             return await FinishAsync(initial.Outcome, initial.WinningTeamId, initial.Message).ConfigureAwait(false);
         }
 
-        for (int round = 1; round <= request.RoundLimit; round++)
+        BattleEncounterScheduleCursor schedule = StartSchedule();
+        while (!schedule.IsComplete)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (schedule.Step is not BattleEncounterRoundStartedScheduleStep roundStarted)
+            {
+                return await FaultDuringBattleAsync(
+                        $"Encounter schedule expected a round-start step but received " +
+                        $"'{schedule.Step?.GetType().Name ?? "<none>"}'.",
+                        faultCode: BattleEncounterFaultCode.ScheduleTransitionInvalid)
+                    .ConfigureAwait(false);
+            }
+
+            int round = roundStarted.RoundNumber;
             completedRounds = round;
             await AddAsync(
                     BattleEncounterEventKind.RoundStarted,
@@ -1082,15 +1148,19 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     $"Round {round} started.")
                 .ConfigureAwait(false);
 
-            foreach (ContentId teamId in teamOrder)
+            Synchronize();
+            schedule = AdvanceSchedule(
+                schedule,
+                BattleEncounterScheduleStepOutcome.BoundaryCompleted());
+            while (!schedule.IsComplete &&
+                   schedule.Step is BattleEncounterPhaseStartedScheduleStep phaseStarted)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                Synchronize();
-                BattleEncounterParticipant[] phaseActors = ActiveTeam(request.Participants, teamId);
-                if (phaseActors.Length == 0)
-                {
-                    continue;
-                }
+                ContentId teamId = phaseStarted.TeamId;
+                BattleEncounterTurnEconomyStart economyStart =
+                    phaseStarted.TurnEconomyStart
+                    ?? throw new InvalidOperationException(
+                        "A team-phase start must select a turn-economy scope.");
 
                 cancellationToken.ThrowIfCancellationRequested();
                 IBattleTurnEconomy turnEconomy = InvokePort(
@@ -1101,7 +1171,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 InvokePortAction(
                     BattleEncounterFaultCode.TurnEconomyExecutionFailed,
                     "turn-economy-start",
-                    () => turnEconomy.StartPhase(phaseActors.Length));
+                    () => turnEconomy.StartPhase(economyStart.ActiveActorCount));
                 BattleTurnEconomySnapshot phaseStartState = CaptureTurnEconomySnapshot(turnEconomy);
                 bool hasTurnsRemaining = HasTurnsRemaining(turnEconomy);
                 string? phaseStartFault = ValidateEconomyState(phaseStartState, hasTurnsRemaining);
@@ -1121,10 +1191,16 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         $"with {phaseStartState.RemainingActions} action(s).")
                     .ConfigureAwait(false);
 
-                int actorIndex = 0;
                 int commandCount = 0;
                 int consecutiveFreeActions = 0;
-                while (hasTurnsRemaining)
+                Synchronize();
+                schedule = AdvanceSchedule(
+                    schedule,
+                    BattleEncounterScheduleStepOutcome.TurnEconomyStarted(
+                        phaseStartState,
+                        hasTurnsRemaining));
+                while (!schedule.IsComplete &&
+                       schedule.Step is BattleEncounterCommandWindowScheduleStep commandWindow)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (commandCount >= services.PhaseProgress.MaximumCommands)
@@ -1150,14 +1226,33 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             .ConfigureAwait(false);
                     }
 
-                    Synchronize();
-                    phaseActors = ActiveTeam(request.Participants, teamId);
-                    if (phaseActors.Length == 0)
+                    BattleEncounterParticipant? scheduledActor = request.Participants
+                        .SingleOrDefault(participant =>
+                            participant.InstanceId == commandWindow.ActorId);
+                    if (scheduledActor is null ||
+                        scheduledActor.TeamId != commandWindow.TeamId ||
+                        commandWindow.TeamId != teamId ||
+                        commandWindow.TurnEconomyStart is not null)
                     {
-                        break;
+                        return await FaultDuringBattleAsync(
+                                $"Encounter schedule selected actor {commandWindow.ActorId} " +
+                                $"for invalid team {commandWindow.TeamId}.",
+                                commandWindow.ActorId,
+                                BattleEncounterFaultCode.ScheduleTransitionInvalid)
+                            .ConfigureAwait(false);
                     }
 
-                    BattleEncounterParticipant actor = phaseActors[actorIndex++ % phaseActors.Length];
+                    if (!scheduledActor.State.IsDeployed || scheduledActor.State.IsDefeated)
+                    {
+                        schedule = AdvanceSchedule(
+                            schedule,
+                            BattleEncounterScheduleStepOutcome.ActorUnavailable(
+                                scheduledActor.InstanceId),
+                            scheduledActor.InstanceId);
+                        continue;
+                    }
+
+                    BattleEncounterParticipant actor = scheduledActor;
                     commandCount++;
                     await AddAsync(
                             BattleEncounterEventKind.TurnStarted,
@@ -1513,6 +1608,26 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         return await FinishAsync(completion.Outcome, completion.WinningTeamId, completion.Message)
                             .ConfigureAwait(false);
                     }
+
+                    schedule = AdvanceSchedule(
+                        schedule,
+                        BattleEncounterScheduleStepOutcome.CommandCommitted(
+                            actor.InstanceId,
+                            command.TurnConsumption,
+                            beforeEconomy,
+                            afterEconomy,
+                            hasTurnsRemaining),
+                        actor.InstanceId);
+                }
+
+                if (schedule.IsComplete ||
+                    schedule.Step is not BattleEncounterPhaseEndedScheduleStep phaseEnded ||
+                    phaseEnded.TeamId != teamId)
+                {
+                    return await FaultDuringBattleAsync(
+                            $"Encounter schedule did not close team {teamId}'s phase.",
+                            faultCode: BattleEncounterFaultCode.ScheduleTransitionInvalid)
+                        .ConfigureAwait(false);
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
@@ -1578,6 +1693,21 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         new BattlePhaseEndedEventPayload(teamId, phaseEndState),
                         $"Team {teamId} phase ended.")
                     .ConfigureAwait(false);
+
+                Synchronize();
+                schedule = AdvanceSchedule(
+                    schedule,
+                    BattleEncounterScheduleStepOutcome.BoundaryCompleted());
+            }
+
+            if (schedule.IsComplete ||
+                schedule.Step is not BattleEncounterRoundEndedScheduleStep roundEnded ||
+                roundEnded.RoundNumber != round)
+            {
+                return await FaultDuringBattleAsync(
+                        $"Encounter schedule did not close round {round}.",
+                        faultCode: BattleEncounterFaultCode.ScheduleTransitionInvalid)
+                    .ConfigureAwait(false);
             }
 
             IReadOnlyList<BattleEncounterEvent> roundEndEvents;
@@ -1612,6 +1742,9 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             cancellationToken.ThrowIfCancellationRequested();
             roundEndTransaction.Commit();
             await AddRangeAsync(roundEndEvents).ConfigureAwait(false);
+            schedule = AdvanceSchedule(
+                schedule,
+                BattleEncounterScheduleStepOutcome.BoundaryCompleted());
         }
 
         return await FinishAsync(
@@ -1910,14 +2043,128 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         public ValueTask<BattleEncounterResult> FinalizeAsync() => _finalize(this);
     }
 
-    private static BattleEncounterParticipant[] ActiveTeam(
-        IEnumerable<BattleEncounterParticipant> participants,
-        ContentId teamId) =>
-        participants
-            .Where(participant => participant.TeamId == teamId &&
-                                  participant.State.IsDeployed &&
-                                  !participant.State.IsDefeated)
-            .ToArray();
+    private sealed class BattleEncounterScheduleCursor
+    {
+        private BattleEncounterScheduleCursor(
+            BattleEncounterScheduleStateSnapshot state,
+            BattleEncounterScheduleStep? step,
+            bool isComplete)
+        {
+            State = state;
+            Step = step;
+            IsComplete = isComplete;
+        }
+
+        public BattleEncounterScheduleStateSnapshot State { get; }
+        public BattleEncounterScheduleStep? Step { get; }
+        public bool IsComplete { get; }
+
+        public static BattleEncounterScheduleCursor Start(
+            IBattleEncounterSchedulePolicy policy,
+            BattleEncounterScheduleStartRequest request,
+            BattleEncounterScheduleTransitionResult transition)
+        {
+            ArgumentNullException.ThrowIfNull(policy);
+            ArgumentNullException.ThrowIfNull(request);
+            ArgumentNullException.ThrowIfNull(transition);
+            if (!policy.PolicyId.IsValid)
+            {
+                throw new InvalidOperationException("The encounter scheduling policy returned an invalid policy ID.");
+            }
+
+            if (transition.Status != BattleEncounterScheduleTransitionStatus.Started ||
+                transition.After is not { } state ||
+                transition.NextStep is not { } step)
+            {
+                throw new InvalidOperationException(
+                    "The encounter scheduling policy did not return a valid started transition.");
+            }
+
+            RequireScheduleIdentity(policy, request, state);
+            if (step.PolicyId != policy.PolicyId)
+            {
+                throw new InvalidOperationException(
+                    "The initial schedule step does not belong to the injected scheduling policy.");
+            }
+
+            return new BattleEncounterScheduleCursor(state, step, isComplete: false);
+        }
+
+        public BattleEncounterScheduleCursor Advance(
+            IBattleEncounterSchedulePolicy policy,
+            BattleEncounterScheduleTransitionResult transition)
+        {
+            ArgumentNullException.ThrowIfNull(policy);
+            ArgumentNullException.ThrowIfNull(transition);
+            if (transition.Status == BattleEncounterScheduleTransitionStatus.Rejected)
+            {
+                string diagnostics = string.Join(
+                    "; ",
+                    transition.Diagnostics.Select(diagnostic =>
+                        $"{diagnostic.Code}: {diagnostic.Message}"));
+                throw new InvalidOperationException(
+                    "The encounter scheduling policy rejected its transition: " + diagnostics);
+            }
+
+            if (!ReferenceEquals(transition.Before, State) ||
+                transition.After is not { } after)
+            {
+                throw new InvalidOperationException(
+                    "The encounter scheduling policy did not advance the current schedule state.");
+            }
+
+            if (after.PolicyId != policy.PolicyId ||
+                !State.ParticipantIds.SequenceEqual(after.ParticipantIds) ||
+                !State.TeamOrder.SequenceEqual(after.TeamOrder) ||
+                State.RoundLimit != after.RoundLimit)
+            {
+                throw new InvalidOperationException(
+                    "The encounter scheduling policy changed encounter identity while advancing.");
+            }
+
+            return transition.Status switch
+            {
+                BattleEncounterScheduleTransitionStatus.Advanced
+                    when transition.NextStep is { } step &&
+                         step.PolicyId == policy.PolicyId =>
+                    new BattleEncounterScheduleCursor(after, step, isComplete: false),
+                BattleEncounterScheduleTransitionStatus.Completed
+                    when transition.NextStep is null =>
+                    new BattleEncounterScheduleCursor(after, null, isComplete: true),
+                _ => throw new InvalidOperationException(
+                    "The encounter scheduling policy returned an invalid advance transition.")
+            };
+        }
+
+        private static void RequireScheduleIdentity(
+            IBattleEncounterSchedulePolicy policy,
+            BattleEncounterScheduleStartRequest request,
+            BattleEncounterScheduleStateSnapshot state)
+        {
+            if (state.PolicyId != policy.PolicyId ||
+                !state.ParticipantIds.SequenceEqual(
+                    request.Participants.Select(participant => participant.InstanceId)) ||
+                !state.TeamOrder.SequenceEqual(request.TeamOrder) ||
+                state.RoundLimit != request.RoundLimit)
+            {
+                throw new InvalidOperationException(
+                    "The encounter scheduling policy changed encounter identity while starting.");
+            }
+        }
+    }
+
+    private static IReadOnlyList<BattleEncounterScheduleParticipantSnapshot>
+        CaptureScheduleParticipants(IEnumerable<BattleEncounterParticipant> participants) =>
+        Array.AsReadOnly(participants.Select(participant =>
+        {
+            RuntimeActorSnapshot actor = participant.State.ToSnapshot();
+            return new BattleEncounterScheduleParticipantSnapshot(
+                participant.InstanceId,
+                participant.TeamId,
+                participant.State.IsDeployed,
+                participant.State.IsDefeated,
+                actor.Stats.EffectiveStats);
+        }).ToArray());
 
     private static bool CanRecallToRoster(BattleEncounterParticipant participant) =>
         participant.State.HasCapability(ContentId.Parse("recall_to_roster"));
