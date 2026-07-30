@@ -1410,41 +1410,62 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         .ConfigureAwait(false);
 
                     cancellationToken.ThrowIfCancellationRequested();
-                    BattleTurnStartLifecycleResult turnStart;
-                    using var turnStartTransaction = new BattleEncounterLifecycleTransaction(
-                        request.Participants,
-                        services.Lifecycle);
-                    try
+                    BattleTurnStartLifecycleResult? stagedTurnStart = null;
+                    IReadOnlyList<BattleEncounterEvent>? turnStartEvents = null;
+                    Exception? turnStartFailure = null;
+                    string? turnStartEconomyFault = null;
+                    using (var turnStartTransaction = new BattleEncounterLifecycleTransaction(
+                               request.Participants,
+                               services.Lifecycle))
                     {
-                        BattleEncounterParticipant stagedActor = turnStartTransaction.GetStaged(actor);
-                        turnStart = await services.Lifecycle.ProcessTurnStartAsync(
-                                new BattleEncounterTurnLifecycleRequest(
-                                    turnStartTransaction.CreateEncounter(request),
-                                    stagedActor,
-                                    turnStartTransaction.Participants,
-                                    CanRecallToRoster(stagedActor)),
-                                cancellationToken)
-                            .ConfigureAwait(false)
-                            ?? throw new InvalidOperationException(
-                                "The battle lifecycle returned a null turn-start result.");
+                        try
+                        {
+                            BattleEncounterParticipant stagedActor =
+                                turnStartTransaction.GetStaged(actor);
+                            stagedTurnStart = await services.Lifecycle.ProcessTurnStartAsync(
+                                    new BattleEncounterTurnLifecycleRequest(
+                                        turnStartTransaction.CreateEncounter(request),
+                                        stagedActor,
+                                        turnStartTransaction.Participants,
+                                        CanRecallToRoster(stagedActor)),
+                                    cancellationToken)
+                                .ConfigureAwait(false)
+                                ?? throw new InvalidOperationException(
+                                    "The battle lifecycle returned a null turn-start result.");
+                            turnStartEvents = MapStatusEvents(stagedTurnStart.Events);
+                            turnStartEconomyFault = CurrentEconomyAuthorityFault(
+                                turnEconomy,
+                                beforeEconomy,
+                                actor.InstanceId);
+                            if (turnStartEconomyFault is null)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                turnStartTransaction.Commit();
+                            }
+                        }
+                        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                        {
+                            throw;
+                        }
+                        catch (BattleEncounterPortException)
+                        {
+                            throw;
+                        }
+                        catch (Exception exception)
+                        {
+                            turnStartFailure = exception;
+                        }
                     }
-                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                    {
-                        throw;
-                    }
-                    catch (Exception exception)
+
+                    if (turnStartFailure is not null)
                     {
                         return await FaultDuringBattleAsync(
-                                LifecycleFailureMessage("turn-start", exception),
+                                LifecycleFailureMessage("turn-start", turnStartFailure),
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.LifecycleExecutionFailed)
                             .ConfigureAwait(false);
                     }
 
-                    string? turnStartEconomyFault = CurrentEconomyAuthorityFault(
-                        turnEconomy,
-                        beforeEconomy,
-                        actor.InstanceId);
                     if (turnStartEconomyFault is not null)
                     {
                         return await FaultDuringBattleAsync(
@@ -1454,10 +1475,13 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             .ConfigureAwait(false);
                     }
 
-                    cancellationToken.ThrowIfCancellationRequested();
-                    turnStartTransaction.Commit();
-
-                    await AddRangeAsync(MapStatusEvents(turnStart.Events)).ConfigureAwait(false);
+                    BattleTurnStartLifecycleResult turnStart = stagedTurnStart
+                        ?? throw new InvalidOperationException(
+                            "The committed turn-start lifecycle result is missing.");
+                    await AddRangeAsync(turnStartEvents
+                            ?? throw new InvalidOperationException(
+                                "The committed turn-start lifecycle events are missing."))
+                        .ConfigureAwait(false);
 
                     if (turnStart.Outcome != BattleTurnStartOutcome.CanAct)
                     {

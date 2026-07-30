@@ -1807,6 +1807,44 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_RejectsMalformedTurnStartEvidenceBeforeCommittingLifecycleState()
+    {
+        BattleEncounterParticipant player =
+            Participant("malformed_turn_start_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("malformed_turn_start_enemy", EnemyTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            AdvanceSequenceOnTurnStart = true,
+            TurnStartAction = request =>
+                request.Actor.State.SetResource(Hp, 1),
+            TurnStartEvents = [null!]
+        };
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(
+            BattleEncounterFaultCode.LifecycleExecutionFailed,
+            result.FaultCode);
+        Assert.Contains("turn-start", result.FaultMessage, StringComparison.Ordinal);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(0, lifecycle.LifecycleSequence);
+        Assert.Equal(0, lifecycle.BattleEndObservedLifecycleSequence);
+        Assert.Empty(handler.Requests);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind is BattleEncounterEventKind.TurnEconomyChanged
+                or BattleEncounterEventKind.TurnEnded);
+    }
+
+    [Fact]
     public async Task Runner_PreCancelledTokenTouchesNoEncounterPortOrActorState()
     {
         BattleEncounterParticipant player = Participant("cancelled_player", PlayerTeam);
@@ -3281,6 +3319,8 @@ public sealed class BattleEncounterRunnerTests
         public Action<BattleEncounterLifecycleRequest>? BattleEndAction { get; init; }
         public IReadOnlyList<BattleEncounterEvent> BattleStartEvents { get; init; } = [];
         public IReadOnlyList<BattleEncounterEvent> BattleEndEvents { get; init; } = [];
+        public IReadOnlyList<BattleStatusLifecycleEvent> TurnStartEvents { get; init; } = [];
+        public bool AdvanceSequenceOnTurnStart { get; init; }
         public int BattleStartCalls { get; private set; }
         public int TurnStartCalls { get; private set; }
         public int TurnEndCalls { get; private set; }
@@ -3288,6 +3328,7 @@ public sealed class BattleEncounterRunnerTests
         public int RoundEndCalls { get; private set; }
         public int BattleEndCalls { get; private set; }
         public int LifecycleSequence { get; private set; }
+        public int? BattleEndObservedLifecycleSequence { get; private set; }
 
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
             BattleEncounterLifecycleRequest request,
@@ -3304,11 +3345,15 @@ public sealed class BattleEncounterRunnerTests
             CancellationToken cancellationToken = default)
         {
             TurnStartCalls++;
+            if (AdvanceSequenceOnTurnStart)
+            {
+                LifecycleSequence++;
+            }
             TurnStartAction?.Invoke(request);
             return new ValueTask<BattleTurnStartLifecycleResult>(
                 Restriction is null
-                    ? new BattleTurnStartLifecycleResult(TurnStartOutcome, [])
-                    : new BattleTurnStartLifecycleResult(Restriction, []));
+                    ? new BattleTurnStartLifecycleResult(TurnStartOutcome, TurnStartEvents)
+                    : new BattleTurnStartLifecycleResult(Restriction, TurnStartEvents));
         }
 
         public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(
@@ -3349,6 +3394,7 @@ public sealed class BattleEncounterRunnerTests
             CancellationToken cancellationToken = default)
         {
             BattleEndCalls++;
+            BattleEndObservedLifecycleSequence = LifecycleSequence;
             BattleEndAction?.Invoke(request);
             return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(BattleEndEvents);
         }
