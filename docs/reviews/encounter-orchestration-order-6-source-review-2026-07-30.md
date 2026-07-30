@@ -368,6 +368,14 @@ At each applicable checkpoint:
 - run the Framework neutrality and forbidden-reference checks;
 - run `git diff --check`.
 
+## Checkpoint Progress
+
+| Checkpoint | State | Evidence |
+|---|---|---|
+| O6-R1 | Complete | This approved source review is indexed by the active review and roadmap documents. |
+| O6-R2 | Complete | The executable capability matrix records `encounter_orchestration` as `partial`, names all four approved gaps, and the active matrix summaries report 22 complete, 1 partial, and 2 deferred capabilities. |
+| O6-R3 through O6-R13 | Pending | Runtime, documentation, and independent closure work has not yet been promoted by this record. |
+
 ## Closure Rule
 
 Order 6 is not complete merely because the current team-phase runner works.
