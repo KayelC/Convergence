@@ -27,7 +27,16 @@ public enum BattleEncounterEventKind
     PhaseEnded,
     BattleFaulted,
     BattleEnded,
-    HostActionRequested
+    HostActionRequested,
+    TurnEnded,
+    RoundEnded
+}
+
+public enum BattleEncounterTurnEndReason
+{
+    CommandCommitted,
+    ActorUnavailable,
+    EncounterTerminated
 }
 
 public abstract record BattleEncounterEventPayload;
@@ -202,6 +211,53 @@ public sealed record BattleTurnEconomyChangedEventPayload : BattleEncounterEvent
     }
 }
 
+public sealed record BattleTurnEndedEventPayload : BattleEncounterEventPayload
+{
+    public BattleTurnEndedEventPayload(
+        RuntimeInstanceId actorId,
+        ContentId teamId,
+        BattleEncounterTurnEndReason reason,
+        BattleTurnEconomySnapshot turnEconomyState,
+        ActionTurnConsumption? turnConsumption = null)
+    {
+        if (!actorId.IsValid)
+        {
+            throw new ArgumentException("Actor runtime ID must be valid.", nameof(actorId));
+        }
+
+        if (!teamId.IsValid)
+        {
+            throw new ArgumentException("Team ID must be valid.", nameof(teamId));
+        }
+
+        if (!Enum.IsDefined(reason))
+        {
+            throw new ArgumentOutOfRangeException(nameof(reason));
+        }
+
+        ArgumentNullException.ThrowIfNull(turnEconomyState);
+        bool commandCommitted = reason == BattleEncounterTurnEndReason.CommandCommitted;
+        if (commandCommitted != (turnConsumption is not null))
+        {
+            throw new ArgumentException(
+                "Only a committed command turn end carries turn consumption.",
+                nameof(turnConsumption));
+        }
+
+        ActorId = actorId;
+        TeamId = teamId;
+        Reason = reason;
+        TurnEconomyState = turnEconomyState;
+        TurnConsumption = turnConsumption;
+    }
+
+    public RuntimeInstanceId ActorId { get; }
+    public ContentId TeamId { get; }
+    public BattleEncounterTurnEndReason Reason { get; }
+    public BattleTurnEconomySnapshot TurnEconomyState { get; }
+    public ActionTurnConsumption? TurnConsumption { get; }
+}
+
 public sealed record BattleEncounterPresenceChangedEventPayload(
     RuntimeInstanceId ActorId,
     bool IsDeployed,
@@ -232,6 +288,21 @@ public sealed record BattlePhaseEndedEventPayload : BattleEncounterEventPayload
     }
 }
 
+public sealed record BattleRoundEndedEventPayload : BattleEncounterEventPayload
+{
+    public BattleRoundEndedEventPayload(int roundNumber)
+    {
+        if (roundNumber <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(roundNumber), "Round number must be positive.");
+        }
+
+        RoundNumber = roundNumber;
+    }
+
+    public int RoundNumber { get; }
+}
+
 public sealed record BattleFaultedEventPayload(
     BattleEncounterFaultCode FaultCode,
     RuntimeInstanceId? ActorId = null,
@@ -245,20 +316,58 @@ public sealed record BattleEndedEventPayload : BattleEncounterEventPayload
         ContentId? winningTeamId,
         int completedRounds,
         BattleEncounterFaultCode? faultCode = null)
+        : this(
+            outcome,
+            winningTeamId,
+            completedRounds == 0 ? null : completedRounds,
+            completedRounds,
+            faultCode)
+    {
+    }
+
+    public BattleEndedEventPayload(
+        BattleEncounterOutcome outcome,
+        ContentId? winningTeamId,
+        int? finalRoundNumber,
+        int completedRounds,
+        BattleEncounterFaultCode? faultCode = null)
     {
         if (completedRounds < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(completedRounds));
         }
 
+        if (finalRoundNumber is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(finalRoundNumber),
+                "A final round number must be positive when present.");
+        }
+
+        if (finalRoundNumber is null && completedRounds != 0)
+        {
+            throw new ArgumentException(
+                "Completed rounds require a final round number.",
+                nameof(completedRounds));
+        }
+
+        if (finalRoundNumber is int finalRound && completedRounds > finalRound)
+        {
+            throw new ArgumentException(
+                "Completed rounds cannot exceed the final round number.",
+                nameof(completedRounds));
+        }
+
         Outcome = outcome;
         WinningTeamId = winningTeamId;
+        FinalRoundNumber = finalRoundNumber;
         CompletedRounds = completedRounds;
         FaultCode = faultCode;
     }
 
     public BattleEncounterOutcome Outcome { get; }
     public ContentId? WinningTeamId { get; }
+    public int? FinalRoundNumber { get; }
     public int CompletedRounds { get; }
     public BattleEncounterFaultCode? FaultCode { get; }
 }
@@ -314,6 +423,7 @@ public sealed record BattleEncounterEvent
         BattleStatusChangedEventPayload value => value.StatusEvent.ActorId,
         BattleResourceChangedEventPayload value => value.SourceActorId,
         BattleTurnEconomyChangedEventPayload value => value.ActorId,
+        BattleTurnEndedEventPayload value => value.ActorId,
         BattleEncounterPresenceChangedEventPayload value => value.ActorId,
         BattleActorDefeatedEventPayload value => value.ActorId,
         BattleFaultedEventPayload value => value.ActorId,
@@ -358,6 +468,7 @@ public sealed record BattleEncounterEvent
     {
         BattlePhaseStartedEventPayload value => value.TurnEconomyState,
         BattleTurnEconomyChangedEventPayload value => value.After,
+        BattleTurnEndedEventPayload value => value.TurnEconomyState,
         BattlePhaseEndedEventPayload value => value.TurnEconomyState,
         _ => null
     };
@@ -390,9 +501,11 @@ public sealed record BattleEncounterEvent
             BattleEncounterEventKind.StatusChanged => payload is BattleStatusChangedEventPayload,
             BattleEncounterEventKind.ResourceChanged => payload is BattleResourceChangedEventPayload,
             BattleEncounterEventKind.TurnEconomyChanged => payload is BattleTurnEconomyChangedEventPayload,
+            BattleEncounterEventKind.TurnEnded => payload is BattleTurnEndedEventPayload,
             BattleEncounterEventKind.EncounterPresenceChanged => payload is BattleEncounterPresenceChangedEventPayload,
             BattleEncounterEventKind.ActorDefeated => payload is BattleActorDefeatedEventPayload,
             BattleEncounterEventKind.PhaseEnded => payload is BattlePhaseEndedEventPayload,
+            BattleEncounterEventKind.RoundEnded => payload is BattleRoundEndedEventPayload,
             BattleEncounterEventKind.BattleFaulted => payload is BattleFaultedEventPayload,
             BattleEncounterEventKind.BattleEnded => payload is BattleEndedEventPayload,
             BattleEncounterEventKind.HostActionRequested => payload is BattleHostActionRequestedEventPayload,
@@ -414,6 +527,11 @@ public sealed record BattleEncounterEvent
                     changed.Before,
                     changed.After,
                     changed.Consumption);
+                break;
+            case BattleTurnEndedEventPayload ended:
+                BattleTurnEconomyEventPayloadValidator.ValidateTeamSnapshot(
+                    ended.TeamId,
+                    ended.TurnEconomyState);
                 break;
             case BattlePhaseEndedEventPayload ended:
                 BattleTurnEconomyEventPayloadValidator.ValidateTeamSnapshot(

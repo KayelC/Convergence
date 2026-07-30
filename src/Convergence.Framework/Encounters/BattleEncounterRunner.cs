@@ -731,6 +731,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 .Where(participant => participant.State.IsDefeated)
                 .Select(participant => participant.InstanceId));
         int sequence = 0;
+        int? finalRoundNumber = null;
         int completedRounds = 0;
         bool battleStarted = false;
         bool battleEndLifecycleAttempted = false;
@@ -1143,7 +1144,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             }
 
             int round = roundStarted.RoundNumber;
-            completedRounds = round;
+            finalRoundNumber = round;
             await AddAsync(
                     BattleEncounterEventKind.RoundStarted,
                     new BattleRoundStartedEventPayload(round),
@@ -1335,23 +1336,50 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                 turnStartDepartureReason.HasValue ? actor : null,
                             explicitDepartureReason: turnStartDepartureReason)
                         .ConfigureAwait(false);
-                    if (turnStartCompletion.IsComplete)
-                    {
-                        return await FinishAsync(
-                                turnStartCompletion.Outcome,
-                                turnStartCompletion.WinningTeamId,
-                                turnStartCompletion.Message)
-                            .ConfigureAwait(false);
-                    }
-
                     if (!actor.State.IsDeployed || actor.State.IsDefeated)
                     {
+                        await AddAsync(
+                                BattleEncounterEventKind.TurnEnded,
+                                new BattleTurnEndedEventPayload(
+                                    actor.InstanceId,
+                                    actor.TeamId,
+                                    BattleEncounterTurnEndReason.ActorUnavailable,
+                                    beforeEconomy),
+                                $"{actor.DisplayName}'s turn ended before a command was committed.")
+                            .ConfigureAwait(false);
+                        if (turnStartCompletion.IsComplete)
+                        {
+                            return await FinishAsync(
+                                    turnStartCompletion.Outcome,
+                                    turnStartCompletion.WinningTeamId,
+                                    turnStartCompletion.Message)
+                                .ConfigureAwait(false);
+                        }
+
                         schedule = AdvanceSchedule(
                             schedule,
                             BattleEncounterScheduleStepOutcome.ActorUnavailable(
                                 actor.InstanceId),
                             actor.InstanceId);
                         continue;
+                    }
+
+                    if (turnStartCompletion.IsComplete)
+                    {
+                        await AddAsync(
+                                BattleEncounterEventKind.TurnEnded,
+                                new BattleTurnEndedEventPayload(
+                                    actor.InstanceId,
+                                    actor.TeamId,
+                                    BattleEncounterTurnEndReason.EncounterTerminated,
+                                    beforeEconomy),
+                                $"{actor.DisplayName}'s turn ended with the encounter.")
+                            .ConfigureAwait(false);
+                        return await FinishAsync(
+                                turnStartCompletion.Outcome,
+                                turnStartCompletion.WinningTeamId,
+                                turnStartCompletion.Message)
+                            .ConfigureAwait(false);
                     }
 
                     IReadOnlyList<StatModifierLifecycleBoundary> activeStatModifierBoundaries =
@@ -1439,11 +1467,29 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                     if (command.Status is BattleEncounterCommandStatus.Cancelled)
                     {
+                        await AddAsync(
+                                BattleEncounterEventKind.TurnEnded,
+                                new BattleTurnEndedEventPayload(
+                                    actor.InstanceId,
+                                    actor.TeamId,
+                                    BattleEncounterTurnEndReason.EncounterTerminated,
+                                    beforeEconomy),
+                                $"{actor.DisplayName}'s turn ended with encounter cancellation.")
+                            .ConfigureAwait(false);
                         return await FinishAsync(BattleEncounterOutcome.Cancelled, null, null).ConfigureAwait(false);
                     }
 
                     if (command.Status is BattleEncounterCommandStatus.Faulted)
                     {
+                        await AddAsync(
+                                BattleEncounterEventKind.TurnEnded,
+                                new BattleTurnEndedEventPayload(
+                                    actor.InstanceId,
+                                    actor.TeamId,
+                                    BattleEncounterTurnEndReason.EncounterTerminated,
+                                    beforeEconomy),
+                                $"{actor.DisplayName}'s turn ended with a command fault.")
+                            .ConfigureAwait(false);
                         await AddAsync(
                                 BattleEncounterEventKind.BattleFaulted,
                                 new BattleFaultedEventPayload(
@@ -1470,6 +1516,15 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                     actor.InstanceId,
                                     BattleEncounterCommandStatus.Rejected),
                                 rejection)
+                            .ConfigureAwait(false);
+                        await AddAsync(
+                                BattleEncounterEventKind.TurnEnded,
+                                new BattleTurnEndedEventPayload(
+                                    actor.InstanceId,
+                                    actor.TeamId,
+                                    BattleEncounterTurnEndReason.EncounterTerminated,
+                                    beforeEconomy),
+                                $"{actor.DisplayName}'s turn ended with a rejected command.")
                             .ConfigureAwait(false);
                         return await FinishAsync(
                                 BattleEncounterOutcome.Faulted,
@@ -1612,6 +1667,17 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                 BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
                             .ConfigureAwait(false);
                     }
+
+                    await AddAsync(
+                            BattleEncounterEventKind.TurnEnded,
+                            new BattleTurnEndedEventPayload(
+                                actor.InstanceId,
+                                actor.TeamId,
+                                BattleEncounterTurnEndReason.CommandCommitted,
+                                afterEconomy,
+                                command.TurnConsumption),
+                            $"{actor.DisplayName}'s turn ended.")
+                        .ConfigureAwait(false);
 
                     if (command.RequestedOutcome is BattleEncounterOutcome requestedOutcome)
                     {
@@ -1770,6 +1836,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             await AddRangeAsync(roundEndEvents).ConfigureAwait(false);
             BattleEncounterCompletion roundCompletion =
                 await ReconcileAsync(null).ConfigureAwait(false);
+            completedRounds = round;
+            await AddAsync(
+                    BattleEncounterEventKind.RoundEnded,
+                    new BattleRoundEndedEventPayload(round),
+                    $"Round {round} ended.")
+                .ConfigureAwait(false);
             if (roundCompletion.IsComplete)
             {
                 return await FinishAsync(
@@ -1972,6 +2044,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     new BattleEndedEventPayload(
                         BattleEncounterOutcome.Faulted,
                         null,
+                        finalRoundNumber,
                         completedRounds,
                         resolvedFaultCode),
                     finalMessage))
@@ -2074,7 +2147,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             await AddRangeAsync(battleEndEvents).ConfigureAwait(false);
             await AddAsync(
                     BattleEncounterEventKind.BattleEnded,
-                    new BattleEndedEventPayload(outcome, winningTeamId, completedRounds, faultCode),
+                    new BattleEndedEventPayload(
+                        outcome,
+                        winningTeamId,
+                        finalRoundNumber,
+                        completedRounds,
+                        faultCode),
                     endMessage)
                 .ConfigureAwait(false);
             return new BattleEncounterResult(

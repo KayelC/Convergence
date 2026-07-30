@@ -31,8 +31,10 @@ public sealed class BattleEncounterRunnerTests
         BattleEncounterEventKind.TurnStarted,
         BattleEncounterEventKind.TurnRestricted,
         BattleEncounterEventKind.TurnEconomyChanged,
+        BattleEncounterEventKind.TurnEnded,
         BattleEncounterEventKind.ActorDefeated,
         BattleEncounterEventKind.PhaseEnded,
+        BattleEncounterEventKind.RoundEnded,
         BattleEncounterEventKind.BattleFaulted,
         BattleEncounterEventKind.BattleEnded
     };
@@ -216,10 +218,24 @@ public sealed class BattleEncounterRunnerTests
         Assert.Equal(0, economy.After.RemainingActions);
         Assert.Equal(ActionTurnConsumptionKind.Pass, economy.Consumption.Kind);
 
+        var turnEnded = Assert.IsType<BattleTurnEndedEventPayload>(
+            result.Events.Single(battleEvent => battleEvent.Kind == BattleEncounterEventKind.TurnEnded).Payload);
+        Assert.Equal(player.InstanceId, turnEnded.ActorId);
+        Assert.Equal(PlayerTeam, turnEnded.TeamId);
+        Assert.Equal(BattleEncounterTurnEndReason.CommandCommitted, turnEnded.Reason);
+        Assert.Equal(ActionTurnConsumptionKind.Pass, turnEnded.TurnConsumption?.Kind);
+        Assert.Equal(0, turnEnded.TurnEconomyState.RemainingActions);
+        Assert.True(
+            result.Events.Single(battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged).Sequence <
+            result.Events.Single(battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.TurnEnded).Sequence);
+
         var ended = Assert.IsType<BattleEndedEventPayload>(
             result.Events.Single(battleEvent => battleEvent.Kind == BattleEncounterEventKind.BattleEnded).Payload);
         Assert.Equal(result.Outcome, ended.Outcome);
-        Assert.Equal(1, ended.CompletedRounds);
+        Assert.Equal(1, ended.FinalRoundNumber);
+        Assert.Equal(0, ended.CompletedRounds);
 
         var eventWithoutDebugText = new BattleEncounterEvent(
             0,
@@ -230,6 +246,68 @@ public sealed class BattleEncounterRunnerTests
             0,
             BattleEncounterEventKind.CommandPassed,
             new BattleTurnStartedEventPayload(player.InstanceId, PlayerTeam)));
+    }
+
+    [Fact]
+    public void Runner_ReportsFinalRoundSeparatelyFromFullyCompletedRounds()
+    {
+        BattleEncounterParticipant player = Participant("round_count_player", PlayerTeam);
+        BattleEncounterParticipant enemy = Participant("round_count_enemy", EnemyTeam);
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ =>
+                BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(3));
+
+        BattleEndedEventPayload ended = Assert.IsType<BattleEndedEventPayload>(
+            result.Events.Single(battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.BattleEnded).Payload);
+        BattleRoundEndedEventPayload completedRound = Assert.IsType<BattleRoundEndedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.RoundEnded).Payload);
+
+        Assert.Equal(2, ended.FinalRoundNumber);
+        Assert.Equal(1, ended.CompletedRounds);
+        Assert.Equal(1, completedRound.RoundNumber);
+        Assert.True(
+            result.Events.Single(battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.RoundEnded).Sequence <
+            result.Events.Last(battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.RoundStarted).Sequence);
+    }
+
+    [Fact]
+    public void EncounterEndPayloads_RejectContradictoryStructuralState()
+    {
+        var economy = new StandardActionTurnEconomySnapshot(1);
+        RuntimeInstanceId actorId = RuntimeInstanceId.Parse("event_actor");
+
+        Assert.Throws<ArgumentException>(() => new BattleTurnEndedEventPayload(
+            actorId,
+            PlayerTeam,
+            BattleEncounterTurnEndReason.CommandCommitted,
+            economy));
+        Assert.Throws<ArgumentException>(() => new BattleTurnEndedEventPayload(
+            actorId,
+            PlayerTeam,
+            BattleEncounterTurnEndReason.ActorUnavailable,
+            economy,
+            ActionTurnConsumption.Normal));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new BattleRoundEndedEventPayload(0));
+        Assert.Throws<ArgumentException>(() => new BattleEndedEventPayload(
+            BattleEncounterOutcome.Draw,
+            null,
+            finalRoundNumber: null,
+            completedRounds: 1));
+        Assert.Throws<ArgumentException>(() => new BattleEndedEventPayload(
+            BattleEncounterOutcome.Draw,
+            null,
+            finalRoundNumber: 1,
+            completedRounds: 2));
     }
 
     [Fact]
@@ -1146,7 +1224,7 @@ public sealed class BattleEncounterRunnerTests
         var handler = new QueueTurnHandler(_ =>
             BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
 
-        Run(
+        BattleEncounterResult result = Run(
             [first, second, enemy],
             new FixedInitiative(PlayerTeam, EnemyTeam),
             lifecycle,
@@ -1154,6 +1232,12 @@ public sealed class BattleEncounterRunnerTests
             new CompleteAfterTurnsPolicy(1));
 
         Assert.Equal(second.InstanceId, Assert.Single(handler.Requests).Actor.InstanceId);
+        BattleTurnEndedEventPayload firstTurnEnd = Assert.IsType<BattleTurnEndedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.TurnEnded &&
+                battleEvent.ActorId == first.InstanceId).Payload);
+        Assert.Equal(BattleEncounterTurnEndReason.ActorUnavailable, firstTurnEnd.Reason);
+        Assert.Null(firstTurnEnd.TurnConsumption);
     }
 
     [Fact]
@@ -1239,6 +1323,15 @@ public sealed class BattleEncounterRunnerTests
             1,
             result.Events.Count(battleEvent =>
                 battleEvent.Kind == BattleEncounterEventKind.RoundStarted));
+        BattleRoundEndedEventPayload roundEnded = Assert.IsType<BattleRoundEndedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.RoundEnded).Payload);
+        Assert.Equal(1, roundEnded.RoundNumber);
+        BattleEndedEventPayload battleEnded = Assert.IsType<BattleEndedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.BattleEnded).Payload);
+        Assert.Equal(1, battleEnded.FinalRoundNumber);
+        Assert.Equal(1, battleEnded.CompletedRounds);
         AssertDefeatPrecedesBattleEnd(result, enemy.InstanceId);
     }
 
@@ -2214,12 +2307,19 @@ public sealed class BattleEncounterRunnerTests
                 before,
                 after,
                 ActionTurnConsumption.Normal),
+            BattleEncounterEventKind.TurnEnded => new BattleTurnEndedEventPayload(
+                actor.InstanceId,
+                actor.TeamId,
+                BattleEncounterTurnEndReason.CommandCommitted,
+                after,
+                ActionTurnConsumption.Normal),
             BattleEncounterEventKind.ActorDefeated => new BattleActorDefeatedEventPayload(
                 actor.InstanceId,
                 actor.TeamId),
             BattleEncounterEventKind.PhaseEnded => new BattlePhaseEndedEventPayload(
                 actor.TeamId,
                 after),
+            BattleEncounterEventKind.RoundEnded => new BattleRoundEndedEventPayload(1),
             BattleEncounterEventKind.BattleFaulted => new BattleFaultedEventPayload(
                 BattleEncounterFaultCode.TurnHandlerExecutionFailed,
                 actor.InstanceId,

@@ -11682,3 +11682,37 @@ Convergence.Encounters.TeamPhaseRoundRobinBattleEncounterSchedulePolicy.PostComm
 Convergence.Encounters.TeamPhaseRoundRobinBattleEncounterSchedulePolicy.TeamPhaseRoundRobinBattleEncounterSchedulePolicy(Convergence.Encounters.BattleEncounterPostCommandScheduleExtension! postCommandExtension) -> void
 static Convergence.Encounters.BattleEncounterPostCommandScheduleDecision.FollowScheduler() -> Convergence.Encounters.BattleEncounterPostCommandScheduleDecision!
 static Convergence.Encounters.BattleEncounterPostCommandScheduleDecision.RetainActor() -> Convergence.Encounters.BattleEncounterPostCommandScheduleDecision!
+Convergence.Encounters.BattleEncounterEventKind.RoundEnded = 23 -> Convergence.Encounters.BattleEncounterEventKind
+Convergence.Encounters.BattleEncounterEventKind.TurnEnded = 22 -> Convergence.Encounters.BattleEncounterEventKind
+Convergence.Encounters.BattleEncounterTurnEndReason
+Convergence.Encounters.BattleEncounterTurnEndReason.ActorUnavailable = 1 -> Convergence.Encounters.BattleEncounterTurnEndReason
+Convergence.Encounters.BattleEncounterTurnEndReason.CommandCommitted = 0 -> Convergence.Encounters.BattleEncounterTurnEndReason
+Convergence.Encounters.BattleEncounterTurnEndReason.EncounterTerminated = 2 -> Convergence.Encounters.BattleEncounterTurnEndReason
+Convergence.Encounters.BattleEndedEventPayload.BattleEndedEventPayload(Convergence.Encounters.BattleEncounterOutcome outcome, Convergence.Content.ContentId? winningTeamId, int? finalRoundNumber, int completedRounds, Convergence.Encounters.BattleEncounterFaultCode? faultCode = null) -> void
+Convergence.Encounters.BattleEndedEventPayload.FinalRoundNumber.get -> int?
+Convergence.Encounters.BattleRoundEndedEventPayload
+Convergence.Encounters.BattleRoundEndedEventPayload.BattleRoundEndedEventPayload(int roundNumber) -> void
+Convergence.Encounters.BattleRoundEndedEventPayload.Equals(Convergence.Encounters.BattleRoundEndedEventPayload? other) -> bool
+Convergence.Encounters.BattleRoundEndedEventPayload.RoundNumber.get -> int
+Convergence.Encounters.BattleTurnEndedEventPayload
+Convergence.Encounters.BattleTurnEndedEventPayload.ActorId.get -> Convergence.Runtime.RuntimeInstanceId
+Convergence.Encounters.BattleTurnEndedEventPayload.BattleTurnEndedEventPayload(Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Content.ContentId teamId, Convergence.Encounters.BattleEncounterTurnEndReason reason, Convergence.Execution.BattleTurnEconomySnapshot! turnEconomyState, Convergence.Execution.ActionTurnConsumption? turnConsumption = null) -> void
+Convergence.Encounters.BattleTurnEndedEventPayload.Equals(Convergence.Encounters.BattleTurnEndedEventPayload? other) -> bool
+Convergence.Encounters.BattleTurnEndedEventPayload.Reason.get -> Convergence.Encounters.BattleEncounterTurnEndReason
+Convergence.Encounters.BattleTurnEndedEventPayload.TeamId.get -> Convergence.Content.ContentId
+Convergence.Encounters.BattleTurnEndedEventPayload.TurnConsumption.get -> Convergence.Execution.ActionTurnConsumption?
+Convergence.Encounters.BattleTurnEndedEventPayload.TurnEconomyState.get -> Convergence.Execution.BattleTurnEconomySnapshot!
+override Convergence.Encounters.BattleRoundEndedEventPayload.<Clone>$() -> Convergence.Encounters.BattleRoundEndedEventPayload!
+override Convergence.Encounters.BattleRoundEndedEventPayload.Equals(object? obj) -> bool
+override Convergence.Encounters.BattleRoundEndedEventPayload.GetHashCode() -> int
+override Convergence.Encounters.BattleRoundEndedEventPayload.ToString() -> string!
+override Convergence.Encounters.BattleTurnEndedEventPayload.<Clone>$() -> Convergence.Encounters.BattleTurnEndedEventPayload!
+override Convergence.Encounters.BattleTurnEndedEventPayload.Equals(object? obj) -> bool
+override Convergence.Encounters.BattleTurnEndedEventPayload.GetHashCode() -> int
+override Convergence.Encounters.BattleTurnEndedEventPayload.ToString() -> string!
+override sealed Convergence.Encounters.BattleRoundEndedEventPayload.Equals(Convergence.Encounters.BattleEncounterEventPayload? other) -> bool
+override sealed Convergence.Encounters.BattleTurnEndedEventPayload.Equals(Convergence.Encounters.BattleEncounterEventPayload? other) -> bool
+static Convergence.Encounters.BattleRoundEndedEventPayload.operator !=(Convergence.Encounters.BattleRoundEndedEventPayload? left, Convergence.Encounters.BattleRoundEndedEventPayload? right) -> bool
+static Convergence.Encounters.BattleRoundEndedEventPayload.operator ==(Convergence.Encounters.BattleRoundEndedEventPayload? left, Convergence.Encounters.BattleRoundEndedEventPayload? right) -> bool
+static Convergence.Encounters.BattleTurnEndedEventPayload.operator !=(Convergence.Encounters.BattleTurnEndedEventPayload? left, Convergence.Encounters.BattleTurnEndedEventPayload? right) -> bool
+static Convergence.Encounters.BattleTurnEndedEventPayload.operator ==(Convergence.Encounters.BattleTurnEndedEventPayload? left, Convergence.Encounters.BattleTurnEndedEventPayload? right) -> bool
