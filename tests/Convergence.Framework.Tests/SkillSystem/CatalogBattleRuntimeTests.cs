@@ -1373,7 +1373,8 @@ public sealed class CatalogBattleRuntimeTests
             typeof(BattleExecutionServices),
             typeof(IBattleEncounterLifecyclePort),
             typeof(BattleTurnEconomyRuleset),
-            typeof(IAutomatedBattleTurnRestrictionResolver)
+            typeof(IAutomatedBattleTurnRestrictionResolver),
+            typeof(BattleEncounterProgressPolicy)
         ], constructor.GetParameters().Select(parameter => parameter.ParameterType));
     }
 
