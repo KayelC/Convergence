@@ -212,8 +212,17 @@ then routes the resulting facts through
 `PersistentBattleKnowledgeTransitionService` rather than rebuilding a snapshot
 ad hoc.
 
-This preserves existing analyzed-profile markers, validates identifiers and
-duplicates, and provides immutable before/after results. Acquisition,
+Before policy evaluation, the service preflights the complete current snapshot
+through the canonical persistent validator. Dedicated familiar diagnostics
+retain typed identifier and duplicate locations; undefined enums, invalid
+analysis fields, and non-storable intrinsic-element facts map to a stable
+transition-rejected diagnostic. Rejection returns the exact current snapshot as
+both `Before` and `After`, imports no entity IDs, and never invokes the policy.
+Even an empty or disabled import runs the injected transition with empty
+discoveries, preventing a no-op from becoming a validation bypass.
+
+This preserves existing analyzed-profile markers and provides immutable
+before/after results. Acquisition,
 Compendium registration, and registered-entry synchronization remain explicit
 call sites; the service does not observe ownership transactions implicitly.
 

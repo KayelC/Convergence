@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
@@ -215,9 +215,13 @@ realistic reachable defect and passed the complete locally executable release
 gate at that revision. The later
 [pre-closure independent audit](../reviews/battle-knowledge-order-5-pre-closure-independent-audit-2026-07-29.md)
 confirmed the approved mechanics but reproduced one low-severity false-success
-path in familiar-import validation. `battle_knowledge` is `partial` pending
-O5-R26 and the O5-R27 closure recheck; Order 6 does not begin before those
-checkpoints close.
+path in familiar-import validation. O5-R26 now validates current knowledge
+before policy evaluation and prevents no-op imports from bypassing the
+transition authority. The
+[O5-R27 final closure review](../reviews/battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
+found no remaining realistic reachable defect and passed every local gate.
+`battle_knowledge` is complete, Order 5 is formally closed, and Order 6 is the
+next collaborative subject.
 
 ## Priority 2: Persistence Evolution
 

@@ -73,6 +73,7 @@ or implementation authority.
 - [Battle Knowledge Order 5 Post-R20 Independent Audit, 29 July 2026](battle-knowledge-order-5-post-r20-independent-audit-2026-07-29.md)
 - [Battle Knowledge Order 5 R25 Independent Closure Review, 29 July 2026](battle-knowledge-order-5-r25-independent-closure-review-2026-07-29.md)
 - [Battle Knowledge Order 5 Pre-Closure Independent Audit, 29 July 2026](battle-knowledge-order-5-pre-closure-independent-audit-2026-07-29.md)
+- [Battle Knowledge Order 5 R27 Final Closure Review, 30 July 2026](battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.

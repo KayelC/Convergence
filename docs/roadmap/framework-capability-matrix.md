@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`battle_knowledge` is `partial`. Persistent entity facts and encounter-local
+`battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and
 Analyze results pass through one atomic framework transition; automated teams
 share only their own encounter snapshot; familiar acquisition is optional and
@@ -71,8 +71,11 @@ later
 confirmed the gameplay model and principal runtime paths but found that a
 no-op familiar-knowledge import can report success for clone-malformed current
 knowledge without invoking complete persistent validation. O5-R26 must close
-that boundary and O5-R27 must perform the closure recheck before Order 5 returns
-to `complete`.
+that boundary. O5-R26 now preflights current knowledge before policy evaluation
+and routes valid no-op imports through the injected transition. The
+[O5-R27 final closure review](../reviews/battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
+found no remaining realistic reachable defect and passed the complete local
+gate, returning Order 5 to `complete`.
 
 `status_and_passive_lifecycle` is `complete`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

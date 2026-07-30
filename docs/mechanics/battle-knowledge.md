@@ -154,6 +154,10 @@ nothing. A custom policy may distinguish direct requests, acquisitions,
 explicit Compendium registration, and synchronization from already registered
 entries.
 
+Existing player knowledge is validated before an import policy is consulted.
+Malformed current knowledge rejects unchanged and cannot be disguised as a
+successful disabled, empty, or unavailable import.
+
 Familiarity affects player knowledge only. It never trains ordinary enemy AI.
 
 A batch import may accept valid requested entities while reporting diagnostics

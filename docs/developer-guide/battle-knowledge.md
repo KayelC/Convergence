@@ -230,6 +230,13 @@ defenses, or implement `IFamiliarKnowledgeImportPolicy` for a game-specific
 rule. The import service does not acquire, recruit, register, or fuse an entity;
 the host calls it after the owning transaction succeeds.
 
+The service validates the complete current `RuntimeKnowledgeSnapshot` before
+it enumerates requested entities or invokes `IFamiliarKnowledgeImportPolicy`.
+Malformed current state returns the same `Before` and `After` snapshot, no
+imported entity IDs, and typed diagnostics; the policy is not called. Empty,
+disabled, or unavailable imports still pass through the injected persistent
+transition authority, so a no-op cannot bypass validation.
+
 For a multi-entity request, `IsSuccess` means that the complete batch produced
 no diagnostics. It does not mean that `After` is unchanged when one requested
 entity fails. Valid requested entities are imported and listed in

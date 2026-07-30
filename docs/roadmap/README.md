@@ -105,6 +105,10 @@ reconciles all active audience and save-contract guidance. The
 found no unresolved realistic reachable defect and passed every locally
 executable release gate at that revision. The later
 [pre-closure independent audit](../reviews/battle-knowledge-order-5-pre-closure-independent-audit-2026-07-29.md)
-reproduced one low-severity familiar-import validation gap. O5-R26 and the
-O5-R27 closure recheck remain before Order 6, encounter orchestration, becomes
-the next collaborative documentation subject.
+reproduced one low-severity familiar-import validation gap. O5-R26 now closes
+that boundary by validating current state before policy evaluation and by
+routing no-op imports through the injected transition. The
+[O5-R27 final closure review](../reviews/battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
+found no remaining realistic reachable defect and passed the complete local
+gate. Order 5 is formally closed; Order 6, encounter orchestration, is the next
+collaborative documentation subject.

@@ -440,8 +440,13 @@ reachable defect. The complete locally executable release gate passed. Order
 [pre-closure independent audit](../reviews/battle-knowledge-order-5-pre-closure-independent-audit-2026-07-29.md)
 reopened the runtime capability for O5-R26 after reproducing an incomplete
 familiar-import validation boundary. The three audience documents remain
-reviewed and mechanically accurate; O5-R27 must recheck their one broad
-malformed-input guarantee after the runtime correction. Order 6 is not yet the
+reviewed and mechanically accurate. O5-R26 now validates current knowledge
+before policy evaluation and prevents disabled, empty, or unavailable imports
+from bypassing transition validation. The
+[O5-R27 final closure review](../reviews/battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
+confirmed the corrected source and all three audience documents, found no
+remaining realistic reachable defect, and passed the complete local gate.
+Order 5 is formally closed, and Order 6 (`encounter_orchestration`) is now the
 next collaborative subject.
 
 A final bounded certification subsequently exercised 1,536 deterministic
