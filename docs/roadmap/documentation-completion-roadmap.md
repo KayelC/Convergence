@@ -436,8 +436,13 @@ records 27 reviewed, 26 `existing_unreviewed`, 15 missing, and 7
 then re-read the corrected source, host integration, adversarial boundaries,
 and all three audience documents without finding an unresolved realistic
 reachable defect. The complete locally executable release gate passed. Order
-5 is formally closed, and Order 6 (`encounter_orchestration`) is now the next
-collaborative subject.
+5 was formally closed at that revision. The later
+[pre-closure independent audit](../reviews/battle-knowledge-order-5-pre-closure-independent-audit-2026-07-29.md)
+reopened the runtime capability for O5-R26 after reproducing an incomplete
+familiar-import validation boundary. The three audience documents remain
+reviewed and mechanically accurate; O5-R27 must recheck their one broad
+malformed-input guarantee after the runtime correction. Order 6 is not yet the
+next collaborative subject.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
