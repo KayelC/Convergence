@@ -685,9 +685,13 @@ public sealed record BattleEncounterEvent
                 break;
             case BattleActionRejectedEventPayload rejected:
                 RequireActorId(rejected.ActorId, nameof(rejected.ActorId));
-                if (!Enum.IsDefined(rejected.Status))
+                if (rejected.Status is not (
+                    BattleEncounterCommandStatus.Rejected or
+                    BattleEncounterCommandStatus.Faulted))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(rejected.Status));
+                    throw new ArgumentException(
+                        "Action-rejected evidence requires a rejected or faulted command status.",
+                        nameof(rejected.Status));
                 }
                 RequireOptionalContentId(rejected.ActionId, nameof(rejected.ActionId));
                 break;
@@ -883,12 +887,34 @@ internal static class BattleEncounterEventOwnership
 {
     public static void RequirePortOwned(
         IEnumerable<BattleEncounterEvent> events,
-        string portName)
+        string portName,
+        IEnumerable<BattleEncounterParticipant> participants,
+        RuntimeInstanceId? scheduledActorId = null)
     {
         ArgumentNullException.ThrowIfNull(events);
         if (string.IsNullOrWhiteSpace(portName))
         {
             throw new ArgumentException("An encounter port name is required.", nameof(portName));
+        }
+
+        BattleEncounterParticipant[] participantSnapshot =
+            participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants));
+        if (participantSnapshot.Length == 0 ||
+            participantSnapshot.Any(participant => participant is null) ||
+            participantSnapshot.Select(participant => participant.InstanceId).Distinct().Count() !=
+            participantSnapshot.Length)
+        {
+            throw new InvalidOperationException(
+                $"Encounter port '{portName}' requires a nonempty, unique participant graph.");
+        }
+
+        var participantsById = participantSnapshot.ToDictionary(
+            participant => participant.InstanceId);
+        if (scheduledActorId is RuntimeInstanceId scheduledActor &&
+            !participantsById.ContainsKey(scheduledActor))
+        {
+            throw new InvalidOperationException(
+                $"Encounter port '{portName}' received unknown scheduled actor '{scheduledActor}'.");
         }
 
         foreach (BattleEncounterEvent battleEvent in events)
@@ -905,8 +931,228 @@ internal static class BattleEncounterEventOwnership
                     $"Encounter port '{portName}' cannot publish runner-owned or unclassified " +
                     $"event kind '{battleEvent.Kind}'.");
             }
+
+            ValidateEncounterGraph(
+                battleEvent,
+                portName,
+                participantsById,
+                scheduledActorId);
         }
     }
+
+    private static void ValidateEncounterGraph(
+        BattleEncounterEvent battleEvent,
+        string portName,
+        IReadOnlyDictionary<RuntimeInstanceId, BattleEncounterParticipant> participants,
+        RuntimeInstanceId? scheduledActorId)
+    {
+        var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        RequireOptionalParticipant(
+            battleEvent.ActorId,
+            participants,
+            portName,
+            "actor");
+        RequireOptionalParticipant(
+            battleEvent.TargetId,
+            participants,
+            portName,
+            "target");
+
+        if (battleEvent.Payload is BattleEncounterPresenceChangedEventPayload presence)
+        {
+            BattleEncounterParticipant participant = RequireParticipant(
+                presence.ActorId,
+                participants,
+                portName,
+                "presence actor");
+            if (participant.TeamId != presence.TeamId)
+            {
+                throw new InvalidOperationException(
+                    $"Encounter port '{portName}' reported actor '{presence.ActorId}' on " +
+                    $"team '{presence.TeamId}', but the encounter graph assigns team " +
+                    $"'{participant.TeamId}'.");
+            }
+        }
+
+        if (scheduledActorId is RuntimeInstanceId scheduledActor &&
+            CommandEvidenceActor(battleEvent.Payload) is RuntimeInstanceId evidenceActor &&
+            evidenceActor != scheduledActor)
+        {
+            throw new InvalidOperationException(
+                $"Encounter port '{portName}' reported command evidence for actor " +
+                $"'{evidenceActor}' while actor '{scheduledActor}' owns the command window.");
+        }
+
+        switch (battleEvent.Payload)
+        {
+            case BattleEffectResolvedEventPayload effect:
+                ValidateEffectResult(effect.Result, participants, portName, visited);
+                break;
+            case BattlePassiveActivatedEventPayload passive when passive.Result is not null:
+                ValidatePassiveResult(passive.Result, participants, portName, visited);
+                break;
+            case BattleStatusChangedEventPayload status:
+                ValidateStatusEvent(status.StatusEvent, participants, portName, visited);
+                break;
+        }
+    }
+
+    private static RuntimeInstanceId? CommandEvidenceActor(
+        BattleEncounterEventPayload payload) =>
+        payload switch
+        {
+            BattleCommandSelectedEventPayload value => value.ActorId,
+            BattleCommandPassedEventPayload value => value.ActorId,
+            BattleActionRejectedEventPayload value => value.ActorId,
+            BattleHostActionRequestedEventPayload value => value.ActorId,
+            _ => null
+        };
+
+    private static void ValidateEffectResult(
+        EffectExecutionResult result,
+        IReadOnlyDictionary<RuntimeInstanceId, BattleEncounterParticipant> participants,
+        string portName,
+        ISet<object> visited)
+    {
+        if (!visited.Add(result))
+        {
+            return;
+        }
+
+        RequireOptionalParticipant(result.TargetId, participants, portName, "effect target");
+        RequireOptionalParticipant(
+            result.DependencyEvaluation?.TargetId,
+            participants,
+            portName,
+            "effect dependency target");
+        foreach (ExecutionResourceChange resource in result.ResourceChanges)
+        {
+            RequireParticipant(
+                resource.ActorId,
+                participants,
+                portName,
+                "effect resource actor");
+        }
+
+        foreach (DamageHitExecutionEvidence hit in result.DamageHits)
+        {
+            RequireParticipant(hit.ActorId, participants, portName, "damage actor");
+            RequireParticipant(hit.TargetId, participants, portName, "damage target");
+            RequireOptionalParticipant(
+                hit.AffectedActorId,
+                participants,
+                portName,
+                "damage affected actor");
+        }
+
+        foreach (var observation in result.KnowledgeObservations)
+        {
+            RequireParticipant(
+                observation.ActorId,
+                participants,
+                portName,
+                "knowledge actor");
+            RequireParticipant(
+                observation.TargetId,
+                participants,
+                portName,
+                "knowledge target");
+        }
+
+        if (result.Analysis is { } analysis)
+        {
+            RequireParticipant(analysis.ActorId, participants, portName, "analysis actor");
+            RequireParticipant(analysis.TargetId, participants, portName, "analysis target");
+        }
+
+        foreach (PassiveTriggerExecutionResult passive in result.PassiveActivations)
+        {
+            ValidatePassiveResult(passive, participants, portName, visited);
+        }
+
+        foreach (BattleStatusLifecycleEvent lifecycleEvent in result.LifecycleEvents)
+        {
+            ValidateStatusEvent(lifecycleEvent, participants, portName, visited);
+        }
+    }
+
+    private static void ValidatePassiveResult(
+        PassiveTriggerExecutionResult result,
+        IReadOnlyDictionary<RuntimeInstanceId, BattleEncounterParticipant> participants,
+        string portName,
+        ISet<object> visited)
+    {
+        if (!visited.Add(result))
+        {
+            return;
+        }
+
+        RequireParticipant(result.TargetId, participants, portName, "passive target");
+        foreach (EffectExecutionResult effect in result.Effects)
+        {
+            ValidateEffectResult(effect, participants, portName, visited);
+        }
+
+        foreach (BattleStatusLifecycleEvent lifecycleEvent in result.CompletionLifecycleEvents)
+        {
+            ValidateStatusEvent(lifecycleEvent, participants, portName, visited);
+        }
+    }
+
+    private static void ValidateStatusEvent(
+        BattleStatusLifecycleEvent status,
+        IReadOnlyDictionary<RuntimeInstanceId, BattleEncounterParticipant> participants,
+        string portName,
+        ISet<object> visited)
+    {
+        if (!visited.Add(status))
+        {
+            return;
+        }
+
+        RequireParticipant(status.ActorId, participants, portName, "status actor");
+        RequireOptionalParticipant(
+            status.SourceActorId,
+            participants,
+            portName,
+            "status source actor");
+        if (status.EffectResult is not null)
+        {
+            ValidateEffectResult(status.EffectResult, participants, portName, visited);
+        }
+
+        if (status.PassiveActivation is not null)
+        {
+            ValidatePassiveResult(
+                status.PassiveActivation,
+                participants,
+                portName,
+                visited);
+        }
+    }
+
+    private static void RequireOptionalParticipant(
+        RuntimeInstanceId? actorId,
+        IReadOnlyDictionary<RuntimeInstanceId, BattleEncounterParticipant> participants,
+        string portName,
+        string role)
+    {
+        if (actorId is RuntimeInstanceId suppliedActorId)
+        {
+            _ = RequireParticipant(suppliedActorId, participants, portName, role);
+        }
+    }
+
+    private static BattleEncounterParticipant RequireParticipant(
+        RuntimeInstanceId actorId,
+        IReadOnlyDictionary<RuntimeInstanceId, BattleEncounterParticipant> participants,
+        string portName,
+        string role) =>
+        participants.TryGetValue(actorId, out BattleEncounterParticipant? participant)
+            ? participant
+            : throw new InvalidOperationException(
+                $"Encounter port '{portName}' reported {role} '{actorId}' outside the " +
+                "frozen participant graph.");
 
     private static bool IsPortOwned(BattleEncounterEventKind kind) =>
         kind is BattleEncounterEventKind.CommandSelected

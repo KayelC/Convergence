@@ -1433,6 +1433,10 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                 ?? throw new InvalidOperationException(
                                     "The battle lifecycle returned a null turn-start result.");
                             turnStartEvents = MapStatusEvents(stagedTurnStart.Events);
+                            BattleEncounterEventOwnership.RequirePortOwned(
+                                turnStartEvents,
+                                "lifecycle-turn-start",
+                                turnStartTransaction.Participants);
                             turnStartEconomyFault = CurrentEconomyAuthorityFault(
                                 turnEconomy,
                                 beforeEconomy,
@@ -1603,7 +1607,9 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                         "The battle turn handler returned null.");
                                 BattleEncounterEventOwnership.RequirePortOwned(
                                     returned.Events,
-                                    "turn-handler");
+                                    "turn-handler",
+                                    request.Participants,
+                                    actor.InstanceId);
                                 return returned;
                             },
                             actor.InstanceId)
@@ -2442,14 +2448,17 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             }
         }
 
-        static IReadOnlyList<BattleEncounterEvent> SnapshotLifecycleEvents(
+        IReadOnlyList<BattleEncounterEvent> SnapshotLifecycleEvents(
             IReadOnlyList<BattleEncounterEvent>? lifecycleEvents,
             string stage)
         {
             BattleEncounterEvent[] snapshot = (lifecycleEvents ?? throw new InvalidOperationException(
                     $"The battle lifecycle returned a null {stage} event collection."))
                 .ToArray();
-            BattleEncounterEventOwnership.RequirePortOwned(snapshot, $"lifecycle-{stage}");
+            BattleEncounterEventOwnership.RequirePortOwned(
+                snapshot,
+                $"lifecycle-{stage}",
+                request.Participants);
             return Array.AsReadOnly(snapshot);
         }
     }

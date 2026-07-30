@@ -1845,6 +1845,230 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_RejectsTurnHandlerEventsOutsideTheFrozenParticipantGraph()
+    {
+        BattleEncounterParticipant player =
+            Participant("foreign_event_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("foreign_event_enemy", EnemyTeam);
+        RuntimeInstanceId foreignTarget =
+            RuntimeInstanceId.Parse("foreign_event_target");
+        const string marker = "foreign target command evidence";
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                [new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.CommandSelected,
+                    new BattleCommandSelectedEventPayload(
+                        player.InstanceId,
+                        Id("foreign_target_action"),
+                        foreignTarget),
+                    marker)])),
+            new CompleteAfterTurnsPolicy(99));
+
+        AssertPortFault(
+            result,
+            BattleEncounterFaultCode.TurnHandlerExecutionFailed,
+            "turn-handler");
+        Assert.Contains("outside the frozen participant graph", result.FaultMessage);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.DebugText == marker);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Fact]
+    public void Runner_RejectsCommandEvidenceForAnActorWithoutTheCommandWindow()
+    {
+        BattleEncounterParticipant player =
+            Participant("wrong_command_actor_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("wrong_command_actor_enemy", EnemyTeam);
+        const string marker = "wrong command actor evidence";
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                [new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.CommandPassed,
+                    new BattleCommandPassedEventPayload(enemy.InstanceId),
+                    marker)])),
+            new CompleteAfterTurnsPolicy(99));
+
+        AssertPortFault(
+            result,
+            BattleEncounterFaultCode.TurnHandlerExecutionFailed,
+            "turn-handler");
+        Assert.Contains("owns the command window", result.FaultMessage);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.DebugText == marker);
+    }
+
+    [Fact]
+    public void Runner_RejectsNestedEffectEvidenceOutsideTheFrozenParticipantGraph()
+    {
+        BattleEncounterParticipant player =
+            Participant("nested_event_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("nested_event_enemy", EnemyTeam);
+        RuntimeInstanceId foreignActor =
+            RuntimeInstanceId.Parse("nested_event_foreign_actor");
+        ContentId actionId = Id("nested_event_action");
+        const string marker = "foreign nested effect evidence";
+        var effect = new EffectExecutionResult(
+            0,
+            enemy.InstanceId,
+            EffectExecutionOutcome.Success)
+        {
+            ResourceChanges =
+            [
+                new ExecutionResourceChange(foreignActor, Hp, -1)
+            ]
+        };
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                [new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.EffectResolved,
+                    new BattleEffectResolvedEventPayload(
+                        player.InstanceId,
+                        actionId,
+                        effect),
+                    marker)])),
+            new CompleteAfterTurnsPolicy(99));
+
+        AssertPortFault(
+            result,
+            BattleEncounterFaultCode.TurnHandlerExecutionFailed,
+            "turn-handler");
+        Assert.Contains("effect resource actor", result.FaultMessage);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.DebugText == marker);
+    }
+
+    [Fact]
+    public void Runner_AllowsHostedEntityProfileProvenanceOutsideTheParticipantGraph()
+    {
+        BattleEncounterParticipant player =
+            Participant("profile_provenance_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("profile_provenance_enemy", EnemyTeam);
+        ContentId actionId = Id("profile_provenance_action");
+        RuntimeInstanceId hostedEntityId =
+            RuntimeInstanceId.Parse("profile_provenance_hosted_entity");
+        var observation = BattleKnowledgeObservation.Elemental(
+            actionId,
+            player.InstanceId,
+            enemy.InstanceId,
+            new RuntimeCombatProfileIdentitySnapshot(
+                hostedEntityId,
+                Id("profile_provenance_entity")),
+            effectIndex: 0,
+            element: DamageElement.Fire,
+            contacted: true,
+            authoredAffinity: ElementalAffinity.Normal,
+            effectiveAffinity: ElementalAffinity.Normal);
+        var effect = new EffectExecutionResult(
+            0,
+            enemy.InstanceId,
+            EffectExecutionOutcome.Success)
+        {
+            KnowledgeObservations = [observation]
+        };
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                [new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.EffectResolved,
+                    new BattleEffectResolvedEventPayload(
+                        player.InstanceId,
+                        actionId,
+                        effect))])),
+            new CompleteAfterTurnsPolicy(1));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        BattleEffectResolvedEventPayload published =
+            Assert.IsType<BattleEffectResolvedEventPayload>(
+                Assert.Single(result.Events, battleEvent =>
+                    battleEvent.Kind == BattleEncounterEventKind.EffectResolved).Payload);
+        Assert.Same(effect, published.Result);
+    }
+
+    [Fact]
+    public void Runner_RejectsLifecyclePresenceEventsWithAMismatchedEncounterTeam()
+    {
+        BattleEncounterParticipant player =
+            Participant("presence_team_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("presence_team_enemy", EnemyTeam);
+        const string marker = "mismatched presence team evidence";
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleStartEvents =
+            [
+                new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.EncounterPresenceChanged,
+                    new BattleEncounterPresenceChangedEventPayload(
+                        player.InstanceId,
+                        false,
+                        EnemyTeam),
+                    marker)
+            ]
+        };
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ =>
+                BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(99));
+
+        AssertPortFault(
+            result,
+            BattleEncounterFaultCode.LifecycleExecutionFailed,
+            "battle-start");
+        Assert.Contains("assigns team", result.FaultMessage);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.DebugText == marker);
+    }
+
+    [Fact]
+    public void EncounterEvent_RejectsActionRejectedEvidenceWithAnExecutedStatus()
+    {
+        RuntimeInstanceId actorId =
+            RuntimeInstanceId.Parse("executed_rejection_actor");
+
+        Assert.Throws<ArgumentException>(() =>
+            new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.ActionRejected,
+                new BattleActionRejectedEventPayload(
+                    actorId,
+                    BattleEncounterCommandStatus.Executed)));
+    }
+
+    [Fact]
     public async Task Runner_PreCancelledTokenTouchesNoEncounterPortOrActorState()
     {
         BattleEncounterParticipant player = Participant("cancelled_player", PlayerTeam);
