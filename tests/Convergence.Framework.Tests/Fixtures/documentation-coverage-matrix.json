@@ -210,18 +210,18 @@
       "id": "encounter_orchestration",
       "mechanics": {
         "state": "existing_unreviewed",
-        "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
-        "reason": "Encounter outcomes are described but the complete loop still requires owner review."
+        "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
+        "reason": "The dedicated mechanics page covers both supplied schedulers, lifecycle order, cancellation, outcomes, and canonical evidence; independent closure review remains."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Command, lifecycle, completion, event, cancellation, and fault ports need a guide."
+        "state": "existing_unreviewed",
+        "documents": ["docs/developer-guide/encounter-orchestration.md"],
+        "reason": "The integration guide covers scheduling, command, lifecycle, completion, event, cancellation, fault, automated, and Godot composition; independent closure review remains."
       },
       "technical": {
         "state": "existing_unreviewed",
-        "documents": ["docs/gameplay-systems.md"],
-        "reason": "The encounter state machine and terminal event guarantees need a reviewed technical page."
+        "documents": ["docs/technical/encounter-orchestration-runtime.md"],
+        "reason": "The technical page traces scheduler protocol, lifecycle transactions, reconciliation, structural event order, result snapshots, and fault containment; independent closure review remains."
       }
     },
     {

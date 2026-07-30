@@ -120,15 +120,20 @@
     {
       "id": "encounter_orchestration",
       "implementationState": "partial",
-      "frameworkTests": ["BattleEncounterRunnerTests", "EncounterPreparationServiceTests"],
+      "frameworkTests": [
+        "BattleEncounterRunnerTests",
+        "TeamPhaseRoundRobinScheduleTests",
+        "AgilityOrderedBattleEncounterScheduleTests",
+        "BattleEncounterPostCommandSchedulingTests",
+        "CatalogBattleRuntimeTests",
+        "EncounterPreparationServiceTests",
+        "GodotIntegrationContractTests"
+      ],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "The active scheduler is fixed to ordered team phases with round-robin actors.",
-        "Committed turn-start, phase-end, and round-end lifecycle boundaries do not all reconcile departure, defeat, and completion before progression.",
-        "The structural event stream has no explicit turn-end or round-end event and conflates the current round with completed rounds.",
-        "Automated battle exposes a synchronous, lossy duplicate event model instead of the canonical typed async encounter result."
+        "The implemented scheduler, lifecycle, event, terminal, cancellation, and automated-runner contracts await the independent Order 6 closure review."
       ]
     },
     {

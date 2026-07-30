@@ -14,7 +14,7 @@ It covers the same 25 capability IDs as the
 ## Current Reading
 
 The documentation matrix currently records 75 audience entries: 27 reviewed,
-26 existing_unreviewed, 15 missing, and 7 not_applicable.
+27 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -144,7 +144,8 @@ audience pages and save-v15 guidance, so the Battle Knowledge entries return to
 [O5-R25 independent closure review](../reviews/battle-knowledge-order-5-r25-independent-closure-review-2026-07-29.md)
 subsequently re-read the corrected implementation and all three audience
 documents, found no unresolved realistic reachable defect, and closed the
-capability. Order 6 is now the next collaborative documentation subject.
+capability. At that revision, Order 6 became the next collaborative
+documentation subject.
 
 The review order and promotion gates for all capabilities are maintained in
 the active
@@ -174,14 +175,21 @@ that receipt before mutation, and O2-R41's fresh source and release-gate review
 found no unresolved reachable defect. The audience entries remain reviewed and
 `combat_resolution` is complete.
 
+Order 6 now has dedicated mechanics, developer, and technical encounter
+orchestration pages. They trace the implemented team-phase and Agility
+schedulers, lifecycle transactions, reconciliation, cancellation, terminal
+validation, structural events, and canonical automated runner. All three remain
+`existing_unreviewed` until O6-R13 independently rereads current source and
+documentation.
+
 The documentation matrix currently records 75 audience entries: 27 reviewed,
-26 existing_unreviewed, 15 missing, and 7 not_applicable.
+27 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
 | `reviewed` | 27 |
-| `existing_unreviewed` | 26 |
-| `missing` | 15 |
+| `existing_unreviewed` | 27 |
+| `missing` | 14 |
 | `not_applicable` | 7 |
 
 These totals describe documentation only. They do not reduce the implementation

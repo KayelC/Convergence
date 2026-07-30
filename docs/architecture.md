@@ -81,7 +81,26 @@ recomposition, and aggregate restoration share that authority model. See
 [Actors And Runtime State](developer-guide/actors-and-runtime-state.md) and
 [Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md).
 
-Action execution reuses typed targeting, conditions, effects, lifecycle rules, and turn economy. Encounter orchestration accepts host command and event ports. Every encounter event carries a kind-specific immutable payload for initiative, rounds, teams, actors, commands, effects, turn economy, deployment, faults, or outcomes. Status application, refresh, replacement, rejection, duration advancement, expiry, cleanup, and passive effects retain typed transition evidence through action and encounter results. Optional debug text is diagnostic only; hosts localize and present the typed payload rather than parsing prose. Hosts remain responsible for selecting when an encounter begins and how resulting events are presented.
+Action execution reuses typed targeting, conditions, effects, lifecycle rules,
+and turn economy. Encounter orchestration accepts explicit initiative,
+scheduling, lifecycle, command, completion, synchronization, economy, and event
+ports. The supplied team-phase scheduler rotates available actors; the supplied
+Agility scheduler freezes a descending actor order per round. Schedulers receive
+detached participant and accepted-economy evidence, so they cannot mutate actors
+or manufacture battle opportunities.
+
+Every encounter event carries a kind-specific immutable payload for initiative,
+rounds, teams, actors, commands, effects, turn economy, deployment, faults, or
+outcomes. The runner alone emits structural start/end, economy, fault, and
+terminal events. Port events are validated against a command/lifecycle
+allow-list. Status application, refresh, replacement, rejection, duration
+advancement, expiry, cleanup, and passive effects retain typed transition
+evidence through action and encounter results. Optional debug text is diagnostic
+only; hosts localize and present the typed payload rather than parsing prose.
+Hosts remain responsible for selecting when an encounter begins and how
+resulting events are presented. See
+[Encounter Orchestration Integration](developer-guide/encounter-orchestration.md)
+and [Encounter Orchestration Runtime](technical/encounter-orchestration-runtime.md).
 
 Passive dispatch freezes each authored trigger's eligible target IDs before
 effects execute, so validation cannot reinterpret eligibility after staged
@@ -104,10 +123,10 @@ explicit owning-team phase or round clock, never per-action aging.
 
 Turn economy is a policy family inside that flow, not the encounter scheduler.
 The supplied neutral and Action Token implementations bind through authored
-rulesets and control only action-opportunity state. The runner owns team order,
-actor rotation, lifecycle windows, and liveness containment. A future
-individual-turn or immediate-bonus schedule therefore requires an explicit
-orchestration policy rather than a disguised economy implementation. See
+rulesets and control only action-opportunity state. The runner owns structural
+validation and lifecycle windows; an injected scheduler owns actor and phase
+order. Immediate follow-up selection is an optional, finitely bounded scheduler
+extension and can use only an opportunity already retained by the economy. See
 [Turn Economy Runtime](technical/turn-economy-runtime.md).
 
 ## Optional Modules

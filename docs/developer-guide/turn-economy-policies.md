@@ -275,23 +275,26 @@ Direct injection is useful for focused tests or a game that does not author
 ruleset records. Authored binding is preferred when content selects the
 policy. Neither route permits silent fallback.
 
-## Understand The Scheduling Limit
+## Compose Scheduling Separately
 
-The current encounter runner uses ordered team phases and rotates through
-active actors after each executed command window. `ActionTurnConsumption.None`
-does not run owner-turn-end lifecycle, but the current scheduler still rotates
-to the next actor command window.
+The encounter runner requires an `IBattleEncounterSchedulePolicy` independently
+of `IBattleTurnEconomy`.
 
-Therefore, a custom economy alone cannot implement:
+- `TeamPhaseRoundRobinBattleEncounterSchedulePolicy` rotates available actors
+  inside ordered team phases.
+- `AgilityOrderedBattleEncounterSchedulePolicy` freezes a descending actor
+  order per round and gives each actor a one-actor phase.
+- `BattleEncounterPostCommandScheduleExtension` can retain the current actor
+  inside the supplied team scheduler when an economy opportunity already
+  remains.
 
-- agility-sorted individual turns across teams;
-- an immediate second command for the same actor;
-- interruption of team order by a bonus action; or
-- another definition of a turn window for lifecycle clocks.
+`ActionTurnConsumption.None` does not run owner-turn-end lifecycle. Which actor
+receives the still-existing opportunity remains a scheduler decision. A custom
+economy alone cannot implement actor order, team interleaving, immediate
+follow-ups, or another definition of a turn window.
 
-Those require the future encounter-scheduling extension tracked under
-Documentation Order 6. Keep this distinction visible in game architecture so a
-replacement economy is not made responsible for actor ordering by accident.
+See [Encounter Orchestration Integration](encounter-orchestration.md) before
+combining a replacement economy with a replacement scheduler.
 
 ## Diagnose Rejected Extensions
 

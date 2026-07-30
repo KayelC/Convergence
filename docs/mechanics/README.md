@@ -27,6 +27,10 @@ and actor scheduling across all three audiences.
 Order 4 now has dedicated mechanics, developer, and technical lifecycle pages.
 They remain pending independent source closure because documentation is not
 promoted merely for existing.
+Order 6 now has a dedicated encounter-loop mechanics page covering both
+supplied schedulers, lifecycle ordering, cancellation, outcomes, and canonical
+event evidence. It remains `existing_unreviewed` until the independent closure
+checkpoint rechecks the page against current source.
 
 ## Rule Index
 
@@ -35,11 +39,12 @@ promoted merely for existing.
 3. [Combat, Defenses, And Turn Economy](combat-defenses-and-turns.md)
 4. [Status And Passive Lifecycle](status-passive-lifecycle.md)
 5. [Battle Knowledge](battle-knowledge.md)
-6. [Party, Rosters, Inventory, Equipment, And Economy](party-inventory-and-economy.md)
-7. [Navigation, Dungeons, Encounters, Negotiation, And Rewards](world-encounters-and-rewards.md)
-8. [Fusion, Inheritance, Acquisition, And Compendium](fusion-acquisition-and-compendium.md)
-9. [Saving, Loading, And Suspend Saves](saving-loading-and-suspend.md)
-10. [Stat Modifier Policies](stat-modifier-policies.md)
+6. [Encounter Rounds, Phases, And Turns](encounter-rounds-phases-and-turns.md)
+7. [Party, Rosters, Inventory, Equipment, And Economy](party-inventory-and-economy.md)
+8. [Navigation, Dungeons, Encounters, Negotiation, And Rewards](world-encounters-and-rewards.md)
+9. [Fusion, Inheritance, Acquisition, And Compendium](fusion-acquisition-and-compendium.md)
+10. [Saving, Loading, And Suspend Saves](saving-loading-and-suspend.md)
+11. [Stat Modifier Policies](stat-modifier-policies.md)
 
 ## Reading A Result
 

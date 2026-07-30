@@ -38,6 +38,10 @@ Developer guides focus on:
 - [Battle Knowledge Integration](battle-knowledge.md): persistent and
   encounter scopes, typed execution transitions, Analyze policy, team seeds,
   familiar imports, UI queries, and save boundaries.
+- [Encounter Orchestration Integration](encounter-orchestration.md):
+  initiative, supplied and replacement schedulers, lifecycle, command,
+  completion, cancellation, fault, event, automated-runner, and Godot
+  composition.
 
 The actor and typed action/effect guides have completed collaborative review.
 That Order 1 review includes stat-modifier policy composition and integration.
@@ -55,6 +59,9 @@ The battle-knowledge guide records the owner-confirmed Order 5 distinction
 between durable entity facts and encounter-instance facts. It routes DemoHost
 and automated battles through framework-owned typed evidence rather than
 host-side defense inspection.
+The encounter-orchestration guide records the implemented Order 6 scheduler,
+lifecycle, command, cancellation, completion, and canonical event contracts.
+It remains `existing_unreviewed` until the independent closure checkpoint.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

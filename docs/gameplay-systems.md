@@ -89,12 +89,30 @@ replaceable choice.
 
 ## Encounters, AI, Knowledge, And Rewards
 
-The encounter runner owns initiative, phases, turns, lifecycle dispatch,
-command execution, liveness, cancellation, outcomes, and ordered events. Its
-events expose immutable typed payloads instead of making debug messages
+The encounter runner owns structural validation, lifecycle dispatch,
+turn-economy application, reconciliation, cancellation, outcomes, and ordered
+events. Initiative and scheduling are injected separately. The supplied
+team-phase policy rotates active actors inside team phases; the supplied
+Agility policy freezes one descending actor order per round and gives each
+actor a one-actor phase. A bounded post-command extension may retain an actor
+only when an economy opportunity already remains.
+
+Lifecycle mutation is staged at battle start, turn start, owner turn end,
+phase end, round end, actor departure, and battle end. Synchronization,
+departure cleanup, defeat announcement, and completion are reconciled after
+every committed lifecycle boundary. Command handlers return typed consumption
+but cannot mutate the retained economy. Menu Back stays inside the host command
+loop; typed encounter cancellation, operational token cancellation, rejection,
+and faults are distinct contracts.
+
+Events expose immutable typed payloads instead of making debug messages
 authoritative, so Godot, console, and test hosts can map the same event to
-different presentation. Strategy ports allow deterministic or host-defined
-action selection.
+different presentation. `TurnEnded` and `RoundEnded` close committed structural
+boundaries, while `BattleEnded` reports both the final round reached and fully
+completed round count. Strategy ports allow deterministic or host-defined
+action selection. See
+[Encounter Rounds, Phases, And Turns](mechanics/encounter-rounds-phases-and-turns.md)
+and its [integration guide](developer-guide/encounter-orchestration.md).
 
 Battle knowledge has two explicit authorities. `RuntimeKnowledgeSnapshot`
 stores persistent entity-definition facts for a player session, while

@@ -39,6 +39,10 @@ Technical pages focus on:
 - [Battle Knowledge Runtime Authority](battle-knowledge-runtime.md): persistent
   and encounter authorities, evidence transitions, Analyze disclosure, AI team
   sharing, familiarity, atomicity, and session-save validation.
+- [Encounter Orchestration Runtime](encounter-orchestration-runtime.md):
+  scheduler protocol, lifecycle transactions, fixed-point reconciliation,
+  command/economy authority, structural event ordering, cancellation, and
+  typed fault containment.
 
 The actor and typed action/effect references have completed collaborative
 review. That Order 1 review includes stat-modifier runtime authority and its
@@ -54,6 +58,9 @@ its final certification completed the independent closure gate.
 The Order 5 knowledge reference traces current source through execution,
 automated strategy, familiarity, and persistence boundaries. Its final
 independent closure review remains separate from this documentation checkpoint.
+The Order 6 encounter reference traces current scheduler, lifecycle,
+turn-economy, event, cancellation, completion, and automated-runner source. It
+remains `existing_unreviewed` until the independent closure checkpoint.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

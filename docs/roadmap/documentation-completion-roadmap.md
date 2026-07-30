@@ -446,15 +446,20 @@ from bypassing transition validation. The
 [O5-R27 final closure review](../reviews/battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
 confirmed the corrected source and all three audience documents, found no
 remaining realistic reachable defect, and passed the complete local gate.
-Order 5 is formally closed, and Order 6 (`encounter_orchestration`) is now the
-next collaborative subject. The owner has approved all eight decisions in the
+Order 5 is formally closed, and Order 6 (`encounter_orchestration`) then became
+the next collaborative subject. The owner approved all eight decisions in the
 source-based
 [Order 6 encounter-orchestration review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
 That record governs O6-R1 through O6-R13: scheduler modularity, lifecycle
 reconciliation, structural event completion, completion validation,
 cancellation and rejection semantics, automated-runner modernization, the
-three audience documents, and independent closure. Order 6 remains open until
-those checkpoints are implemented and verified.
+three audience documents, and independent closure. O6-R1 through O6-R12 are
+implemented. The dedicated
+[mechanics](../mechanics/encounter-rounds-phases-and-turns.md),
+[developer](../developer-guide/encounter-orchestration.md), and
+[technical](../technical/encounter-orchestration-runtime.md) pages remain
+`existing_unreviewed` until O6-R13 independently rereads current source,
+cross-checks all three audiences, and passes the complete release gate.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored

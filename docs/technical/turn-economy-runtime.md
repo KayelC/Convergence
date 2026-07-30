@@ -308,14 +308,17 @@ flowchart LR
     end
 ```
 
-The current scheduler uses ordered team phases and round-robin active actors.
-It advances `actorIndex` for every executed command window, including `None`.
-`None` skips owner-turn-end lifecycle but does not request the same actor again.
+The supplied team-phase scheduler rotates round-robin active actors. The
+supplied Agility scheduler freezes descending effective-Agility order per round
+and keeps one actor inside its own phase while opportunities remain. The
+optional bounded post-command extension can retain the same actor in the
+team-phase scheduler.
 
-Immediate same-actor bonus actions, agility-sorted cross-team turns, and other
-turn-window definitions require a future scheduler policy in encounter
-orchestration. They must not be implemented by mutating economy snapshots or
-parsing event text.
+`None` skips owner-turn-end lifecycle, but does not itself choose the next
+actor. Immediate follow-ups, actor order, team interleaving, and other
+turn-window definitions belong to `IBattleEncounterSchedulePolicy`. They must
+not be implemented by mutating economy snapshots or parsing event text. See
+[Encounter Orchestration Runtime](encounter-orchestration-runtime.md).
 
 ## Extension Checklist
 

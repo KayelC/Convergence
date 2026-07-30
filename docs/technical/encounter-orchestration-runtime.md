@@ -1,0 +1,350 @@
+# Encounter Orchestration Runtime
+
+## Scope
+
+This document defines the internal authority, state machine, transaction
+boundaries, event ordering, and fault containment of
+`BattleEncounterRunner`.
+
+It covers:
+
+- initiative and scheduling;
+- phase-scoped turn economy;
+- lifecycle and command ports;
+- reconciliation and completion;
+- canonical events;
+- cancellation and faults;
+- automated encounter composition.
+
+It does not define action math, status rules, rewards, recruitment, or scene
+presentation.
+
+## Authority Map
+
+| Authority | Owns | Must not own |
+|---|---|---|
+| Runner | orchestration, validation, event sequence, economy application, reconciliation, termination | host input, action math, scheduler policy |
+| Initiative policy | initial exact team permutation | actor windows or mutation |
+| Schedule policy | immutable structural cursor and next actor/boundary | live actors, command execution, economy mutation |
+| Turn economy | opportunity state and consumption transition | actor order |
+| Lifecycle port | staged status/passive/cleanup mutation at named boundaries | structural event forgery |
+| Turn handler | command selection/execution and typed consumption result | applying economy or ending a phase directly |
+| Completion policy | terminal evaluation over reconciled participants | cleanup, rewards, or event publication |
+| Event sink | asynchronous observation | runtime mutation authority |
+| State synchronizer | host adapter synchronization | completion or scheduling decisions |
+
+## Outer State Machine
+
+```mermaid
+flowchart TB
+    Validate["Validate request and unique runtime IDs"]
+    Initiative["Resolve exact participating-team order"]
+    StartTxn["Stage and commit battle-start lifecycle"]
+    ReconcileStart["Synchronize, reconcile departures and defeat, evaluate completion"]
+    ScheduleStart["Start injected schedule"]
+    RoundStart["Publish RoundStarted"]
+    PhaseStart["Create and validate fresh phase economy; publish PhaseStarted"]
+    CommandWindows["Process scheduled command windows"]
+    PhaseEndTxn["Stage and commit phase-end lifecycle; publish PhaseEnded"]
+    ReconcilePhase["Reconcile after the phase event and evaluate completion"]
+    RoundEndTxn["Stage and commit round-end lifecycle"]
+    ReconcileRound["Reconcile and evaluate completion"]
+    RoundEndEvent["Publish RoundEnded and count completed round"]
+    Finish["Stage battle-end lifecycle; publish BattleEnded"]
+    Fault["Typed fault finalization and one cleanup attempt"]
+
+    Validate --> Initiative
+    Initiative --> StartTxn
+    StartTxn --> ReconcileStart
+    ReconcileStart -->|"complete"| Finish
+    ReconcileStart -->|"continue"| ScheduleStart
+    ScheduleStart --> RoundStart
+    RoundStart --> PhaseStart
+    PhaseStart --> CommandWindows
+    CommandWindows -->|"phase closes"| PhaseEndTxn
+    CommandWindows -->|"terminal outcome"| Finish
+    PhaseEndTxn --> ReconcilePhase
+    ReconcilePhase -->|"complete"| Finish
+    ReconcilePhase -->|"next phase"| PhaseStart
+    ReconcilePhase -->|"round closes"| RoundEndTxn
+    RoundEndTxn --> ReconcileRound
+    ReconcileRound --> RoundEndEvent
+    ReconcileRound -->|"complete"| Finish
+    RoundEndEvent -->|"next round"| RoundStart
+    RoundEndEvent -->|"round limit"| Finish
+    Validate -. "invalid contract" .-> Fault
+    Initiative -. "port failure or invalid order" .-> Fault
+    ScheduleStart -. "policy failure or invalid transition" .-> Fault
+    CommandWindows -. "port, economy, lifecycle, or command fault" .-> Fault
+```
+
+The round limit is scheduler state. `completedRounds` advances only after
+round-end lifecycle and reconciliation commit; `finalRoundNumber` advances at
+round start.
+
+## Scheduler Protocol
+
+`IBattleEncounterSchedulePolicy` is a pure transition authority over detached
+data:
+
+```mermaid
+sequenceDiagram
+    participant R as Runner
+    participant S as Schedule policy
+    participant E as Turn economy
+    participant H as Turn handler
+
+    R->>S: Start(participant snapshots, team order, round limit)
+    S-->>R: state revision 0 + RoundStarted step
+    R->>S: Advance(BoundaryCompleted)
+    S-->>R: PhaseStarted step + economy start count
+    R->>E: StartPhase(active actor count)
+    R->>S: Advance(TurnEconomyStarted, accepted snapshot)
+    S-->>R: CommandWindow(actor ID)
+    R->>H: ExecuteTurnAsync(actor, restriction, economy snapshot)
+    H-->>R: command result + typed consumption
+    R->>E: Apply(consumption)
+    R->>S: Advance(CommandCommitted, before/after evidence)
+    S-->>R: next command, phase end, or later boundary
+```
+
+The runner validates:
+
+- policy and encounter identity remain unchanged;
+- revisions and step sequences advance exactly once;
+- returned steps match the supplied policy ID and round;
+- command-window actors exist and belong to the selected team;
+- step outcomes match the step being completed;
+- economy evidence is present only where required.
+
+Rejected scheduling transitions become `ScheduleTransitionInvalid`; policy
+exceptions become `ScheduleExecutionFailed`. Neither route executes another
+command.
+
+### Supplied Team Scheduler
+
+`TeamPhaseRoundRobinBattleEncounterSchedulePolicy` stores team index, actor
+offset, round counters, and immediate-repeat count. It recomputes available
+actors from each advance request, so deployment and defeat affect the next
+window without rewriting policy state.
+
+Its optional post-command extension receives accepted immutable economy
+evidence. `RetainActor` is legal only when an opportunity remains and the
+configured consecutive-repeat bound has not been reached.
+
+### Supplied Agility Scheduler
+
+`AgilityOrderedBattleEncounterSchedulePolicy` resolves and freezes a descending
+ordering-stat permutation at each round boundary. Its state stores the frozen
+runtime-ID order and next index. It rejects missing or negative ordering stats
+and any tie-break result that is not an exact permutation.
+
+Each frozen actor owns a one-actor phase. Remaining economy opportunities
+repeat that actor; unavailable frozen entries are skipped. Mid-round
+deployments wait until the next ordering pass.
+
+## Command Transaction
+
+```mermaid
+flowchart TB
+    Begin["Publish TurnStarted and capture accepted economy"]
+    StageStart["Clone participants for turn-start lifecycle"]
+    CommitStart["Validate economy authority and commit staged turn-start state"]
+    ReconcileStart["Synchronize, process departure cleanup, announce defeat, evaluate completion"]
+    Handler["Invoke turn handler with restriction and active clock boundaries"]
+    ValidateHandler["Validate port-owned events and unchanged economy authority"]
+    ApplyEconomy["Apply typed ActionTurnConsumption once"]
+    ValidateEconomy["Validate economy type, ID, state, liveness, and explicit termination"]
+    StageEnd["Stage owner-turn-end lifecycle when consumption is not None"]
+    CommitEnd["Recheck economy authority and commit staged turn-end state"]
+    EconomyEvent["Publish TurnEconomyChanged"]
+    ReconcileEnd["Synchronize, bounded departure cleanup, defeat announcement, completion"]
+    TurnEnd["Publish TurnEnded"]
+    Advance["Return accepted before/after evidence to scheduler"]
+    Rollback["Discard staged lifecycle graph"]
+    Fault["Return typed fault after cleanup attempt"]
+
+    Begin --> StageStart
+    StageStart --> CommitStart
+    StageStart -. "cancel or failure" .-> Rollback
+    CommitStart --> ReconcileStart
+    ReconcileStart -->|"actor can act"| Handler
+    ReconcileStart -->|"actor unavailable or encounter complete"| TurnEnd
+    Handler --> ValidateHandler
+    ValidateHandler --> ApplyEconomy
+    ValidateHandler -. "invalid result or port event" .-> Fault
+    ApplyEconomy --> ValidateEconomy
+    ValidateEconomy --> StageEnd
+    ValidateEconomy -. "invalid transition" .-> Fault
+    StageEnd --> CommitEnd
+    StageEnd -. "cancel or failure" .-> Rollback
+    CommitEnd --> EconomyEvent
+    EconomyEvent --> ReconcileEnd
+    ReconcileEnd --> TurnEnd
+    TurnEnd --> Advance
+```
+
+The handler executes action mutation before returning. The runner therefore
+guards the boundaries it owns:
+
+- the handler cannot mutate the retained economy;
+- the returned consumption is validated before acceptance;
+- lifecycle work is staged in `BattleEncounterLifecycleTransaction`;
+- cancellation is checked before every staged commit;
+- a non-`None` consumption invokes owner-turn-end lifecycle;
+- event publication occurs in canonical sequence after the relevant commit.
+
+Action-level atomicity remains owned by `BattleActionExecutor` and its staged
+actor graph.
+
+## Reconciliation Fixed Point
+
+`ReconcileAsync` runs after:
+
+- battle-start lifecycle;
+- turn-start lifecycle;
+- each committed command and turn-end lifecycle;
+- phase-end lifecycle;
+- round-end lifecycle.
+
+It performs:
+
+1. host state synchronization;
+2. defeat, flee, or roster-recall departure lifecycle;
+3. synchronization after departure mutation;
+4. another departure scan;
+5. bounded repetition until stable;
+6. exactly-once defeat announcements;
+7. completion evaluation.
+
+The pass bound is participant count plus the final stability check. A lifecycle
+that continually creates new departure work faults rather than looping
+forever.
+
+The completion policy receives `LastActor` only after that actor committed a
+command. Lifecycle-only completion checks receive no fabricated acting actor.
+
+## Canonical Event Authority
+
+`BattleEncounterEvent` pairs:
+
+- one positive, continuous encounter sequence;
+- one `BattleEncounterEventKind`;
+- the matching immutable `BattleEncounterEventPayload`;
+- optional non-authoritative debug text.
+
+The result retains the exact canonical events published to the sink. The
+automated runner no longer translates or resequences them.
+
+### Runner-Owned Structural Order
+
+For a normal turn:
+
+```text
+TurnStarted
+turn-start port events
+TurnRestricted (when applicable)
+command port events
+turn-end port events (when turn-consuming)
+TurnEconomyChanged
+departure/status/defeat reconciliation events
+TurnEnded
+```
+
+`PhaseEnded` follows committed phase-end lifecycle events; reconciliation then
+runs before the scheduler advances. `RoundEnded` follows committed round-end
+lifecycle events and reconciliation.
+`BattleEnded` follows committed battle-end lifecycle events.
+
+Ports may publish only command, action, effect, passive, status, resource,
+presence, and host-request events. Structural event forgery is rejected before
+the returned batch is added.
+
+## Terminal Shape Validation
+
+Completion and command terminal outputs are validated before acceptance:
+
+| Outcome | Winner | Fault code |
+|---|---|---|
+| `Victory` | required participating team | none |
+| `Defeat` | required participating team | none |
+| `Escape` | none | none |
+| `Draw` | none | none |
+| `Cancelled` | none | none |
+| `Faulted` | none | required in final event/result |
+
+An incomplete completion result must not carry outcome-specific metadata.
+Unknown enums, unknown winners, missing winners, and contradictory metadata
+become typed faults.
+
+## Cancellation And Fault Boundary
+
+Operational cancellation is not a gameplay result:
+
+1. `CancellationToken` is checked before each port;
+2. awaited ports receive the same token;
+3. staged lifecycle mutation is not committed after cancellation;
+4. `OperationCanceledException` propagates;
+5. no synthetic terminal event is appended.
+
+Typed command cancellation is a gameplay result. It emits one terminating
+`TurnEnded`, skips economy and owner-turn-end lifecycle, commits battle-end
+cleanup once, and returns `Cancelled`.
+
+Port exceptions are wrapped with port name, actor when available, and a stable
+`BattleEncounterFaultCode`. Fault finalization:
+
+1. records `BattleFaulted`;
+2. attempts battle-end lifecycle once if battle start occurred;
+3. records cleanup failure separately if needed;
+4. records one `BattleEnded(Faulted)` result.
+
+If the event sink itself failed, final evidence remains in the returned result
+without recursively trusting the failed sink.
+
+## Result Snapshot Boundary
+
+`BattleEncounterResult` does not expose live participants. It captures
+`BattleEncounterParticipantSnapshot` values containing detached
+`RuntimeActorSnapshot` state and immutable event collections.
+
+Callers that own live actors already possess those actors through the request.
+Consumers of the result cannot mutate completed encounter state by retaining a
+participant from the result.
+
+## Automated Composition
+
+`AutomatedBattleRunner.RunAsync` adapts catalog actors to
+`BattleEncounterParticipant`, supplies the canonical runner services, and
+returns canonical events directly.
+
+Its deterministic selector:
+
+- assesses authored equipped skills;
+- uses stable authored order for ties;
+- consumes team-local encounter knowledge;
+- does not persist AI knowledge after the request unless a host explicitly
+  chooses to do so.
+
+The synchronous wrapper clears and restores the caller's synchronization
+context, but remains a non-UI compatibility API.
+
+## Source And Test Evidence
+
+Primary source:
+
+- `src/Convergence.Framework/Encounters/BattleEncounterRunner.cs`
+- `src/Convergence.Framework/Encounters/BattleEncounterScheduling.cs`
+- `src/Convergence.Framework/Encounters/AgilityOrderedBattleEncounterScheduling.cs`
+- `src/Convergence.Framework/Encounters/BattleEncounterPostCommandScheduling.cs`
+- `src/Convergence.Framework/Encounters/BattleEncounterEvents.cs`
+- `src/Convergence.Framework/Encounters/AutomatedBattleRunner.cs`
+
+Primary tests:
+
+- `tests/Convergence.Framework.Tests/SkillSystem/BattleEncounterRunnerTests.cs`
+- `tests/Convergence.Framework.Tests/Encounters/TeamPhaseRoundRobinScheduleTests.cs`
+- `tests/Convergence.Framework.Tests/Encounters/AgilityOrderedBattleEncounterScheduleTests.cs`
+- `tests/Convergence.Framework.Tests/Encounters/BattleEncounterPostCommandSchedulingTests.cs`
+- `tests/Convergence.Framework.Tests/SkillSystem/CatalogBattleRuntimeTests.cs`
+- `tests/Convergence.Framework.Tests/Hosting/GodotIntegrationContractTests.cs`

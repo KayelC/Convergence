@@ -26,6 +26,12 @@ This directory is the active documentation authority for Convergence Framework.
     discovery, Analyze, familiarity, AI scope, and persistence rules.
 14. [Battle Knowledge Integration](developer-guide/battle-knowledge.md): using
     typed evidence and immutable knowledge in a Godot or other host.
+15. [Encounter Rounds, Phases, And Turns](mechanics/encounter-rounds-phases-and-turns.md):
+    player-visible scheduling, lifecycle, cancellation, and outcome rules.
+16. [Encounter Orchestration Integration](developer-guide/encounter-orchestration.md):
+    composing schedulers, commands, lifecycle, events, and completion.
+17. [Encounter Orchestration Runtime](technical/encounter-orchestration-runtime.md):
+    state-machine, transaction, reconciliation, and fault invariants.
 
 ## Documentation Audiences
 

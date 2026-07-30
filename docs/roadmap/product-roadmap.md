@@ -12,10 +12,11 @@ Phase 8 established the clean product boundary. Framework, DemoHost, tests, and 
 
 `encounter_orchestration` is temporarily `partial` under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
-The existing runner remains usable for team-phase battles, but completion now
-requires modular scheduling, lifecycle reconciliation, complete structural
-events, validated terminal shapes, and canonical asynchronous automated
-execution.
+O6-R1 through O6-R12 have implemented modular team-phase and Agility
+scheduling, bounded immediate follow-ups, lifecycle reconciliation, complete
+structural events, validated terminal shapes, cancellation certification,
+canonical asynchronous automated execution, and all three audience documents.
+O6-R13 remains the independent source and documentation closure gate.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
@@ -227,8 +228,9 @@ before policy evaluation and prevents no-op imports from bypassing the
 transition authority. The
 [O5-R27 final closure review](../reviews/battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
 found no remaining realistic reachable defect and passed every local gate.
-`battle_knowledge` is complete, Order 5 is formally closed, and Order 6 is the
-next collaborative subject.
+`battle_knowledge` is complete and Order 5 is formally closed. Order 6
+encounter orchestration has completed implementation and documentation through
+O6-R12; independent closure review O6-R13 is the active subject.
 
 ## Priority 2: Persistence Evolution
 

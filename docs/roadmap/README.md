@@ -110,7 +110,11 @@ that boundary by validating current state before policy evaluation and by
 routing no-op imports through the injected transition. The
 [O5-R27 final closure review](../reviews/battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
 found no remaining realistic reachable defect and passed the complete local
-gate. Order 5 is formally closed; Order 6, encounter orchestration, is the next
-collaborative documentation subject. Its eight owner-approved decisions and
+gate. Order 5 is formally closed; Order 6, encounter orchestration, then became
+the next collaborative documentation subject. Its eight owner-approved decisions and
 ordered O6-R1 through O6-R13 checkpoints are recorded in the
 [Order 6 source review and approved roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
+O6-R1 through O6-R12 are now implemented. Both supplied schedulers, lifecycle
+reconciliation, structural events, terminal validation, cancellation,
+canonical automated execution, and the three audience documents are present;
+O6-R13 remains the independent closure gate.

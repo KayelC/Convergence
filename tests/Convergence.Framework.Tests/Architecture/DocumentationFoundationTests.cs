@@ -290,6 +290,76 @@ public sealed class DocumentationFoundationTests
     }
 
     [Fact]
+    public void EncounterOrchestrationDocumentation_PreservesSchedulingAndTerminationAuthority()
+    {
+        string mechanics = File.ReadAllText(
+            RepositoryPath("docs", "mechanics", "encounter-rounds-phases-and-turns.md"))
+            .ReplaceLineEndings(" ");
+        string developer = File.ReadAllText(
+            RepositoryPath("docs", "developer-guide", "encounter-orchestration.md"))
+            .ReplaceLineEndings(" ");
+        string technical = File.ReadAllText(
+            RepositoryPath("docs", "technical", "encounter-orchestration-runtime.md"))
+            .ReplaceLineEndings(" ");
+
+        string[] mechanicsTokens =
+        [
+            "The scheduler chooses *who receives the next window*.",
+            "The turn economy decides",
+            "TeamPhaseRoundRobinBattleEncounterSchedulePolicy",
+            "AgilityOrderedBattleEncounterSchedulePolicy",
+            "**Menu Back:**",
+            "**Typed encounter cancellation:**",
+            "**Operational cancellation:**",
+            "last round that was reached",
+            "number of rounds whose round-end lifecycle fully committed"
+        ];
+        Assert.All(
+            mechanicsTokens,
+            token => Assert.Contains(token, mechanics, StringComparison.Ordinal));
+
+        string[] developerTokens =
+        [
+            "## Required Composition",
+            "## Choosing A Scheduler",
+            "## Implementing The Turn Handler",
+            "Do not return `Cancelled` for submenu Back.",
+            "The handler must not mutate the encounter economy.",
+            "The runner owns structural events.",
+            "OperationCanceledException",
+            "AutomatedBattleRunner.RunAsync",
+            "RuntimeInstanceId -> Node"
+        ];
+        Assert.All(
+            developerTokens,
+            token => Assert.Contains(token, developer, StringComparison.Ordinal));
+
+        string[] technicalTokens =
+        [
+            "## Authority Map",
+            "## Outer State Machine",
+            "## Scheduler Protocol",
+            "## Command Transaction",
+            "## Reconciliation Fixed Point",
+            "## Canonical Event Authority",
+            "PhaseEnded` follows committed phase-end lifecycle events; reconciliation then",
+            "RoundEnded` follows committed round-end lifecycle events and reconciliation",
+            "OperationCanceledException",
+            "BattleEncounterResult` does not expose live participants",
+            "```mermaid"
+        ];
+        Assert.All(
+            technicalTokens,
+            token => Assert.Contains(token, technical, StringComparison.Ordinal));
+
+        DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
+            capability => capability.Id == "encounter_orchestration");
+        Assert.Equal("existing_unreviewed", encounter.Mechanics.State);
+        Assert.Equal("existing_unreviewed", encounter.DeveloperGuide.State);
+        Assert.Equal("existing_unreviewed", encounter.Technical.State);
+    }
+
+    [Fact]
     public void AudienceEvidenceAndRoadmapDirectories_AreIndexedAndDeclutterTheDocsRoot()
     {
         string docsRoot = RepositoryPath("docs");

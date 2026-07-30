@@ -310,14 +310,16 @@ normal action     []
 ### What turn economy does not decide
 
 Turn economy changes the opportunity pool after a command. It does not choose
-initiative, teams, or the next actor. The current encounter schedule uses team
-phases and rotates active actors after each executed command window, including
-a free command. A free command does not complete owner-turn-end lifecycle, but
-it does not automatically grant the same actor another command.
+initiative, teams, or the next actor. The supplied team-phase scheduler rotates
+active actors after each command window, including a free command. The supplied
+Agility scheduler gives one actor a phase and retains that actor while its
+economy still has opportunities. A bounded post-command extension can instead
+retain the current actor inside the supplied team schedule.
 
-An agility-ordered battle or immediate same-actor bonus system therefore needs
-a future encounter-scheduling policy in addition to an economy. Swapping only
-`IBattleTurnEconomy` does not claim to implement that schedule.
+These are scheduler decisions. A free command does not complete owner-turn-end
+lifecycle, and swapping only `IBattleTurnEconomy` never selects who receives
+the remaining opportunity. See
+[Encounter Rounds, Phases, And Turns](encounter-rounds-phases-and-turns.md).
 
 **Host responsibility:** presentation may use icons, pips, text, or no visible
 turn meter. Godot reads typed phase and before/after transition payloads. It
