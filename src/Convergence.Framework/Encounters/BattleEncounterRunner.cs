@@ -2334,16 +2334,19 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         private BattleEncounterScheduleCursor(
             BattleEncounterScheduleStateSnapshot state,
             BattleEncounterScheduleStep? step,
-            bool isComplete)
+            bool isComplete,
+            IReadOnlyDictionary<RuntimeInstanceId, ContentId> participantTeams)
         {
             State = state;
             Step = step;
             IsComplete = isComplete;
+            ParticipantTeams = participantTeams;
         }
 
         public BattleEncounterScheduleStateSnapshot State { get; }
         public BattleEncounterScheduleStep? Step { get; }
         public bool IsComplete { get; }
+        private IReadOnlyDictionary<RuntimeInstanceId, ContentId> ParticipantTeams { get; }
 
         public static BattleEncounterScheduleCursor Start(
             IBattleEncounterSchedulePolicy policy,
@@ -2373,7 +2376,17 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     "The initial schedule step does not belong to the injected scheduling policy.");
             }
 
-            return new BattleEncounterScheduleCursor(state, step, isComplete: false);
+            IReadOnlyDictionary<RuntimeInstanceId, ContentId> participantTeams =
+                new System.Collections.ObjectModel.ReadOnlyDictionary<RuntimeInstanceId, ContentId>(
+                    request.Participants.ToDictionary(
+                        participant => participant.InstanceId,
+                        participant => participant.TeamId));
+            RequireStepIdentity(state, step, participantTeams);
+            return new BattleEncounterScheduleCursor(
+                state,
+                step,
+                isComplete: false,
+                participantTeams);
         }
 
         public BattleEncounterScheduleCursor Advance(
@@ -2413,13 +2426,29 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 BattleEncounterScheduleTransitionStatus.Advanced
                     when transition.NextStep is { } step &&
                          step.PolicyId == policy.PolicyId =>
-                    new BattleEncounterScheduleCursor(after, step, isComplete: false),
+                    CreateAdvanced(after, step),
                 BattleEncounterScheduleTransitionStatus.Completed
                     when transition.NextStep is null =>
-                    new BattleEncounterScheduleCursor(after, null, isComplete: true),
+                    new BattleEncounterScheduleCursor(
+                        after,
+                        null,
+                        isComplete: true,
+                        ParticipantTeams),
                 _ => throw new InvalidOperationException(
                     "The encounter scheduling policy returned an invalid advance transition.")
             };
+        }
+
+        private BattleEncounterScheduleCursor CreateAdvanced(
+            BattleEncounterScheduleStateSnapshot state,
+            BattleEncounterScheduleStep step)
+        {
+            RequireStepIdentity(state, step, ParticipantTeams);
+            return new BattleEncounterScheduleCursor(
+                state,
+                step,
+                isComplete: false,
+                ParticipantTeams);
         }
 
         private static void RequireScheduleIdentity(
@@ -2435,6 +2464,38 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             {
                 throw new InvalidOperationException(
                     "The encounter scheduling policy changed encounter identity while starting.");
+            }
+        }
+
+        private static void RequireStepIdentity(
+            BattleEncounterScheduleStateSnapshot state,
+            BattleEncounterScheduleStep step,
+            IReadOnlyDictionary<RuntimeInstanceId, ContentId> participantTeams)
+        {
+            ContentId? stepTeamId = step switch
+            {
+                BattleEncounterPhaseStartedScheduleStep phaseStarted =>
+                    phaseStarted.TeamId,
+                BattleEncounterCommandWindowScheduleStep commandWindow =>
+                    commandWindow.TeamId,
+                BattleEncounterPhaseEndedScheduleStep phaseEnded =>
+                    phaseEnded.TeamId,
+                _ => null
+            };
+            if (stepTeamId is ContentId teamId &&
+                !state.TeamOrder.Contains(teamId))
+            {
+                throw new InvalidOperationException(
+                    $"Schedule step team {teamId} is outside the frozen encounter graph.");
+            }
+
+            if (step is BattleEncounterCommandWindowScheduleStep command &&
+                (!participantTeams.TryGetValue(command.ActorId, out ContentId actorTeamId) ||
+                 actorTeamId != command.TeamId))
+            {
+                throw new InvalidOperationException(
+                    $"Schedule command actor {command.ActorId} does not belong to " +
+                    $"team {command.TeamId} in the frozen encounter graph.");
             }
         }
     }

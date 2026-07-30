@@ -174,6 +174,51 @@ public sealed class BattleEncounterRunnerTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Runner_RejectsScheduleStepsOutsideTheFrozenEncounterGraph()
+    {
+        BattleEncounterParticipant player =
+            Participant("schedule_identity_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("schedule_identity_enemy", EnemyTeam);
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult unknownTeam = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            schedule: new UnknownTeamPhaseSchedulePolicy());
+        BattleEncounterResult mismatchedActor = Run(
+            [Participant("schedule_actor_player", PlayerTeam),
+             Participant("schedule_actor_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            schedule: new MismatchedActorTeamSchedulePolicy(
+                RuntimeInstanceId.Parse("schedule_actor_player")));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, unknownTeam.Outcome);
+        Assert.Equal(
+            BattleEncounterFaultCode.ScheduleTransitionInvalid,
+            unknownTeam.FaultCode);
+        Assert.DoesNotContain(
+            unknownTeam.Events,
+            battleEvent => battleEvent.Kind == BattleEncounterEventKind.PhaseStarted);
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, mismatchedActor.Outcome);
+        Assert.Equal(
+            BattleEncounterFaultCode.ScheduleTransitionInvalid,
+            mismatchedActor.FaultCode);
+        Assert.DoesNotContain(
+            mismatchedActor.Events,
+            battleEvent => battleEvent.Kind == BattleEncounterEventKind.TurnStarted);
+        Assert.Empty(handler.Requests);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
@@ -2796,6 +2841,93 @@ public sealed class BattleEncounterRunnerTests
                     "Unexpected empty-phase loop schedule step.")
             };
         }
+    }
+
+    private sealed class UnknownTeamPhaseSchedulePolicy : IBattleEncounterSchedulePolicy
+    {
+        private static readonly ContentId UnknownTeam = ContentId.Parse("unknown_team");
+
+        public ContentId PolicyId { get; } = ContentId.Parse("unknown_team_phase_schedule");
+
+        public BattleEncounterScheduleTransitionResult Start(
+            BattleEncounterScheduleStartRequest request) =>
+            StartScriptedSchedule(PolicyId, request);
+
+        public BattleEncounterScheduleTransitionResult Advance(
+            BattleEncounterScheduleAdvanceRequest request)
+        {
+            ScriptedScheduleState state = Assert.IsType<ScriptedScheduleState>(request.State);
+            BattleEncounterScheduleStateSnapshot after = state.Advance();
+            return BattleEncounterScheduleTransitionResult.Advance(
+                state,
+                after,
+                new BattleEncounterPhaseStartedScheduleStep(
+                    PolicyId,
+                    after.NextStepSequence,
+                    1,
+                    UnknownTeam,
+                    new BattleEncounterTurnEconomyStart(1)));
+        }
+    }
+
+    private sealed class MismatchedActorTeamSchedulePolicy(RuntimeInstanceId actorId) :
+        IBattleEncounterSchedulePolicy
+    {
+        public ContentId PolicyId { get; } =
+            ContentId.Parse("mismatched_actor_team_schedule");
+
+        public BattleEncounterScheduleTransitionResult Start(
+            BattleEncounterScheduleStartRequest request) =>
+            StartScriptedSchedule(PolicyId, request);
+
+        public BattleEncounterScheduleTransitionResult Advance(
+            BattleEncounterScheduleAdvanceRequest request)
+        {
+            ScriptedScheduleState state = Assert.IsType<ScriptedScheduleState>(request.State);
+            BattleEncounterScheduleStateSnapshot after = state.Advance();
+            return request.CompletedStep switch
+            {
+                BattleEncounterRoundStartedScheduleStep =>
+                    BattleEncounterScheduleTransitionResult.Advance(
+                        state,
+                        after,
+                        new BattleEncounterPhaseStartedScheduleStep(
+                            PolicyId,
+                            after.NextStepSequence,
+                            1,
+                            PlayerTeam,
+                            new BattleEncounterTurnEconomyStart(1))),
+                BattleEncounterPhaseStartedScheduleStep =>
+                    BattleEncounterScheduleTransitionResult.Advance(
+                        state,
+                        after,
+                        new BattleEncounterCommandWindowScheduleStep(
+                            PolicyId,
+                            after.NextStepSequence,
+                            1,
+                            actorId,
+                            EnemyTeam)),
+                _ => throw new InvalidOperationException(
+                    "Unexpected actor-team mismatch schedule step.")
+            };
+        }
+    }
+
+    private static BattleEncounterScheduleTransitionResult StartScriptedSchedule(
+        ContentId policyId,
+        BattleEncounterScheduleStartRequest request)
+    {
+        var state = new ScriptedScheduleState(
+            policyId,
+            revision: 0,
+            nextStepSequence: 0,
+            completedRounds: 0,
+            request.Participants.Select(participant => participant.InstanceId),
+            request.TeamOrder,
+            request.RoundLimit);
+        return BattleEncounterScheduleTransitionResult.Start(
+            state,
+            new BattleEncounterRoundStartedScheduleStep(policyId, 0, 1));
     }
 
     private sealed class ScriptedScheduleState : BattleEncounterScheduleStateSnapshot
