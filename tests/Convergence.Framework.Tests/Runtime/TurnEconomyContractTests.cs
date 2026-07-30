@@ -112,6 +112,14 @@ public sealed class TurnEconomyContractTests
             winningTeamId: winningTeam));
         Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
             BattleEncounterCommandStatus.Executed,
+            ActionTurnConsumption.Normal,
+            requestedOutcome: BattleEncounterOutcome.Victory));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Executed,
+            ActionTurnConsumption.Normal,
+            requestedOutcome: (BattleEncounterOutcome)int.MaxValue));
+        Assert.Throws<ArgumentException>(() => new BattleEncounterCommandResult(
+            BattleEncounterCommandStatus.Executed,
             ActionTurnConsumption.None,
             requestedOutcome: BattleEncounterOutcome.Escape,
             winningTeamId: winningTeam));

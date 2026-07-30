@@ -332,6 +332,45 @@ public sealed record BattleEndedEventPayload : BattleEncounterEventPayload
         int completedRounds,
         BattleEncounterFaultCode? faultCode = null)
     {
+        if (!Enum.IsDefined(outcome))
+        {
+            throw new ArgumentOutOfRangeException(nameof(outcome));
+        }
+
+        if (winningTeamId is ContentId winner && !winner.IsValid)
+        {
+            throw new ArgumentException(
+                "Winning team ID must be valid when supplied.",
+                nameof(winningTeamId));
+        }
+
+        if (faultCode is BattleEncounterFaultCode suppliedFaultCode &&
+            !Enum.IsDefined(suppliedFaultCode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(faultCode));
+        }
+
+        bool requiresWinner =
+            outcome is BattleEncounterOutcome.Victory or BattleEncounterOutcome.Defeat;
+        if (requiresWinner != (winningTeamId is not null))
+        {
+            throw new ArgumentException(
+                requiresWinner
+                    ? $"{outcome} requires a winning team ID."
+                    : $"{outcome} cannot carry a winning team ID.",
+                nameof(winningTeamId));
+        }
+
+        bool requiresFaultCode = outcome == BattleEncounterOutcome.Faulted;
+        if (requiresFaultCode != (faultCode is not null))
+        {
+            throw new ArgumentException(
+                requiresFaultCode
+                    ? "A faulted battle end requires a fault code."
+                    : "Only a faulted battle end can carry a fault code.",
+                nameof(faultCode));
+        }
+
         if (completedRounds < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(completedRounds));

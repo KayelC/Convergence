@@ -308,6 +308,32 @@ public sealed class BattleEncounterRunnerTests
             null,
             finalRoundNumber: 1,
             completedRounds: 2));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BattleEndedEventPayload(
+            (BattleEncounterOutcome)int.MaxValue,
+            null,
+            completedRounds: 0));
+        Assert.Throws<ArgumentException>(() => new BattleEndedEventPayload(
+            BattleEncounterOutcome.Victory,
+            null,
+            completedRounds: 0));
+        Assert.Throws<ArgumentException>(() => new BattleEndedEventPayload(
+            BattleEncounterOutcome.Draw,
+            PlayerTeam,
+            completedRounds: 0));
+        Assert.Throws<ArgumentException>(() => new BattleEndedEventPayload(
+            BattleEncounterOutcome.Faulted,
+            null,
+            completedRounds: 0));
+        Assert.Throws<ArgumentException>(() => new BattleEndedEventPayload(
+            BattleEncounterOutcome.Draw,
+            null,
+            completedRounds: 0,
+            faultCode: BattleEncounterFaultCode.CommandRejected));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BattleEndedEventPayload(
+            BattleEncounterOutcome.Faulted,
+            null,
+            completedRounds: 0,
+            faultCode: (BattleEncounterFaultCode)int.MaxValue));
     }
 
     [Fact]
@@ -867,6 +893,68 @@ public sealed class BattleEncounterRunnerTests
         Assert.Equal(1, lifecycle.BattleEndCalls);
     }
 
+    [Fact]
+    public void Runner_RejectsContradictoryCompletionPolicyResultsAsTypedFaults()
+    {
+        BattleEncounterCompletion[] invalidResults =
+        [
+            new(false, BattleEncounterOutcome.Victory, PlayerTeam),
+            new(false, Message: "Not terminal."),
+            new(true, (BattleEncounterOutcome)int.MaxValue),
+            new(true, BattleEncounterOutcome.Victory),
+            new(true, BattleEncounterOutcome.Defeat),
+            new(true, BattleEncounterOutcome.Draw, PlayerTeam),
+            new(true, BattleEncounterOutcome.Escape, PlayerTeam),
+            new(true, BattleEncounterOutcome.Faulted),
+            new(true, BattleEncounterOutcome.Victory, Id("unknown_team")),
+            new(true, BattleEncounterOutcome.Victory, default(ContentId))
+        ];
+
+        foreach (BattleEncounterCompletion invalid in invalidResults)
+        {
+            var handler = new QueueTurnHandler(_ =>
+                BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+            BattleEncounterResult result = Run(
+                [Participant("invalid_completion_player", PlayerTeam),
+                 Participant("invalid_completion_enemy", EnemyTeam)],
+                new FixedInitiative(PlayerTeam, EnemyTeam),
+                new RecordingLifecycle(),
+                handler,
+                new FixedCompletionPolicy(invalid));
+
+            Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+            Assert.Equal(BattleEncounterFaultCode.CompletionEvaluationFailed, result.FaultCode);
+            Assert.Empty(handler.Requests);
+        }
+    }
+
+    [Theory]
+    [InlineData(BattleEncounterOutcome.Victory, true)]
+    [InlineData(BattleEncounterOutcome.Defeat, true)]
+    [InlineData(BattleEncounterOutcome.Escape, false)]
+    [InlineData(BattleEncounterOutcome.Draw, false)]
+    [InlineData(BattleEncounterOutcome.Cancelled, false)]
+    public void Runner_AcceptsCoherentCompletionPolicyTerminalShapes(
+        BattleEncounterOutcome outcome,
+        bool requiresWinner)
+    {
+        ContentId? winner = requiresWinner ? PlayerTeam : null;
+
+        BattleEncounterResult result = Run(
+            [Participant("valid_completion_player", PlayerTeam),
+             Participant("valid_completion_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ =>
+                BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new FixedCompletionPolicy(new BattleEncounterCompletion(true, outcome, winner)));
+
+        Assert.Equal(outcome, result.Outcome);
+        Assert.Equal(winner, result.WinningTeamId);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.RoundStarted);
+    }
+
     [Theory]
     [InlineData(BattleEncounterEventKind.ActorCreated, 0)]
     [InlineData(BattleEncounterEventKind.RoundStarted, 1)]
@@ -1388,6 +1476,29 @@ public sealed class BattleEncounterRunnerTests
         Assert.Contains(result.Events, battleEvent =>
             battleEvent.Kind == BattleEncounterEventKind.ActionRejected &&
             battleEvent.DebugText == "selection became invalid");
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
+    [Fact]
+    public void Runner_RejectsACommandWinnerThatIsNotAnEncounterTeam()
+    {
+        var lifecycle = new RecordingLifecycle();
+
+        BattleEncounterResult result = Run(
+            [Participant("unknown_winner_player", PlayerTeam),
+             Participant("unknown_winner_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                requestedOutcome: BattleEncounterOutcome.Victory,
+                winningTeamId: Id("unknown_team"))),
+            new CompleteAfterTurnsPolicy(99));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.CommandExecutionFaulted, result.FaultCode);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
         Assert.DoesNotContain(result.Events, battleEvent =>
             battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged);
     }
@@ -2744,6 +2855,13 @@ public sealed class BattleEncounterRunnerTests
                 ? null!
                 : throw new InvalidOperationException("Deliberate completion failure.");
         }
+    }
+
+    private sealed class FixedCompletionPolicy(BattleEncounterCompletion result)
+        : IBattleEncounterCompletionPolicy
+    {
+        public BattleEncounterCompletion Evaluate(BattleEncounterCompletionRequest request) =>
+            result;
     }
 
     private sealed class RecordingLifecycle : IBattleEncounterLifecyclePort

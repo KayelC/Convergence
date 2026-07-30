@@ -467,6 +467,12 @@ public sealed record BattleEncounterCommandResult
         ContentId? winningTeamId,
         string? faultMessage)
     {
+        if (requestedOutcome is BattleEncounterOutcome outcome &&
+            !Enum.IsDefined(outcome))
+        {
+            throw new ArgumentOutOfRangeException(nameof(requestedOutcome));
+        }
+
         bool hasNoTurnCost = turnConsumption.Kind == ActionTurnConsumptionKind.None;
         switch (status)
         {
@@ -519,6 +525,14 @@ public sealed record BattleEncounterCommandResult
         {
             throw new ArgumentException(
                 "A winning team ID is valid only for victory or defeat outcomes.",
+                nameof(winningTeamId));
+        }
+
+        if (requestedOutcome is BattleEncounterOutcome.Victory or BattleEncounterOutcome.Defeat &&
+            winningTeamId is null)
+        {
+            throw new ArgumentException(
+                "Victory and defeat outcomes require a winning team ID.",
                 nameof(winningTeamId));
         }
     }
@@ -1534,6 +1548,16 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             .ConfigureAwait(false);
                     }
 
+                    if (command.WinningTeamId is ContentId commandWinner &&
+                        !teamOrder.Contains(commandWinner))
+                    {
+                        return await FaultDuringBattleAsync(
+                                $"Battle command selected unknown winning team {commandWinner}.",
+                                actor.InstanceId,
+                                BattleEncounterFaultCode.CommandExecutionFaulted)
+                            .ConfigureAwait(false);
+                    }
+
                     InvokePortAction(
                         BattleEncounterFaultCode.TurnEconomyExecutionFailed,
                         "turn-economy-apply",
@@ -1916,9 +1940,16 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             return InvokePort(
                 BattleEncounterFaultCode.CompletionEvaluationFailed,
                 "completion-evaluation",
-                () => services.Completion.Evaluate(
-                          new BattleEncounterCompletionRequest(request.Participants, lastActor))
-                      ?? throw new InvalidOperationException("The battle completion policy returned null."),
+                () =>
+                {
+                    BattleEncounterCompletion completion =
+                        services.Completion.Evaluate(
+                            new BattleEncounterCompletionRequest(request.Participants, lastActor))
+                        ?? throw new InvalidOperationException(
+                            "The battle completion policy returned null.");
+                    ValidateCompletion(completion, teamOrder);
+                    return completion;
+                },
                 lastActor?.InstanceId);
         }
 
@@ -2166,6 +2197,61 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         static string LifecycleFailureMessage(string stage, Exception exception) =>
             $"Battle lifecycle step '{stage}' failed: {exception.Message}";
+
+        static void ValidateCompletion(
+            BattleEncounterCompletion completion,
+            IReadOnlyCollection<ContentId> participatingTeamIds)
+        {
+            if (!Enum.IsDefined(completion.Outcome))
+            {
+                throw new InvalidOperationException(
+                    $"The battle completion policy returned undefined outcome " +
+                    $"'{(int)completion.Outcome}'.");
+            }
+
+            if (completion.WinningTeamId is ContentId suppliedWinner &&
+                !suppliedWinner.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "The battle completion policy returned an invalid winning team ID.");
+            }
+
+            if (!completion.IsComplete)
+            {
+                if (completion.Outcome != BattleEncounterOutcome.Draw ||
+                    completion.WinningTeamId is not null ||
+                    completion.Message is not null)
+                {
+                    throw new InvalidOperationException(
+                        "An incomplete battle completion result cannot carry terminal outcome metadata.");
+                }
+
+                return;
+            }
+
+            bool requiresWinner =
+                completion.Outcome is BattleEncounterOutcome.Victory or BattleEncounterOutcome.Defeat;
+            if (requiresWinner != (completion.WinningTeamId is not null))
+            {
+                throw new InvalidOperationException(
+                    requiresWinner
+                        ? $"A complete {completion.Outcome} result requires a winning team."
+                        : $"A complete {completion.Outcome} result cannot carry a winning team.");
+            }
+
+            if (completion.Outcome == BattleEncounterOutcome.Faulted)
+            {
+                throw new InvalidOperationException(
+                    "A completion policy cannot report a fault without a typed fault code.");
+            }
+
+            if (completion.WinningTeamId is ContentId winner &&
+                !participatingTeamIds.Contains(winner))
+            {
+                throw new InvalidOperationException(
+                    $"The battle completion policy selected unknown winning team {winner}.");
+            }
+        }
 
         static IReadOnlyList<BattleEncounterEvent> SnapshotLifecycleEvents(
             IReadOnlyList<BattleEncounterEvent>? lifecycleEvents,
