@@ -64,6 +64,55 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_IsolatesInitiativeAndCompletionPoliciesFromLiveActors()
+    {
+        BattleEncounterParticipant player =
+            Participant("detached_policy_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("detached_policy_enemy", EnemyTeam);
+        var initiative = new CapturingInitiative(PlayerTeam, EnemyTeam);
+        var completion = new CapturingCompletionPolicy();
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            initiative,
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ =>
+                BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            completion);
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        BattleEncounterInitiativeRequest initiativeRequest =
+            Assert.IsType<BattleEncounterInitiativeRequest>(initiative.Request);
+        BattleEncounterCompletionRequest completionRequest =
+            Assert.IsType<BattleEncounterCompletionRequest>(completion.LastCommandRequest);
+        Assert.Equal(
+            typeof(IReadOnlyList<BattleEncounterParticipantSnapshot>),
+            typeof(BattleEncounterInitiativeRequest)
+                .GetProperty(nameof(BattleEncounterInitiativeRequest.Participants))!
+                .PropertyType);
+        Assert.Equal(
+            typeof(BattleEncounterParticipantSnapshot),
+            typeof(BattleEncounterCompletionRequest)
+                .GetProperty(nameof(BattleEncounterCompletionRequest.LastActor))!
+                .PropertyType);
+
+        player.State.SetResource(Hp, 1);
+
+        Assert.Equal(
+            10,
+            initiativeRequest.Participants
+                .Single(participant => participant.InstanceId == player.InstanceId)
+                .State.Resources.Single(resource => resource.ResourceId == Hp)
+                .Current);
+        Assert.Equal(
+            10,
+            completionRequest.LastActor!.State.Resources
+                .Single(resource => resource.ResourceId == Hp)
+                .Current);
+    }
+
+    [Fact]
     public void Runner_UsesTheInjectedSchedulerAsActorOrderAuthority()
     {
         BattleEncounterParticipant player = Participant("scheduled_player", PlayerTeam);
@@ -2700,6 +2749,19 @@ public sealed class BattleEncounterRunnerTests
         public IReadOnlyList<ContentId> DetermineTeamOrder(BattleEncounterInitiativeRequest request) => teamOrder;
     }
 
+    private sealed class CapturingInitiative(params ContentId[] teamOrder) :
+        IBattleEncounterInitiativePolicy
+    {
+        public BattleEncounterInitiativeRequest? Request { get; private set; }
+
+        public IReadOnlyList<ContentId> DetermineTeamOrder(
+            BattleEncounterInitiativeRequest request)
+        {
+            Request = request;
+            return teamOrder;
+        }
+    }
+
     private sealed class EnemyFirstSchedulePolicy(RuntimeInstanceId enemyId) :
         IBattleEncounterSchedulePolicy
     {
@@ -3139,6 +3201,22 @@ public sealed class BattleEncounterRunnerTests
             return returnNull
                 ? null!
                 : throw new InvalidOperationException("Deliberate completion failure.");
+        }
+    }
+
+    private sealed class CapturingCompletionPolicy : IBattleEncounterCompletionPolicy
+    {
+        public BattleEncounterCompletionRequest? LastCommandRequest { get; private set; }
+
+        public BattleEncounterCompletion Evaluate(BattleEncounterCompletionRequest request)
+        {
+            if (request.LastActor is null)
+            {
+                return new BattleEncounterCompletion(false);
+            }
+
+            LastCommandRequest = request;
+            return new BattleEncounterCompletion(true, BattleEncounterOutcome.Draw);
         }
     }
 

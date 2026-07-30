@@ -129,7 +129,47 @@ public sealed record BattleEncounterResult
     public BattleEncounterFaultCode? FaultCode { get; }
 }
 
-public sealed record BattleEncounterInitiativeRequest(IReadOnlyList<BattleEncounterParticipant> Participants);
+public sealed class BattleEncounterInitiativeRequest
+{
+    public BattleEncounterInitiativeRequest(
+        IEnumerable<BattleEncounterParticipantSnapshot> participants)
+    {
+        Participants = SnapshotPolicyParticipants(participants, nameof(participants));
+    }
+
+    public IReadOnlyList<BattleEncounterParticipantSnapshot> Participants { get; }
+
+    internal static IReadOnlyList<BattleEncounterParticipantSnapshot> SnapshotPolicyParticipants(
+        IEnumerable<BattleEncounterParticipantSnapshot> participants,
+        string parameterName)
+    {
+        BattleEncounterParticipantSnapshot[] snapshot =
+            participants?.ToArray() ?? throw new ArgumentNullException(parameterName);
+        if (snapshot.Length == 0)
+        {
+            throw new ArgumentException(
+                "An encounter decision request requires at least one participant.",
+                parameterName);
+        }
+
+        if (snapshot.Any(participant => participant is null))
+        {
+            throw new ArgumentException(
+                "Encounter decision participants cannot contain null entries.",
+                parameterName);
+        }
+
+        if (snapshot.Select(participant => participant.InstanceId).Distinct().Count() !=
+            snapshot.Length)
+        {
+            throw new ArgumentException(
+                "Encounter decision participant instance IDs must be unique.",
+                parameterName);
+        }
+
+        return Array.AsReadOnly(snapshot);
+    }
+}
 
 public interface IBattleEncounterInitiativePolicy
 {
@@ -591,9 +631,31 @@ public interface IBattleEncounterTurnHandler
         CancellationToken cancellationToken = default);
 }
 
-public sealed record BattleEncounterCompletionRequest(
-    IReadOnlyList<BattleEncounterParticipant> Participants,
-    BattleEncounterParticipant? LastActor = null);
+public sealed class BattleEncounterCompletionRequest
+{
+    public BattleEncounterCompletionRequest(
+        IEnumerable<BattleEncounterParticipantSnapshot> participants,
+        BattleEncounterParticipantSnapshot? lastActor = null)
+    {
+        Participants =
+            BattleEncounterInitiativeRequest.SnapshotPolicyParticipants(
+                participants,
+                nameof(participants));
+        if (lastActor is not null &&
+            !Participants.Any(participant =>
+                participant.InstanceId == lastActor.InstanceId))
+        {
+            throw new ArgumentException(
+                "The last actor must belong to the completion participant graph.",
+                nameof(lastActor));
+        }
+
+        LastActor = lastActor;
+    }
+
+    public IReadOnlyList<BattleEncounterParticipantSnapshot> Participants { get; }
+    public BattleEncounterParticipantSnapshot? LastActor { get; }
+}
 
 public sealed record BattleEncounterCompletion(
     bool IsComplete,
@@ -612,7 +674,7 @@ public sealed class LastTeamStandingCompletionPolicy : IBattleEncounterCompletio
     {
         ArgumentNullException.ThrowIfNull(request);
         ContentId[] livingTeams = request.Participants
-            .Where(participant => participant.State.IsDeployed && !participant.State.IsDefeated)
+            .Where(participant => participant.IsDeployed && !participant.IsDefeated)
             .Select(participant => participant.TeamId)
             .Distinct()
             .ToArray();
@@ -1083,7 +1145,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             () =>
             {
                 IReadOnlyList<ContentId>? proposed = services.Initiative.DetermineTeamOrder(
-                    new BattleEncounterInitiativeRequest(request.Participants));
+                    new BattleEncounterInitiativeRequest(
+                        CaptureParticipantSnapshots(request.Participants)));
                 return proposed is null
                     ? null
                     : Array.AsReadOnly(proposed.ToArray());
@@ -1981,7 +2044,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 {
                     BattleEncounterCompletion completion =
                         services.Completion.Evaluate(
-                            new BattleEncounterCompletionRequest(request.Participants, lastActor))
+                            CreateCompletionRequest(request.Participants, lastActor))
                         ?? throw new InvalidOperationException(
                             "The battle completion policy returned null.");
                     ValidateCompletion(completion, teamOrder);
@@ -1996,6 +2059,22 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 BattleEncounterFaultCode.StateSynchronizationFailed,
                 "state-synchronization",
                 () => services.Synchronizer.Synchronize(request.Participants));
+        }
+
+        static BattleEncounterCompletionRequest CreateCompletionRequest(
+            IEnumerable<BattleEncounterParticipant> participants,
+            BattleEncounterParticipant? lastActor)
+        {
+            IReadOnlyList<BattleEncounterParticipantSnapshot> snapshots =
+                CaptureParticipantSnapshots(participants);
+            BattleEncounterParticipantSnapshot? lastActorSnapshot =
+                lastActor is null
+                    ? null
+                    : snapshots.Single(participant =>
+                        participant.InstanceId == lastActor.InstanceId);
+            return new BattleEncounterCompletionRequest(
+                snapshots,
+                lastActorSnapshot);
         }
 
         BattleTurnEconomySnapshot CaptureTurnEconomySnapshot(
@@ -2512,6 +2591,13 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 participant.State.IsDefeated,
                 actor.Stats.EffectiveStats);
         }).ToArray());
+
+    private static IReadOnlyList<BattleEncounterParticipantSnapshot>
+        CaptureParticipantSnapshots(IEnumerable<BattleEncounterParticipant> participants) =>
+        Array.AsReadOnly(
+            participants
+                .Select(participant => new BattleEncounterParticipantSnapshot(participant))
+                .ToArray());
 
     private static bool CanRecallToRoster(BattleEncounterParticipant participant) =>
         participant.State.HasCapability(ContentId.Parse("recall_to_roster"));

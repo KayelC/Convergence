@@ -1856,14 +1856,9 @@ Convergence.Encounters.BattleEncounterCompletion.Outcome.init -> void
 Convergence.Encounters.BattleEncounterCompletion.WinningTeamId.get -> Convergence.Content.ContentId?
 Convergence.Encounters.BattleEncounterCompletion.WinningTeamId.init -> void
 Convergence.Encounters.BattleEncounterCompletionRequest
-Convergence.Encounters.BattleEncounterCompletionRequest.<Clone>$() -> Convergence.Encounters.BattleEncounterCompletionRequest!
-Convergence.Encounters.BattleEncounterCompletionRequest.BattleEncounterCompletionRequest(System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterParticipant!>! Participants, Convergence.Encounters.BattleEncounterParticipant? LastActor = null) -> void
-Convergence.Encounters.BattleEncounterCompletionRequest.Deconstruct(out System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterParticipant!>! Participants, out Convergence.Encounters.BattleEncounterParticipant? LastActor) -> void
-Convergence.Encounters.BattleEncounterCompletionRequest.Equals(Convergence.Encounters.BattleEncounterCompletionRequest? other) -> bool
-Convergence.Encounters.BattleEncounterCompletionRequest.LastActor.get -> Convergence.Encounters.BattleEncounterParticipant?
-Convergence.Encounters.BattleEncounterCompletionRequest.LastActor.init -> void
-Convergence.Encounters.BattleEncounterCompletionRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterParticipant!>!
-Convergence.Encounters.BattleEncounterCompletionRequest.Participants.init -> void
+Convergence.Encounters.BattleEncounterCompletionRequest.BattleEncounterCompletionRequest(System.Collections.Generic.IEnumerable<Convergence.Encounters.BattleEncounterParticipantSnapshot!>! participants, Convergence.Encounters.BattleEncounterParticipantSnapshot? lastActor = null) -> void
+Convergence.Encounters.BattleEncounterCompletionRequest.LastActor.get -> Convergence.Encounters.BattleEncounterParticipantSnapshot?
+Convergence.Encounters.BattleEncounterCompletionRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterParticipantSnapshot!>!
 Convergence.Encounters.BattleEncounterEvent
 Convergence.Encounters.BattleEncounterEvent.<Clone>$() -> Convergence.Encounters.BattleEncounterEvent!
 Convergence.Encounters.BattleEncounterEvent.ActorId.get -> Convergence.Runtime.RuntimeInstanceId?
@@ -1923,12 +1918,8 @@ Convergence.Encounters.BattleEncounterFaultCode.TurnEconomyExecutionFailed = 4 -
 Convergence.Encounters.BattleEncounterFaultCode.TurnEconomyTransitionInvalid = 10 -> Convergence.Encounters.BattleEncounterFaultCode
 Convergence.Encounters.BattleEncounterFaultCode.TurnHandlerExecutionFailed = 5 -> Convergence.Encounters.BattleEncounterFaultCode
 Convergence.Encounters.BattleEncounterInitiativeRequest
-Convergence.Encounters.BattleEncounterInitiativeRequest.<Clone>$() -> Convergence.Encounters.BattleEncounterInitiativeRequest!
-Convergence.Encounters.BattleEncounterInitiativeRequest.BattleEncounterInitiativeRequest(System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterParticipant!>! Participants) -> void
-Convergence.Encounters.BattleEncounterInitiativeRequest.Deconstruct(out System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterParticipant!>! Participants) -> void
-Convergence.Encounters.BattleEncounterInitiativeRequest.Equals(Convergence.Encounters.BattleEncounterInitiativeRequest? other) -> bool
-Convergence.Encounters.BattleEncounterInitiativeRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterParticipant!>!
-Convergence.Encounters.BattleEncounterInitiativeRequest.Participants.init -> void
+Convergence.Encounters.BattleEncounterInitiativeRequest.BattleEncounterInitiativeRequest(System.Collections.Generic.IEnumerable<Convergence.Encounters.BattleEncounterParticipantSnapshot!>! participants) -> void
+Convergence.Encounters.BattleEncounterInitiativeRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterParticipantSnapshot!>!
 Convergence.Encounters.BattleEncounterLifecycleRequest
 Convergence.Encounters.BattleEncounterLifecycleRequest.<Clone>$() -> Convergence.Encounters.BattleEncounterLifecycleRequest!
 Convergence.Encounters.BattleEncounterLifecycleRequest.BattleEncounterLifecycleRequest(Convergence.Encounters.BattleEncounterRequest! Encounter, System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterParticipant!>! Participants, System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>! TeamOrder) -> void
@@ -7386,18 +7377,12 @@ override Convergence.Encounters.BattleEncounterCommandResult.ToString() -> strin
 override Convergence.Encounters.BattleEncounterCompletion.Equals(object? obj) -> bool
 override Convergence.Encounters.BattleEncounterCompletion.GetHashCode() -> int
 override Convergence.Encounters.BattleEncounterCompletion.ToString() -> string!
-override Convergence.Encounters.BattleEncounterCompletionRequest.Equals(object? obj) -> bool
-override Convergence.Encounters.BattleEncounterCompletionRequest.GetHashCode() -> int
-override Convergence.Encounters.BattleEncounterCompletionRequest.ToString() -> string!
 override Convergence.Encounters.BattleEncounterEvent.Equals(object? obj) -> bool
 override Convergence.Encounters.BattleEncounterEvent.GetHashCode() -> int
 override Convergence.Encounters.BattleEncounterEvent.ToString() -> string!
 override Convergence.Encounters.BattleEncounterEventPayload.Equals(object? obj) -> bool
 override Convergence.Encounters.BattleEncounterEventPayload.GetHashCode() -> int
 override Convergence.Encounters.BattleEncounterEventPayload.ToString() -> string!
-override Convergence.Encounters.BattleEncounterInitiativeRequest.Equals(object? obj) -> bool
-override Convergence.Encounters.BattleEncounterInitiativeRequest.GetHashCode() -> int
-override Convergence.Encounters.BattleEncounterInitiativeRequest.ToString() -> string!
 override Convergence.Encounters.BattleEncounterLifecycleRequest.Equals(object? obj) -> bool
 override Convergence.Encounters.BattleEncounterLifecycleRequest.GetHashCode() -> int
 override Convergence.Encounters.BattleEncounterLifecycleRequest.ToString() -> string!
@@ -8869,14 +8854,10 @@ static Convergence.Encounters.BattleEncounterCommandResult.operator ==(Convergen
 static Convergence.Encounters.BattleEncounterCommandResult.Rejected(string! message, System.Collections.Generic.IEnumerable<Convergence.Encounters.BattleEncounterEvent!>? events = null) -> Convergence.Encounters.BattleEncounterCommandResult!
 static Convergence.Encounters.BattleEncounterCompletion.operator !=(Convergence.Encounters.BattleEncounterCompletion? left, Convergence.Encounters.BattleEncounterCompletion? right) -> bool
 static Convergence.Encounters.BattleEncounterCompletion.operator ==(Convergence.Encounters.BattleEncounterCompletion? left, Convergence.Encounters.BattleEncounterCompletion? right) -> bool
-static Convergence.Encounters.BattleEncounterCompletionRequest.operator !=(Convergence.Encounters.BattleEncounterCompletionRequest? left, Convergence.Encounters.BattleEncounterCompletionRequest? right) -> bool
-static Convergence.Encounters.BattleEncounterCompletionRequest.operator ==(Convergence.Encounters.BattleEncounterCompletionRequest? left, Convergence.Encounters.BattleEncounterCompletionRequest? right) -> bool
 static Convergence.Encounters.BattleEncounterEvent.operator !=(Convergence.Encounters.BattleEncounterEvent? left, Convergence.Encounters.BattleEncounterEvent? right) -> bool
 static Convergence.Encounters.BattleEncounterEvent.operator ==(Convergence.Encounters.BattleEncounterEvent? left, Convergence.Encounters.BattleEncounterEvent? right) -> bool
 static Convergence.Encounters.BattleEncounterEventPayload.operator !=(Convergence.Encounters.BattleEncounterEventPayload? left, Convergence.Encounters.BattleEncounterEventPayload? right) -> bool
 static Convergence.Encounters.BattleEncounterEventPayload.operator ==(Convergence.Encounters.BattleEncounterEventPayload? left, Convergence.Encounters.BattleEncounterEventPayload? right) -> bool
-static Convergence.Encounters.BattleEncounterInitiativeRequest.operator !=(Convergence.Encounters.BattleEncounterInitiativeRequest? left, Convergence.Encounters.BattleEncounterInitiativeRequest? right) -> bool
-static Convergence.Encounters.BattleEncounterInitiativeRequest.operator ==(Convergence.Encounters.BattleEncounterInitiativeRequest? left, Convergence.Encounters.BattleEncounterInitiativeRequest? right) -> bool
 static Convergence.Encounters.BattleEncounterLifecycleRequest.operator !=(Convergence.Encounters.BattleEncounterLifecycleRequest? left, Convergence.Encounters.BattleEncounterLifecycleRequest? right) -> bool
 static Convergence.Encounters.BattleEncounterLifecycleRequest.operator ==(Convergence.Encounters.BattleEncounterLifecycleRequest? left, Convergence.Encounters.BattleEncounterLifecycleRequest? right) -> bool
 static Convergence.Encounters.BattleEncounterParticipant.operator !=(Convergence.Encounters.BattleEncounterParticipant? left, Convergence.Encounters.BattleEncounterParticipant? right) -> bool

@@ -1086,7 +1086,15 @@ public sealed class StatModifierExecutionIntegrationTests
 
     private static int RemainingDuration(RuntimeActorState actor) =>
         Assert.IsType<TurnDurationDefinition>(
-            Assert.Single(Assert.Single(actor.StatModifierState!.Tracks).Contributions).Duration).Value;
+            Assert.Single(
+                Assert.Single(actor.StatModifierState!.Tracks)
+                    .Contributions).Duration).Value;
+
+    private static int RemainingDuration(RuntimeActorSnapshot actor) =>
+        Assert.IsType<TurnDurationDefinition>(
+            Assert.Single(
+                Assert.Single(actor.BattleStatus.StatModifiers!.Tracks)
+                    .Contributions).Duration).Value;
 
     private sealed class MinimumRandomSource : IRandomSource
     {
