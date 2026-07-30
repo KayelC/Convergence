@@ -216,17 +216,20 @@ internal sealed class CleanBattleDemoHost
             lifecycle,
             turnEconomy,
             new AutomatedBattleTurnRestrictionResolver());
-        AutomatedBattleResult battle = runner.Run(new AutomatedBattleRequest(
-            [frostResult.RequireActor(), emberResult.RequireActor()],
-            Battle,
-            NormalBattle,
-            moonPhaseId: null,
-            roundLimit: 10));
+        AutomatedBattleResult battle = await runner.RunAsync(
+            new AutomatedBattleRequest(
+                [frostResult.RequireActor(), emberResult.RequireActor()],
+                Battle,
+                NormalBattle,
+                moonPhaseId: null,
+                roundLimit: 10),
+            cancellationToken);
 
-        foreach (BattleRuntimeEvent battleEvent in battle.Events)
+        foreach (BattleEncounterEvent battleEvent in battle.Events)
         {
             await _eventSink.PublishAsync(
-                $"{battleEvent.Sequence:D3} [{battleEvent.Kind}] {battleEvent.Message}",
+                $"{battleEvent.Sequence:D3} [{battleEvent.Kind}] " +
+                $"{battleEvent.DebugText ?? battleEvent.Kind.ToString()}",
                 cancellationToken);
         }
         await _eventSink.PublishAsync(

@@ -260,41 +260,6 @@ public enum AutomatedBattleOutcome
     Faulted
 }
 
-public enum BattleRuntimeEventKind
-{
-    ActorCreated,
-    BattleStarted,
-    RoundStarted,
-    PhaseStarted,
-    TurnRestricted,
-    SkillSelected,
-    SkillPassed,
-    EffectResolved,
-    PassiveActivated,
-    StatusChanged,
-    TurnEconomyChanged,
-    ResourceChanged,
-    ActorDefeated,
-    BattleFaulted,
-    BattleEnded,
-    EncounterPresenceChanged,
-    HostActionRequested
-}
-
-public sealed record BattleRuntimeEvent(
-    int Sequence,
-    BattleRuntimeEventKind Kind,
-    string Message,
-    RuntimeInstanceId? ActorId = null,
-    RuntimeInstanceId? TargetId = null,
-    ContentId? SkillId = null,
-    decimal? Value = null,
-    BattleTurnEconomySnapshot? TurnEconomyState = null,
-    bool? IsDeployed = null)
-{
-    public BattleEncounterFaultCode? FaultCode { get; internal init; }
-}
-
 public sealed record BattleActorFinalSnapshot
 {
     internal BattleActorFinalSnapshot(BattleEncounterParticipantSnapshot participant)
@@ -410,7 +375,7 @@ public sealed record AutomatedBattleResult
         AutomatedBattleOutcome outcome,
         ContentId? winningTeamId,
         IEnumerable<BattleEncounterParticipantSnapshot> participants,
-        IEnumerable<BattleRuntimeEvent> events,
+        IEnumerable<BattleEncounterEvent> events,
         IEnumerable<KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>> teamKnowledge,
         string? faultMessage = null,
         BattleEncounterFaultCode? faultCode = null)
@@ -428,7 +393,7 @@ public sealed record AutomatedBattleResult
     public AutomatedBattleOutcome Outcome { get; }
     public ContentId? WinningTeamId { get; }
     public IReadOnlyList<BattleActorFinalSnapshot> FinalActors { get; }
-    public IReadOnlyList<BattleRuntimeEvent> Events { get; }
+    public IReadOnlyList<BattleEncounterEvent> Events { get; }
     public IReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> TeamKnowledge { get; }
     public string? FaultMessage { get; }
     public BattleEncounterFaultCode? FaultCode { get; }
@@ -437,6 +402,10 @@ public sealed record AutomatedBattleResult
 public interface IAutomatedBattleRunner
 {
     AutomatedBattleResult Run(AutomatedBattleRequest request);
+
+    ValueTask<AutomatedBattleResult> RunAsync(
+        AutomatedBattleRequest request,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
@@ -464,8 +433,30 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         _restrictionResolver = restrictionResolver ?? throw new ArgumentNullException(nameof(restrictionResolver));
     }
 
+    /// <summary>
+    /// Compatibility-only synchronous entry point for non-UI callers that do not require
+    /// synchronization-context affinity. Engine and UI hosts must await <see cref="RunAsync"/>.
+    /// </summary>
     public AutomatedBattleResult Run(AutomatedBattleRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        SynchronizationContext? callerContext = SynchronizationContext.Current;
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(null);
+            return RunAsync(request).AsTask().GetAwaiter().GetResult();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(callerContext);
+        }
+    }
+
+    public async ValueTask<AutomatedBattleResult> RunAsync(
+        AutomatedBattleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(request);
         if (request.RoundLimit <= 0) throw new ArgumentOutOfRangeException(nameof(request), "Round limit must be positive.");
         if (request.Participants.Count == 0) throw new ArgumentException("A battle requires participants.", nameof(request));
@@ -488,14 +479,16 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             new LastTeamStandingCompletionPolicy(),
             _turnEconomy.CreateEconomy,
             _turnEconomy.PhaseProgress);
-        BattleEncounterResult result = new BattleEncounterRunner().Run(
-            new BattleEncounterRequest(
-                participants,
-                request.ContextId,
-                request.BattleKindId,
-                request.MoonPhaseId,
-                request.RoundLimit),
-            services);
+        BattleEncounterResult result = await new BattleEncounterRunner().RunAsync(
+                new BattleEncounterRequest(
+                    participants,
+                    request.ContextId,
+                    request.BattleKindId,
+                    request.MoonPhaseId,
+                    request.RoundLimit),
+                services,
+                cancellationToken)
+            .ConfigureAwait(false);
 
         return new AutomatedBattleResult(
             result.Outcome switch
@@ -506,62 +499,10 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             },
             result.WinningTeamId,
             result.Participants,
-            ToRuntimeEvents(result.Events),
+            result.Events,
             turnHandler.KnowledgeSnapshots,
             result.FaultMessage,
             result.FaultCode);
-    }
-
-    private static IReadOnlyList<BattleRuntimeEvent> ToRuntimeEvents(IEnumerable<BattleEncounterEvent> events)
-    {
-        var mapped = new List<BattleRuntimeEvent>();
-        foreach (BattleEncounterEvent battleEvent in events)
-        {
-            BattleRuntimeEventKind? kind = battleEvent.Kind switch
-            {
-                BattleEncounterEventKind.ActorCreated => BattleRuntimeEventKind.ActorCreated,
-                BattleEncounterEventKind.BattleStarted => BattleRuntimeEventKind.BattleStarted,
-                BattleEncounterEventKind.RoundStarted => BattleRuntimeEventKind.RoundStarted,
-                BattleEncounterEventKind.PhaseStarted => BattleRuntimeEventKind.PhaseStarted,
-                BattleEncounterEventKind.TurnRestricted => BattleRuntimeEventKind.TurnRestricted,
-                BattleEncounterEventKind.CommandSelected => BattleRuntimeEventKind.SkillSelected,
-                BattleEncounterEventKind.CommandPassed => BattleRuntimeEventKind.SkillPassed,
-                BattleEncounterEventKind.EffectResolved => BattleRuntimeEventKind.EffectResolved,
-                BattleEncounterEventKind.PassiveActivated => BattleRuntimeEventKind.PassiveActivated,
-                BattleEncounterEventKind.StatusChanged => BattleRuntimeEventKind.StatusChanged,
-                BattleEncounterEventKind.TurnEconomyChanged => BattleRuntimeEventKind.TurnEconomyChanged,
-                BattleEncounterEventKind.ResourceChanged => BattleRuntimeEventKind.ResourceChanged,
-                BattleEncounterEventKind.EncounterPresenceChanged => BattleRuntimeEventKind.EncounterPresenceChanged,
-                BattleEncounterEventKind.HostActionRequested => BattleRuntimeEventKind.HostActionRequested,
-                BattleEncounterEventKind.ActorDefeated => BattleRuntimeEventKind.ActorDefeated,
-                BattleEncounterEventKind.BattleFaulted => BattleRuntimeEventKind.BattleFaulted,
-                BattleEncounterEventKind.BattleEnded => BattleRuntimeEventKind.BattleEnded,
-                _ => null
-            };
-            if (kind is null)
-            {
-                continue;
-            }
-
-            var runtimeEvent = new BattleRuntimeEvent(
-                mapped.Count + 1,
-                kind.Value,
-                battleEvent.DebugText ?? battleEvent.Kind.ToString(),
-                battleEvent.ActorId,
-                battleEvent.TargetId,
-                battleEvent.SourceId,
-                battleEvent.Value,
-                battleEvent.TurnEconomyState,
-                battleEvent.Payload is BattleEncounterPresenceChangedEventPayload presence
-                    ? presence.IsDeployed
-                    : null)
-            {
-                FaultCode = battleEvent.FaultCode
-            };
-            mapped.Add(runtimeEvent);
-        }
-
-        return Array.AsReadOnly(mapped.ToArray());
     }
 
     private sealed class AutomatedBattleTurnHandler : IBattleEncounterTurnHandler

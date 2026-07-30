@@ -147,8 +147,10 @@ public sealed class GodotIntegrationContractTests
 
         Assert.Equal(AutomatedBattleOutcome.Victory, battle.Outcome);
         Assert.Equal(PlayerTeam, battle.WinningTeamId);
-        Assert.Contains(battle.Events, battleEvent => battleEvent.Kind == BattleRuntimeEventKind.SkillSelected);
-        Assert.Contains(battle.Events, battleEvent => battleEvent.Kind == BattleRuntimeEventKind.EffectResolved);
+        Assert.Contains(battle.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.CommandSelected);
+        Assert.Contains(battle.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.EffectResolved);
         Assert.All(
             battle.Events.Where(battleEvent => battleEvent.ActorId is not null),
             battleEvent => Assert.True(sceneRegistry.TryGet(battleEvent.ActorId!.Value, out _)));

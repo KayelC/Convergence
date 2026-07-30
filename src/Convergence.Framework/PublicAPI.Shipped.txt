@@ -1678,7 +1678,7 @@ Convergence.Encounters.AutomatedBattleRestrictionActionRequest.Turn.get -> Conve
 Convergence.Encounters.AutomatedBattleResult
 Convergence.Encounters.AutomatedBattleResult.<Clone>$() -> Convergence.Encounters.AutomatedBattleResult!
 Convergence.Encounters.AutomatedBattleResult.Equals(Convergence.Encounters.AutomatedBattleResult? other) -> bool
-Convergence.Encounters.AutomatedBattleResult.Events.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleRuntimeEvent!>!
+Convergence.Encounters.AutomatedBattleResult.Events.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleEncounterEvent!>!
 Convergence.Encounters.AutomatedBattleResult.FaultCode.get -> Convergence.Encounters.BattleEncounterFaultCode?
 Convergence.Encounters.AutomatedBattleResult.FaultMessage.get -> string?
 Convergence.Encounters.AutomatedBattleResult.FinalActors.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.BattleActorFinalSnapshot!>!
@@ -1688,6 +1688,7 @@ Convergence.Encounters.AutomatedBattleResult.WinningTeamId.get -> Convergence.Co
 Convergence.Encounters.AutomatedBattleRunner
 Convergence.Encounters.AutomatedBattleRunner.AutomatedBattleRunner(Convergence.Execution.ISkillExecutor! executor, Convergence.Encounters.IBattleActionSelector! selector, Convergence.Execution.BattleExecutionServices! services, Convergence.Encounters.IBattleEncounterLifecyclePort! lifecycle, Convergence.Runtime.BattleTurnEconomyRuleset! turnEconomy, Convergence.Encounters.IAutomatedBattleTurnRestrictionResolver! restrictionResolver) -> void
 Convergence.Encounters.AutomatedBattleRunner.Run(Convergence.Encounters.AutomatedBattleRequest! request) -> Convergence.Encounters.AutomatedBattleResult!
+Convergence.Encounters.AutomatedBattleRunner.RunAsync(Convergence.Encounters.AutomatedBattleRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Convergence.Encounters.AutomatedBattleResult!>
 Convergence.Encounters.AutomatedBattleTurnRestrictionRequest
 Convergence.Encounters.AutomatedBattleTurnRestrictionRequest.<Clone>$() -> Convergence.Encounters.AutomatedBattleTurnRestrictionRequest!
 Convergence.Encounters.AutomatedBattleTurnRestrictionRequest.Actor.get -> Convergence.Encounters.CatalogBattleActor!
@@ -2177,48 +2178,6 @@ Convergence.Encounters.BattleRoundStartedEventPayload
 Convergence.Encounters.BattleRoundStartedEventPayload.BattleRoundStartedEventPayload(int roundNumber) -> void
 Convergence.Encounters.BattleRoundStartedEventPayload.Equals(Convergence.Encounters.BattleRoundStartedEventPayload? other) -> bool
 Convergence.Encounters.BattleRoundStartedEventPayload.RoundNumber.get -> int
-Convergence.Encounters.BattleRuntimeEvent
-Convergence.Encounters.BattleRuntimeEvent.<Clone>$() -> Convergence.Encounters.BattleRuntimeEvent!
-Convergence.Encounters.BattleRuntimeEvent.ActorId.get -> Convergence.Runtime.RuntimeInstanceId?
-Convergence.Encounters.BattleRuntimeEvent.ActorId.init -> void
-Convergence.Encounters.BattleRuntimeEvent.BattleRuntimeEvent(int Sequence, Convergence.Encounters.BattleRuntimeEventKind Kind, string! Message, Convergence.Runtime.RuntimeInstanceId? ActorId = null, Convergence.Runtime.RuntimeInstanceId? TargetId = null, Convergence.Content.ContentId? SkillId = null, decimal? Value = null, Convergence.Execution.BattleTurnEconomySnapshot? TurnEconomyState = null, bool? IsDeployed = null) -> void
-Convergence.Encounters.BattleRuntimeEvent.Deconstruct(out int Sequence, out Convergence.Encounters.BattleRuntimeEventKind Kind, out string! Message, out Convergence.Runtime.RuntimeInstanceId? ActorId, out Convergence.Runtime.RuntimeInstanceId? TargetId, out Convergence.Content.ContentId? SkillId, out decimal? Value, out Convergence.Execution.BattleTurnEconomySnapshot? TurnEconomyState, out bool? IsDeployed) -> void
-Convergence.Encounters.BattleRuntimeEvent.Equals(Convergence.Encounters.BattleRuntimeEvent? other) -> bool
-Convergence.Encounters.BattleRuntimeEvent.FaultCode.get -> Convergence.Encounters.BattleEncounterFaultCode?
-Convergence.Encounters.BattleRuntimeEvent.IsDeployed.get -> bool?
-Convergence.Encounters.BattleRuntimeEvent.IsDeployed.init -> void
-Convergence.Encounters.BattleRuntimeEvent.Kind.get -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEvent.Kind.init -> void
-Convergence.Encounters.BattleRuntimeEvent.Message.get -> string!
-Convergence.Encounters.BattleRuntimeEvent.Message.init -> void
-Convergence.Encounters.BattleRuntimeEvent.Sequence.get -> int
-Convergence.Encounters.BattleRuntimeEvent.Sequence.init -> void
-Convergence.Encounters.BattleRuntimeEvent.SkillId.get -> Convergence.Content.ContentId?
-Convergence.Encounters.BattleRuntimeEvent.SkillId.init -> void
-Convergence.Encounters.BattleRuntimeEvent.TargetId.get -> Convergence.Runtime.RuntimeInstanceId?
-Convergence.Encounters.BattleRuntimeEvent.TargetId.init -> void
-Convergence.Encounters.BattleRuntimeEvent.TurnEconomyState.get -> Convergence.Execution.BattleTurnEconomySnapshot?
-Convergence.Encounters.BattleRuntimeEvent.TurnEconomyState.init -> void
-Convergence.Encounters.BattleRuntimeEvent.Value.get -> decimal?
-Convergence.Encounters.BattleRuntimeEvent.Value.init -> void
-Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.ActorCreated = 0 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.ActorDefeated = 12 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.BattleEnded = 14 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.BattleFaulted = 13 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.BattleStarted = 1 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.EffectResolved = 7 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.EncounterPresenceChanged = 15 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.HostActionRequested = 16 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.PassiveActivated = 8 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.PhaseStarted = 3 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.ResourceChanged = 11 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.RoundStarted = 2 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.SkillPassed = 6 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.SkillSelected = 5 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.StatusChanged = 9 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.TurnEconomyChanged = 10 -> Convergence.Encounters.BattleRuntimeEventKind
-Convergence.Encounters.BattleRuntimeEventKind.TurnRestricted = 4 -> Convergence.Encounters.BattleRuntimeEventKind
 Convergence.Encounters.BattleStartedEventPayload
 Convergence.Encounters.BattleStartedEventPayload.ActorIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeInstanceId>!
 Convergence.Encounters.BattleStartedEventPayload.BattleKindId.get -> Convergence.Content.ContentId
@@ -2360,6 +2319,7 @@ Convergence.Encounters.IAutomatedBattleRestrictionActionSource
 Convergence.Encounters.IAutomatedBattleRestrictionActionSource.SelectAsync(Convergence.Encounters.AutomatedBattleRestrictionActionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Convergence.Encounters.AutomatedRestrictedActionSelection!>
 Convergence.Encounters.IAutomatedBattleRunner
 Convergence.Encounters.IAutomatedBattleRunner.Run(Convergence.Encounters.AutomatedBattleRequest! request) -> Convergence.Encounters.AutomatedBattleResult!
+Convergence.Encounters.IAutomatedBattleRunner.RunAsync(Convergence.Encounters.AutomatedBattleRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Convergence.Encounters.AutomatedBattleResult!>
 Convergence.Encounters.IAutomatedBattleTurnRestrictionResolver
 Convergence.Encounters.IAutomatedBattleTurnRestrictionResolver.ResolveAsync(Convergence.Encounters.AutomatedBattleTurnRestrictionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Convergence.Encounters.BattleEncounterCommandResult!>
 Convergence.Encounters.IBattleActionSelector
@@ -7509,9 +7469,6 @@ override Convergence.Encounters.BattleRoundStartedEventPayload.<Clone>$() -> Con
 override Convergence.Encounters.BattleRoundStartedEventPayload.Equals(object? obj) -> bool
 override Convergence.Encounters.BattleRoundStartedEventPayload.GetHashCode() -> int
 override Convergence.Encounters.BattleRoundStartedEventPayload.ToString() -> string!
-override Convergence.Encounters.BattleRuntimeEvent.Equals(object? obj) -> bool
-override Convergence.Encounters.BattleRuntimeEvent.GetHashCode() -> int
-override Convergence.Encounters.BattleRuntimeEvent.ToString() -> string!
 override Convergence.Encounters.BattleStartedEventPayload.<Clone>$() -> Convergence.Encounters.BattleStartedEventPayload!
 override Convergence.Encounters.BattleStartedEventPayload.Equals(object? obj) -> bool
 override Convergence.Encounters.BattleStartedEventPayload.GetHashCode() -> int
@@ -8959,8 +8916,6 @@ static Convergence.Encounters.BattleRewardResult.operator !=(Convergence.Encount
 static Convergence.Encounters.BattleRewardResult.operator ==(Convergence.Encounters.BattleRewardResult? left, Convergence.Encounters.BattleRewardResult? right) -> bool
 static Convergence.Encounters.BattleRoundStartedEventPayload.operator !=(Convergence.Encounters.BattleRoundStartedEventPayload? left, Convergence.Encounters.BattleRoundStartedEventPayload? right) -> bool
 static Convergence.Encounters.BattleRoundStartedEventPayload.operator ==(Convergence.Encounters.BattleRoundStartedEventPayload? left, Convergence.Encounters.BattleRoundStartedEventPayload? right) -> bool
-static Convergence.Encounters.BattleRuntimeEvent.operator !=(Convergence.Encounters.BattleRuntimeEvent? left, Convergence.Encounters.BattleRuntimeEvent? right) -> bool
-static Convergence.Encounters.BattleRuntimeEvent.operator ==(Convergence.Encounters.BattleRuntimeEvent? left, Convergence.Encounters.BattleRuntimeEvent? right) -> bool
 static Convergence.Encounters.BattleStartedEventPayload.operator !=(Convergence.Encounters.BattleStartedEventPayload? left, Convergence.Encounters.BattleStartedEventPayload? right) -> bool
 static Convergence.Encounters.BattleStartedEventPayload.operator ==(Convergence.Encounters.BattleStartedEventPayload? left, Convergence.Encounters.BattleStartedEventPayload? right) -> bool
 static Convergence.Encounters.BattleStatusChangedEventPayload.operator !=(Convergence.Encounters.BattleStatusChangedEventPayload? left, Convergence.Encounters.BattleStatusChangedEventPayload? right) -> bool

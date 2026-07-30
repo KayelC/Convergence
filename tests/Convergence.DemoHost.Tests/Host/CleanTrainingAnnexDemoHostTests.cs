@@ -71,7 +71,7 @@ public sealed class CleanTrainingAnnexDemoHostTests
         Assert.Contains("[encounter] Host trigger annex_scene_trigger selected Ashling Drill.", text, StringComparison.Ordinal);
         Assert.Contains("[encounter] Resolved Ashling Drill: Ashling.", text, StringComparison.Ordinal);
         Assert.Contains("[item] Annex Tonic:", text, StringComparison.Ordinal);
-        Assert.Contains("SkillSelected: echo_adept selected Frost Tip.", text, StringComparison.Ordinal);
+        Assert.Contains("CommandSelected: echo_adept selected Frost Tip.", text, StringComparison.Ordinal);
         Assert.Contains("[battle] Outcome Victory; winner player_team.", text, StringComparison.Ordinal);
         Assert.Contains("[reward] Awarded", text, StringComparison.Ordinal);
         Assert.Contains("[save] Validated Training Annex save snapshot with 0 diagnostic(s).", text, StringComparison.Ordinal);

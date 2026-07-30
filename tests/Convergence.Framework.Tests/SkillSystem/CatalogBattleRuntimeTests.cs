@@ -775,19 +775,139 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(PlayerTeam, result.WinningTeamId);
         Assert.Equal(
             Id("convergence.clean_battle_demo:ember_bolt_demo"),
-            result.Events.First(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.SkillSelected).SkillId);
+            result.Events.First(battleEvent => battleEvent.Kind == BattleEncounterEventKind.CommandSelected).SourceId);
         Assert.Contains(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
-            battleEvent.SkillId == Id("convergence.clean_battle_demo:frost_lance_demo"));
+            battleEvent.Kind == BattleEncounterEventKind.CommandSelected &&
+            battleEvent.SourceId == Id("convergence.clean_battle_demo:frost_lance_demo"));
         Assert.Contains(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.PassiveActivated &&
-            battleEvent.SkillId == Id("convergence.clean_battle_demo:regenerate_demo"));
+            battleEvent.Kind == BattleEncounterEventKind.PassiveActivated &&
+            battleEvent.SourceId == Id("convergence.clean_battle_demo:regenerate_demo"));
         Assert.Contains(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.EffectResolved &&
-            battleEvent.Message.Contains("Weakness", StringComparison.Ordinal));
+            battleEvent.Kind == BattleEncounterEventKind.EffectResolved &&
+            battleEvent.DebugText?.Contains("Weakness", StringComparison.Ordinal) == true);
         Assert.True(result.Events.Select(battleEvent => battleEvent.Sequence).SequenceEqual(
             Enumerable.Range(1, result.Events.Count)));
         Assert.True(result.FinalActors.Single(actor => actor.TeamId == EnemyTeam).IsDefeated);
+    }
+
+    [Fact]
+    public async Task RunnerAsync_ReturnsTheCompleteCanonicalEncounterEventStream()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor frost = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
+        CatalogBattleActor ember = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        AutomatedBattleRunner runner = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services);
+
+        AutomatedBattleResult result = await runner.RunAsync(new AutomatedBattleRequest(
+            [frost, ember], Battle, NormalBattle, NewMoon, 10));
+
+        Assert.Equal(AutomatedBattleOutcome.Victory, result.Outcome);
+        Assert.True(result.Events.Select(battleEvent => battleEvent.Sequence).SequenceEqual(
+            Enumerable.Range(1, result.Events.Count)));
+        BattleEncounterEvent turnStarted = result.Events.First(
+            battleEvent => battleEvent.Kind == BattleEncounterEventKind.TurnStarted &&
+                           battleEvent.ActorId == frost.State.InstanceId);
+        Assert.IsType<BattleTurnStartedEventPayload>(turnStarted.Payload);
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEnded &&
+            battleEvent.ActorId == frost.State.InstanceId &&
+            battleEvent.Payload is BattleTurnEndedEventPayload
+            {
+                Reason: BattleEncounterTurnEndReason.CommandCommitted
+            });
+        Assert.IsType<BattleEndedEventPayload>(
+            result.Events.Last(battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.BattleEnded).Payload);
+    }
+
+    [Fact]
+    public async Task RunnerAsync_PreCancelledTokenDoesNotMutateParticipants()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor frost = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
+        CatalogBattleActor ember = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
+        RuntimeActorSnapshot frostBefore = frost.State.ToSnapshot();
+        RuntimeActorSnapshot emberBefore = ember.State.ToSnapshot();
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        AutomatedBattleRunner runner = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => runner.RunAsync(
+                new AutomatedBattleRequest(
+                    [frost, ember], Battle, NormalBattle, NewMoon, 10),
+                cancellation.Token).AsTask());
+
+        AssertActorStateUnchanged(frostBefore, frost.State.ToSnapshot());
+        AssertActorStateUnchanged(emberBefore, ember.State.ToSnapshot());
+
+        static void AssertActorStateUnchanged(
+            RuntimeActorSnapshot before,
+            RuntimeActorSnapshot after)
+        {
+            Assert.Equal(before.Identity, after.Identity);
+            Assert.Equal(before.Affiliation, after.Affiliation);
+            Assert.Equal(before.EncounterPresence, after.EncounterPresence);
+            Assert.Equal(before.Progression, after.Progression);
+            Assert.Equal(before.Resources, after.Resources);
+            Assert.Equal(before.Stats.BaseStats, after.Stats.BaseStats);
+            Assert.Equal(before.Stats.EffectiveStats, after.Stats.EffectiveStats);
+            Assert.Equal(before.Skills.LearnedSkillIds, after.Skills.LearnedSkillIds);
+            Assert.Equal(before.Skills.EquippedSkillIds, after.Skills.EquippedSkillIds);
+            Assert.Equal(before.Skills.PendingChoices, after.Skills.PendingChoices);
+            Assert.Equal(before.BattleStatus.Ailments, after.BattleStatus.Ailments);
+            Assert.Equal(before.BattleStatus.Statuses, after.BattleStatus.Statuses);
+            Assert.Equal(before.BattleStatus.Charges, after.BattleStatus.Charges);
+            Assert.Equal(before.BattleStatus.Shields, after.BattleStatus.Shields);
+            Assert.Equal(before.BattleStatus.AffinityOverrides, after.BattleStatus.AffinityOverrides);
+            Assert.Equal(before.BattleStatus.AffinityBreaks, after.BattleStatus.AffinityBreaks);
+            Assert.Equal(before.BattleStatus.IsGuarding, after.BattleStatus.IsGuarding);
+            Assert.Equal(
+                before.BattleActivations.PassiveActivations,
+                after.BattleActivations.PassiveActivations);
+        }
+    }
+
+    [Fact]
+    public void Runner_SynchronousCompatibilityPathRestoresTheCallerContext()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor frost = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
+        CatalogBattleActor ember = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executor = new SkillExecutor(services);
+        AutomatedBattleRunner runner = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services);
+        var context = new NonPumpingSynchronizationContext();
+        SynchronizationContext? previous = SynchronizationContext.Current;
+
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(context);
+
+            AutomatedBattleResult result = runner.Run(new AutomatedBattleRequest(
+                [frost, ember], Battle, NormalBattle, NewMoon, 10));
+
+            Assert.Equal(AutomatedBattleOutcome.Victory, result.Outcome);
+            Assert.Same(context, SynchronizationContext.Current);
+            Assert.Equal(0, context.PostCount);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
     }
 
     [Fact]
@@ -827,10 +947,10 @@ public sealed class CatalogBattleRuntimeTests
                 [scout, teammate, target], Battle, NormalBattle, null, 1));
 
         ContentId[] playerSelections = result.Events
-            .Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
+            .Where(battleEvent => battleEvent.Kind == BattleEncounterEventKind.CommandSelected &&
                                   battleEvent.ActorId is RuntimeInstanceId actorId &&
                                   actorId != target.State.InstanceId)
-            .Select(battleEvent => battleEvent.SkillId!.Value)
+            .Select(battleEvent => battleEvent.SourceId!.Value)
             .ToArray();
         Assert.Equal([openingFire.Id, followupIce.Id], playerSelections);
         EncounterElementalKnowledgeEntry learned = Assert.Single(
@@ -1074,21 +1194,21 @@ public sealed class CatalogBattleRuntimeTests
         AutomatedBattleResult result = runner.Run(new AutomatedBattleRequest(
             [attacker, reflector], Battle, NormalBattle, null, 1));
 
-        BattleRuntimeEvent[] resourceChanges = result.Events.Where(battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.ResourceChanged).ToArray();
+        BattleEncounterEvent[] resourceChanges = result.Events.Where(battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.ResourceChanged).ToArray();
         Assert.Equal(2, resourceChanges.Length);
-        BattleRuntimeEvent cost = resourceChanges[0];
+        BattleEncounterEvent cost = resourceChanges[0];
         Assert.Equal(attacker.State.InstanceId, cost.ActorId);
         Assert.Equal(attacker.State.InstanceId, cost.TargetId);
-        Assert.Equal(attack.Id, cost.SkillId);
+        Assert.Equal(attack.Id, cost.SourceId);
         Assert.Equal(-3, cost.Value);
-        BattleRuntimeEvent reflected = resourceChanges[1];
+        BattleEncounterEvent reflected = resourceChanges[1];
         Assert.Equal(attacker.State.InstanceId, reflected.ActorId);
         Assert.Equal(attacker.State.InstanceId, reflected.TargetId);
-        Assert.Equal(attack.Id, reflected.SkillId);
+        Assert.Equal(attack.Id, reflected.SourceId);
         Assert.Equal(-1, reflected.Value);
         Assert.DoesNotContain(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.ResourceChanged &&
+            battleEvent.Kind == BattleEncounterEventKind.ResourceChanged &&
             battleEvent.TargetId == reflector.State.InstanceId);
     }
 
@@ -1158,7 +1278,7 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(BattleEncounterFaultCode.DuplicateParticipantInstanceId, result.FaultCode);
         Assert.Contains("shared_automated_instance", result.FaultMessage, StringComparison.Ordinal);
         Assert.Equal(
-            [BattleRuntimeEventKind.BattleFaulted, BattleRuntimeEventKind.BattleEnded],
+            [BattleEncounterEventKind.BattleFaulted, BattleEncounterEventKind.BattleEnded],
             result.Events.Select(battleEvent => battleEvent.Kind));
         Assert.Equal(
             BattleEncounterFaultCode.DuplicateParticipantInstanceId,
@@ -1208,7 +1328,7 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
         Assert.Equal(2, randomTargets.CallCount);
         Assert.Equal(2, result.Events.Count(battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.EffectResolved));
+            battleEvent.Kind == BattleEncounterEventKind.EffectResolved));
     }
 
     [Fact]
@@ -1363,10 +1483,10 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
         Assert.Equal(100m, enemy.State.GetRequiredResource(Id("hp")).Current);
         Assert.DoesNotContain(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
+            battleEvent.Kind == BattleEncounterEventKind.CommandSelected &&
             battleEvent.ActorId == player.State.InstanceId);
         Assert.Contains(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.SkillPassed &&
+            battleEvent.Kind == BattleEncounterEventKind.CommandPassed &&
             battleEvent.ActorId == player.State.InstanceId);
     }
 
@@ -1403,9 +1523,9 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(BattleTurnStartOutcome.LimitedAction, source.LastRequest!.Turn.TurnStartOutcome);
         Assert.Equal(99m, enemy.State.GetRequiredResource(Id("hp")).Current);
         Assert.Contains(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
+            battleEvent.Kind == BattleEncounterEventKind.CommandSelected &&
             battleEvent.ActorId == player.State.InstanceId &&
-            battleEvent.SkillId == attack.Id);
+            battleEvent.SourceId == attack.Id);
     }
 
     [Fact]
@@ -1475,9 +1595,9 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
         Assert.Equal(90m, enemy.State.GetRequiredResource(Id("hp")).Current);
         Assert.Contains(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
+            battleEvent.Kind == BattleEncounterEventKind.CommandSelected &&
             battleEvent.ActorId == player.State.InstanceId &&
-            battleEvent.SkillId == Id("basic_attack"));
+            battleEvent.SourceId == Id("basic_attack"));
     }
 
     [Fact]
@@ -1568,7 +1688,7 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(93m, player.State.GetRequiredResource(Id("hp")).Current);
         Assert.Equal(100m, enemy.State.GetRequiredResource(Id("hp")).Current);
         Assert.Contains(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.EffectResolved &&
+            battleEvent.Kind == BattleEncounterEventKind.EffectResolved &&
             battleEvent.TargetId == player.State.InstanceId);
     }
 
@@ -1600,12 +1720,14 @@ public sealed class CatalogBattleRuntimeTests
         BattleActorFinalSnapshot finalPlayer = result.FinalActors.Single(actor =>
             actor.InstanceId == player.State.InstanceId);
         Assert.False(finalPlayer.IsDeployed);
-        BattleRuntimeEvent presenceChanged = Assert.Single(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.EncounterPresenceChanged &&
+        BattleEncounterEvent presenceChanged = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.EncounterPresenceChanged &&
             battleEvent.ActorId == player.State.InstanceId &&
-            battleEvent.Message.Contains(expectedMessage, StringComparison.Ordinal));
+            battleEvent.DebugText?.Contains(expectedMessage, StringComparison.Ordinal) == true);
         Assert.Equal(player.State.InstanceId, presenceChanged.ActorId);
-        Assert.False(presenceChanged.IsDeployed);
+        Assert.False(
+            Assert.IsType<BattleEncounterPresenceChangedEventPayload>(presenceChanged.Payload)
+                .IsDeployed);
     }
 
     [Theory]
@@ -1664,18 +1786,18 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(EnemyTeam, result.WinningTeamId);
         Assert.False(player.State.IsDeployed);
         Assert.DoesNotContain(departureStatusId, player.State.OtherStatuses);
-        BattleRuntimeEvent presence = Assert.Single(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.EncounterPresenceChanged &&
+        BattleEncounterEvent presence = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.EncounterPresenceChanged &&
             battleEvent.ActorId == player.State.InstanceId);
-        BattleRuntimeEvent[] departureEvents = result.Events.Where(battleEvent =>
-                battleEvent.Kind == BattleRuntimeEventKind.StatusChanged &&
+        BattleEncounterEvent[] departureEvents = result.Events.Where(battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.StatusChanged &&
                 battleEvent.ActorId == player.State.InstanceId &&
-                battleEvent.Message == expectedCleanupDetail)
+                battleEvent.DebugText == expectedCleanupDetail)
             .ToArray();
         Assert.Equal(2, departureEvents.Length);
-        BattleRuntimeEvent cleanup = departureEvents[^1];
-        BattleRuntimeEvent battleEnd = result.Events.Single(battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.BattleEnded);
+        BattleEncounterEvent cleanup = departureEvents[^1];
+        BattleEncounterEvent battleEnd = result.Events.Single(battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.BattleEnded);
         Assert.True(presence.Sequence < cleanup.Sequence);
         Assert.True(cleanup.Sequence < battleEnd.Sequence);
     }
@@ -1717,15 +1839,15 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(AutomatedBattleOutcome.Victory, result.Outcome);
         Assert.Equal(PlayerTeam, result.WinningTeamId);
         Assert.DoesNotContain(defeatStatusId, enemy.State.OtherStatuses);
-        BattleRuntimeEvent[] defeatLifecycleEvents = result.Events.Where(battleEvent =>
-                battleEvent.Kind == BattleRuntimeEventKind.StatusChanged &&
+        BattleEncounterEvent[] defeatLifecycleEvents = result.Events.Where(battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.StatusChanged &&
                 battleEvent.ActorId == enemy.State.InstanceId &&
-                battleEvent.Message == "Defeat")
+                battleEvent.DebugText == "Defeat")
             .ToArray();
         Assert.Equal(2, defeatLifecycleEvents.Length);
-        BattleRuntimeEvent cleanup = defeatLifecycleEvents[^1];
-        BattleRuntimeEvent defeat = Assert.Single(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.ActorDefeated &&
+        BattleEncounterEvent cleanup = defeatLifecycleEvents[^1];
+        BattleEncounterEvent defeat = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.ActorDefeated &&
             battleEvent.ActorId == enemy.State.InstanceId);
         Assert.True(cleanup.Sequence < defeat.Sequence);
     }
@@ -1834,16 +1956,16 @@ public sealed class CatalogBattleRuntimeTests
                 scenario.Player.State.Ailments[scenario.AilmentId].Duration).Value);
         Assert.DoesNotContain(scenario.BattleStatusId, scenario.Player.State.OtherStatuses);
         Assert.Contains(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.TurnRestricted &&
+            battleEvent.Kind == BattleEncounterEventKind.TurnRestricted &&
             battleEvent.ActorId == scenario.Player.State.InstanceId);
         Assert.Contains(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.ResourceChanged &&
+            battleEvent.Kind == BattleEncounterEventKind.ResourceChanged &&
             battleEvent.ActorId == scenario.Player.State.InstanceId);
         Assert.Contains(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.StatusChanged &&
+            battleEvent.Kind == BattleEncounterEventKind.StatusChanged &&
             battleEvent.ActorId == scenario.Player.State.InstanceId);
         Assert.All(
-            result.Events.Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.TurnEconomyChanged),
+            result.Events.Where(battleEvent => battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged),
             battleEvent => Assert.IsType<ActionTokenTurnEconomySnapshot>(battleEvent.TurnEconomyState));
     }
 
@@ -1870,8 +1992,8 @@ public sealed class CatalogBattleRuntimeTests
                 NewMoon,
                 1));
 
-        BattleRuntimeEvent[] economyEvents = result.Events
-            .Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.TurnEconomyChanged)
+        BattleEncounterEvent[] economyEvents = result.Events
+            .Where(battleEvent => battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged)
             .ToArray();
         Assert.NotEmpty(economyEvents);
         Assert.All(economyEvents, battleEvent =>
@@ -1940,7 +2062,7 @@ public sealed class CatalogBattleRuntimeTests
             automated.Player.State.OtherStatuses.Contains(automated.BattleStatusId));
 
         ActionTokenTurnEconomySnapshot[] automatedEconomyEvents = automatedResult.Events
-            .Where(battleEvent => battleEvent.Kind == BattleRuntimeEventKind.TurnEconomyChanged)
+            .Where(battleEvent => battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged)
             .Select(battleEvent => Assert.IsType<ActionTokenTurnEconomySnapshot>(battleEvent.TurnEconomyState))
             .ToArray();
         ActionTokenTurnEconomySnapshot[] directEconomyEvents = directResult.Events
@@ -1993,11 +2115,11 @@ public sealed class CatalogBattleRuntimeTests
             executor, new DeterministicBattleActionSelector(executor), services).Run(
             new AutomatedBattleRequest([player, enemy], Battle, NormalBattle, NewMoon, 1));
 
-        BattleRuntimeEvent activation = Assert.Single(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.PassiveActivated &&
-            battleEvent.SkillId == openingPassive.Id);
+        BattleEncounterEvent activation = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.PassiveActivated &&
+            battleEvent.SourceId == openingPassive.Id);
         Assert.True(activation.Sequence < result.Events.First(battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.RoundStarted).Sequence);
+            battleEvent.Kind == BattleEncounterEventKind.RoundStarted).Sequence);
     }
 
     [Fact]
@@ -2015,7 +2137,7 @@ public sealed class CatalogBattleRuntimeTests
 
         Assert.Equal(AutomatedBattleOutcome.Faulted, result.Outcome);
         Assert.NotNull(result.FaultMessage);
-        Assert.Contains(result.Events, battleEvent => battleEvent.Kind == BattleRuntimeEventKind.BattleFaulted);
+        Assert.Contains(result.Events, battleEvent => battleEvent.Kind == BattleEncounterEventKind.BattleFaulted);
     }
 
     [Fact]
@@ -2043,7 +2165,7 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(playerSp, player.State.GetRequiredResource(Id("sp")).Current);
         Assert.Equal(enemyHp, enemy.State.GetRequiredResource(Id("hp")).Current);
         Assert.DoesNotContain(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected);
+            battleEvent.Kind == BattleEncounterEventKind.CommandSelected);
     }
 
     [Fact]
@@ -2071,7 +2193,7 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(playerSp, player.State.GetRequiredResource(Id("sp")).Current);
         Assert.Equal(enemyHp, enemy.State.GetRequiredResource(Id("hp")).Current);
         Assert.DoesNotContain(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected);
+            battleEvent.Kind == BattleEncounterEventKind.CommandSelected);
     }
 
     [Fact]
@@ -2100,7 +2222,7 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(playerSp, player.State.GetRequiredResource(Id("sp")).Current);
         Assert.Equal(enemyHp, enemy.State.GetRequiredResource(Id("hp")).Current);
         Assert.DoesNotContain(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected);
+            battleEvent.Kind == BattleEncounterEventKind.CommandSelected);
     }
 
     [Theory]
@@ -2171,7 +2293,7 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(playerSp, player.State.GetRequiredResource(Id("sp")).Current);
         Assert.Equal(enemyHp, enemy.State.GetRequiredResource(Id("hp")).Current);
         Assert.DoesNotContain(result.Events, battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected);
+            battleEvent.Kind == BattleEncounterEventKind.CommandSelected);
     }
 
     [Theory]
@@ -2323,8 +2445,8 @@ public sealed class CatalogBattleRuntimeTests
         AutomatedBattleResult result,
         CatalogBattleActor actor) =>
         result.Events.First(battleEvent =>
-            battleEvent.Kind == BattleRuntimeEventKind.SkillSelected &&
-            battleEvent.ActorId == actor.State.InstanceId).SkillId!.Value;
+            battleEvent.Kind == BattleEncounterEventKind.CommandSelected &&
+            battleEvent.ActorId == actor.State.InstanceId).SourceId!.Value;
 
     private static AutomatedBattleRunner CreateAutomatedRunner(
         ISkillExecutor executor,
@@ -3129,6 +3251,16 @@ public sealed class CatalogBattleRuntimeTests
             RuntimeActorState actor,
             BattleActionCommand command) =>
             BattleActionAuthorizationResult.Authorized;
+    }
+
+    private sealed class NonPumpingSynchronizationContext : SynchronizationContext
+    {
+        public int PostCount { get; private set; }
+
+        public override void Post(SendOrPostCallback d, object? state)
+        {
+            PostCount++;
+        }
     }
 
     private static TSnapshot CloneWithProperty<TSnapshot, TValue>(

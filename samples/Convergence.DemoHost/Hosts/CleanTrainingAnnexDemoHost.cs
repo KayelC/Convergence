@@ -254,23 +254,26 @@ internal sealed class CleanTrainingAnnexDemoHost
                         ContentId.Parse("enemy_phase_end"))
                 ],
                 ContentId.Parse("round_end")));
-        AutomatedBattleResult battle = new AutomatedBattleRunner(
-            skillExecutor,
-            new DeterministicBattleActionSelector(skillExecutor),
-            executionServices,
-            lifecycle,
-            turnEconomy,
-            new AutomatedBattleTurnRestrictionResolver())
-            .Run(new AutomatedBattleRequest(
-                [echo, ashling],
-                TrainingAnnexHostSupport.Battle,
-                NormalBattle,
-                null,
-                10));
-        foreach (BattleRuntimeEvent battleEvent in battle.Events)
+        AutomatedBattleResult battle = await new AutomatedBattleRunner(
+                skillExecutor,
+                new DeterministicBattleActionSelector(skillExecutor),
+                executionServices,
+                lifecycle,
+                turnEconomy,
+                new AutomatedBattleTurnRestrictionResolver())
+            .RunAsync(
+                new AutomatedBattleRequest(
+                    [echo, ashling],
+                    TrainingAnnexHostSupport.Battle,
+                    NormalBattle,
+                    null,
+                    10),
+                cancellationToken);
+        foreach (BattleEncounterEvent battleEvent in battle.Events)
         {
             await _eventSink.PublishAsync(
-                $"{sequence++:D3} [battle] {battleEvent.Kind}: {battleEvent.Message}",
+                $"{sequence++:D3} [battle] {battleEvent.Kind}: " +
+                $"{battleEvent.DebugText ?? battleEvent.Kind.ToString()}",
                 cancellationToken).ConfigureAwait(false);
         }
 
