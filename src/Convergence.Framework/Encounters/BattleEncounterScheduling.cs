@@ -43,7 +43,9 @@ public enum BattleEncounterScheduleDiagnosticCode
     PolicyRejected = 5,
     MissingOrderingStat = 6,
     InvalidOrderingStat = 7,
-    InvalidTieBreakOrder = 8
+    InvalidTieBreakOrder = 8,
+    InvalidPostCommandDecision = 9,
+    ImmediateRepeatLimitExceeded = 10
 }
 
 /// <summary>Explains why an encounter scheduling policy rejected a transition.</summary>
@@ -830,7 +832,19 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
 {
     public static ContentId ScheduleId { get; } = ContentId.Parse("team_phase_round_robin");
 
+    public TeamPhaseRoundRobinBattleEncounterSchedulePolicy()
+    {
+    }
+
+    public TeamPhaseRoundRobinBattleEncounterSchedulePolicy(
+        BattleEncounterPostCommandScheduleExtension postCommandExtension)
+    {
+        PostCommandExtension = postCommandExtension
+            ?? throw new ArgumentNullException(nameof(postCommandExtension));
+    }
+
     public ContentId PolicyId => ScheduleId;
+    public BattleEncounterPostCommandScheduleExtension? PostCommandExtension { get; }
 
     public BattleEncounterScheduleTransitionResult Start(
         BattleEncounterScheduleStartRequest request)
@@ -845,7 +859,8 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
             request.TeamOrder,
             request.RoundLimit,
             currentTeamIndex: -1,
-            nextActorOffset: 0);
+            nextActorOffset: 0,
+            consecutiveImmediateRepeats: 0);
         return BattleEncounterScheduleTransitionResult.Start(
             state,
             new BattleEncounterRoundStartedScheduleStep(PolicyId, 0, 1));
@@ -891,7 +906,7 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
         };
     }
 
-    private static BattleEncounterScheduleTransitionResult AdvanceCommand(
+    private BattleEncounterScheduleTransitionResult AdvanceCommand(
         TeamPhaseRoundRobinScheduleState state,
         BattleEncounterCommandWindowScheduleStep command,
         BattleEncounterScheduleStepOutcome outcome,
@@ -912,9 +927,48 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
             BattleEncounterScheduleStepOutcomeKind.ActorUnavailable => true,
             _ => false
         };
-        return continuePhase
-            ? SelectCommandOrPhaseEnd(state, command.TeamId, participants)
-            : SelectPhaseEnd(state, command.TeamId);
+        if (!continuePhase)
+        {
+            return SelectPhaseEnd(state, command.TeamId);
+        }
+
+        PostCommandScheduleEvaluation extension = BattleEncounterPostCommandScheduleEvaluator.Evaluate(
+            PostCommandExtension,
+            command,
+            outcome,
+            state.ConsecutiveImmediateRepeats);
+        if (extension.IsRejected)
+        {
+            return Reject(
+                state,
+                extension.RejectionCode!.Value,
+                extension.RejectionMessage!);
+        }
+
+        BattleEncounterScheduleParticipantSnapshot? actor = participants
+            .SingleOrDefault(participant =>
+                participant.InstanceId == command.ActorId &&
+                participant.TeamId == command.TeamId &&
+                participant.IsAvailable);
+        if (extension.RetainActor && actor is not null)
+        {
+            TeamPhaseRoundRobinScheduleState retained = state.Advance(
+                currentTeamIndex: state.CurrentTeamIndex,
+                nextActorOffset: state.NextActorOffset,
+                consecutiveImmediateRepeats:
+                    checked(state.ConsecutiveImmediateRepeats + 1));
+            return BattleEncounterScheduleTransitionResult.Advance(
+                state,
+                retained,
+                new BattleEncounterCommandWindowScheduleStep(
+                    ScheduleId,
+                    retained.NextStepSequence,
+                    retained.CurrentRound,
+                    actor.InstanceId,
+                    actor.TeamId));
+        }
+
+        return SelectCommandOrPhaseEnd(state, command.TeamId, participants);
     }
 
     private static BattleEncounterScheduleTransitionResult SelectCommandOrPhaseEnd(
@@ -933,7 +987,8 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
         BattleEncounterScheduleParticipantSnapshot actor = activeActors[actorIndex];
         TeamPhaseRoundRobinScheduleState after = state.Advance(
             currentTeamIndex: state.CurrentTeamIndex,
-            nextActorOffset: checked(state.NextActorOffset + 1));
+            nextActorOffset: checked(state.NextActorOffset + 1),
+            consecutiveImmediateRepeats: 0);
         return BattleEncounterScheduleTransitionResult.Advance(
             state,
             after,
@@ -951,7 +1006,8 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
     {
         TeamPhaseRoundRobinScheduleState after = state.Advance(
             currentTeamIndex: state.CurrentTeamIndex,
-            nextActorOffset: state.NextActorOffset);
+            nextActorOffset: state.NextActorOffset,
+            consecutiveImmediateRepeats: 0);
         return BattleEncounterScheduleTransitionResult.Advance(
             state,
             after,
@@ -979,7 +1035,8 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
 
             TeamPhaseRoundRobinScheduleState phaseState = state.Advance(
                 currentTeamIndex: teamIndex,
-                nextActorOffset: 0);
+                nextActorOffset: 0,
+                consecutiveImmediateRepeats: 0);
             return BattleEncounterScheduleTransitionResult.Advance(
                 state,
                 phaseState,
@@ -993,7 +1050,8 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
 
         TeamPhaseRoundRobinScheduleState roundEndState = state.Advance(
             currentTeamIndex: -1,
-            nextActorOffset: 0);
+            nextActorOffset: 0,
+            consecutiveImmediateRepeats: 0);
         return BattleEncounterScheduleTransitionResult.Advance(
             state,
             roundEndState,
@@ -1012,7 +1070,8 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
                 currentRound: state.CurrentRound,
                 completedRounds: state.CurrentRound,
                 currentTeamIndex: -1,
-                nextActorOffset: 0);
+                nextActorOffset: 0,
+                consecutiveImmediateRepeats: 0);
             return BattleEncounterScheduleTransitionResult.Complete(state, completed);
         }
 
@@ -1020,7 +1079,8 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
             currentRound: checked(state.CurrentRound + 1),
             completedRounds: state.CurrentRound,
             currentTeamIndex: -1,
-            nextActorOffset: 0);
+            nextActorOffset: 0,
+            consecutiveImmediateRepeats: 0);
         return BattleEncounterScheduleTransitionResult.Advance(
             state,
             nextRound,
@@ -1057,7 +1117,8 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
             IEnumerable<ContentId> teamOrder,
             int roundLimit,
             int currentTeamIndex,
-            long nextActorOffset)
+            long nextActorOffset,
+            int consecutiveImmediateRepeats)
             : base(
                 ScheduleId,
                 revision,
@@ -1078,18 +1139,26 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
                 throw new ArgumentOutOfRangeException(nameof(nextActorOffset));
             }
 
+            if (consecutiveImmediateRepeats < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(consecutiveImmediateRepeats));
+            }
+
             CurrentTeamIndex = currentTeamIndex;
             NextActorOffset = nextActorOffset;
+            ConsecutiveImmediateRepeats = consecutiveImmediateRepeats;
         }
 
         public int CurrentTeamIndex { get; }
         public long NextActorOffset { get; }
+        public int ConsecutiveImmediateRepeats { get; }
 
         public TeamPhaseRoundRobinScheduleState Advance(
             int? currentRound = null,
             int? completedRounds = null,
             int? currentTeamIndex = null,
-            long? nextActorOffset = null) =>
+            long? nextActorOffset = null,
+            int? consecutiveImmediateRepeats = null) =>
             new(
                 checked(Revision + 1),
                 currentRound ?? CurrentRound,
@@ -1099,6 +1168,7 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
                 TeamOrder,
                 RoundLimit,
                 currentTeamIndex ?? CurrentTeamIndex,
-                nextActorOffset ?? NextActorOffset);
+                nextActorOffset ?? NextActorOffset,
+                consecutiveImmediateRepeats ?? ConsecutiveImmediateRepeats);
     }
 }

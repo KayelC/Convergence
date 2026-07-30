@@ -308,6 +308,11 @@
       "publicSurface": "internal_only"
     },
     {
+      "path": "Encounters/BattleEncounterPostCommandScheduling.cs",
+      "owner": "encounter_runtime",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Encounters/BattleEncounterRunner.cs",
       "owner": "encounter_runtime",
       "publicSurface": "exported"
