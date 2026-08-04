@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-27 existing_unreviewed, 14 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -188,17 +188,18 @@ to `reviewed` at that revision. The later
 reproduced four supported paths that conflict with the current audience claims.
 O6-R15 through O6-R18 corrected those paths and O6-R19 reconciled all three
 pages. O6-R20 then found one actorless ordinary-action event shape; O6-R21
-closed it and O6-R22 reconciled this guidance. The entries remain
-`existing_unreviewed` until O6-R23 independently re-reads the corrected source
-and completes the full gate.
+closed it and O6-R22 reconciled this guidance. The
+[O6-R23 final closure review](../reviews/encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md)
+independently re-read the corrected source and all three audiences, found no
+unresolved realistic reachable defect, and returned the entries to `reviewed`.
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-27 existing_unreviewed, 14 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 27 |
-| `existing_unreviewed` | 27 |
+| `reviewed` | 30 |
+| `existing_unreviewed` | 24 |
 | `missing` | 14 |
 | `not_applicable` | 7 |
 

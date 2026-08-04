@@ -119,12 +119,13 @@
     },
     {
       "id": "encounter_orchestration",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": [
         "BattleEncounterRunnerTests",
         "TeamPhaseRoundRobinScheduleTests",
         "AgilityOrderedBattleEncounterScheduleTests",
         "BattleEncounterPostCommandSchedulingTests",
+        "BattleEncounterEventContractTests",
         "CatalogBattleRuntimeTests",
         "EncounterPreparationServiceTests",
         "GodotIntegrationContractTests"
@@ -132,9 +133,7 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "O6-R21 closes the actorless ordinary-action event shape found by O6-R20, and O6-R22 reconciles active guidance; the required O6-R23 source-first closure review remains before this capability can return to complete."
-      ]
+      "knownGaps": []
     },
     {
       "id": "battle_knowledge",

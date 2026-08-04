@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`encounter_orchestration` is `partial`. The owner-approved
+`encounter_orchestration` is `complete`. The owner-approved
 [Order 6 roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md)
 implemented replaceable team-phase and Agility scheduling, bounded phase and
 encounter progress, bounded post-command actor selection, lifecycle-boundary
@@ -35,8 +35,12 @@ correlation. O6-R19 reconciled those contracts. The
 [O6-R20 source review](../reviews/encounter-orchestration-order-6-r20-source-closure-review-2026-08-04.md)
 then found that ordinary executed-action evidence could omit its actor. O6-R21
 now permits actorless evidence only for `PartyRosterTransitioned`, and O6-R22
-reconciles the active guidance. The capability remains `partial` only until
-O6-R23 independently re-reads the corrected source and completes the full gate.
+reconciled the active guidance. The
+[O6-R23 final closure review](../reviews/encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md)
+independently re-read the corrected source, found no unresolved realistic
+reachable defect, and passed every locally executable release gate. The online
+NuGet advisory lookup remains a connected CI check because the local
+environment could not reach its advisory endpoint.
 
 `battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and

@@ -9,10 +9,10 @@ presentation, and any mapping between framework runtime IDs and scene objects.
 Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
-> **Current review status:** O6-R15 through O6-R18 corrected the runtime paths
-> reproduced by O6-R14, and O6-R21 closed the actorless ordinary-action event
-> shape found by O6-R20. This guide describes those corrected contracts but
-> remains `existing_unreviewed` until the independent O6-R23 closure review.
+> **Current review status:** `reviewed`. O6-R23 independently traced the
+> corrected runtime and confirmed this guide's composition, command ownership,
+> cancellation, automated execution, and trusted-host boundaries against
+> executable evidence.
 
 ## Required Composition
 

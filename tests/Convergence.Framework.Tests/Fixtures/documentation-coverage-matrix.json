@@ -209,19 +209,19 @@
     {
       "id": "encounter_orchestration",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R15 and O6-R16 corrected repeated-defeat reconciliation and zero-living-team completion; O6-R21 closed the actorless ordinary-action event shape and O6-R22 reconciled the mechanics page, which awaits O6-R23 closure review."
+        "reason": "O6-R23 re-read the corrected source and confirmed scheduler/economy authority, repeated-defeat periods, zero-survivor draws, cancellation, and terminal evidence against executable tests."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R17 corrected automated untargeted and terminal skill mapping; O6-R21 closed the actorless ordinary-action event shape and O6-R22 reconciled the integration guidance, which awaits O6-R23 closure review."
+        "reason": "O6-R23 confirmed the required composition, asynchronous host path, command ownership, automated terminal mapping, cancellation, and trusted adapter boundaries against current source."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R15 through O6-R18 corrected the four reproduced runtime paths; O6-R21 closed the actorless ordinary-action event shape and O6-R22 reconciled the technical trace, which awaits O6-R23 closure review."
+        "reason": "O6-R23 traced lifecycle transactions, scheduling, reconciliation, event ownership, completion, immutable results, and fault containment without finding an unresolved reachable defect."
       }
     },
     {

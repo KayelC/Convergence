@@ -19,11 +19,10 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Current review status:** O6-R15 through O6-R18 corrected the four bounded
-> runtime paths reproduced by O6-R14, and O6-R21 closed the actorless
-> ordinary-action event shape found by O6-R20. This reference traces those
-> corrected contracts but remains `existing_unreviewed` until the independent
-> O6-R23 closure review.
+> **Current review status:** `reviewed`. O6-R23 independently traced lifecycle
+> transactions, scheduling, reconciliation, event ownership, completion,
+> immutable results, and fault containment without finding an unresolved
+> realistic reachable defect.
 
 ## Authority Map
 

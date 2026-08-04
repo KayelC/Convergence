@@ -10,8 +10,8 @@
 
 **Result:** corrections required; Order 6 is reopened
 
-**Post-audit correction status:** O6-R15 through O6-R22 implemented; O6-R23
-source-first closure review pending
+**Post-audit correction status:** O6-R15 through O6-R23 complete; Order 6
+formally closed by the R23 source-first review
 
 ## Purpose
 
@@ -277,7 +277,7 @@ open while any checkpoint is incomplete.
 | O6-R20 | Complete; correction required | The [source-closure review](encounter-orchestration-order-6-r20-source-closure-review-2026-08-04.md) confirmed the prior corrections and found that actorless ordinary `ActionExecuted` evidence can still bypass command ownership. |
 | O6-R21 | Complete | Commit `fd5167c2` requires an actor for every executed-action kind except `PartyRosterTransitioned`; direct and encounter-level tests preserve the one valid actorless shape and fault the malformed ordinary shape. |
 | O6-R22 | Complete | Mechanics, developer, technical, API, architecture, matrix, roadmap, and executable documentation guidance now states the exact event-kind exception. Audience entries intentionally remain `existing_unreviewed`. |
-| O6-R23 | Pending | Perform another fresh source-first closure review and complete the local gate. |
+| O6-R23 | Complete | The [final closure review](encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md) independently traced the corrected source and documentation, found no unresolved realistic reachable defect, passed every locally executable release gate, and formally closed Order 6. |
 
 ## Verification At This Audit
 

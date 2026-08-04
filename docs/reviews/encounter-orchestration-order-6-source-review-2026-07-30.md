@@ -4,7 +4,7 @@
 **Capability:** `encounter_orchestration`  
 **Source baseline:** `f72d36f0` (`Order 5 Completed`)  
 **Owner-decision status:** all eight discussion decisions approved  
-**Implementation status:** complete through O6-R13L; this record preserves the
+**Implementation status:** complete through O6-R23; this record preserves the
 original baseline review and approved roadmap
 
 ## Purpose
@@ -394,7 +394,7 @@ At each applicable checkpoint:
 | O6-R20 | Complete; correction required | The fresh source-first review confirmed O6-R15 through O6-R19 and found one actorless ordinary executed-action shape. |
 | O6-R21 | Complete | Executed-action evidence now requires the scheduled actor except for the canonical actorless `PartyRosterTransitioned` event. |
 | O6-R22 | Complete | Active audience, API, architecture, matrix, roadmap, and executable documentation guidance states the exact event-kind exception. |
-| O6-R23 | Pending | Fresh source-first closure review and the complete local gate remain required before promotion. |
+| O6-R23 | Complete | The [final closure review](encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md) independently traced the corrected source and all three audience documents, found no unresolved realistic reachable defect, passed every locally executable release gate, and returned `encounter_orchestration` to `complete`. |
 
 ## Closure Rule
 

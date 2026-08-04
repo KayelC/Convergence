@@ -494,8 +494,11 @@ reconciled all audience, API, matrix, and roadmap guidance. The
 confirmed those corrections but found that ordinary executed-action evidence
 could still omit its actor. O6-R21 now reserves actorless evidence for
 `PartyRosterTransitioned`, and O6-R22 reconciles the resulting guidance. The
-three audience entries remain `existing_unreviewed` until O6-R23. Current
-documentation totals remain 27 reviewed, 27 `existing_unreviewed`, 14 missing,
+[O6-R23 final closure review](../reviews/encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md)
+independently re-read the corrected source, tests, and all three audience
+documents, found no unresolved realistic reachable defect, and passed every
+locally executable release gate. Order 6 is formally closed. Current
+documentation totals are 30 reviewed, 24 `existing_unreviewed`, 14 missing,
 and 7 `not_applicable`.
 
 A final bounded certification subsequently exercised 1,536 deterministic

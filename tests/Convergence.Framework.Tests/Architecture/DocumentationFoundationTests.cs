@@ -319,6 +319,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "encounter-orchestration-order-6-r20-source-closure-review-2026-08-04.md"))
             .ReplaceLineEndings(" ");
+        string finalClosureReview = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -395,11 +401,11 @@ public sealed class DocumentationFoundationTests
             StringComparison.Ordinal);
         Assert.Contains("## Correction Roadmap", currentAudit, StringComparison.Ordinal);
         Assert.Contains("## Correction Progress After This Audit", currentAudit, StringComparison.Ordinal);
-        Assert.Contains("O6-R15 through O6-R22 implemented", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("O6-R15 through O6-R23 complete", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O6-R20 | Complete; correction required", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O6-R21 | Complete", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O6-R22 | Complete", currentAudit, StringComparison.Ordinal);
-        Assert.Contains("O6-R23 | Pending", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("O6-R23 | Complete", currentAudit, StringComparison.Ordinal);
         Assert.Contains(
             "**Result:** one bounded correction required",
             currentSourceReview,
@@ -407,12 +413,20 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("### O6-R20-M1", currentSourceReview, StringComparison.Ordinal);
         Assert.Contains("## Correction Progress", currentSourceReview, StringComparison.Ordinal);
         Assert.Contains("O6-R21 | Complete", currentSourceReview, StringComparison.Ordinal);
+        Assert.Contains("O6-R23 | Complete", currentSourceReview, StringComparison.Ordinal);
+        Assert.Contains(
+            "**Result:** no unresolved realistic reachable defect found",
+            finalClosureReview,
+            StringComparison.Ordinal);
+        Assert.Contains("## Corrected Invariants Rechecked", finalClosureReview, StringComparison.Ordinal);
+        Assert.Contains("## Trusted Boundaries And Residual Risk", finalClosureReview, StringComparison.Ordinal);
+        Assert.Contains("Order 6 is formally complete", finalClosureReview, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
-        Assert.Equal("existing_unreviewed", encounter.Mechanics.State);
-        Assert.Equal("existing_unreviewed", encounter.DeveloperGuide.State);
-        Assert.Equal("existing_unreviewed", encounter.Technical.State);
+        Assert.Equal("reviewed", encounter.Mechanics.State);
+        Assert.Equal("reviewed", encounter.DeveloperGuide.State);
+        Assert.Equal("reviewed", encounter.Technical.State);
     }
 
     [Fact]

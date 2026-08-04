@@ -10,8 +10,8 @@
 
 **Result:** one bounded correction required
 
-**Post-review correction status:** O6-R21 and O6-R22 implemented; O6-R23
-source-first closure review pending
+**Post-review correction status:** O6-R21 through O6-R23 complete; Order 6
+formally closed by the R23 source-first review
 
 ## Purpose
 
@@ -145,7 +145,7 @@ O6-R23 concludes without another reachable correction.
 |---|---|---|
 | O6-R21 | Complete | Commit `fd5167c2` rejects an actorless ordinary executed-action payload, surfaces the turn-handler failure as a typed encounter fault, and preserves actorless `PartyRosterTransitioned` evidence. |
 | O6-R22 | Complete | Active audience, API, architecture, matrix, roadmap, and executable documentation evidence now names `PartyRosterTransitioned` as the sole actorless executed-action shape. |
-| O6-R23 | Pending | Requires a fresh source-first review and the complete local gate before formal closure. |
+| O6-R23 | Complete | The [final closure review](encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md) independently traced the corrected source and documentation, found no unresolved realistic reachable defect, passed every locally executable release gate, and formally closed Order 6. |
 
 ## Closure Decision
 

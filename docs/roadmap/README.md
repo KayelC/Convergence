@@ -126,5 +126,8 @@ returning `encounter_orchestration` to `complete` at that revision. The later
 reproduced four supported but uncovered paths and reopened the capability as
 `partial`. O6-R15 through O6-R19 corrected and reconciled those paths. O6-R20
 then found one actorless ordinary-action event shape; O6-R21 closes it and
-O6-R22 reconciles the active guidance. O6-R23 remains the required fresh
-source-first closure gate.
+O6-R22 reconciles the active guidance. The
+[O6-R23 final closure review](../reviews/encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md)
+re-read the corrected source and all three audience documents, found no
+unresolved realistic reachable defect, and returned the capability to
+`complete`.
