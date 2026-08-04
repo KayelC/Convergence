@@ -211,17 +211,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R28 reopened the audience review after reproducing limited-action identity bypass and duplicate departure cleanup; restriction enactment order also needs precise owner wording."
+        "reason": "O6-R31 reconciles restriction decision, enactment, canonical command identity, and one explicit departure reason per defeat period; O6-R32 independent verification remains pending."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R28 requires corrected integration guidance for canonical restricted-command identity and one authoritative departure reason per defeat period."
+        "reason": "O6-R31 documents canonical restricted-command identity, handler enactment duties, and one authoritative departure reason per defeat period; O6-R32 independent verification remains pending."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R28 disproved complete limited-action authorization and explicit-departure fixed-point claims; the technical state machine needs reconciliation after runtime correction."
+        "reason": "O6-R31 reconciles the command transaction and fixed-point departure algorithm with O6-R29 and O6-R30; O6-R32 independent verification remains pending."
       }
     },
     {

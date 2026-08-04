@@ -528,6 +528,13 @@ guides. Order 6 is reopened under O6-R29 through O6-R32. Its three audience
 entries return to `existing_unreviewed`, so the current totals are 27 reviewed,
 27 `existing_unreviewed`, 14 missing, and 7 `not_applicable`.
 
+O6-R29 and O6-R30 now correct canonical restricted-command identity and
+explicit departure-reason ownership. O6-R31 reconciles the mechanics,
+developer, technical, public integration, and executable matrix evidence. The
+three audience entries deliberately remain `existing_unreviewed`, and the
+totals remain 27 reviewed, 27 `existing_unreviewed`, 14 missing, and 7
+`not_applicable`, until O6-R32 performs the independent closure review.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

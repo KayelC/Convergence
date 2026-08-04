@@ -203,14 +203,27 @@ work already completed; it records two bounded unfinished contract paths.
 | Checkpoint | Work | State |
 |---|---|---|
 | O6-R28 | Record this independent audit, reopen executable tracking, and preserve the two reproductions as explicit correction requirements. | `complete` |
-| O6-R29 | Make typed command identity authoritative for limited-action validation and add exhaustive supported-command mismatch tests. | `pending` |
-| O6-R30 | Preserve one explicit departure reason per uninterrupted defeat period and add Flee/Recall plus Defeat lifecycle tests. | `pending` |
-| O6-R31 | Reconcile mechanics, developer, technical, public integration wording, matrices, and API evidence with the corrected runtime. | `pending` |
+| O6-R29 | Make typed command identity authoritative for limited-action validation and add exhaustive supported-command mismatch tests. | `complete` |
+| O6-R30 | Preserve one explicit departure reason per uninterrupted defeat period and add Flee/Recall plus Defeat lifecycle tests. | `complete` |
+| O6-R31 | Reconcile mechanics, developer, technical, public integration wording, matrices, and API evidence with the corrected runtime. | `complete` |
 | O6-R32 | Independently reread the corrected source and documents, rerun adversarial probes and the complete release gate, and decide closure. | `pending` |
 
 Each implementation checkpoint must be an isolated green commit. Order 6 may
 return to `complete` and its audience entries may return to `reviewed` only
 after O6-R32 finds no unresolved realistic reachable defect.
+
+## Correction Progress
+
+- O6-R29 derives the canonical identity from each supported typed command and
+  rejects any detached selection label mismatch before assessment or mutation.
+- O6-R30 preserves an explicit Flee or Roster Recall cleanup reason for the
+  complete uninterrupted defeat period while keeping defeat announcement as a
+  separate once-per-period authority.
+- O6-R31 reconciles all three audience documents, the public integration
+  contract, lifecycle cross-references, executable matrices, and documentation
+  evidence while deliberately retaining `partial` and `existing_unreviewed`.
+- O6-R32 remains the only closure checkpoint. It must reread current source and
+  documents independently and pass the complete release gate before promotion.
 
 ## Verification Evidence
 

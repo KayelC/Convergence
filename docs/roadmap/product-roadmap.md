@@ -48,6 +48,13 @@ departure cleanup. The established architecture remains usable, but these two
 public supplied-component paths must be corrected under O6-R29 through O6-R32
 before Order 6 closes again.
 
+O6-R29 and O6-R30 have now corrected both paths: restricted commands use their
+typed canonical identity, and an explicit Flee or Roster Recall reason owns
+cleanup for its complete uninterrupted defeat period. O6-R31 reconciles the
+active documents and executable matrices. O6-R32 remains the required
+independent closure and release-gate checkpoint, so the current state stays
+`partial` rather than claiming completion early.
+
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced stale execution by a removed ailment and definition-incoherent

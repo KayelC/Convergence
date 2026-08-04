@@ -119,6 +119,15 @@ extension; the runner invokes it for committed flee, roster recall, and newly
 observed defeat without forcing lifecycle implementations that do not own
 status cleanup to fabricate behavior.
 
+The supplied automated restriction path treats typed command identity as
+authoritative. For Basic Attack, Skill, Item, Guard, Pass, Analyze, and Escape,
+`AutomatedRestrictedActionSelection` requires its action ID to match the
+command-derived canonical ID; the resolver rechecks the invariant before
+assessment. Other command kinds require a custom restriction resolver.
+Explicit Flee or Roster Recall departure cleanup also owns
+the complete current uninterrupted defeat period, so reconciliation cannot
+append a second Defeat cleanup until the actor recovers.
+
 `BattleEncounterResult` enforces one terminal shape. `Victory` and `Defeat`
 require a winner; other outcomes reject one. `FaultMessage` and `FaultCode` are
 present together only for `Faulted`. A normal `BattleEncounterCompletion.Message`

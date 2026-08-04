@@ -142,3 +142,5 @@ reproduced a limited-action identity bypass and a duplicate
 explicit-plus-defeat departure cleanup, reopening the capability as `partial`.
 O6-R29 through O6-R32 govern correction, documentation reconciliation, and a
 fresh closure review.
+O6-R29 and O6-R30 now correct both runtime paths, and O6-R31 reconciles the
+active guidance. O6-R32 remains pending as the independent closure gate.

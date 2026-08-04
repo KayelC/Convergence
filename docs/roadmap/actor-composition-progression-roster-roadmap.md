@@ -8,7 +8,9 @@ verified across Checkpoints 0-8.**
 **Current product state:** runtime save contract v15 is authoritative; the
 Framework Capability Matrix records 22 complete, 1 partial, and 2 intentionally
 deferred capabilities because O6-R28 has reopened the bounded encounter
-orchestration corrections. O4-R42 corrected the narrow status/passive validation
+orchestration corrections. O6-R29 through O6-R31 have corrected the two runtime
+paths and reconciled their documentation; O6-R32 independent closure remains
+pending. O4-R42 corrected the narrow status/passive validation
 boundary, O4-R43 and O4-R43A corrected current save-v13 guidance, and O4-R44
 independently closed Order 4. This actor roadmap itself remains completed.
 Save v10 and earlier capability counts below are preserved only as labelled

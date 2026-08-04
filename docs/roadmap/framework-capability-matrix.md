@@ -65,6 +65,13 @@ explicitly fled or recalled actor that is also defeated can receive a second
 Defeat cleanup in the same defeat period. O6-R29 through O6-R32 govern the
 runtime corrections, documentation reconciliation, and fresh closure review.
 
+O6-R29 now makes typed command identity authoritative for every command kind
+supported by the supplied restriction resolver. O6-R30 preserves one explicit
+Flee or Roster Recall cleanup reason for the entire current defeat period.
+O6-R31 reconciles active audience and integration guidance. The capability
+remains `partial` only until O6-R32 independently rereads the correction and
+passes the complete release gate.
+
 `battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and
 Analyze results pass through one atomic framework transition; automated teams

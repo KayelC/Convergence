@@ -308,6 +308,12 @@ departure-port exception or cancellation before commit leaves cleanup state
 unchanged and becomes the encounter's typed lifecycle fault. Committed cleanup
 events precede defeat announcements and terminal completion.
 
+An explicit Flee or Roster Recall reason remains authoritative for cleanup if
+the same committed transition also leaves the actor defeated. The runner may
+announce that defeat once, but it does not invoke a second Defeat cleanup while
+the actor remains in the same uninterrupted defeated period. Recovery ends the
+period and permits later cleanup normally.
+
 The extension is optional so a lifecycle implementation that does not own
 status cleanup is not forced to invent it. If a host performs a manual
 deployment swap or roster command outside the canonical encounter transaction,

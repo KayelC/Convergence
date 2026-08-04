@@ -9,10 +9,10 @@ presentation, and any mapping between framework runtime IDs and scene objects.
 Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
-> **Current review status:** `reviewed`. O6-R27 independently traced the
-> corrected runtime and confirmed this guide's composition, command ownership,
-> cancellation, automated execution, and trusted-host boundaries against
-> executable evidence.
+> **Current review status:** `existing_unreviewed`. O6-R31 reconciles this
+> guide with the O6-R29 restricted-command identity and O6-R30
+> departure-reason corrections. O6-R32 must independently verify the result
+> before this guide returns to `reviewed`.
 
 ## Required Composition
 
@@ -141,6 +141,13 @@ neither can replace the other.
 - the accepted turn-economy snapshot;
 - any active stat-modifier lifecycle boundaries.
 
+The committed restriction is authoritative input, not advisory metadata.
+`CanAct` permits the normal host command loop. Skip, limited-action,
+forced-action, flee, and roster-recall outcomes must be enacted by the turn
+handler or an explicitly composed restriction resolver. The runner validates
+the returned command transaction, but it does not invent a replacement command
+for a custom handler that ignores the restriction.
+
 A manual host normally loops internally:
 
 1. show commands permitted by the restriction;
@@ -163,6 +170,28 @@ roll back arbitrary scene, network, filesystem, or other external side effects
 performed inside host code. Use the framework action executor and staged
 lifecycle services for framework state, and give custom mutation ports an
 equivalent transaction boundary before they return.
+
+### Supplied Automated Restriction Resolver
+
+`AutomatedBattleTurnRestrictionResolver` accepts an
+`IAutomatedRestrictedActionSource` for restrictions that require a command.
+Each `AutomatedRestrictedActionSelection.ActionId` must identify its typed
+command exactly:
+
+| Command | Canonical action ID |
+|---|---|
+| `BasicAttackBattleActionCommand` | the command's `ActionId` |
+| `SkillBattleActionCommand` | `Skill.Id` |
+| `ItemBattleActionCommand` | `Item.Id` |
+| `GuardBattleActionCommand` | `guard` |
+| `PassBattleActionCommand` | `pass` |
+| `AnalyzeBattleActionCommand` | `analyze` |
+| `EscapeAttemptBattleActionCommand` | `escape` |
+
+Construction rejects a mismatch, and the resolver independently revalidates
+the identity before assessment or mutation. Limited-action restrictions compare
+their allowed IDs with this canonical value. Supply a custom resolver for
+other command kinds rather than assigning them a misleading fixed label.
 
 ## Lifecycle Composition
 
@@ -192,6 +221,12 @@ depart. Defeat bookkeeping covers one uninterrupted defeated period: repeated
 reconciliation while the actor remains defeated does not duplicate cleanup or
 announcement, recovery releases that bookkeeping, and a later defeat is
 processed as a new period.
+
+If an explicit Flee or Roster Recall commits while that actor is also defeated,
+the explicit reason owns cleanup for the complete current defeat period. A
+defeat announcement may still be published once, but the fixed-point pass does
+not append a second Defeat cleanup. Recovery releases both cleanup and
+announcement bookkeeping for a later period.
 
 If timed stat modifiers need the currently active lifecycle sequence, implement
 `IBattleEncounterStatModifierBoundarySource`. The runner snapshots those
@@ -335,6 +370,9 @@ after `Victory`, `Escape`, or `Draw` remain host-owned.
 - Scheduler and turn economy are selected independently.
 - Phase and encounter progress policies are both configured.
 - Command Back remains inside the host selection loop.
+- The turn handler or restriction resolver enacts every committed non-CanAct
+  restriction.
+- Restricted automated selections use the typed command's canonical action ID.
 - The handler returns consumption but never applies it.
 - Lifecycle and command events use only port-owned kinds.
 - Port event identities belong to the frozen participant graph.

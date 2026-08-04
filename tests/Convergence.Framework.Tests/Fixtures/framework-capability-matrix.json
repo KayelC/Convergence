@@ -134,8 +134,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "The supplied automated restriction resolver can authorize Guard, Pass, Analyze, or Escape from a detached action ID that does not identify the typed command.",
-        "An explicitly fled or recalled actor that is also defeated can receive a second Defeat departure cleanup during the same uninterrupted defeat period."
+        "O6-R29 and O6-R30 corrected restricted-command identity and authoritative departure reasons; O6-R32 independent source and release-gate verification remains pending before formal completion."
       ]
     },
     {

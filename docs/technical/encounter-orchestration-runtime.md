@@ -19,10 +19,10 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Current review status:** `reviewed`. O6-R27 independently traced lifecycle
-> transactions, scheduling, reconciliation, event ownership, completion,
-> immutable results, and fault containment without finding an unresolved
-> realistic reachable defect.
+> **Current review status:** `existing_unreviewed`. O6-R31 reconciles this
+> reference with the O6-R29 restricted-command identity and O6-R30
+> departure-reason corrections. O6-R32 must independently verify the result
+> before this reference returns to `reviewed`.
 
 ## Authority Map
 
@@ -164,7 +164,7 @@ flowchart TB
     StageStart["Clone participants for turn-start lifecycle"]
     CommitStart["Validate economy authority and commit staged turn-start state"]
     ReconcileStart["Synchronize, process departure cleanup, announce defeat, evaluate completion"]
-    Handler["Invoke turn handler with restriction and active clock boundaries"]
+    Handler["Handler enacts the committed restriction and returns a command"]
     ValidateHandler["Validate port-owned events and unchanged economy authority"]
     ApplyEconomy["Apply typed ActionTurnConsumption once"]
     ValidateEconomy["Validate economy type, ID, state, liveness, and explicit termination"]
@@ -210,6 +210,14 @@ guards the boundaries it owns:
 Action-level atomicity remains owned by `BattleActionExecutor` and its staged
 actor graph.
 
+The turn-start lifecycle owns restriction decision and commit. The turn handler
+owns restriction enactment. For the supplied automated path,
+`AutomatedRestrictedActionIdentity` derives one canonical identity from the
+typed command: Skill and Item definition IDs, the basic-attack action ID, or
+the fixed `guard`, `pass`, `analyze`, and `escape` IDs. Both selection
+construction and resolver execution reject any detached label mismatch before
+assessment. `LimitedAction` authorization compares only this canonical value.
+
 Custom turn handlers and state synchronizers are trusted mutation ports. The
 runner contains a thrown exception as a typed fault, but it is not a
 transaction over arbitrary external side effects or direct live-state changes
@@ -237,12 +245,13 @@ boundary that does not retain modifier cursors from the previous authority.
 It performs:
 
 1. host state synchronization;
-2. defeat, flee, or roster-recall departure lifecycle;
-3. synchronization after departure mutation;
-4. another departure scan;
-5. bounded repetition until stable;
-6. one defeat announcement per uninterrupted defeated period;
-7. completion evaluation.
+2. select at most one exact defeat, flee, or roster-recall reason per actor;
+3. run departure lifecycle against one staged participant graph;
+4. synchronization after departure mutation;
+5. another departure scan;
+6. bounded repetition until stable;
+7. one defeat announcement per uninterrupted defeated period;
+8. completion evaluation.
 
 The pass bound is participant count plus the final stability check. A lifecycle
 that continually creates new departure work faults rather than looping
@@ -252,6 +261,13 @@ The runner releases defeat-cleanup and announcement membership whenever a
 synchronization boundary observes that participant living again. Stable
 reconciliation while the participant remains defeated is idempotent; a later
 living-to-defeated transition receives both operations again.
+
+Explicit Flee and Roster Recall reasons are inserted before inferred Defeat.
+After their staged mutation commits, any actor that is currently defeated and
+had a selected departure reason is marked processed for the complete current
+defeat period. The fixed-point pass therefore cannot append Defeat cleanup to
+the same explicit departure. Defeat announcement is tracked separately and may
+still occur once. Recovery releases both authorities for a later period.
 
 The completion policy receives `LastActor` only after that actor committed a
 command. Lifecycle-only completion checks receive no fabricated acting actor.

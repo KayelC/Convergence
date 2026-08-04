@@ -300,8 +300,11 @@ The runner maps an undeployed actor's committed `FleeBattle` restriction to
 `Flee` and `RecallToRoster` restriction to `RosterRecall`. It scans the full
 participant graph for newly defeated actors and dispatches `Defeat` once per
 runtime ID. An explicit flee or recall reason wins if the same actor is also
-defeated during that command. Actors already defeated when the encounter
-request begins are not treated as newly defeated.
+defeated during that command and remains authoritative for that uninterrupted
+defeat period; the fixed-point scan cannot append a second Defeat cleanup.
+Defeat announcement is tracked separately and may still occur once. Recovery
+releases the period. Actors already defeated when the encounter request begins
+are not treated as newly defeated.
 
 If the supplied lifecycle port does not implement the optional extension, the
 runner does not fabricate cleanup behavior. Manual deployment swaps and roster

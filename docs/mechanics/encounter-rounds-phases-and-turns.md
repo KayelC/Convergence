@@ -11,10 +11,10 @@ A Godot game may animate a timeline, a console may display menus, and an
 automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
-> **Current review status:** `reviewed`. O6-R27 independently traced the
-> corrected runtime and confirmed this page's scheduling, turn-economy,
-> reconciliation, cancellation, and terminal-state rules against executable
-> evidence.
+> **Current review status:** `existing_unreviewed`. O6-R31 reconciles this
+> page with the O6-R29 restricted-command identity and O6-R30 departure-reason
+> corrections. O6-R32 must independently verify the result before this page
+> returns to `reviewed`.
 
 ## Rule Ownership
 
@@ -94,14 +94,18 @@ These are supplied policies, not mandatory genres. A game may implement
 For a normal committed command, the visible rule order is:
 
 1. the actor's turn starts;
-2. turn-start lifecycle runs;
-3. restrictions, defeat, flee, and roster recall are reconciled;
-4. the host or AI selects and executes a command;
-5. the configured turn economy applies the command's typed consumption;
-6. owner-turn-end lifecycle runs when the command consumes a turn;
-7. resource, status, departure, and defeat changes are reconciled;
-8. the actor's turn ends;
-9. the scheduler chooses the next structural step.
+2. turn-start lifecycle stages and commits the actor's restriction and any
+   accompanying state changes;
+3. the runner reconciles those committed changes and skips command execution
+   if the actor is no longer available or the encounter has completed;
+4. the host turn handler or supplied automated restriction resolver enacts the
+   exact committed restriction while selecting and executing a command;
+5. the handler returns one typed command result and turn consumption;
+6. the configured turn economy applies that consumption exactly once;
+7. owner-turn-end lifecycle runs when the command consumes a turn;
+8. resource, status, departure, and defeat changes are reconciled;
+9. the actor's turn ends;
+10. the scheduler chooses the next structural step.
 
 A free action still closes its current command window, but it does not run
 owner-turn-end lifecycle and does not spend the turn economy. Phase liveness
@@ -122,15 +126,30 @@ Turn-start restrictions may:
 - flee the battle;
 - recall a Companion to its roster.
 
-The lifecycle policy supplies the restriction. The encounter runner ensures
-that every route uses the same command-result, reconciliation, event, and
-completion boundaries.
+The lifecycle policy decides and commits the restriction. It does not invent
+or execute the resulting command. The selected turn handler must enact that
+restriction, either directly or through a restriction resolver. The encounter
+runner supplies the same command-result, reconciliation, event, and completion
+boundaries around every route, but it does not silently replace a custom turn
+handler's command choice.
+
+Limited-action authorization uses canonical command identity. A Skill or Item
+uses its definition ID, a basic attack uses its command action ID, and the
+fixed commands use `guard`, `pass`, `analyze`, and `escape`. The supplied
+automated resolver rejects a detached action label that does not identify the
+typed command before assessment or mutation.
 
 Defeat cleanup and announcement happen once for each uninterrupted period in
 which an actor is defeated. Merely observing the same defeated actor at another
 reconciliation boundary does not repeat either operation. If the actor becomes
 living again, that recovery closes the old defeat period; a later defeat starts
 a new period and receives cleanup and announcement again.
+
+When a committed Flee or Roster Recall also leaves the actor defeated, that
+explicit departure reason owns cleanup for the whole current defeat period.
+The runner may still announce the defeat once, but it does not follow the
+explicit cleanup with a second Defeat cleanup. Recovery ends that period and
+allows a later departure or defeat to be processed normally.
 
 ## Back, Cancellation, Rejection, And Faults
 

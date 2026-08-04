@@ -359,6 +359,9 @@ public sealed class DocumentationFoundationTests
             "only when battle start had already succeeded",
             "encounter-wide structural-transition bound",
             "Defeat cleanup and announcement happen once for each uninterrupted period",
+            "The selected turn handler must enact that restriction",
+            "fixed commands use `guard`, `pass`, `analyze`, and `escape`",
+            "explicit departure reason owns cleanup for the whole current defeat period",
             "Zero living teams produce an immediate `Draw`",
             "a completion policy cannot create `Faulted`",
             "Normal terminal outcomes always have null `FaultMessage` and `FaultCode`",
@@ -377,6 +380,10 @@ public sealed class DocumentationFoundationTests
             "## Implementing The Turn Handler",
             "Do not return `Cancelled` for submenu Back.",
             "The handler must not mutate the encounter economy.",
+            "The committed restriction is authoritative input, not advisory metadata.",
+            "## Supplied Automated Restriction Resolver",
+            "Restricted automated selections use the typed command's canonical action ID.",
+            "explicit reason owns cleanup for the complete current defeat period",
             "trusted host mutation ports",
             "The runner owns structural events.",
             "BattleEncounterProgressPolicy",
@@ -407,6 +414,9 @@ public sealed class DocumentationFoundationTests
             "BattleEncounterProgressPolicy",
             "frozen participant graph",
             "one defeat announcement per uninterrupted defeated period",
+            "The turn handler owns restriction enactment.",
+            "select at most one exact defeat, flee, or roster-recall reason per actor",
+            "cannot append Defeat cleanup to the same explicit departure",
             "`ActionExecuted` must also identify that actor",
             "`PartyRosterTransitioned`",
             "no deployed living teams produces `Draw`",
@@ -433,6 +443,14 @@ public sealed class DocumentationFoundationTests
             StringComparison.Ordinal);
         Assert.Contains(
             "it cannot originate `Faulted`",
+            publicApi,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "typed command identity as authoritative",
+            publicApi,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "complete current uninterrupted defeat period",
             publicApi,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -491,8 +509,11 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("### O6-R28-M2", postR27Audit, StringComparison.Ordinal);
         Assert.Contains("### O6-R28-L1", postR27Audit, StringComparison.Ordinal);
         Assert.Contains("## Correction Roadmap", postR27Audit, StringComparison.Ordinal);
-        Assert.Contains("O6-R29", postR27Audit, StringComparison.Ordinal);
-        Assert.Contains("O6-R32", postR27Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R29 | Make typed command identity", postR27Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R30 | Preserve one explicit departure reason", postR27Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R31 | Reconcile mechanics", postR27Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R32 | Independently reread", postR27Audit, StringComparison.Ordinal);
+        Assert.Contains("## Correction Progress", postR27Audit, StringComparison.Ordinal);
         Assert.Contains("**Order 6 is not ready to close.**", postR27Audit, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
@@ -504,7 +525,8 @@ public sealed class DocumentationFoundationTests
         FrameworkCapability encounterCapability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
         Assert.Equal("partial", encounterCapability.ImplementationState);
-        Assert.Equal(2, encounterCapability.KnownGaps.Count);
+        Assert.Single(encounterCapability.KnownGaps);
+        Assert.Contains("O6-R32", encounterCapability.KnownGaps[0], StringComparison.Ordinal);
     }
 
     [Fact]

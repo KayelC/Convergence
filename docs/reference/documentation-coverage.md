@@ -213,6 +213,11 @@ wording. The three encounter entries therefore return to
 `existing_unreviewed` until O6-R29 through O6-R32 correct and independently
 recheck those contracts.
 
+O6-R29 and O6-R30 correct the two runtime contracts. O6-R31 reconciles all
+three audience pages and their public integration evidence. Their state remains
+`existing_unreviewed` until O6-R32 independently rereads the corrected source
+and documentation and passes the complete release gate.
+
 The documentation matrix currently records 75 audience entries: 27 reviewed,
 27 existing_unreviewed, 14 missing, and 7 not_applicable.
 
