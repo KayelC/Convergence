@@ -716,9 +716,12 @@ public sealed class LastTeamStandingCompletionPolicy : IBattleEncounterCompletio
             .Distinct()
             .ToArray();
 
-        return livingTeams.Length == 1
-            ? new BattleEncounterCompletion(true, BattleEncounterOutcome.Victory, livingTeams[0])
-            : new BattleEncounterCompletion(false);
+        return livingTeams.Length switch
+        {
+            0 => new BattleEncounterCompletion(true, BattleEncounterOutcome.Draw),
+            1 => new BattleEncounterCompletion(true, BattleEncounterOutcome.Victory, livingTeams[0]),
+            _ => new BattleEncounterCompletion(false)
+        };
     }
 }
 

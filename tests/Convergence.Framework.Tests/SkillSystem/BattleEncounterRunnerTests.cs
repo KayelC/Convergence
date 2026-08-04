@@ -1459,6 +1459,85 @@ public sealed class BattleEncounterRunnerTests
                 battleEvent.ActorId == first.InstanceId));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Runner_CompletesAnInitiallyEmptyBattleAsAnImmediateDraw(bool agilityOrdered)
+    {
+        BattleEncounterParticipant player = ParticipantWithAgility(
+            "empty_start_player",
+            PlayerTeam,
+            agility: 10m);
+        BattleEncounterParticipant enemy = ParticipantWithAgility(
+            "empty_start_enemy",
+            EnemyTeam,
+            agility: 5m);
+        player.State.SetResource(Hp, 0m);
+        enemy.State.SetResource(Hp, 0m);
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new LastTeamStandingCompletionPolicy(),
+            schedule: CompletionSchedule(agilityOrdered));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Empty(handler.Requests);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.RoundStarted);
+        BattleEndedEventPayload battleEnded = Assert.IsType<BattleEndedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.BattleEnded).Payload);
+        Assert.Null(battleEnded.FinalRoundNumber);
+        Assert.Equal(0, battleEnded.CompletedRounds);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Runner_CompletesMutualDefeatAsAnImmediateDraw(bool agilityOrdered)
+    {
+        BattleEncounterParticipant player = ParticipantWithAgility(
+            "mutual_defeat_player",
+            PlayerTeam,
+            agility: 10m);
+        BattleEncounterParticipant enemy = ParticipantWithAgility(
+            "mutual_defeat_enemy",
+            EnemyTeam,
+            agility: 5m);
+        var handler = new QueueTurnHandler(_ =>
+        {
+            player.State.SetResource(Hp, 0m);
+            enemy.State.SetResource(Hp, 0m);
+            return BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal);
+        });
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new LastTeamStandingCompletionPolicy(),
+            schedule: CompletionSchedule(agilityOrdered));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Single(handler.Requests);
+        Assert.Equal(
+            [player.InstanceId, enemy.InstanceId],
+            result.Events
+                .Where(battleEvent => battleEvent.Kind == BattleEncounterEventKind.ActorDefeated)
+                .Select(battleEvent => battleEvent.ActorId));
+        BattleEndedEventPayload battleEnded = Assert.IsType<BattleEndedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.BattleEnded).Payload);
+        Assert.Equal(1, battleEnded.FinalRoundNumber);
+        Assert.Equal(0, battleEnded.CompletedRounds);
+    }
+
     [Fact]
     public void Runner_ReconcilesBattleStartMutationBeforeOpeningARound()
     {
@@ -3055,6 +3134,13 @@ public sealed class BattleEncounterRunnerTests
             [new KeyValuePair<ContentId, decimal>(Id("agility"), agility)]);
         return new BattleEncounterParticipant(state, id);
     }
+
+    private static IBattleEncounterSchedulePolicy CompletionSchedule(bool agilityOrdered) =>
+        agilityOrdered
+            ? new AgilityOrderedBattleEncounterSchedulePolicy(
+                Id("agility"),
+                new EncounterOrderBattleEncounterScheduleTieBreakPolicy())
+            : new TeamPhaseRoundRobinBattleEncounterSchedulePolicy();
 
     private static IEnumerable<Type> PublicSignatureTypes(Type type)
     {
