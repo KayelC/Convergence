@@ -123,6 +123,9 @@ status cleanup to fabricate behavior.
 require a winner; other outcomes reject one. `FaultMessage` and `FaultCode` are
 present together only for `Faulted`. A normal `BattleEncounterCompletion.Message`
 is retained solely as optional, non-authoritative `BattleEnded` debug text.
+`IBattleEncounterCompletionPolicy` may select coherent normal terminal
+outcomes, but it cannot originate `Faulted`; only the runner's typed fault
+boundary owns a fault code.
 The result owns the complete sequenced event history; a sink failure can leave
 terminal evidence in that result which the failed sink did not receive.
 

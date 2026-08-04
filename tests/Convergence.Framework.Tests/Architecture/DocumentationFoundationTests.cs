@@ -334,6 +334,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "encounter-orchestration-order-6-post-r23-independent-audit-2026-08-04.md"))
             .ReplaceLineEndings(" ");
+        string r27ClosureReview = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "encounter-orchestration-order-6-r27-final-closure-review-2026-08-04.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -348,6 +354,7 @@ public sealed class DocumentationFoundationTests
             "encounter-wide structural-transition bound",
             "Defeat cleanup and announcement happen once for each uninterrupted period",
             "Zero living teams produce an immediate `Draw`",
+            "a completion policy cannot create `Faulted`",
             "Normal terminal outcomes always have null `FaultMessage` and `FaultCode`",
             "result owns the complete canonical sequenced history",
             "last round that was reached",
@@ -364,6 +371,7 @@ public sealed class DocumentationFoundationTests
             "## Implementing The Turn Handler",
             "Do not return `Cancelled` for submenu Back.",
             "The handler must not mutate the encounter economy.",
+            "trusted host mutation ports",
             "The runner owns structural events.",
             "BattleEncounterProgressPolicy",
             "frozen participant graph",
@@ -399,6 +407,7 @@ public sealed class DocumentationFoundationTests
             "complete canonical sequenced event history",
             "result-only terminal evidence",
             "Every non-fault outcome has null `FaultMessage` and `FaultCode`",
+            "Custom turn handlers and state synchronizers are trusted mutation ports",
             "PhaseEnded` follows committed phase-end lifecycle events; reconciliation then",
             "RoundEnded` follows committed round-end lifecycle events and reconciliation",
             "OperationCanceledException",
@@ -414,6 +423,10 @@ public sealed class DocumentationFoundationTests
             StringComparison.Ordinal);
         Assert.Contains(
             "sink failure can leave terminal evidence in that result",
+            publicApi,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "it cannot originate `Faulted`",
             publicApi,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -456,13 +469,20 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("## Correction Roadmap", postR23Audit, StringComparison.Ordinal);
         Assert.Contains("O6-R25 | `complete`", postR23Audit, StringComparison.Ordinal);
         Assert.Contains("O6-R26 | `complete`", postR23Audit, StringComparison.Ordinal);
-        Assert.Contains("O6-R27 | `pending`", postR23Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R27 | `complete`", postR23Audit, StringComparison.Ordinal);
+        Assert.Contains(
+            "**Result:** no unresolved realistic reachable runtime defect found",
+            r27ClosureReview,
+            StringComparison.Ordinal);
+        Assert.Contains("## Corrected Invariants Rechecked", r27ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("## Trusted Boundaries And Residual Risk", r27ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("Order 6 is formally complete", r27ClosureReview, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
-        Assert.Equal("existing_unreviewed", encounter.Mechanics.State);
-        Assert.Equal("existing_unreviewed", encounter.DeveloperGuide.State);
-        Assert.Equal("existing_unreviewed", encounter.Technical.State);
+        Assert.Equal("reviewed", encounter.Mechanics.State);
+        Assert.Equal("reviewed", encounter.DeveloperGuide.State);
+        Assert.Equal("reviewed", encounter.Technical.State);
     }
 
     [Fact]

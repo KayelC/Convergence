@@ -35,9 +35,10 @@ O6-R15, O6-R16, O6-R19, and O6-R21 corrected and reconciled those rules.
 O6-R23 independently re-read the corrected source and returned the page to
 `reviewed`. O6-R24 later found that normal completion text crosses the
 fault-result boundary and that the mechanics fault-cleanup sentence omits its
-battle-start condition. The page is `existing_unreviewed` until O6-R25 through
-O6-R27 complete. O6-R25 and O6-R26 have now corrected the runtime result shape
-and all three audience statements; O6-R27 remains the independent closure gate.
+battle-start condition. The page was `existing_unreviewed` until O6-R25 through
+O6-R27 complete. O6-R25 and O6-R26 corrected the runtime result shape and all
+three audience statements; O6-R27 independently re-read the result and restored
+this page to `reviewed`.
 
 ## Rule Index
 

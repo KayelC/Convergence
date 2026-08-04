@@ -9,7 +9,7 @@ presentation, and any mapping between framework runtime IDs and scene objects.
 Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
-> **Current review status:** `reviewed`. O6-R23 independently traced the
+> **Current review status:** `reviewed`. O6-R27 independently traced the
 > corrected runtime and confirmed this guide's composition, command ownership,
 > cancellation, automated execution, and trusted-host boundaries against
 > executable evidence.
@@ -156,6 +156,13 @@ encounter. Do not return `Rejected` for an ordinary disabled menu option;
 
 The handler must not mutate the encounter economy. It returns
 `ActionTurnConsumption`; the runner applies and validates it exactly once.
+
+The handler and optional state synchronizer are trusted host mutation ports.
+The runner converts their exceptions to typed encounter faults, but it cannot
+roll back arbitrary scene, network, filesystem, or other external side effects
+performed inside host code. Use the framework action executor and staged
+lifecycle services for framework state, and give custom mutation ports an
+equivalent transaction boundary before they return.
 
 ## Lifecycle Composition
 

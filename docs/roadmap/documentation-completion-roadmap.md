@@ -508,9 +508,14 @@ contract defect and two documentation precision errors. Order 6 is reopened;
 O6-R25 through O6-R27 govern the correction and fresh owner closure. Its three
 audience entries are `existing_unreviewed`, so the current totals are 27
 reviewed, 27 `existing_unreviewed`, 14 missing, and 7 `not_applicable`.
-O6-R25 and O6-R26 have now corrected the runtime result shape and all audience
-statements. O6-R27 remains pending, so the documentation totals do not promote
-yet.
+O6-R25 and O6-R26 corrected the runtime result shape and all audience
+statements. The
+[O6-R27 final closure review](../reviews/encounter-orchestration-order-6-r27-final-closure-review-2026-08-04.md)
+independently traced current source and documents, corrected completion-policy
+fault-authority wording, and found no unresolved realistic reachable runtime
+defect. Order 6 is formally closed again. Its three entries are `reviewed`, so
+the current totals are 30 reviewed, 24 `existing_unreviewed`, 14 missing, and
+7 `not_applicable`.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored

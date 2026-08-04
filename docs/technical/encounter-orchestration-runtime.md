@@ -19,7 +19,7 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Current review status:** `reviewed`. O6-R23 independently traced lifecycle
+> **Current review status:** `reviewed`. O6-R27 independently traced lifecycle
 > transactions, scheduling, reconciliation, event ownership, completion,
 > immutable results, and fault containment without finding an unresolved
 > realistic reachable defect.
@@ -209,6 +209,13 @@ guards the boundaries it owns:
 
 Action-level atomicity remains owned by `BattleActionExecutor` and its staged
 actor graph.
+
+Custom turn handlers and state synchronizers are trusted mutation ports. The
+runner contains a thrown exception as a typed fault, but it is not a
+transaction over arbitrary external side effects or direct live-state changes
+performed by those ports. Framework-provided action and lifecycle services use
+the staged boundaries described here; a custom mutating port must supply an
+equivalent atomic boundary.
 
 The supplied `BattleStatusEncounterLifecyclePort` retains one committed
 sequence counter per lifecycle event ID. It is mutable lifecycle authority, not

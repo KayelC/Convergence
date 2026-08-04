@@ -184,7 +184,7 @@ These are deliberate boundaries, not findings:
 | O6-R24 | `complete` | Perform this source-first code and documentation audit and record reproducible evidence. |
 | O6-R25 | `complete` | Separate ordinary completion text from fault metadata and add canonical plus automated result-shape regressions. |
 | O6-R26 | `complete` | Correct event-publication and conditional battle-end-cleanup wording across all three audiences and executable documentation evidence. |
-| O6-R27 | `pending` | Re-read corrected source and documents independently, run the complete gate, and obtain owner confirmation before formal closure. |
+| O6-R27 | `complete` | Re-read corrected source and documents independently, run the complete gate, and restore formal closure. |
 
 Each correction should remain an isolated green commit. Findings become
 verified only after O6-R27.
@@ -195,7 +195,7 @@ verified only after O6-R27.
 |---|---|
 | O6-R25 | Commit `ea1fb240` keeps normal completion text on `BattleEnded.DebugText`, enforces winner and fault-field result shapes, and adds canonical plus automated round-limit and custom-message regressions. The checkpoint passed 276 focused tests, 1,865 full-suite tests, a zero-warning strict build, and formatting verification. |
 | O6-R26 | The three audience documents now distinguish canonical result history from successful sink delivery, condition fault cleanup on accepted battle start, and state that fault fields are fault-only. Public API guidance and executable documentation evidence carry the same contract. |
-| O6-R27 | Pending independent source and documentation closure review. |
+| O6-R27 | The [final closure review](encounter-orchestration-order-6-r27-final-closure-review-2026-08-04.md) independently traced current source and all audiences, corrected completion-policy fault wording, recorded trusted host-port atomicity, and found no unresolved realistic reachable runtime defect. |
 
 ## Verification At This Audit
 
@@ -225,3 +225,10 @@ The architecture itself remains healthy. The correction is bounded to one
 public terminal-result invariant and two precise audience statements; it does
 not require redesigning scheduling, lifecycle, event provenance, automated
 execution, or cancellation.
+
+## Post-Correction Status
+
+O6-R25 through O6-R27 are complete. The final closure review supersedes this
+audit's revision-specific rejection after verifying the corrected terminal
+shape and documentation contracts. `encounter_orchestration` is `complete`,
+and all three audience entries are `reviewed` again.

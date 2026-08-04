@@ -209,19 +209,19 @@
     {
       "id": "encounter_orchestration",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R25 and O6-R26 corrected normal completion metadata and conditional fault-cleanup wording; O6-R27 independent review remains pending."
+        "reason": "O6-R27 independently traced the corrected terminal shape, completion authority, lifecycle cleanup, scheduling, and event history against current source."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R25 and O6-R26 give hosts coherent normal-versus-fault result metadata and delivery guidance; O6-R27 independent review remains pending."
+        "reason": "O6-R27 independently confirmed host composition, result metadata, event-delivery acknowledgement, cancellation, and trusted mutation-port guidance."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R25 and O6-R26 separate fault metadata and document result-only sink-failure evidence; O6-R27 independent review remains pending."
+        "reason": "O6-R27 independently traced scheduler, lifecycle, economy, reconciliation, event, terminal-result, and automated-runner authority against current source."
       }
     },
     {

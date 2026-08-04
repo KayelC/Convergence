@@ -11,7 +11,7 @@ A Godot game may animate a timeline, a console may display menus, and an
 automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
-> **Current review status:** `reviewed`. O6-R23 independently traced the
+> **Current review status:** `reviewed`. O6-R27 independently traced the
 > corrected runtime and confirmed this page's scheduling, turn-economy,
 > reconciliation, cancellation, and terminal-state rules against executable
 > evidence.
@@ -163,12 +163,13 @@ host's assessment loop before it becomes an encounter command result.
 The supplied `LastTeamStandingCompletionPolicy` ends as soon as at most one
 deployed, living team remains. Zero living teams produce an immediate `Draw`;
 one living team produces `Victory` for that team; two or more keep the encounter
-running. A replacement completion policy may select another rule, but its result
-must be coherent:
+running. A replacement completion policy may select another normal terminal
+rule, but its result must be coherent:
 
 - `Victory` and `Defeat` require one participating winning team;
 - `Draw`, `Escape`, and `Cancelled` do not carry a winner;
-- `Faulted` carries a stable fault code rather than a winner;
+- a completion policy cannot create `Faulted`; only the runner's typed fault
+  boundary owns fault codes;
 - incomplete evaluations cannot carry terminal metadata.
 
 Normal terminal outcomes always have null `FaultMessage` and `FaultCode`
