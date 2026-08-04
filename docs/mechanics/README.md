@@ -31,8 +31,8 @@ Order 6 now has a dedicated encounter-loop mechanics page covering both
 supplied schedulers, lifecycle ordering, cancellation, outcomes, and canonical
 event evidence. O6-R13L rechecked it at that revision; O6-R14 later reproduced
 repeated-defeat and zero-survivor paths that reopened its coverage entry.
-O6-R15, O6-R16, and O6-R19 have corrected and reconciled those rules; the page
-remains `existing_unreviewed` until O6-R20.
+O6-R15, O6-R16, O6-R19, and O6-R21 have corrected and reconciled those rules;
+the page remains `existing_unreviewed` until the O6-R23 closure review.
 
 ## Rule Index
 

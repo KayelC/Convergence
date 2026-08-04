@@ -93,9 +93,10 @@ Every encounter event carries a kind-specific immutable payload for initiative,
 rounds, teams, actors, commands, effects, turn economy, deployment, faults, or
 outcomes. The runner alone emits structural start/end, economy, fault, and
 terminal events. Port events are validated against a command/lifecycle
-allow-list and the frozen participant graph. Command evidence with an actor is
-correlated to the scheduled command-window owner; actor-less executed roster
-evidence remains valid. Status application, refresh, replacement, rejection, duration
+allow-list and the frozen participant graph. Command evidence is correlated to
+the scheduled command-window owner. Executed actions require that actor except
+for the canonical actorless `PartyRosterTransitioned` evidence. Status
+application, refresh, replacement, rejection, duration
 advancement, expiry, cleanup, and passive effects retain typed transition
 evidence through action and encounter results. Optional debug text is diagnostic
 only; hosts localize and present the typed payload rather than parsing prose.

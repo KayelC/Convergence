@@ -10,8 +10,9 @@ Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
 > **Current review status:** O6-R15 through O6-R18 corrected the runtime paths
-> reproduced by O6-R14. This guide now describes those corrected contracts, but
-> remains `existing_unreviewed` until the independent O6-R20 source review.
+> reproduced by O6-R14, and O6-R21 closed the actorless ordinary-action event
+> shape found by O6-R20. This guide describes those corrected contracts but
+> remains `existing_unreviewed` until the independent O6-R23 closure review.
 
 ## Required Composition
 
@@ -223,9 +224,11 @@ Every runtime actor or target ID in a port event must belong to the encounter's
 frozen participant graph, including IDs nested inside effect, damage, resource,
 knowledge, analysis, passive, and lifecycle evidence. Selected, passed,
 rejected, and host-request command evidence must name the actor who owns the
-current command window. A non-null actor on `ActionExecuted` must name that same
-actor; actor-less `ActionExecuted` remains legal for roster-style evidence that
-has no acting participant. Presence-change events must report the participant's
+current command window. `ActionExecuted` must also name that actor unless its
+action event kind is `PartyRosterTransitioned`, the canonical transition that
+has no acting participant. Actorless ordinary-action evidence is rejected while
+the turn handler is executing and becomes a typed turn-handler fault before the
+event is published. Presence-change events must report the participant's
 actual encounter team. Combat-profile source identity is provenance rather than
 a routing target, so a Vessel may still identify a non-deployed Hosted Entity as
 its profile source.

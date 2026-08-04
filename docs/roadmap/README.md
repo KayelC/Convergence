@@ -123,7 +123,8 @@ closure passes. The
 then reconciled current source, tests, and all three audience documents,
 returning `encounter_orchestration` to `complete` at that revision. The later
 [O6-R14 fresh owner-closure audit](../reviews/encounter-orchestration-order-6-fresh-owner-closure-audit-2026-08-04.md)
-reproduced four supported but uncovered paths and reopens the capability as
-`partial`. O6-R15 through O6-R18 have corrected those runtime paths and O6-R19
-has reconciled the active documentation. O6-R20 remains the required fresh
+reproduced four supported but uncovered paths and reopened the capability as
+`partial`. O6-R15 through O6-R19 corrected and reconciled those paths. O6-R20
+then found one actorless ordinary-action event shape; O6-R21 closes it and
+O6-R22 reconciles the active guidance. O6-R23 remains the required fresh
 source-first closure gate.

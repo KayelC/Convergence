@@ -187,8 +187,10 @@ to `reviewed` at that revision. The later
 [O6-R14 fresh owner-closure audit](../reviews/encounter-orchestration-order-6-fresh-owner-closure-audit-2026-08-04.md)
 reproduced four supported paths that conflict with the current audience claims.
 O6-R15 through O6-R18 corrected those paths and O6-R19 reconciled all three
-pages with the corrected contracts. The entries remain `existing_unreviewed`
-until O6-R20 independently re-reads current source and completes the full gate.
+pages. O6-R20 then found one actorless ordinary-action event shape; O6-R21
+closed it and O6-R22 reconciled this guidance. The entries remain
+`existing_unreviewed` until O6-R23 independently re-reads the corrected source
+and completes the full gate.
 
 The documentation matrix currently records 75 audience entries: 27 reviewed,
 27 existing_unreviewed, 14 missing, and 7 not_applicable.

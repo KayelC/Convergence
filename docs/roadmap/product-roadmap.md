@@ -21,10 +21,11 @@ complete automated terminal outcomes, and all three audience documents. The earl
 records the state at that revision. The later
 [O6-R14 fresh owner-closure audit](../reviews/encounter-orchestration-order-6-fresh-owner-closure-audit-2026-08-04.md)
 reopened the capability after reproducing four realistic supported paths that
-the green suite did not cover. O6-R15 through O6-R18 have corrected those
-bounded runtime paths, and O6-R19 has reconciled their active documentation.
-The capability remains `partial` until the O6-R20 source-first closure review
-and complete local gate.
+the green suite did not cover. O6-R15 through O6-R18 corrected those bounded
+runtime paths, and O6-R19 reconciled their active documentation. O6-R20 then
+found one actorless ordinary-action event shape. O6-R21 closes that shape and
+O6-R22 reconciles the resulting contract. The capability remains `partial`
+until the O6-R23 source-first closure review and complete local gate.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

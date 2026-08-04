@@ -211,17 +211,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R15 and O6-R16 corrected repeated-defeat reconciliation and zero-living-team completion; O6-R19 reconciled the mechanics page, which awaits the O6-R20 source-first review."
+        "reason": "O6-R15 and O6-R16 corrected repeated-defeat reconciliation and zero-living-team completion; O6-R21 closed the actorless ordinary-action event shape and O6-R22 reconciled the mechanics page, which awaits O6-R23 closure review."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R17 corrected automated untargeted and terminal skill mapping and O6-R19 reconciled the detached completion-snapshot guidance; the guide awaits O6-R20 source-first review."
+        "reason": "O6-R17 corrected automated untargeted and terminal skill mapping; O6-R21 closed the actorless ordinary-action event shape and O6-R22 reconciled the integration guidance, which awaits O6-R23 closure review."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R15 through O6-R18 corrected the four reproduced runtime paths and O6-R19 reconciled the technical trace; the reference awaits O6-R20 source-first review."
+        "reason": "O6-R15 through O6-R18 corrected the four reproduced runtime paths; O6-R21 closed the actorless ordinary-action event shape and O6-R22 reconciled the technical trace, which awaits O6-R23 closure review."
       }
     },
     {

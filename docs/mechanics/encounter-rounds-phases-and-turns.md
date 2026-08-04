@@ -12,8 +12,9 @@ automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
 > **Current review status:** O6-R15 through O6-R18 corrected the four runtime
-> paths reproduced by O6-R14. This page now describes those corrected rules,
-> but remains `existing_unreviewed` until the independent O6-R20 source review.
+> paths reproduced by O6-R14, and O6-R21 closed the actorless ordinary-action
+> event shape found by O6-R20. This page describes those corrected rules but
+> remains `existing_unreviewed` until the independent O6-R23 closure review.
 
 ## Rule Ownership
 

@@ -391,7 +391,10 @@ At each applicable checkpoint:
 | O6-R17 | Complete | Automated execution now preserves untargeted null targets, ordered host-action requests, and successful escape as canonical output. |
 | O6-R18 | Complete | A non-null actor on `ActionExecuted` must own the scheduled command window; actor-less roster evidence remains legal. |
 | O6-R19 | Complete | Active mechanics, developer, technical, API, architecture, gameplay, matrix, roadmap, and documentation-test language is reconciled with O6-R15 through O6-R18. |
-| O6-R20 | Pending | Fresh source-first closure review and the complete local gate remain required before promotion. |
+| O6-R20 | Complete; correction required | The fresh source-first review confirmed O6-R15 through O6-R19 and found one actorless ordinary executed-action shape. |
+| O6-R21 | Complete | Executed-action evidence now requires the scheduled actor except for the canonical actorless `PartyRosterTransitioned` event. |
+| O6-R22 | Complete | Active audience, API, architecture, matrix, roadmap, and executable documentation guidance states the exact event-kind exception. |
+| O6-R23 | Pending | Fresh source-first closure review and the complete local gate remain required before promotion. |
 
 ## Closure Rule
 

@@ -133,7 +133,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "The O6-R15 through O6-R19 corrections await the required O6-R20 source-first closure review before this capability can return to complete."
+        "O6-R21 closes the actorless ordinary-action event shape found by O6-R20, and O6-R22 reconciles active guidance; the required O6-R23 source-first closure review remains before this capability can return to complete."
       ]
     },
     {

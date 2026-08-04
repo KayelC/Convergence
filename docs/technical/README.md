@@ -61,9 +61,9 @@ independent closure review remains separate from this documentation checkpoint.
 The Order 6 encounter reference traces current scheduler, lifecycle,
 turn-economy, event, cancellation, completion, and automated-runner source. It
 completed independent source reconciliation in O6-R13L, but the later O6-R14
-source audit reproduced four uncovered runtime paths. It is now
-reconciled with the O6-R15 through O6-R19 corrections, but remains
-`existing_unreviewed` until the O6-R20 source-first closure review.
+source audit reproduced four uncovered runtime paths. It is now reconciled with
+the O6-R15 through O6-R19 and O6-R21 through O6-R22 corrections, but remains
+`existing_unreviewed` until the O6-R23 source-first closure review.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

@@ -349,7 +349,8 @@ public sealed class DocumentationFoundationTests
             "The runner owns structural events.",
             "BattleEncounterProgressPolicy",
             "frozen participant graph",
-            "actor-less `ActionExecuted` remains legal",
+            "unless its action event kind is `PartyRosterTransitioned`",
+            "Actorless ordinary-action evidence is rejected",
             "preserves a null command target for valid untargeted skills",
             "maps a successful skill escape request to the canonical `Escape` outcome",
             "OperationCanceledException",
@@ -371,7 +372,8 @@ public sealed class DocumentationFoundationTests
             "BattleEncounterProgressPolicy",
             "frozen participant graph",
             "one defeat announcement per uninterrupted defeated period",
-            "`ActionExecuted` is checked against that actor",
+            "`ActionExecuted` must also identify that actor",
+            "`PartyRosterTransitioned`",
             "no deployed living teams produces `Draw`",
             "PhaseEnded` follows committed phase-end lifecycle events; reconciliation then",
             "RoundEnded` follows committed round-end lifecycle events and reconciliation",
@@ -393,14 +395,18 @@ public sealed class DocumentationFoundationTests
             StringComparison.Ordinal);
         Assert.Contains("## Correction Roadmap", currentAudit, StringComparison.Ordinal);
         Assert.Contains("## Correction Progress After This Audit", currentAudit, StringComparison.Ordinal);
-        Assert.Contains("O6-R15 through O6-R19 implemented", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("O6-R15 through O6-R22 implemented", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O6-R20 | Complete; correction required", currentAudit, StringComparison.Ordinal);
-        Assert.Contains("O6-R21 | Pending", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("O6-R21 | Complete", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("O6-R22 | Complete", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("O6-R23 | Pending", currentAudit, StringComparison.Ordinal);
         Assert.Contains(
             "**Result:** one bounded correction required",
             currentSourceReview,
             StringComparison.Ordinal);
         Assert.Contains("### O6-R20-M1", currentSourceReview, StringComparison.Ordinal);
+        Assert.Contains("## Correction Progress", currentSourceReview, StringComparison.Ordinal);
+        Assert.Contains("O6-R21 | Complete", currentSourceReview, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");

@@ -487,12 +487,15 @@ The later
 did not accept that historical closure as current proof. Its source-first trace
 reproduced repeated-defeat reconciliation failure, delayed zero-survivor
 completion, incomplete automated untargeted and terminal skill mapping, and
-missing scheduled-actor correlation for `ActionExecuted` evidence. Order 6 is
-reopened. O6-R15 through O6-R18 have corrected those four runtime paths and
-O6-R19 has reconciled all audience, API, matrix, and roadmap guidance. O6-R20
-remains the fresh source-first closure review. The three audience entries are
-`existing_unreviewed`; the current
-documentation totals are 27 reviewed, 27 `existing_unreviewed`, 14 missing,
+missing scheduled-actor correlation for `ActionExecuted` evidence. Order 6 was
+reopened. O6-R15 through O6-R18 corrected those four runtime paths and O6-R19
+reconciled all audience, API, matrix, and roadmap guidance. The
+[O6-R20 source-closure review](../reviews/encounter-orchestration-order-6-r20-source-closure-review-2026-08-04.md)
+confirmed those corrections but found that ordinary executed-action evidence
+could still omit its actor. O6-R21 now reserves actorless evidence for
+`PartyRosterTransitioned`, and O6-R22 reconciles the resulting guidance. The
+three audience entries remain `existing_unreviewed` until O6-R23. Current
+documentation totals remain 27 reviewed, 27 `existing_unreviewed`, 14 missing,
 and 7 `not_applicable`.
 
 A final bounded certification subsequently exercised 1,536 deterministic

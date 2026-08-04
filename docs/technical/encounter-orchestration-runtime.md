@@ -20,9 +20,10 @@ It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
 > **Current review status:** O6-R15 through O6-R18 corrected the four bounded
-> runtime paths reproduced by O6-R14. This reference now traces those corrected
-> contracts, but remains `existing_unreviewed` until the independent O6-R20
-> source review.
+> runtime paths reproduced by O6-R14, and O6-R21 closed the actorless
+> ordinary-action event shape found by O6-R20. This reference traces those
+> corrected contracts but remains `existing_unreviewed` until the independent
+> O6-R23 closure review.
 
 ## Authority Map
 
@@ -289,9 +290,11 @@ Port evidence is also correlated with the frozen participant graph before
 publication. Top-level and nested actor or target IDs in effect, damage,
 resource, knowledge, analysis, passive, and lifecycle evidence must identify
 encounter participants. Selected, passed, rejected, and host-request evidence
-must identify the scheduled actor. `ActionExecuted` is checked against that
-actor whenever its optional actor ID is present; an absent actor remains valid
-for actor-less roster evidence. Presence evidence must use the participant's
+must identify the scheduled actor. `ActionExecuted` must also identify that
+actor unless `ActionEventKind` is `PartyRosterTransitioned`; only that canonical
+actorless shape bypasses scheduled-actor correlation. Any other missing actor is
+rejected by payload validation and crosses the port boundary as a typed
+turn-handler fault. Presence evidence must use the participant's
 encounter team. A combat-profile source ID is retained as provenance and is not
 treated as a deployed routing target, allowing a Vessel to derive its profile
 from a Hosted Entity outside the encounter graph.
