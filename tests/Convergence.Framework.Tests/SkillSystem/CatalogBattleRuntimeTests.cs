@@ -2194,6 +2194,63 @@ public sealed class CatalogBattleRuntimeTests
         Assert.True(cleanup.Sequence < battleEnd.Sequence);
     }
 
+    [Theory]
+    [InlineData(BattleTurnStartOutcome.FleeBattle, BattleStatusDepartureReason.Flee)]
+    [InlineData(BattleTurnStartOutcome.RecallToRoster, BattleStatusDepartureReason.RosterRecall)]
+    public void Runner_ExplicitDepartureOwnsTheActorsCurrentDefeatPeriod(
+        BattleTurnStartOutcome outcome,
+        BattleStatusDepartureReason expectedReason)
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor(
+            $"explicit_{outcome}_player",
+            $"explicit_{outcome}_player",
+            PlayerTeam,
+            capabilityIds: outcome == BattleTurnStartOutcome.RecallToRoster
+                ? [Id("recall_to_roster")]
+                : []);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            $"explicit_{outcome}_enemy",
+            $"explicit_{outcome}_enemy",
+            EnemyTeam);
+        ContentId defeatOnlyStatusId = Id($"test.pack:explicit_{outcome}_defeat_only");
+        player.State.AddOtherStatus(
+            defeatOnlyStatusId,
+            new StatusLifetimeDefinition(
+                new PermanentDurationDefinition(),
+                new StatusRemovalProfileDefinition([StatusRemovalCause.Defeat])));
+
+        BattleExecutionServices services = Services(catalog);
+        var skillExecutor = new SkillExecutor(services);
+        var lifecycle = new RestrictedBattleStatusLifecyclePort(
+            new BattleStatusEncounterLifecyclePort(
+                new BattleStatusLifecycleService(new MinimumRandomSource()),
+                services,
+                Id("battle_start"),
+                Id("owner_turn_end"),
+                TestEncounterClocks.Standard(PlayerTeam, EnemyTeam)),
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(outcome));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            skillExecutor,
+            new DeterministicBattleActionSelector(skillExecutor),
+            services,
+            lifecycle,
+            restrictionResolver: new DefeatingExitRestrictionResolver()).Run(
+            new AutomatedBattleRequest([player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Victory, result.Outcome);
+        Assert.Equal(EnemyTeam, result.WinningTeamId);
+        Assert.True(player.State.IsDefeated);
+        Assert.False(player.State.IsDeployed);
+        Assert.Contains(defeatOnlyStatusId, player.State.OtherStatuses);
+        Assert.Equal([expectedReason], lifecycle.DepartureReasons);
+        Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.ActorDefeated &&
+            battleEvent.ActorId == player.State.InstanceId);
+    }
+
     [Fact]
     public void Runner_CanonicalLifecycleCleansDefeatStatusesBeforeDefeatAnnouncement()
     {
@@ -3518,8 +3575,11 @@ public sealed class CatalogBattleRuntimeTests
         RuntimeInstanceId restrictedActorId,
         BattleTurnStartRestriction restriction) :
         IBattleEncounterLifecyclePort,
+        IBattleEncounterDepartureLifecyclePort,
         IBattleEncounterStatModifierBoundarySource
     {
+        public List<BattleStatusDepartureReason> DepartureReasons { get; } = [];
+
         public IReadOnlyList<StatModifierLifecycleBoundary> GetActiveStatModifierBoundaries(
             BattleEncounterTurnLifecycleRequest request) =>
             inner.GetActiveStatModifierBoundaries(request);
@@ -3561,6 +3621,14 @@ public sealed class CatalogBattleRuntimeTests
             BattleEncounterOutcome outcome,
             CancellationToken cancellationToken = default) =>
             inner.ProcessBattleEndAsync(request, outcome, cancellationToken);
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessActorDepartureAsync(
+            BattleEncounterDepartureLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            DepartureReasons.Add(request.Reason);
+            return inner.ProcessActorDepartureAsync(request, cancellationToken);
+        }
     }
 
     private sealed class FixedTurnRestrictionLifecyclePort : IBattleEncounterLifecyclePort
@@ -3647,6 +3715,30 @@ public sealed class CatalogBattleRuntimeTests
             ArgumentNullException.ThrowIfNull(request);
             cancellationToken.ThrowIfCancellationRequested();
             return new ValueTask<BattleEncounterCommandResult>(result);
+        }
+    }
+
+    private sealed class DefeatingExitRestrictionResolver : IAutomatedBattleTurnRestrictionResolver
+    {
+        public ValueTask<BattleEncounterCommandResult> ResolveAsync(
+            AutomatedBattleTurnRestrictionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            cancellationToken.ThrowIfCancellationRequested();
+            request.Actor.State.SetResource(Id("hp"), 0m);
+            request.Actor.State.SetEncounterPresence(isDeployed: false);
+            return new ValueTask<BattleEncounterCommandResult>(
+                BattleEncounterCommandResult.Executed(
+                    ActionTurnConsumption.Normal,
+                    [new BattleEncounterEvent(
+                        0,
+                        BattleEncounterEventKind.EncounterPresenceChanged,
+                        new BattleEncounterPresenceChangedEventPayload(
+                            request.Actor.State.InstanceId,
+                            false,
+                            request.Actor.State.TeamId),
+                        $"{request.Actor.State.InstanceId} left while defeated.")]));
         }
     }
 

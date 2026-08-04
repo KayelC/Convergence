@@ -1131,11 +1131,11 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 await AddRangeAsync(departureEvents).ConfigureAwait(false);
             }
 
-            foreach ((RuntimeInstanceId actorId, BattleStatusDepartureReason departureReason) in reasonsByActor)
+            foreach (BattleEncounterParticipant participant in request.Participants)
             {
-                if (departureReason == BattleStatusDepartureReason.Defeat)
+                if (participant.State.IsDefeated && reasonsByActor.ContainsKey(participant.InstanceId))
                 {
-                    processedDefeatDepartures.Add(actorId);
+                    processedDefeatDepartures.Add(participant.InstanceId);
                 }
             }
 
