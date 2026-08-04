@@ -1110,6 +1110,7 @@ public sealed class BattleEncounterRunnerTests
         bool requiresWinner)
     {
         ContentId? winner = requiresWinner ? PlayerTeam : null;
+        const string completionMessage = "Normal completion detail.";
 
         BattleEncounterResult result = Run(
             [Participant("valid_completion_player", PlayerTeam),
@@ -1118,12 +1119,45 @@ public sealed class BattleEncounterRunnerTests
             new RecordingLifecycle(),
             new QueueTurnHandler(_ =>
                 BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
-            new FixedCompletionPolicy(new BattleEncounterCompletion(true, outcome, winner)));
+            new FixedCompletionPolicy(new BattleEncounterCompletion(
+                true,
+                outcome,
+                winner,
+                completionMessage)));
 
         Assert.Equal(outcome, result.Outcome);
         Assert.Equal(winner, result.WinningTeamId);
+        Assert.Null(result.FaultMessage);
+        Assert.Null(result.FaultCode);
+        Assert.Equal(
+            completionMessage,
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.BattleEnded).DebugText);
         Assert.DoesNotContain(result.Events, battleEvent =>
             battleEvent.Kind == BattleEncounterEventKind.RoundStarted);
+    }
+
+    [Fact]
+    public void Runner_RoundLimitDrawKeepsNormalDetailOutOfFaultMetadata()
+    {
+        BattleEncounterResult result = Run(
+            [Participant("round_limit_player", PlayerTeam),
+             Participant("round_limit_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ =>
+                BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(99),
+            roundLimit: 1);
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Null(result.WinningTeamId);
+        Assert.Null(result.FaultMessage);
+        Assert.Null(result.FaultCode);
+        Assert.Equal(
+            "Battle ended in a draw after 1 round(s).",
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.BattleEnded).DebugText);
     }
 
     [Theory]
@@ -1754,8 +1788,13 @@ public sealed class BattleEncounterRunnerTests
 
         Assert.Equal(BattleEncounterOutcome.Faulted, fault.Outcome);
         Assert.Equal("bad command", fault.FaultMessage);
+        Assert.Equal(BattleEncounterFaultCode.CommandExecutionFaulted, fault.FaultCode);
         Assert.Equal(BattleEncounterOutcome.Cancelled, cancelled.Outcome);
+        Assert.Null(cancelled.FaultMessage);
+        Assert.Null(cancelled.FaultCode);
         Assert.Equal(BattleEncounterOutcome.Escape, escaped.Outcome);
+        Assert.Null(escaped.FaultMessage);
+        Assert.Null(escaped.FaultCode);
     }
 
     [Fact]
@@ -3132,9 +3171,10 @@ public sealed class BattleEncounterRunnerTests
         BattleEncounterProgressPolicy? encounterProgress = null,
         IBattleEncounterStateSynchronizer? synchronizer = null,
         IBattleEncounterEventSink? events = null,
-        IBattleEncounterSchedulePolicy? schedule = null) =>
+        IBattleEncounterSchedulePolicy? schedule = null,
+        int roundLimit = 5) =>
         new BattleEncounterRunner().Run(
-            new BattleEncounterRequest(participants, Battle, Kind, Moon, 5),
+            new BattleEncounterRequest(participants, Battle, Kind, Moon, roundLimit),
             new BattleEncounterServices(
                 initiative,
                 schedule ?? new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),

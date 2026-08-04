@@ -147,6 +147,8 @@ public sealed record BattleEncounterResult
         string? faultMessage = null,
         BattleEncounterFaultCode? faultCode = null)
     {
+        ValidateTerminalShape(outcome, winningTeamId, faultMessage, faultCode);
+
         Outcome = outcome;
         WinningTeamId = winningTeamId;
         Participants = Array.AsReadOnly(
@@ -164,6 +166,53 @@ public sealed record BattleEncounterResult
     public IReadOnlyList<BattleEncounterEvent> Events { get; }
     public string? FaultMessage { get; }
     public BattleEncounterFaultCode? FaultCode { get; }
+
+    private static void ValidateTerminalShape(
+        BattleEncounterOutcome outcome,
+        ContentId? winningTeamId,
+        string? faultMessage,
+        BattleEncounterFaultCode? faultCode)
+    {
+        if (!Enum.IsDefined(outcome))
+        {
+            throw new ArgumentOutOfRangeException(nameof(outcome));
+        }
+
+        bool requiresWinner = outcome is BattleEncounterOutcome.Victory or BattleEncounterOutcome.Defeat;
+        if (requiresWinner != (winningTeamId is not null))
+        {
+            throw new ArgumentException(
+                requiresWinner
+                    ? $"A {outcome} result requires a winning team."
+                    : $"A {outcome} result cannot carry a winning team.",
+                nameof(winningTeamId));
+        }
+
+        if (outcome == BattleEncounterOutcome.Faulted)
+        {
+            if (faultCode is not BattleEncounterFaultCode code || !Enum.IsDefined(code))
+            {
+                throw new ArgumentException(
+                    "A faulted encounter result requires a defined fault code.",
+                    nameof(faultCode));
+            }
+            if (string.IsNullOrWhiteSpace(faultMessage))
+            {
+                throw new ArgumentException(
+                    "A faulted encounter result requires a fault message.",
+                    nameof(faultMessage));
+            }
+
+            return;
+        }
+
+        if (faultCode is not null || faultMessage is not null)
+        {
+            throw new ArgumentException(
+                $"A non-fault {outcome} result cannot carry fault metadata.",
+                faultCode is not null ? nameof(faultCode) : nameof(faultMessage));
+        }
+    }
 }
 
 public sealed class BattleEncounterInitiativeRequest
@@ -2405,8 +2454,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 winningTeamId,
                 request.Participants,
                 events,
-                message,
-                faultCode);
+                outcome == BattleEncounterOutcome.Faulted ? message : null,
+                outcome == BattleEncounterOutcome.Faulted ? faultCode : null);
         }
 
         static string LifecycleFailureMessage(string stage, Exception exception) =>

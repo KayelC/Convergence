@@ -1465,6 +1465,12 @@ public sealed class CatalogBattleRuntimeTests
 
         Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
         Assert.Null(result.WinningTeamId);
+        Assert.Null(result.FaultMessage);
+        Assert.Null(result.FaultCode);
+        Assert.Equal(
+            "Battle ended in a draw after 1 round(s).",
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.BattleEnded).DebugText);
     }
 
     [Theory]
