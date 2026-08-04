@@ -12,6 +12,34 @@ public enum AutomatedRestrictedActionSelectionStatus
     Unavailable
 }
 
+internal static class AutomatedRestrictedActionIdentity
+{
+    private static readonly ContentId Guard = ContentId.Parse("guard");
+    private static readonly ContentId Pass = ContentId.Parse("pass");
+    private static readonly ContentId Analyze = ContentId.Parse("analyze");
+    private static readonly ContentId Escape = ContentId.Parse("escape");
+
+    public static bool TryResolve(BattleActionCommand command, out ContentId actionId)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        ContentId? resolved = command switch
+        {
+            BasicAttackBattleActionCommand basicAttack => basicAttack.ActionId,
+            SkillBattleActionCommand skill => skill.Skill.Id,
+            ItemBattleActionCommand item => item.Item.Id,
+            GuardBattleActionCommand => Guard,
+            PassBattleActionCommand => Pass,
+            AnalyzeBattleActionCommand => Analyze,
+            EscapeAttemptBattleActionCommand => Escape,
+            _ => null
+        };
+
+        actionId = resolved.GetValueOrDefault();
+        return resolved.HasValue;
+    }
+}
+
 public sealed record AutomatedRestrictedActionSelection
 {
     private AutomatedRestrictedActionSelection(
@@ -30,6 +58,16 @@ public sealed record AutomatedRestrictedActionSelection
             (actionId is null || actionId.Value == default))
         {
             throw new ArgumentException("A selected restricted action requires a valid action ID.", nameof(actionId));
+        }
+
+        if (status == AutomatedRestrictedActionSelectionStatus.Selected &&
+            command is not null &&
+            AutomatedRestrictedActionIdentity.TryResolve(command, out ContentId commandActionId) &&
+            actionId != commandActionId)
+        {
+            throw new ArgumentException(
+                $"Selected action ID '{actionId}' does not match typed command action ID '{commandActionId}'.",
+                nameof(actionId));
         }
 
         if (status == AutomatedRestrictedActionSelectionStatus.Unavailable && command is not null)
@@ -268,9 +306,23 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
         }
 
         BattleActionCommand command = selection.Command;
+        if (!AutomatedRestrictedActionIdentity.TryResolve(command, out ContentId commandActionId))
+        {
+            return Fault(
+                request,
+                $"Automated restricted action kind '{command.Kind}' requires a custom restriction resolver.");
+        }
+
+        if (actionId != commandActionId)
+        {
+            return Fault(
+                request,
+                $"Selected action ID '{actionId}' does not match typed command action ID '{commandActionId}'.");
+        }
+
         string? validationFailure = ValidateCommand(
             request,
-            actionId,
+            commandActionId,
             command,
             selection.ItemInventory);
         if (validationFailure is not null)
@@ -294,7 +346,7 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
         {
             return Fault(
                 request,
-                $"Restricted automated action '{actionId}' was rejected: " +
+                $"Restricted automated action '{commandActionId}' was rejected: " +
                 string.Join("; ", assessment.Diagnostics.Select(diagnostic => diagnostic.Message)));
         }
 
@@ -306,13 +358,13 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
         {
             return Fault(
                 request,
-                $"Restricted automated action '{actionId}' was rejected during execution: " +
+                $"Restricted automated action '{commandActionId}' was rejected during execution: " +
                 string.Join("; ", execution.Diagnostics.Select(diagnostic => diagnostic.Message)));
         }
 
         IReadOnlyList<BattleEncounterEvent> events = MapExecutionEvents(
             request,
-            actionId,
+            commandActionId,
             command,
             execution);
         return BattleEncounterCommandResult.Executed(
@@ -327,25 +379,8 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
         BattleActionCommand command,
         IItemActionInventory? itemInventory)
     {
-        if (command.Kind is not (
-            BattleActionKind.BasicAttack or
-            BattleActionKind.Skill or
-            BattleActionKind.Item or
-            BattleActionKind.Guard or
-            BattleActionKind.Pass or
-            BattleActionKind.Analyze or
-            BattleActionKind.EscapeAttempt))
-        {
-            return $"Automated restricted action kind '{command.Kind}' requires a custom restriction resolver.";
-        }
-
         if (command is SkillBattleActionCommand selectedSkill)
         {
-            if (selectedSkill.Skill.Id != actionId)
-            {
-                return $"Restricted skill '{selectedSkill.Skill.Id}' does not match action ID '{actionId}'.";
-            }
-
             SkillDefinition? loadedSkill = request.Actor.ActiveSkills.FirstOrDefault(
                 skill => skill.Id == selectedSkill.Skill.Id);
             if (loadedSkill is null)
@@ -358,16 +393,6 @@ public sealed class AutomatedBattleTurnRestrictionResolver : IAutomatedBattleTur
             {
                 return $"Restricted skill '{selectedSkill.Skill.Id}' is not the actor's catalog definition.";
             }
-        }
-
-        if (command is ItemBattleActionCommand selectedItem && selectedItem.Item.Id != actionId)
-        {
-            return $"Restricted item '{selectedItem.Item.Id}' does not match action ID '{actionId}'.";
-        }
-
-        if (command is BasicAttackBattleActionCommand basicAttack && basicAttack.ActionId != actionId)
-        {
-            return $"Restricted basic attack '{basicAttack.ActionId}' does not match action ID '{actionId}'.";
         }
 
         if (command is ItemBattleActionCommand && itemInventory is null)

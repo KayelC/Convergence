@@ -1787,6 +1787,61 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void RestrictedActionSelection_RequiresCanonicalIdentityForEverySupportedCommandKind()
+    {
+        SkillDefinition skill = Active("test.pack:restricted_identity_skill", DamageElement.Physical);
+        var item = new ItemDefinition(
+            Id("test.pack:restricted_identity_item"),
+            "Restricted Identity Item",
+            "Identity-only test item.",
+            ItemKind.Consumable,
+            1,
+            1m);
+        RuntimeInstanceId targetId = RuntimeInstanceId.Parse("restricted_identity_target");
+        ContentId basicAttackId = Id("test.pack:restricted_identity_attack");
+        ContentId escapeRuleId = Id("test.pack:restricted_identity_escape_rule");
+        var targeting = new TargetingDefinition(
+            TargetRelation.Enemy,
+            TargetSelection.Single,
+            TargetLifeState.Alive,
+            false);
+        (ContentId ActionId, BattleActionCommand Command)[] cases =
+        [
+            (
+                basicAttackId,
+                new BasicAttackBattleActionCommand(
+                    new EquipmentBasicAttackDefinition(
+                        DamageElement.Physical,
+                        1,
+                        100,
+                        new NeverCriticalDefinition(),
+                        false),
+                    targeting,
+                    [targetId],
+                    basicAttackId)),
+            (skill.Id, new SkillBattleActionCommand(skill, [targetId])),
+            (item.Id, new ItemBattleActionCommand(item, [targetId])),
+            (Id("guard"), new GuardBattleActionCommand()),
+            (Id("pass"), new PassBattleActionCommand()),
+            (Id("analyze"), new AnalyzeBattleActionCommand(targetId, [AnalysisLayer.Affinities])),
+            (Id("escape"), new EscapeAttemptBattleActionCommand(escapeRuleId, 100))
+        ];
+
+        foreach ((ContentId actionId, BattleActionCommand command) in cases)
+        {
+            AutomatedRestrictedActionSelection selected =
+                AutomatedRestrictedActionSelection.Selected(actionId, command);
+
+            Assert.Equal(actionId, selected.ActionId);
+            Assert.Same(command, selected.Command);
+            ArgumentException mismatch = Assert.Throws<ArgumentException>(() =>
+                AutomatedRestrictedActionSelection.Selected(Id("test.pack:mismatched_action"), command));
+            Assert.Equal("actionId", mismatch.ParamName);
+            Assert.Contains("does not match typed command action ID", mismatch.Message, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void Runner_LimitedActionExecutesAnExplicitlyAllowedTypedCommand()
     {
         GameDataCatalog catalog = LoadDemoCatalog();
@@ -1854,6 +1909,47 @@ public sealed class CatalogBattleRuntimeTests
 
         Assert.Equal(AutomatedBattleOutcome.Faulted, result.Outcome);
         Assert.Contains("not allowed", result.FaultMessage, StringComparison.Ordinal);
+        Assert.Equal(100m, enemy.State.GetRequiredResource(Id("hp")).Current);
+    }
+
+    [Fact]
+    public void Runner_LimitedActionContainsAMismatchedTypedCommandAsAFaultBeforeExecution()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "mismatched_limited_player",
+            "mismatched_limited_player",
+            PlayerTeam);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "mismatched_limited_enemy",
+            "mismatched_limited_enemy",
+            EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var skillExecutor = new SkillExecutor(services);
+        var source = new RecordingRestrictedActionSource(request =>
+            AutomatedRestrictedActionSelection.Selected(
+                Id("guard"),
+                new AnalyzeBattleActionCommand(
+                    request.Participants.Single(actor => actor.State.TeamId == EnemyTeam).State.InstanceId,
+                    [AnalysisLayer.Affinities])));
+        var lifecycle = new FixedTurnRestrictionLifecyclePort(
+            player.State.InstanceId,
+            new BattleTurnStartRestriction(BattleTurnStartOutcome.LimitedAction, [Id("guard")]));
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            skillExecutor,
+            new DeterministicBattleActionSelector(skillExecutor),
+            services,
+            lifecycle,
+            restrictionResolver: RestrictionResolver(skillExecutor, services, source)).Run(
+            new AutomatedBattleRequest([player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Faulted, result.Outcome);
+        Assert.Contains("does not match typed command action ID", result.FaultMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind is BattleEncounterEventKind.CommandSelected or
+                BattleEncounterEventKind.EffectResolved);
+        Assert.Equal(100m, player.State.GetRequiredResource(Id("hp")).Current);
         Assert.Equal(100m, enemy.State.GetRequiredResource(Id("hp")).Current);
     }
 
