@@ -64,7 +64,10 @@ completed independent source reconciliation in O6-R13L, but the later O6-R14
 source audit reproduced four uncovered runtime paths. O6-R15 through O6-R19
 and O6-R21 through O6-R22 corrected and reconciled those paths. O6-R23
 independently re-read the corrected source and returned the reference to
-`reviewed`.
+`reviewed`. O6-R24 later reopened it as `existing_unreviewed` because returned
+fault-finalization evidence is not always identical to successful sink
+publication and normal completion text currently crosses the fault-result
+boundary.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

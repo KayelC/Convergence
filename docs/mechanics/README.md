@@ -33,7 +33,10 @@ event evidence. O6-R13L rechecked it at that revision; O6-R14 later reproduced
 repeated-defeat and zero-survivor paths that reopened its coverage entry.
 O6-R15, O6-R16, O6-R19, and O6-R21 corrected and reconciled those rules.
 O6-R23 independently re-read the corrected source and returned the page to
-`reviewed`.
+`reviewed`. O6-R24 later found that normal completion text crosses the
+fault-result boundary and that the mechanics fault-cleanup sentence omits its
+battle-start condition. The page is `existing_unreviewed` until O6-R25 through
+O6-R27 complete.
 
 ## Rule Index
 

@@ -65,7 +65,9 @@ O6-R13L reconciled its composition examples and boundaries at that revision.
 The later O6-R14 source audit reopened it for automated-result and completion
 integration corrections. O6-R15 through O6-R19 and O6-R21 through O6-R22
 corrected and reconciled those contracts. O6-R23 independently re-read the
-corrected source and returned the guide to `reviewed`.
+corrected source and returned the guide to `reviewed`. O6-R24 later reopened
+the guide as `existing_unreviewed` until normal completion and fault metadata
+are separated and the corrected host contract is independently checked.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

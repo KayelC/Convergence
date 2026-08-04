@@ -130,4 +130,8 @@ O6-R22 reconciles the active guidance. The
 [O6-R23 final closure review](../reviews/encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md)
 re-read the corrected source and all three audience documents, found no
 unresolved realistic reachable defect, and returned the capability to
-`complete`.
+`complete`. The later
+[O6-R24 post-R23 independent audit](../reviews/encounter-orchestration-order-6-post-r23-independent-audit-2026-08-04.md)
+reopened the capability as `partial` for contradictory normal-versus-fault
+result metadata and two audience precision corrections. O6-R25 through O6-R27
+are now the active Order 6 closure checkpoints.

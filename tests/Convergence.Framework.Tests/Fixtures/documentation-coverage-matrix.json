@@ -209,19 +209,19 @@
     {
       "id": "encounter_orchestration",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R23 re-read the corrected source and confirmed scheduler/economy authority, repeated-defeat periods, zero-survivor draws, cancellation, and terminal evidence against executable tests."
+        "reason": "O6-R24 reopened this audience until normal completion metadata and conditional fault-cleanup wording are corrected and independently reviewed."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R23 confirmed the required composition, asynchronous host path, command ownership, automated terminal mapping, cancellation, and trusted adapter boundaries against current source."
+        "reason": "O6-R24 reopened this audience until hosts receive coherent normal-versus-fault result metadata and the integration guidance is rechecked."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R23 traced lifecycle transactions, scheduling, reconciliation, event ownership, completion, immutable results, and fault containment without finding an unresolved reachable defect."
+        "reason": "O6-R24 reopened this audience because returned event history can include sink-failure evidence that was never published and normal completion text currently crosses the fault-result boundary."
       }
     },
     {

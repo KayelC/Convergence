@@ -501,6 +501,14 @@ locally executable release gate. Order 6 is formally closed. Current
 documentation totals are 30 reviewed, 24 `existing_unreviewed`, 14 missing,
 and 7 `not_applicable`.
 
+The subsequent
+[O6-R24 post-R23 independent audit](../reviews/encounter-orchestration-order-6-post-r23-independent-audit-2026-08-04.md)
+did not use that closure as proof. It found one reachable terminal-result
+contract defect and two documentation precision errors. Order 6 is reopened;
+O6-R25 through O6-R27 govern the correction and fresh owner closure. Its three
+audience entries are `existing_unreviewed`, so the current totals are 27
+reviewed, 27 `existing_unreviewed`, 14 missing, and 7 `not_applicable`.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

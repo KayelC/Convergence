@@ -325,6 +325,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md"))
             .ReplaceLineEndings(" ");
+        string postR23Audit = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "encounter-orchestration-order-6-post-r23-independent-audit-2026-08-04.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -421,12 +427,22 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("## Corrected Invariants Rechecked", finalClosureReview, StringComparison.Ordinal);
         Assert.Contains("## Trusted Boundaries And Residual Risk", finalClosureReview, StringComparison.Ordinal);
         Assert.Contains("Order 6 is formally complete", finalClosureReview, StringComparison.Ordinal);
+        Assert.Contains(
+            "**Result:** one runtime correction and one documentation correction required; Order 6 is reopened",
+            postR23Audit,
+            StringComparison.Ordinal);
+        Assert.Contains("### O6-R24-M1", postR23Audit, StringComparison.Ordinal);
+        Assert.Contains("### O6-R24-L1", postR23Audit, StringComparison.Ordinal);
+        Assert.Contains("## Correction Roadmap", postR23Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R25 | `pending`", postR23Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R26 | `pending`", postR23Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R27 | `pending`", postR23Audit, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
-        Assert.Equal("reviewed", encounter.Mechanics.State);
-        Assert.Equal("reviewed", encounter.DeveloperGuide.State);
-        Assert.Equal("reviewed", encounter.Technical.State);
+        Assert.Equal("existing_unreviewed", encounter.Mechanics.State);
+        Assert.Equal("existing_unreviewed", encounter.DeveloperGuide.State);
+        Assert.Equal("existing_unreviewed", encounter.Technical.State);
     }
 
     [Fact]

@@ -119,7 +119,7 @@
     },
     {
       "id": "encounter_orchestration",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "BattleEncounterRunnerTests",
         "TeamPhaseRoundRobinScheduleTests",
@@ -133,7 +133,9 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "O6-R24 found that normal round-limit and custom completion messages populate FaultMessage; O6-R25 through O6-R27 must restore terminal result-shape and documentation parity."
+      ]
     },
     {
       "id": "battle_knowledge",
