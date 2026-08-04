@@ -2067,6 +2067,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             BattleStatusDepartureReason? explicitDepartureReason = null)
         {
             Synchronize();
+            ReleaseRecoveredDefeatPeriods();
             BattleEncounterParticipant? pendingExplicitActor = explicitDepartureActor;
             BattleStatusDepartureReason? pendingExplicitReason = explicitDepartureReason;
             if (pendingExplicitActor?.State.IsDeployed == true)
@@ -2088,6 +2089,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 if (stateMutated)
                 {
                     Synchronize();
+                    ReleaseRecoveredDefeatPeriods();
                 }
 
                 if (!hadDepartures)
@@ -2126,6 +2128,20 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     return completion;
                 },
                 lastActor?.InstanceId);
+        }
+
+        void ReleaseRecoveredDefeatPeriods()
+        {
+            foreach (BattleEncounterParticipant participant in request.Participants)
+            {
+                if (participant.State.IsDefeated)
+                {
+                    continue;
+                }
+
+                processedDefeatDepartures.Remove(participant.InstanceId);
+                defeatedAnnouncements.Remove(participant.InstanceId);
+            }
         }
 
         void Synchronize()

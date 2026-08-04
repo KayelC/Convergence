@@ -1408,6 +1408,58 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_ReconcilesEachDistinctDefeatPeriodExactlyOnce()
+    {
+        BattleEncounterParticipant first = Participant("repeat_defeat_first", PlayerTeam);
+        BattleEncounterParticipant ally = Participant("repeat_defeat_ally", PlayerTeam);
+        BattleEncounterParticipant firstEnemy = Participant("repeat_defeat_enemy_a", EnemyTeam);
+        BattleEncounterParticipant secondEnemy = Participant("repeat_defeat_enemy_b", EnemyTeam);
+        var lifecycle = new RecordingDepartureLifecycle();
+        int command = 0;
+        var handler = new QueueTurnHandler(_ =>
+        {
+            command++;
+            switch (command)
+            {
+                case 2:
+                    first.State.SetResource(Hp, 0m);
+                    break;
+                case 3:
+                    first.State.SetResource(Hp, 1m);
+                    break;
+                case 5:
+                    first.State.SetResource(Hp, 0m);
+                    break;
+                case 6:
+                    firstEnemy.State.SetResource(Hp, 0m);
+                    secondEnemy.State.SetResource(Hp, 0m);
+                    break;
+            }
+
+            return BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal);
+        });
+
+        BattleEncounterResult result = Run(
+            [first, ally, firstEnemy, secondEnemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new LastTeamStandingCompletionPolicy());
+
+        Assert.Equal(BattleEncounterOutcome.Victory, result.Outcome);
+        Assert.Equal(6, handler.Requests.Count);
+        Assert.Equal(
+            2,
+            lifecycle.Departures.Count(departure =>
+                departure == (first.InstanceId, BattleStatusDepartureReason.Defeat)));
+        Assert.Equal(
+            2,
+            result.Events.Count(battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.ActorDefeated &&
+                battleEvent.ActorId == first.InstanceId));
+    }
+
+    [Fact]
     public void Runner_ReconcilesBattleStartMutationBeforeOpeningARound()
     {
         BattleEncounterParticipant player = Participant("battle_start_player", PlayerTeam);
@@ -3690,6 +3742,55 @@ public sealed class BattleEncounterRunnerTests
             DepartureReason = request.Reason;
             request.Actor.State.SetResource(Hp, 1m);
             throw new InvalidOperationException("Deliberate actor-departure failure.");
+        }
+    }
+
+    private sealed class RecordingDepartureLifecycle :
+        IBattleEncounterLifecyclePort,
+        IBattleEncounterDepartureLifecyclePort
+    {
+        public List<(RuntimeInstanceId ActorId, BattleStatusDepartureReason Reason)> Departures { get; } = [];
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleStartAsync(
+            BattleEncounterLifecycleRequest request,
+            CancellationToken cancellationToken = default) =>
+            new(Array.Empty<BattleEncounterEvent>());
+
+        public ValueTask<BattleTurnStartLifecycleResult> ProcessTurnStartAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default) =>
+            new(new BattleTurnStartLifecycleResult(BattleTurnStartOutcome.CanAct, []));
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessTurnEndAsync(
+            BattleEncounterTurnLifecycleRequest request,
+            CancellationToken cancellationToken = default) =>
+            new(Array.Empty<BattleEncounterEvent>());
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessPhaseEndAsync(
+            BattleEncounterLifecycleRequest request,
+            ContentId teamId,
+            CancellationToken cancellationToken = default) =>
+            new(Array.Empty<BattleEncounterEvent>());
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessRoundEndAsync(
+            BattleEncounterLifecycleRequest request,
+            int roundNumber,
+            CancellationToken cancellationToken = default) =>
+            new(Array.Empty<BattleEncounterEvent>());
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessBattleEndAsync(
+            BattleEncounterLifecycleRequest request,
+            BattleEncounterOutcome outcome,
+            CancellationToken cancellationToken = default) =>
+            new(Array.Empty<BattleEncounterEvent>());
+
+        public ValueTask<IReadOnlyList<BattleEncounterEvent>> ProcessActorDepartureAsync(
+            BattleEncounterDepartureLifecycleRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Departures.Add((request.Actor.InstanceId, request.Reason));
+            return new ValueTask<IReadOnlyList<BattleEncounterEvent>>(
+                Array.Empty<BattleEncounterEvent>());
         }
     }
 
