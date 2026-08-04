@@ -826,6 +826,167 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void Runner_ExecutesUntargetedCustomSkillsWithoutFabricatingATarget()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        ContentId handlerId = Id("untargeted_resource_change");
+        SkillDefinition skill = UntargetedActive(
+            "test.pack:untargeted_resource_skill",
+            new CustomEffectDefinition(handlerId));
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "untargeted_player",
+            "untargeted_player",
+            PlayerTeam,
+            [skill]);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "untargeted_enemy",
+            "untargeted_enemy",
+            EnemyTeam);
+        BattleExecutionServices services = Services(
+            catalog,
+            customEffects:
+            [
+                new KeyValuePair<ContentId, ICustomEffectHandler>(
+                    handlerId,
+                    new ResourceChangingCustomEffectHandler(Id("sp"), -1m))
+            ]);
+        var executor = new SkillExecutor(services);
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy],
+                Battle,
+                NormalBattle,
+                null,
+                1));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
+        Assert.Equal(19m, player.State.GetRequiredResource(Id("sp")).Current);
+        BattleCommandSelectedEventPayload selected = Assert.IsType<BattleCommandSelectedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.CommandSelected).Payload);
+        Assert.Null(selected.TargetId);
+        BattleEffectResolvedEventPayload resolved = Assert.IsType<BattleEffectResolvedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.EffectResolved).Payload);
+        Assert.Null(resolved.Result.TargetId);
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.ResourceChanged &&
+            battleEvent.ActorId == player.State.InstanceId &&
+            battleEvent.TargetId == player.State.InstanceId &&
+            battleEvent.SourceId == skill.Id &&
+            battleEvent.Value == -1m);
+    }
+
+    [Fact]
+    public void Runner_PublishesUntargetedSkillHostActionRequests()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        ContentId handlerId = Id("host_request_handler");
+        ContentId hostActionId = Id("open_host_sequence");
+        SkillDefinition skill = UntargetedActive(
+            "test.pack:host_request_skill",
+            new CustomEffectDefinition(handlerId));
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "host_request_player",
+            "host_request_player",
+            PlayerTeam,
+            [skill]);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "host_request_enemy",
+            "host_request_enemy",
+            EnemyTeam);
+        BattleExecutionServices services = Services(
+            catalog,
+            customEffects:
+            [
+                new KeyValuePair<ContentId, ICustomEffectHandler>(
+                    handlerId,
+                    new HostRequestCustomEffectHandler(hostActionId))
+            ]);
+        var executor = new SkillExecutor(services);
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy],
+                Battle,
+                NormalBattle,
+                null,
+                1));
+
+        Assert.Equal(AutomatedBattleOutcome.Draw, result.Outcome);
+        BattleEncounterEvent hostRequest = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.HostActionRequested);
+        var payload = Assert.IsType<BattleHostActionRequestedEventPayload>(hostRequest.Payload);
+        Assert.Equal(player.State.InstanceId, payload.ActorId);
+        Assert.Equal(hostActionId, payload.ActionId);
+        Assert.Null(payload.TargetId);
+        Assert.True(
+            result.Events.Single(battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.EffectResolved).Sequence <
+            hostRequest.Sequence);
+    }
+
+    [Fact]
+    public void Runner_MapsSuccessfulUntargetedEscapeToTheEncounterOutcome()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        ContentId escapeRuleId = Id("always_escape");
+        SkillDefinition skill = UntargetedActive(
+            "test.pack:escape_skill",
+            new EscapeEffectDefinition(escapeRuleId, 100));
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "escape_skill_player",
+            "escape_skill_player",
+            PlayerTeam,
+            [skill]);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "escape_skill_enemy",
+            "escape_skill_enemy",
+            EnemyTeam);
+        BattleExecutionServices services = Services(
+            catalog,
+            escapeRules:
+            [
+                new KeyValuePair<ContentId, IEscapeRuleHandler>(
+                    escapeRuleId,
+                    new AlwaysEscapeRuleHandler())
+            ]);
+        var executor = new SkillExecutor(services);
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executor,
+            new DeterministicBattleActionSelector(executor),
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy],
+                Battle,
+                NormalBattle,
+                null,
+                5));
+
+        Assert.Equal(AutomatedBattleOutcome.Escape, result.Outcome);
+        BattleCommandSelectedEventPayload selected = Assert.IsType<BattleCommandSelectedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.CommandSelected).Payload);
+        Assert.Null(selected.TargetId);
+        BattleEffectResolvedEventPayload resolved = Assert.IsType<BattleEffectResolvedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.EffectResolved).Payload);
+        Assert.True(resolved.Result.EscapeRequested);
+        Assert.Equal(
+            BattleEncounterOutcome.Escape,
+            Assert.IsType<BattleEndedEventPayload>(
+                Assert.Single(result.Events, battleEvent =>
+                    battleEvent.Kind == BattleEncounterEventKind.BattleEnded).Payload).Outcome);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.RoundEnded);
+    }
+
+    [Fact]
     public async Task RunnerAsync_PreCancelledTokenDoesNotMutateParticipants()
     {
         GameDataCatalog catalog = LoadDemoCatalog();
@@ -2549,7 +2710,9 @@ public sealed class CatalogBattleRuntimeTests
         GameDataCatalog catalog,
         IRandomTargetSelectionPolicy? randomTargetPolicy = null,
         IStatModifierPolicyService? statModifiers = null,
-        IDamageExecutionPolicy? damagePolicy = null) => new(
+        IDamageExecutionPolicy? damagePolicy = null,
+        IEnumerable<KeyValuePair<ContentId, IEscapeRuleHandler>>? escapeRules = null,
+        IEnumerable<KeyValuePair<ContentId, ICustomEffectHandler>>? customEffects = null) => new(
         catalog,
         damagePolicy ?? new TestDamagePolicy(),
         new NeverInstantDeathPolicy(),
@@ -2559,7 +2722,9 @@ public sealed class CatalogBattleRuntimeTests
         randomTargetPolicy ?? new FirstRandomTargetPolicy(),
         new OrderedRuntimeTargetSelectionPolicy(),
         statModifiers ?? TestStatModifierPolicy.CreatePersistent(),
-        new SplitChargePolicy());
+        new SplitChargePolicy(),
+        escapeRuleHandlers: escapeRules,
+        customEffectHandlers: customEffects);
 
     private static IBattleKnowledgeView KnowledgeView(
         params (CatalogBattleActor Target, DamageElement Element, ElementalAffinity Affinity)[] facts) =>
@@ -2751,6 +2916,24 @@ public sealed class CatalogBattleRuntimeTests
                 1,
                 new TurnDurationDefinition(1, Id("owner_turn_end"), true))
         ],
+        availability: new SkillAvailabilityDefinition([Battle]));
+
+    private static SkillDefinition UntargetedActive(
+        string id,
+        params EffectDefinition[] effects) => new(
+        Id(id),
+        id,
+        id,
+        SkillActivation.Active,
+        SkillMenuGroup.Buff,
+        InheritanceGroup.Support,
+        new SkillInheritanceDefinition(true),
+        targeting: new TargetingDefinition(
+            TargetRelation.None,
+            TargetSelection.None,
+            TargetLifeState.Any,
+            true),
+        effects: effects,
         availability: new SkillAvailabilityDefinition([Battle]));
 
     private static void AssertSameBoundaryTickPreservedOneTurnDuration(
@@ -3395,6 +3578,49 @@ public sealed class CatalogBattleRuntimeTests
             RuntimeActorState actor,
             BattleActionCommand command) =>
             BattleActionAuthorizationResult.Authorized;
+    }
+
+    private sealed class AlwaysEscapeRuleHandler : IEscapeRuleHandler
+    {
+        public bool CanEscape(EscapeEffectDefinition effect, EffectExecutionContext context) => true;
+    }
+
+    private sealed class ResourceChangingCustomEffectHandler(
+        ContentId resourceId,
+        decimal delta) : ICustomEffectHandler
+    {
+        public EffectExecutionResult Execute(
+            CustomEffectDefinition effect,
+            EffectExecutionContext context)
+        {
+            context.Actor.AddResource(resourceId, delta);
+            return new EffectExecutionResult(
+                context.EffectIndex,
+                context.Target?.InstanceId,
+                EffectExecutionOutcome.Success,
+                Value: delta)
+            {
+                ResourceChanges =
+                [
+                    new ExecutionResourceChange(
+                        context.Actor.InstanceId,
+                        resourceId,
+                        delta)
+                ]
+            };
+        }
+    }
+
+    private sealed class HostRequestCustomEffectHandler(ContentId hostActionId) : ICustomEffectHandler
+    {
+        public EffectExecutionResult Execute(
+            CustomEffectDefinition effect,
+            EffectExecutionContext context) =>
+            new(
+                context.EffectIndex,
+                context.Target?.InstanceId,
+                EffectExecutionOutcome.Success,
+                HostActionRequestIds: [hostActionId]);
     }
 
     private sealed class NonPumpingSynchronizationContext : SynchronizationContext

@@ -685,7 +685,9 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 new BattleCommandSelectedEventPayload(
                     actor.State.InstanceId,
                     selection.Skill.Id,
-                    selection.SelectedTargetIds.FirstOrDefault()),
+                    selection.SelectedTargetIds.Count == 0
+                        ? null
+                        : selection.SelectedTargetIds[0]),
                 $"{actor.State.InstanceId} selected {selection.Skill.DisplayName}."));
 
             SkillExecutionResult execution = _executor.Execute(
@@ -706,7 +708,10 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             return new ValueTask<BattleEncounterCommandResult>(
                 BattleEncounterCommandResult.Executed(
                     ActionTurnConsumption.FromTurnEconomy(execution.TurnEconomy),
-                    events));
+                    events,
+                    requestedOutcome: execution.EscapeRequested
+                        ? BattleEncounterOutcome.Escape
+                        : null));
         }
 
         private bool TryValidatePreparedSelection(
@@ -916,6 +921,17 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         events.AddRange(BattleStatusLifecycleEventMapper.MapAll(
             execution.LifecycleEvents,
             statusEvent => $"Action lifecycle transition: {statusEvent.Kind}."));
+
+        foreach (ContentId hostActionId in execution.HostActionRequestIds)
+        {
+            events.Add(new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.HostActionRequested,
+                new BattleHostActionRequestedEventPayload(
+                    actor.State.InstanceId,
+                    hostActionId),
+                $"Host action '{hostActionId}' was requested."));
+        }
     }
 
     private static void RecordResourceChange(
