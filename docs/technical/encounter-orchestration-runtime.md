@@ -19,6 +19,11 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
+> **Current review status:** O6-R14 reopened this reference for four bounded
+> runtime corrections: transition-aware repeated defeat, immediate zero-team
+> completion, complete automated skill-result mapping, and scheduled-actor
+> correlation for `ActionExecuted` evidence.
+
 ## Authority Map
 
 | Authority | Owns | Must not own |

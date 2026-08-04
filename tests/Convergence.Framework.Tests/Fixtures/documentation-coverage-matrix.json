@@ -209,19 +209,19 @@
     {
       "id": "encounter_orchestration",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R13L independently reconciled the player-visible scheduler, lifecycle, liveness, cancellation, outcome, and typed-evidence rules with current source."
+        "reason": "O6-R14 reopened review after reproducing repeated-defeat reconciliation and zero-living-team completion defects that conflict with the documented lifecycle and outcome rules."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R13L independently verified the required composition, two liveness policies, event identity boundary, lifecycle authority, automated outcomes, and Godot integration guidance."
+        "reason": "O6-R14 reopened review because automated untargeted and terminal skill results are incomplete and the guide incorrectly described detached completion snapshots as live participants."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R13L independently traced the scheduler protocol, transaction and reconciliation boundaries, structural event and identity authority, terminal mapping, cancellation, and automated composition."
+        "reason": "O6-R14 reopened review after finding encounter-lifetime defeat bookkeeping, incomplete automated result mapping, and missing scheduled-actor correlation for ActionExecuted evidence."
       }
     },
     {

@@ -16,18 +16,23 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
-`encounter_orchestration` is `complete`. The owner-approved
+`encounter_orchestration` is `partial`. The owner-approved
 [Order 6 roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md)
 implemented replaceable team-phase and Agility scheduling, bounded phase and
 encounter progress, bounded post-command actor selection, lifecycle-boundary
 reconciliation, complete structural events, frozen-graph event identity,
 validated completion shapes, certified cancellation paths, and canonical
-asynchronous automated execution. The
+asynchronous automated execution. The earlier
 [final closure review](../reviews/encounter-orchestration-order-6-final-closure-review-2026-07-30.md)
-independently reread current source and all three audience documents, found no
-unresolved realistic reachable defect, and passed the complete local gate.
+records that revision. A later
+[fresh owner-closure audit](../reviews/encounter-orchestration-order-6-fresh-owner-closure-audit-2026-08-04.md)
+reproduced four supported but uncovered paths: defeat after revival is not
+reconciled again, zero surviving teams do not complete immediately, automated
+untargeted and terminal skill results are incomplete, and `ActionExecuted`
+actor evidence is not tied to the scheduled command actor. O6-R15 through
+O6-R20 now govern correction, documentation reconciliation, and fresh closure.
 
 `battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and

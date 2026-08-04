@@ -9,6 +9,10 @@ presentation, and any mapping between framework runtime IDs and scene objects.
 Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
+> **Current review status:** O6-R14 found incomplete automated handling for
+> untargeted and terminal skill results. Use the automated convenience runner
+> only for its currently covered targeted actions until O6-R17 is complete.
+
 ## Required Composition
 
 Create a `BattleEncounterServices` instance with:
@@ -226,8 +230,9 @@ the immutable returned event evidence.
 
 ## Completion Results
 
-`IBattleEncounterCompletionPolicy.Evaluate` receives live participants after
-synchronization, departure cleanup, and defeat announcement. Return:
+`IBattleEncounterCompletionPolicy.Evaluate` receives detached participant
+snapshots captured after synchronization, departure cleanup, and defeat
+announcement. Return:
 
 - `IsComplete = false` with no terminal metadata; or
 - a coherent `BattleEncounterOutcome`.

@@ -60,7 +60,9 @@ automated strategy, familiarity, and persistence boundaries. Its final
 independent closure review remains separate from this documentation checkpoint.
 The Order 6 encounter reference traces current scheduler, lifecycle,
 turn-economy, event, cancellation, completion, and automated-runner source. It
-completed independent source reconciliation in O6-R13L and is now `reviewed`.
+completed independent source reconciliation in O6-R13L, but the later O6-R14
+source audit reproduced four uncovered runtime paths. It is now
+`existing_unreviewed` until O6-R15 through O6-R20 finish.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

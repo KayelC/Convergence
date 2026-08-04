@@ -482,6 +482,18 @@ gate. Order 6 is formally closed. Its mechanics, developer, and technical
 entries are `reviewed`; the matrix now records 30 reviewed, 24
 `existing_unreviewed`, 14 missing, and 7 `not_applicable` entries.
 
+The later
+[O6-R14 fresh owner-closure audit](../reviews/encounter-orchestration-order-6-fresh-owner-closure-audit-2026-08-04.md)
+did not accept that historical closure as current proof. Its source-first trace
+reproduced repeated-defeat reconciliation failure, delayed zero-survivor
+completion, incomplete automated untargeted and terminal skill mapping, and
+missing scheduled-actor correlation for `ActionExecuted` evidence. Order 6 is
+reopened. O6-R15 through O6-R18 correct those four runtime paths, O6-R19
+reconciles all audience and API guidance, and O6-R20 performs a fresh closure
+review. The three audience entries are `existing_unreviewed`; the current
+documentation totals are 27 reviewed, 27 `existing_unreviewed`, 14 missing,
+and 7 `not_applicable`.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

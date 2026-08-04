@@ -121,4 +121,8 @@ O6-R13A through O6-R13K corrected every defect found by the independent
 closure passes. The
 [O6-R13L final closure review](../reviews/encounter-orchestration-order-6-final-closure-review-2026-07-30.md)
 then reconciled current source, tests, and all three audience documents,
-returning `encounter_orchestration` to `complete`.
+returning `encounter_orchestration` to `complete` at that revision. The later
+[O6-R14 fresh owner-closure audit](../reviews/encounter-orchestration-order-6-fresh-owner-closure-audit-2026-08-04.md)
+reproduced four supported but uncovered paths and reopens the capability as
+`partial`. O6-R15 through O6-R20 are now the active correction and closure
+sequence.

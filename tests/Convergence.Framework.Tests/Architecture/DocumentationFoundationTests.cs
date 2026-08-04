@@ -301,11 +301,17 @@ public sealed class DocumentationFoundationTests
         string technical = File.ReadAllText(
             RepositoryPath("docs", "technical", "encounter-orchestration-runtime.md"))
             .ReplaceLineEndings(" ");
-        string closureReview = File.ReadAllText(
+        string previousClosureReview = File.ReadAllText(
             RepositoryPath(
                 "docs",
                 "reviews",
                 "encounter-orchestration-order-6-final-closure-review-2026-07-30.md"))
+            .ReplaceLineEndings(" ");
+        string currentAudit = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "encounter-orchestration-order-6-fresh-owner-closure-audit-2026-08-04.md"))
             .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
@@ -364,15 +370,20 @@ public sealed class DocumentationFoundationTests
             token => Assert.Contains(token, technical, StringComparison.Ordinal));
         Assert.Contains(
             "**Result:** no unresolved realistic reachable defect found",
-            closureReview,
+            previousClosureReview,
             StringComparison.Ordinal);
-        Assert.Contains("## Invariants Rechecked", closureReview, StringComparison.Ordinal);
+        Assert.Contains("## Invariants Rechecked", previousClosureReview, StringComparison.Ordinal);
+        Assert.Contains(
+            "**Result:** corrections required; Order 6 is reopened",
+            currentAudit,
+            StringComparison.Ordinal);
+        Assert.Contains("## Correction Roadmap", currentAudit, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
-        Assert.Equal("reviewed", encounter.Mechanics.State);
-        Assert.Equal("reviewed", encounter.DeveloperGuide.State);
-        Assert.Equal("reviewed", encounter.Technical.State);
+        Assert.Equal("existing_unreviewed", encounter.Mechanics.State);
+        Assert.Equal("existing_unreviewed", encounter.DeveloperGuide.State);
+        Assert.Equal("existing_unreviewed", encounter.Technical.State);
     }
 
     [Fact]

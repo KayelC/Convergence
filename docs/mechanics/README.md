@@ -29,8 +29,9 @@ They remain pending independent source closure because documentation is not
 promoted merely for existing.
 Order 6 now has a dedicated encounter-loop mechanics page covering both
 supplied schedulers, lifecycle ordering, cancellation, outcomes, and canonical
-event evidence. O6-R13L independently rechecked it against current source and
-its coverage entry is now `reviewed`.
+event evidence. O6-R13L rechecked it at that revision; O6-R14 later reproduced
+repeated-defeat and zero-survivor paths that reopen its coverage entry as
+`existing_unreviewed`.
 
 ## Rule Index
 

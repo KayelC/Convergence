@@ -11,6 +11,11 @@ A Godot game may animate a timeline, a console may display menus, and an
 automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
+> **Current review status:** O6-R14 found two uncovered supplied-policy paths:
+> an actor defeated after revival is not reconciled a second time, and zero
+> surviving teams do not complete immediately. The intended rules below remain
+> authoritative; O6-R15 and O6-R16 are required before closure.
+
 ## Rule Ownership
 
 - **Framework rule:** the encounter runner validates participants, executes

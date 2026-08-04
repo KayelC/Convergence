@@ -61,8 +61,9 @@ and automated battles through framework-owned typed evidence rather than
 host-side defense inspection.
 The encounter-orchestration guide records the implemented Order 6 scheduler,
 lifecycle, command, cancellation, completion, and canonical event contracts.
-O6-R13L independently reconciled its composition examples and boundaries with
-current source, so it is now `reviewed`.
+O6-R13L reconciled its composition examples and boundaries at that revision.
+The later O6-R14 source audit reopened it for automated-result and completion
+integration corrections, so it is now `existing_unreviewed`.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).
