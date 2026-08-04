@@ -535,6 +535,14 @@ three audience entries deliberately remain `existing_unreviewed`, and the
 totals remain 27 reviewed, 27 `existing_unreviewed`, 14 missing, and 7
 `not_applicable`, until O6-R32 performs the independent closure review.
 
+The
+[O6-R32 final closure review](../reviews/encounter-orchestration-order-6-r32-final-closure-review-2026-08-04.md)
+independently reread current source and all three audiences, reran both hostile
+paths and the complete release gate, and found no unresolved realistic
+reachable defect. Order 6 is formally closed again. Its entries return to
+`reviewed`, so the current totals are 30 reviewed, 24 `existing_unreviewed`,
+14 missing, and 7 `not_applicable`.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

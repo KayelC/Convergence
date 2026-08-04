@@ -143,4 +143,8 @@ explicit-plus-defeat departure cleanup, reopening the capability as `partial`.
 O6-R29 through O6-R32 govern correction, documentation reconciliation, and a
 fresh closure review.
 O6-R29 and O6-R30 now correct both runtime paths, and O6-R31 reconciles the
-active guidance. O6-R32 remains pending as the independent closure gate.
+active guidance. The
+[O6-R32 final closure review](../reviews/encounter-orchestration-order-6-r32-final-closure-review-2026-08-04.md)
+independently reread current source and documents, found no unresolved
+realistic reachable defect, passed the complete release gate, and restored
+formal closure.

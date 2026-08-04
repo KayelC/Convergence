@@ -9,10 +9,10 @@ presentation, and any mapping between framework runtime IDs and scene objects.
 Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
-> **Current review status:** `existing_unreviewed`. O6-R31 reconciles this
-> guide with the O6-R29 restricted-command identity and O6-R30
-> departure-reason corrections. O6-R32 must independently verify the result
-> before this guide returns to `reviewed`.
+> **Current review status:** `reviewed`. O6-R32 independently traced the
+> corrected restriction identity, handler responsibilities, departure fixed
+> point, cancellation, automated execution, and trusted-host boundaries
+> against current source and executable evidence.
 
 ## Required Composition
 

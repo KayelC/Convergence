@@ -119,7 +119,7 @@
     },
     {
       "id": "encounter_orchestration",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": [
         "BattleEncounterRunnerTests",
         "TeamPhaseRoundRobinScheduleTests",
@@ -133,9 +133,7 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "O6-R29 and O6-R30 corrected restricted-command identity and authoritative departure reasons; O6-R32 independent source and release-gate verification remains pending before formal completion."
-      ]
+      "knownGaps": []
     },
     {
       "id": "battle_knowledge",

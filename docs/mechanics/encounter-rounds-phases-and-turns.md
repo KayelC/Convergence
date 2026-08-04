@@ -11,10 +11,10 @@ A Godot game may animate a timeline, a console may display menus, and an
 automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
-> **Current review status:** `existing_unreviewed`. O6-R31 reconciles this
-> page with the O6-R29 restricted-command identity and O6-R30 departure-reason
-> corrections. O6-R32 must independently verify the result before this page
-> returns to `reviewed`.
+> **Current review status:** `reviewed`. O6-R32 independently traced the
+> corrected restriction identity, handler enactment, departure fixed point,
+> scheduling, economy, cancellation, and terminal-state rules against current
+> source and executable evidence.
 
 ## Rule Ownership
 

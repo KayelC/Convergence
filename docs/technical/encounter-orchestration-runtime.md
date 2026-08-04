@@ -19,10 +19,10 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Current review status:** `existing_unreviewed`. O6-R31 reconciles this
-> reference with the O6-R29 restricted-command identity and O6-R30
-> departure-reason corrections. O6-R32 must independently verify the result
-> before this reference returns to `reviewed`.
+> **Current review status:** `reviewed`. O6-R32 independently traced the
+> corrected command identity, restriction enactment, departure fixed point,
+> lifecycle transactions, scheduling, events, completion, and fault
+> containment against current source and executable evidence.
 
 ## Authority Map
 

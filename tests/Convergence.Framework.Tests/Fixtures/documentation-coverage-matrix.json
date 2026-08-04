@@ -209,19 +209,19 @@
     {
       "id": "encounter_orchestration",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R31 reconciles restriction decision, enactment, canonical command identity, and one explicit departure reason per defeat period; O6-R32 independent verification remains pending."
+        "reason": "O6-R32 independently traced restriction decision, enactment, canonical command identity, one explicit departure reason per defeat period, scheduling, economy, and termination against current source and tests."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R31 documents canonical restricted-command identity, handler enactment duties, and one authoritative departure reason per defeat period; O6-R32 independent verification remains pending."
+        "reason": "O6-R32 independently reconciled canonical restricted-command identity, handler enactment duties, departure-period ownership, automated composition, cancellation, and trusted host boundaries."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R31 reconciles the command transaction and fixed-point departure algorithm with O6-R29 and O6-R30; O6-R32 independent verification remains pending."
+        "reason": "O6-R32 independently traced the command transaction, restriction identity, fixed-point departure algorithm, scheduler, event authority, lifecycle atomicity, completion, and fault containment."
       }
     },
     {
