@@ -313,6 +313,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "encounter-orchestration-order-6-fresh-owner-closure-audit-2026-08-04.md"))
             .ReplaceLineEndings(" ");
+        string currentSourceReview = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "encounter-orchestration-order-6-r20-source-closure-review-2026-08-04.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -388,7 +394,13 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("## Correction Roadmap", currentAudit, StringComparison.Ordinal);
         Assert.Contains("## Correction Progress After This Audit", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O6-R15 through O6-R19 implemented", currentAudit, StringComparison.Ordinal);
-        Assert.Contains("O6-R20 | Pending", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("O6-R20 | Complete; correction required", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("O6-R21 | Pending", currentAudit, StringComparison.Ordinal);
+        Assert.Contains(
+            "**Result:** one bounded correction required",
+            currentSourceReview,
+            StringComparison.Ordinal);
+        Assert.Contains("### O6-R20-M1", currentSourceReview, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");

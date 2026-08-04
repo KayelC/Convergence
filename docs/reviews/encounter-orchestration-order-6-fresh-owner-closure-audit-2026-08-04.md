@@ -11,7 +11,7 @@
 **Result:** corrections required; Order 6 is reopened
 
 **Post-audit correction status:** O6-R15 through O6-R19 implemented; O6-R20
-source-first closure review pending
+found one bounded event-shape defect; O6-R21 through O6-R23 pending
 
 ## Purpose
 
@@ -274,7 +274,10 @@ open while any checkpoint is incomplete.
 | O6-R17 | Complete | Commit `4ab46b44` preserves null untargeted selection, ordered host-action requests, and successful escape as a canonical automated terminal outcome. |
 | O6-R18 | Complete | Commit `4dad93fb` correlates every non-null `ActionExecuted` actor with the scheduled command window while preserving actor-less roster evidence. |
 | O6-R19 | Complete | Mechanics, developer, technical, public API, architecture, gameplay, matrices, roadmaps, and executable documentation assertions now state the corrected contracts. Audience entries intentionally remain `existing_unreviewed`. |
-| O6-R20 | Pending | Requires a fresh source-first re-review, complete local gate, and either formal closure or a new bounded correction roadmap. |
+| O6-R20 | Complete; correction required | The [source-closure review](encounter-orchestration-order-6-r20-source-closure-review-2026-08-04.md) confirmed the prior corrections and found that actorless ordinary `ActionExecuted` evidence can still bypass command ownership. |
+| O6-R21 | Pending | Require an actor for every executed-action kind except a genuine `PartyRosterTransitioned` event. |
+| O6-R22 | Pending | Reconcile event-ownership guidance and maturity evidence after O6-R21. |
+| O6-R23 | Pending | Perform another fresh source-first closure review and complete the local gate. |
 
 ## Verification At This Audit
 
