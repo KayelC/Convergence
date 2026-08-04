@@ -211,17 +211,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R14 reopened review after reproducing repeated-defeat reconciliation and zero-living-team completion defects that conflict with the documented lifecycle and outcome rules."
+        "reason": "O6-R15 and O6-R16 corrected repeated-defeat reconciliation and zero-living-team completion; O6-R19 reconciled the mechanics page, which awaits the O6-R20 source-first review."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R14 reopened review because automated untargeted and terminal skill results are incomplete and the guide incorrectly described detached completion snapshots as live participants."
+        "reason": "O6-R17 corrected automated untargeted and terminal skill mapping and O6-R19 reconciled the detached completion-snapshot guidance; the guide awaits O6-R20 source-first review."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R14 reopened review after finding encounter-lifetime defeat bookkeeping, incomplete automated result mapping, and missing scheduled-actor correlation for ActionExecuted evidence."
+        "reason": "O6-R15 through O6-R18 corrected the four reproduced runtime paths and O6-R19 reconciled the technical trace; the reference awaits O6-R20 source-first review."
       }
     },
     {

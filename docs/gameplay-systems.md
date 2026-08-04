@@ -105,6 +105,11 @@ but cannot mutate the retained economy. Menu Back stays inside the host command
 loop; typed encounter cancellation, operational token cancellation, rejection,
 and faults are distinct contracts.
 
+The supplied last-team-standing completion policy returns an immediate draw
+when no deployed living team remains and victory when exactly one remains.
+Defeat cleanup and announcement occur once per uninterrupted defeated period;
+recovery permits a later defeat to begin a new period.
+
 Events expose immutable typed payloads instead of making debug messages
 authoritative, so Godot, console, and test hosts can map the same event to
 different presentation. `TurnEnded` and `RoundEnded` close committed structural

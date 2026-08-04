@@ -10,6 +10,9 @@
 
 **Result:** corrections required; Order 6 is reopened
 
+**Post-audit correction status:** O6-R15 through O6-R19 implemented; O6-R20
+source-first closure review pending
+
 ## Purpose
 
 This is a new source-first review performed before the project owner formally
@@ -261,6 +264,17 @@ and the runner cannot generically roll back arbitrary external side effects.
 
 Each correction should be isolated in its own green commit. Order 6 must remain
 open while any checkpoint is incomplete.
+
+## Correction Progress After This Audit
+
+| Checkpoint | State | Evidence |
+|---|---|---|
+| O6-R15 | Complete | Commit `dffdbbfd` releases defeat bookkeeping when synchronization observes recovery, then processes a later defeat as a new period. Focused coverage proves two cleanups and two announcements without duplicates during stable defeat. |
+| O6-R16 | Complete | Commit `16302c18` makes zero deployed living teams an immediate draw. Initial and command-time mutual defeat pass under both supplied schedulers. |
+| O6-R17 | Complete | Commit `4ab46b44` preserves null untargeted selection, ordered host-action requests, and successful escape as a canonical automated terminal outcome. |
+| O6-R18 | Complete | Commit `4dad93fb` correlates every non-null `ActionExecuted` actor with the scheduled command window while preserving actor-less roster evidence. |
+| O6-R19 | Complete | Mechanics, developer, technical, public API, architecture, gameplay, matrices, roadmaps, and executable documentation assertions now state the corrected contracts. Audience entries intentionally remain `existing_unreviewed`. |
+| O6-R20 | Pending | Requires a fresh source-first re-review, complete local gate, and either formal closure or a new bounded correction roadmap. |
 
 ## Verification At This Audit
 

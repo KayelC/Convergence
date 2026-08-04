@@ -9,9 +9,9 @@ presentation, and any mapping between framework runtime IDs and scene objects.
 Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
-> **Current review status:** O6-R14 found incomplete automated handling for
-> untargeted and terminal skill results. Use the automated convenience runner
-> only for its currently covered targeted actions until O6-R17 is complete.
+> **Current review status:** O6-R15 through O6-R18 corrected the runtime paths
+> reproduced by O6-R14. This guide now describes those corrected contracts, but
+> remains `existing_unreviewed` until the independent O6-R20 source review.
 
 ## Required Composition
 
@@ -180,7 +180,10 @@ The runner calls lifecycle at these boundaries:
 If the lifecycle also implements `IBattleEncounterDepartureLifecyclePort`, the
 runner dispatches exact defeat, flee, and roster-recall cleanup. Departure is
 reconciled to a bounded fixed point because one cleanup may make another actor
-depart.
+depart. Defeat bookkeeping covers one uninterrupted defeated period: repeated
+reconciliation while the actor remains defeated does not duplicate cleanup or
+announcement, recovery releases that bookkeeping, and a later defeat is
+processed as a new period.
 
 If timed stat modifiers need the currently active lifecycle sequence, implement
 `IBattleEncounterStatModifierBoundarySource`. The runner snapshots those
@@ -218,11 +221,14 @@ auditable source for structural ordering.
 
 Every runtime actor or target ID in a port event must belong to the encounter's
 frozen participant graph, including IDs nested inside effect, damage, resource,
-knowledge, analysis, passive, and lifecycle evidence. Command events must name
-the actor who owns the current command window, and presence-change events must
-report that actor's actual encounter team. Combat-profile source identity is
-provenance rather than a routing target, so a Vessel may still identify a
-non-deployed Hosted Entity as its profile source.
+knowledge, analysis, passive, and lifecycle evidence. Selected, passed,
+rejected, and host-request command evidence must name the actor who owns the
+current command window. A non-null actor on `ActionExecuted` must name that same
+actor; actor-less `ActionExecuted` remains legal for roster-style evidence that
+has no acting participant. Presence-change events must report the participant's
+actual encounter team. Combat-profile source identity is provenance rather than
+a routing target, so a Vessel may still identify a non-deployed Hosted Entity as
+its profile source.
 
 An event-sink exception becomes `EventPublicationFailed`. During fault
 finalization, a second sink failure stops further publication but preserves
@@ -242,8 +248,9 @@ announcement. Return:
 not produce `Faulted`; execution faults are owned by the runner's typed fault
 boundary.
 
-The supplied `LastTeamStandingCompletionPolicy` ends when one deployed, living
-team remains.
+The supplied `LastTeamStandingCompletionPolicy` completes immediately when at
+most one deployed, living team remains: zero produces `Draw`, one produces
+`Victory` for that team, and two or more remains incomplete.
 
 ## Cancellation And Fault Handling
 
@@ -268,6 +275,9 @@ canonical encounter runner. It:
 - executes catalog-authorized skills;
 - shares encounter-only knowledge within each team;
 - applies the configured lifecycle and turn economy;
+- preserves a null command target for valid untargeted skills;
+- publishes every ordered host-action request returned by skill execution;
+- maps a successful skill escape request to the canonical `Escape` outcome;
 - returns the complete `IReadOnlyList<BattleEncounterEvent>`.
 
 Its top-level outcome preserves the canonical result exactly as `Victory`,

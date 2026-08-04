@@ -48,9 +48,17 @@ compatibility conveniences for non-UI callers, not the recommended Godot path.
 `BattleEncounterResult.Participants` contains detached participant snapshots.
 Canonical event kinds always carry matching typed payloads; `DebugText` is
 optional and non-authoritative. Command and lifecycle ports cannot publish
-runner-owned structural kinds. Operational cancellation propagates
+runner-owned structural kinds. Non-null command-evidence actors, including the
+optional actor on `BattleActionExecutedEventPayload`, must match the scheduled
+command-window actor. Actor-less executed roster evidence remains supported.
+Operational cancellation propagates
 `OperationCanceledException`, while `BattleEncounterCommandResult.Cancelled`
 requests a typed encounter outcome.
+
+`LastTeamStandingCompletionPolicy` completes zero deployed living teams as
+`Draw` and one as `Victory`. `AutomatedBattleRunner` preserves null targets for
+untargeted skills, publishes ordered host-action requests, and maps a successful
+skill escape request to the canonical `Escape` outcome.
 
 See [Encounter Orchestration Integration](developer-guide/encounter-orchestration.md)
 and [Encounter Orchestration Runtime](technical/encounter-orchestration-runtime.md).

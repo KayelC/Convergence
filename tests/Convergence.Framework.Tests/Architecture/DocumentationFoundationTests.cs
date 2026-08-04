@@ -324,6 +324,8 @@ public sealed class DocumentationFoundationTests
             "**Typed encounter cancellation:**",
             "**Operational cancellation:**",
             "encounter-wide structural-transition bound",
+            "Defeat cleanup and announcement happen once for each uninterrupted period",
+            "Zero living teams produce an immediate `Draw`",
             "last round that was reached",
             "number of rounds whose round-end lifecycle fully committed"
         ];
@@ -341,6 +343,9 @@ public sealed class DocumentationFoundationTests
             "The runner owns structural events.",
             "BattleEncounterProgressPolicy",
             "frozen participant graph",
+            "actor-less `ActionExecuted` remains legal",
+            "preserves a null command target for valid untargeted skills",
+            "maps a successful skill escape request to the canonical `Escape` outcome",
             "OperationCanceledException",
             "AutomatedBattleRunner.RunAsync",
             "RuntimeInstanceId -> Node"
@@ -359,6 +364,9 @@ public sealed class DocumentationFoundationTests
             "## Canonical Event Authority",
             "BattleEncounterProgressPolicy",
             "frozen participant graph",
+            "one defeat announcement per uninterrupted defeated period",
+            "`ActionExecuted` is checked against that actor",
+            "no deployed living teams produces `Draw`",
             "PhaseEnded` follows committed phase-end lifecycle events; reconciliation then",
             "RoundEnded` follows committed round-end lifecycle events and reconciliation",
             "OperationCanceledException",
@@ -378,6 +386,9 @@ public sealed class DocumentationFoundationTests
             currentAudit,
             StringComparison.Ordinal);
         Assert.Contains("## Correction Roadmap", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("## Correction Progress After This Audit", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("O6-R15 through O6-R19 implemented", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("O6-R20 | Pending", currentAudit, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");

@@ -11,10 +11,9 @@ A Godot game may animate a timeline, a console may display menus, and an
 automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
-> **Current review status:** O6-R14 found two uncovered supplied-policy paths:
-> an actor defeated after revival is not reconciled a second time, and zero
-> surviving teams do not complete immediately. The intended rules below remain
-> authoritative; O6-R15 and O6-R16 are required before closure.
+> **Current review status:** O6-R15 through O6-R18 corrected the four runtime
+> paths reproduced by O6-R14. This page now describes those corrected rules,
+> but remains `existing_unreviewed` until the independent O6-R20 source review.
 
 ## Rule Ownership
 
@@ -126,6 +125,12 @@ The lifecycle policy supplies the restriction. The encounter runner ensures
 that every route uses the same command-result, reconciliation, event, and
 completion boundaries.
 
+Defeat cleanup and announcement happen once for each uninterrupted period in
+which an actor is defeated. Merely observing the same defeated actor at another
+reconciliation boundary does not repeat either operation. If the actor becomes
+living again, that recovery closes the old defeat period; a later defeat starts
+a new period and receives cleanup and announcement again.
+
 ## Back, Cancellation, Rejection, And Faults
 
 These are different outcomes:
@@ -152,9 +157,11 @@ host's assessment loop before it becomes an encounter command result.
 
 ## Completion And Outcomes
 
-The supplied `LastTeamStandingCompletionPolicy` ends when exactly one deployed,
-living team remains. A replacement completion policy may select another rule,
-but its result must be coherent:
+The supplied `LastTeamStandingCompletionPolicy` ends as soon as at most one
+deployed, living team remains. Zero living teams produce an immediate `Draw`;
+one living team produces `Victory` for that team; two or more keep the encounter
+running. A replacement completion policy may select another rule, but its result
+must be coherent:
 
 - `Victory` and `Defeat` require one participating winning team;
 - `Draw`, `Escape`, and `Cancelled` do not carry a winner;

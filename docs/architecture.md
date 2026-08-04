@@ -93,7 +93,9 @@ Every encounter event carries a kind-specific immutable payload for initiative,
 rounds, teams, actors, commands, effects, turn economy, deployment, faults, or
 outcomes. The runner alone emits structural start/end, economy, fault, and
 terminal events. Port events are validated against a command/lifecycle
-allow-list. Status application, refresh, replacement, rejection, duration
+allow-list and the frozen participant graph. Command evidence with an actor is
+correlated to the scheduled command-window owner; actor-less executed roster
+evidence remains valid. Status application, refresh, replacement, rejection, duration
 advancement, expiry, cleanup, and passive effects retain typed transition
 evidence through action and encounter results. Optional debug text is diagnostic
 only; hosts localize and present the typed payload rather than parsing prose.
@@ -111,7 +113,9 @@ explicit policy.
 Encounter lifecycle composition may also implement the optional typed departure
 port. The supplied status lifecycle adapter uses it so canonical flee,
 roster-recall, and newly observed defeat transitions receive their exact
-cleanup cause through one staged participant graph. Manual host-owned
+cleanup cause through one staged participant graph. Recovery closes a defeat
+period, allowing a later defeat to receive cleanup again without duplicating
+work while the actor remains defeated. Manual host-owned
 deployment changes remain explicit host cleanup boundaries.
 
 Status lifetime uses typed actor-turn, action, team-phase, round, and custom

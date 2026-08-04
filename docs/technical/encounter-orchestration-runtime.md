@@ -19,10 +19,10 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Current review status:** O6-R14 reopened this reference for four bounded
-> runtime corrections: transition-aware repeated defeat, immediate zero-team
-> completion, complete automated skill-result mapping, and scheduled-actor
-> correlation for `ActionExecuted` evidence.
+> **Current review status:** O6-R15 through O6-R18 corrected the four bounded
+> runtime paths reproduced by O6-R14. This reference now traces those corrected
+> contracts, but remains `existing_unreviewed` until the independent O6-R20
+> source review.
 
 ## Authority Map
 
@@ -234,12 +234,17 @@ It performs:
 3. synchronization after departure mutation;
 4. another departure scan;
 5. bounded repetition until stable;
-6. exactly-once defeat announcements;
+6. one defeat announcement per uninterrupted defeated period;
 7. completion evaluation.
 
 The pass bound is participant count plus the final stability check. A lifecycle
 that continually creates new departure work faults rather than looping
 forever.
+
+The runner releases defeat-cleanup and announcement membership whenever a
+synchronization boundary observes that participant living again. Stable
+reconciliation while the participant remains defeated is idempotent; a later
+living-to-defeated transition receives both operations again.
 
 The completion policy receives `LastActor` only after that actor committed a
 command. Lifecycle-only completion checks receive no fabricated acting actor.
@@ -283,11 +288,13 @@ the returned batch is added.
 Port evidence is also correlated with the frozen participant graph before
 publication. Top-level and nested actor or target IDs in effect, damage,
 resource, knowledge, analysis, passive, and lifecycle evidence must identify
-encounter participants. Command evidence must identify the scheduled actor, and
-presence evidence must use that participant's encounter team. A combat-profile
-source ID is retained as provenance and is not treated as a deployed routing
-target, allowing a Vessel to derive its profile from a Hosted Entity outside
-the encounter graph.
+encounter participants. Selected, passed, rejected, and host-request evidence
+must identify the scheduled actor. `ActionExecuted` is checked against that
+actor whenever its optional actor ID is present; an absent actor remains valid
+for actor-less roster evidence. Presence evidence must use the participant's
+encounter team. A combat-profile source ID is retained as provenance and is not
+treated as a deployed routing target, allowing a Vessel to derive its profile
+from a Hosted Entity outside the encounter graph.
 
 ## Terminal Shape Validation
 
@@ -305,6 +312,10 @@ Completion and command terminal outputs are validated before acceptance:
 An incomplete completion result must not carry outcome-specific metadata.
 Unknown enums, unknown winners, missing winners, and contradictory metadata
 become typed faults.
+
+The supplied `LastTeamStandingCompletionPolicy` is complete for both terminal
+cardinalities: no deployed living teams produces `Draw`, while exactly one
+produces `Victory` for that team. Two or more living teams remains incomplete.
 
 ## Cancellation And Fault Boundary
 
@@ -355,6 +366,11 @@ flow to the canonical encounter runner so callers receive its typed
 
 The automated result preserves every canonical terminal outcome:
 `Victory`, `Defeat`, `Escape`, `Draw`, `Faulted`, and `Cancelled`.
+
+Its command adapter does not fabricate a target for an untargeted skill. It
+publishes ordered `HostActionRequested` events for every host request returned
+by skill execution and converts a successful escape request into the canonical
+`Escape` command outcome before the encounter advances another boundary.
 
 Its deterministic selector:
 

@@ -28,11 +28,12 @@ asynchronous automated execution. The earlier
 [final closure review](../reviews/encounter-orchestration-order-6-final-closure-review-2026-07-30.md)
 records that revision. A later
 [fresh owner-closure audit](../reviews/encounter-orchestration-order-6-fresh-owner-closure-audit-2026-08-04.md)
-reproduced four supported but uncovered paths: defeat after revival is not
-reconciled again, zero surviving teams do not complete immediately, automated
-untargeted and terminal skill results are incomplete, and `ActionExecuted`
-actor evidence is not tied to the scheduled command actor. O6-R15 through
-O6-R20 now govern correction, documentation reconciliation, and fresh closure.
+reproduced four supported but uncovered paths. O6-R15 through O6-R18 now
+correct transition-aware defeat periods, zero-living-team completion,
+automated untargeted and terminal skill results, and `ActionExecuted` actor
+correlation. O6-R19 reconciles the active audience, API, matrix, and roadmap
+language. The capability remains `partial` only until O6-R20 independently
+re-reads the corrected source and completes the full gate.
 
 `battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and

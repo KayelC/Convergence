@@ -63,7 +63,8 @@ The encounter-orchestration guide records the implemented Order 6 scheduler,
 lifecycle, command, cancellation, completion, and canonical event contracts.
 O6-R13L reconciled its composition examples and boundaries at that revision.
 The later O6-R14 source audit reopened it for automated-result and completion
-integration corrections, so it is now `existing_unreviewed`.
+integration corrections. O6-R15 through O6-R19 have corrected and reconciled
+those contracts, but the guide remains `existing_unreviewed` until O6-R20.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

@@ -488,9 +488,10 @@ did not accept that historical closure as current proof. Its source-first trace
 reproduced repeated-defeat reconciliation failure, delayed zero-survivor
 completion, incomplete automated untargeted and terminal skill mapping, and
 missing scheduled-actor correlation for `ActionExecuted` evidence. Order 6 is
-reopened. O6-R15 through O6-R18 correct those four runtime paths, O6-R19
-reconciles all audience and API guidance, and O6-R20 performs a fresh closure
-review. The three audience entries are `existing_unreviewed`; the current
+reopened. O6-R15 through O6-R18 have corrected those four runtime paths and
+O6-R19 has reconciled all audience, API, matrix, and roadmap guidance. O6-R20
+remains the fresh source-first closure review. The three audience entries are
+`existing_unreviewed`; the current
 documentation totals are 27 reviewed, 27 `existing_unreviewed`, 14 missing,
 and 7 `not_applicable`.
 

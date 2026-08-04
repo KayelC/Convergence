@@ -133,10 +133,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Defeat reconciliation and announcement are not transition-aware after an actor is revived and defeated again.",
-        "The supplied last-team-standing policy delays the zero-living-team draw until the round limit.",
-        "Automated skill execution does not completely preserve untargeted, escape, and host-action-request results.",
-        "ActionExecuted evidence with an actor ID is not correlated with the scheduled command actor."
+        "The O6-R15 through O6-R19 corrections await the required O6-R20 source-first closure review before this capability can return to complete."
       ]
     },
     {

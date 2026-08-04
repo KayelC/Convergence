@@ -186,9 +186,9 @@ found no unresolved realistic reachable defect and promoted all three entries
 to `reviewed` at that revision. The later
 [O6-R14 fresh owner-closure audit](../reviews/encounter-orchestration-order-6-fresh-owner-closure-audit-2026-08-04.md)
 reproduced four supported paths that conflict with the current audience claims.
-All three entries therefore return to `existing_unreviewed` until O6-R15
-through O6-R20 correct the implementation, reconcile the pages, and complete a
-fresh source review.
+O6-R15 through O6-R18 corrected those paths and O6-R19 reconciled all three
+pages with the corrected contracts. The entries remain `existing_unreviewed`
+until O6-R20 independently re-reads current source and completes the full gate.
 
 The documentation matrix currently records 75 audience entries: 27 reviewed,
 27 existing_unreviewed, 14 missing, and 7 not_applicable.
