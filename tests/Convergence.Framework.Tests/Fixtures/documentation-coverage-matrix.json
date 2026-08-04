@@ -209,19 +209,19 @@
     {
       "id": "encounter_orchestration",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R27 independently traced the corrected terminal shape, completion authority, lifecycle cleanup, scheduling, and event history against current source."
+        "reason": "O6-R28 reopened the audience review after reproducing limited-action identity bypass and duplicate departure cleanup; restriction enactment order also needs precise owner wording."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R27 independently confirmed host composition, result metadata, event-delivery acknowledgement, cancellation, and trusted mutation-port guidance."
+        "reason": "O6-R28 requires corrected integration guidance for canonical restricted-command identity and one authoritative departure reason per defeat period."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R27 independently traced scheduler, lifecycle, economy, reconciliation, event, terminal-result, and automated-runner authority against current source."
+        "reason": "O6-R28 disproved complete limited-action authorization and explicit-departure fixed-point claims; the technical state machine needs reconciliation after runtime correction."
       }
     },
     {

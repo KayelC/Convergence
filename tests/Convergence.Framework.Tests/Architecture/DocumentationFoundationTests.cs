@@ -340,6 +340,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "encounter-orchestration-order-6-r27-final-closure-review-2026-08-04.md"))
             .ReplaceLineEndings(" ");
+        string postR27Audit = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "encounter-orchestration-order-6-post-r27-independent-audit-2026-08-04.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -477,12 +483,28 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("## Corrected Invariants Rechecked", r27ClosureReview, StringComparison.Ordinal);
         Assert.Contains("## Trusted Boundaries And Residual Risk", r27ClosureReview, StringComparison.Ordinal);
         Assert.Contains("Order 6 is formally complete", r27ClosureReview, StringComparison.Ordinal);
+        Assert.Contains(
+            "**Result:** two realistic reachable runtime corrections and one documentation correction are required; Order 6 is reopened",
+            postR27Audit,
+            StringComparison.Ordinal);
+        Assert.Contains("### O6-R28-M1", postR27Audit, StringComparison.Ordinal);
+        Assert.Contains("### O6-R28-M2", postR27Audit, StringComparison.Ordinal);
+        Assert.Contains("### O6-R28-L1", postR27Audit, StringComparison.Ordinal);
+        Assert.Contains("## Correction Roadmap", postR27Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R29", postR27Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R32", postR27Audit, StringComparison.Ordinal);
+        Assert.Contains("**Order 6 is not ready to close.**", postR27Audit, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
-        Assert.Equal("reviewed", encounter.Mechanics.State);
-        Assert.Equal("reviewed", encounter.DeveloperGuide.State);
-        Assert.Equal("reviewed", encounter.Technical.State);
+        Assert.Equal("existing_unreviewed", encounter.Mechanics.State);
+        Assert.Equal("existing_unreviewed", encounter.DeveloperGuide.State);
+        Assert.Equal("existing_unreviewed", encounter.Technical.State);
+
+        FrameworkCapability encounterCapability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
+            capability => capability.Id == "encounter_orchestration");
+        Assert.Equal("partial", encounterCapability.ImplementationState);
+        Assert.Equal(2, encounterCapability.KnownGaps.Count);
     }
 
     [Fact]
@@ -603,5 +625,8 @@ public sealed class DocumentationFoundationTests
     private sealed record FrameworkCapabilityMatrix(
         IReadOnlyList<FrameworkCapability> Capabilities);
 
-    private sealed record FrameworkCapability(string Id);
+    private sealed record FrameworkCapability(
+        string Id,
+        string ImplementationState,
+        IReadOnlyList<string> KnownGaps);
 }

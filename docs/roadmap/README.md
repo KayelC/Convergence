@@ -136,4 +136,9 @@ reopened the capability as `partial` for contradictory normal-versus-fault
 result metadata and two audience precision corrections. O6-R25 through O6-R27
 became the final Order 6 closure checkpoints. O6-R25 and O6-R26 corrected the
 runtime result and audience contracts; O6-R27 independently re-read current
-source and restored formal closure.
+source and restored formal closure. The subsequent
+[O6-R28 post-R27 independent audit](../reviews/encounter-orchestration-order-6-post-r27-independent-audit-2026-08-04.md)
+reproduced a limited-action identity bypass and a duplicate
+explicit-plus-defeat departure cleanup, reopening the capability as `partial`.
+O6-R29 through O6-R32 govern correction, documentation reconciliation, and a
+fresh closure review.

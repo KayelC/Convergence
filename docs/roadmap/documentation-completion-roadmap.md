@@ -517,6 +517,17 @@ defect. Order 6 is formally closed again. Its three entries are `reviewed`, so
 the current totals are 30 reviewed, 24 `existing_unreviewed`, 14 missing, and
 7 `not_applicable`.
 
+The subsequent
+[O6-R28 post-R27 independent audit](../reviews/encounter-orchestration-order-6-post-r27-independent-audit-2026-08-04.md)
+reproduced two reachable runtime defects that the existing green suite did not
+cover: detached action-label authorization can bypass a limited-action
+restriction, and explicit flee or recall cleanup can be followed by a second
+Defeat cleanup for the same uninterrupted defeat period. It also found one
+restriction-enactment wording ambiguity across the encounter and lifecycle
+guides. Order 6 is reopened under O6-R29 through O6-R32. Its three audience
+entries return to `existing_unreviewed`, so the current totals are 27 reviewed,
+27 `existing_unreviewed`, 14 missing, and 7 `not_applicable`.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
-`encounter_orchestration` is `complete`. Its scheduler, lifecycle,
+`encounter_orchestration` is `partial`. Its scheduler, lifecycle,
 turn-economy, event, cancellation, and automated execution foundations remain
 implemented. The owner-approved
 [Order 6 roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md)
@@ -55,6 +55,15 @@ public API contracts. The
 independently traced current source and documentation, corrected one
 completion-policy wording ambiguity, and found no unresolved realistic
 reachable runtime defect.
+
+The subsequent
+[O6-R28 post-R27 independent audit](../reviews/encounter-orchestration-order-6-post-r27-independent-audit-2026-08-04.md)
+reopened the capability after reproducing two supported contract defects. The
+supplied automated restriction resolver can authorize a typed Guard, Pass,
+Analyze, or Escape command from a different allowed action label, and an
+explicitly fled or recalled actor that is also defeated can receive a second
+Defeat cleanup in the same defeat period. O6-R29 through O6-R32 govern the
+runtime corrections, documentation reconciliation, and fresh closure review.
 
 `battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and

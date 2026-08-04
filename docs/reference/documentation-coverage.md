@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 30 reviewed,
-24 existing_unreviewed, 14 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 27 reviewed,
+27 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -204,13 +204,22 @@ O6-R25 and O6-R26 completed the implementation and audience corrections. The
 independently traced current source and all audiences, corrected the remaining
 completion-policy ambiguity, and restored the three entries to `reviewed`.
 
-The documentation matrix currently records 75 audience entries: 30 reviewed,
-24 existing_unreviewed, 14 missing, and 7 not_applicable.
+The subsequent
+[O6-R28 post-R27 independent audit](../reviews/encounter-orchestration-order-6-post-r27-independent-audit-2026-08-04.md)
+reproduced a limited-action identity bypass and duplicate
+explicit-plus-defeat departure cleanup. It also found that restriction
+decision, enactment, and reconciliation ownership needs clearer audience
+wording. The three encounter entries therefore return to
+`existing_unreviewed` until O6-R29 through O6-R32 correct and independently
+recheck those contracts.
+
+The documentation matrix currently records 75 audience entries: 27 reviewed,
+27 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 30 |
-| `existing_unreviewed` | 24 |
+| `reviewed` | 27 |
+| `existing_unreviewed` | 27 |
 | `missing` | 14 |
 | `not_applicable` | 7 |
 

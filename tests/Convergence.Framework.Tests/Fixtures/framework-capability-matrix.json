@@ -119,7 +119,7 @@
     },
     {
       "id": "encounter_orchestration",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "BattleEncounterRunnerTests",
         "TeamPhaseRoundRobinScheduleTests",
@@ -133,7 +133,10 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "The supplied automated restriction resolver can authorize Guard, Pass, Analyze, or Escape from a detached action ID that does not identify the typed command.",
+        "An explicitly fled or recalled actor that is also defeated can receive a second Defeat departure cleanup during the same uninterrupted defeat period."
+      ]
     },
     {
       "id": "battle_knowledge",
