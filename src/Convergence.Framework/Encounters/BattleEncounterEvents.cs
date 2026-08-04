@@ -679,6 +679,13 @@ public sealed record BattleEncounterEvent
                 {
                     throw new ArgumentOutOfRangeException(nameof(executed.ActionEventKind));
                 }
+                if (executed.ActorId is null &&
+                    executed.ActionEventKind != BattleActionEventKind.PartyRosterTransitioned)
+                {
+                    throw new ArgumentException(
+                        $"Executed action event '{executed.ActionEventKind}' requires an actor ID.",
+                        nameof(executed.ActorId));
+                }
                 RequireOptionalActorId(executed.ActorId, nameof(executed.ActorId));
                 RequireOptionalActorId(executed.TargetId, nameof(executed.TargetId));
                 RequireOptionalContentId(executed.SourceId, nameof(executed.SourceId));

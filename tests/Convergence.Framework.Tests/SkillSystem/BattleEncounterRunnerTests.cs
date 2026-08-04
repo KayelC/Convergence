@@ -2110,7 +2110,62 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
-    public void Runner_AcceptsActorlessExecutedActionEvidence()
+    public void ExecutedActionPayload_RequiresAnActorExceptForRosterTransitions()
+    {
+        ArgumentException failure = Assert.Throws<ArgumentException>(() =>
+            new BattleEncounterEvent(
+                0,
+                BattleEncounterEventKind.ActionExecuted,
+                new BattleActionExecutedEventPayload(
+                    BattleActionEventKind.Executed,
+                    SourceId: Id("actorless_ordinary_action"))));
+
+        Assert.Equal("ActorId", failure.ParamName);
+        Assert.Contains("requires an actor ID", failure.Message);
+
+        var rosterEvent = new BattleEncounterEvent(
+            0,
+            BattleEncounterEventKind.ActionExecuted,
+            new BattleActionExecutedEventPayload(
+                BattleActionEventKind.PartyRosterTransitioned,
+                SourceId: Id("actorless_roster_action")));
+
+        Assert.Null(rosterEvent.ActorId);
+    }
+
+    [Fact]
+    public void Runner_FaultsWhenTurnHandlerReturnsActorlessOrdinaryActionEvidence()
+    {
+        BattleEncounterParticipant player =
+            Participant("actorless_ordinary_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("actorless_ordinary_enemy", EnemyTeam);
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                [new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.ActionExecuted,
+                    new BattleActionExecutedEventPayload(
+                        BattleActionEventKind.Executed,
+                        SourceId: Id("actorless_ordinary_action")))])),
+            new CompleteAfterTurnsPolicy(99));
+
+        AssertPortFault(
+            result,
+            BattleEncounterFaultCode.TurnHandlerExecutionFailed,
+            "turn-handler");
+        Assert.Contains("requires an actor ID", result.FaultMessage);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.ActionExecuted);
+    }
+
+    [Fact]
+    public void Runner_AcceptsActorlessRosterTransitionEvidence()
     {
         BattleEncounterParticipant player =
             Participant("actorless_executed_player", PlayerTeam);
