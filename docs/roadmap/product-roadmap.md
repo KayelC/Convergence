@@ -34,8 +34,9 @@ The
 [O6-R24 post-R23 independent audit](../reviews/encounter-orchestration-order-6-post-r23-independent-audit-2026-08-04.md)
 then re-read current source and found a bounded public-result inconsistency:
 normal completion text reaches the fault-only result property. The implemented
-encounter architecture remains intact, but O6-R25 through O6-R27 are required
-before formal closure is restored.
+encounter architecture remains intact. O6-R25 has corrected and tested the
+runtime result shape, and O6-R26 reconciles the audience and public API
+guidance. O6-R27 independent closure remains required.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

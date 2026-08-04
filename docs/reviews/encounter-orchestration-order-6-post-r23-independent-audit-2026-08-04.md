@@ -182,12 +182,20 @@ These are deliberate boundaries, not findings:
 | Checkpoint | State | Required work |
 |---|---|---|
 | O6-R24 | `complete` | Perform this source-first code and documentation audit and record reproducible evidence. |
-| O6-R25 | `pending` | Separate ordinary completion text from fault metadata and add canonical plus automated result-shape regressions. |
-| O6-R26 | `pending` | Correct event-publication and conditional battle-end-cleanup wording across all three audiences and executable documentation evidence. |
+| O6-R25 | `complete` | Separate ordinary completion text from fault metadata and add canonical plus automated result-shape regressions. |
+| O6-R26 | `complete` | Correct event-publication and conditional battle-end-cleanup wording across all three audiences and executable documentation evidence. |
 | O6-R27 | `pending` | Re-read corrected source and documents independently, run the complete gate, and obtain owner confirmation before formal closure. |
 
 Each correction should remain an isolated green commit. Findings become
 verified only after O6-R27.
+
+## Correction Progress After This Audit
+
+| Checkpoint | Evidence |
+|---|---|
+| O6-R25 | Commit `ea1fb240` keeps normal completion text on `BattleEnded.DebugText`, enforces winner and fault-field result shapes, and adds canonical plus automated round-limit and custom-message regressions. The checkpoint passed 276 focused tests, 1,865 full-suite tests, a zero-warning strict build, and formatting verification. |
+| O6-R26 | The three audience documents now distinguish canonical result history from successful sink delivery, condition fault cleanup on accepted battle start, and state that fault fields are fault-only. Public API guidance and executable documentation evidence carry the same contract. |
+| O6-R27 | Pending independent source and documentation closure review. |
 
 ## Verification At This Audit
 

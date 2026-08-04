@@ -134,7 +134,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "O6-R24 found that normal round-limit and custom completion messages populate FaultMessage; O6-R25 through O6-R27 must restore terminal result-shape and documentation parity."
+        "O6-R25 and O6-R26 corrected terminal result shape and audience wording; O6-R27 independent source and documentation closure remains pending."
       ]
     },
     {

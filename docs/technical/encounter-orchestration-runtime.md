@@ -258,8 +258,11 @@ command. Lifecycle-only completion checks receive no fabricated acting actor.
 - the matching immutable `BattleEncounterEventPayload`;
 - optional non-authoritative debug text.
 
-The result retains the exact canonical events published to the sink. The
-automated runner no longer translates or resequences them.
+The result retains the complete canonical sequenced event history. During
+ordinary successful publication, the sink receives that same history in the
+same order. If the sink fails, fault finalization may append result-only
+terminal evidence rather than recursively publishing through the failed sink.
+The automated runner does not translate or resequence either form.
 
 ### Runner-Owned Structural Order
 
@@ -349,6 +352,12 @@ without recursively trusting the failed sink.
 `BattleEncounterResult` does not expose live participants. It captures
 `BattleEncounterParticipantSnapshot` values containing detached
 `RuntimeActorSnapshot` state and immutable event collections.
+
+Its terminal metadata is shape-checked at construction. `Victory` and `Defeat`
+require one winner; the other outcomes reject a winner. Every non-fault outcome
+has null `FaultMessage` and `FaultCode`. `Faulted` requires a defined fault code
+and nonblank fault message. A normal completion policy message survives only as
+optional `BattleEnded.DebugText`.
 
 Callers that own live actors already possess those actors through the request.
 Consumers of the result cannot mutate completed encounter state by retaining a

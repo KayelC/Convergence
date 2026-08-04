@@ -119,6 +119,13 @@ extension; the runner invokes it for committed flee, roster recall, and newly
 observed defeat without forcing lifecycle implementations that do not own
 status cleanup to fabricate behavior.
 
+`BattleEncounterResult` enforces one terminal shape. `Victory` and `Defeat`
+require a winner; other outcomes reject one. `FaultMessage` and `FaultCode` are
+present together only for `Faulted`. A normal `BattleEncounterCompletion.Message`
+is retained solely as optional, non-authoritative `BattleEnded` debug text.
+The result owns the complete sequenced event history; a sink failure can leave
+terminal evidence in that result which the failed sink did not receive.
+
 `RuntimeSaveValidationCode` appends `MissingPassiveSkillState` and
 `ConflictingActorAilmentExclusivityGroup`. These guarded `0.1.0` diagnostics
 reject incomplete passive enabled-state coverage and mutually exclusive active

@@ -114,7 +114,9 @@ Events expose immutable typed payloads instead of making debug messages
 authoritative, so Godot, console, and test hosts can map the same event to
 different presentation. `TurnEnded` and `RoundEnded` close committed structural
 boundaries, while `BattleEnded` reports both the final round reached and fully
-completed round count. Strategy ports allow deterministic or host-defined
+completed round count. Normal completion detail remains optional event debug
+text; `FaultMessage` and `FaultCode` appear only on faulted results. Strategy
+ports allow deterministic or host-defined
 action selection. See
 [Encounter Rounds, Phases, And Turns](mechanics/encounter-rounds-phases-and-turns.md)
 and its [integration guide](developer-guide/encounter-orchestration.md).

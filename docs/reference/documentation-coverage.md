@@ -199,6 +199,8 @@ found that normal completion text can populate fault-only result metadata and
 that two audience statements overstate event publication and fault cleanup.
 The three encounter entries therefore return to `existing_unreviewed` until
 O6-R25 through O6-R27 correct and independently recheck those contracts.
+O6-R25 and O6-R26 have completed the implementation and audience corrections;
+O6-R27 independent closure remains pending, so the entries do not promote yet.
 
 The documentation matrix currently records 75 audience entries: 27 reviewed,
 27 existing_unreviewed, 14 missing, and 7 not_applicable.

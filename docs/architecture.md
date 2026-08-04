@@ -100,6 +100,10 @@ application, refresh, replacement, rejection, duration
 advancement, expiry, cleanup, and passive effects retain typed transition
 evidence through action and encounter results. Optional debug text is diagnostic
 only; hosts localize and present the typed payload rather than parsing prose.
+Normal encounter results never carry fault fields; normal completion detail is
+optional `BattleEnded` debug text. The result owns the complete event history,
+which may include result-only terminal evidence after the event sink itself
+fails.
 Hosts remain responsible for selecting when an encounter begins and how
 resulting events are presented. See
 [Encounter Orchestration Integration](developer-guide/encounter-orchestration.md)

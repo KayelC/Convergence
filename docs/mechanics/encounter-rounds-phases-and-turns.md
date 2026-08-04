@@ -150,8 +150,10 @@ These are different outcomes:
   contract. The encounter ends as a typed `CommandRejected` fault rather than
   spending a turn or silently asking the player again.
 - **Port fault:** an injected service throws or returns an invalid transition.
-  The runner contains it as a stable `BattleEncounterFaultCode`, attempts
-  battle-end cleanup once, and reports a faulted result.
+  The runner contains it as a stable `BattleEncounterFaultCode`. The runner
+  attempts battle-end cleanup once only when battle start had already succeeded;
+  a failure before battle start has no accepted encounter lifecycle to clean
+  up. Either path reports a faulted result.
 
 An ordinary unaffordable or invalid menu option should be rejected during the
 host's assessment loop before it becomes an encounter command result.
@@ -168,6 +170,11 @@ must be coherent:
 - `Draw`, `Escape`, and `Cancelled` do not carry a winner;
 - `Faulted` carries a stable fault code rather than a winner;
 - incomplete evaluations cannot carry terminal metadata.
+
+Normal terminal outcomes always have null `FaultMessage` and `FaultCode`
+fields. A completion policy's optional message is diagnostic text on the
+`BattleEnded` event, not fault evidence. Only `Faulted` returns both a stable
+fault code and a nonblank fault message.
 
 The configured round limit produces a draw after that many fully completed
 rounds. The final result distinguishes:
@@ -197,6 +204,11 @@ rejections, and host-mediated requests.
 
 Typed payloads are authoritative. Optional debug text is only useful for logs;
 a UI must not parse it to decide mechanics.
+
+The result owns the complete canonical sequenced history. When publication is
+successful, the sink observes that same order. If the sink itself fails,
+terminal fault evidence may be present only in the returned result because the
+runner will not recursively trust the failed sink.
 
 The runner verifies that command, effect, status, resource, knowledge, and
 presence evidence refers to participants in this encounter. A command cannot

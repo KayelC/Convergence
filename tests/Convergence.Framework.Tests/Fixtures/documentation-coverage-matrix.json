@@ -211,17 +211,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R24 reopened this audience until normal completion metadata and conditional fault-cleanup wording are corrected and independently reviewed."
+        "reason": "O6-R25 and O6-R26 corrected normal completion metadata and conditional fault-cleanup wording; O6-R27 independent review remains pending."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R24 reopened this audience until hosts receive coherent normal-versus-fault result metadata and the integration guidance is rechecked."
+        "reason": "O6-R25 and O6-R26 give hosts coherent normal-versus-fault result metadata and delivery guidance; O6-R27 independent review remains pending."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R24 reopened this audience because returned event history can include sink-failure evidence that was never published and normal completion text currently crosses the fault-result boundary."
+        "reason": "O6-R25 and O6-R26 separate fault metadata and document result-only sink-failure evidence; O6-R27 independent review remains pending."
       }
     },
     {

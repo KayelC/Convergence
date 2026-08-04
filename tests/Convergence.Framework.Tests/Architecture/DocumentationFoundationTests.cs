@@ -301,6 +301,9 @@ public sealed class DocumentationFoundationTests
         string technical = File.ReadAllText(
             RepositoryPath("docs", "technical", "encounter-orchestration-runtime.md"))
             .ReplaceLineEndings(" ");
+        string publicApi = File.ReadAllText(
+            RepositoryPath("docs", "public-api-contract.md"))
+            .ReplaceLineEndings(" ");
         string previousClosureReview = File.ReadAllText(
             RepositoryPath(
                 "docs",
@@ -341,9 +344,12 @@ public sealed class DocumentationFoundationTests
             "**Menu Back:**",
             "**Typed encounter cancellation:**",
             "**Operational cancellation:**",
+            "only when battle start had already succeeded",
             "encounter-wide structural-transition bound",
             "Defeat cleanup and announcement happen once for each uninterrupted period",
             "Zero living teams produce an immediate `Draw`",
+            "Normal terminal outcomes always have null `FaultMessage` and `FaultCode`",
+            "result owns the complete canonical sequenced history",
             "last round that was reached",
             "number of rounds whose round-end lifecycle fully committed"
         ];
@@ -365,6 +371,9 @@ public sealed class DocumentationFoundationTests
             "Actorless ordinary-action evidence is rejected",
             "preserves a null command target for valid untargeted skills",
             "maps a successful skill escape request to the canonical `Escape` outcome",
+            "Every normal result has null `FaultMessage` and `FaultCode`",
+            "track the sequence numbers it actually consumed",
+            "only when battle start had already succeeded",
             "OperationCanceledException",
             "AutomatedBattleRunner.RunAsync",
             "RuntimeInstanceId -> Node"
@@ -387,6 +396,9 @@ public sealed class DocumentationFoundationTests
             "`ActionExecuted` must also identify that actor",
             "`PartyRosterTransitioned`",
             "no deployed living teams produces `Draw`",
+            "complete canonical sequenced event history",
+            "result-only terminal evidence",
+            "Every non-fault outcome has null `FaultMessage` and `FaultCode`",
             "PhaseEnded` follows committed phase-end lifecycle events; reconciliation then",
             "RoundEnded` follows committed round-end lifecycle events and reconciliation",
             "OperationCanceledException",
@@ -396,6 +408,14 @@ public sealed class DocumentationFoundationTests
         Assert.All(
             technicalTokens,
             token => Assert.Contains(token, technical, StringComparison.Ordinal));
+        Assert.Contains(
+            "`FaultMessage` and `FaultCode` are present together only for `Faulted`",
+            publicApi,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "sink failure can leave terminal evidence in that result",
+            publicApi,
+            StringComparison.Ordinal);
         Assert.Contains(
             "**Result:** no unresolved realistic reachable defect found",
             previousClosureReview,
@@ -434,8 +454,8 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("### O6-R24-M1", postR23Audit, StringComparison.Ordinal);
         Assert.Contains("### O6-R24-L1", postR23Audit, StringComparison.Ordinal);
         Assert.Contains("## Correction Roadmap", postR23Audit, StringComparison.Ordinal);
-        Assert.Contains("O6-R25 | `pending`", postR23Audit, StringComparison.Ordinal);
-        Assert.Contains("O6-R26 | `pending`", postR23Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R25 | `complete`", postR23Audit, StringComparison.Ordinal);
+        Assert.Contains("O6-R26 | `complete`", postR23Audit, StringComparison.Ordinal);
         Assert.Contains("O6-R27 | `pending`", postR23Audit, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(

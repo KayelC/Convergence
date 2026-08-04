@@ -235,7 +235,12 @@ its profile source.
 
 An event-sink exception becomes `EventPublicationFailed`. During fault
 finalization, a second sink failure stops further publication but preserves
-the immutable returned event evidence.
+the immutable returned event evidence. The result therefore owns the canonical
+sequenced history; it is identical to successful sink delivery during ordinary
+operation, but sink-failure finalization may append evidence that the failed
+sink never received. A host that needs delivery acknowledgement must track the
+sequence numbers it actually consumed rather than infer delivery from the
+returned result.
 
 ## Completion Results
 
@@ -251,6 +256,12 @@ announcement. Return:
 not produce `Faulted`; execution faults are owned by the runner's typed fault
 boundary.
 
+`BattleEncounterCompletion.Message` is optional non-authoritative debug text
+for the terminal `BattleEnded` event. It is not copied into
+`BattleEncounterResult.FaultMessage`. Every normal result has null
+`FaultMessage` and `FaultCode`; a `Faulted` result has both. The automated
+runner preserves the same distinction.
+
 The supplied `LastTeamStandingCompletionPolicy` completes immediately when at
 most one deployed, living team remains: zero produces `Draw`, one produces
 `Victory` for that team, and two or more remains incomplete.
@@ -265,6 +276,10 @@ commits.
 - A typed command cancellation returns a normal `Cancelled` encounter result.
 - Port exceptions return a `Faulted` result with `BattleEncounterFaultCode`.
 - Command rejection returns `CommandRejected` and consumes no turn.
+
+Fault finalization attempts battle-end lifecycle exactly once only when battle
+start had already succeeded. A pre-start fault has no accepted battle lifecycle
+to clean up.
 
 Do not catch operational cancellation and convert it to a gameplay outcome
 unless the game explicitly owns that higher-level policy.

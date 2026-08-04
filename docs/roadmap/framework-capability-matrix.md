@@ -48,9 +48,10 @@ The later
 [O6-R24 post-R23 independent audit](../reviews/encounter-orchestration-order-6-post-r23-independent-audit-2026-08-04.md)
 reopened the capability after reproducing one normal terminal-result contract
 defect: round-limit and custom completion text can populate `FaultMessage`
-without a fault. O6-R25 through O6-R27 must correct that result shape, reconcile
-two audience statements, and re-run source-first closure before the capability
-returns to `complete`.
+without a fault. O6-R25 now keeps normal text on `BattleEnded.DebugText` and
+enforces fault-only result metadata. O6-R26 reconciles the three audience and
+public API contracts. O6-R27 must still re-run source-first closure before the
+capability returns to `complete`.
 
 `battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and

@@ -67,7 +67,8 @@ independently re-read the corrected source and returned the reference to
 `reviewed`. O6-R24 later reopened it as `existing_unreviewed` because returned
 fault-finalization evidence is not always identical to successful sink
 publication and normal completion text currently crosses the fault-result
-boundary.
+boundary. O6-R25 and O6-R26 have corrected both contracts; O6-R27 remains the
+independent source and documentation closure gate.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

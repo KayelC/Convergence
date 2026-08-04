@@ -68,6 +68,7 @@ corrected and reconciled those contracts. O6-R23 independently re-read the
 corrected source and returned the guide to `reviewed`. O6-R24 later reopened
 the guide as `existing_unreviewed` until normal completion and fault metadata
 are separated and the corrected host contract is independently checked.
+O6-R25 and O6-R26 have completed those corrections; O6-R27 remains pending.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

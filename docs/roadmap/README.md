@@ -134,4 +134,5 @@ unresolved realistic reachable defect, and returned the capability to
 [O6-R24 post-R23 independent audit](../reviews/encounter-orchestration-order-6-post-r23-independent-audit-2026-08-04.md)
 reopened the capability as `partial` for contradictory normal-versus-fault
 result metadata and two audience precision corrections. O6-R25 through O6-R27
-are now the active Order 6 closure checkpoints.
+are now the active Order 6 closure checkpoints. O6-R25 and O6-R26 have corrected
+the runtime result and audience contracts; O6-R27 remains pending.
