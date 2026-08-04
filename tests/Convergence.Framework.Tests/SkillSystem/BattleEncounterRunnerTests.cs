@@ -2045,6 +2045,101 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Fact]
+    public void Runner_RejectsExecutedActionEvidenceForAnActorWithoutTheCommandWindow()
+    {
+        BattleEncounterParticipant player =
+            Participant("wrong_executed_actor_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("wrong_executed_actor_enemy", EnemyTeam);
+        const string marker = "wrong executed actor evidence";
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                [new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.ActionExecuted,
+                    new BattleActionExecutedEventPayload(
+                        BattleActionEventKind.Executed,
+                        enemy.InstanceId,
+                        SourceId: Id("wrong_executed_actor_action")),
+                    marker)])),
+            new CompleteAfterTurnsPolicy(99));
+
+        AssertPortFault(
+            result,
+            BattleEncounterFaultCode.TurnHandlerExecutionFailed,
+            "turn-handler");
+        Assert.Contains("owns the command window", result.FaultMessage);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.DebugText == marker);
+    }
+
+    [Fact]
+    public void Runner_AcceptsExecutedActionEvidenceForTheScheduledActor()
+    {
+        BattleEncounterParticipant player =
+            Participant("scheduled_executed_actor_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("scheduled_executed_actor_enemy", EnemyTeam);
+        const string marker = "scheduled executed actor evidence";
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                [new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.ActionExecuted,
+                    new BattleActionExecutedEventPayload(
+                        BattleActionEventKind.Executed,
+                        player.InstanceId,
+                        SourceId: Id("scheduled_executed_actor_action")),
+                    marker)])),
+            new CompleteAfterTurnsPolicy(1));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        BattleEncounterEvent executed = Assert.Single(result.Events, battleEvent =>
+            battleEvent.DebugText == marker);
+        Assert.Equal(player.InstanceId, executed.ActorId);
+    }
+
+    [Fact]
+    public void Runner_AcceptsActorlessExecutedActionEvidence()
+    {
+        BattleEncounterParticipant player =
+            Participant("actorless_executed_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("actorless_executed_enemy", EnemyTeam);
+        const string marker = "actorless roster action evidence";
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(
+                ActionTurnConsumption.Normal,
+                [new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.ActionExecuted,
+                    new BattleActionExecutedEventPayload(
+                        BattleActionEventKind.PartyRosterTransitioned,
+                        SourceId: Id("actorless_roster_action")),
+                    marker)])),
+            new CompleteAfterTurnsPolicy(1));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        BattleEncounterEvent executed = Assert.Single(result.Events, battleEvent =>
+            battleEvent.DebugText == marker);
+        Assert.Null(executed.ActorId);
+    }
+
+    [Fact]
     public void Runner_RejectsNestedEffectEvidenceOutsideTheFrozenParticipantGraph()
     {
         BattleEncounterParticipant player =

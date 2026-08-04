@@ -1003,6 +1003,7 @@ internal static class BattleEncounterEventOwnership
         {
             BattleCommandSelectedEventPayload value => value.ActorId,
             BattleCommandPassedEventPayload value => value.ActorId,
+            BattleActionExecutedEventPayload value => value.ActorId,
             BattleActionRejectedEventPayload value => value.ActorId,
             BattleHostActionRequestedEventPayload value => value.ActorId,
             _ => null
