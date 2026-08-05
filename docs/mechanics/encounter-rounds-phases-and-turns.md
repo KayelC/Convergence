@@ -11,10 +11,10 @@ A Godot game may animate a timeline, a console may display menus, and an
 automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
-> **Current review status:** `reviewed`. O6-R34 and O6-R35 corrected the
-> no-cost turn-economy and scheduler-continuity defects reproduced by O6-R33,
-> O6-R36 reconciled this page, and O6-R37 independently traced it against the
-> current source and hostile regression tests.
+> **Current review status:** `existing_unreviewed`. The O6-R38 independent
+> source audit reproduced stable round-robin and scheduler/economy-liveness
+> defects. This page remains useful current guidance, but O6-R39 through
+> O6-R42 must correct and independently reconcile those boundaries.
 
 ## Rule Ownership
 

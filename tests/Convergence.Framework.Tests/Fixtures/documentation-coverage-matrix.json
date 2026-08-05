@@ -209,19 +209,19 @@
     {
       "id": "encounter_orchestration",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R37 independently traced the corrected no-cost economy, scheduler continuity, lifecycle, reconciliation, and cleanup-boundary rules against current source and hostile tests."
+        "reason": "O6-R38 reproduced stable round-robin and scheduler/economy-liveness defects; O6-R39 through O6-R42 must correct and independently reconcile this page."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R37 independently reconciled host composition, custom economy and scheduler obligations, cancellation, events, and the exact structural BattleStarted cleanup boundary with current source."
+        "reason": "O6-R38 reproduced stable round-robin and scheduler/economy-liveness defects; O6-R39 through O6-R42 must correct and independently reconcile this guide."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R37 independently traced request, schedule, lifecycle transaction, command, economy, reconciliation, completion, event, and detached-result state through current source."
+        "reason": "O6-R38 reproduced stable round-robin and scheduler/economy-liveness defects; O6-R39 through O6-R42 must correct and independently reconcile this runtime reference."
       }
     },
     {

@@ -158,3 +158,10 @@ O6-R34 and O6-R35 enforce the two runtime contracts, and O6-R36 reconciles the
 active audience, API, matrix, and roadmap guidance. The
 [O6-R37 final closure review](../reviews/encounter-orchestration-order-6-r37-final-closure-review-2026-08-05.md)
 independently traced the corrected implementation and formally closes Order 6.
+
+The later
+[O6-R38 post-R37 independent audit](../reviews/encounter-orchestration-order-6-post-r37-independent-audit-2026-08-05.md)
+reproduced stable round-robin and scheduler/economy-liveness defects and found
+one phase-window safety-limit terminology ambiguity. Order 6 is reopened under
+O6-R39 through O6-R42; `encounter_orchestration` is currently `partial` and
+its three audience entries are `existing_unreviewed`.
