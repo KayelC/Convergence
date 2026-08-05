@@ -1253,10 +1253,86 @@ public sealed class BattleEncounterRunnerTests
         Assert.Equal(
             Enumerable.Range(1, result.Events.Count),
             result.Events.Select(battleEvent => battleEvent.Sequence));
+        Assert.Contains(result.Events, battleEvent => battleEvent.Kind == failingKind);
         Assert.Equal(BattleEncounterEventKind.BattleFaulted, result.Events[^2].Kind);
         Assert.Equal(BattleEncounterEventKind.BattleEnded, result.Events[^1].Kind);
         Assert.DoesNotContain(eventSink.Events, battleEvent =>
             battleEvent.Kind is BattleEncounterEventKind.BattleFaulted or BattleEncounterEventKind.BattleEnded);
+    }
+
+    [Fact]
+    public void Runner_PreservesCanonicalEventWhenSinkRecordsThenThrows()
+    {
+        var eventSink = new RecordingThenThrowingEventSink(
+            BattleEncounterEventKind.RoundStarted);
+
+        BattleEncounterResult result = Run(
+            [Participant("record_then_fault_player", PlayerTeam), Participant("record_then_fault_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(99),
+            events: eventSink);
+
+        AssertPortFault(result, BattleEncounterFaultCode.EventPublicationFailed, "event-publication");
+        BattleEncounterEvent observed = Assert.Single(
+            eventSink.Events,
+            battleEvent => battleEvent.Kind == BattleEncounterEventKind.RoundStarted);
+        BattleEncounterEvent canonical = Assert.Single(
+            result.Events,
+            battleEvent => battleEvent.Kind == BattleEncounterEventKind.RoundStarted);
+        Assert.Equal(observed, canonical);
+        Assert.Equal(
+            Enumerable.Range(1, result.Events.Count),
+            result.Events.Select(battleEvent => battleEvent.Sequence));
+        Assert.Equal(
+            result.Events.Count,
+            result.Events.Select(battleEvent => battleEvent.Sequence).Distinct().Count());
+    }
+
+    [Fact]
+    public void Runner_PreservesPostCommitLifecycleEventWhenPublicationFails()
+    {
+        BattleEncounterParticipant player = Participant("committed_event_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleStartAction = request => request.Participants
+                .Single(participant => participant.InstanceId == player.InstanceId)
+                .State.SetResource(Hp, 7),
+            BattleStartEvents =
+            [
+                new BattleEncounterEvent(
+                    0,
+                    BattleEncounterEventKind.ResourceChanged,
+                    new BattleResourceChangedEventPayload(
+                        player.InstanceId,
+                        player.InstanceId,
+                        -3,
+                        Hp))
+            ]
+        };
+
+        BattleEncounterResult result = Run(
+            [player, Participant("committed_event_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal)),
+            new CompleteAfterTurnsPolicy(99),
+            events: new ThrowingEventSink(BattleEncounterEventKind.ResourceChanged));
+
+        AssertPortFault(result, BattleEncounterFaultCode.EventPublicationFailed, "event-publication");
+        Assert.Equal(7, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(
+            7,
+            result.Participants
+                .Single(participant => participant.InstanceId == player.InstanceId)
+                .State.Resources.Single(resource => resource.ResourceId == Hp)
+                .Current);
+        Assert.Contains(
+            result.Events,
+            battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.ResourceChanged &&
+                battleEvent.ActorId == player.InstanceId);
     }
 
     [Fact]
@@ -4793,6 +4869,30 @@ public sealed class BattleEncounterRunnerTests
             {
                 _remaining = checked(_remaining + actionDelta);
             }
+        }
+    }
+
+    private sealed class RecordingThenThrowingEventSink(BattleEncounterEventKind failingKind)
+        : IBattleEncounterEventSink
+    {
+        private bool _failed;
+
+        public List<BattleEncounterEvent> Events { get; } = [];
+
+        public ValueTask PublishAsync(
+            BattleEncounterEvent battleEvent,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Events.Add(battleEvent);
+            if (_failed || battleEvent.Kind != failingKind)
+            {
+                return ValueTask.CompletedTask;
+            }
+
+            _failed = true;
+            return new ValueTask(Task.FromException(
+                new InvalidOperationException("Deliberate post-record event-publication failure.")));
         }
     }
 

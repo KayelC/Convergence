@@ -1000,22 +1000,13 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         async ValueTask PublishAndRecordAsync(BattleEncounterEvent battleEvent)
         {
-            try
-            {
-                await InvokePortTaskAsync(
-                        BattleEncounterFaultCode.EventPublicationFailed,
-                        "event-publication",
-                        () => services.Events.PublishAsync(battleEvent, cancellationToken),
-                        battleEvent.ActorId)
-                    .ConfigureAwait(false);
-            }
-            catch
-            {
-                sequence--;
-                throw;
-            }
-
             events.Add(battleEvent);
+            await InvokePortTaskAsync(
+                    BattleEncounterFaultCode.EventPublicationFailed,
+                    "event-publication",
+                    () => services.Events.PublishAsync(battleEvent, cancellationToken),
+                    battleEvent.ActorId)
+                .ConfigureAwait(false);
         }
 
         async ValueTask AddAsync(
