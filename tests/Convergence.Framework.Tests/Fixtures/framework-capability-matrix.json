@@ -134,7 +134,6 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Team-phase round-robin selection indexes a compacted availability list, so a turn-start departure on a team of three or more can skip the next stable actor and redistribute an opportunity.",
         "Schedule transition validation does not reject a command window selected after accepted economy evidence reports no remaining opportunities, allowing the handler to mutate before a later typed fault."
       ]
     },

@@ -170,10 +170,22 @@ the accepted exhaustion evidence before invoking the second handler.
 | Checkpoint | State | Work |
 |---|---|---|
 | O6-R38 | `complete` | Record this independent source and documentation audit; reopen only encounter orchestration tracking. |
-| O6-R39 | `pending` | Replace filtered-array indexing with stable-ring round-robin selection and adversarial three-or-more-actor tests. |
+| O6-R39 | `complete` | Replaced filtered-array indexing with stable-ring round-robin selection and adversarial three-or-more-actor tests. |
 | O6-R40 | `pending` | Correlate structural schedule transitions with accepted economy liveness before another command window can run. |
 | O6-R41 | `pending` | Reconcile phase-end exceptions and phase-window safety-limit terminology across mechanics, developer, technical, XML, and API guidance. |
 | O6-R42 | `pending` | Independently reread corrected source and documents, run the complete release gate, and decide formal closure. |
+
+## Correction Progress
+
+O6-R39 now selects within the stable participant order for the acting team. It
+scans forward from the stored ring cursor, skips unavailable slots without
+compacting the ring, and advances past the selected stable slot. Focused tests
+cover three-actor departure before a command, departure after a committed
+command, new deployment, and immediate actor retention followed by normal
+rotation. The focused team-schedule and post-command suite passes 16 tests.
+
+O6-M1 and O6-L1 remain open through O6-R40 and O6-R41. Order 6 therefore
+remains reopened.
 
 ## Closure Decision
 

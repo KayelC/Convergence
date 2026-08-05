@@ -597,7 +597,7 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("### O6-M2", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("### O6-L1", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("## Correction Roadmap", postR37Audit, StringComparison.Ordinal);
-        Assert.Contains("| O6-R39 | `pending` |", postR37Audit, StringComparison.Ordinal);
+        Assert.Contains("| O6-R39 | `complete` |", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R40 | `pending` |", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R41 | `pending` |", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R42 | `pending` |", postR37Audit, StringComparison.Ordinal);
@@ -612,7 +612,7 @@ public sealed class DocumentationFoundationTests
         FrameworkCapability encounterCapability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
         Assert.Equal("partial", encounterCapability.ImplementationState);
-        Assert.Equal(2, encounterCapability.KnownGaps.Count);
+        Assert.Single(encounterCapability.KnownGaps);
     }
 
     [Fact]

@@ -1112,18 +1112,35 @@ public sealed class TeamPhaseRoundRobinBattleEncounterSchedulePolicy :
         ContentId teamId,
         IReadOnlyList<BattleEncounterScheduleParticipantSnapshot> participants)
     {
-        BattleEncounterScheduleParticipantSnapshot[] activeActors =
-            ActiveTeam(participants, teamId);
-        if (activeActors.Length == 0)
+        BattleEncounterScheduleParticipantSnapshot[] teamActors = participants
+            .Where(participant => participant.TeamId == teamId)
+            .ToArray();
+        if (teamActors.Length == 0)
         {
             return SelectPhaseEnd(state, teamId);
         }
 
-        int actorIndex = (int)(state.NextActorOffset % activeActors.Length);
-        BattleEncounterScheduleParticipantSnapshot actor = activeActors[actorIndex];
+        int startIndex = (int)(state.NextActorOffset % teamActors.Length);
+        BattleEncounterScheduleParticipantSnapshot? actor = null;
+        int scannedSlots = 0;
+        for (; scannedSlots < teamActors.Length; scannedSlots++)
+        {
+            int actorIndex = (startIndex + scannedSlots) % teamActors.Length;
+            if (teamActors[actorIndex].IsAvailable)
+            {
+                actor = teamActors[actorIndex];
+                break;
+            }
+        }
+
+        if (actor is null)
+        {
+            return SelectPhaseEnd(state, teamId);
+        }
+
         TeamPhaseRoundRobinScheduleState after = state.Advance(
             currentTeamIndex: state.CurrentTeamIndex,
-            nextActorOffset: checked(state.NextActorOffset + 1),
+            nextActorOffset: checked(state.NextActorOffset + scannedSlots + 1L),
             consecutiveImmediateRepeats: 0);
         return BattleEncounterScheduleTransitionResult.Advance(
             state,

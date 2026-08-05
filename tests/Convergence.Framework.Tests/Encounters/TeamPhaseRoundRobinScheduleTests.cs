@@ -12,6 +12,7 @@ public sealed class TeamPhaseRoundRobinScheduleTests
     private static readonly ContentId EnemyTeam = ContentId.Parse("enemy_team");
     private static readonly RuntimeInstanceId PlayerA = RuntimeInstanceId.Parse("player_a");
     private static readonly RuntimeInstanceId PlayerB = RuntimeInstanceId.Parse("player_b");
+    private static readonly RuntimeInstanceId PlayerC = RuntimeInstanceId.Parse("player_c");
     private static readonly RuntimeInstanceId Enemy = RuntimeInstanceId.Parse("enemy");
 
     [Fact]
@@ -89,6 +90,70 @@ public sealed class TeamPhaseRoundRobinScheduleTests
             PlayerB,
             AssertStep<BattleEncounterCommandWindowScheduleStep>(cursor, 1).ActorId);
         Assert.Null(cursor.Step.TurnEconomyStart);
+    }
+
+    [Fact]
+    public void Schedule_UsesStableThreeActorOrderWhenCurrentActorLeavesBeforeCommand()
+    {
+        var policy = new TeamPhaseRoundRobinBattleEncounterSchedulePolicy();
+        BattleEncounterScheduleParticipantSnapshot[] participants = ThreePlayerParticipants();
+        Cursor cursor = Start(policy, participants, roundLimit: 1);
+        cursor = Boundary(policy, cursor, participants);
+        cursor = Boundary(policy, cursor, participants);
+        BattleEncounterCommandWindowScheduleStep command =
+            AssertStep<BattleEncounterCommandWindowScheduleStep>(cursor, 1);
+        Assert.Equal(PlayerA, command.ActorId);
+
+        participants =
+        [
+            Participant(PlayerA, PlayerTeam, deployed: false),
+            Participant(PlayerB, PlayerTeam),
+            Participant(PlayerC, PlayerTeam),
+            Participant(Enemy, EnemyTeam)
+        ];
+        cursor = Cursor.From(policy.Advance(
+            Request(
+                cursor,
+                BattleEncounterScheduleStepOutcome.ActorUnavailable(command.ActorId),
+                participants)));
+
+        Assert.Equal(
+            PlayerB,
+            AssertStep<BattleEncounterCommandWindowScheduleStep>(cursor, 1).ActorId);
+        cursor = Command(policy, cursor, participants, hasRemainingOpportunities: true);
+        Assert.Equal(
+            PlayerC,
+            AssertStep<BattleEncounterCommandWindowScheduleStep>(cursor, 1).ActorId);
+    }
+
+    [Fact]
+    public void Schedule_UsesStableThreeActorOrderWhenCurrentActorLeavesAfterCommand()
+    {
+        var policy = new TeamPhaseRoundRobinBattleEncounterSchedulePolicy();
+        BattleEncounterScheduleParticipantSnapshot[] participants = ThreePlayerParticipants();
+        Cursor cursor = Start(policy, participants, roundLimit: 1);
+        cursor = Boundary(policy, cursor, participants);
+        cursor = Boundary(policy, cursor, participants);
+        Assert.Equal(
+            PlayerA,
+            AssertStep<BattleEncounterCommandWindowScheduleStep>(cursor, 1).ActorId);
+
+        participants =
+        [
+            Participant(PlayerA, PlayerTeam, defeated: true),
+            Participant(PlayerB, PlayerTeam),
+            Participant(PlayerC, PlayerTeam),
+            Participant(Enemy, EnemyTeam)
+        ];
+        cursor = Command(policy, cursor, participants, hasRemainingOpportunities: true);
+
+        Assert.Equal(
+            PlayerB,
+            AssertStep<BattleEncounterCommandWindowScheduleStep>(cursor, 1).ActorId);
+        cursor = Command(policy, cursor, participants, hasRemainingOpportunities: true);
+        Assert.Equal(
+            PlayerC,
+            AssertStep<BattleEncounterCommandWindowScheduleStep>(cursor, 1).ActorId);
     }
 
     [Fact]
@@ -288,6 +353,14 @@ public sealed class TeamPhaseRoundRobinScheduleTests
     [
         Participant(PlayerA, PlayerTeam),
         Participant(PlayerB, PlayerTeam),
+        Participant(Enemy, EnemyTeam)
+    ];
+
+    private static BattleEncounterScheduleParticipantSnapshot[] ThreePlayerParticipants() =>
+    [
+        Participant(PlayerA, PlayerTeam),
+        Participant(PlayerB, PlayerTeam),
+        Participant(PlayerC, PlayerTeam),
         Participant(Enemy, EnemyTeam)
     ];
 

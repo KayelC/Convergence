@@ -138,6 +138,40 @@ public sealed class BattleEncounterPostCommandSchedulingTests
     }
 
     [Fact]
+    public void Extension_ImmediateRepeatResumesAtTheNextStableRingSlot()
+    {
+        var extensionPolicy = new RetainThenFollowPolicy();
+        var policy = new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(
+            new BattleEncounterPostCommandScheduleExtension(
+                extensionPolicy,
+                maximumConsecutiveImmediateRepeats: 1));
+        BattleEncounterScheduleParticipantSnapshot[] participants = Participants();
+        Cursor cursor = OpenFirstCommand(policy, participants);
+        BattleEncounterCommandWindowScheduleStep first =
+            Assert.IsType<BattleEncounterCommandWindowScheduleStep>(cursor.Step);
+
+        cursor = Advance(
+            policy,
+            cursor,
+            Committed(first, beforeActions: 3, afterActions: 2, hasRemaining: true),
+            participants);
+        BattleEncounterCommandWindowScheduleStep repeated =
+            Assert.IsType<BattleEncounterCommandWindowScheduleStep>(cursor.Step);
+        Assert.Equal(PlayerA, repeated.ActorId);
+
+        cursor = Advance(
+            policy,
+            cursor,
+            Committed(repeated, beforeActions: 2, afterActions: 1, hasRemaining: true),
+            participants);
+
+        Assert.Equal(
+            PlayerB,
+            Assert.IsType<BattleEncounterCommandWindowScheduleStep>(cursor.Step).ActorId);
+        Assert.Equal(2, extensionPolicy.Calls);
+    }
+
+    [Fact]
     public void Extension_RejectsInvalidPolicyOutputWithoutAdvancingState()
     {
         var policy = new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(
@@ -274,6 +308,21 @@ public sealed class BattleEncounterPostCommandSchedulingTests
         public BattleEncounterPostCommandScheduleDecision Decide(
             BattleEncounterPostCommandScheduleRequest request) =>
             BattleEncounterPostCommandScheduleDecision.FollowScheduler();
+    }
+
+    private sealed class RetainThenFollowPolicy : IBattleEncounterPostCommandSchedulePolicy
+    {
+        public ContentId PolicyId { get; } = ContentId.Parse("retain_then_follow");
+        public int Calls { get; private set; }
+
+        public BattleEncounterPostCommandScheduleDecision Decide(
+            BattleEncounterPostCommandScheduleRequest request)
+        {
+            Calls++;
+            return Calls == 1
+                ? BattleEncounterPostCommandScheduleDecision.RetainActor()
+                : BattleEncounterPostCommandScheduleDecision.FollowScheduler();
+        }
     }
 
     private sealed class NullDecisionPolicy : IBattleEncounterPostCommandSchedulePolicy
