@@ -551,6 +551,16 @@ through O6-R37. Its mechanics, developer, and technical entries return to
 `existing_unreviewed`, so the current totals are 27 reviewed, 27
 `existing_unreviewed`, 14 missing, and 7 `not_applicable`.
 
+O6-R34 now rejects any no-cost turn-economy state movement before accepted
+evidence or lifecycle commitment. O6-R35 now rejects illegal scheduler round,
+completed-round, and step progression before the next cursor can execute
+gameplay. O6-R36 reconciles all three audiences, the public API contract, and
+executable tracking with those rules and the exact structural `BattleStarted`
+cleanup boundary. The three audience entries deliberately remain
+`existing_unreviewed`, and the totals remain 27 reviewed, 27
+`existing_unreviewed`, 14 missing, and 7 `not_applicable`, until O6-R37 performs
+the independent closure review.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

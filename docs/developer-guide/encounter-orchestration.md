@@ -9,10 +9,10 @@ presentation, and any mapping between framework runtime IDs and scene objects.
 Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
-> **Current review status:** `reviewed`. O6-R32 independently traced the
-> corrected restriction identity, handler responsibilities, departure fixed
-> point, cancellation, automated execution, and trusted-host boundaries
-> against current source and executable evidence.
+> **Current review status:** `existing_unreviewed`. O6-R34 and O6-R35 corrected
+> no-cost economy authority and scheduler structural continuity, and O6-R36
+> reconciled this integration guidance. O6-R37 remains the independent
+> source-and-document closure review.
 
 ## Required Composition
 
@@ -126,11 +126,35 @@ revision continuity, step sequence, and legal step/outcome pairings. An invalid
 transition becomes `ScheduleTransitionInvalid`; an exception becomes
 `ScheduleExecutionFailed`.
 
+An active state must report `CompletedRounds == CurrentRound - 1`. Every
+transition except completion must obey this structural matrix:
+
+| Completed step | Legal next step |
+|---|---|
+| `RoundStarted` | `PhaseStarted` or `RoundEnded` |
+| `PhaseStarted(team)` | `CommandWindow(team)` or `PhaseEnded(team)` |
+| `CommandWindow(team)` | `CommandWindow(team)` or `PhaseEnded(team)` |
+| `PhaseEnded` | `PhaseStarted` or `RoundEnded` |
+| `RoundEnded` | the next round's `RoundStarted`, or schedule completion at the configured round limit |
+
+Non-round-end steps preserve both round counters. Advancing after
+`RoundEnded` increments the current round exactly once and marks the prior
+round complete; completing after `RoundEnded` is legal only at the round limit.
+The runner validates this before accepting the next cursor, so structural drift
+cannot reach another command or lifecycle commit.
+
 `BattleEncounterProgressPolicy` is a separate encounter-wide liveness guard.
 It limits accepted scheduler transitions, including round and phase boundaries
 that do not open a command window. `BattlePhaseProgressPolicy` instead limits
 commands and consecutive free actions inside one phase. Supply both policies:
 neither can replace the other.
+
+For turn economy, `ActionTurnConsumptionKind.None` is a strict no-cost
+contract. `IBattleTurnEconomy.Apply` must return an exactly equal snapshot for
+that kind. Any state movement becomes `TurnEconomyTransitionInvalid` before
+turn-end lifecycle or economy evidence is accepted. Every nonterminal `None`
+result advances the consecutive-free-action counter by its typed kind rather
+than by comparing snapshots.
 
 ## Implementing The Turn Handler
 
@@ -319,9 +343,11 @@ commits.
 - Port exceptions return a `Faulted` result with `BattleEncounterFaultCode`.
 - Command rejection returns `CommandRejected` and consumes no turn.
 
-Fault finalization attempts battle-end lifecycle exactly once only when battle
-start had already succeeded. A pre-start fault has no accepted battle lifecycle
-to clean up.
+Fault finalization attempts battle-end lifecycle exactly once after the
+structural `BattleStarted` event has been accepted and, when configured,
+successfully published. That boundary occurs before battle-start lifecycle, so
+a failure inside battle-start lifecycle still receives cleanup. A fault before
+the structural event is accepted receives none.
 
 Do not catch operational cancellation and convert it to a gameplay outcome
 unless the game explicitly owns that higher-level policy.

@@ -40,7 +40,8 @@ O6-R27 complete. O6-R25 and O6-R26 corrected the runtime result shape and all
 three audience statements; O6-R27 independently re-read the result and restored
 this page to `reviewed` at that revision. O6-R33 subsequently reproduced
 no-cost economy mutation and scheduler round drift, so this page returns to
-`existing_unreviewed` until O6-R34 through O6-R37 complete.
+`existing_unreviewed`. O6-R34 and O6-R35 now correct both runtime boundaries,
+and O6-R36 reconciles the page; O6-R37 remains its independent closure review.
 
 ## Rule Index
 

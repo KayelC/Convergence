@@ -11,10 +11,10 @@ A Godot game may animate a timeline, a console may display menus, and an
 automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
-> **Current review status:** `reviewed`. O6-R32 independently traced the
-> corrected restriction identity, handler enactment, departure fixed point,
-> scheduling, economy, cancellation, and terminal-state rules against current
-> source and executable evidence.
+> **Current review status:** `existing_unreviewed`. O6-R34 and O6-R35 corrected
+> the no-cost turn-economy and scheduler-continuity defects reproduced by
+> O6-R33, and O6-R36 reconciled this page. O6-R37 remains the independent
+> source-and-document closure review.
 
 ## Rule Ownership
 
@@ -89,6 +89,13 @@ their frozen slot is skipped.
 These are supplied policies, not mandatory genres. A game may implement
 `IBattleEncounterSchedulePolicy` for another deterministic structure.
 
+A replacement scheduler may choose different teams or actor windows, but it
+cannot rewrite time that has already happened. Round start, phase start,
+command windows, phase end, and round end must occur in a legal structural
+order. Only round end may advance the round counters, and it advances exactly
+one round or completes exactly at the configured limit. A rejected structural
+transition faults before another command or later lifecycle boundary commits.
+
 ## One Actor Window
 
 For a normal committed command, the visible rule order is:
@@ -108,8 +115,12 @@ For a normal committed command, the visible rule order is:
 10. the scheduler chooses the next structural step.
 
 A free action still closes its current command window, but it does not run
-owner-turn-end lifecycle and does not spend the turn economy. Phase liveness
-limits prevent an unlimited stream of free actions.
+owner-turn-end lifecycle and does not spend the turn economy. `None`
+consumption must preserve an exactly equal before/after economy snapshot. Every
+accepted nonterminal `None` result counts toward the consecutive-free-action
+limit by its typed consumption kind, so a custom economy cannot evade that
+limit by moving its own state. Phase liveness limits prevent an unlimited
+stream of free actions.
 
 Encounter liveness has a second independent limit. A custom scheduler cannot
 loop forever through empty round or phase boundaries without ever offering a
@@ -169,10 +180,11 @@ These are different outcomes:
   contract. The encounter ends as a typed `CommandRejected` fault rather than
   spending a turn or silently asking the player again.
 - **Port fault:** an injected service throws or returns an invalid transition.
-  The runner contains it as a stable `BattleEncounterFaultCode`. The runner
-  attempts battle-end cleanup once only when battle start had already succeeded;
-  a failure before battle start has no accepted encounter lifecycle to clean
-  up. Either path reports a faulted result.
+  The runner contains it as a stable `BattleEncounterFaultCode`. Successfully
+  accepting the structural `BattleStarted` event opens the cleanup boundary.
+  A later failure, including battle-start lifecycle failure, receives one
+  battle-end cleanup attempt. A failure before that event is accepted receives
+  none. Either path reports a faulted result.
 
 An ordinary unaffordable or invalid menu option should be rejected during the
 host's assessment loop before it becomes an encounter command result.

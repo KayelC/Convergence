@@ -70,8 +70,9 @@ publication and normal completion text currently crosses the fault-result
 boundary. O6-R25 and O6-R26 corrected both contracts, and O6-R27 independently
 traced the current source before restoring the reference to `reviewed` at that
 revision. O6-R33 subsequently reproduced missing no-cost economy and scheduler
-round-continuity validation, so the reference is `existing_unreviewed` pending
-O6-R34 through O6-R37.
+round-continuity validation, so the reference is `existing_unreviewed`. O6-R34
+and O6-R35 now correct both runtime boundaries, and O6-R36 reconciles this
+reference; O6-R37 remains its independent closure review.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

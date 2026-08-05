@@ -19,10 +19,10 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Current review status:** `reviewed`. O6-R32 independently traced the
-> corrected command identity, restriction enactment, departure fixed point,
-> lifecycle transactions, scheduling, events, completion, and fault
-> containment against current source and executable evidence.
+> **Current review status:** `existing_unreviewed`. O6-R34 and O6-R35 corrected
+> no-cost economy authority and scheduler structural continuity, and O6-R36
+> reconciled this runtime reference. O6-R37 remains the independent
+> source-and-document closure review.
 
 ## Authority Map
 
@@ -118,6 +118,14 @@ The runner validates:
 - policy and encounter identity remain unchanged;
 - revisions and step sequences advance exactly once;
 - returned steps match the supplied policy ID and round;
+- active state satisfies `CompletedRounds == CurrentRound - 1`;
+- non-round-end steps preserve both round counters;
+- `RoundStarted` advances only to `PhaseStarted` or `RoundEnded`;
+- `PhaseStarted` and `CommandWindow` advance only within the same team to a
+  command window or phase end;
+- `PhaseEnded` advances only to another phase start or round end;
+- `RoundEnded` advances exactly one round to `RoundStarted`, or completes
+  exactly at the configured round limit;
 - command-window actors exist and belong to the selected team;
 - step outcomes match the step being completed;
 - economy evidence is present only where required.
@@ -202,6 +210,9 @@ guards the boundaries it owns:
 
 - the handler cannot mutate the retained economy;
 - the returned consumption is validated before acceptance;
+- `None` consumption requires exactly equal before/after economy snapshots;
+- every nonterminal `None` result counts against free-action liveness by its
+  validated consumption kind;
 - lifecycle work is staged in `BattleEncounterLifecycleTransaction`;
 - cancellation is checked before every staged commit;
 - a non-`None` consumption invokes owner-turn-end lifecycle;
@@ -363,9 +374,14 @@ Port exceptions are wrapped with port name, actor when available, and a stable
 `BattleEncounterFaultCode`. Fault finalization:
 
 1. records `BattleFaulted`;
-2. attempts battle-end lifecycle once if battle start occurred;
+2. attempts battle-end lifecycle once if the structural `BattleStarted` event
+   was accepted before the fault;
 3. records cleanup failure separately if needed;
 4. records one `BattleEnded(Faulted)` result.
+
+The cleanup boundary opens before battle-start lifecycle is invoked. A fault in
+that lifecycle therefore receives one cleanup attempt; a fault while accepting
+or publishing `BattleStarted` does not.
 
 If the event sink itself failed, final evidence remains in the returned result
 without recursively trusting the failed sink.

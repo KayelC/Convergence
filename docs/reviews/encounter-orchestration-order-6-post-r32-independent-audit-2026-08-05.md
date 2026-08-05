@@ -190,12 +190,28 @@ runtime corrections and wording reconciliation are complete.
 | Checkpoint | State |
 |---|---|
 | O6-R33 | `complete` |
-| O6-R34 | `pending` |
-| O6-R35 | `pending` |
-| O6-R36 | `pending` |
+| O6-R34 | `complete` |
+| O6-R35 | `complete` |
+| O6-R36 | `complete` |
 | O6-R37 | `pending` |
 
-## Verification At This Revision
+O6-R34 now requires an unchanged economy snapshot for `None` in both runner
+execution and standalone event evidence, and derives nonterminal free-action
+liveness from the validated consumption kind. Hostile spending and minting
+economies fault before turn-end lifecycle or economy evidence is accepted.
+
+O6-R35 now validates the completed scheduler step against the returned state
+and next step before constructing the next cursor. Round jumps,
+completed-round jumps, rewinds, illegal step pairings, and premature completion
+are rejected before another command or later lifecycle commit. Valid next-round
+transitions remain accepted.
+
+O6-R36 reconciles the mechanics, developer, technical, public API, executable
+matrix, and roadmap guidance with both corrected contracts and the exact
+structural `BattleStarted` cleanup boundary. Formal closure remains reserved
+for the independent O6-R37 reread.
+
+## Verification At The Audit Revision
 
 - focused encounter and orchestration tests: **272 passed**, 0 failed, 0 skipped;
 - full solution tests: **1,869 passed**, 0 failed, 0 skipped;
@@ -205,12 +221,22 @@ runtime corrections and wording reconciliation are complete.
 - premature-completion control probe: rejected before command execution;
 - audit probes removed; retained worktree restored before documentation edits.
 
-The green suite is meaningful but does not currently cover the two reproduced
-public-extension paths.
+The green suite at the audit revision was meaningful but did not cover the two
+reproduced public-extension paths.
+
+## Correction Verification Through O6-R36
+
+- O6-R34 focused encounter and event-contract tests: **164 passed**, 0 failed,
+  0 skipped;
+- O6-R35 focused runner and scheduler tests: **186 passed**, 0 failed, 0
+  skipped;
+- full solution after O6-R35: **1,876 passed**, 0 failed, 0 skipped;
+- strict .NET 8 Release build: **0 warnings**, **0 errors**;
+- format verification and `git diff --check`: passed.
 
 ## Closure Decision
 
-**Order 6 is not ready to close.** Its architecture remains sound and the
-supplied implementations remain usable, but the framework must enforce the
-same contracts for custom implementations that its audience documentation
-promises. O6-R34 through O6-R37 are the bounded route back to formal closure.
+**Order 6 is not ready to close.** Its architecture remains sound and the two
+reproduced runtime paths are corrected and documented. O6-R37 remains the
+required independent source-and-document reread before those corrections are
+accepted as formal closure evidence.

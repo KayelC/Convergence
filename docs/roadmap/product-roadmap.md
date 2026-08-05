@@ -62,9 +62,13 @@ The later
 did not treat that closure as current proof. It reproduced no-cost
 turn-economy mutation and scheduler round drift through the public extension
 contracts, plus one battle-start cleanup wording ambiguity. O6-R34 through
-O6-R37 now form the bounded correction and closure sequence. The architecture
-and supplied policies remain usable, but formal Order 6 closure is withdrawn
-until that sequence completes.
+O6-R37 form the bounded correction and closure sequence. O6-R34 now enforces
+strict no-cost economy authority, O6-R35 enforces scheduler structural
+continuity before later gameplay can commit, and O6-R36 reconciles all active
+guidance with those contracts and the structural `BattleStarted` cleanup
+boundary. The architecture and supplied policies remain usable, but formal
+Order 6 closure remains withdrawn until O6-R37 independently rereads the
+corrected source and documentation.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

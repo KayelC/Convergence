@@ -134,8 +134,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "No-cost turn consumption does not yet require an unchanged turn-economy snapshot or govern free-action liveness by its validated kind.",
-        "Custom scheduler transitions do not yet enforce structural round and completed-round continuity before the next command window."
+        "O6-R37 must independently reread the corrected no-cost economy, scheduler continuity, and cleanup-boundary contracts before formal closure."
       ]
     },
     {

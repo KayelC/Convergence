@@ -111,6 +111,20 @@ protocol used by `BattleEncounterRunner`; this preserves one auditable economy
 authority and prevents a retained policy instance from spending a command both
 inside a host port and again when the runner applies its returned cost.
 
+`ActionTurnConsumptionKind.None` is a universal no-cost contract, not a hint to
+one supplied economy. Applying it must preserve an exactly equal economy
+snapshot. Both `BattleEncounterRunner` and
+`BattleTurnEconomyChangedEventPayload` reject changed no-cost evidence, and
+every nonterminal no-cost command counts toward phase liveness by its validated
+consumption kind.
+
+`IBattleEncounterSchedulePolicy` remains replaceable, but accepted transitions
+must preserve structural time. Non-round-end steps preserve round counters and
+follow the legal round/phase/command pairing matrix. Only `RoundEnded` can
+advance exactly one round or complete exactly at the configured limit. The
+runner validates this before another cursor can execute a command or commit a
+lifecycle boundary.
+
 `IBattleEncounterDepartureLifecyclePort` is an optional extension to
 `IBattleEncounterLifecyclePort`. Its immutable request identifies one
 departing participant, the complete matching encounter graph, and an exact
@@ -137,6 +151,10 @@ outcomes, but it cannot originate `Faulted`; only the runner's typed fault
 boundary owns a fault code.
 The result owns the complete sequenced event history; a sink failure can leave
 terminal evidence in that result which the failed sink did not receive.
+The fault-cleanup boundary opens after the structural `BattleStarted` event is
+accepted and successfully published when a sink exists. A later battle-start
+lifecycle failure receives one battle-end cleanup attempt; a fault before that
+event boundary receives none.
 
 `RuntimeSaveValidationCode` appends `MissingPassiveSkillState` and
 `ConflictingActorAilmentExclusivityGroup`. These guarded `0.1.0` diagnostics

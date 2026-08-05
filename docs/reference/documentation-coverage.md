@@ -230,6 +230,12 @@ reproduced two extension-contract defects and one cleanup-boundary wording
 ambiguity. The three encounter entries return to `existing_unreviewed` until
 O6-R34 through O6-R37 correct and independently recheck those contracts.
 
+O6-R34 and O6-R35 now correct no-cost economy authority and scheduler
+structural continuity. O6-R36 reconciles the mechanics, developer, technical,
+and public integration statements with those changes and the exact structural
+`BattleStarted` cleanup boundary. The entries remain `existing_unreviewed`
+until O6-R37 independently rereads current source and all three audiences.
+
 The documentation matrix currently records 75 audience entries: 27 reviewed,
 27 existing_unreviewed, 14 missing, and 7 not_applicable.
 

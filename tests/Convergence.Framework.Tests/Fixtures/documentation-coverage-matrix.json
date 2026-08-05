@@ -211,17 +211,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R33 reproduced no-cost turn-economy mutation and scheduler round drift that contradict the documented free-action and invalid-transition guarantees; correction and fresh review remain pending."
+        "reason": "O6-R34 and O6-R35 corrected no-cost economy authority and scheduler continuity, and O6-R36 reconciled the player-facing rules; O6-R37 independent source review remains pending."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R33 found incomplete enforcement at the custom turn-economy and scheduler boundaries plus imprecise battle-start cleanup wording; integration guidance requires reconciliation after correction."
+        "reason": "O6-R36 now documents the corrected custom economy and scheduler contracts plus the exact structural BattleStarted cleanup boundary; O6-R37 independent review remains pending."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R33 demonstrated that structural round continuity and no-cost economy immutability are promised but not fully validated; the state machine and fault boundary require correction and rereview."
+        "reason": "O6-R34 through O6-R36 corrected and documented no-cost economy immutability, structural schedule continuity, and fault cleanup timing; O6-R37 independent review remains pending."
       }
     },
     {

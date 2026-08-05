@@ -80,10 +80,14 @@ The subsequent
 reproduced two supported extension-boundary defects: `None` consumption can
 change turn-economy state and evade free-action liveness, and a custom
 scheduler can drift into another round far enough to commit a command before
-typed rejection. O6-R34 through O6-R37 govern runtime correction, audience
-reconciliation, and fresh closure. Until those checkpoints finish,
-`encounter_orchestration` remains `partial` and its three audience entries are
-`existing_unreviewed`.
+typed rejection. O6-R34 now enforces immutable no-cost economy evidence and
+kind-based nonterminal free-action liveness. O6-R35 now validates exact
+round/completed-round and step continuity before another cursor is accepted.
+O6-R36 reconciles the structural `BattleStarted` cleanup boundary and both
+corrected contracts across the active audience and API guidance. O6-R37 remains
+the independent source-and-document closure gate, so
+`encounter_orchestration` remains `partial` and its three audience entries
+remain `existing_unreviewed` until that reread completes.
 
 `battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and

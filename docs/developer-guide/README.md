@@ -72,7 +72,8 @@ O6-R25 and O6-R26 completed those corrections. O6-R27 independently traced the
 current integration boundary and restored the guide to `reviewed` at that
 revision. O6-R33 subsequently reproduced two custom-policy validation gaps and
 one cleanup-boundary wording ambiguity, returning the guide to
-`existing_unreviewed` pending O6-R34 through O6-R37.
+`existing_unreviewed`. O6-R34 and O6-R35 now correct the runtime boundaries,
+and O6-R36 reconciles this guide; O6-R37 remains its independent closure review.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).
