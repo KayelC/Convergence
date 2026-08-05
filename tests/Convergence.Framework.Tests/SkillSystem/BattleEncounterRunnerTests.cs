@@ -2760,6 +2760,35 @@ public sealed class BattleEncounterRunnerTests
         Assert.Contains("consecutive free-action limit of 2", result.FaultMessage);
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(1)]
+    public void Runner_RejectsNoCostEconomyMutationBeforeAcceptingEvidenceOrTurnEnd(
+        int actionDelta)
+    {
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.None));
+
+        BattleEncounterResult result = Run(
+            [Participant("mutating_free_player", PlayerTeam), Participant("mutating_free_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            () => new NoCostMutatingTurnEconomy(actionDelta),
+            new BattlePhaseProgressPolicy(8, 2));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.TurnEconomyTransitionInvalid, result.FaultCode);
+        Assert.Contains("changed state for no-cost consumption", result.FaultMessage);
+        Assert.Single(handler.Requests);
+        Assert.Equal(0, lifecycle.TurnEndCalls);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind is BattleEncounterEventKind.TurnEconomyChanged
+                or BattleEncounterEventKind.TurnEnded);
+    }
+
     [Fact]
     public void Runner_AllowsExactlyTheConfiguredFreeActionLimit()
     {
@@ -4424,6 +4453,27 @@ public sealed class BattleEncounterRunnerTests
             public ExpandingTurnEconomySnapshot(int remainingActions)
                 : base(Economy, remainingActions)
             {
+            }
+        }
+    }
+
+    private sealed class NoCostMutatingTurnEconomy(int actionDelta) : IBattleTurnEconomy
+    {
+        private int _remaining;
+
+        public void StartPhase(int activeActorCount) => _remaining = 1;
+
+        public bool HasTurnsRemaining() => _remaining > 0;
+
+        public BattleTurnEconomySnapshot CaptureSnapshot() =>
+            new StandardActionTurnEconomySnapshot(_remaining);
+
+        public void Apply(ActionTurnConsumption consumption)
+        {
+            ArgumentNullException.ThrowIfNull(consumption);
+            if (consumption.Kind == ActionTurnConsumptionKind.None)
+            {
+                _remaining = checked(_remaining + actionDelta);
             }
         }
     }

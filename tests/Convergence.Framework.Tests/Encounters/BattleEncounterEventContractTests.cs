@@ -581,6 +581,12 @@ public sealed class BattleEncounterEventContractTests
                 alternateStandard,
                 ActionTurnConsumption.Normal));
         Assert.Throws<ArgumentException>(() =>
+            new BattleTurnEconomyChangedEventPayload(
+                actor,
+                standard,
+                new StandardActionTurnEconomySnapshot(1),
+                ActionTurnConsumption.None));
+        Assert.Throws<ArgumentException>(() =>
             new BattlePhaseStartedEventPayload(default, standard));
         Assert.Throws<ArgumentNullException>(() =>
             new BattlePhaseEndedEventPayload(team, null!));

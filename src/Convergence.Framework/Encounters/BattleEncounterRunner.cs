@@ -1806,8 +1806,10 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     }
 
                     acceptedEconomyState = afterEconomy;
-                    bool economyAdvanced = !Equals(beforeEconomy, afterEconomy);
-                    if (!economyAdvanced && command.RequestedOutcome is null)
+                    bool isContinuingFreeAction =
+                        command.TurnConsumption.Kind == ActionTurnConsumptionKind.None &&
+                        command.RequestedOutcome is null;
+                    if (isContinuingFreeAction)
                     {
                         consecutiveFreeActions++;
                         if (consecutiveFreeActions > services.PhaseProgress.MaximumConsecutiveFreeActions)
@@ -2793,7 +2795,13 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                    "after explicit phase termination.";
         }
 
-        if (consumption.Kind != ActionTurnConsumptionKind.None && Equals(before, after))
+        bool economyChanged = !Equals(before, after);
+        if (consumption.Kind == ActionTurnConsumptionKind.None && economyChanged)
+        {
+            return $"Turn economy {after.EconomyId} changed state for no-cost consumption.";
+        }
+
+        if (consumption.Kind != ActionTurnConsumptionKind.None && !economyChanged)
         {
             return $"Turn economy {after.EconomyId} did not advance for {consumption.Kind} consumption.";
         }

@@ -887,6 +887,13 @@ internal static class BattleTurnEconomyEventPayloadValidator
                 "Turn-economy transition snapshots must use the same concrete type.",
                 nameof(after));
         }
+
+        if (consumption.Kind == ActionTurnConsumptionKind.None && !Equals(before, after))
+        {
+            throw new ArgumentException(
+                "No-cost turn-economy evidence must preserve the exact economy state.",
+                nameof(after));
+        }
     }
 }
 
