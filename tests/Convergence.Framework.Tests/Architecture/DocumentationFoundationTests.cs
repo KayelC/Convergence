@@ -389,6 +389,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "encounter-orchestration-order-6-post-r42-independent-audit-2026-08-05.md"))
             .ReplaceLineEndings(" ");
+        string r47ClosureReview = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -663,23 +669,34 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("| O6-R45 | `pending` |", postR42Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R46 | `pending` |", postR42Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R47 | `pending` |", postR42Audit, StringComparison.Ordinal);
+        Assert.Contains(
+            "**Result:** no unresolved realistic reachable encounter-orchestration defect",
+            r47ClosureReview,
+            StringComparison.Ordinal);
+        Assert.Contains("## Corrected Invariants Rechecked", r47ClosureReview, StringComparison.Ordinal);
+        Assert.Contains(
+            "### Canonical event identity survives publication failure",
+            r47ClosureReview,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "### Primary command faults survive cleanup failure",
+            r47ClosureReview,
+            StringComparison.Ordinal);
+        Assert.Contains("## Documentation Cross-Examination", r47ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("## Verification", r47ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("CONVERGENCE_GODOT_SMOKE_OK", r47ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("Order 6 is formally complete after O6-R47", r47ClosureReview, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
-        Assert.Equal("existing_unreviewed", encounter.Mechanics.State);
-        Assert.Equal("existing_unreviewed", encounter.DeveloperGuide.State);
-        Assert.Equal("existing_unreviewed", encounter.Technical.State);
+        Assert.Equal("reviewed", encounter.Mechanics.State);
+        Assert.Equal("reviewed", encounter.DeveloperGuide.State);
+        Assert.Equal("reviewed", encounter.Technical.State);
 
         FrameworkCapability encounterCapability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
-        Assert.Equal("partial", encounterCapability.ImplementationState);
-        Assert.Equal(2, encounterCapability.KnownGaps.Count);
-        Assert.Contains(
-            encounterCapability.KnownGaps,
-            gap => gap.Contains("event publication", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(
-            encounterCapability.KnownGaps,
-            gap => gap.Contains("cleanup failure", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("complete", encounterCapability.ImplementationState);
+        Assert.Empty(encounterCapability.KnownGaps);
     }
 
     [Fact]

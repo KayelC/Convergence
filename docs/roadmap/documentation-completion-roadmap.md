@@ -596,6 +596,14 @@ model, and the developer guide names one nonexistent interface. The three Order
 reviewed, 27 `existing_unreviewed`, 14 missing, and 7 `not_applicable` until
 O6-R44 through O6-R47 are complete.
 
+O6-R44 and O6-R45 correct the two combined runtime failure paths. O6-R46
+reconciles mechanics, developer, technical, public API, and XML guidance. The
+[O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+independently rereads the corrected source and documents, passes the complete
+local release gate, and finds no unresolved realistic reachable defect. Order 6
+is formally complete. Its entries return to `reviewed`, so the current totals
+are 30 reviewed, 24 `existing_unreviewed`, 14 missing, and 7 `not_applicable`.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

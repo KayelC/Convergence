@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`encounter_orchestration` is currently `partial`. Its scheduler, lifecycle,
+`encounter_orchestration` is `complete`. Its scheduler, lifecycle,
 turn-economy, event, cancellation, and automated execution foundations remain
 implemented. The owner-approved
 [Order 6 roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md)
@@ -120,6 +120,16 @@ battle-end cleanup failure can replace an earlier command fault as terminal
 authority. O6-R44 through O6-R47 govern correction, documentation
 reconciliation, and independent closure. `encounter_orchestration` is therefore
 `partial` with those two named gaps.
+
+O6-R44 now records canonical events before optional sink publication and never
+reuses a failed event's sequence. O6-R45 routes faulted and rejected command
+results through one primary-fault finalizer, preserving the command code when
+battle-end cleanup also fails. O6-R46 reconciles all active guidance and the
+exact restriction-action interface name. The
+[O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+independently reread the corrected source and documents, passed the complete
+local release gate, and found no remaining realistic reachable defect.
+`encounter_orchestration` returns to `complete` with no known gap.
 
 `battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and

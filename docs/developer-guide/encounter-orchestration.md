@@ -9,9 +9,9 @@ presentation, and any mapping between framework runtime IDs and scene objects.
 Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
-> **Current review status:** `existing_unreviewed` after O6-R46. Event-delivery
-> authority, primary command-fault preservation, and the restricted-action
-> interface name now match source. O6-R47 remains the independent closure gate.
+> **Review state:** `reviewed` after O6-R47. Event-delivery authority, primary
+> command-fault preservation, scheduler composition, and the restricted-action
+> interface name were independently rechecked against current source.
 
 ## Required Composition
 

@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
@@ -97,7 +97,16 @@ The later
 reopened Order 6 after tracing two supported combined failure paths in event
 publication and command-fault finalization, plus one developer-guide contract
 name error. O6-R44 through O6-R47 now form the bounded correction and closure
-sequence. `encounter_orchestration` is `partial` until that sequence is green.
+sequence. At that audit revision, `encounter_orchestration` returned to
+`partial` pending that sequence.
+
+O6-R44 and O6-R45 correct both combined-failure paths. O6-R46 reconciles the
+three audience documents, public API guidance, XML guidance, and exact exported
+interface name. The
+[O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+independently reread the corrected implementation and documentation, passed the
+complete local gate, and found no unresolved realistic reachable defect. Order
+6 is formally complete and `encounter_orchestration` returns to `complete`.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

@@ -11,10 +11,9 @@ A Godot game may animate a timeline, a console may display menus, and an
 automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
-> **Current review status:** `existing_unreviewed` after O6-R46. O6-R44 and
-> O6-R45 corrected canonical event retention and primary-fault preservation;
-> O6-R46 reconciled this explanation. O6-R47 remains the independent closure
-> gate.
+> **Review state:** `reviewed` after O6-R47. Canonical event retention,
+> primary-fault preservation, scheduling, lifecycle, and Action Token behavior
+> were independently rechecked against current source and executable tests.
 
 ## Rule Ownership
 

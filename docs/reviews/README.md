@@ -91,6 +91,7 @@ or implementation authority.
 - [Encounter Orchestration Order 6 Post-R37 Independent Audit, 5 August 2026](encounter-orchestration-order-6-post-r37-independent-audit-2026-08-05.md)
 - [Encounter Orchestration Order 6 O6-R42 Final Closure Review, 5 August 2026](encounter-orchestration-order-6-r42-final-closure-review-2026-08-05.md)
 - [Encounter Orchestration Order 6 Post-R42 Independent Audit, 5 August 2026](encounter-orchestration-order-6-post-r42-independent-audit-2026-08-05.md)
+- [Encounter Orchestration Order 6 O6-R47 Final Closure Review, 5 August 2026](encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.

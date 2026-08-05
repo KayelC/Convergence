@@ -19,9 +19,9 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Current review status:** `existing_unreviewed` after O6-R46. O6-R44 and
-> O6-R45 corrected the two supported combined-failure paths, and O6-R46
-> reconciled the contract text. O6-R47 remains the independent closure gate.
+> **Review state:** `reviewed` after O6-R47. The corrected combined-failure
+> paths, structural scheduler protocol, lifecycle transactions, cancellation,
+> and automated composition were independently rechecked against current source.
 
 ## Authority Map
 

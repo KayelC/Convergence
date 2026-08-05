@@ -82,6 +82,12 @@ capability.
 The later O6-R43 source audit reopens the reference for canonical event
 retention and primary command-fault authority. It is `existing_unreviewed`
 until O6-R44 through O6-R47 are complete.
+O6-R44 preserves canonical event identity when optional sink publication
+fails, O6-R45 preserves the primary command fault when cleanup also fails, and
+O6-R46 reconciles the runtime contract. The
+[O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+independently traces the corrected source. This reference is `reviewed`, and
+Order 6 is formally complete.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

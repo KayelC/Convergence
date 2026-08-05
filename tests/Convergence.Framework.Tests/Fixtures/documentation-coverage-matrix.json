@@ -209,19 +209,19 @@
     {
       "id": "encounter_orchestration",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R43 reopened the entry because failed event publication can remove canonical post-commit evidence and reuse its sequence."
+        "reason": "O6-R47 independently rechecked canonical event retention, scheduling, lifecycle, cancellation, and terminal fault behavior against corrected source."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R43 reopened the entry for event-delivery authority, primary command-fault preservation, and one incorrect restricted-action source interface name."
+        "reason": "O6-R47 independently rechecked host composition, fallible event observation, primary fault authority, and the exact exported restriction-action interface."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R43 reopened the entry because the documented complete canonical history and secondary cleanup-fault model do not hold on two supported combined failure paths."
+        "reason": "O6-R47 independently rechecked the corrected event sequence authority, secondary cleanup-fault model, scheduler protocol, and transaction boundaries."
       }
     },
     {

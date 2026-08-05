@@ -83,6 +83,12 @@ capability.
 The later O6-R43 source audit reopens the guide for event-delivery authority,
 primary command-fault preservation, and one incorrect interface name. It is
 `existing_unreviewed` until O6-R44 through O6-R47 are complete.
+O6-R44 preserves canonical event identity when optional sink publication
+fails, O6-R45 preserves the primary command fault when cleanup also fails, and
+O6-R46 reconciles the composition guidance and interface name. The
+[O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+independently traces the corrected host boundary. This guide is `reviewed`, and
+Order 6 is formally complete.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

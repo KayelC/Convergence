@@ -178,4 +178,11 @@ The later
 [O6-R43 post-R42 independent audit](../reviews/encounter-orchestration-order-6-post-r42-independent-audit-2026-08-05.md)
 reopens Order 6 for two supported combined failure paths and one documentation
 contract-name error. O6-R44 through O6-R47 govern the bounded correction and
-fresh closure sequence; `encounter_orchestration` is currently `partial`.
+fresh closure sequence; at that audit revision, `encounter_orchestration`
+returned to `partial` pending that sequence.
+
+O6-R44 and O6-R45 correct the two runtime paths, and O6-R46 reconciles the
+active audience and public API guidance. The
+[O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+independently re-reads the corrected source and executable gates. Order 6 is
+formally complete; `encounter_orchestration` is `complete` with no known gap.

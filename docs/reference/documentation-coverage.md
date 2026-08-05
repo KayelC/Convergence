@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-27 existing_unreviewed, 14 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -261,13 +261,21 @@ authority plus one incorrect developer-guide interface name. All three
 encounter entries return to `existing_unreviewed` until O6-R44 through O6-R47
 correct and independently recheck the contracts.
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-27 existing_unreviewed, 14 missing, and 7 not_applicable.
+O6-R44 and O6-R45 correct canonical event retention and primary command-fault
+authority. O6-R46 reconciles all three audiences and the public API guidance.
+The
+[O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+independently rechecks current source and documentation without finding an
+unresolved realistic reachable defect. The three encounter entries return to
+`reviewed`.
+
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 27 |
-| `existing_unreviewed` | 27 |
+| `reviewed` | 30 |
+| `existing_unreviewed` | 24 |
 | `missing` | 14 |
 | `not_applicable` | 7 |
 
