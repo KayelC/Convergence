@@ -69,7 +69,10 @@ corrected source and returned the guide to `reviewed`. O6-R24 later reopened
 the guide as `existing_unreviewed` until normal completion and fault metadata
 are separated and the corrected host contract is independently checked.
 O6-R25 and O6-R26 completed those corrections. O6-R27 independently traced the
-current integration boundary and restored the guide to `reviewed`.
+current integration boundary and restored the guide to `reviewed` at that
+revision. O6-R33 subsequently reproduced two custom-policy validation gaps and
+one cleanup-boundary wording ambiguity, returning the guide to
+`existing_unreviewed` pending O6-R34 through O6-R37.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

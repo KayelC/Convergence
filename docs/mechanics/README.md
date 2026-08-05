@@ -38,7 +38,9 @@ fault-result boundary and that the mechanics fault-cleanup sentence omits its
 battle-start condition. The page was `existing_unreviewed` until O6-R25 through
 O6-R27 complete. O6-R25 and O6-R26 corrected the runtime result shape and all
 three audience statements; O6-R27 independently re-read the result and restored
-this page to `reviewed`.
+this page to `reviewed` at that revision. O6-R33 subsequently reproduced
+no-cost economy mutation and scheduler round drift, so this page returns to
+`existing_unreviewed` until O6-R34 through O6-R37 complete.
 
 ## Rule Index
 

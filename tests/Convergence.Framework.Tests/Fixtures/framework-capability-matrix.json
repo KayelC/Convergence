@@ -119,7 +119,7 @@
     },
     {
       "id": "encounter_orchestration",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "BattleEncounterRunnerTests",
         "TeamPhaseRoundRobinScheduleTests",
@@ -133,7 +133,10 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "No-cost turn consumption does not yet require an unchanged turn-economy snapshot or govern free-action liveness by its validated kind.",
+        "Custom scheduler transitions do not yet enforce structural round and completed-round continuity before the next command window."
+      ]
     },
     {
       "id": "battle_knowledge",

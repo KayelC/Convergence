@@ -543,6 +543,14 @@ reachable defect. Order 6 is formally closed again. Its entries return to
 `reviewed`, so the current totals are 30 reviewed, 24 `existing_unreviewed`,
 14 missing, and 7 `not_applicable`.
 
+The later
+[O6-R33 post-R32 independent audit](../reviews/encounter-orchestration-order-6-post-r32-independent-audit-2026-08-05.md)
+independently reproduced two public extension-contract defects and one
+battle-start cleanup wording ambiguity. Order 6 is reopened under O6-R34
+through O6-R37. Its mechanics, developer, and technical entries return to
+`existing_unreviewed`, so the current totals are 27 reviewed, 27
+`existing_unreviewed`, 14 missing, and 7 `not_applicable`.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

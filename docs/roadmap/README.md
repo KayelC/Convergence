@@ -148,3 +148,9 @@ active guidance. The
 independently reread current source and documents, found no unresolved
 realistic reachable defect, passed the complete release gate, and restored
 formal closure.
+
+The subsequent
+[O6-R33 post-R32 independent audit](../reviews/encounter-orchestration-order-6-post-r32-independent-audit-2026-08-05.md)
+reopened Order 6 after reproducing no-cost turn-economy mutation and scheduler
+round drift through supported custom-policy boundaries. O6-R34 through O6-R37
+govern correction, documentation reconciliation, and a fresh closure review.

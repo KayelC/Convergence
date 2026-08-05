@@ -68,7 +68,10 @@ independently re-read the corrected source and returned the reference to
 fault-finalization evidence is not always identical to successful sink
 publication and normal completion text currently crosses the fault-result
 boundary. O6-R25 and O6-R26 corrected both contracts, and O6-R27 independently
-traced the current source before restoring the reference to `reviewed`.
+traced the current source before restoring the reference to `reviewed` at that
+revision. O6-R33 subsequently reproduced missing no-cost economy and scheduler
+round-continuity validation, so the reference is `existing_unreviewed` pending
+O6-R34 through O6-R37.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).
