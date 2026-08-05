@@ -173,3 +173,9 @@ three audience documents and returns their entries to `reviewed`. The
 independently verifies current source, documentation, and the locally
 executable release gate. Order 6 is formally complete and the capability
 returns to `complete`.
+
+The later
+[O6-R43 post-R42 independent audit](../reviews/encounter-orchestration-order-6-post-r42-independent-audit-2026-08-05.md)
+reopens Order 6 for two supported combined failure paths and one documentation
+contract-name error. O6-R44 through O6-R47 govern the bounded correction and
+fresh closure sequence; `encounter_orchestration` is currently `partial`.

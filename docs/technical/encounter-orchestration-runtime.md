@@ -19,10 +19,10 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Current review status:** `reviewed` and independently verified at O6-R42.
-> Stable team-ring rotation, economy-aware scheduler validation, legitimate
-> live-phase closure, and phase turn-window safety semantics match current
-> source and tests.
+> **Current review status:** `existing_unreviewed` after O6-R43. The normal
+> runtime state machine remains aligned, but canonical event retention and
+> primary command-fault authority are incomplete on supported combined failure
+> paths. O6-R44 through O6-R47 govern correction and independent closure.
 
 ## Authority Map
 

@@ -119,7 +119,7 @@
     },
     {
       "id": "encounter_orchestration",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "BattleEncounterRunnerTests",
         "TeamPhaseRoundRobinScheduleTests",
@@ -133,7 +133,10 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Failed event publication can remove already-assigned canonical evidence and reuse its sequence in the returned fault history.",
+        "A battle-end cleanup failure can replace an earlier command fault or rejection as the terminal result's primary fault."
+      ]
     },
     {
       "id": "battle_knowledge",

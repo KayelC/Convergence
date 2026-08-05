@@ -209,19 +209,19 @@
     {
       "id": "encounter_orchestration",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R42 independently verified the O6-R41 stable team-ring, economy-liveness, phase-end, and accepted turn-window mechanics against current source and tests."
+        "reason": "O6-R43 reopened the entry because failed event publication can remove canonical post-commit evidence and reuse its sequence."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R42 independently verified scheduler extension obligations, exhausted-economy rejection, legitimate early phase end, stable ring selection, and exact phase safety-counter timing."
+        "reason": "O6-R43 reopened the entry for event-delivery authority, primary command-fault preservation, and one incorrect restricted-action source interface name."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R42 independently verified the structural validator, stable team-ring cursor, scheduler/economy authority, and accepted turn-window counter against the corrected runtime."
+        "reason": "O6-R43 reopened the entry because the documented complete canonical history and secondary cleanup-fault model do not hold on two supported combined failure paths."
       }
     },
     {

@@ -587,6 +587,15 @@ independently verified all three documents against current source and tests.
 No documentation state changes at closure; Order 6 and its audience evidence
 are now formally complete.
 
+The subsequent
+[O6-R43 post-R42 independent audit](../reviews/encounter-orchestration-order-6-post-r42-independent-audit-2026-08-05.md)
+found that failed event publication can contradict the documented canonical
+history, command-fault cleanup can contradict the documented secondary-fault
+model, and the developer guide names one nonexistent interface. The three Order
+6 entries return to `existing_unreviewed`, so the current totals are 27
+reviewed, 27 `existing_unreviewed`, 14 missing, and 7 `not_applicable` until
+O6-R44 through O6-R47 are complete.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

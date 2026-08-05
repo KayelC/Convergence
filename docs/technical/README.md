@@ -79,6 +79,9 @@ economy-liveness defects. O6-R39 and O6-R40 correct those paths, and O6-R41
 reconciles this reference with the exact phase turn-window safety boundary. It
 is `reviewed` again, and the O6-R42 independent review formally closes the
 capability.
+The later O6-R43 source audit reopens the reference for canonical event
+retention and primary command-fault authority. It is `existing_unreviewed`
+until O6-R44 through O6-R47 are complete.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).
