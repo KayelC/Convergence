@@ -844,10 +844,12 @@ internal static class BattleEncounterScheduleStructuralValidator
     public static void ValidateAdvance(
         BattleEncounterScheduleStateSnapshot before,
         BattleEncounterScheduleStep completedStep,
+        BattleEncounterScheduleStepOutcome completedOutcome,
         BattleEncounterScheduleTransitionResult transition)
     {
         ArgumentNullException.ThrowIfNull(before);
         ArgumentNullException.ThrowIfNull(completedStep);
+        ArgumentNullException.ThrowIfNull(completedOutcome);
         ArgumentNullException.ThrowIfNull(transition);
 
         if (transition.Status is not BattleEncounterScheduleTransitionStatus.Advanced and
@@ -904,6 +906,14 @@ internal static class BattleEncounterScheduleStructuralValidator
         {
             throw new InvalidOperationException(
                 $"Schedule step '{completedStep.Kind}' cannot advance to '{nextStep.Kind}'.");
+        }
+
+        if (nextStep is BattleEncounterCommandWindowScheduleStep &&
+            completedOutcome.HasRemainingOpportunities == false)
+        {
+            throw new InvalidOperationException(
+                $"Schedule step '{completedStep.Kind}' cannot open another command window " +
+                "after accepted turn-economy evidence reports no remaining opportunities.");
         }
     }
 

@@ -274,6 +274,7 @@ public sealed class BattleEncounterSchedulingContractTests
         BattleEncounterScheduleStructuralValidator.ValidateAdvance(
             before,
             completedStep,
+            BattleEncounterScheduleStepOutcome.BoundaryCompleted(),
             transition);
     }
 
@@ -294,6 +295,7 @@ public sealed class BattleEncounterSchedulingContractTests
             BattleEncounterScheduleStructuralValidator.ValidateAdvance(
                 before,
                 roundStarted,
+                BattleEncounterScheduleStepOutcome.BoundaryCompleted(),
                 prematureCompletion));
 
         TestScheduleState advancedState = State(revision: 1, sequence: 1);
@@ -312,7 +314,58 @@ public sealed class BattleEncounterSchedulingContractTests
             BattleEncounterScheduleStructuralValidator.ValidateAdvance(
                 before,
                 roundStarted,
+                BattleEncounterScheduleStepOutcome.BoundaryCompleted(),
                 illegalPairing));
+    }
+
+    [Fact]
+    public void StructuralValidator_RejectsCommandWindowsAfterAcceptedEconomyExhaustion()
+    {
+        TestScheduleState before = State(revision: 0, sequence: 0);
+        TestScheduleState after = State(revision: 1, sequence: 1);
+        var nextCommand = new BattleEncounterCommandWindowScheduleStep(
+            Policy,
+            1,
+            1,
+            Player,
+            PlayerTeam);
+        BattleEncounterScheduleTransitionResult transition =
+            BattleEncounterScheduleTransitionResult.Advance(before, after, nextCommand);
+        var phaseStarted = new BattleEncounterPhaseStartedScheduleStep(
+            Policy,
+            0,
+            1,
+            PlayerTeam,
+            new BattleEncounterTurnEconomyStart(1));
+        var command = new BattleEncounterCommandWindowScheduleStep(
+            Policy,
+            0,
+            1,
+            Player,
+            PlayerTeam);
+
+        InvalidOperationException phaseFailure = Assert.Throws<InvalidOperationException>(() =>
+            BattleEncounterScheduleStructuralValidator.ValidateAdvance(
+                before,
+                phaseStarted,
+                BattleEncounterScheduleStepOutcome.TurnEconomyStarted(
+                    new StandardActionTurnEconomySnapshot(0),
+                    hasRemainingOpportunities: false),
+                transition));
+        InvalidOperationException commandFailure = Assert.Throws<InvalidOperationException>(() =>
+            BattleEncounterScheduleStructuralValidator.ValidateAdvance(
+                before,
+                command,
+                BattleEncounterScheduleStepOutcome.CommandCommitted(
+                    Player,
+                    ActionTurnConsumption.Normal,
+                    new StandardActionTurnEconomySnapshot(1),
+                    new StandardActionTurnEconomySnapshot(0),
+                    hasRemainingOpportunities: false),
+                transition));
+
+        Assert.Contains("no remaining opportunities", phaseFailure.Message, StringComparison.Ordinal);
+        Assert.Contains("no remaining opportunities", commandFailure.Message, StringComparison.Ordinal);
     }
 
     [Fact]

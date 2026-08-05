@@ -1190,7 +1190,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             return InvokePort(
                 BattleEncounterFaultCode.ScheduleTransitionInvalid,
                 "schedule-transition-validation",
-                () => cursor.Advance(services.Schedule, transition),
+                () => cursor.Advance(services.Schedule, outcome, transition),
                 actorId);
         }
 
@@ -2622,9 +2622,11 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         public BattleEncounterScheduleCursor Advance(
             IBattleEncounterSchedulePolicy policy,
+            BattleEncounterScheduleStepOutcome completedOutcome,
             BattleEncounterScheduleTransitionResult transition)
         {
             ArgumentNullException.ThrowIfNull(policy);
+            ArgumentNullException.ThrowIfNull(completedOutcome);
             ArgumentNullException.ThrowIfNull(transition);
             if (transition.Status == BattleEncounterScheduleTransitionStatus.Rejected)
             {
@@ -2656,6 +2658,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 State,
                 Step ?? throw new InvalidOperationException(
                     "A completed encounter schedule cannot accept another transition."),
+                completedOutcome,
                 transition);
 
             return transition.Status switch

@@ -134,7 +134,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Schedule transition validation does not reject a command window selected after accepted economy evidence reports no remaining opportunities, allowing the handler to mutate before a later typed fault."
+        "Stable scheduling and economy-liveness corrections are implemented; audience reconciliation and independent closure review remain pending."
       ]
     },
     {

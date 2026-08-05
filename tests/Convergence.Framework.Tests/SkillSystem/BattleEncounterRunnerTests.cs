@@ -303,6 +303,41 @@ public sealed class BattleEncounterRunnerTests
             battleEvent.Kind == BattleEncounterEventKind.PhaseStarted));
     }
 
+    [Fact]
+    public void Runner_RejectsAnotherCommandWindowAfterEconomyExhaustionBeforeHandlerMutation()
+    {
+        BattleEncounterParticipant player =
+            Participant("exhausted_schedule_player", PlayerTeam);
+        BattleEncounterParticipant enemy =
+            Participant("exhausted_schedule_enemy", EnemyTeam);
+        var handler = new QueueTurnHandler(_ =>
+        {
+            decimal current = enemy.State.GetRequiredResource(Hp).Current;
+            enemy.State.SetResource(Hp, current - 1m);
+            return BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal);
+        });
+
+        BattleEncounterResult result = Run(
+            [player, enemy],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            schedule: new ExtraCommandAfterExhaustionSchedulePolicy(player.InstanceId));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.ScheduleTransitionInvalid, result.FaultCode);
+        Assert.Contains("no remaining opportunities", result.FaultMessage, StringComparison.Ordinal);
+        Assert.Single(handler.Requests);
+        Assert.Equal(9m, enemy.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(
+            9m,
+            result.Participants.Single(participant => participant.InstanceId == enemy.InstanceId)
+                .State.Resources.Single(resource => resource.ResourceId == Hp).Current);
+        Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnStarted);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
@@ -3664,6 +3699,49 @@ public sealed class BattleEncounterRunnerTests
                             EnemyTeam)),
                 _ => throw new InvalidOperationException(
                     "Unexpected actor-team mismatch schedule step.")
+            };
+        }
+    }
+
+    private sealed class ExtraCommandAfterExhaustionSchedulePolicy(RuntimeInstanceId actorId) :
+        IBattleEncounterSchedulePolicy
+    {
+        public ContentId PolicyId { get; } = ContentId.Parse("extra_exhausted_command_schedule");
+
+        public BattleEncounterScheduleTransitionResult Start(
+            BattleEncounterScheduleStartRequest request) =>
+            StartScriptedSchedule(PolicyId, request);
+
+        public BattleEncounterScheduleTransitionResult Advance(
+            BattleEncounterScheduleAdvanceRequest request)
+        {
+            ScriptedScheduleState state = Assert.IsType<ScriptedScheduleState>(request.State);
+            ScriptedScheduleState after = state.Advance();
+            return request.CompletedStep switch
+            {
+                BattleEncounterRoundStartedScheduleStep =>
+                    BattleEncounterScheduleTransitionResult.Advance(
+                        state,
+                        after,
+                        new BattleEncounterPhaseStartedScheduleStep(
+                            PolicyId,
+                            after.NextStepSequence,
+                            1,
+                            PlayerTeam,
+                            new BattleEncounterTurnEconomyStart(1))),
+                BattleEncounterPhaseStartedScheduleStep or
+                BattleEncounterCommandWindowScheduleStep =>
+                    BattleEncounterScheduleTransitionResult.Advance(
+                        state,
+                        after,
+                        new BattleEncounterCommandWindowScheduleStep(
+                            PolicyId,
+                            after.NextStepSequence,
+                            1,
+                            actorId,
+                            PlayerTeam)),
+                _ => throw new InvalidOperationException(
+                    "Unexpected exhausted-economy schedule step.")
             };
         }
     }

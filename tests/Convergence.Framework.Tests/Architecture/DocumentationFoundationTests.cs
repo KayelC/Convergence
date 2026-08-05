@@ -598,7 +598,7 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("### O6-L1", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("## Correction Roadmap", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R39 | `complete` |", postR37Audit, StringComparison.Ordinal);
-        Assert.Contains("| O6-R40 | `pending` |", postR37Audit, StringComparison.Ordinal);
+        Assert.Contains("| O6-R40 | `complete` |", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R41 | `pending` |", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R42 | `pending` |", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("Order 6 is **not ready for formal closure**", postR37Audit, StringComparison.Ordinal);

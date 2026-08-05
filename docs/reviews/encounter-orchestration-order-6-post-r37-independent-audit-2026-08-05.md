@@ -171,7 +171,7 @@ the accepted exhaustion evidence before invoking the second handler.
 |---|---|---|
 | O6-R38 | `complete` | Record this independent source and documentation audit; reopen only encounter orchestration tracking. |
 | O6-R39 | `complete` | Replaced filtered-array indexing with stable-ring round-robin selection and adversarial three-or-more-actor tests. |
-| O6-R40 | `pending` | Correlate structural schedule transitions with accepted economy liveness before another command window can run. |
+| O6-R40 | `complete` | Correlated structural schedule transitions with accepted economy liveness before another command window can run. |
 | O6-R41 | `pending` | Reconcile phase-end exceptions and phase-window safety-limit terminology across mechanics, developer, technical, XML, and API guidance. |
 | O6-R42 | `pending` | Independently reread corrected source and documents, run the complete release gate, and decide formal closure. |
 
@@ -184,8 +184,15 @@ cover three-actor departure before a command, departure after a committed
 command, new deployment, and immediate actor retention followed by normal
 rotation. The focused team-schedule and post-command suite passes 16 tests.
 
-O6-M1 and O6-L1 remain open through O6-R40 and O6-R41. Order 6 therefore
-remains reopened.
+O6-R40 now passes each accepted typed step outcome into structural transition
+validation. A phase-start or committed-command outcome reporting no remaining
+opportunities cannot select another command window. Contract tests cover both
+exhausted boundary kinds. An end-to-end hostile scheduler test proves the
+runner returns `ScheduleTransitionInvalid` before a second turn starts or a
+second handler mutation occurs.
+
+O6-L1 and audience reconciliation remain open through O6-R41, followed by the
+independent O6-R42 closure gate. Order 6 therefore remains reopened.
 
 ## Closure Decision
 
