@@ -11,10 +11,10 @@ A Godot game may animate a timeline, a console may display menus, and an
 automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
-> **Current review status:** `existing_unreviewed` after O6-R43. Normal
-> scheduling, lifecycle, and Action Token rules match current source, but failed
-> event publication can omit canonical post-commit evidence. O6-R44 through
-> O6-R47 govern correction and independent closure.
+> **Current review status:** `existing_unreviewed` after O6-R46. O6-R44 and
+> O6-R45 corrected canonical event retention and primary-fault preservation;
+> O6-R46 reconciled this explanation. O6-R47 remains the independent closure
+> gate.
 
 ## Rule Ownership
 
@@ -190,11 +190,16 @@ These are different outcomes:
   contract. The encounter ends as a typed `CommandRejected` fault rather than
   spending a turn or silently asking the player again.
 - **Port fault:** an injected service throws or returns an invalid transition.
-  The runner contains it as a stable `BattleEncounterFaultCode`. Successfully
-  accepting the structural `BattleStarted` event opens the cleanup boundary.
-  A later failure, including battle-start lifecycle failure, receives one
-  battle-end cleanup attempt. A failure before that event is accepted receives
-  none. Either path reports a faulted result.
+  The runner contains it as a stable `BattleEncounterFaultCode`. The cleanup
+  boundary opens only after `BattleStarted` publication completes. A later
+  failure, including battle-start lifecycle failure, receives one battle-end
+  cleanup attempt. If publication of `BattleStarted` fails, that event remains
+  canonical evidence but startup did not complete, so cleanup does not run.
+  Either path reports a faulted result.
+
+Once a primary fault has been established, battle-end cleanup failure is
+secondary evidence. It is appended to the fault history and message without
+replacing the primary code used by the result and terminal `BattleEnded` event.
 
 An ordinary unaffordable or invalid menu option should be rejected during the
 host's assessment loop before it becomes an encounter command result.
@@ -247,10 +252,12 @@ rejections, and host-mediated requests.
 Typed payloads are authoritative. Optional debug text is only useful for logs;
 a UI must not parse it to decide mechanics.
 
-The result owns the complete canonical sequenced history. When publication is
-successful, the sink observes that same order. If the sink itself fails,
-terminal fault evidence may be present only in the returned result because the
-runner will not recursively trust the failed sink.
+The result owns the complete canonical sequenced history. The runner records
+each event before asking the optional sink to observe it. If the sink throws
+before or after observing that event, the event remains in the result with its
+original sequence; the sequence is never reused. Terminal fault evidence may
+then be present only in the returned result because the runner will not
+recursively trust the failed sink.
 
 The runner verifies that command, effect, status, resource, knowledge, and
 presence evidence refers to participants in this encounter. A command cannot

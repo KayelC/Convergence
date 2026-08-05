@@ -787,8 +787,13 @@ public sealed class NoopBattleEncounterStateSynchronizer : IBattleEncounterState
     }
 }
 
+/// <summary>
+/// Observes canonical encounter events after the runner records their sequence and payload.
+/// A publication failure faults the encounter but cannot remove or renumber recorded evidence.
+/// </summary>
 public interface IBattleEncounterEventSink
 {
+    /// <summary>Observes one canonical event without receiving encounter mutation authority.</summary>
     ValueTask PublishAsync(BattleEncounterEvent battleEvent, CancellationToken cancellationToken = default);
 }
 

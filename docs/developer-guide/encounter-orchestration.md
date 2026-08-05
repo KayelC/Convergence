@@ -9,9 +9,9 @@ presentation, and any mapping between framework runtime IDs and scene objects.
 Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
-> **Current review status:** `existing_unreviewed` after O6-R43. Event-delivery
-> authority, primary command-fault preservation, and one restricted-action
-> interface name require correction under O6-R44 through O6-R47.
+> **Current review status:** `existing_unreviewed` after O6-R46. Event-delivery
+> authority, primary command-fault preservation, and the restricted-action
+> interface name now match source. O6-R47 remains the independent closure gate.
 
 ## Required Composition
 
@@ -28,7 +28,7 @@ Create a `BattleEncounterServices` instance with:
 | `BattlePhaseProgressPolicy` | Bounds accepted actor turn windows and consecutive free actions per phase. |
 | `BattleEncounterProgressPolicy` | Bounds accepted structural scheduler transitions across the encounter. |
 | `IBattleEncounterStateSynchronizer` | Optional host adapter for synchronizing external state with canonical participants. |
-| `IBattleEncounterEventSink` | Optional asynchronous destination for animation, UI, logs, or telemetry. |
+| `IBattleEncounterEventSink` | Optional fallible observer for animation, UI, logs, or telemetry; the returned result remains canonical. |
 
 The reusable runtime state is `RuntimeActorState`. Construct each
 `BattleEncounterParticipant` from that state and a display label. Runtime
@@ -208,7 +208,8 @@ equivalent transaction boundary before they return.
 ### Supplied Automated Restriction Resolver
 
 `AutomatedBattleTurnRestrictionResolver` accepts an
-`IAutomatedRestrictedActionSource` for restrictions that require a command.
+`IAutomatedBattleRestrictionActionSource` for restrictions that require a
+command.
 Each `AutomatedRestrictedActionSelection.ActionId` must identify its typed
 command exactly:
 
@@ -309,14 +310,13 @@ actual encounter team. Combat-profile source identity is provenance rather than
 a routing target, so a Vessel may still identify a non-deployed Hosted Entity as
 its profile source.
 
-An event-sink exception becomes `EventPublicationFailed`. During fault
-finalization, a second sink failure stops further publication but preserves
-the immutable returned event evidence. The result therefore owns the canonical
-sequenced history; it is identical to successful sink delivery during ordinary
-operation, but sink-failure finalization may append evidence that the failed
-sink never received. A host that needs delivery acknowledgement must track the
-sequence numbers it actually consumed rather than infer delivery from the
-returned result.
+The runner records each canonical event before calling the sink. An event-sink
+exception becomes `EventPublicationFailed`, but it cannot remove that event or
+reuse its sequence, including when the sink enqueued the event before throwing.
+During fault finalization, the failed sink is not called again; terminal fault
+evidence is appended to the immutable returned history only. A host that needs
+delivery acknowledgement must track the sequence numbers it actually consumed
+rather than infer delivery from the returned result.
 
 ## Completion Results
 
@@ -353,11 +353,17 @@ commits.
 - Port exceptions return a `Faulted` result with `BattleEncounterFaultCode`.
 - Command rejection returns `CommandRejected` and consumes no turn.
 
-Fault finalization attempts battle-end lifecycle exactly once after the
-structural `BattleStarted` event has been accepted and, when configured,
-successfully published. That boundary occurs before battle-start lifecycle, so
-a failure inside battle-start lifecycle still receives cleanup. A fault before
-the structural event is accepted receives none.
+Fault finalization attempts battle-end lifecycle exactly once after publication
+of the structural `BattleStarted` event completes. The event is canonical before
+publication begins, but a sink failure during that publication does not open the
+cleanup boundary. A later failure inside battle-start lifecycle does receive
+cleanup.
+
+If command execution has already established `CommandExecutionFaulted` or
+`CommandRejected`, a battle-end cleanup failure is recorded as a second
+`LifecycleExecutionFailed` event. The original command code remains authoritative
+on `BattleEncounterResult` and `BattleEnded`; cleanup details are appended to the
+message rather than replacing the root cause.
 
 Do not catch operational cancellation and convert it to a gameplay outcome
 unless the game explicitly owns that higher-level policy.

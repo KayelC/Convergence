@@ -304,6 +304,13 @@ public sealed class DocumentationFoundationTests
         string publicApi = File.ReadAllText(
             RepositoryPath("docs", "public-api-contract.md"))
             .ReplaceLineEndings(" ");
+        string restrictionResolverSource = File.ReadAllText(
+            RepositoryPath(
+                "src",
+                "Convergence.Framework",
+                "Encounters",
+                "AutomatedBattleTurnRestrictionResolver.cs"))
+            .ReplaceLineEndings(" ");
         string previousClosureReview = File.ReadAllText(
             RepositoryPath(
                 "docs",
@@ -394,7 +401,7 @@ public sealed class DocumentationFoundationTests
             "**Menu Back:**",
             "**Typed encounter cancellation:**",
             "**Operational cancellation:**",
-            "accepting the structural `BattleStarted` event opens the cleanup boundary.",
+            "boundary opens only after `BattleStarted` publication completes.",
             "encounter-wide structural-transition bound",
             "`None` consumption must preserve an exactly equal before/after economy snapshot",
             "Only round end may advance the round counters",
@@ -422,6 +429,7 @@ public sealed class DocumentationFoundationTests
             "The handler must not mutate the encounter economy.",
             "The committed restriction is authoritative input, not advisory metadata.",
             "## Supplied Automated Restriction Resolver",
+            "IAutomatedBattleRestrictionActionSource",
             "Restricted automated selections use the typed command's canonical action ID.",
             "explicit reason owns cleanup for the complete current defeat period",
             "trusted host mutation ports",
@@ -434,7 +442,7 @@ public sealed class DocumentationFoundationTests
             "maps a successful skill escape request to the canonical `Escape` outcome",
             "Every normal result has null `FaultMessage` and `FaultCode`",
             "track the sequence numbers it actually consumed",
-            "structural `BattleStarted` event has been accepted",
+            "publication of the structural `BattleStarted` event completes",
             "Every nonterminal `None` result advances the consecutive-free-action counter",
             "An active state must report `CompletedRounds == CurrentRound - 1`",
             "If that value is false, selecting another",
@@ -446,6 +454,14 @@ public sealed class DocumentationFoundationTests
         Assert.All(
             developerTokens,
             token => Assert.Contains(token, developer, StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            "IAutomatedRestrictedActionSource",
+            developer,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "public interface IAutomatedBattleRestrictionActionSource",
+            restrictionResolverSource,
+            StringComparison.Ordinal);
 
         string[] technicalTokens =
         [
@@ -487,7 +503,7 @@ public sealed class DocumentationFoundationTests
             publicApi,
             StringComparison.Ordinal);
         Assert.Contains(
-            "sink failure can leave terminal evidence in that result",
+            "a sink failure cannot remove or renumber it",
             publicApi,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -511,7 +527,11 @@ public sealed class DocumentationFoundationTests
             publicApi,
             StringComparison.Ordinal);
         Assert.Contains(
-            "fault-cleanup boundary opens after the structural `BattleStarted` event",
+            "Each event is recorded before optional sink publication",
+            publicApi,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "later cleanup failure is secondary evidence",
             publicApi,
             StringComparison.Ordinal);
         Assert.Contains(

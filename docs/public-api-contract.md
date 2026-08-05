@@ -155,12 +155,14 @@ is retained solely as optional, non-authoritative `BattleEnded` debug text.
 `IBattleEncounterCompletionPolicy` may select coherent normal terminal
 outcomes, but it cannot originate `Faulted`; only the runner's typed fault
 boundary owns a fault code.
-The result owns the complete sequenced event history; a sink failure can leave
-terminal evidence in that result which the failed sink did not receive.
-The fault-cleanup boundary opens after the structural `BattleStarted` event is
-accepted and successfully published when a sink exists. A later battle-start
-lifecycle failure receives one battle-end cleanup attempt; a fault before that
-event boundary receives none.
+The result owns the complete sequenced event history. Each event is recorded
+before optional sink publication, and a sink failure cannot remove or renumber
+it. Terminal evidence can therefore remain only in the result after the runner
+stops trusting the failed sink. The fault-cleanup boundary opens after
+publication of the structural `BattleStarted` event completes. Its canonical
+record may exist even when publication fails, but cleanup starts only after
+successful publication. Once a primary fault exists, later cleanup failure is
+secondary evidence and cannot replace the result or `BattleEnded` fault code.
 
 `RuntimeSaveValidationCode` appends `MissingPassiveSkillState` and
 `ConflictingActorAilmentExclusivityGroup`. These guarded `0.1.0` diagnostics

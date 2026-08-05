@@ -19,10 +19,9 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Current review status:** `existing_unreviewed` after O6-R43. The normal
-> runtime state machine remains aligned, but canonical event retention and
-> primary command-fault authority are incomplete on supported combined failure
-> paths. O6-R44 through O6-R47 govern correction and independent closure.
+> **Current review status:** `existing_unreviewed` after O6-R46. O6-R44 and
+> O6-R45 corrected the two supported combined-failure paths, and O6-R46
+> reconciled the contract text. O6-R47 remains the independent closure gate.
 
 ## Authority Map
 
@@ -229,7 +228,8 @@ guards the boundaries it owns:
 - lifecycle work is staged in `BattleEncounterLifecycleTransaction`;
 - cancellation is checked before every staged commit;
 - a non-`None` consumption invokes owner-turn-end lifecycle;
-- event publication occurs in canonical sequence after the relevant commit.
+- each event is recorded in canonical sequence after the relevant commit and
+  before optional sink publication.
 
 Action-level atomicity remains owned by `BattleActionExecutor` and its staged
 actor graph.
@@ -305,9 +305,10 @@ command. Lifecycle-only completion checks receive no fabricated acting actor.
 - the matching immutable `BattleEncounterEventPayload`;
 - optional non-authoritative debug text.
 
-The result retains the complete canonical sequenced event history. During
-ordinary successful publication, the sink receives that same history in the
-same order. If the sink fails, fault finalization may append result-only
+The result retains the complete canonical sequenced event history. The runner
+assigns a sequence and appends the event before invoking the sink. A sink that
+throws before acceptance or after enqueueing cannot remove the event and cannot
+cause its sequence to be reused. Fault finalization then appends result-only
 terminal evidence rather than recursively publishing through the failed sink.
 The automated runner does not translate or resequence either form.
 
@@ -392,9 +393,16 @@ Port exceptions are wrapped with port name, actor when available, and a stable
 3. records cleanup failure separately if needed;
 4. records one `BattleEnded(Faulted)` result.
 
-The cleanup boundary opens before battle-start lifecycle is invoked. A fault in
-that lifecycle therefore receives one cleanup attempt; a fault while accepting
-or publishing `BattleStarted` does not.
+Faulted and rejected command results enter this same finalizer. Their command
+fault is recorded once as the primary code. If battle-end lifecycle also fails,
+the lifecycle fault is secondary evidence and the result plus `BattleEnded`
+retain the original command code.
+
+The cleanup boundary opens after `BattleStarted` sink publication completes and
+before battle-start lifecycle is invoked. The event is already present in the
+canonical result while publication is attempted, but publication failure does
+not open cleanup. A later fault in battle-start lifecycle receives one cleanup
+attempt.
 
 If the event sink itself failed, final evidence remains in the returned result
 without recursively trusting the failed sink.
