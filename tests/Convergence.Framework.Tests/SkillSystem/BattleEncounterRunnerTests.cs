@@ -1409,6 +1409,73 @@ public sealed class BattleEncounterRunnerTests
         Assert.Equal(BattleEncounterEventKind.BattleEnded, result.Events[^1].Kind);
     }
 
+    [Theory]
+    [InlineData(
+        BattleEncounterCommandStatus.Faulted,
+        BattleEncounterFaultCode.CommandExecutionFaulted,
+        "Primary command fault.")]
+    [InlineData(
+        BattleEncounterCommandStatus.Rejected,
+        BattleEncounterFaultCode.CommandRejected,
+        "Primary command rejection.")]
+    public void Runner_PreservesPrimaryCommandFaultWhenBattleEndCleanupFails(
+        BattleEncounterCommandStatus commandStatus,
+        BattleEncounterFaultCode expectedFaultCode,
+        string primaryMessage)
+    {
+        BattleEncounterParticipant player = Participant("command_cleanup_player", PlayerTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            BattleEndAction = request =>
+            {
+                request.Participants[0].State.SetResource(Hp, 1);
+                throw new InvalidOperationException("Deliberate command cleanup failure.");
+            }
+        };
+        BattleEncounterCommandResult command = commandStatus switch
+        {
+            BattleEncounterCommandStatus.Faulted =>
+                BattleEncounterCommandResult.Faulted(primaryMessage),
+            BattleEncounterCommandStatus.Rejected =>
+                BattleEncounterCommandResult.Rejected(primaryMessage),
+            _ => throw new ArgumentOutOfRangeException(nameof(commandStatus))
+        };
+
+        BattleEncounterResult result = Run(
+            [player, Participant("command_cleanup_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            new QueueTurnHandler(_ => command),
+            new CompleteAfterTurnsPolicy(99));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(expectedFaultCode, result.FaultCode);
+        Assert.StartsWith(primaryMessage, result.FaultMessage, StringComparison.Ordinal);
+        Assert.Contains("battle-end", result.FaultMessage, StringComparison.Ordinal);
+        Assert.Equal(1, lifecycle.BattleEndCalls);
+        Assert.Equal(10, player.State.GetRequiredResource(Hp).Current);
+        Assert.Equal(
+            10,
+            result.Participants[0].State.Resources.Single(resource => resource.ResourceId == Hp).Current);
+
+        BattleEncounterEvent[] faultEvents = result.Events
+            .Where(battleEvent => battleEvent.Kind == BattleEncounterEventKind.BattleFaulted)
+            .ToArray();
+        Assert.Equal(2, faultEvents.Length);
+        Assert.Equal(expectedFaultCode, faultEvents[0].FaultCode);
+        BattleFaultedEventPayload primaryFault = Assert.IsType<BattleFaultedEventPayload>(
+            faultEvents[0].Payload);
+        Assert.Equal(player.InstanceId, primaryFault.ActorId);
+        Assert.Equal(PlayerTeam, primaryFault.TeamId);
+        Assert.Equal("turn-handler", primaryFault.PortName);
+        Assert.Equal(BattleEncounterFaultCode.LifecycleExecutionFailed, faultEvents[1].FaultCode);
+
+        BattleEndedEventPayload battleEnded = Assert.IsType<BattleEndedEventPayload>(
+            Assert.Single(result.Events, battleEvent =>
+                battleEvent.Kind == BattleEncounterEventKind.BattleEnded).Payload);
+        Assert.Equal(expectedFaultCode, battleEnded.FaultCode);
+    }
+
     [Fact]
     public void Runner_PublishesSuccessfulBattleEndLifecycleEventsBeforeTheTerminalEvent()
     {

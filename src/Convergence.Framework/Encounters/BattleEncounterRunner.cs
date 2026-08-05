@@ -1710,20 +1710,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                     beforeEconomy),
                                 $"{actor.DisplayName}'s turn ended with a command fault.")
                             .ConfigureAwait(false);
-                        await AddAsync(
-                                BattleEncounterEventKind.BattleFaulted,
-                                new BattleFaultedEventPayload(
-                                    BattleEncounterFaultCode.CommandExecutionFaulted,
-                                    actor.InstanceId,
-                                    actor.TeamId,
-                                    "turn-handler"),
-                                command.FaultMessage ?? "Battle command faulted.")
-                            .ConfigureAwait(false);
-                        return await FinishAsync(
-                                BattleEncounterOutcome.Faulted,
-                                null,
-                                command.FaultMessage,
-                                BattleEncounterFaultCode.CommandExecutionFaulted)
+                        return await FaultDuringBattleAsync(
+                                command.FaultMessage ?? "Battle command faulted.",
+                                actor.InstanceId,
+                                BattleEncounterFaultCode.CommandExecutionFaulted,
+                                actor.TeamId,
+                                "turn-handler")
                             .ConfigureAwait(false);
                     }
 
@@ -1746,20 +1738,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                     beforeEconomy),
                                 $"{actor.DisplayName}'s turn ended with a rejected command.")
                             .ConfigureAwait(false);
-                        await AddAsync(
-                                BattleEncounterEventKind.BattleFaulted,
-                                new BattleFaultedEventPayload(
-                                    BattleEncounterFaultCode.CommandRejected,
-                                    actor.InstanceId,
-                                    actor.TeamId,
-                                    "turn-handler"),
-                                rejection)
-                            .ConfigureAwait(false);
-                        return await FinishAsync(
-                                BattleEncounterOutcome.Faulted,
-                                null,
+                        return await FaultDuringBattleAsync(
                                 rejection,
-                                BattleEncounterFaultCode.CommandRejected)
+                                actor.InstanceId,
+                                BattleEncounterFaultCode.CommandRejected,
+                                actor.TeamId,
+                                "turn-handler")
                             .ConfigureAwait(false);
                     }
 
@@ -2258,7 +2242,9 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             string primaryMessage,
             BattleEncounterFaultCode? faultCode,
             RuntimeInstanceId? actorId,
-            bool publishEvents)
+            bool publishEvents,
+            ContentId? teamId = null,
+            string? portName = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             bool publishDuringFinalization = publishEvents;
@@ -2268,7 +2254,11 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             await AppendFinalEventAsync(new BattleEncounterEvent(
                     0,
                     BattleEncounterEventKind.BattleFaulted,
-                    new BattleFaultedEventPayload(resolvedFaultCode, actorId),
+                    new BattleFaultedEventPayload(
+                        resolvedFaultCode,
+                        actorId,
+                        teamId,
+                        portName),
                     primaryMessage))
                 .ConfigureAwait(false);
 
@@ -2378,8 +2368,17 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         async ValueTask<BattleEncounterResult> FaultDuringBattleAsync(
             string message,
             RuntimeInstanceId? actorId = null,
-            BattleEncounterFaultCode? faultCode = null) =>
-            await FinalizeFailureAsync(message, faultCode, actorId, publishEvents: true).ConfigureAwait(false);
+            BattleEncounterFaultCode? faultCode = null,
+            ContentId? teamId = null,
+            string? portName = null) =>
+            await FinalizeFailureAsync(
+                    message,
+                    faultCode,
+                    actorId,
+                    publishEvents: true,
+                    teamId: teamId,
+                    portName: portName)
+                .ConfigureAwait(false);
 
         async ValueTask<BattleEncounterResult> FinishAsync(
             BattleEncounterOutcome outcome,
