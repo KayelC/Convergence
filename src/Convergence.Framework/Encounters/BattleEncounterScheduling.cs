@@ -839,6 +839,113 @@ public sealed class BattleEncounterScheduleTransitionResult
     }
 }
 
+internal static class BattleEncounterScheduleStructuralValidator
+{
+    public static void ValidateAdvance(
+        BattleEncounterScheduleStateSnapshot before,
+        BattleEncounterScheduleStep completedStep,
+        BattleEncounterScheduleTransitionResult transition)
+    {
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentNullException.ThrowIfNull(completedStep);
+        ArgumentNullException.ThrowIfNull(transition);
+
+        if (transition.Status is not BattleEncounterScheduleTransitionStatus.Advanced and
+            not BattleEncounterScheduleTransitionStatus.Completed ||
+            transition.After is not { } after)
+        {
+            throw new InvalidOperationException(
+                "Structural schedule validation requires an advanced or completed transition.");
+        }
+
+        if (before.CompletedRounds != before.CurrentRound - 1)
+        {
+            throw new InvalidOperationException(
+                $"Schedule state for round {before.CurrentRound} must report exactly " +
+                $"{before.CurrentRound - 1} completed round(s).");
+        }
+
+        if (completedStep is BattleEncounterRoundEndedScheduleStep)
+        {
+            ValidateRoundEnd(before, after, transition);
+            return;
+        }
+
+        if (transition.Status != BattleEncounterScheduleTransitionStatus.Advanced ||
+            transition.NextStep is not { } nextStep)
+        {
+            throw new InvalidOperationException(
+                $"Schedule step '{completedStep.Kind}' cannot complete the encounter schedule.");
+        }
+
+        if (after.CurrentRound != before.CurrentRound ||
+            after.CompletedRounds != before.CompletedRounds)
+        {
+            throw new InvalidOperationException(
+                $"Schedule step '{completedStep.Kind}' must preserve round " +
+                $"{before.CurrentRound} and {before.CompletedRounds} completed round(s).");
+        }
+
+        bool legalStep = completedStep switch
+        {
+            BattleEncounterRoundStartedScheduleStep =>
+                nextStep is BattleEncounterPhaseStartedScheduleStep or
+                    BattleEncounterRoundEndedScheduleStep,
+            BattleEncounterPhaseStartedScheduleStep phaseStarted =>
+                IsPhaseContinuation(nextStep, phaseStarted.TeamId),
+            BattleEncounterCommandWindowScheduleStep commandWindow =>
+                IsPhaseContinuation(nextStep, commandWindow.TeamId),
+            BattleEncounterPhaseEndedScheduleStep =>
+                nextStep is BattleEncounterPhaseStartedScheduleStep or
+                    BattleEncounterRoundEndedScheduleStep,
+            _ => false
+        };
+        if (!legalStep)
+        {
+            throw new InvalidOperationException(
+                $"Schedule step '{completedStep.Kind}' cannot advance to '{nextStep.Kind}'.");
+        }
+    }
+
+    private static void ValidateRoundEnd(
+        BattleEncounterScheduleStateSnapshot before,
+        BattleEncounterScheduleStateSnapshot after,
+        BattleEncounterScheduleTransitionResult transition)
+    {
+        if (transition.Status == BattleEncounterScheduleTransitionStatus.Completed)
+        {
+            if (before.CurrentRound != before.RoundLimit ||
+                after.CurrentRound != before.CurrentRound ||
+                after.CompletedRounds != before.CurrentRound)
+            {
+                throw new InvalidOperationException(
+                    $"Schedule completion requires round {before.RoundLimit} to close exactly once.");
+            }
+
+            return;
+        }
+
+        if (transition.NextStep is not BattleEncounterRoundStartedScheduleStep ||
+            before.CurrentRound >= before.RoundLimit ||
+            after.CurrentRound != checked(before.CurrentRound + 1) ||
+            after.CompletedRounds != before.CurrentRound)
+        {
+            throw new InvalidOperationException(
+                $"Round {before.CurrentRound} must advance exactly once to the next round-start step.");
+        }
+    }
+
+    private static bool IsPhaseContinuation(
+        BattleEncounterScheduleStep nextStep,
+        ContentId teamId) =>
+        nextStep switch
+        {
+            BattleEncounterCommandWindowScheduleStep command => command.TeamId == teamId,
+            BattleEncounterPhaseEndedScheduleStep phaseEnd => phaseEnd.TeamId == teamId,
+            _ => false
+        };
+}
+
 /// <summary>
 /// Selects structural encounter boundaries and command recipients without
 /// executing actions or mutating a turn economy.

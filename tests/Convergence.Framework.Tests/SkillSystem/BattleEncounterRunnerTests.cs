@@ -269,6 +269,41 @@ public sealed class BattleEncounterRunnerTests
     }
 
     [Theory]
+    [InlineData(StructuralScheduleDrift.RoundJump, 0)]
+    [InlineData(StructuralScheduleDrift.CompletedRoundJump, 0)]
+    [InlineData(StructuralScheduleDrift.RoundRewind, 2)]
+    public void Runner_RejectsStructuralScheduleDriftBeforeAnotherCommandOrLifecycleCommit(
+        StructuralScheduleDrift drift,
+        int commandsBeforeDrift)
+    {
+        var lifecycle = new RecordingLifecycle();
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+        var schedule = new StructuralDriftSchedulePolicy(drift);
+
+        BattleEncounterResult result = Run(
+            [Participant("structural_drift_player", PlayerTeam),
+             Participant("structural_drift_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            schedule: schedule,
+            roundLimit: 2);
+
+        Assert.True(schedule.Drifted);
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.ScheduleTransitionInvalid, result.FaultCode);
+        Assert.Contains("must preserve round", result.FaultMessage);
+        Assert.Equal(commandsBeforeDrift, handler.Requests.Count);
+        Assert.Equal(commandsBeforeDrift, lifecycle.TurnEndCalls);
+        Assert.Equal(commandsBeforeDrift, result.Events.Count(battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnEconomyChanged));
+        Assert.Equal(commandsBeforeDrift, result.Events.Count(battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.PhaseStarted));
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(-1)]
     public void EncounterProgressPolicy_RejectsNonPositiveLimits(int maximumTransitions)
@@ -3630,6 +3665,93 @@ public sealed class BattleEncounterRunnerTests
                 _ => throw new InvalidOperationException(
                     "Unexpected actor-team mismatch schedule step.")
             };
+        }
+    }
+
+    public enum StructuralScheduleDrift
+    {
+        RoundJump,
+        CompletedRoundJump,
+        RoundRewind
+    }
+
+    private sealed class StructuralDriftSchedulePolicy(StructuralScheduleDrift drift) :
+        IBattleEncounterSchedulePolicy
+    {
+        private readonly TeamPhaseRoundRobinBattleEncounterSchedulePolicy _inner = new();
+
+        public ContentId PolicyId => _inner.PolicyId;
+        public bool Drifted { get; private set; }
+
+        public BattleEncounterScheduleTransitionResult Start(
+            BattleEncounterScheduleStartRequest request) =>
+            _inner.Start(request);
+
+        public BattleEncounterScheduleTransitionResult Advance(
+            BattleEncounterScheduleAdvanceRequest request)
+        {
+            if (!Drifted && ShouldDrift(request.CompletedStep))
+            {
+                Drifted = true;
+                return CreateDrift(request);
+            }
+
+            return _inner.Advance(request);
+        }
+
+        private bool ShouldDrift(BattleEncounterScheduleStep step) =>
+            step is BattleEncounterRoundStartedScheduleStep roundStarted &&
+            drift switch
+            {
+                StructuralScheduleDrift.RoundJump or
+                    StructuralScheduleDrift.CompletedRoundJump => roundStarted.RoundNumber == 1,
+                StructuralScheduleDrift.RoundRewind => roundStarted.RoundNumber == 2,
+                _ => throw new ArgumentOutOfRangeException(nameof(drift))
+            };
+
+        private BattleEncounterScheduleTransitionResult CreateDrift(
+            BattleEncounterScheduleAdvanceRequest request)
+        {
+            (int currentRound, int completedRounds) = drift switch
+            {
+                StructuralScheduleDrift.RoundJump => (2, 0),
+                StructuralScheduleDrift.CompletedRoundJump => (1, 1),
+                StructuralScheduleDrift.RoundRewind => (1, 1),
+                _ => throw new ArgumentOutOfRangeException(nameof(drift))
+            };
+            var after = new StructuralDriftScheduleState(
+                request.State,
+                currentRound,
+                completedRounds);
+            return BattleEncounterScheduleTransitionResult.Advance(
+                request.State,
+                after,
+                new BattleEncounterPhaseStartedScheduleStep(
+                    PolicyId,
+                    after.NextStepSequence,
+                    after.CurrentRound,
+                    after.TeamOrder[0],
+                    new BattleEncounterTurnEconomyStart(1)));
+        }
+
+        private sealed class StructuralDriftScheduleState :
+            BattleEncounterScheduleStateSnapshot
+        {
+            public StructuralDriftScheduleState(
+                BattleEncounterScheduleStateSnapshot before,
+                int currentRound,
+                int completedRounds)
+                : base(
+                    before.PolicyId,
+                    checked(before.Revision + 1),
+                    currentRound,
+                    completedRounds,
+                    checked(before.NextStepSequence + 1),
+                    before.ParticipantIds,
+                    before.TeamOrder,
+                    before.RoundLimit)
+            {
+            }
         }
     }
 

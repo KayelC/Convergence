@@ -2652,6 +2652,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     "The encounter scheduling policy changed encounter identity while advancing.");
             }
 
+            BattleEncounterScheduleStructuralValidator.ValidateAdvance(
+                State,
+                Step ?? throw new InvalidOperationException(
+                    "A completed encounter schedule cannot accept another transition."),
+                transition);
+
             return transition.Status switch
             {
                 BattleEncounterScheduleTransitionStatus.Advanced

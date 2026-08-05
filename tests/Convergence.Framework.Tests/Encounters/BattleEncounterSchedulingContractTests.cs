@@ -252,6 +252,70 @@ public sealed class BattleEncounterSchedulingContractTests
     }
 
     [Fact]
+    public void StructuralValidator_AcceptsExactlyOneNextRoundAfterRoundEnd()
+    {
+        TestScheduleState before = State(
+            revision: 5,
+            sequence: 5,
+            currentRound: 1,
+            completedRounds: 0);
+        var completedStep = new BattleEncounterRoundEndedScheduleStep(Policy, 5, 1);
+        TestScheduleState after = State(
+            revision: 6,
+            sequence: 6,
+            currentRound: 2,
+            completedRounds: 1);
+        BattleEncounterScheduleTransitionResult transition =
+            BattleEncounterScheduleTransitionResult.Advance(
+                before,
+                after,
+                new BattleEncounterRoundStartedScheduleStep(Policy, 6, 2));
+
+        BattleEncounterScheduleStructuralValidator.ValidateAdvance(
+            before,
+            completedStep,
+            transition);
+    }
+
+    [Fact]
+    public void StructuralValidator_RejectsPrematureCompletionAndIllegalStepPairing()
+    {
+        TestScheduleState before = State(revision: 0, sequence: 0);
+        var roundStarted = new BattleEncounterRoundStartedScheduleStep(Policy, 0, 1);
+        TestScheduleState completedState = State(
+            revision: 1,
+            sequence: 1,
+            currentRound: 1,
+            completedRounds: 1);
+        BattleEncounterScheduleTransitionResult prematureCompletion =
+            BattleEncounterScheduleTransitionResult.Complete(before, completedState);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            BattleEncounterScheduleStructuralValidator.ValidateAdvance(
+                before,
+                roundStarted,
+                prematureCompletion));
+
+        TestScheduleState advancedState = State(revision: 1, sequence: 1);
+        BattleEncounterScheduleTransitionResult illegalPairing =
+            BattleEncounterScheduleTransitionResult.Advance(
+                before,
+                advancedState,
+                new BattleEncounterCommandWindowScheduleStep(
+                    Policy,
+                    1,
+                    1,
+                    Player,
+                    PlayerTeam));
+
+        Assert.Throws<InvalidOperationException>(() =>
+            BattleEncounterScheduleStructuralValidator.ValidateAdvance(
+                before,
+                roundStarted,
+                illegalPairing));
+    }
+
+    [Fact]
     public void Rejection_PreservesStateAndSnapshotsDiagnostics()
     {
         TestScheduleState state = State(revision: 0, sequence: 0);
