@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-27 existing_unreviewed, 14 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -246,13 +246,19 @@ one phase-window safety-limit terminology ambiguity. The three encounter
 entries return to `existing_unreviewed` until O6-R39 through O6-R42 correct and
 independently reconcile those contracts.
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-27 existing_unreviewed, 14 missing, and 7 not_applicable.
+O6-R39 and O6-R40 correct stable team-ring rotation and exhausted-economy
+schedule validation. O6-R41 reconciles those contracts and the exact accepted
+turn-window meaning of `MaximumCommands` across all three audiences. Their
+entries return to `reviewed`; O6-R42 remains the independent capability-closure
+gate.
+
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 27 |
-| `existing_unreviewed` | 27 |
+| `reviewed` | 30 |
+| `existing_unreviewed` | 24 |
 | `missing` | 14 |
 | `not_applicable` | 7 |
 

@@ -375,6 +375,8 @@ public sealed class DocumentationFoundationTests
         [
             "The scheduler chooses *who receives the next window*.",
             "The turn economy decides",
+            "stable team-participant ring",
+            "accepted turn-window safety limit",
             "TeamPhaseRoundRobinBattleEncounterSchedulePolicy",
             "AgilityOrderedBattleEncounterSchedulePolicy",
             "**Menu Back:**",
@@ -423,6 +425,8 @@ public sealed class DocumentationFoundationTests
             "structural `BattleStarted` event has been accepted",
             "Every nonterminal `None` result advances the consecutive-free-action counter",
             "An active state must report `CompletedRounds == CurrentRound - 1`",
+            "If that value is false, selecting another",
+            "pre-release `MaximumCommands` property increments",
             "OperationCanceledException",
             "AutomatedBattleRunner.RunAsync",
             "RuntimeInstanceId -> Node"
@@ -442,6 +446,8 @@ public sealed class DocumentationFoundationTests
             "BattleEncounterProgressPolicy",
             "frozen participant graph",
             "active state satisfies `CompletedRounds == CurrentRound - 1`",
+            "accepted exhausted",
+            "stable team-ring offset",
             "`RoundEnded` advances exactly one round",
             "`None` consumption requires exactly equal before/after economy snapshots",
             "one defeat announcement per uninterrupted defeated period",
@@ -599,15 +605,15 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("## Correction Roadmap", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R39 | `complete` |", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R40 | `complete` |", postR37Audit, StringComparison.Ordinal);
-        Assert.Contains("| O6-R41 | `pending` |", postR37Audit, StringComparison.Ordinal);
+        Assert.Contains("| O6-R41 | `complete` |", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R42 | `pending` |", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("Order 6 is **not ready for formal closure**", postR37Audit, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
-        Assert.Equal("existing_unreviewed", encounter.Mechanics.State);
-        Assert.Equal("existing_unreviewed", encounter.DeveloperGuide.State);
-        Assert.Equal("existing_unreviewed", encounter.Technical.State);
+        Assert.Equal("reviewed", encounter.Mechanics.State);
+        Assert.Equal("reviewed", encounter.DeveloperGuide.State);
+        Assert.Equal("reviewed", encounter.Technical.State);
 
         FrameworkCapability encounterCapability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");

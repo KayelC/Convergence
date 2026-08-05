@@ -3219,7 +3219,73 @@ public sealed class BattleEncounterRunnerTests
 
         Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
         Assert.Equal(3, handler.Requests.Count);
-        Assert.Contains("phase command limit of 3", result.FaultMessage);
+        Assert.Contains("phase turn-window safety limit of 3", result.FaultMessage);
+    }
+
+    [Fact]
+    public void Runner_TurnWindowLimitDoesNotCountAnActorUnavailableBeforeTurnStart()
+    {
+        BattleEncounterParticipant unavailable =
+            Participant("pre_turn_unavailable", PlayerTeam);
+        unavailable.State.SetEncounterPresence(isDeployed: false);
+        BattleEncounterParticipant available =
+            Participant("pre_turn_available", PlayerTeam);
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [unavailable, available, Participant("pre_turn_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            new RecordingLifecycle(),
+            handler,
+            new CompleteAfterTurnsPolicy(1),
+            phaseProgress: new BattlePhaseProgressPolicy(1, 0),
+            schedule: new UnavailableThenAvailableSchedulePolicy(
+                unavailable.InstanceId,
+                available.InstanceId));
+
+        Assert.Equal(BattleEncounterOutcome.Draw, result.Outcome);
+        Assert.Equal(available.InstanceId, Assert.Single(handler.Requests).Actor.InstanceId);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnStarted &&
+            battleEvent.ActorId == unavailable.InstanceId);
+    }
+
+    [Fact]
+    public void Runner_TurnWindowLimitCountsAnActorRemovedByTurnStartLifecycle()
+    {
+        BattleEncounterParticipant first =
+            Participant("lifecycle_window_first", PlayerTeam);
+        BattleEncounterParticipant second =
+            Participant("lifecycle_window_second", PlayerTeam);
+        var lifecycle = new RecordingLifecycle
+        {
+            TurnStartAction = request =>
+            {
+                if (request.Actor.InstanceId == first.InstanceId)
+                {
+                    request.Actor.State.SetEncounterPresence(isDeployed: false);
+                }
+            }
+        };
+        var handler = new QueueTurnHandler(_ =>
+            BattleEncounterCommandResult.Executed(ActionTurnConsumption.Normal));
+
+        BattleEncounterResult result = Run(
+            [first, second, Participant("lifecycle_window_enemy", EnemyTeam)],
+            new FixedInitiative(PlayerTeam, EnemyTeam),
+            lifecycle,
+            handler,
+            new CompleteAfterTurnsPolicy(99),
+            phaseProgress: new BattlePhaseProgressPolicy(1, 0));
+
+        Assert.Equal(BattleEncounterOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.PhaseCommandLimitExceeded, result.FaultCode);
+        Assert.Empty(handler.Requests);
+        BattleEncounterEvent turnStart = Assert.Single(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.TurnStarted);
+        Assert.Equal(first.InstanceId, turnStart.ActorId);
+        Assert.Contains("phase turn-window safety limit of 1", result.FaultMessage);
     }
 
     [Fact]
@@ -3744,6 +3810,58 @@ public sealed class BattleEncounterRunnerTests
                     "Unexpected exhausted-economy schedule step.")
             };
         }
+    }
+
+    private sealed class UnavailableThenAvailableSchedulePolicy(
+        RuntimeInstanceId unavailableActorId,
+        RuntimeInstanceId availableActorId) : IBattleEncounterSchedulePolicy
+    {
+        public ContentId PolicyId { get; } = ContentId.Parse("unavailable_then_available_schedule");
+
+        public BattleEncounterScheduleTransitionResult Start(
+            BattleEncounterScheduleStartRequest request) =>
+            StartScriptedSchedule(PolicyId, request);
+
+        public BattleEncounterScheduleTransitionResult Advance(
+            BattleEncounterScheduleAdvanceRequest request)
+        {
+            ScriptedScheduleState state = Assert.IsType<ScriptedScheduleState>(request.State);
+            ScriptedScheduleState after = state.Advance();
+            return request.CompletedStep switch
+            {
+                BattleEncounterRoundStartedScheduleStep =>
+                    BattleEncounterScheduleTransitionResult.Advance(
+                        state,
+                        after,
+                        new BattleEncounterPhaseStartedScheduleStep(
+                            PolicyId,
+                            after.NextStepSequence,
+                            1,
+                            PlayerTeam,
+                            new BattleEncounterTurnEconomyStart(1))),
+                BattleEncounterPhaseStartedScheduleStep =>
+                    Command(state, after, unavailableActorId),
+                BattleEncounterCommandWindowScheduleStep command
+                    when command.ActorId == unavailableActorId =>
+                    Command(state, after, availableActorId),
+                _ => throw new InvalidOperationException(
+                    "Unexpected unavailable-actor schedule step.")
+            };
+        }
+
+        private BattleEncounterScheduleTransitionResult Command(
+            ScriptedScheduleState before,
+            ScriptedScheduleState after,
+            RuntimeInstanceId actorId) =>
+            BattleEncounterScheduleTransitionResult.Advance(
+                before,
+                after,
+                new BattleEncounterCommandWindowScheduleStep(
+                    PolicyId,
+                    after.NextStepSequence,
+                    1,
+                    actorId,
+                    PlayerTeam));
     }
 
     public enum StructuralScheduleDrift

@@ -43,6 +43,10 @@ no-cost economy mutation and scheduler round drift, so this page returns to
 `existing_unreviewed`. O6-R34 and O6-R35 corrected both runtime boundaries,
 O6-R36 reconciled the page, and O6-R37 independently traced current source and
 restored the page to `reviewed`.
+O6-R38 later reopened the page after finding stable-ring and economy-liveness
+defects. O6-R39 and O6-R40 correct those paths, and O6-R41 reconciles the page
+with the exact phase-end and accepted turn-window rules. It is `reviewed` again
+while O6-R42 remains the capability-closure gate.
 
 ## Rule Index
 

@@ -9,10 +9,10 @@ presentation, and any mapping between framework runtime IDs and scene objects.
 Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
-> **Current review status:** `existing_unreviewed`. The O6-R38 independent
-> source audit reproduced stable round-robin and scheduler/economy-liveness
-> defects. O6-R39 through O6-R42 must correct those paths and reconcile this
-> integration guidance before owner review returns.
+> **Current review status:** `reviewed` at O6-R41. Stable team-ring rotation,
+> economy-aware scheduler validation, and phase turn-window safety semantics
+> have been reconciled with source and tests. O6-R42 remains the independent
+> capability-closure gate.
 
 ## Required Composition
 
@@ -26,7 +26,7 @@ Create a `BattleEncounterServices` instance with:
 | `IBattleEncounterTurnHandler` | Reads a host or AI command and returns one typed command result. |
 | `IBattleEncounterCompletionPolicy` | Evaluates terminal state after every reconciliation boundary. |
 | `Func<IBattleTurnEconomy>` | Creates a fresh economy for each scheduled phase. |
-| `BattlePhaseProgressPolicy` | Bounds total commands and consecutive free actions per phase. |
+| `BattlePhaseProgressPolicy` | Bounds accepted actor turn windows and consecutive free actions per phase. |
 | `BattleEncounterProgressPolicy` | Bounds accepted structural scheduler transitions across the encounter. |
 | `IBattleEncounterStateSynchronizer` | Optional host adapter for synchronizing external state with canonical participants. |
 | `IBattleEncounterEventSink` | Optional asynchronous destination for animation, UI, logs, or telemetry. |
@@ -75,8 +75,9 @@ constructs Action Token directly only to show the interface shape.
 ### Team Phases
 
 Use `TeamPhaseRoundRobinBattleEncounterSchedulePolicy` for phases shared by a
-team. It rotates through available actors while the phase economy has
-opportunities.
+team. It scans the team's stable participant order from a retained ring cursor,
+skipping unavailable actors without compacting the ring, while the phase
+economy has opportunities.
 
 To give the same actor an immediate follow-up without changing the economy,
 configure:
@@ -143,11 +144,21 @@ round complete; completing after `RoundEnded` is legal only at the round limit.
 The runner validates this before accepting the next cursor, so structural drift
 cannot reach another command or lifecycle commit.
 
+`TurnEconomyStarted` and `CommandCommitted` outcomes carry authoritative
+`HasRemainingOpportunities` evidence. If that value is false, selecting another
+`CommandWindow` is structurally invalid and faults before turn-start lifecycle
+or the handler can run. A scheduler may still select `PhaseEnded` while the
+economy is live when it has no eligible recipient; the supplied one-actor
+Agility scheduler uses this route after its frozen actor becomes unavailable.
+
 `BattleEncounterProgressPolicy` is a separate encounter-wide liveness guard.
 It limits accepted scheduler transitions, including round and phase boundaries
 that do not open a command window. `BattlePhaseProgressPolicy` instead limits
-commands and consecutive free actions inside one phase. Supply both policies:
-neither can replace the other.
+accepted turn windows and consecutive free actions inside one phase. Its
+pre-release `MaximumCommands` property increments when an initially available
+actor reaches `TurnStarted`, before turn-start lifecycle. An actor found
+unavailable before that boundary does not increment it; an actor removed by the
+committed lifecycle does. Supply both policies: neither can replace the other.
 
 For turn economy, `ActionTurnConsumptionKind.None` is a strict no-cost
 contract. `IBattleTurnEconomy.Apply` must return an exactly equal snapshot for

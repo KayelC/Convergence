@@ -75,6 +75,10 @@ one cleanup-boundary wording ambiguity, returning the guide to
 `existing_unreviewed`. O6-R34 and O6-R35 corrected the runtime boundaries,
 O6-R36 reconciled this guide, and O6-R37 independently traced the current
 composition contract and restored the guide to `reviewed`.
+O6-R38 later reopened the guide after finding stable-ring and
+economy-liveness defects. O6-R39 and O6-R40 correct those paths, and O6-R41
+reconciles the extension and phase turn-window contracts. The guide is
+`reviewed` again while O6-R42 remains the capability-closure gate.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

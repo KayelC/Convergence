@@ -19,10 +19,10 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Current review status:** `existing_unreviewed`. The O6-R38 independent
-> source audit reproduced stable round-robin and scheduler/economy-liveness
-> defects. O6-R39 through O6-R42 must correct those paths and reconcile the
-> state machines and transition tables before owner review returns.
+> **Current review status:** `reviewed` at O6-R41. Stable team-ring rotation,
+> economy-aware scheduler validation, and phase turn-window safety semantics
+> have been reconciled with source and tests. O6-R42 remains the independent
+> capability-closure gate.
 
 ## Authority Map
 
@@ -128,7 +128,9 @@ The runner validates:
   exactly at the configured round limit;
 - command-window actors exist and belong to the selected team;
 - step outcomes match the step being completed;
-- economy evidence is present only where required.
+- economy evidence is present only where required; and
+- a phase-start or committed-command outcome reporting no remaining
+  opportunities cannot select another command window.
 
 Rejected scheduling transitions become `ScheduleTransitionInvalid`; policy
 exceptions become `ScheduleExecutionFailed`. Neither route executes another
@@ -139,15 +141,21 @@ next step is interpreted. `BattleEncounterProgressPolicy` faults the encounter
 before accepting a transition that would exceed its configured maximum. This
 closes structural loops that can cycle through round or phase boundaries
 without opening a command window. It is independent from
-`BattlePhaseProgressPolicy`, which bounds commands and consecutive free actions
-only inside the current phase.
+`BattlePhaseProgressPolicy`, which bounds accepted turn windows and consecutive
+free actions only inside the current phase. `MaximumCommands` retains its
+pre-release name, but the counter increments after the selected actor passes
+the initial availability check and immediately before `TurnStarted` and
+turn-start lifecycle. Pre-turn unavailability does not increment it; departure
+committed by turn-start lifecycle does. Once the configured maximum has already
+been accepted, the next command-window step faults before processing.
 
 ### Supplied Team Scheduler
 
-`TeamPhaseRoundRobinBattleEncounterSchedulePolicy` stores team index, actor
-offset, round counters, and immediate-repeat count. It recomputes available
-actors from each advance request, so deployment and defeat affect the next
-window without rewriting policy state.
+`TeamPhaseRoundRobinBattleEncounterSchedulePolicy` stores team index, stable
+team-ring offset, round counters, and immediate-repeat count. It scans the
+unfiltered team participant order from that offset and selects the first
+available actor. Deployment and defeat therefore affect eligibility without
+compacting the ring or redistributing its cursor.
 
 Its optional post-command extension receives accepted immutable economy
 evidence. `RetainActor` is legal only when an opportunity remains and the
@@ -163,6 +171,11 @@ and any tie-break result that is not an exact permutation.
 Each frozen actor owns a one-actor phase. Remaining economy opportunities
 repeat that actor; unavailable frozen entries are skipped. Mid-round
 deployments wait until the next ordering pass.
+
+A scheduler may close a phase while its economy still has an opportunity when
+no eligible recipient exists. It may not do the reverse: accepted exhausted
+economy evidence followed by another command window is rejected before the
+window reaches lifecycle or handler execution.
 
 ## Command Transaction
 

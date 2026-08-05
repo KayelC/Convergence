@@ -201,12 +201,14 @@ Two counters guard different failures:
 
 | Counter | Increment | Reset | Fault threshold |
 |---|---|---|---|
-| Phase commands | Every command window | New phase | The next command after exactly `maximumCommands` have run. |
+| Accepted turn windows | An initially available actor reaches `TurnStarted`, before turn-start lifecycle | New phase | The next command-window step after exactly `maximumCommands` windows have reached turn start. |
 | Consecutive free actions | Accepted command whose snapshot is unchanged and which requests no encounter outcome | Any accepted state change or requested encounter outcome | The next unchanged command after exactly `maximumConsecutiveFreeActions` have run. |
 
 Thus a configured free-action limit of `2` permits two consecutive unchanged
-commands and faults on the third. The absolute command count still bounds a
-custom economy that changes or expands state forever.
+commands and faults on the third. The absolute turn-window count still bounds a
+custom economy that changes or expands state forever. An unavailable actor
+detected before `TurnStarted` does not increment this counter. An actor removed
+by committed turn-start lifecycle does, even when no handler command follows.
 
 `BattlePhaseProgressPolicy` requires:
 

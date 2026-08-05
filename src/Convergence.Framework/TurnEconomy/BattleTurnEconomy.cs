@@ -102,7 +102,9 @@ public sealed class StandardActionTurnEconomy : IBattleTurnEconomy
 
 /// <summary>
 /// Mandatory finite limits for one encounter phase. These are safety bounds,
-/// not balance rules: hosts choose values appropriate to their action system.
+/// not balance rules. <see cref="MaximumCommands"/> retains its pre-release
+/// name but counts accepted actor turn windows that reach turn-start lifecycle,
+/// whether or not a command handler later runs.
 /// </summary>
 public sealed record BattlePhaseProgressPolicy
 {
@@ -110,20 +112,28 @@ public sealed record BattlePhaseProgressPolicy
     {
         if (maximumCommands <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(maximumCommands), "Maximum commands must be positive.");
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumCommands),
+                "Maximum accepted turn windows must be positive.");
         }
 
         if (maximumConsecutiveFreeActions < 0 || maximumConsecutiveFreeActions >= maximumCommands)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(maximumConsecutiveFreeActions),
-                "The free-action limit must be nonnegative and lower than the command limit.");
+                "The free-action limit must be nonnegative and lower than the turn-window limit.");
         }
 
         MaximumCommands = maximumCommands;
         MaximumConsecutiveFreeActions = maximumConsecutiveFreeActions;
     }
 
+    /// <summary>
+    /// Gets the maximum number of actor turn windows that may reach turn-start
+    /// lifecycle during one phase.
+    /// </summary>
     public int MaximumCommands { get; }
+
+    /// <summary>Gets the maximum accepted consecutive no-cost actions.</summary>
     public int MaximumConsecutiveFreeActions { get; }
 }

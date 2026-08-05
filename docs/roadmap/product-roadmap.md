@@ -80,6 +80,14 @@ stable team-ring selection, economy-aware transition validation, documentation
 reconciliation, and an independent closure gate. No unrelated capability is
 demoted.
 
+O6-R39 now preserves one stable team-participant ring across departure,
+defeat, deployment, and immediate-repeat scheduling. O6-R40 rejects another
+command window as soon as accepted economy evidence reports exhaustion, before
+turn-start lifecycle or handler mutation. O6-R41 reconciles the three audience
+documents and the pre-release `MaximumCommands` API/wire name with its actual
+accepted turn-window safety semantics. O6-R42 remains the independent closure
+gate, so the capability remains `partial` until that review completes.
+
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced stale execution by a removed ailment and definition-incoherent

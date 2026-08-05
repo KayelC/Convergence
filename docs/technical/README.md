@@ -74,6 +74,10 @@ round-continuity validation, so the reference was `existing_unreviewed`.
 O6-R34 and O6-R35 corrected both runtime boundaries, O6-R36 reconciled this
 reference, and O6-R37 independently traced current source and restored it to
 `reviewed`.
+O6-R38 later reopened the reference after finding stable-ring and
+economy-liveness defects. O6-R39 and O6-R40 correct those paths, and O6-R41
+reconciles this reference with the exact phase turn-window safety boundary. It
+is `reviewed` again while O6-R42 remains the capability-closure gate.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

@@ -134,7 +134,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Stable scheduling and economy-liveness corrections are implemented; audience reconciliation and independent closure review remain pending."
+        "Stable scheduling, economy-liveness, and audience reconciliation are complete; independent O6-R42 closure review remains pending."
       ]
     },
     {

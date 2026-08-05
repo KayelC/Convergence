@@ -1392,7 +1392,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         $"with {phaseStartState.RemainingActions} action(s).")
                     .ConfigureAwait(false);
 
-                int commandCount = 0;
+                int acceptedTurnWindowCount = 0;
                 int consecutiveFreeActions = 0;
                 Synchronize();
                 schedule = AdvanceSchedule(
@@ -1404,10 +1404,10 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                        schedule.Step is BattleEncounterCommandWindowScheduleStep commandWindow)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (commandCount >= services.PhaseProgress.MaximumCommands)
+                    if (acceptedTurnWindowCount >= services.PhaseProgress.MaximumCommands)
                     {
                         return await FaultDuringBattleAsync(
-                                $"Team {teamId} exceeded the configured phase command limit " +
+                                $"Team {teamId} exceeded the configured phase turn-window safety limit " +
                                 $"of {services.PhaseProgress.MaximumCommands}.",
                                 faultCode: BattleEncounterFaultCode.PhaseCommandLimitExceeded)
                             .ConfigureAwait(false);
@@ -1454,7 +1454,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     }
 
                     BattleEncounterParticipant actor = scheduledActor;
-                    commandCount++;
+                    acceptedTurnWindowCount++;
                     await AddAsync(
                             BattleEncounterEventKind.TurnStarted,
                             new BattleTurnStartedEventPayload(actor.InstanceId, actor.TeamId),

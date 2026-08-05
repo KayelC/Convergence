@@ -172,7 +172,7 @@ the accepted exhaustion evidence before invoking the second handler.
 | O6-R38 | `complete` | Record this independent source and documentation audit; reopen only encounter orchestration tracking. |
 | O6-R39 | `complete` | Replaced filtered-array indexing with stable-ring round-robin selection and adversarial three-or-more-actor tests. |
 | O6-R40 | `complete` | Correlated structural schedule transitions with accepted economy liveness before another command window can run. |
-| O6-R41 | `pending` | Reconcile phase-end exceptions and phase-window safety-limit terminology across mechanics, developer, technical, XML, and API guidance. |
+| O6-R41 | `complete` | Reconciled phase-end exceptions and phase-window safety-limit terminology across mechanics, developer, technical, XML, and API guidance. |
 | O6-R42 | `pending` | Independently reread corrected source and documents, run the complete release gate, and decide formal closure. |
 
 ## Correction Progress
@@ -191,8 +191,16 @@ exhausted boundary kinds. An end-to-end hostile scheduler test proves the
 runner returns `ScheduleTransitionInvalid` before a second turn starts or a
 second handler mutation occurs.
 
-O6-L1 and audience reconciliation remain open through O6-R41, followed by the
-independent O6-R42 closure gate. Order 6 therefore remains reopened.
+O6-R41 now defines `MaximumCommands` consistently as the pre-release name for
+an accepted actor turn-window safety bound. The counter increments after the
+initial availability check and before `TurnStarted` and turn-start lifecycle;
+departure committed by that lifecycle still consumes one safety slot. The
+three audience documents also define stable-ring rotation, exhausted-economy
+rejection, and the legitimate live-economy phase-end path when no scheduler
+recipient remains. Their executable entries return to `reviewed`.
+
+Only the independent O6-R42 closure gate remains. Order 6 therefore remains
+reopened until that source and documentation review completes.
 
 ## Closure Decision
 

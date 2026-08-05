@@ -22,7 +22,7 @@ Both accept exactly these required parameters:
 
 | Parameter | Type | Rule |
 |---|---:|---|
-| `maximumCommands` | integer | Must be positive. Counts every command in one phase. |
+| `maximumCommands` | integer | Must be positive. Counts accepted actor turn windows that reach turn-start lifecycle, whether or not a handler later runs. |
 | `maximumConsecutiveFreeActions` | integer | Must be nonnegative and lower than `maximumCommands`. |
 
 Example neutral ruleset:

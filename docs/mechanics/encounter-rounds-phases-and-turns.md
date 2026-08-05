@@ -11,10 +11,10 @@ A Godot game may animate a timeline, a console may display menus, and an
 automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
-> **Current review status:** `existing_unreviewed`. The O6-R38 independent
-> source audit reproduced stable round-robin and scheduler/economy-liveness
-> defects. This page remains useful current guidance, but O6-R39 through
-> O6-R42 must correct and independently reconcile those boundaries.
+> **Current review status:** `reviewed` at O6-R41. Stable team-ring rotation,
+> economy-aware scheduler validation, and phase turn-window safety semantics
+> have been reconciled with source and tests. O6-R42 remains the independent
+> capability-closure gate.
 
 ## Rule Ownership
 
@@ -40,16 +40,17 @@ The supplied loop uses these concepts:
 2. **Round:** a scheduler-defined outer cycle. A round can contain team phases
    or individual actor phases.
 3. **Phase:** one turn-economy scope. It starts with a configured number of
-   opportunities and ends when none remain or a command explicitly terminates
-   it.
+   opportunities and ends when none remain, a command explicitly terminates
+   it, or the scheduler has no eligible recipient for a remaining opportunity.
 4. **Turn window:** one scheduled actor reaches turn start and may commit one
    command, unless lifecycle restrictions remove or redirect that opportunity.
 5. **Battle end:** completion or a command requests a terminal outcome,
    battle-end lifecycle commits, and the final result is published.
 
 The scheduler chooses *who receives the next window*. The turn economy decides
-*whether the current phase still has an opportunity*. Neither authority may
-silently perform the other's job.
+*whether the current phase still has an opportunity*. An exhausted economy can
+never be followed by another command window. A scheduler may end a still-live
+phase when it has no eligible recipient, but it may not invent an opportunity.
 
 ## Supplied Scheduling Models
 
@@ -60,7 +61,8 @@ silently perform the other's job.
 - visits teams in initiative order;
 - starts one phase for each team;
 - counts the team's currently deployed, living actors when the phase begins;
-- rotates command windows across currently available actors on that team;
+- scans a stable team-participant ring for the next available actor, so an
+  earlier departure does not shift or skip later actors;
 - refreshes availability after commands, defeat, recall, flee, or deployment
   changes;
 - closes the round after all team phases close.
@@ -121,6 +123,14 @@ accepted nonterminal `None` result counts toward the consecutive-free-action
 limit by its typed consumption kind, so a custom economy cannot evade that
 limit by moving its own state. Phase liveness limits prevent an unlimited
 stream of free actions.
+
+The pre-release `MaximumCommands` name is an absolute **accepted turn-window
+safety limit**, not a count of successful handler commands. A scheduled actor
+found unavailable before `TurnStarted` does not increment it. Once an available
+actor reaches `TurnStarted` and turn-start lifecycle, that window counts even
+if lifecycle then defeats, recalls, or removes the actor before a handler runs.
+After the limit has been reached, another scheduled command-window step faults
+before that next window is processed.
 
 Encounter liveness has a second independent limit. A custom scheduler cannot
 loop forever through empty round or phase boundaries without ever offering a

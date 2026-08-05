@@ -577,6 +577,13 @@ O6-R39 through O6-R42. Its mechanics, developer, and technical entries return
 to `existing_unreviewed`, so the current totals are 27 reviewed, 27
 `existing_unreviewed`, 14 missing, and 7 `not_applicable`.
 
+O6-R39 and O6-R40 correct stable team-ring selection and exhausted-economy
+schedule validation. O6-R41 reconciles those runtime contracts plus the exact
+accepted turn-window meaning of `MaximumCommands` across all three audiences.
+The entries return to `reviewed`, so the current totals are 30 reviewed, 24
+`existing_unreviewed`, 14 missing, and 7 `not_applicable`. O6-R42 remains the
+independent capability-closure gate.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

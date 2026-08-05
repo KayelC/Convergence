@@ -57,7 +57,11 @@ Both require the same two integer parameters:
 
 - `maximumCommands` must be positive;
 - `maximumConsecutiveFreeActions` must be nonnegative and lower than the
-  command limit.
+  accepted turn-window limit.
+
+The retained `maximumCommands` wire name counts initially available actor
+windows that reach `TurnStarted` and turn-start lifecycle. It is a liveness
+bound, not a limit on successful handler executions.
 
 Unknown parameters and missing, non-integer, or inconsistent limits reject the
 complete binding. `BattleTurnEconomyRuleset` returns a fresh-economy factory
@@ -353,6 +357,10 @@ be unique within that kind. The framework supplies no hidden capacity curve.
 These are safety limits for one encounter phase. They are authored because a
 host's command model determines reasonable bounds. The supplied examples use
 `256` and `32`; those values are not resolver fallbacks.
+
+`maximumCommands` retains its pre-release wire name but counts accepted actor
+turn windows that reach turn-start lifecycle, including a window whose
+committed lifecycle removes the actor before handler execution.
 
 ## Fixed Supplied Policies
 

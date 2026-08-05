@@ -165,3 +165,8 @@ reproduced stable round-robin and scheduler/economy-liveness defects and found
 one phase-window safety-limit terminology ambiguity. Order 6 is reopened under
 O6-R39 through O6-R42; `encounter_orchestration` is currently `partial` and
 its three audience entries are `existing_unreviewed`.
+
+O6-R39 and O6-R40 have corrected the two runtime paths. O6-R41 reconciles all
+three audience documents and returns their entries to `reviewed`. The
+capability remains `partial` only until O6-R42 completes its independent
+source, documentation, and release-gate review.

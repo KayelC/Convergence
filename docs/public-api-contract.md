@@ -125,6 +125,12 @@ advance exactly one round or complete exactly at the configured limit. The
 runner validates this before another cursor can execute a command or commit a
 lifecycle boundary.
 
+Accepted phase-start and command outcomes also carry turn-economy liveness.
+Exhausted evidence cannot advance to another command window. A scheduler may
+end a live phase when no eligible recipient remains. The pre-release
+`BattlePhaseProgressPolicy.MaximumCommands` name counts actor windows accepted
+into `TurnStarted` and turn-start lifecycle, not only handler executions.
+
 `IBattleEncounterDepartureLifecyclePort` is an optional extension to
 `IBattleEncounterLifecyclePort`. Its immutable request identifies one
 departing participant, the complete matching encounter graph, and an exact

@@ -40,7 +40,9 @@ Convergence supplies two standard implementations:
 
 Both policies require explicit authored `maximumCommands` and
 `maximumConsecutiveFreeActions` values. These are finite safety boundaries,
-not hidden balance defaults.
+not hidden balance defaults. The retained `maximumCommands` name counts actor
+turn windows accepted into turn-start lifecycle, not only commands that reach a
+handler.
 
 ### Standard actions
 

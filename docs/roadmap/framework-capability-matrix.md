@@ -101,6 +101,14 @@ fault. O6-R39 through O6-R42 govern the bounded correction, documentation
 reconciliation, and independent closure. The capability is therefore
 `partial` and its three audience entries are `existing_unreviewed`.
 
+O6-R39 has replaced compacted availability indexing with one stable team ring.
+O6-R40 now correlates every proposed schedule transition with accepted economy
+liveness before another command window can begin. O6-R41 reconciles the
+mechanics, developer, technical, XML, API, and turn-economy guidance, returning
+the three audience entries to `reviewed`. O6-R42 remains the independent
+closure gate; `encounter_orchestration` therefore remains `partial` until that
+review is complete.
+
 `battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and
 Analyze results pass through one atomic framework transition; automated teams
