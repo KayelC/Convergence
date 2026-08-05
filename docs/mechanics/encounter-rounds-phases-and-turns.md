@@ -11,10 +11,10 @@ A Godot game may animate a timeline, a console may display menus, and an
 automated simulation may choose commands without input. They can all use the
 same encounter contract.
 
-> **Current review status:** `reviewed` at O6-R41. Stable team-ring rotation,
-> economy-aware scheduler validation, and phase turn-window safety semantics
-> have been reconciled with source and tests. O6-R42 remains the independent
-> capability-closure gate.
+> **Current review status:** `reviewed` and independently verified at O6-R42.
+> Stable team-ring rotation, economy-aware scheduler validation, legitimate
+> live-phase closure, and phase turn-window safety semantics match current
+> source and tests.
 
 ## Rule Ownership
 

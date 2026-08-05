@@ -173,7 +173,7 @@ the accepted exhaustion evidence before invoking the second handler.
 | O6-R39 | `complete` | Replaced filtered-array indexing with stable-ring round-robin selection and adversarial three-or-more-actor tests. |
 | O6-R40 | `complete` | Correlated structural schedule transitions with accepted economy liveness before another command window can run. |
 | O6-R41 | `complete` | Reconciled phase-end exceptions and phase-window safety-limit terminology across mechanics, developer, technical, XML, and API guidance. |
-| O6-R42 | `pending` | Independently reread corrected source and documents, run the complete release gate, and decide formal closure. |
+| O6-R42 | `complete` | Independently reread corrected source and documents, ran the complete locally executable release gate, and formally closed Order 6. |
 
 ## Correction Progress
 
@@ -199,13 +199,22 @@ three audience documents also define stable-ring rotation, exhausted-economy
 rejection, and the legitimate live-economy phase-end path when no scheduler
 recipient remains. Their executable entries return to `reviewed`.
 
-Only the independent O6-R42 closure gate remains. Order 6 therefore remains
-reopened until that source and documentation review completes.
+O6-R42 independently reread current scheduler, runner, lifecycle, event,
+automated, and terminal-result source plus all three audience documents. No
+unresolved realistic reachable encounter-orchestration defect was found. The
+focused selection passed 290 tests; the complete solution passed 1,883 tests
+with zero failures and zero skips; strict and trimming-aware builds produced
+zero compiler warnings; coverage remained above the release thresholds; all
+active content and DemoHost modes passed; and the real Godot 4.7.1 headless
+consumer emitted `CONVERGENCE_GODOT_SMOKE_OK`. The connected NuGet advisory
+endpoint was unavailable locally and remains enforced by CI. The
+[O6-R42 final closure review](encounter-orchestration-order-6-r42-final-closure-review-2026-08-05.md)
+records the independent trace and exact gate evidence.
 
 ## Closure Decision
 
-Order 6 is **not ready for formal closure** at `0af87d93`.
-`encounter_orchestration` returns to `partial`; no unrelated capability is
-demoted. The architecture remains sound and the findings are bounded, but both
-runtime defects affect advertised supplied or extension behavior and require
-correction before the order can close.
+Order 6 was **not ready for formal closure** at the audited starting revision
+`0af87d93`. O6-R39 through O6-R41 corrected both reachable runtime defects and
+the documentation ambiguity. O6-R42 then independently verified the corrected
+implementation and formally closed Order 6. `encounter_orchestration` returns
+to `complete`; no unrelated capability changed state.

@@ -211,17 +211,17 @@
       "mechanics": {
         "state": "reviewed",
         "documents": ["docs/mechanics/encounter-rounds-phases-and-turns.md"],
-        "reason": "O6-R41 reconciles stable team-ring order, economy-aware scheduler liveness, phase-end exceptions, and accepted turn-window safety semantics with current source and tests."
+        "reason": "O6-R42 independently verified the O6-R41 stable team-ring, economy-liveness, phase-end, and accepted turn-window mechanics against current source and tests."
       },
       "developerGuide": {
         "state": "reviewed",
         "documents": ["docs/developer-guide/encounter-orchestration.md"],
-        "reason": "O6-R41 documents scheduler extension obligations, exhausted-economy rejection, legitimate early phase end, stable ring selection, and exact phase safety-counter timing."
+        "reason": "O6-R42 independently verified scheduler extension obligations, exhausted-economy rejection, legitimate early phase end, stable ring selection, and exact phase safety-counter timing."
       },
       "technical": {
         "state": "reviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R41 reconciles the structural validator, stable team-ring cursor, scheduler/economy authority, and accepted turn-window counter with the corrected runtime."
+        "reason": "O6-R42 independently verified the structural validator, stable team-ring cursor, scheduler/economy authority, and accepted turn-window counter against the corrected runtime."
       }
     },
     {

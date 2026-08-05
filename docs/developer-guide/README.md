@@ -78,7 +78,8 @@ composition contract and restored the guide to `reviewed`.
 O6-R38 later reopened the guide after finding stable-ring and
 economy-liveness defects. O6-R39 and O6-R40 correct those paths, and O6-R41
 reconciles the extension and phase turn-window contracts. The guide is
-`reviewed` again while O6-R42 remains the capability-closure gate.
+`reviewed` again, and the O6-R42 independent review formally closes the
+capability.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

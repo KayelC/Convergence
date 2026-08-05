@@ -370,6 +370,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "encounter-orchestration-order-6-post-r37-independent-audit-2026-08-05.md"))
             .ReplaceLineEndings(" ");
+        string r42ClosureReview = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "encounter-orchestration-order-6-r42-final-closure-review-2026-08-05.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -606,8 +612,20 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("| O6-R39 | `complete` |", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R40 | `complete` |", postR37Audit, StringComparison.Ordinal);
         Assert.Contains("| O6-R41 | `complete` |", postR37Audit, StringComparison.Ordinal);
-        Assert.Contains("| O6-R42 | `pending` |", postR37Audit, StringComparison.Ordinal);
-        Assert.Contains("Order 6 is **not ready for formal closure**", postR37Audit, StringComparison.Ordinal);
+        Assert.Contains("| O6-R42 | `complete` |", postR37Audit, StringComparison.Ordinal);
+        Assert.Contains(
+            "**Result:** no unresolved realistic reachable encounter-orchestration defect was found",
+            r42ClosureReview,
+            StringComparison.Ordinal);
+        Assert.Contains("## Corrected Invariants Rechecked", r42ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("### Stable team-participant rotation", r42ClosureReview, StringComparison.Ordinal);
+        Assert.Contains(
+            "### Turn-economy liveness precedes another command window",
+            r42ClosureReview,
+            StringComparison.Ordinal);
+        Assert.Contains("### Accepted turn-window safety bound", r42ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("## Trusted Boundaries And Residual Risk", r42ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("Order 6 is formally complete after O6-R42", r42ClosureReview, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
@@ -617,8 +635,8 @@ public sealed class DocumentationFoundationTests
 
         FrameworkCapability encounterCapability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
-        Assert.Equal("partial", encounterCapability.ImplementationState);
-        Assert.Single(encounterCapability.KnownGaps);
+        Assert.Equal("complete", encounterCapability.ImplementationState);
+        Assert.Empty(encounterCapability.KnownGaps);
     }
 
     [Fact]

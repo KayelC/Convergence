@@ -46,7 +46,7 @@ restored the page to `reviewed`.
 O6-R38 later reopened the page after finding stable-ring and economy-liveness
 defects. O6-R39 and O6-R40 correct those paths, and O6-R41 reconciles the page
 with the exact phase-end and accepted turn-window rules. It is `reviewed` again
-while O6-R42 remains the capability-closure gate.
+and the O6-R42 independent review formally closes the capability.
 
 ## Rule Index
 

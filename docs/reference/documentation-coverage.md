@@ -249,8 +249,10 @@ independently reconcile those contracts.
 O6-R39 and O6-R40 correct stable team-ring rotation and exhausted-economy
 schedule validation. O6-R41 reconciles those contracts and the exact accepted
 turn-window meaning of `MaximumCommands` across all three audiences. Their
-entries return to `reviewed`; O6-R42 remains the independent capability-closure
-gate.
+entries return to `reviewed`. The
+[O6-R42 final closure review](../reviews/encounter-orchestration-order-6-r42-final-closure-review-2026-08-05.md)
+independently verifies those documents against current source and tests and
+formally closes Order 6 without changing the audience totals.
 
 The documentation matrix currently records 75 audience entries: 30 reviewed,
 24 existing_unreviewed, 14 missing, and 7 not_applicable.

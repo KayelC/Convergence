@@ -163,10 +163,13 @@ The later
 [O6-R38 post-R37 independent audit](../reviews/encounter-orchestration-order-6-post-r37-independent-audit-2026-08-05.md)
 reproduced stable round-robin and scheduler/economy-liveness defects and found
 one phase-window safety-limit terminology ambiguity. Order 6 is reopened under
-O6-R39 through O6-R42; `encounter_orchestration` is currently `partial` and
-its three audience entries are `existing_unreviewed`.
+O6-R39 through O6-R42; at that audit revision, `encounter_orchestration`
+returned to `partial` and its three audience entries returned to
+`existing_unreviewed`.
 
 O6-R39 and O6-R40 have corrected the two runtime paths. O6-R41 reconciles all
 three audience documents and returns their entries to `reviewed`. The
-capability remains `partial` only until O6-R42 completes its independent
-source, documentation, and release-gate review.
+[O6-R42 final closure review](../reviews/encounter-orchestration-order-6-r42-final-closure-review-2026-08-05.md)
+independently verifies current source, documentation, and the locally
+executable release gate. Order 6 is formally complete and the capability
+returns to `complete`.

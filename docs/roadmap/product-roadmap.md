@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
@@ -85,8 +85,12 @@ defeat, deployment, and immediate-repeat scheduling. O6-R40 rejects another
 command window as soon as accepted economy evidence reports exhaustion, before
 turn-start lifecycle or handler mutation. O6-R41 reconciles the three audience
 documents and the pre-release `MaximumCommands` API/wire name with its actual
-accepted turn-window safety semantics. O6-R42 remains the independent closure
-gate, so the capability remains `partial` until that review completes.
+accepted turn-window safety semantics. The
+[O6-R42 final closure review](../reviews/encounter-orchestration-order-6-r42-final-closure-review-2026-08-05.md)
+independently reread current source, adversarial tests, supplied policies, and
+all three audience documents. No unresolved realistic reachable defect was
+found, and every locally executable release gate passed. Order 6 is formally
+complete and `encounter_orchestration` returns to `complete`.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

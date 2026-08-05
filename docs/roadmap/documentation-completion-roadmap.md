@@ -581,8 +581,11 @@ O6-R39 and O6-R40 correct stable team-ring selection and exhausted-economy
 schedule validation. O6-R41 reconciles those runtime contracts plus the exact
 accepted turn-window meaning of `MaximumCommands` across all three audiences.
 The entries return to `reviewed`, so the current totals are 30 reviewed, 24
-`existing_unreviewed`, 14 missing, and 7 `not_applicable`. O6-R42 remains the
-independent capability-closure gate.
+`existing_unreviewed`, 14 missing, and 7 `not_applicable`. The
+[O6-R42 final closure review](../reviews/encounter-orchestration-order-6-r42-final-closure-review-2026-08-05.md)
+independently verified all three documents against current source and tests.
+No documentation state changes at closure; Order 6 and its audience evidence
+are now formally complete.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
