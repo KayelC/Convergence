@@ -193,7 +193,7 @@ runtime corrections and wording reconciliation are complete.
 | O6-R34 | `complete` |
 | O6-R35 | `complete` |
 | O6-R36 | `complete` |
-| O6-R37 | `pending` |
+| O6-R37 | `complete` |
 
 O6-R34 now requires an unchanged economy snapshot for `None` in both runner
 execution and standalone event evidence, and derives nonterminal free-action
@@ -210,6 +210,12 @@ O6-R36 reconciles the mechanics, developer, technical, public API, executable
 matrix, and roadmap guidance with both corrected contracts and the exact
 structural `BattleStarted` cleanup boundary. Formal closure remains reserved
 for the independent O6-R37 reread.
+
+O6-R37 independently reread current source, hostile policy tests, both supplied
+schedulers, and all three audience documents without treating this audit as
+proof. The complete gate passed and the
+[R37 final closure review](encounter-orchestration-order-6-r37-final-closure-review-2026-08-05.md)
+found no unresolved realistic reachable encounter-orchestration defect.
 
 ## Verification At The Audit Revision
 
@@ -236,7 +242,7 @@ reproduced public-extension paths.
 
 ## Closure Decision
 
-**Order 6 is not ready to close.** Its architecture remains sound and the two
-reproduced runtime paths are corrected and documented. O6-R37 remains the
-required independent source-and-document reread before those corrections are
-accepted as formal closure evidence.
+This audit reopened Order 6 at its review revision. O6-R34 through O6-R36 then
+corrected and documented the reproduced paths, and the independent O6-R37
+source-and-document reread now supplies formal closure evidence. Order 6 is
+formally complete at the R37 revision.

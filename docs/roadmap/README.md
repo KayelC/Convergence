@@ -154,6 +154,7 @@ The subsequent
 reopened Order 6 after reproducing no-cost turn-economy mutation and scheduler
 round drift through supported custom-policy boundaries. O6-R34 through O6-R37
 govern correction, documentation reconciliation, and a fresh closure review.
-O6-R34 and O6-R35 now enforce the two runtime contracts, and O6-R36 reconciles
-the active audience, API, matrix, and roadmap guidance. O6-R37 remains the sole
-independent closure checkpoint.
+O6-R34 and O6-R35 enforce the two runtime contracts, and O6-R36 reconciles the
+active audience, API, matrix, and roadmap guidance. The
+[O6-R37 final closure review](../reviews/encounter-orchestration-order-6-r37-final-closure-review-2026-08-05.md)
+independently traced the corrected implementation and formally closes Order 6.

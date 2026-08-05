@@ -19,10 +19,10 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Current review status:** `existing_unreviewed`. O6-R34 and O6-R35 corrected
-> no-cost economy authority and scheduler structural continuity, and O6-R36
-> reconciled this runtime reference. O6-R37 remains the independent
-> source-and-document closure review.
+> **Current review status:** `reviewed`. O6-R34 and O6-R35 corrected no-cost
+> economy authority and scheduler structural continuity, O6-R36 reconciled this
+> runtime reference, and O6-R37 independently traced its state machines,
+> transaction boundaries, event authority, and result contracts against source.
 
 ## Authority Map
 

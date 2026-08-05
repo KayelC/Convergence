@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`encounter_orchestration` is `partial`. Its scheduler, lifecycle,
+`encounter_orchestration` is `complete`. Its scheduler, lifecycle,
 turn-economy, event, cancellation, and automated execution foundations remain
 implemented. The owner-approved
 [Order 6 roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md)
@@ -84,10 +84,12 @@ typed rejection. O6-R34 now enforces immutable no-cost economy evidence and
 kind-based nonterminal free-action liveness. O6-R35 now validates exact
 round/completed-round and step continuity before another cursor is accepted.
 O6-R36 reconciles the structural `BattleStarted` cleanup boundary and both
-corrected contracts across the active audience and API guidance. O6-R37 remains
-the independent source-and-document closure gate, so
-`encounter_orchestration` remains `partial` and its three audience entries
-remain `existing_unreviewed` until that reread completes.
+corrected contracts across the active audience and API guidance. The
+[O6-R37 final closure review](../reviews/encounter-orchestration-order-6-r37-final-closure-review-2026-08-05.md)
+independently traced current source, hostile tests, both supplied schedulers,
+and all three audience documents. It found no unresolved realistic reachable
+defect, so `encounter_orchestration` returns to `complete` and its audience
+entries return to `reviewed`.
 
 `battle_knowledge` is `complete`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and

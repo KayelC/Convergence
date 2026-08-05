@@ -561,6 +561,14 @@ cleanup boundary. The three audience entries deliberately remain
 `existing_unreviewed`, 14 missing, and 7 `not_applicable`, until O6-R37 performs
 the independent closure review.
 
+The
+[O6-R37 final closure review](../reviews/encounter-orchestration-order-6-r37-final-closure-review-2026-08-05.md)
+independently traced current source, hostile tests, both supplied schedulers,
+and all three audience documents. No unresolved realistic reachable defect was
+found and the complete gate passed. Order 6 is formally complete; its three
+entries return to `reviewed`, so the current totals are 30 reviewed, 24
+`existing_unreviewed`, 14 missing, and 7 `not_applicable`.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

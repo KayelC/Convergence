@@ -9,10 +9,10 @@ presentation, and any mapping between framework runtime IDs and scene objects.
 Engine and UI hosts should always await `RunAsync`. The synchronous `Run`
 method exists only as a compatibility convenience for non-UI callers.
 
-> **Current review status:** `existing_unreviewed`. O6-R34 and O6-R35 corrected
-> no-cost economy authority and scheduler structural continuity, and O6-R36
-> reconciled this integration guidance. O6-R37 remains the independent
-> source-and-document closure review.
+> **Current review status:** `reviewed`. O6-R34 and O6-R35 corrected no-cost
+> economy authority and scheduler structural continuity, O6-R36 reconciled this
+> integration guidance, and O6-R37 independently traced it against current
+> source, supplied schedulers, and hostile extension-policy tests.
 
 ## Required Composition
 

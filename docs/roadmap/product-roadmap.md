@@ -8,9 +8,9 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`encounter_orchestration` is currently partial under the owner-approved
+`encounter_orchestration` is complete under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
 O6-R1 through O6-R13L implemented modular team-phase and Agility
 scheduling, bounded immediate follow-ups, lifecycle reconciliation, complete
@@ -66,9 +66,11 @@ O6-R37 form the bounded correction and closure sequence. O6-R34 now enforces
 strict no-cost economy authority, O6-R35 enforces scheduler structural
 continuity before later gameplay can commit, and O6-R36 reconciles all active
 guidance with those contracts and the structural `BattleStarted` cleanup
-boundary. The architecture and supplied policies remain usable, but formal
-Order 6 closure remains withdrawn until O6-R37 independently rereads the
-corrected source and documentation.
+boundary. The
+[O6-R37 final closure review](../reviews/encounter-orchestration-order-6-r37-final-closure-review-2026-08-05.md)
+independently reread the corrected source, hostile paths, supplied schedulers,
+and documentation, passed the complete gate, and found no unresolved realistic
+reachable defect. Order 6 is formally complete.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)

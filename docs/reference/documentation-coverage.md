@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-27 existing_unreviewed, 14 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -230,19 +230,22 @@ reproduced two extension-contract defects and one cleanup-boundary wording
 ambiguity. The three encounter entries return to `existing_unreviewed` until
 O6-R34 through O6-R37 correct and independently recheck those contracts.
 
-O6-R34 and O6-R35 now correct no-cost economy authority and scheduler
-structural continuity. O6-R36 reconciles the mechanics, developer, technical,
-and public integration statements with those changes and the exact structural
-`BattleStarted` cleanup boundary. The entries remain `existing_unreviewed`
-until O6-R37 independently rereads current source and all three audiences.
+O6-R34 and O6-R35 correct no-cost economy authority and scheduler structural
+continuity. O6-R36 reconciles the mechanics, developer, technical, and public
+integration statements with those changes and the exact structural
+`BattleStarted` cleanup boundary. The
+[O6-R37 final closure review](../reviews/encounter-orchestration-order-6-r37-final-closure-review-2026-08-05.md)
+independently rereads current source and all three audiences without finding an
+unresolved realistic reachable defect. The encounter entries return to
+`reviewed`.
 
-The documentation matrix currently records 75 audience entries: 27 reviewed,
-27 existing_unreviewed, 14 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 27 |
-| `existing_unreviewed` | 27 |
+| `reviewed` | 30 |
+| `existing_unreviewed` | 24 |
 | `missing` | 14 |
 | `not_applicable` | 7 |
 
