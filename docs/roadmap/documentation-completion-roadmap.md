@@ -604,6 +604,18 @@ local release gate, and finds no unresolved realistic reachable defect. Order 6
 is formally complete. Its entries return to `reviewed`, so the current totals
 are 30 reviewed, 24 `existing_unreviewed`, 14 missing, and 7 `not_applicable`.
 
+The subsequent
+[O6-R48 independent closure audit](../reviews/encounter-orchestration-order-6-r48-independent-closure-audit-2026-08-07.md)
+freshly traced the current runner, schedulers, lifecycle, turn economy, events,
+faults, cancellation, automated composition, tests, and audience documents. It
+found no high- or medium-severity runtime defect. It did identify one low public
+API clarity issue in `AutomatedBattleRunner` and one inaccurate branch omission
+in the technical command transaction diagram. Mechanics and developer guidance
+remain `reviewed`; the technical entry returns to `existing_unreviewed`, so the
+current totals are 29 reviewed, 25 `existing_unreviewed`, 14 missing, and 7
+`not_applicable`. Formal owner closure is held narrowly for O6-R49 through
+O6-R51.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

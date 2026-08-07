@@ -395,6 +395,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md"))
             .ReplaceLineEndings(" ");
+        string r48Audit = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "encounter-orchestration-order-6-r48-independent-closure-audit-2026-08-07.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -686,12 +692,18 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("## Verification", r47ClosureReview, StringComparison.Ordinal);
         Assert.Contains("CONVERGENCE_GODOT_SMOKE_OK", r47ClosureReview, StringComparison.Ordinal);
         Assert.Contains("Order 6 is formally complete after O6-R47", r47ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("### O6-R48-L1", r48Audit, StringComparison.Ordinal);
+        Assert.Contains("### O6-R48-D1", r48Audit, StringComparison.Ordinal);
+        Assert.Contains("## Runtime Conclusions", r48Audit, StringComparison.Ordinal);
+        Assert.Contains("## Documentation Alignment", r48Audit, StringComparison.Ordinal);
+        Assert.Contains("## Correction Checkpoints", r48Audit, StringComparison.Ordinal);
+        Assert.Contains("Order 6 should not be marked formally owner-closed", r48Audit, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
         Assert.Equal("reviewed", encounter.Mechanics.State);
         Assert.Equal("reviewed", encounter.DeveloperGuide.State);
-        Assert.Equal("reviewed", encounter.Technical.State);
+        Assert.Equal("existing_unreviewed", encounter.Technical.State);
 
         FrameworkCapability encounterCapability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");

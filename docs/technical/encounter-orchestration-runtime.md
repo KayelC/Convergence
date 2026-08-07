@@ -19,9 +19,9 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Review state:** `reviewed` after O6-R47. The corrected combined-failure
-> paths, structural scheduler protocol, lifecycle transactions, cancellation,
-> and automated composition were independently rechecked against current source.
+> **Review state:** `existing_unreviewed` after O6-R48. The prose remains
+> source-aligned, but the command transaction diagram omits the valid cancelled,
+> rejected, and faulted handler-result branches. O6-R50 owns that correction.
 
 ## Authority Map
 
