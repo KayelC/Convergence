@@ -86,8 +86,7 @@ extracted operation that owns them.
 | 1328-1351, 2027-2090 | One round's start/end shell | `RunRoundAsync` |
 | 1352-2025 | One team phase, including its command-window loop | `RunPhaseAsync` |
 | 1399-1934 | One scheduled command window | `RunCommandWindowAsync` |
-| 2098-2232, 2516-2528 | Reconciliation, synchronization, economy capture, lifecycle-event snapshotting | `EncounterRunContext` shared operations |
-| 2234-2456 | Port-fault, ordinary-fault, cleanup, and successful finalization | `EncounterRunContext` finalization methods |
+| 2098-2528 | Reconciliation, synchronization, economy capture, port-fault and ordinary-fault finalization, cleanup, successful finalization, lifecycle failure formatting, completion validation, and lifecycle-event snapshotting | `EncounterRunContext` shared and finalization methods |
 | 1328, 2090-2096 | Repeated-round control and draw completion | `RunScheduledRoundsAsync` |
 
 The line ranges overlap where a later stage extracts code from a method created
@@ -138,9 +137,14 @@ preservation tests pass unchanged.
 
 **Extraction:** Introduce `EncounterRunContext` and move the existing event,
 departure, schedule, reconciliation, synchronization, economy-capture,
-lifecycle-event snapshot, and finalization local functions from baseline lines
-1017-1212, 2098-2456, and 2516-2528 into it. The main encounter flow remains in
-`RunCoreAsync`.
+lifecycle-event snapshot, finalization, lifecycle-failure-formatting, and
+completion-validation local functions from baseline lines 1017-1212 and
+2098-2528 into it. The main encounter flow remains in `RunCoreAsync`.
+
+The original roadmap accidentally omitted baseline lines 2458-2514 even though
+`LifecycleFailureMessage` and `ValidateCompletion` are dependencies of the
+already-approved moved methods. The owner approved the corrected contiguous
+2098-2528 boundary before Stage 2 source editing began.
 
 This dependency-preparation stage is required by the actual source and was not
 explicit in the suggested stage list. Battle start, rounds, phases, and command
@@ -409,5 +413,74 @@ approval.
   Stage 1 exposed no suspicious behavior.
 - **Commit:** `refactor(encounter-runner): stage 1 - move port invocation`.
 
+### Stage 2 - Complete On 8 August 2026
+
+- **Verified base:** before editing, the independently rerun unchanged Stage 1
+  tree reproduced 168 focused passes and all 1,888 solution passes with no
+  failures or skips.
+- **Baseline to destination:** baseline shared-operation functions at
+  `BattleEncounterRunner.cs:1017-1212` and the owner-approved corrected
+  contiguous range `2098-2528` moved to private nested `EncounterRunContext`
+  at post-stage lines 1821-2449. `RunCoreAsync` constructs that context at
+  post-stage lines 901-907 and retains the battle-start and repeated-round
+  control flow.
+- **Changed files:**
+  `src/Convergence.Framework/Encounters/BattleEncounterRunner.cs` and this
+  roadmap. No test, assertion, API baseline, external call site, notes file, or
+  other source file changed.
+- **Focused verification:** 168 passed, 0 failed, 0 skipped in the unchanged
+  `BattleEncounterRunnerTests` suite.
+- **Full verification:** 1,888 passed, 0 failed, 0 skipped: Framework 1,703,
+  DemoHost 178, ContentValidator 7.
+- **Additional gates:** strict nonincremental solution build succeeded with
+  0 warnings and 0 errors; `dotnet format --verify-no-changes` succeeded; all
+  6 public-API boundary tests passed; `git diff --check` succeeded.
+- **Hazard 1 - direct final-event recording after publication failure:**
+  `AppendFinalEventAsync` still increments the shared sequence and appends the
+  sequenced event to `_runState.Events` before checking whether publication is
+  enabled and before awaiting the event sink. Fault and terminal events remain
+  present in the result even after publication fails.
+- **Hazard 2 - progressive publication disable during fault finalization:**
+  `publishDuringFinalization` still begins with the caller's `publishEvents`
+  value. A non-cancellation publication exception still performs the second
+  cancellation check and then changes only that local flag to `false`, so all
+  later final events are recorded without another publication attempt.
+- **Hazard 3 - once-only `BattleEndLifecycleAttempted`:** successful
+  `FinishAsync` still sets the flag immediately before its one battle-end
+  lifecycle attempt. Fault finalization still tests `BattleStarted &&
+  !BattleEndLifecycleAttempted` and sets the flag before invoking cleanup.
+  A failed successful-finalization lifecycle therefore cannot be invoked a
+  second time by `FinalizeFailureAsync`.
+- **Hazard 4 - cleanup event ordering:** fault finalization still records the
+  primary `BattleFaulted` event first, then any cleanup-failure
+  `BattleFaulted` event, then lifecycle-returned battle-end events in their
+  supplied order, and finally the terminal `BattleEnded` event. Successful
+  finalization still records lifecycle-returned events before `BattleEnded`.
+- **Hazard 5 - reconciliation pass bounds:** reconciliation retains
+  `for (int pass = 0; pass <= _request.Participants.Count; pass++)`, clears the
+  one-shot explicit departure after the first pass, breaks on no departures,
+  and raises the stability fault only when departures remain on
+  `pass == _request.Participants.Count`.
+- **Hazard 6 - schedule transition budget timing:** `StartSchedule` still
+  consumes the budget before constructing or invoking schedule start.
+  `AdvanceSchedule` still validates its arguments, consumes the budget, and
+  only then reads the completed step and invokes schedule advance. The budget
+  body still checks `>= MaximumScheduleTransitions` before the same checked
+  increment.
+- **Event/fault/exception/cancellation evidence:** every moved body is a 1:1
+  extraction whose captured `request`, `services`, `cancellationToken`,
+  `runState`, and `portInvoker` references changed only to context members.
+  Main-flow call sites changed only by adding the `runContext` receiver (or the
+  enclosing context type for the static lifecycle message formatter). Event
+  sequence increments, event writes, fault codes, port names, finalizer
+  arguments, catch types and filters, cancellation checks, lifecycle
+  transactions, commit points, and returned result construction remain in the
+  same statement order. Existing event-publication, cleanup, fault-authority,
+  exception-containment, cancellation, reconciliation, scheduler, lifecycle,
+  and completion tests passed unchanged.
+- **Deferred observations:** none. `POST-O6-NOTES.md` was not created because
+  Stage 2 exposed no suspicious behavior.
+- **Commit:** `refactor(encounter-runner): stage 2 - move shared run operations`.
+
 Later completion entries will be appended below this one and will not rewrite
-the Stage 0 or Stage 1 evidence.
+the Stage 0, Stage 1, or Stage 2 evidence.

@@ -899,208 +899,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         if (request.Participants.Count == 0) throw new ArgumentException("A battle requires participants.", nameof(request));
 
         var runState = new EncounterRunState(request.Participants);
-        var portInvoker = new EncounterPortInvoker(
+        var runContext = new EncounterRunContext(
+            request,
+            services,
             cancellationToken,
-            services.Events,
-            runState.Events,
-            FinalizePortFailureAsync);
-
-        async ValueTask AddAsync(
-            BattleEncounterEventKind kind,
-            BattleEncounterEventPayload payload,
-            string? debugText = null)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var battleEvent = new BattleEncounterEvent(++runState.Sequence, kind, payload, debugText);
-            await portInvoker.PublishAndRecordAsync(battleEvent).ConfigureAwait(false);
-        }
-
-        async ValueTask AddTurnEconomyAsync(
-            RuntimeInstanceId actor,
-            BattleTurnEconomySnapshot before,
-            BattleTurnEconomySnapshot after,
-            ActionTurnConsumption consumption)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var battleEvent = new BattleEncounterEvent(
-                ++runState.Sequence,
-                BattleEncounterEventKind.TurnEconomyChanged,
-                new BattleTurnEconomyChangedEventPayload(actor, before, after, consumption),
-                $"Turn economy {after.EconomyId}: {after.RemainingActions} action(s) remaining.");
-            await portInvoker.PublishAndRecordAsync(battleEvent).ConfigureAwait(false);
-        }
-
-        async ValueTask AddRangeAsync(IEnumerable<BattleEncounterEvent> unsequenced)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            foreach (BattleEncounterEvent battleEvent in unsequenced)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                BattleEncounterEvent sequenced = battleEvent.WithSequence(++runState.Sequence);
-                await portInvoker.PublishAndRecordAsync(sequenced).ConfigureAwait(false);
-            }
-        }
-
-        async ValueTask<(bool HadDepartures, bool StateMutated)> ProcessPendingDeparturesAsync(
-            BattleEncounterParticipant? explicitActor = null,
-            BattleStatusDepartureReason? explicitReason = null)
-        {
-            if ((explicitActor is null) != (explicitReason is null))
-            {
-                throw new InvalidOperationException(
-                    "An explicit encounter departure requires both an actor and a reason.");
-            }
-
-            var reasonsByActor = new Dictionary<RuntimeInstanceId, BattleStatusDepartureReason>();
-            if (explicitActor is not null &&
-                explicitReason is BattleStatusDepartureReason explicitDepartureReason)
-            {
-                reasonsByActor.Add(explicitActor.InstanceId, explicitDepartureReason);
-            }
-
-            foreach (BattleEncounterParticipant participant in request.Participants)
-            {
-                if (participant.State.IsDefeated &&
-                    !runState.ProcessedDefeatDepartures.Contains(participant.InstanceId))
-                {
-                    reasonsByActor.TryAdd(
-                        participant.InstanceId,
-                        BattleStatusDepartureReason.Defeat);
-                }
-            }
-
-            if (reasonsByActor.Count == 0)
-            {
-                return (false, false);
-            }
-
-            bool stateMutated = false;
-            if (services.Lifecycle is IBattleEncounterDepartureLifecyclePort departureLifecycle)
-            {
-                using var transaction = new BattleEncounterLifecycleTransaction(
-                    request.Participants,
-                    services.Lifecycle);
-                var departureEvents = new List<BattleEncounterEvent>();
-                foreach (BattleEncounterParticipant participant in transaction.Participants)
-                {
-                    if (!reasonsByActor.TryGetValue(
-                            participant.InstanceId,
-                            out BattleStatusDepartureReason participantDepartureReason))
-                    {
-                        continue;
-                    }
-
-                    IReadOnlyList<BattleEncounterEvent> returnedEvents =
-                        await portInvoker.InvokeAsync(
-                                BattleEncounterFaultCode.LifecycleExecutionFailed,
-                                "actor-departure-lifecycle",
-                                async () =>
-                                {
-                                    IReadOnlyList<BattleEncounterEvent> result =
-                                        await departureLifecycle.ProcessActorDepartureAsync(
-                                                new BattleEncounterDepartureLifecycleRequest(
-                                                    transaction.CreateEncounter(request),
-                                                    participant,
-                                                    transaction.Participants,
-                                                    participantDepartureReason),
-                                                cancellationToken)
-                                            .ConfigureAwait(false);
-                                    return SnapshotLifecycleEvents(result, "actor-departure");
-                                },
-                                participant.InstanceId)
-                            .ConfigureAwait(false);
-                    departureEvents.AddRange(returnedEvents);
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-                transaction.Commit();
-                stateMutated = true;
-                await AddRangeAsync(departureEvents).ConfigureAwait(false);
-            }
-
-            foreach (BattleEncounterParticipant participant in request.Participants)
-            {
-                if (participant.State.IsDefeated && reasonsByActor.ContainsKey(participant.InstanceId))
-                {
-                    runState.ProcessedDefeatDepartures.Add(participant.InstanceId);
-                }
-            }
-
-            return (true, stateMutated);
-        }
-
-        BattleEncounterScheduleCursor StartSchedule()
-        {
-            ConsumeScheduleTransitionBudget();
-            var scheduleRequest = new BattleEncounterScheduleStartRequest(
-                CaptureScheduleParticipants(request.Participants),
-                runState.TeamOrder,
-                request.RoundLimit);
-            BattleEncounterScheduleTransitionResult transition = portInvoker.Invoke(
-                BattleEncounterFaultCode.ScheduleExecutionFailed,
-                "schedule-start",
-                () => services.Schedule.Start(scheduleRequest)
-                      ?? throw new InvalidOperationException(
-                          "The encounter scheduling policy returned null while starting."));
-            return portInvoker.Invoke(
-                BattleEncounterFaultCode.ScheduleTransitionInvalid,
-                "schedule-transition-validation",
-                () => BattleEncounterScheduleCursor.Start(
-                    services.Schedule,
-                    scheduleRequest,
-                    transition));
-        }
-
-        BattleEncounterScheduleCursor AdvanceSchedule(
-            BattleEncounterScheduleCursor cursor,
-            BattleEncounterScheduleStepOutcome outcome,
-            RuntimeInstanceId? actorId = null)
-        {
-            ArgumentNullException.ThrowIfNull(cursor);
-            ArgumentNullException.ThrowIfNull(outcome);
-            ConsumeScheduleTransitionBudget(actorId);
-            BattleEncounterScheduleStep completedStep = cursor.Step
-                ?? throw new InvalidOperationException(
-                    "A completed encounter schedule cannot be advanced.");
-            var advanceRequest = new BattleEncounterScheduleAdvanceRequest(
-                cursor.State,
-                completedStep,
-                outcome,
-                CaptureScheduleParticipants(request.Participants));
-            BattleEncounterScheduleTransitionResult transition = portInvoker.Invoke(
-                BattleEncounterFaultCode.ScheduleExecutionFailed,
-                "schedule-advance",
-                () => services.Schedule.Advance(advanceRequest)
-                      ?? throw new InvalidOperationException(
-                          "The encounter scheduling policy returned null while advancing."),
-                actorId);
-            return portInvoker.Invoke(
-                BattleEncounterFaultCode.ScheduleTransitionInvalid,
-                "schedule-transition-validation",
-                () => cursor.Advance(services.Schedule, outcome, transition),
-                actorId);
-        }
-
-        void ConsumeScheduleTransitionBudget(RuntimeInstanceId? actorId = null)
-        {
-            portInvoker.InvokeAction(
-                BattleEncounterFaultCode.ScheduleTransitionLimitExceeded,
-                "schedule-progress",
-                () =>
-                {
-                    if (runState.ScheduleTransitionCount >=
-                        services.EncounterProgress.MaximumScheduleTransitions)
-                    {
-                        throw new InvalidOperationException(
-                            "The encounter schedule exceeded the configured structural " +
-                            $"transition limit of " +
-                            $"{services.EncounterProgress.MaximumScheduleTransitions}.");
-                    }
-
-                    runState.ScheduleTransitionCount = checked(runState.ScheduleTransitionCount + 1);
-                },
-                actorId);
-        }
+            runState);
+        EncounterPortInvoker portInvoker = runContext.PortInvoker;
 
         RuntimeInstanceId[] duplicateParticipantIds = request.Participants
             .GroupBy(participant => participant.InstanceId)
@@ -1110,7 +914,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         if (duplicateParticipantIds.Length > 0)
         {
             string duplicates = string.Join(", ", duplicateParticipantIds.Select(id => id.ToString()));
-            return await FailBeforeStartAsync(
+            return await runContext.FailBeforeStartAsync(
                     $"Encounter participant runtime instance IDs must be unique. Duplicates: [{duplicates}].",
                     BattleEncounterFaultCode.DuplicateParticipantInstanceId)
                 .ConfigureAwait(false);
@@ -1139,14 +943,14 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             string received = proposedTeamOrder is null
                 ? "<null>"
                 : string.Join(", ", proposedTeamOrder.Select(team => team.ToString()));
-            return await FailBeforeStartAsync(
+            return await runContext.FailBeforeStartAsync(
                     $"Initiative must return every participating team exactly once. Expected [{expected}]; received [{received}].",
                     BattleEncounterFaultCode.InitiativeExecutionFailed)
                 .ConfigureAwait(false);
         }
 
         runState.TeamOrder = Array.AsReadOnly(proposedTeamOrder!.ToArray());
-        Synchronize();
+        runContext.Synchronize();
         using var battleStartTransaction = new BattleEncounterLifecycleTransaction(
             request.Participants,
             services.Lifecycle);
@@ -1154,7 +958,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         {
             cancellationToken.ThrowIfCancellationRequested();
             participant.State.Passives.ResetBattleActivations();
-            await AddAsync(
+            await runContext.AddAsync(
                     BattleEncounterEventKind.ActorCreated,
                     new BattleActorCreatedEventPayload(
                         participant.InstanceId,
@@ -1164,7 +968,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 .ConfigureAwait(false);
         }
 
-        await AddAsync(
+        await runContext.AddAsync(
                 BattleEncounterEventKind.BattleStarted,
                 new BattleStartedEventPayload(
                     request.ContextId,
@@ -1176,7 +980,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 "Battle started.")
             .ConfigureAwait(false);
         runState.BattleStarted = true;
-        await AddAsync(
+        await runContext.AddAsync(
                 BattleEncounterEventKind.InitiativeRolled,
                 new BattleInitiativeRolledEventPayload(runState.TeamOrder),
                 "Initiative order: " + string.Join(", ", runState.TeamOrder.Select(team => team.ToString())) + ".")
@@ -1192,7 +996,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         runState.TeamOrder),
                     cancellationToken)
                 .ConfigureAwait(false);
-            battleStartEvents = SnapshotLifecycleEvents(returnedEvents, "battle-start");
+            battleStartEvents = runContext.SnapshotLifecycleEvents(returnedEvents, "battle-start");
             cancellationToken.ThrowIfCancellationRequested();
             battleStartTransaction.Commit();
         }
@@ -1202,26 +1006,26 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         }
         catch (Exception exception)
         {
-            return await FaultDuringBattleAsync(
-                    LifecycleFailureMessage("battle-start", exception),
+            return await runContext.FaultDuringBattleAsync(
+                    EncounterRunContext.LifecycleFailureMessage("battle-start", exception),
                     faultCode: BattleEncounterFaultCode.LifecycleExecutionFailed)
                 .ConfigureAwait(false);
         }
 
-        await AddRangeAsync(battleStartEvents).ConfigureAwait(false);
-        BattleEncounterCompletion initial = await ReconcileAsync(null).ConfigureAwait(false);
+        await runContext.AddRangeAsync(battleStartEvents).ConfigureAwait(false);
+        BattleEncounterCompletion initial = await runContext.ReconcileAsync(null).ConfigureAwait(false);
         if (initial.IsComplete)
         {
-            return await FinishAsync(initial.Outcome, initial.WinningTeamId, initial.Message).ConfigureAwait(false);
+            return await runContext.FinishAsync(initial.Outcome, initial.WinningTeamId, initial.Message).ConfigureAwait(false);
         }
 
-        BattleEncounterScheduleCursor schedule = StartSchedule();
+        BattleEncounterScheduleCursor schedule = runContext.StartSchedule();
         while (!schedule.IsComplete)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (schedule.Step is not BattleEncounterRoundStartedScheduleStep roundStarted)
             {
-                return await FaultDuringBattleAsync(
+                return await runContext.FaultDuringBattleAsync(
                         $"Encounter schedule expected a round-start step but received " +
                         $"'{schedule.Step?.GetType().Name ?? "<none>"}'.",
                         faultCode: BattleEncounterFaultCode.ScheduleTransitionInvalid)
@@ -1230,14 +1034,14 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
             int round = roundStarted.RoundNumber;
             runState.FinalRoundNumber = round;
-            await AddAsync(
+            await runContext.AddAsync(
                     BattleEncounterEventKind.RoundStarted,
                     new BattleRoundStartedEventPayload(round),
                     $"Round {round} started.")
                 .ConfigureAwait(false);
 
-            Synchronize();
-            schedule = AdvanceSchedule(
+            runContext.Synchronize();
+            schedule = runContext.AdvanceSchedule(
                 schedule,
                 BattleEncounterScheduleStepOutcome.BoundaryCompleted());
             while (!schedule.IsComplete &&
@@ -1260,19 +1064,19 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     BattleEncounterFaultCode.TurnEconomyExecutionFailed,
                     "turn-economy-start",
                     () => turnEconomy.StartPhase(economyStart.ActiveActorCount));
-                BattleTurnEconomySnapshot phaseStartState = CaptureTurnEconomySnapshot(turnEconomy);
-                bool hasTurnsRemaining = HasTurnsRemaining(turnEconomy);
+                BattleTurnEconomySnapshot phaseStartState = runContext.CaptureTurnEconomySnapshot(turnEconomy);
+                bool hasTurnsRemaining = runContext.HasTurnsRemaining(turnEconomy);
                 string? phaseStartFault = ValidateEconomyState(phaseStartState, hasTurnsRemaining);
                 if (phaseStartFault is not null)
                 {
-                    return await FaultDuringBattleAsync(
+                    return await runContext.FaultDuringBattleAsync(
                             phaseStartFault,
                             faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
                         .ConfigureAwait(false);
                 }
 
                 BattleTurnEconomySnapshot acceptedEconomyState = phaseStartState;
-                await AddAsync(
+                await runContext.AddAsync(
                         BattleEncounterEventKind.PhaseStarted,
                         new BattlePhaseStartedEventPayload(teamId, phaseStartState),
                         $"Team {teamId} started a phase using {phaseStartState.EconomyId} " +
@@ -1281,8 +1085,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                 int acceptedTurnWindowCount = 0;
                 int consecutiveFreeActions = 0;
-                Synchronize();
-                schedule = AdvanceSchedule(
+                runContext.Synchronize();
+                schedule = runContext.AdvanceSchedule(
                     schedule,
                     BattleEncounterScheduleStepOutcome.TurnEconomyStarted(
                         phaseStartState,
@@ -1293,22 +1097,22 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     cancellationToken.ThrowIfCancellationRequested();
                     if (acceptedTurnWindowCount >= services.PhaseProgress.MaximumCommands)
                     {
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 $"Team {teamId} exceeded the configured phase turn-window safety limit " +
                                 $"of {services.PhaseProgress.MaximumCommands}.",
                                 faultCode: BattleEncounterFaultCode.PhaseCommandLimitExceeded)
                             .ConfigureAwait(false);
                     }
 
-                    BattleTurnEconomySnapshot beforeEconomy = CaptureTurnEconomySnapshot(turnEconomy);
-                    bool beforeHasTurnsRemaining = HasTurnsRemaining(turnEconomy);
+                    BattleTurnEconomySnapshot beforeEconomy = runContext.CaptureTurnEconomySnapshot(turnEconomy);
+                    bool beforeHasTurnsRemaining = runContext.HasTurnsRemaining(turnEconomy);
                     string? continuityFault = ValidateEconomyAuthority(
                         acceptedEconomyState,
                         beforeEconomy,
                         beforeHasTurnsRemaining);
                     if (continuityFault is not null)
                     {
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 continuityFault,
                                 faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
                             .ConfigureAwait(false);
@@ -1322,7 +1126,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         commandWindow.TeamId != teamId ||
                         commandWindow.TurnEconomyStart is not null)
                     {
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 $"Encounter schedule selected actor {commandWindow.ActorId} " +
                                 $"for invalid team {commandWindow.TeamId}.",
                                 commandWindow.ActorId,
@@ -1332,7 +1136,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                     if (!scheduledActor.State.IsDeployed || scheduledActor.State.IsDefeated)
                     {
-                        schedule = AdvanceSchedule(
+                        schedule = runContext.AdvanceSchedule(
                             schedule,
                             BattleEncounterScheduleStepOutcome.ActorUnavailable(
                                 scheduledActor.InstanceId),
@@ -1342,7 +1146,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                     BattleEncounterParticipant actor = scheduledActor;
                     acceptedTurnWindowCount++;
-                    await AddAsync(
+                    await runContext.AddAsync(
                             BattleEncounterEventKind.TurnStarted,
                             new BattleTurnStartedEventPayload(actor.InstanceId, actor.TeamId),
                             $"{actor.DisplayName}'s turn started.")
@@ -1376,7 +1180,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                 turnStartEvents,
                                 "lifecycle-turn-start",
                                 turnStartTransaction.Participants);
-                            turnStartEconomyFault = CurrentEconomyAuthorityFault(
+                            turnStartEconomyFault = runContext.CurrentEconomyAuthorityFault(
                                 turnEconomy,
                                 beforeEconomy,
                                 actor.InstanceId);
@@ -1402,8 +1206,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                     if (turnStartFailure is not null)
                     {
-                        return await FaultDuringBattleAsync(
-                                LifecycleFailureMessage("turn-start", turnStartFailure),
+                        return await runContext.FaultDuringBattleAsync(
+                                EncounterRunContext.LifecycleFailureMessage("turn-start", turnStartFailure),
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.LifecycleExecutionFailed)
                             .ConfigureAwait(false);
@@ -1411,7 +1215,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                     if (turnStartEconomyFault is not null)
                     {
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 turnStartEconomyFault,
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
@@ -1421,14 +1225,14 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     BattleTurnStartLifecycleResult turnStart = stagedTurnStart
                         ?? throw new InvalidOperationException(
                             "The committed turn-start lifecycle result is missing.");
-                    await AddRangeAsync(turnStartEvents
+                    await runContext.AddRangeAsync(turnStartEvents
                             ?? throw new InvalidOperationException(
                                 "The committed turn-start lifecycle events are missing."))
                         .ConfigureAwait(false);
 
                     if (turnStart.Outcome != BattleTurnStartOutcome.CanAct)
                     {
-                        await AddAsync(
+                        await runContext.AddAsync(
                                 BattleEncounterEventKind.TurnRestricted,
                                 new BattleTurnRestrictedEventPayload(actor.InstanceId, turnStart.Restriction),
                                 $"{actor.DisplayName} turn restriction: {turnStart.Outcome}.")
@@ -1444,7 +1248,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                 BattleStatusDepartureReason.RosterRecall,
                             _ => null
                         };
-                    BattleEncounterCompletion turnStartCompletion = await ReconcileAsync(
+                    BattleEncounterCompletion turnStartCompletion = await runContext.ReconcileAsync(
                             lastActor: null,
                             explicitDepartureActor:
                                 turnStartDepartureReason.HasValue ? actor : null,
@@ -1452,7 +1256,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         .ConfigureAwait(false);
                     if (!actor.State.IsDeployed || actor.State.IsDefeated)
                     {
-                        await AddAsync(
+                        await runContext.AddAsync(
                                 BattleEncounterEventKind.TurnEnded,
                                 new BattleTurnEndedEventPayload(
                                     actor.InstanceId,
@@ -1463,14 +1267,14 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             .ConfigureAwait(false);
                         if (turnStartCompletion.IsComplete)
                         {
-                            return await FinishAsync(
+                            return await runContext.FinishAsync(
                                     turnStartCompletion.Outcome,
                                     turnStartCompletion.WinningTeamId,
                                     turnStartCompletion.Message)
                                 .ConfigureAwait(false);
                         }
 
-                        schedule = AdvanceSchedule(
+                        schedule = runContext.AdvanceSchedule(
                             schedule,
                             BattleEncounterScheduleStepOutcome.ActorUnavailable(
                                 actor.InstanceId),
@@ -1480,7 +1284,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                     if (turnStartCompletion.IsComplete)
                     {
-                        await AddAsync(
+                        await runContext.AddAsync(
                                 BattleEncounterEventKind.TurnEnded,
                                 new BattleTurnEndedEventPayload(
                                     actor.InstanceId,
@@ -1489,7 +1293,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                     beforeEconomy),
                                 $"{actor.DisplayName}'s turn ended with the encounter.")
                             .ConfigureAwait(false);
-                        return await FinishAsync(
+                        return await runContext.FinishAsync(
                                 turnStartCompletion.Outcome,
                                 turnStartCompletion.WinningTeamId,
                                 turnStartCompletion.Message)
@@ -1513,13 +1317,13 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                     "activeStatModifierBoundaries"),
                                 actor.InstanceId)
                             : Array.Empty<StatModifierLifecycleBoundary>();
-                    string? preHandlerEconomyFault = CurrentEconomyAuthorityFault(
+                    string? preHandlerEconomyFault = runContext.CurrentEconomyAuthorityFault(
                         turnEconomy,
                         beforeEconomy,
                         actor.InstanceId);
                     if (preHandlerEconomyFault is not null)
                     {
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 preHandlerEconomyFault,
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
@@ -1554,27 +1358,27 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             actor.InstanceId)
                         .ConfigureAwait(false);
 
-                    string? postHandlerEconomyFault = CurrentEconomyAuthorityFault(
+                    string? postHandlerEconomyFault = runContext.CurrentEconomyAuthorityFault(
                         turnEconomy,
                         beforeEconomy,
                         actor.InstanceId);
                     if (postHandlerEconomyFault is not null)
                     {
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 postHandlerEconomyFault,
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
                             .ConfigureAwait(false);
                     }
 
-                    await AddRangeAsync(command.Events).ConfigureAwait(false);
-                    string? preApplyEconomyFault = CurrentEconomyAuthorityFault(
+                    await runContext.AddRangeAsync(command.Events).ConfigureAwait(false);
+                    string? preApplyEconomyFault = runContext.CurrentEconomyAuthorityFault(
                         turnEconomy,
                         beforeEconomy,
                         actor.InstanceId);
                     if (preApplyEconomyFault is not null)
                     {
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 preApplyEconomyFault,
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
@@ -1583,7 +1387,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                     if (command.Status is BattleEncounterCommandStatus.Cancelled)
                     {
-                        await AddAsync(
+                        await runContext.AddAsync(
                                 BattleEncounterEventKind.TurnEnded,
                                 new BattleTurnEndedEventPayload(
                                     actor.InstanceId,
@@ -1592,12 +1396,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                     beforeEconomy),
                                 $"{actor.DisplayName}'s turn ended with encounter cancellation.")
                             .ConfigureAwait(false);
-                        return await FinishAsync(BattleEncounterOutcome.Cancelled, null, null).ConfigureAwait(false);
+                        return await runContext.FinishAsync(BattleEncounterOutcome.Cancelled, null, null).ConfigureAwait(false);
                     }
 
                     if (command.Status is BattleEncounterCommandStatus.Faulted)
                     {
-                        await AddAsync(
+                        await runContext.AddAsync(
                                 BattleEncounterEventKind.TurnEnded,
                                 new BattleTurnEndedEventPayload(
                                     actor.InstanceId,
@@ -1606,7 +1410,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                     beforeEconomy),
                                 $"{actor.DisplayName}'s turn ended with a command fault.")
                             .ConfigureAwait(false);
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 command.FaultMessage ?? "Battle command faulted.",
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.CommandExecutionFaulted,
@@ -1618,14 +1422,14 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     if (command.Status is BattleEncounterCommandStatus.Rejected)
                     {
                         string rejection = command.FaultMessage ?? "Battle command was rejected.";
-                        await AddAsync(
+                        await runContext.AddAsync(
                                 BattleEncounterEventKind.ActionRejected,
                                 new BattleActionRejectedEventPayload(
                                     actor.InstanceId,
                                     BattleEncounterCommandStatus.Rejected),
                                 rejection)
                             .ConfigureAwait(false);
-                        await AddAsync(
+                        await runContext.AddAsync(
                                 BattleEncounterEventKind.TurnEnded,
                                 new BattleTurnEndedEventPayload(
                                     actor.InstanceId,
@@ -1634,7 +1438,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                     beforeEconomy),
                                 $"{actor.DisplayName}'s turn ended with a rejected command.")
                             .ConfigureAwait(false);
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 rejection,
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.CommandRejected,
@@ -1646,7 +1450,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     if (command.WinningTeamId is ContentId commandWinner &&
                         !runState.TeamOrder.Contains(commandWinner))
                     {
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 $"Battle command selected unknown winning team {commandWinner}.",
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.CommandExecutionFaulted)
@@ -1658,10 +1462,10 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         "turn-economy-apply",
                         () => turnEconomy.Apply(command.TurnConsumption),
                         actor.InstanceId);
-                    BattleTurnEconomySnapshot afterEconomy = CaptureTurnEconomySnapshot(
+                    BattleTurnEconomySnapshot afterEconomy = runContext.CaptureTurnEconomySnapshot(
                         turnEconomy,
                         actor.InstanceId);
-                    hasTurnsRemaining = HasTurnsRemaining(turnEconomy, actor.InstanceId);
+                    hasTurnsRemaining = runContext.HasTurnsRemaining(turnEconomy, actor.InstanceId);
                     string? economyFault = ValidateEconomyTransition(
                         beforeEconomy,
                         afterEconomy,
@@ -1669,7 +1473,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         command.TurnConsumption);
                     if (economyFault is not null)
                     {
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 economyFault,
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
@@ -1685,7 +1489,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         consecutiveFreeActions++;
                         if (consecutiveFreeActions > services.PhaseProgress.MaximumConsecutiveFreeActions)
                         {
-                            return await FaultDuringBattleAsync(
+                            return await runContext.FaultDuringBattleAsync(
                                     $"Team {teamId} exceeded the configured consecutive free-action limit " +
                                     $"of {services.PhaseProgress.MaximumConsecutiveFreeActions}.",
                                     actor.InstanceId,
@@ -1717,7 +1521,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                         CanRecallToRoster(stagedActor)),
                                     cancellationToken)
                                 .ConfigureAwait(false);
-                            turnEndEvents = SnapshotLifecycleEvents(returnedEvents, "turn-end");
+                            turnEndEvents = runContext.SnapshotLifecycleEvents(returnedEvents, "turn-end");
                         }
                         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                         {
@@ -1725,20 +1529,20 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         }
                         catch (Exception exception)
                         {
-                            return await FaultDuringBattleAsync(
-                                    LifecycleFailureMessage("turn-end", exception),
+                            return await runContext.FaultDuringBattleAsync(
+                                    EncounterRunContext.LifecycleFailureMessage("turn-end", exception),
                                     actor.InstanceId,
                                     BattleEncounterFaultCode.LifecycleExecutionFailed)
                                 .ConfigureAwait(false);
                         }
 
-                        string? turnEndEconomyFault = CurrentEconomyAuthorityFault(
+                        string? turnEndEconomyFault = runContext.CurrentEconomyAuthorityFault(
                             turnEconomy,
                             acceptedEconomyState,
                             actor.InstanceId);
                         if (turnEndEconomyFault is not null)
                         {
-                            return await FaultDuringBattleAsync(
+                            return await runContext.FaultDuringBattleAsync(
                                     turnEndEconomyFault,
                                     actor.InstanceId,
                                     BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
@@ -1748,49 +1552,49 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         cancellationToken.ThrowIfCancellationRequested();
                         turnEndTransaction.Commit();
 
-                        await AddRangeAsync(turnEndEvents).ConfigureAwait(false);
+                        await runContext.AddRangeAsync(turnEndEvents).ConfigureAwait(false);
                     }
 
-                    string? preEventEconomyFault = CurrentEconomyAuthorityFault(
+                    string? preEventEconomyFault = runContext.CurrentEconomyAuthorityFault(
                         turnEconomy,
                         acceptedEconomyState,
                         actor.InstanceId);
                     if (preEventEconomyFault is not null)
                     {
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 preEventEconomyFault,
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
                             .ConfigureAwait(false);
                     }
 
-                    await AddTurnEconomyAsync(
+                    await runContext.AddTurnEconomyAsync(
                             actor.InstanceId,
                             beforeEconomy,
                             afterEconomy,
                             command.TurnConsumption)
                         .ConfigureAwait(false);
 
-                    BattleEncounterCompletion completion = await ReconcileAsync(
+                    BattleEncounterCompletion completion = await runContext.ReconcileAsync(
                             actor,
                             turnStartDepartureReason.HasValue ? actor : null,
                             turnStartDepartureReason)
                         .ConfigureAwait(false);
 
-                    string? postCommandEconomyFault = CurrentEconomyAuthorityFault(
+                    string? postCommandEconomyFault = runContext.CurrentEconomyAuthorityFault(
                         turnEconomy,
                         acceptedEconomyState,
                         actor.InstanceId);
                     if (postCommandEconomyFault is not null)
                     {
-                        return await FaultDuringBattleAsync(
+                        return await runContext.FaultDuringBattleAsync(
                                 postCommandEconomyFault,
                                 actor.InstanceId,
                                 BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
                             .ConfigureAwait(false);
                     }
 
-                    await AddAsync(
+                    await runContext.AddAsync(
                             BattleEncounterEventKind.TurnEnded,
                             new BattleTurnEndedEventPayload(
                                 actor.InstanceId,
@@ -1803,17 +1607,17 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                     if (command.RequestedOutcome is BattleEncounterOutcome requestedOutcome)
                     {
-                        return await FinishAsync(requestedOutcome, command.WinningTeamId, command.FaultMessage)
+                        return await runContext.FinishAsync(requestedOutcome, command.WinningTeamId, command.FaultMessage)
                             .ConfigureAwait(false);
                     }
 
                     if (completion.IsComplete)
                     {
-                        return await FinishAsync(completion.Outcome, completion.WinningTeamId, completion.Message)
+                        return await runContext.FinishAsync(completion.Outcome, completion.WinningTeamId, completion.Message)
                             .ConfigureAwait(false);
                     }
 
-                    schedule = AdvanceSchedule(
+                    schedule = runContext.AdvanceSchedule(
                         schedule,
                         BattleEncounterScheduleStepOutcome.CommandCommitted(
                             actor.InstanceId,
@@ -1828,22 +1632,22 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     schedule.Step is not BattleEncounterPhaseEndedScheduleStep phaseEnded ||
                     phaseEnded.TeamId != teamId)
                 {
-                    return await FaultDuringBattleAsync(
+                    return await runContext.FaultDuringBattleAsync(
                             $"Encounter schedule did not close team {teamId}'s phase.",
                             faultCode: BattleEncounterFaultCode.ScheduleTransitionInvalid)
                         .ConfigureAwait(false);
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
-                BattleTurnEconomySnapshot phaseEndState = CaptureTurnEconomySnapshot(turnEconomy);
-                bool phaseEndHasTurnsRemaining = HasTurnsRemaining(turnEconomy);
+                BattleTurnEconomySnapshot phaseEndState = runContext.CaptureTurnEconomySnapshot(turnEconomy);
+                bool phaseEndHasTurnsRemaining = runContext.HasTurnsRemaining(turnEconomy);
                 string? phaseEndFault = ValidateEconomyAuthority(
                     acceptedEconomyState,
                     phaseEndState,
                     phaseEndHasTurnsRemaining);
                 if (phaseEndFault is not null)
                 {
-                    return await FaultDuringBattleAsync(
+                    return await runContext.FaultDuringBattleAsync(
                             phaseEndFault,
                             faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
                         .ConfigureAwait(false);
@@ -1864,7 +1668,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             teamId,
                             cancellationToken)
                         .ConfigureAwait(false);
-                    phaseEndEvents = SnapshotLifecycleEvents(returnedEvents, "phase-end");
+                    phaseEndEvents = runContext.SnapshotLifecycleEvents(returnedEvents, "phase-end");
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -1872,18 +1676,18 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 }
                 catch (Exception exception)
                 {
-                    return await FaultDuringBattleAsync(
-                            LifecycleFailureMessage("phase-end", exception),
+                    return await runContext.FaultDuringBattleAsync(
+                            EncounterRunContext.LifecycleFailureMessage("phase-end", exception),
                             faultCode: BattleEncounterFaultCode.LifecycleExecutionFailed)
                         .ConfigureAwait(false);
                 }
 
-                string? postPhaseLifecycleEconomyFault = CurrentEconomyAuthorityFault(
+                string? postPhaseLifecycleEconomyFault = runContext.CurrentEconomyAuthorityFault(
                     turnEconomy,
                     acceptedEconomyState);
                 if (postPhaseLifecycleEconomyFault is not null)
                 {
-                    return await FaultDuringBattleAsync(
+                    return await runContext.FaultDuringBattleAsync(
                             postPhaseLifecycleEconomyFault,
                             faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
                         .ConfigureAwait(false);
@@ -1892,25 +1696,25 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 cancellationToken.ThrowIfCancellationRequested();
                 phaseEndTransaction.Commit();
 
-                await AddRangeAsync(phaseEndEvents).ConfigureAwait(false);
-                await AddAsync(
+                await runContext.AddRangeAsync(phaseEndEvents).ConfigureAwait(false);
+                await runContext.AddAsync(
                         BattleEncounterEventKind.PhaseEnded,
                         new BattlePhaseEndedEventPayload(teamId, phaseEndState),
                         $"Team {teamId} phase ended.")
                     .ConfigureAwait(false);
 
                 BattleEncounterCompletion phaseCompletion =
-                    await ReconcileAsync(null).ConfigureAwait(false);
+                    await runContext.ReconcileAsync(null).ConfigureAwait(false);
                 if (phaseCompletion.IsComplete)
                 {
-                    return await FinishAsync(
+                    return await runContext.FinishAsync(
                             phaseCompletion.Outcome,
                             phaseCompletion.WinningTeamId,
                             phaseCompletion.Message)
                         .ConfigureAwait(false);
                 }
 
-                schedule = AdvanceSchedule(
+                schedule = runContext.AdvanceSchedule(
                     schedule,
                     BattleEncounterScheduleStepOutcome.BoundaryCompleted());
             }
@@ -1919,7 +1723,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 schedule.Step is not BattleEncounterRoundEndedScheduleStep roundEnded ||
                 roundEnded.RoundNumber != round)
             {
-                return await FaultDuringBattleAsync(
+                return await runContext.FaultDuringBattleAsync(
                         $"Encounter schedule did not close round {round}.",
                         faultCode: BattleEncounterFaultCode.ScheduleTransitionInvalid)
                     .ConfigureAwait(false);
@@ -1941,7 +1745,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             round,
                             cancellationToken)
                         .ConfigureAwait(false);
-                roundEndEvents = SnapshotLifecycleEvents(returnedEvents, "round-end");
+                roundEndEvents = runContext.SnapshotLifecycleEvents(returnedEvents, "round-end");
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -1949,44 +1753,269 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             }
             catch (Exception exception)
             {
-                return await FaultDuringBattleAsync(
-                        LifecycleFailureMessage("round-end", exception),
+                return await runContext.FaultDuringBattleAsync(
+                        EncounterRunContext.LifecycleFailureMessage("round-end", exception),
                         faultCode: BattleEncounterFaultCode.LifecycleExecutionFailed)
                     .ConfigureAwait(false);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
             roundEndTransaction.Commit();
-            await AddRangeAsync(roundEndEvents).ConfigureAwait(false);
+            await runContext.AddRangeAsync(roundEndEvents).ConfigureAwait(false);
             BattleEncounterCompletion roundCompletion =
-                await ReconcileAsync(null).ConfigureAwait(false);
+                await runContext.ReconcileAsync(null).ConfigureAwait(false);
             runState.CompletedRounds = round;
-            await AddAsync(
+            await runContext.AddAsync(
                     BattleEncounterEventKind.RoundEnded,
                     new BattleRoundEndedEventPayload(round),
                     $"Round {round} ended.")
                 .ConfigureAwait(false);
             if (roundCompletion.IsComplete)
             {
-                return await FinishAsync(
+                return await runContext.FinishAsync(
                         roundCompletion.Outcome,
                         roundCompletion.WinningTeamId,
                         roundCompletion.Message)
                     .ConfigureAwait(false);
             }
 
-            schedule = AdvanceSchedule(
+            schedule = runContext.AdvanceSchedule(
                 schedule,
                 BattleEncounterScheduleStepOutcome.BoundaryCompleted());
         }
 
-        return await FinishAsync(
+        return await runContext.FinishAsync(
                 BattleEncounterOutcome.Draw,
                 null,
                 $"Battle ended in a draw after {request.RoundLimit} round(s).")
             .ConfigureAwait(false);
 
-        async ValueTask<BattleEncounterCompletion> ReconcileAsync(
+    }
+
+    private sealed class EncounterRunContext
+    {
+        private readonly BattleEncounterRequest _request;
+        private readonly BattleEncounterServices _services;
+        private readonly CancellationToken _cancellationToken;
+        private readonly EncounterRunState _runState;
+
+        public EncounterRunContext(
+            BattleEncounterRequest request,
+            BattleEncounterServices services,
+            CancellationToken cancellationToken,
+            EncounterRunState runState)
+        {
+            _request = request;
+            _services = services;
+            _cancellationToken = cancellationToken;
+            _runState = runState;
+            PortInvoker = new EncounterPortInvoker(
+                cancellationToken,
+                services.Events,
+                runState.Events,
+                FinalizePortFailureAsync);
+        }
+
+        public EncounterPortInvoker PortInvoker { get; }
+
+        public async ValueTask AddAsync(
+            BattleEncounterEventKind kind,
+            BattleEncounterEventPayload payload,
+            string? debugText = null)
+        {
+            _cancellationToken.ThrowIfCancellationRequested();
+            var battleEvent = new BattleEncounterEvent(++_runState.Sequence, kind, payload, debugText);
+            await PortInvoker.PublishAndRecordAsync(battleEvent).ConfigureAwait(false);
+        }
+
+        public async ValueTask AddTurnEconomyAsync(
+            RuntimeInstanceId actor,
+            BattleTurnEconomySnapshot before,
+            BattleTurnEconomySnapshot after,
+            ActionTurnConsumption consumption)
+        {
+            _cancellationToken.ThrowIfCancellationRequested();
+            var battleEvent = new BattleEncounterEvent(
+                ++_runState.Sequence,
+                BattleEncounterEventKind.TurnEconomyChanged,
+                new BattleTurnEconomyChangedEventPayload(actor, before, after, consumption),
+                $"Turn economy {after.EconomyId}: {after.RemainingActions} action(s) remaining.");
+            await PortInvoker.PublishAndRecordAsync(battleEvent).ConfigureAwait(false);
+        }
+
+        public async ValueTask AddRangeAsync(IEnumerable<BattleEncounterEvent> unsequenced)
+        {
+            _cancellationToken.ThrowIfCancellationRequested();
+            foreach (BattleEncounterEvent battleEvent in unsequenced)
+            {
+                _cancellationToken.ThrowIfCancellationRequested();
+                BattleEncounterEvent sequenced = battleEvent.WithSequence(++_runState.Sequence);
+                await PortInvoker.PublishAndRecordAsync(sequenced).ConfigureAwait(false);
+            }
+        }
+
+        private async ValueTask<(bool HadDepartures, bool StateMutated)> ProcessPendingDeparturesAsync(
+            BattleEncounterParticipant? explicitActor = null,
+            BattleStatusDepartureReason? explicitReason = null)
+        {
+            if ((explicitActor is null) != (explicitReason is null))
+            {
+                throw new InvalidOperationException(
+                    "An explicit encounter departure requires both an actor and a reason.");
+            }
+
+            var reasonsByActor = new Dictionary<RuntimeInstanceId, BattleStatusDepartureReason>();
+            if (explicitActor is not null &&
+                explicitReason is BattleStatusDepartureReason explicitDepartureReason)
+            {
+                reasonsByActor.Add(explicitActor.InstanceId, explicitDepartureReason);
+            }
+
+            foreach (BattleEncounterParticipant participant in _request.Participants)
+            {
+                if (participant.State.IsDefeated &&
+                    !_runState.ProcessedDefeatDepartures.Contains(participant.InstanceId))
+                {
+                    reasonsByActor.TryAdd(
+                        participant.InstanceId,
+                        BattleStatusDepartureReason.Defeat);
+                }
+            }
+
+            if (reasonsByActor.Count == 0)
+            {
+                return (false, false);
+            }
+
+            bool stateMutated = false;
+            if (_services.Lifecycle is IBattleEncounterDepartureLifecyclePort departureLifecycle)
+            {
+                using var transaction = new BattleEncounterLifecycleTransaction(
+                    _request.Participants,
+                    _services.Lifecycle);
+                var departureEvents = new List<BattleEncounterEvent>();
+                foreach (BattleEncounterParticipant participant in transaction.Participants)
+                {
+                    if (!reasonsByActor.TryGetValue(
+                            participant.InstanceId,
+                            out BattleStatusDepartureReason participantDepartureReason))
+                    {
+                        continue;
+                    }
+
+                    IReadOnlyList<BattleEncounterEvent> returnedEvents =
+                        await PortInvoker.InvokeAsync(
+                                BattleEncounterFaultCode.LifecycleExecutionFailed,
+                                "actor-departure-lifecycle",
+                                async () =>
+                                {
+                                    IReadOnlyList<BattleEncounterEvent> result =
+                                        await departureLifecycle.ProcessActorDepartureAsync(
+                                                new BattleEncounterDepartureLifecycleRequest(
+                                                    transaction.CreateEncounter(_request),
+                                                    participant,
+                                                    transaction.Participants,
+                                                    participantDepartureReason),
+                                                _cancellationToken)
+                                            .ConfigureAwait(false);
+                                    return SnapshotLifecycleEvents(result, "actor-departure");
+                                },
+                                participant.InstanceId)
+                            .ConfigureAwait(false);
+                    departureEvents.AddRange(returnedEvents);
+                }
+
+                _cancellationToken.ThrowIfCancellationRequested();
+                transaction.Commit();
+                stateMutated = true;
+                await AddRangeAsync(departureEvents).ConfigureAwait(false);
+            }
+
+            foreach (BattleEncounterParticipant participant in _request.Participants)
+            {
+                if (participant.State.IsDefeated && reasonsByActor.ContainsKey(participant.InstanceId))
+                {
+                    _runState.ProcessedDefeatDepartures.Add(participant.InstanceId);
+                }
+            }
+
+            return (true, stateMutated);
+        }
+
+        public BattleEncounterScheduleCursor StartSchedule()
+        {
+            ConsumeScheduleTransitionBudget();
+            var scheduleRequest = new BattleEncounterScheduleStartRequest(
+                CaptureScheduleParticipants(_request.Participants),
+                _runState.TeamOrder,
+                _request.RoundLimit);
+            BattleEncounterScheduleTransitionResult transition = PortInvoker.Invoke(
+                BattleEncounterFaultCode.ScheduleExecutionFailed,
+                "schedule-start",
+                () => _services.Schedule.Start(scheduleRequest)
+                      ?? throw new InvalidOperationException(
+                          "The encounter scheduling policy returned null while starting."));
+            return PortInvoker.Invoke(
+                BattleEncounterFaultCode.ScheduleTransitionInvalid,
+                "schedule-transition-validation",
+                () => BattleEncounterScheduleCursor.Start(
+                    _services.Schedule,
+                    scheduleRequest,
+                    transition));
+        }
+
+        public BattleEncounterScheduleCursor AdvanceSchedule(
+            BattleEncounterScheduleCursor cursor,
+            BattleEncounterScheduleStepOutcome outcome,
+            RuntimeInstanceId? actorId = null)
+        {
+            ArgumentNullException.ThrowIfNull(cursor);
+            ArgumentNullException.ThrowIfNull(outcome);
+            ConsumeScheduleTransitionBudget(actorId);
+            BattleEncounterScheduleStep completedStep = cursor.Step
+                ?? throw new InvalidOperationException(
+                    "A completed encounter schedule cannot be advanced.");
+            var advanceRequest = new BattleEncounterScheduleAdvanceRequest(
+                cursor.State,
+                completedStep,
+                outcome,
+                CaptureScheduleParticipants(_request.Participants));
+            BattleEncounterScheduleTransitionResult transition = PortInvoker.Invoke(
+                BattleEncounterFaultCode.ScheduleExecutionFailed,
+                "schedule-advance",
+                () => _services.Schedule.Advance(advanceRequest)
+                      ?? throw new InvalidOperationException(
+                          "The encounter scheduling policy returned null while advancing."),
+                actorId);
+            return PortInvoker.Invoke(
+                BattleEncounterFaultCode.ScheduleTransitionInvalid,
+                "schedule-transition-validation",
+                () => cursor.Advance(_services.Schedule, outcome, transition),
+                actorId);
+        }
+
+        private void ConsumeScheduleTransitionBudget(RuntimeInstanceId? actorId = null)
+        {
+            PortInvoker.InvokeAction(
+                BattleEncounterFaultCode.ScheduleTransitionLimitExceeded,
+                "schedule-progress",
+                () =>
+                {
+                    if (_runState.ScheduleTransitionCount >=
+                        _services.EncounterProgress.MaximumScheduleTransitions)
+                    {
+                        throw new InvalidOperationException(
+                            "The encounter schedule exceeded the configured structural " +
+                            $"transition limit of " +
+                            $"{_services.EncounterProgress.MaximumScheduleTransitions}.");
+                    }
+
+                    _runState.ScheduleTransitionCount = checked(_runState.ScheduleTransitionCount + 1);
+                },
+                actorId);
+        }
+
+        public async ValueTask<BattleEncounterCompletion> ReconcileAsync(
             BattleEncounterParticipant? lastActor,
             BattleEncounterParticipant? explicitDepartureActor = null,
             BattleStatusDepartureReason? explicitDepartureReason = null)
@@ -2001,7 +2030,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 pendingExplicitReason = null;
             }
 
-            for (int pass = 0; pass <= request.Participants.Count; pass++)
+            for (int pass = 0; pass <= _request.Participants.Count; pass++)
             {
                 (bool hadDepartures, bool stateMutated) =
                     await ProcessPendingDeparturesAsync(
@@ -2022,9 +2051,9 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     break;
                 }
 
-                if (pass == request.Participants.Count)
+                if (pass == _request.Participants.Count)
                 {
-                    portInvoker.InvokeAction(
+                    PortInvoker.InvokeAction(
                         BattleEncounterFaultCode.LifecycleExecutionFailed,
                         "departure-reconciliation",
                         () => throw new InvalidOperationException(
@@ -2034,50 +2063,50 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             }
 
             await AnnounceNewDefeatsAsync(
-                    request.Participants,
-                    runState.DefeatedAnnouncements,
+                    _request.Participants,
+                    _runState.DefeatedAnnouncements,
                     AddAsync)
                 .ConfigureAwait(false);
 
-            return portInvoker.Invoke(
+            return PortInvoker.Invoke(
                 BattleEncounterFaultCode.CompletionEvaluationFailed,
                 "completion-evaluation",
                 () =>
                 {
                     BattleEncounterCompletion completion =
-                        services.Completion.Evaluate(
-                            CreateCompletionRequest(request.Participants, lastActor))
+                        _services.Completion.Evaluate(
+                            CreateCompletionRequest(_request.Participants, lastActor))
                         ?? throw new InvalidOperationException(
                             "The battle completion policy returned null.");
-                    ValidateCompletion(completion, runState.TeamOrder);
+                    ValidateCompletion(completion, _runState.TeamOrder);
                     return completion;
                 },
                 lastActor?.InstanceId);
         }
 
-        void ReleaseRecoveredDefeatPeriods()
+        private void ReleaseRecoveredDefeatPeriods()
         {
-            foreach (BattleEncounterParticipant participant in request.Participants)
+            foreach (BattleEncounterParticipant participant in _request.Participants)
             {
                 if (participant.State.IsDefeated)
                 {
                     continue;
                 }
 
-                runState.ProcessedDefeatDepartures.Remove(participant.InstanceId);
-                runState.DefeatedAnnouncements.Remove(participant.InstanceId);
+                _runState.ProcessedDefeatDepartures.Remove(participant.InstanceId);
+                _runState.DefeatedAnnouncements.Remove(participant.InstanceId);
             }
         }
 
-        void Synchronize()
+        public void Synchronize()
         {
-            portInvoker.InvokeAction(
+            PortInvoker.InvokeAction(
                 BattleEncounterFaultCode.StateSynchronizationFailed,
                 "state-synchronization",
-                () => services.Synchronizer.Synchronize(request.Participants));
+                () => _services.Synchronizer.Synchronize(_request.Participants));
         }
 
-        static BattleEncounterCompletionRequest CreateCompletionRequest(
+        private static BattleEncounterCompletionRequest CreateCompletionRequest(
             IEnumerable<BattleEncounterParticipant> participants,
             BattleEncounterParticipant? lastActor)
         {
@@ -2093,26 +2122,26 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 lastActorSnapshot);
         }
 
-        BattleTurnEconomySnapshot CaptureTurnEconomySnapshot(
+        public BattleTurnEconomySnapshot CaptureTurnEconomySnapshot(
             IBattleTurnEconomy turnEconomy,
             RuntimeInstanceId? actorId = null) =>
-            portInvoker.Invoke(
+            PortInvoker.Invoke(
                 BattleEncounterFaultCode.TurnEconomyExecutionFailed,
                 "turn-economy-snapshot",
                 () => turnEconomy.CaptureSnapshot()
                       ?? throw new InvalidOperationException("The turn economy returned a null snapshot."),
                 actorId);
 
-        bool HasTurnsRemaining(
+        public bool HasTurnsRemaining(
             IBattleTurnEconomy turnEconomy,
             RuntimeInstanceId? actorId = null) =>
-            portInvoker.Invoke(
+            PortInvoker.Invoke(
                 BattleEncounterFaultCode.TurnEconomyExecutionFailed,
                 "turn-economy-state",
                 turnEconomy.HasTurnsRemaining,
                 actorId);
 
-        string? CurrentEconomyAuthorityFault(
+        public string? CurrentEconomyAuthorityFault(
             IBattleTurnEconomy turnEconomy,
             BattleTurnEconomySnapshot expected,
             RuntimeInstanceId? actorId = null)
@@ -2122,7 +2151,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             return ValidateEconomyAuthority(expected, actual, actualHasTurnsRemaining);
         }
 
-        ValueTask<BattleEncounterResult> FinalizePortFailureAsync(
+        private ValueTask<BattleEncounterResult> FinalizePortFailureAsync(
             BattleEncounterPortException failure)
         {
             string primaryMessage =
@@ -2134,7 +2163,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 failure.FaultCode != BattleEncounterFaultCode.EventPublicationFailed);
         }
 
-        async ValueTask<BattleEncounterResult> FinalizeFailureAsync(
+        private async ValueTask<BattleEncounterResult> FinalizeFailureAsync(
             string primaryMessage,
             BattleEncounterFaultCode? faultCode,
             RuntimeInstanceId? actorId,
@@ -2142,7 +2171,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             ContentId? teamId = null,
             string? portName = null)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            _cancellationToken.ThrowIfCancellationRequested();
             bool publishDuringFinalization = publishEvents;
             BattleEncounterFaultCode resolvedFaultCode =
                 faultCode ?? BattleEncounterFaultCode.CommandExecutionFaulted;
@@ -2160,30 +2189,30 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
             IReadOnlyList<BattleEncounterEvent> battleEndEvents = [];
             string? cleanupFailure = null;
-            if (runState.BattleStarted && !runState.BattleEndLifecycleAttempted)
+            if (_runState.BattleStarted && !_runState.BattleEndLifecycleAttempted)
             {
-                runState.BattleEndLifecycleAttempted = true;
+                _runState.BattleEndLifecycleAttempted = true;
                 try
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    _cancellationToken.ThrowIfCancellationRequested();
                     using var lifecycleTransaction = new BattleEncounterLifecycleTransaction(
-                        request.Participants,
-                        services.Lifecycle);
+                        _request.Participants,
+                        _services.Lifecycle);
                     IReadOnlyList<BattleEncounterEvent> returnedEvents =
-                        await services.Lifecycle.ProcessBattleEndAsync(
+                        await _services.Lifecycle.ProcessBattleEndAsync(
                                 new BattleEncounterLifecycleRequest(
-                                    lifecycleTransaction.CreateEncounter(request),
+                                    lifecycleTransaction.CreateEncounter(_request),
                                     lifecycleTransaction.Participants,
-                                    runState.TeamOrder),
+                                    _runState.TeamOrder),
                                 BattleEncounterOutcome.Faulted,
-                                cancellationToken)
+                                _cancellationToken)
                             .ConfigureAwait(false);
-                    cancellationToken.ThrowIfCancellationRequested();
+                    _cancellationToken.ThrowIfCancellationRequested();
                     battleEndEvents = SnapshotLifecycleEvents(returnedEvents, "battle-end");
-                    cancellationToken.ThrowIfCancellationRequested();
+                    _cancellationToken.ThrowIfCancellationRequested();
                     lifecycleTransaction.Commit();
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
                 {
                     throw;
                 }
@@ -2215,8 +2244,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     new BattleEndedEventPayload(
                         BattleEncounterOutcome.Faulted,
                         null,
-                        runState.FinalRoundNumber,
-                        runState.CompletedRounds,
+                        _runState.FinalRoundNumber,
+                        _runState.CompletedRounds,
                         resolvedFaultCode),
                     finalMessage))
                 .ConfigureAwait(false);
@@ -2224,16 +2253,16 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             return new BattleEncounterResult(
                 BattleEncounterOutcome.Faulted,
                 null,
-                request.Participants,
-                runState.Events,
+                _request.Participants,
+                _runState.Events,
                 finalMessage,
                 resolvedFaultCode);
 
             async ValueTask AppendFinalEventAsync(BattleEncounterEvent unsequenced)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                BattleEncounterEvent sequenced = unsequenced.WithSequence(++runState.Sequence);
-                runState.Events.Add(sequenced);
+                _cancellationToken.ThrowIfCancellationRequested();
+                BattleEncounterEvent sequenced = unsequenced.WithSequence(++_runState.Sequence);
+                _runState.Events.Add(sequenced);
                 if (!publishDuringFinalization)
                 {
                     return;
@@ -2241,27 +2270,27 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                 try
                 {
-                    await services.Events.PublishAsync(sequenced, cancellationToken).ConfigureAwait(false);
-                    cancellationToken.ThrowIfCancellationRequested();
+                    await _services.Events.PublishAsync(sequenced, _cancellationToken).ConfigureAwait(false);
+                    _cancellationToken.ThrowIfCancellationRequested();
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
                 {
                     throw;
                 }
                 catch (Exception)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    _cancellationToken.ThrowIfCancellationRequested();
                     publishDuringFinalization = false;
                 }
             }
         }
 
-        async ValueTask<BattleEncounterResult> FailBeforeStartAsync(
+        public async ValueTask<BattleEncounterResult> FailBeforeStartAsync(
             string message,
             BattleEncounterFaultCode? faultCode = null) =>
             await FinalizeFailureAsync(message, faultCode, null, publishEvents: true).ConfigureAwait(false);
 
-        async ValueTask<BattleEncounterResult> FaultDuringBattleAsync(
+        public async ValueTask<BattleEncounterResult> FaultDuringBattleAsync(
             string message,
             RuntimeInstanceId? actorId = null,
             BattleEncounterFaultCode? faultCode = null,
@@ -2276,34 +2305,34 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     portName: portName)
                 .ConfigureAwait(false);
 
-        async ValueTask<BattleEncounterResult> FinishAsync(
+        public async ValueTask<BattleEncounterResult> FinishAsync(
             BattleEncounterOutcome outcome,
             ContentId? winningTeamId,
             string? message,
             BattleEncounterFaultCode? faultCode = null)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            runState.BattleEndLifecycleAttempted = true;
+            _cancellationToken.ThrowIfCancellationRequested();
+            _runState.BattleEndLifecycleAttempted = true;
             IReadOnlyList<BattleEncounterEvent> battleEndEvents;
             try
             {
                 using var lifecycleTransaction = new BattleEncounterLifecycleTransaction(
-                    request.Participants,
-                    services.Lifecycle);
+                    _request.Participants,
+                    _services.Lifecycle);
                 IReadOnlyList<BattleEncounterEvent> returnedEvents =
-                    await services.Lifecycle.ProcessBattleEndAsync(
+                    await _services.Lifecycle.ProcessBattleEndAsync(
                         new BattleEncounterLifecycleRequest(
-                            lifecycleTransaction.CreateEncounter(request),
+                            lifecycleTransaction.CreateEncounter(_request),
                             lifecycleTransaction.Participants,
-                            runState.TeamOrder),
+                            _runState.TeamOrder),
                         outcome,
-                        cancellationToken)
+                        _cancellationToken)
                     .ConfigureAwait(false);
                 battleEndEvents = SnapshotLifecycleEvents(returnedEvents, "battle-end");
-                cancellationToken.ThrowIfCancellationRequested();
+                _cancellationToken.ThrowIfCancellationRequested();
                 lifecycleTransaction.Commit();
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
             {
                 throw;
             }
@@ -2332,24 +2361,24 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     new BattleEndedEventPayload(
                         outcome,
                         winningTeamId,
-                        runState.FinalRoundNumber,
-                        runState.CompletedRounds,
+                        _runState.FinalRoundNumber,
+                        _runState.CompletedRounds,
                         faultCode),
                     endMessage)
                 .ConfigureAwait(false);
             return new BattleEncounterResult(
                 outcome,
                 winningTeamId,
-                request.Participants,
-                runState.Events,
+                _request.Participants,
+                _runState.Events,
                 outcome == BattleEncounterOutcome.Faulted ? message : null,
                 outcome == BattleEncounterOutcome.Faulted ? faultCode : null);
         }
 
-        static string LifecycleFailureMessage(string stage, Exception exception) =>
+        public static string LifecycleFailureMessage(string stage, Exception exception) =>
             $"Battle lifecycle step '{stage}' failed: {exception.Message}";
 
-        static void ValidateCompletion(
+        private static void ValidateCompletion(
             BattleEncounterCompletion completion,
             IReadOnlyCollection<ContentId> participatingTeamIds)
         {
@@ -2404,7 +2433,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             }
         }
 
-        IReadOnlyList<BattleEncounterEvent> SnapshotLifecycleEvents(
+        public IReadOnlyList<BattleEncounterEvent> SnapshotLifecycleEvents(
             IReadOnlyList<BattleEncounterEvent>? lifecycleEvents,
             string stage)
         {
@@ -2414,7 +2443,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             BattleEncounterEventOwnership.RequirePortOwned(
                 snapshot,
                 $"lifecycle-{stage}",
-                request.Participants);
+                _request.Participants);
             return Array.AsReadOnly(snapshot);
         }
     }
