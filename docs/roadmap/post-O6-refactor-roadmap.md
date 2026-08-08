@@ -2,8 +2,8 @@
 
 ## Status
 
-**Approved on 8 August 2026. Stage 0 is complete; Stage 1 has not begun and
-remains gated by the per-stage owner approval rule.**
+**Approved on 8 August 2026. Stages 0 and 1 are complete; Stage 2 has not begun
+and remains gated by the per-stage owner approval rule.**
 
 This roadmap governs a mechanical decomposition of
 `BattleEncounterRunner.RunCoreAsync`. It does not reopen Order 6 mechanics and
@@ -358,5 +358,56 @@ approval.
   Stage 0 exposed no suspicious behavior.
 - **Commit:** `refactor(encounter-runner): stage 0 - move run state`.
 
+### Stage 1 - Complete On 8 August 2026
+
+- **Verified base:** before editing, the independently rerun unchanged Stage 0
+  tree reproduced 168 focused passes and all 1,888 solution passes with no
+  failures or skips.
+- **Baseline to destination:** baseline port-boundary functions at
+  `BattleEncounterRunner.cs:915-1015`, corresponding to post-Stage-0 lines
+  903-1003, moved to private nested `EncounterPortInvoker` at post-stage lines
+  2422-2542. Existing call sites now use the `portInvoker` instance.
+- **Changed files:**
+  `src/Convergence.Framework/Encounters/BattleEncounterRunner.cs` and this
+  roadmap. No test, assertion, API baseline, call site outside the target
+  method, or other source file changed.
+- **Focused verification:** 168 passed, 0 failed, 0 skipped in the unchanged
+  `BattleEncounterRunnerTests` suite.
+- **Full verification:** 1,888 passed, 0 failed, 0 skipped: Framework 1,703,
+  DemoHost 178, ContentValidator 7.
+- **Additional gates:** strict nonincremental solution build succeeded with
+  0 warnings and 0 errors; `dotnet format --verify-no-changes` succeeded; all
+  6 public-API boundary tests passed; `git diff --check` succeeded.
+- **Hazard 1 - cancellation checks before and after every port call:**
+  `Invoke` and `InvokeAsync` retain the cancellation check immediately before
+  their `try`, execute the supplied operation once, then retain the check
+  immediately after that operation. `InvokeAction` still delegates to
+  `Invoke`; `InvokeTaskAsync` still delegates to `InvokeAsync`.
+- **Hazard 2 - cancellation exception filter:** both invocation paths retain
+  `catch (OperationCanceledException) when
+  (_cancellationToken.IsCancellationRequested)` and rethrow unchanged. No
+  cancellation-shaped exception classification changed.
+- **Hazard 3 - second cancellation check in the general catch:** both general
+  `catch (Exception exception)` blocks still call
+  `_cancellationToken.ThrowIfCancellationRequested()` before constructing a
+  typed port exception.
+- **Hazard 4 - `BattleEncounterPortException` construction:** both paths pass
+  the same ordered arguments: caller-supplied fault code, caller-supplied port
+  name, optional actor ID, caught inner exception, and the same
+  `FinalizePortFailureAsync` method captured once as the invoker's finalizer
+  delegate. No port name, fault code, message, or wrapping path changed.
+- **Hazard 5 - record before publication:**
+  `PublishAndRecordAsync` retains `_events.Add(battleEvent)` as its first
+  statement and only then awaits `InvokeTaskAsync` for `event-publication`.
+  The event therefore remains in the encounter result if publication fails.
+- **Event/fault/exception/cancellation evidence:** the control-flow diff is a
+  1:1 move of all five bodies plus receiver-only call-site changes. Existing
+  pre-start and active-battle event-sink failure, canonical-event retention,
+  primary-fault preservation, cleanup-failure, port exception, unsignalled
+  cancellation, and every focused cancellation test passed unchanged.
+- **Deferred observations:** none. `POST-O6-NOTES.md` was not created because
+  Stage 1 exposed no suspicious behavior.
+- **Commit:** `refactor(encounter-runner): stage 1 - move port invocation`.
+
 Later completion entries will be appended below this one and will not rewrite
-the Stage 0 evidence.
+the Stage 0 or Stage 1 evidence.

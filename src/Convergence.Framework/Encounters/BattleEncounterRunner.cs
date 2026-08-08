@@ -899,108 +899,11 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         if (request.Participants.Count == 0) throw new ArgumentException("A battle requires participants.", nameof(request));
 
         var runState = new EncounterRunState(request.Participants);
-
-        T InvokePort<T>(
-            BattleEncounterFaultCode faultCode,
-            string portName,
-            Func<T> operation,
-            RuntimeInstanceId? actorId = null)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                T result = operation();
-                cancellationToken.ThrowIfCancellationRequested();
-                return result;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                throw new BattleEncounterPortException(
-                    faultCode,
-                    portName,
-                    actorId,
-                    exception,
-                    FinalizePortFailureAsync);
-            }
-        }
-
-        void InvokePortAction(
-            BattleEncounterFaultCode faultCode,
-            string portName,
-            Action operation,
-            RuntimeInstanceId? actorId = null) =>
-            InvokePort(
-                faultCode,
-                portName,
-                () =>
-                {
-                    operation();
-                    return true;
-                },
-                actorId);
-
-        async ValueTask<T> InvokePortAsync<T>(
-            BattleEncounterFaultCode faultCode,
-            string portName,
-            Func<ValueTask<T>> operation,
-            RuntimeInstanceId? actorId = null)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                T result = await operation().ConfigureAwait(false);
-                cancellationToken.ThrowIfCancellationRequested();
-                return result;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                throw new BattleEncounterPortException(
-                    faultCode,
-                    portName,
-                    actorId,
-                    exception,
-                    FinalizePortFailureAsync);
-            }
-        }
-
-        async ValueTask InvokePortTaskAsync(
-            BattleEncounterFaultCode faultCode,
-            string portName,
-            Func<ValueTask> operation,
-            RuntimeInstanceId? actorId = null)
-        {
-            await InvokePortAsync(
-                    faultCode,
-                    portName,
-                    async () =>
-                    {
-                        await operation().ConfigureAwait(false);
-                        return true;
-                    },
-                    actorId)
-                .ConfigureAwait(false);
-        }
-
-        async ValueTask PublishAndRecordAsync(BattleEncounterEvent battleEvent)
-        {
-            runState.Events.Add(battleEvent);
-            await InvokePortTaskAsync(
-                    BattleEncounterFaultCode.EventPublicationFailed,
-                    "event-publication",
-                    () => services.Events.PublishAsync(battleEvent, cancellationToken),
-                    battleEvent.ActorId)
-                .ConfigureAwait(false);
-        }
+        var portInvoker = new EncounterPortInvoker(
+            cancellationToken,
+            services.Events,
+            runState.Events,
+            FinalizePortFailureAsync);
 
         async ValueTask AddAsync(
             BattleEncounterEventKind kind,
@@ -1009,7 +912,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         {
             cancellationToken.ThrowIfCancellationRequested();
             var battleEvent = new BattleEncounterEvent(++runState.Sequence, kind, payload, debugText);
-            await PublishAndRecordAsync(battleEvent).ConfigureAwait(false);
+            await portInvoker.PublishAndRecordAsync(battleEvent).ConfigureAwait(false);
         }
 
         async ValueTask AddTurnEconomyAsync(
@@ -1024,7 +927,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 BattleEncounterEventKind.TurnEconomyChanged,
                 new BattleTurnEconomyChangedEventPayload(actor, before, after, consumption),
                 $"Turn economy {after.EconomyId}: {after.RemainingActions} action(s) remaining.");
-            await PublishAndRecordAsync(battleEvent).ConfigureAwait(false);
+            await portInvoker.PublishAndRecordAsync(battleEvent).ConfigureAwait(false);
         }
 
         async ValueTask AddRangeAsync(IEnumerable<BattleEncounterEvent> unsequenced)
@@ -1034,7 +937,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 BattleEncounterEvent sequenced = battleEvent.WithSequence(++runState.Sequence);
-                await PublishAndRecordAsync(sequenced).ConfigureAwait(false);
+                await portInvoker.PublishAndRecordAsync(sequenced).ConfigureAwait(false);
             }
         }
 
@@ -1088,7 +991,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     }
 
                     IReadOnlyList<BattleEncounterEvent> returnedEvents =
-                        await InvokePortAsync(
+                        await portInvoker.InvokeAsync(
                                 BattleEncounterFaultCode.LifecycleExecutionFailed,
                                 "actor-departure-lifecycle",
                                 async () =>
@@ -1133,13 +1036,13 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 CaptureScheduleParticipants(request.Participants),
                 runState.TeamOrder,
                 request.RoundLimit);
-            BattleEncounterScheduleTransitionResult transition = InvokePort(
+            BattleEncounterScheduleTransitionResult transition = portInvoker.Invoke(
                 BattleEncounterFaultCode.ScheduleExecutionFailed,
                 "schedule-start",
                 () => services.Schedule.Start(scheduleRequest)
                       ?? throw new InvalidOperationException(
                           "The encounter scheduling policy returned null while starting."));
-            return InvokePort(
+            return portInvoker.Invoke(
                 BattleEncounterFaultCode.ScheduleTransitionInvalid,
                 "schedule-transition-validation",
                 () => BattleEncounterScheduleCursor.Start(
@@ -1164,14 +1067,14 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 completedStep,
                 outcome,
                 CaptureScheduleParticipants(request.Participants));
-            BattleEncounterScheduleTransitionResult transition = InvokePort(
+            BattleEncounterScheduleTransitionResult transition = portInvoker.Invoke(
                 BattleEncounterFaultCode.ScheduleExecutionFailed,
                 "schedule-advance",
                 () => services.Schedule.Advance(advanceRequest)
                       ?? throw new InvalidOperationException(
                           "The encounter scheduling policy returned null while advancing."),
                 actorId);
-            return InvokePort(
+            return portInvoker.Invoke(
                 BattleEncounterFaultCode.ScheduleTransitionInvalid,
                 "schedule-transition-validation",
                 () => cursor.Advance(services.Schedule, outcome, transition),
@@ -1180,7 +1083,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         void ConsumeScheduleTransitionBudget(RuntimeInstanceId? actorId = null)
         {
-            InvokePortAction(
+            portInvoker.InvokeAction(
                 BattleEncounterFaultCode.ScheduleTransitionLimitExceeded,
                 "schedule-progress",
                 () =>
@@ -1214,7 +1117,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<ContentId>? proposedTeamOrder = InvokePort(
+        IReadOnlyList<ContentId>? proposedTeamOrder = portInvoker.Invoke(
             BattleEncounterFaultCode.InitiativeExecutionFailed,
             "initiative",
             () =>
@@ -1348,12 +1251,12 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         "A team-phase start must select a turn-economy scope.");
 
                 cancellationToken.ThrowIfCancellationRequested();
-                IBattleTurnEconomy turnEconomy = InvokePort(
+                IBattleTurnEconomy turnEconomy = portInvoker.Invoke(
                     BattleEncounterFaultCode.TurnEconomyExecutionFailed,
                     "turn-economy-factory",
                     () => services.TurnEconomyFactory()
                           ?? throw new InvalidOperationException("The turn-economy factory returned null."));
-                InvokePortAction(
+                portInvoker.InvokeAction(
                     BattleEncounterFaultCode.TurnEconomyExecutionFailed,
                     "turn-economy-start",
                     () => turnEconomy.StartPhase(economyStart.ActiveActorCount));
@@ -1595,7 +1498,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                     IReadOnlyList<StatModifierLifecycleBoundary> activeStatModifierBoundaries =
                         services.Lifecycle is IBattleEncounterStatModifierBoundarySource boundarySource
-                            ? InvokePort(
+                            ? portInvoker.Invoke(
                                 BattleEncounterFaultCode.LifecycleExecutionFailed,
                                 "stat-modifier-boundary-source",
                                 () => BattleEncounterTurnRequest.SnapshotActiveStatModifierBoundaries(
@@ -1623,7 +1526,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             .ConfigureAwait(false);
                     }
 
-                    BattleEncounterCommandResult command = await InvokePortAsync(
+                    BattleEncounterCommandResult command = await portInvoker.InvokeAsync(
                             BattleEncounterFaultCode.TurnHandlerExecutionFailed,
                             "turn-handler",
                             async () =>
@@ -1750,7 +1653,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             .ConfigureAwait(false);
                     }
 
-                    InvokePortAction(
+                    portInvoker.InvokeAction(
                         BattleEncounterFaultCode.TurnEconomyExecutionFailed,
                         "turn-economy-apply",
                         () => turnEconomy.Apply(command.TurnConsumption),
@@ -2121,7 +2024,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
                 if (pass == request.Participants.Count)
                 {
-                    InvokePortAction(
+                    portInvoker.InvokeAction(
                         BattleEncounterFaultCode.LifecycleExecutionFailed,
                         "departure-reconciliation",
                         () => throw new InvalidOperationException(
@@ -2136,7 +2039,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     AddAsync)
                 .ConfigureAwait(false);
 
-            return InvokePort(
+            return portInvoker.Invoke(
                 BattleEncounterFaultCode.CompletionEvaluationFailed,
                 "completion-evaluation",
                 () =>
@@ -2168,7 +2071,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         void Synchronize()
         {
-            InvokePortAction(
+            portInvoker.InvokeAction(
                 BattleEncounterFaultCode.StateSynchronizationFailed,
                 "state-synchronization",
                 () => services.Synchronizer.Synchronize(request.Participants));
@@ -2193,7 +2096,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         BattleTurnEconomySnapshot CaptureTurnEconomySnapshot(
             IBattleTurnEconomy turnEconomy,
             RuntimeInstanceId? actorId = null) =>
-            InvokePort(
+            portInvoker.Invoke(
                 BattleEncounterFaultCode.TurnEconomyExecutionFailed,
                 "turn-economy-snapshot",
                 () => turnEconomy.CaptureSnapshot()
@@ -2203,7 +2106,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         bool HasTurnsRemaining(
             IBattleTurnEconomy turnEconomy,
             RuntimeInstanceId? actorId = null) =>
-            InvokePort(
+            portInvoker.Invoke(
                 BattleEncounterFaultCode.TurnEconomyExecutionFailed,
                 "turn-economy-state",
                 turnEconomy.HasTurnsRemaining,
@@ -2513,6 +2416,128 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 $"lifecycle-{stage}",
                 request.Participants);
             return Array.AsReadOnly(snapshot);
+        }
+    }
+
+    private sealed class EncounterPortInvoker
+    {
+        private readonly CancellationToken _cancellationToken;
+        private readonly IBattleEncounterEventSink _eventSink;
+        private readonly List<BattleEncounterEvent> _events;
+        private readonly Func<BattleEncounterPortException, ValueTask<BattleEncounterResult>> _finalizePortFailureAsync;
+
+        public EncounterPortInvoker(
+            CancellationToken cancellationToken,
+            IBattleEncounterEventSink eventSink,
+            List<BattleEncounterEvent> events,
+            Func<BattleEncounterPortException, ValueTask<BattleEncounterResult>> finalizePortFailureAsync)
+        {
+            _cancellationToken = cancellationToken;
+            _eventSink = eventSink;
+            _events = events;
+            _finalizePortFailureAsync = finalizePortFailureAsync;
+        }
+
+        public T Invoke<T>(
+            BattleEncounterFaultCode faultCode,
+            string portName,
+            Func<T> operation,
+            RuntimeInstanceId? actorId = null)
+        {
+            _cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                T result = operation();
+                _cancellationToken.ThrowIfCancellationRequested();
+                return result;
+            }
+            catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _cancellationToken.ThrowIfCancellationRequested();
+                throw new BattleEncounterPortException(
+                    faultCode,
+                    portName,
+                    actorId,
+                    exception,
+                    _finalizePortFailureAsync);
+            }
+        }
+
+        public void InvokeAction(
+            BattleEncounterFaultCode faultCode,
+            string portName,
+            Action operation,
+            RuntimeInstanceId? actorId = null) =>
+            Invoke(
+                faultCode,
+                portName,
+                () =>
+                {
+                    operation();
+                    return true;
+                },
+                actorId);
+
+        public async ValueTask<T> InvokeAsync<T>(
+            BattleEncounterFaultCode faultCode,
+            string portName,
+            Func<ValueTask<T>> operation,
+            RuntimeInstanceId? actorId = null)
+        {
+            _cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                T result = await operation().ConfigureAwait(false);
+                _cancellationToken.ThrowIfCancellationRequested();
+                return result;
+            }
+            catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _cancellationToken.ThrowIfCancellationRequested();
+                throw new BattleEncounterPortException(
+                    faultCode,
+                    portName,
+                    actorId,
+                    exception,
+                    _finalizePortFailureAsync);
+            }
+        }
+
+        public async ValueTask InvokeTaskAsync(
+            BattleEncounterFaultCode faultCode,
+            string portName,
+            Func<ValueTask> operation,
+            RuntimeInstanceId? actorId = null)
+        {
+            await InvokeAsync(
+                    faultCode,
+                    portName,
+                    async () =>
+                    {
+                        await operation().ConfigureAwait(false);
+                        return true;
+                    },
+                    actorId)
+                .ConfigureAwait(false);
+        }
+
+        public async ValueTask PublishAndRecordAsync(BattleEncounterEvent battleEvent)
+        {
+            _events.Add(battleEvent);
+            await InvokeTaskAsync(
+                    BattleEncounterFaultCode.EventPublicationFailed,
+                    "event-publication",
+                    () => _eventSink.PublishAsync(battleEvent, _cancellationToken),
+                    battleEvent.ActorId)
+                .ConfigureAwait(false);
         }
     }
 
