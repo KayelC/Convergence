@@ -692,3 +692,109 @@ the Stage 0 through Stage 4 evidence.
 
 Later completion entries will be appended below this one and will not rewrite
 the Stage 0 through Stage 5 evidence.
+
+### Stage 6 - Complete On 8 August 2026
+
+- **Verified boundary:** before editing, baseline commit `0b174b23` lines
+  `1399-1934` were compared directly with post-Stage-5 lines `1240-1775`.
+  Both are the complete scheduled-command-window loop, beginning with the
+  command-window schedule step and ending immediately after its final
+  `CommandCommitted` schedule advancement. All called helpers are existing
+  `EncounterRunContext` members or class-level static helpers; no referenced
+  local-helper declaration sits outside the approved range. The immutable
+  phase `teamId` remains a separate argument so the existing command-window
+  team mismatch validation is preserved rather than reduced to a
+  self-comparison.
+- **Baseline to destination:** baseline command-window orchestration at
+  `BattleEncounterRunner.cs:1399-1934` moved to
+  `EncounterRunContext.RunCommandWindowAsync` at post-stage lines `1349-1888`.
+  `RunPhaseAsync` owns `EncounterPhaseRunState` and consumes one command-window
+  result at post-stage lines `1232-1255`. Private phase state is at post-stage
+  lines `2520-2542`; private immutable `CommandWindowRunResult` is at
+  post-stage lines `2544-2562`.
+- **Changed files:**
+  `src/Convergence.Framework/Encounters/BattleEncounterRunner.cs` and this
+  roadmap. No test, assertion, API baseline, external call site, notes file, or
+  other source file changed.
+- **Focused verification:** 168 passed, 0 failed, 0 skipped in the unchanged
+  `BattleEncounterRunnerTests` suite.
+- **Full verification:** 1,888 passed, 0 failed, 0 skipped: Framework 1,703,
+  DemoHost 178, ContentValidator 7.
+- **Additional gates:** strict nonincremental solution build succeeded with
+  0 warnings and 0 errors; `dotnet format --verify-no-changes` succeeded; all
+  6 public-API boundary tests passed; `git diff --check` succeeded.
+- **Hazard 1 - unavailable-actor paths do not count alike:** a scheduled actor
+  already unavailable still advances with `ActorUnavailable` before the
+  accepted-window counter or `TurnStarted` event and returns the advanced phase
+  state. An actor made unavailable during turn-start processing still retains
+  the prior accepted-window increment, lifecycle work, reconciliation, and
+  `TurnEnded(ActorUnavailable)` event before the same schedule outcome. Each
+  former `continue` now returns the same mutated phase state to the outer loop;
+  neither becomes a committed command.
+- **Hazard 2 - turn-start commit and restriction timing:** the accepted-window
+  increment and `TurnStarted` event remain before turn-start lifecycle work.
+  Staged lifecycle execution, event mapping and ownership validation, economy
+  authority validation, explicit cancellation, and transaction commit remain
+  in that order. Lifecycle events are recorded after commit; `TurnRestricted`
+  and departure reconciliation remain after those events.
+- **Hazard 3 - handler ownership validation:** turn-start lifecycle events
+  still pass `RequirePortOwned` against staged participants before commit.
+  Turn-handler events still pass `RequirePortOwned` inside the invoker callback
+  against the request participants and current actor before the callback
+  returns. Conditions, owner arguments, port names, and fault boundaries are
+  unchanged.
+- **Hazard 4 - rejected/cancelled/faulted command handling:** command events
+  remain recorded before status dispatch. Cancellation still records
+  `TurnEnded(EncounterTerminated)` and finishes as `Cancelled`; fault still
+  records that turn end and finalizes `CommandExecutionFaulted`; rejection
+  still records `ActionRejected`, then the terminating turn end, then finalizes
+  `CommandRejected`. Messages, actor/team payloads, port name, and terminal
+  behavior are unchanged.
+- **Hazard 5 - economy apply/validation order:** continuity is still checked
+  before actor selection. Economy authority remains checked before and after
+  handler execution and once more after handler events but before apply. Only
+  an accepted command reaches `Apply`; the after snapshot and remaining-turn
+  evidence are then captured, and `ValidateEconomyTransition` runs before the
+  accepted economy state or counters are updated.
+- **Hazard 6 - free-action counting:** both counters are still initialized to
+  zero after `PhaseStarted` and before synchronization. Accepted windows still
+  increment only after a deployable scheduled actor is accepted. The
+  consecutive-free counter increments only for `None` consumption without a
+  requested terminal outcome, retains the same limit check, and resets to zero
+  for every other accepted command.
+- **Hazard 7 - turn-end lifecycle commit timing:** turn-end lifecycle remains
+  conditional on non-`None` consumption. Its lifecycle call and event snapshot
+  remain inside the same try/catch; filtered cancellation still rethrows and
+  ordinary failure still finalizes a lifecycle fault. Economy authority is
+  checked after lifecycle execution, followed by explicit cancellation,
+  transaction commit, and only then lifecycle-event recording.
+- **Hazard 8 - turn-economy event order, reconciliation, and terminal checks:**
+  post-lifecycle economy authority remains before `TurnEconomyChanged`.
+  Reconciliation remains after that event, followed by another authority
+  check and `TurnEnded(CommandCommitted)`. A requested outcome is still tested
+  before reconciled completion; both terminal branches remain before schedule
+  advancement.
+- **Hazard 9 - schedule advancement:** the two unavailable paths still advance
+  with `ActorUnavailable` at their original points. The normal path advances
+  with `CommandCommitted` only after economy application, lifecycle, events,
+  reconciliation, authority checks, turn end, and terminal checks. The returned
+  phase state is reevaluated by the unchanged command-window loop; phase
+  boundary advancement remains in `RunPhaseAsync` after phase completion.
+- **Event/fault/exception/cancellation evidence:** a direct mechanical source
+  comparison against parent commit `e5e1fb2d` matched all 532 moved body lines
+  after reversing only four-space dedenting, six phase-state member
+  categories, 22 terminal carrier wrappers, and the two continuation
+  carrier returns. Event constructions and ordering, fault messages and codes,
+  port names, catches and filters, explicit cancellation checks, lifecycle
+  transaction scopes and commits, economy operations, reconciliation calls,
+  counters, and scheduler outcomes otherwise remain statement-for-statement
+  identical. The private state and result carrier add no validation, exception,
+  cancellation, event, or fault path. Existing restriction, ownership,
+  command-status, economy, free-action, lifecycle, departure, scheduler,
+  port-fault, and cancellation tests passed unchanged.
+- **Deferred observations:** none. `POST-O6-NOTES.md` was not created because
+  Stage 6 exposed no suspicious behavior.
+- **Commit:** `refactor(encounter-runner): stage 6 - move command window execution`.
+
+Later completion entries will be appended below this one and will not rewrite
+the Stage 0 through Stage 6 evidence.
