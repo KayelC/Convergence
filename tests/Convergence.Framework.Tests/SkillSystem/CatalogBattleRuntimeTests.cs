@@ -2674,6 +2674,62 @@ public sealed class CatalogBattleRuntimeTests
             battleEvent.Kind == BattleEncounterEventKind.CommandSelected);
     }
 
+    [Fact]
+    public void Runner_RejectsPreparedAssessmentFromAnotherExecutorAuthority()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = CreateDemoActor(catalog, "frost_duelist_demo", "frost", PlayerTeam);
+        CatalogBattleActor enemy = CreateDemoActor(catalog, "ember_duelist_demo", "ember", EnemyTeam);
+        BattleExecutionServices services = Services(catalog);
+        var executionAuthority = new SkillExecutor(services);
+        var foreignAssessmentAuthority = new SkillExecutor(Services(catalog));
+        SkillDefinition skill = player.ActiveSkills[0];
+        decimal playerSp = player.State.GetRequiredResource(Id("sp")).Current;
+        decimal enemyHp = enemy.State.GetRequiredResource(Id("hp")).Current;
+        var selector = new DelegatingBattleActionSelector(request =>
+        {
+            RuntimeInstanceId targetId = request.Participants.Single(participant =>
+                participant.State.TeamId != request.Actor.State.TeamId).State.InstanceId;
+            var executionRequest = new SkillExecutionRequest(
+                skill,
+                request.Actor.State,
+                request.Participants.Select(participant => participant.State),
+                new EffectExecutionEnvironment(
+                    request.ContextId,
+                    request.BattleKindId,
+                    request.MoonPhaseId,
+                    request.ActiveStatModifierBoundaries),
+                [targetId]);
+            SkillExecutionAssessment assessment = foreignAssessmentAuthority.Assess(executionRequest);
+            Assert.True(
+                assessment.CanExecute,
+                string.Join("; ", assessment.Diagnostics.Select(diagnostic => diagnostic.Message)));
+            return new BattleActionSelection(
+                BattleActionSelectionStatus.Selected,
+                skill,
+                assessment.TargetIds,
+                assessment);
+        });
+
+        AutomatedBattleResult result = CreateAutomatedRunner(
+            executionAuthority,
+            selector,
+            services).Run(new AutomatedBattleRequest(
+                [player, enemy], Battle, NormalBattle, NewMoon, 1));
+
+        Assert.Equal(AutomatedBattleOutcome.Faulted, result.Outcome);
+        Assert.Equal(BattleEncounterFaultCode.CommandExecutionFaulted, result.FaultCode);
+        Assert.Contains("another executor", result.FaultMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(playerSp, player.State.GetRequiredResource(Id("sp")).Current);
+        Assert.Equal(enemyHp, enemy.State.GetRequiredResource(Id("hp")).Current);
+        Assert.Contains(result.Events, battleEvent =>
+            battleEvent.Kind == BattleEncounterEventKind.CommandSelected);
+        Assert.DoesNotContain(result.Events, battleEvent =>
+            battleEvent.Kind is BattleEncounterEventKind.ResourceChanged
+                or BattleEncounterEventKind.EffectResolved
+                or BattleEncounterEventKind.TurnEconomyChanged);
+    }
+
     [Theory]
     [InlineData(PreparedSelectionMismatch.Actor, "another actor")]
     [InlineData(PreparedSelectionMismatch.Participants, "another participant set")]

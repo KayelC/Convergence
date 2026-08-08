@@ -282,6 +282,12 @@ interpretation, sends only `Executed` commands through turn economy, and skips
 owner-turn-end lifecycle only for `None` consumption. The technical entry
 returns to `reviewed`; O6-R51 remains the bounded closure review.
 
+The
+[O6-R51 final closure review](../reviews/encounter-orchestration-order-6-r51-final-closure-review-2026-08-08.md)
+independently rechecks automated execution authority and every command-status
+transaction branch without finding an unresolved realistic reachable defect.
+Order 6 is formally owner-closed; the documentation totals do not change.
+
 The documentation matrix currently records 75 audience entries: 30 reviewed,
 24 existing_unreviewed, 14 missing, and 7 not_applicable.
 

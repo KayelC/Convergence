@@ -222,8 +222,9 @@ must describe the page as a whole, not merely its prose.
 | O6-R48 | Fresh source, test, and documentation audit; reopen only affected tracking | Complete |
 | O6-R49 | Remove the unused automated-runner services dependency and update public API evidence | Complete |
 | O6-R50 | Correct the technical command transaction diagram and revalidate all audience guidance | Complete |
-| O6-R51 | Perform one bounded fresh closure review over the two corrections | Pending |
+| O6-R51 | Perform one bounded fresh closure review over the two corrections | Complete |
 
-Order 6 should not be marked formally owner-closed until O6-R51 is complete.
-The remaining hold is only the bounded closure review; no encounter mechanic
-redesign or additional presentation work is required.
+The
+[O6-R51 final closure review](encounter-orchestration-order-6-r51-final-closure-review-2026-08-08.md)
+independently rechecks the two corrections and finds no unresolved realistic
+reachable defect. Order 6 is formally owner-closed.

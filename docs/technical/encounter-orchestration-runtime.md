@@ -19,9 +19,10 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Review state:** `reviewed` after O6-R50. The command transaction diagram and
-> surrounding guidance now distinguish all valid command statuses and show that
-> only an executed command reaches turn-economy application.
+> **Review state:** `reviewed` after O6-R51. The command transaction diagram and
+> surrounding guidance distinguish all valid command statuses and show that
+> only an executed command reaches turn-economy application; the bounded closure
+> review independently reconciled both with current source and tests.
 
 ## Authority Map
 

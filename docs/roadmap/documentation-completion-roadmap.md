@@ -628,6 +628,13 @@ lifecycle path. The encounter technical entry returns to `reviewed`, so the
 current totals are 30 reviewed, 24 `existing_unreviewed`, 14 missing, and 7
 `not_applicable`. Formal owner closure remains held only for O6-R51.
 
+The
+[O6-R51 final closure review](../reviews/encounter-orchestration-order-6-r51-final-closure-review-2026-08-08.md)
+rechecks the corrected constructor authority, prepared-assessment ownership,
+command-status transaction, lifecycle/economy branch, tests, and all three
+audience documents. No unresolved realistic reachable defect remains. Order 6
+is formally owner-closed with the encounter entries still `reviewed`.
+
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored
 mixed lifecycle state through the public catalog boundary at every supported

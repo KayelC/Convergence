@@ -401,6 +401,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "encounter-orchestration-order-6-r48-independent-closure-audit-2026-08-07.md"))
             .ReplaceLineEndings(" ");
+        string r51ClosureReview = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "encounter-orchestration-order-6-r51-final-closure-review-2026-08-08.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -707,7 +713,22 @@ public sealed class DocumentationFoundationTests
             "| O6-R50 | Correct the technical command transaction diagram and revalidate all audience guidance | Complete |",
             r48Audit,
             StringComparison.Ordinal);
-        Assert.Contains("Order 6 should not be marked formally owner-closed until O6-R51", r48Audit, StringComparison.Ordinal);
+        Assert.Contains(
+            "| O6-R51 | Perform one bounded fresh closure review over the two corrections | Complete |",
+            r48Audit,
+            StringComparison.Ordinal);
+        Assert.Contains("Order 6 is formally owner-closed", r48Audit, StringComparison.Ordinal);
+        Assert.Contains(
+            "**no unresolved realistic reachable defect found; Order 6 is formally owner-closed**",
+            r51ClosureReview,
+            StringComparison.Ordinal);
+        Assert.Contains("## Corrected Invariants Rechecked", r51ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("### One automated action-execution authority", r51ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("### Complete command-status transaction", r51ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("## Documentation Cross-Examination", r51ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("## Trusted Boundaries And Residual Risk", r51ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("CONVERGENCE_GODOT_SMOKE_OK", r51ClosureReview, StringComparison.Ordinal);
+        Assert.Contains("Order 6 is formally owner-closed after O6-R51", r51ClosureReview, StringComparison.Ordinal);
 
         string encounterTechnical = File.ReadAllText(
             RepositoryPath("docs", "technical", "encounter-orchestration-runtime.md"));
