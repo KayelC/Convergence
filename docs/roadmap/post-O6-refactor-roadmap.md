@@ -2,8 +2,8 @@
 
 ## Status
 
-**Proposed. No extraction is authorized until the owner explicitly approves this
-roadmap.**
+**Approved on 8 August 2026. Stage 0 is complete; Stage 1 has not begun and
+remains gated by the per-stage owner approval rule.**
 
 This roadmap governs a mechanical decomposition of
 `BattleEncounterRunner.RunCoreAsync`. It does not reopen Order 6 mechanics and
@@ -314,5 +314,49 @@ approval.
 
 ## Completion Record
 
-No stage has begun. This section will be extended, never rewritten from memory,
-after each approved stage.
+### Stage 0 - Complete On 8 August 2026
+
+- **Baseline to destination:** baseline mutable declarations at
+  `BattleEncounterRunner.cs:901-913` moved to private nested
+  `EncounterRunState` at post-stage lines 2519-2548. The replacement
+  construction remains at post-stage line 901, after the unchanged checks at
+  lines 895-899.
+- **Changed files:**
+  `src/Convergence.Framework/Encounters/BattleEncounterRunner.cs` and this
+  roadmap. No test, assertion, API baseline, call site, or other source file
+  changed.
+- **Focused verification:** 168 passed, 0 failed, 0 skipped in the unchanged
+  `BattleEncounterRunnerTests` suite.
+- **Full verification:** 1,888 passed, 0 failed, 0 skipped: Framework 1,703,
+  DemoHost 178, ContentValidator 7.
+- **Additional gates:** strict nonincremental solution build succeeded with
+  0 warnings and 0 errors; `dotnet format --verify-no-changes` succeeded; all
+  6 public-API boundary tests passed; `git diff --check` succeeded.
+- **Event parity:** the bodies and call sites of `AddAsync`,
+  `AddTurnEconomyAsync`, `AddRangeAsync`, `PublishAndRecordAsync`, and final
+  event append remain in place. Their four sequence increments and two event
+  list writes changed only from a captured local to the corresponding state
+  member. Existing typed-event ordering, sequence, successful cleanup ordering,
+  and event-publication-failure tests passed unchanged.
+- **Fault parity:** no condition, fault code, payload, message, catch, or
+  finalization statement moved. `BattleStarted`,
+  `BattleEndLifecycleAttempted`, team order, defeat-period sets, and round
+  counters are read and written at their original statement positions through
+  direct state members. Existing primary-fault preservation, cleanup-failure,
+  scheduler, completion, and economy-authority tests passed unchanged.
+- **Exception parity:** `EncounterRunState` adds no guard or conversion. It
+  performs the original allocations, defeated-participant projection, and
+  explicit initial assignments in their original order. The existing
+  validation and port/lifecycle exception tests passed unchanged.
+- **Cancellation parity:** every cancellation call remains at its baseline
+  control-flow position. In particular, the pre-cancel check still precedes
+  argument validation and state construction, and construction still precedes
+  the first port invocation. All focused pre-start, actor-creation,
+  turn-economy, handler, round-end, and battle-end cancellation tests passed
+  unchanged.
+- **Deferred observations:** none. `POST-O6-NOTES.md` was not created because
+  Stage 0 exposed no suspicious behavior.
+- **Commit:** `refactor(encounter-runner): stage 0 - move run state`.
+
+Later completion entries will be appended below this one and will not rewrite
+the Stage 0 evidence.

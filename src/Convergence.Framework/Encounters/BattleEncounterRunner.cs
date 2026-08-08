@@ -898,19 +898,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         if (request.RoundLimit <= 0) throw new ArgumentOutOfRangeException(nameof(request), "Round limit must be positive.");
         if (request.Participants.Count == 0) throw new ArgumentException("A battle requires participants.", nameof(request));
 
-        var events = new List<BattleEncounterEvent>();
-        var defeatedAnnouncements = new HashSet<RuntimeInstanceId>();
-        var processedDefeatDepartures = new HashSet<RuntimeInstanceId>(
-            request.Participants
-                .Where(participant => participant.State.IsDefeated)
-                .Select(participant => participant.InstanceId));
-        int sequence = 0;
-        int? finalRoundNumber = null;
-        int completedRounds = 0;
-        bool battleStarted = false;
-        bool battleEndLifecycleAttempted = false;
-        int scheduleTransitionCount = 0;
-        IReadOnlyList<ContentId> teamOrder = Array.Empty<ContentId>();
+        var runState = new EncounterRunState(request.Participants);
 
         T InvokePort<T>(
             BattleEncounterFaultCode faultCode,
@@ -1005,7 +993,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
         async ValueTask PublishAndRecordAsync(BattleEncounterEvent battleEvent)
         {
-            events.Add(battleEvent);
+            runState.Events.Add(battleEvent);
             await InvokePortTaskAsync(
                     BattleEncounterFaultCode.EventPublicationFailed,
                     "event-publication",
@@ -1020,7 +1008,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             string? debugText = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var battleEvent = new BattleEncounterEvent(++sequence, kind, payload, debugText);
+            var battleEvent = new BattleEncounterEvent(++runState.Sequence, kind, payload, debugText);
             await PublishAndRecordAsync(battleEvent).ConfigureAwait(false);
         }
 
@@ -1032,7 +1020,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
         {
             cancellationToken.ThrowIfCancellationRequested();
             var battleEvent = new BattleEncounterEvent(
-                ++sequence,
+                ++runState.Sequence,
                 BattleEncounterEventKind.TurnEconomyChanged,
                 new BattleTurnEconomyChangedEventPayload(actor, before, after, consumption),
                 $"Turn economy {after.EconomyId}: {after.RemainingActions} action(s) remaining.");
@@ -1045,7 +1033,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             foreach (BattleEncounterEvent battleEvent in unsequenced)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                BattleEncounterEvent sequenced = battleEvent.WithSequence(++sequence);
+                BattleEncounterEvent sequenced = battleEvent.WithSequence(++runState.Sequence);
                 await PublishAndRecordAsync(sequenced).ConfigureAwait(false);
             }
         }
@@ -1070,7 +1058,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             foreach (BattleEncounterParticipant participant in request.Participants)
             {
                 if (participant.State.IsDefeated &&
-                    !processedDefeatDepartures.Contains(participant.InstanceId))
+                    !runState.ProcessedDefeatDepartures.Contains(participant.InstanceId))
                 {
                     reasonsByActor.TryAdd(
                         participant.InstanceId,
@@ -1131,7 +1119,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             {
                 if (participant.State.IsDefeated && reasonsByActor.ContainsKey(participant.InstanceId))
                 {
-                    processedDefeatDepartures.Add(participant.InstanceId);
+                    runState.ProcessedDefeatDepartures.Add(participant.InstanceId);
                 }
             }
 
@@ -1143,7 +1131,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             ConsumeScheduleTransitionBudget();
             var scheduleRequest = new BattleEncounterScheduleStartRequest(
                 CaptureScheduleParticipants(request.Participants),
-                teamOrder,
+                runState.TeamOrder,
                 request.RoundLimit);
             BattleEncounterScheduleTransitionResult transition = InvokePort(
                 BattleEncounterFaultCode.ScheduleExecutionFailed,
@@ -1197,7 +1185,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 "schedule-progress",
                 () =>
                 {
-                    if (scheduleTransitionCount >=
+                    if (runState.ScheduleTransitionCount >=
                         services.EncounterProgress.MaximumScheduleTransitions)
                     {
                         throw new InvalidOperationException(
@@ -1206,7 +1194,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             $"{services.EncounterProgress.MaximumScheduleTransitions}.");
                     }
 
-                    scheduleTransitionCount = checked(scheduleTransitionCount + 1);
+                    runState.ScheduleTransitionCount = checked(runState.ScheduleTransitionCount + 1);
                 },
                 actorId);
         }
@@ -1254,7 +1242,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 .ConfigureAwait(false);
         }
 
-        teamOrder = Array.AsReadOnly(proposedTeamOrder!.ToArray());
+        runState.TeamOrder = Array.AsReadOnly(proposedTeamOrder!.ToArray());
         Synchronize();
         using var battleStartTransaction = new BattleEncounterLifecycleTransaction(
             request.Participants,
@@ -1284,11 +1272,11 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     participatingTeams),
                 "Battle started.")
             .ConfigureAwait(false);
-        battleStarted = true;
+        runState.BattleStarted = true;
         await AddAsync(
                 BattleEncounterEventKind.InitiativeRolled,
-                new BattleInitiativeRolledEventPayload(teamOrder),
-                "Initiative order: " + string.Join(", ", teamOrder.Select(team => team.ToString())) + ".")
+                new BattleInitiativeRolledEventPayload(runState.TeamOrder),
+                "Initiative order: " + string.Join(", ", runState.TeamOrder.Select(team => team.ToString())) + ".")
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<BattleEncounterEvent> battleStartEvents;
@@ -1298,7 +1286,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     new BattleEncounterLifecycleRequest(
                         battleStartTransaction.CreateEncounter(request),
                         battleStartTransaction.Participants,
-                        teamOrder),
+                        runState.TeamOrder),
                     cancellationToken)
                 .ConfigureAwait(false);
             battleStartEvents = SnapshotLifecycleEvents(returnedEvents, "battle-start");
@@ -1338,7 +1326,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             }
 
             int round = roundStarted.RoundNumber;
-            finalRoundNumber = round;
+            runState.FinalRoundNumber = round;
             await AddAsync(
                     BattleEncounterEventKind.RoundStarted,
                     new BattleRoundStartedEventPayload(round),
@@ -1753,7 +1741,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     }
 
                     if (command.WinningTeamId is ContentId commandWinner &&
-                        !teamOrder.Contains(commandWinner))
+                        !runState.TeamOrder.Contains(commandWinner))
                     {
                         return await FaultDuringBattleAsync(
                                 $"Battle command selected unknown winning team {commandWinner}.",
@@ -1969,7 +1957,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             new BattleEncounterLifecycleRequest(
                                 phaseEndTransaction.CreateEncounter(request),
                                 phaseEndTransaction.Participants,
-                                teamOrder),
+                                runState.TeamOrder),
                             teamId,
                             cancellationToken)
                         .ConfigureAwait(false);
@@ -2046,7 +2034,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             new BattleEncounterLifecycleRequest(
                                 roundEndTransaction.CreateEncounter(request),
                                 roundEndTransaction.Participants,
-                                teamOrder),
+                                runState.TeamOrder),
                             round,
                             cancellationToken)
                         .ConfigureAwait(false);
@@ -2069,7 +2057,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             await AddRangeAsync(roundEndEvents).ConfigureAwait(false);
             BattleEncounterCompletion roundCompletion =
                 await ReconcileAsync(null).ConfigureAwait(false);
-            completedRounds = round;
+            runState.CompletedRounds = round;
             await AddAsync(
                     BattleEncounterEventKind.RoundEnded,
                     new BattleRoundEndedEventPayload(round),
@@ -2144,7 +2132,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
             await AnnounceNewDefeatsAsync(
                     request.Participants,
-                    defeatedAnnouncements,
+                    runState.DefeatedAnnouncements,
                     AddAsync)
                 .ConfigureAwait(false);
 
@@ -2158,7 +2146,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                             CreateCompletionRequest(request.Participants, lastActor))
                         ?? throw new InvalidOperationException(
                             "The battle completion policy returned null.");
-                    ValidateCompletion(completion, teamOrder);
+                    ValidateCompletion(completion, runState.TeamOrder);
                     return completion;
                 },
                 lastActor?.InstanceId);
@@ -2173,8 +2161,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     continue;
                 }
 
-                processedDefeatDepartures.Remove(participant.InstanceId);
-                defeatedAnnouncements.Remove(participant.InstanceId);
+                runState.ProcessedDefeatDepartures.Remove(participant.InstanceId);
+                runState.DefeatedAnnouncements.Remove(participant.InstanceId);
             }
         }
 
@@ -2269,9 +2257,9 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
 
             IReadOnlyList<BattleEncounterEvent> battleEndEvents = [];
             string? cleanupFailure = null;
-            if (battleStarted && !battleEndLifecycleAttempted)
+            if (runState.BattleStarted && !runState.BattleEndLifecycleAttempted)
             {
-                battleEndLifecycleAttempted = true;
+                runState.BattleEndLifecycleAttempted = true;
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -2283,7 +2271,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                                 new BattleEncounterLifecycleRequest(
                                     lifecycleTransaction.CreateEncounter(request),
                                     lifecycleTransaction.Participants,
-                                    teamOrder),
+                                    runState.TeamOrder),
                                 BattleEncounterOutcome.Faulted,
                                 cancellationToken)
                             .ConfigureAwait(false);
@@ -2324,8 +2312,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     new BattleEndedEventPayload(
                         BattleEncounterOutcome.Faulted,
                         null,
-                        finalRoundNumber,
-                        completedRounds,
+                        runState.FinalRoundNumber,
+                        runState.CompletedRounds,
                         resolvedFaultCode),
                     finalMessage))
                 .ConfigureAwait(false);
@@ -2334,15 +2322,15 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 BattleEncounterOutcome.Faulted,
                 null,
                 request.Participants,
-                events,
+                runState.Events,
                 finalMessage,
                 resolvedFaultCode);
 
             async ValueTask AppendFinalEventAsync(BattleEncounterEvent unsequenced)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                BattleEncounterEvent sequenced = unsequenced.WithSequence(++sequence);
-                events.Add(sequenced);
+                BattleEncounterEvent sequenced = unsequenced.WithSequence(++runState.Sequence);
+                runState.Events.Add(sequenced);
                 if (!publishDuringFinalization)
                 {
                     return;
@@ -2392,7 +2380,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             BattleEncounterFaultCode? faultCode = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            battleEndLifecycleAttempted = true;
+            runState.BattleEndLifecycleAttempted = true;
             IReadOnlyList<BattleEncounterEvent> battleEndEvents;
             try
             {
@@ -2404,7 +2392,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                         new BattleEncounterLifecycleRequest(
                             lifecycleTransaction.CreateEncounter(request),
                             lifecycleTransaction.Participants,
-                            teamOrder),
+                            runState.TeamOrder),
                         outcome,
                         cancellationToken)
                     .ConfigureAwait(false);
@@ -2441,8 +2429,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                     new BattleEndedEventPayload(
                         outcome,
                         winningTeamId,
-                        finalRoundNumber,
-                        completedRounds,
+                        runState.FinalRoundNumber,
+                        runState.CompletedRounds,
                         faultCode),
                     endMessage)
                 .ConfigureAwait(false);
@@ -2450,7 +2438,7 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 outcome,
                 winningTeamId,
                 request.Participants,
-                events,
+                runState.Events,
                 outcome == BattleEncounterOutcome.Faulted ? message : null,
                 outcome == BattleEncounterOutcome.Faulted ? faultCode : null);
         }
@@ -2526,6 +2514,37 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 request.Participants);
             return Array.AsReadOnly(snapshot);
         }
+    }
+
+    private sealed class EncounterRunState
+    {
+        public EncounterRunState(IReadOnlyList<BattleEncounterParticipant> participants)
+        {
+            Events = new List<BattleEncounterEvent>();
+            DefeatedAnnouncements = new HashSet<RuntimeInstanceId>();
+            ProcessedDefeatDepartures = new HashSet<RuntimeInstanceId>(
+                participants
+                    .Where(participant => participant.State.IsDefeated)
+                    .Select(participant => participant.InstanceId));
+            Sequence = 0;
+            FinalRoundNumber = null;
+            CompletedRounds = 0;
+            BattleStarted = false;
+            BattleEndLifecycleAttempted = false;
+            ScheduleTransitionCount = 0;
+            TeamOrder = Array.Empty<ContentId>();
+        }
+
+        public List<BattleEncounterEvent> Events { get; }
+        public HashSet<RuntimeInstanceId> DefeatedAnnouncements { get; }
+        public HashSet<RuntimeInstanceId> ProcessedDefeatDepartures { get; }
+        public int Sequence { get; set; }
+        public int? FinalRoundNumber { get; set; }
+        public int CompletedRounds { get; set; }
+        public bool BattleStarted { get; set; }
+        public bool BattleEndLifecycleAttempted { get; set; }
+        public int ScheduleTransitionCount { get; set; }
+        public IReadOnlyList<ContentId> TeamOrder { get; set; }
     }
 
     private sealed class BattleEncounterPortException : Exception
