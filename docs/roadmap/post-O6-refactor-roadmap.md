@@ -482,5 +482,70 @@ approval.
   Stage 2 exposed no suspicious behavior.
 - **Commit:** `refactor(encounter-runner): stage 2 - move shared run operations`.
 
+### Stage 3 - Complete On 8 August 2026
+
+- **Verified boundary:** before editing, baseline commit `0b174b23` lines
+  `1214-1327` were compared directly with post-Stage-2 lines 909-1022. Both
+  begin with duplicate-ID validation and end with schedule creation after the
+  initial terminal-completion branch; no boundary discrepancy was found.
+- **Baseline to destination:** baseline battle-start orchestration at
+  `BattleEncounterRunner.cs:1214-1327` moved to
+  `EncounterRunContext.RunBattleStartPhaseAsync` at post-stage lines
+  1715-1839. `RunCoreAsync` consumes its result at post-stage lines 909-916.
+  Private immutable `BattleStartPhaseResult` is at post-stage lines 2472-2489.
+- **Changed files:**
+  `src/Convergence.Framework/Encounters/BattleEncounterRunner.cs` and this
+  roadmap. No test, assertion, API baseline, external call site, notes file, or
+  other source file changed.
+- **Focused verification:** 168 passed, 0 failed, 0 skipped in the unchanged
+  `BattleEncounterRunnerTests` suite.
+- **Full verification:** 1,888 passed, 0 failed, 0 skipped: Framework 1,703,
+  DemoHost 178, ContentValidator 7.
+- **Additional gates:** strict nonincremental solution build succeeded with
+  0 warnings and 0 errors; `dotnet format --verify-no-changes` succeeded; all
+  6 public-API boundary tests passed; `git diff --check` succeeded.
+- **Hazard 1 - duplicate-ID rejection precedes every encounter port call:**
+  after context construction, `RunCoreAsync` immediately awaits
+  `RunBattleStartPhaseAsync`. Its first operation computes and rejects duplicate
+  participant IDs through pre-start finalization. The first ordinary port
+  invocation, initiative, remains after that branch; constructing the private
+  context and invoker performs no port call.
+- **Hazard 2 - initiative cancellation checks:** the explicit cancellation
+  check remains immediately before the initiative `PortInvoker.Invoke` call.
+  The invoker retains its unchanged before-operation, after-operation,
+  exception-filter, and general-catch cancellation checks from Stage 1.
+- **Hazard 3 - actor passive reset order:** the lifecycle transaction is still
+  created before enumerating its participant snapshot. For each participant,
+  cancellation is checked first, passive battle activations are reset second,
+  and the matching `ActorCreated` event is awaited third, in the same
+  transaction-participant order.
+- **Hazard 4 - exact `BattleStarted` assignment point:** the
+  `BattleStarted` event is still fully published and recorded first;
+  `_runState.BattleStarted = true` remains the next statement; the
+  `InitiativeRolled` event remains after the assignment.
+- **Hazard 5 - lifecycle transaction commit timing:** the battle-start
+  lifecycle still runs against staged participants, its returned events are
+  snapshotted and ownership-validated, cancellation is checked, and only then
+  is the transaction committed. The same filtered cancellation catch rethrows;
+  the same general catch finalizes a typed lifecycle fault without committing.
+- **Hazard 6 - initial completion before schedule creation:** committed
+  lifecycle events are still added before reconciliation. Reconciliation is
+  evaluated next; a complete result is finalized and returned through the
+  terminal carrier branch. `StartSchedule()` is called only in the final
+  nonterminal return expression, so no schedule is created for an initially
+  complete encounter.
+- **Event/fault/exception/cancellation evidence:** the extracted method retains
+  every event argument and order, fault code and message, lifecycle request,
+  catch type and filter, cancellation point, transaction scope and commit,
+  reconciliation call, finalization call, and schedule-start call. Captured
+  locals changed only to `EncounterRunContext` members. The private result
+  carrier has a private constructor and two factories that populate exactly
+  one result path; it adds no runtime guard or new fault. Existing duplicate,
+  initiative, actor-creation, lifecycle rollback, immediate completion,
+  event-publication, and cancellation tests passed unchanged.
+- **Deferred observations:** none. `POST-O6-NOTES.md` was not created because
+  Stage 3 exposed no suspicious behavior.
+- **Commit:** `refactor(encounter-runner): stage 3 - move battle start phase`.
+
 Later completion entries will be appended below this one and will not rewrite
-the Stage 0, Stage 1, or Stage 2 evidence.
+the Stage 0 through Stage 3 evidence.
