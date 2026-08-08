@@ -21,6 +21,7 @@ records. It does not define individual mechanics.
 - [Documentation Completion Roadmap](documentation-completion-roadmap.md)
 - [Framework Capability Matrix](framework-capability-matrix.md)
 - [Production-Readiness Completion Record](production-readiness-roadmap.md)
+- [Post-O6 Encounter Runner Refactor Roadmap](post-O6-refactor-roadmap.md)
 
 Documentation maturity is tracked separately through the
 [documentation coverage matrix](../reference/documentation-coverage.md). A
