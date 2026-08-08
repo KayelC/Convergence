@@ -1113,676 +1113,14 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             while (!schedule.IsComplete &&
                    schedule.Step is BattleEncounterPhaseStartedScheduleStep phaseStarted)
             {
-                _cancellationToken.ThrowIfCancellationRequested();
-                ContentId teamId = phaseStarted.TeamId;
-                BattleEncounterTurnEconomyStart economyStart =
-                    phaseStarted.TurnEconomyStart
-                    ?? throw new InvalidOperationException(
-                        "A team-phase start must select a turn-economy scope.");
-
-                _cancellationToken.ThrowIfCancellationRequested();
-                IBattleTurnEconomy turnEconomy = PortInvoker.Invoke(
-                    BattleEncounterFaultCode.TurnEconomyExecutionFailed,
-                    "turn-economy-factory",
-                    () => _services.TurnEconomyFactory()
-                          ?? throw new InvalidOperationException("The turn-economy factory returned null."));
-                PortInvoker.InvokeAction(
-                    BattleEncounterFaultCode.TurnEconomyExecutionFailed,
-                    "turn-economy-start",
-                    () => turnEconomy.StartPhase(economyStart.ActiveActorCount));
-                BattleTurnEconomySnapshot phaseStartState = CaptureTurnEconomySnapshot(turnEconomy);
-                bool hasTurnsRemaining = HasTurnsRemaining(turnEconomy);
-                string? phaseStartFault = ValidateEconomyState(phaseStartState, hasTurnsRemaining);
-                if (phaseStartFault is not null)
+                PhaseRunResult phaseRun =
+                    await RunPhaseAsync(schedule, phaseStarted).ConfigureAwait(false);
+                if (phaseRun.TerminalResult is BattleEncounterResult phaseTerminalResult)
                 {
-                    return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                            phaseStartFault,
-                            faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                        .ConfigureAwait(false));
+                    return RoundRunResult.Finalized(phaseTerminalResult);
                 }
 
-                BattleTurnEconomySnapshot acceptedEconomyState = phaseStartState;
-                await AddAsync(
-                        BattleEncounterEventKind.PhaseStarted,
-                        new BattlePhaseStartedEventPayload(teamId, phaseStartState),
-                        $"Team {teamId} started a phase using {phaseStartState.EconomyId} " +
-                        $"with {phaseStartState.RemainingActions} action(s).")
-                    .ConfigureAwait(false);
-
-                int acceptedTurnWindowCount = 0;
-                int consecutiveFreeActions = 0;
-                Synchronize();
-                schedule = AdvanceSchedule(
-                    schedule,
-                    BattleEncounterScheduleStepOutcome.TurnEconomyStarted(
-                        phaseStartState,
-                        hasTurnsRemaining));
-                while (!schedule.IsComplete &&
-                       schedule.Step is BattleEncounterCommandWindowScheduleStep commandWindow)
-                {
-                    _cancellationToken.ThrowIfCancellationRequested();
-                    if (acceptedTurnWindowCount >= _services.PhaseProgress.MaximumCommands)
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                $"Team {teamId} exceeded the configured phase turn-window safety limit " +
-                                $"of {_services.PhaseProgress.MaximumCommands}.",
-                                faultCode: BattleEncounterFaultCode.PhaseCommandLimitExceeded)
-                            .ConfigureAwait(false));
-                    }
-
-                    BattleTurnEconomySnapshot beforeEconomy = CaptureTurnEconomySnapshot(turnEconomy);
-                    bool beforeHasTurnsRemaining = HasTurnsRemaining(turnEconomy);
-                    string? continuityFault = ValidateEconomyAuthority(
-                        acceptedEconomyState,
-                        beforeEconomy,
-                        beforeHasTurnsRemaining);
-                    if (continuityFault is not null)
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                continuityFault,
-                                faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                            .ConfigureAwait(false));
-                    }
-
-                    BattleEncounterParticipant? scheduledActor = _request.Participants
-                        .SingleOrDefault(participant =>
-                            participant.InstanceId == commandWindow.ActorId);
-                    if (scheduledActor is null ||
-                        scheduledActor.TeamId != commandWindow.TeamId ||
-                        commandWindow.TeamId != teamId ||
-                        commandWindow.TurnEconomyStart is not null)
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                $"Encounter schedule selected actor {commandWindow.ActorId} " +
-                                $"for invalid team {commandWindow.TeamId}.",
-                                commandWindow.ActorId,
-                                BattleEncounterFaultCode.ScheduleTransitionInvalid)
-                            .ConfigureAwait(false));
-                    }
-
-                    if (!scheduledActor.State.IsDeployed || scheduledActor.State.IsDefeated)
-                    {
-                        schedule = AdvanceSchedule(
-                            schedule,
-                            BattleEncounterScheduleStepOutcome.ActorUnavailable(
-                                scheduledActor.InstanceId),
-                            scheduledActor.InstanceId);
-                        continue;
-                    }
-
-                    BattleEncounterParticipant actor = scheduledActor;
-                    acceptedTurnWindowCount++;
-                    await AddAsync(
-                            BattleEncounterEventKind.TurnStarted,
-                            new BattleTurnStartedEventPayload(actor.InstanceId, actor.TeamId),
-                            $"{actor.DisplayName}'s turn started.")
-                        .ConfigureAwait(false);
-
-                    _cancellationToken.ThrowIfCancellationRequested();
-                    BattleTurnStartLifecycleResult? stagedTurnStart = null;
-                    IReadOnlyList<BattleEncounterEvent>? turnStartEvents = null;
-                    Exception? turnStartFailure = null;
-                    string? turnStartEconomyFault = null;
-                    using (var turnStartTransaction = new BattleEncounterLifecycleTransaction(
-                               _request.Participants,
-                               _services.Lifecycle))
-                    {
-                        try
-                        {
-                            BattleEncounterParticipant stagedActor =
-                                turnStartTransaction.GetStaged(actor);
-                            stagedTurnStart = await _services.Lifecycle.ProcessTurnStartAsync(
-                                    new BattleEncounterTurnLifecycleRequest(
-                                        turnStartTransaction.CreateEncounter(_request),
-                                        stagedActor,
-                                        turnStartTransaction.Participants,
-                                        CanRecallToRoster(stagedActor)),
-                                    _cancellationToken)
-                                .ConfigureAwait(false)
-                                ?? throw new InvalidOperationException(
-                                    "The battle lifecycle returned a null turn-start result.");
-                            turnStartEvents = MapStatusEvents(stagedTurnStart.Events);
-                            BattleEncounterEventOwnership.RequirePortOwned(
-                                turnStartEvents,
-                                "lifecycle-turn-start",
-                                turnStartTransaction.Participants);
-                            turnStartEconomyFault = CurrentEconomyAuthorityFault(
-                                turnEconomy,
-                                beforeEconomy,
-                                actor.InstanceId);
-                            if (turnStartEconomyFault is null)
-                            {
-                                _cancellationToken.ThrowIfCancellationRequested();
-                                turnStartTransaction.Commit();
-                            }
-                        }
-                        catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
-                        {
-                            throw;
-                        }
-                        catch (BattleEncounterPortException)
-                        {
-                            throw;
-                        }
-                        catch (Exception exception)
-                        {
-                            turnStartFailure = exception;
-                        }
-                    }
-
-                    if (turnStartFailure is not null)
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                LifecycleFailureMessage("turn-start", turnStartFailure),
-                                actor.InstanceId,
-                                BattleEncounterFaultCode.LifecycleExecutionFailed)
-                            .ConfigureAwait(false));
-                    }
-
-                    if (turnStartEconomyFault is not null)
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                turnStartEconomyFault,
-                                actor.InstanceId,
-                                BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                            .ConfigureAwait(false));
-                    }
-
-                    BattleTurnStartLifecycleResult turnStart = stagedTurnStart
-                        ?? throw new InvalidOperationException(
-                            "The committed turn-start lifecycle result is missing.");
-                    await AddRangeAsync(turnStartEvents
-                            ?? throw new InvalidOperationException(
-                                "The committed turn-start lifecycle events are missing."))
-                        .ConfigureAwait(false);
-
-                    if (turnStart.Outcome != BattleTurnStartOutcome.CanAct)
-                    {
-                        await AddAsync(
-                                BattleEncounterEventKind.TurnRestricted,
-                                new BattleTurnRestrictedEventPayload(actor.InstanceId, turnStart.Restriction),
-                                $"{actor.DisplayName} turn restriction: {turnStart.Outcome}.")
-                            .ConfigureAwait(false);
-                    }
-
-                    BattleStatusDepartureReason? turnStartDepartureReason =
-                        turnStart.Outcome switch
-                        {
-                            BattleTurnStartOutcome.FleeBattle =>
-                                BattleStatusDepartureReason.Flee,
-                            BattleTurnStartOutcome.RecallToRoster =>
-                                BattleStatusDepartureReason.RosterRecall,
-                            _ => null
-                        };
-                    BattleEncounterCompletion turnStartCompletion = await ReconcileAsync(
-                            lastActor: null,
-                            explicitDepartureActor:
-                                turnStartDepartureReason.HasValue ? actor : null,
-                            explicitDepartureReason: turnStartDepartureReason)
-                        .ConfigureAwait(false);
-                    if (!actor.State.IsDeployed || actor.State.IsDefeated)
-                    {
-                        await AddAsync(
-                                BattleEncounterEventKind.TurnEnded,
-                                new BattleTurnEndedEventPayload(
-                                    actor.InstanceId,
-                                    actor.TeamId,
-                                    BattleEncounterTurnEndReason.ActorUnavailable,
-                                    beforeEconomy),
-                                $"{actor.DisplayName}'s turn ended before a command was committed.")
-                            .ConfigureAwait(false);
-                        if (turnStartCompletion.IsComplete)
-                        {
-                            return RoundRunResult.Finalized(await FinishAsync(
-                                    turnStartCompletion.Outcome,
-                                    turnStartCompletion.WinningTeamId,
-                                    turnStartCompletion.Message)
-                                .ConfigureAwait(false));
-                        }
-
-                        schedule = AdvanceSchedule(
-                            schedule,
-                            BattleEncounterScheduleStepOutcome.ActorUnavailable(
-                                actor.InstanceId),
-                            actor.InstanceId);
-                        continue;
-                    }
-
-                    if (turnStartCompletion.IsComplete)
-                    {
-                        await AddAsync(
-                                BattleEncounterEventKind.TurnEnded,
-                                new BattleTurnEndedEventPayload(
-                                    actor.InstanceId,
-                                    actor.TeamId,
-                                    BattleEncounterTurnEndReason.EncounterTerminated,
-                                    beforeEconomy),
-                                $"{actor.DisplayName}'s turn ended with the encounter.")
-                            .ConfigureAwait(false);
-                        return RoundRunResult.Finalized(await FinishAsync(
-                                turnStartCompletion.Outcome,
-                                turnStartCompletion.WinningTeamId,
-                                turnStartCompletion.Message)
-                            .ConfigureAwait(false));
-                    }
-
-                    IReadOnlyList<StatModifierLifecycleBoundary> activeStatModifierBoundaries =
-                        _services.Lifecycle is IBattleEncounterStatModifierBoundarySource boundarySource
-                            ? PortInvoker.Invoke(
-                                BattleEncounterFaultCode.LifecycleExecutionFailed,
-                                "stat-modifier-boundary-source",
-                                () => BattleEncounterTurnRequest.SnapshotActiveStatModifierBoundaries(
-                                    boundarySource.GetActiveStatModifierBoundaries(
-                                        new BattleEncounterTurnLifecycleRequest(
-                                            _request,
-                                            actor,
-                                            _request.Participants,
-                                            CanRecallToRoster(actor)))
-                                    ?? throw new InvalidOperationException(
-                                        "The lifecycle boundary source returned null."),
-                                    "activeStatModifierBoundaries"),
-                                actor.InstanceId)
-                            : Array.Empty<StatModifierLifecycleBoundary>();
-                    string? preHandlerEconomyFault = CurrentEconomyAuthorityFault(
-                        turnEconomy,
-                        beforeEconomy,
-                        actor.InstanceId);
-                    if (preHandlerEconomyFault is not null)
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                preHandlerEconomyFault,
-                                actor.InstanceId,
-                                BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                            .ConfigureAwait(false));
-                    }
-
-                    BattleEncounterCommandResult command = await PortInvoker.InvokeAsync(
-                            BattleEncounterFaultCode.TurnHandlerExecutionFailed,
-                            "turn-handler",
-                            async () =>
-                            {
-                                BattleEncounterCommandResult returned =
-                                    await _services.TurnHandler.ExecuteTurnAsync(
-                                            new BattleEncounterTurnRequest(
-                                                _request,
-                                                actor,
-                                                _request.Participants,
-                                                turnStart.Restriction,
-                                                beforeEconomy,
-                                                activeStatModifierBoundaries),
-                                            _cancellationToken)
-                                        .ConfigureAwait(false)
-                                    ?? throw new InvalidOperationException(
-                                        "The battle turn handler returned null.");
-                                BattleEncounterEventOwnership.RequirePortOwned(
-                                    returned.Events,
-                                    "turn-handler",
-                                    _request.Participants,
-                                    actor.InstanceId);
-                                return returned;
-                            },
-                            actor.InstanceId)
-                        .ConfigureAwait(false);
-
-                    string? postHandlerEconomyFault = CurrentEconomyAuthorityFault(
-                        turnEconomy,
-                        beforeEconomy,
-                        actor.InstanceId);
-                    if (postHandlerEconomyFault is not null)
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                postHandlerEconomyFault,
-                                actor.InstanceId,
-                                BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                            .ConfigureAwait(false));
-                    }
-
-                    await AddRangeAsync(command.Events).ConfigureAwait(false);
-                    string? preApplyEconomyFault = CurrentEconomyAuthorityFault(
-                        turnEconomy,
-                        beforeEconomy,
-                        actor.InstanceId);
-                    if (preApplyEconomyFault is not null)
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                preApplyEconomyFault,
-                                actor.InstanceId,
-                                BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                            .ConfigureAwait(false));
-                    }
-
-                    if (command.Status is BattleEncounterCommandStatus.Cancelled)
-                    {
-                        await AddAsync(
-                                BattleEncounterEventKind.TurnEnded,
-                                new BattleTurnEndedEventPayload(
-                                    actor.InstanceId,
-                                    actor.TeamId,
-                                    BattleEncounterTurnEndReason.EncounterTerminated,
-                                    beforeEconomy),
-                                $"{actor.DisplayName}'s turn ended with encounter cancellation.")
-                            .ConfigureAwait(false);
-                        return RoundRunResult.Finalized(await FinishAsync(BattleEncounterOutcome.Cancelled, null, null).ConfigureAwait(false));
-                    }
-
-                    if (command.Status is BattleEncounterCommandStatus.Faulted)
-                    {
-                        await AddAsync(
-                                BattleEncounterEventKind.TurnEnded,
-                                new BattleTurnEndedEventPayload(
-                                    actor.InstanceId,
-                                    actor.TeamId,
-                                    BattleEncounterTurnEndReason.EncounterTerminated,
-                                    beforeEconomy),
-                                $"{actor.DisplayName}'s turn ended with a command fault.")
-                            .ConfigureAwait(false);
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                command.FaultMessage ?? "Battle command faulted.",
-                                actor.InstanceId,
-                                BattleEncounterFaultCode.CommandExecutionFaulted,
-                                actor.TeamId,
-                                "turn-handler")
-                            .ConfigureAwait(false));
-                    }
-
-                    if (command.Status is BattleEncounterCommandStatus.Rejected)
-                    {
-                        string rejection = command.FaultMessage ?? "Battle command was rejected.";
-                        await AddAsync(
-                                BattleEncounterEventKind.ActionRejected,
-                                new BattleActionRejectedEventPayload(
-                                    actor.InstanceId,
-                                    BattleEncounterCommandStatus.Rejected),
-                                rejection)
-                            .ConfigureAwait(false);
-                        await AddAsync(
-                                BattleEncounterEventKind.TurnEnded,
-                                new BattleTurnEndedEventPayload(
-                                    actor.InstanceId,
-                                    actor.TeamId,
-                                    BattleEncounterTurnEndReason.EncounterTerminated,
-                                    beforeEconomy),
-                                $"{actor.DisplayName}'s turn ended with a rejected command.")
-                            .ConfigureAwait(false);
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                rejection,
-                                actor.InstanceId,
-                                BattleEncounterFaultCode.CommandRejected,
-                                actor.TeamId,
-                                "turn-handler")
-                            .ConfigureAwait(false));
-                    }
-
-                    if (command.WinningTeamId is ContentId commandWinner &&
-                        !_runState.TeamOrder.Contains(commandWinner))
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                $"Battle command selected unknown winning team {commandWinner}.",
-                                actor.InstanceId,
-                                BattleEncounterFaultCode.CommandExecutionFaulted)
-                            .ConfigureAwait(false));
-                    }
-
-                    PortInvoker.InvokeAction(
-                        BattleEncounterFaultCode.TurnEconomyExecutionFailed,
-                        "turn-economy-apply",
-                        () => turnEconomy.Apply(command.TurnConsumption),
-                        actor.InstanceId);
-                    BattleTurnEconomySnapshot afterEconomy = CaptureTurnEconomySnapshot(
-                        turnEconomy,
-                        actor.InstanceId);
-                    hasTurnsRemaining = HasTurnsRemaining(turnEconomy, actor.InstanceId);
-                    string? economyFault = ValidateEconomyTransition(
-                        beforeEconomy,
-                        afterEconomy,
-                        hasTurnsRemaining,
-                        command.TurnConsumption);
-                    if (economyFault is not null)
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                economyFault,
-                                actor.InstanceId,
-                                BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                            .ConfigureAwait(false));
-                    }
-
-                    acceptedEconomyState = afterEconomy;
-                    bool isContinuingFreeAction =
-                        command.TurnConsumption.Kind == ActionTurnConsumptionKind.None &&
-                        command.RequestedOutcome is null;
-                    if (isContinuingFreeAction)
-                    {
-                        consecutiveFreeActions++;
-                        if (consecutiveFreeActions > _services.PhaseProgress.MaximumConsecutiveFreeActions)
-                        {
-                            return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                    $"Team {teamId} exceeded the configured consecutive free-action limit " +
-                                    $"of {_services.PhaseProgress.MaximumConsecutiveFreeActions}.",
-                                    actor.InstanceId,
-                                    BattleEncounterFaultCode.ConsecutiveFreeActionLimitExceeded)
-                                .ConfigureAwait(false));
-                        }
-                    }
-                    else
-                    {
-                        consecutiveFreeActions = 0;
-                    }
-
-                    if (command.TurnConsumption.Kind != ActionTurnConsumptionKind.None)
-                    {
-                        _cancellationToken.ThrowIfCancellationRequested();
-                        IReadOnlyList<BattleEncounterEvent> turnEndEvents;
-                        using var turnEndTransaction = new BattleEncounterLifecycleTransaction(
-                            _request.Participants,
-                            _services.Lifecycle);
-                        try
-                        {
-                            BattleEncounterParticipant stagedActor = turnEndTransaction.GetStaged(actor);
-                            IReadOnlyList<BattleEncounterEvent> returnedEvents =
-                                await _services.Lifecycle.ProcessTurnEndAsync(
-                                    new BattleEncounterTurnLifecycleRequest(
-                                        turnEndTransaction.CreateEncounter(_request),
-                                        stagedActor,
-                                        turnEndTransaction.Participants,
-                                        CanRecallToRoster(stagedActor)),
-                                    _cancellationToken)
-                                .ConfigureAwait(false);
-                            turnEndEvents = SnapshotLifecycleEvents(returnedEvents, "turn-end");
-                        }
-                        catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
-                        {
-                            throw;
-                        }
-                        catch (Exception exception)
-                        {
-                            return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                    LifecycleFailureMessage("turn-end", exception),
-                                    actor.InstanceId,
-                                    BattleEncounterFaultCode.LifecycleExecutionFailed)
-                                .ConfigureAwait(false));
-                        }
-
-                        string? turnEndEconomyFault = CurrentEconomyAuthorityFault(
-                            turnEconomy,
-                            acceptedEconomyState,
-                            actor.InstanceId);
-                        if (turnEndEconomyFault is not null)
-                        {
-                            return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                    turnEndEconomyFault,
-                                    actor.InstanceId,
-                                    BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                                .ConfigureAwait(false));
-                        }
-
-                        _cancellationToken.ThrowIfCancellationRequested();
-                        turnEndTransaction.Commit();
-
-                        await AddRangeAsync(turnEndEvents).ConfigureAwait(false);
-                    }
-
-                    string? preEventEconomyFault = CurrentEconomyAuthorityFault(
-                        turnEconomy,
-                        acceptedEconomyState,
-                        actor.InstanceId);
-                    if (preEventEconomyFault is not null)
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                preEventEconomyFault,
-                                actor.InstanceId,
-                                BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                            .ConfigureAwait(false));
-                    }
-
-                    await AddTurnEconomyAsync(
-                            actor.InstanceId,
-                            beforeEconomy,
-                            afterEconomy,
-                            command.TurnConsumption)
-                        .ConfigureAwait(false);
-
-                    BattleEncounterCompletion completion = await ReconcileAsync(
-                            actor,
-                            turnStartDepartureReason.HasValue ? actor : null,
-                            turnStartDepartureReason)
-                        .ConfigureAwait(false);
-
-                    string? postCommandEconomyFault = CurrentEconomyAuthorityFault(
-                        turnEconomy,
-                        acceptedEconomyState,
-                        actor.InstanceId);
-                    if (postCommandEconomyFault is not null)
-                    {
-                        return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                                postCommandEconomyFault,
-                                actor.InstanceId,
-                                BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                            .ConfigureAwait(false));
-                    }
-
-                    await AddAsync(
-                            BattleEncounterEventKind.TurnEnded,
-                            new BattleTurnEndedEventPayload(
-                                actor.InstanceId,
-                                actor.TeamId,
-                                BattleEncounterTurnEndReason.CommandCommitted,
-                                afterEconomy,
-                                command.TurnConsumption),
-                            $"{actor.DisplayName}'s turn ended.")
-                        .ConfigureAwait(false);
-
-                    if (command.RequestedOutcome is BattleEncounterOutcome requestedOutcome)
-                    {
-                        return RoundRunResult.Finalized(await FinishAsync(requestedOutcome, command.WinningTeamId, command.FaultMessage)
-                            .ConfigureAwait(false));
-                    }
-
-                    if (completion.IsComplete)
-                    {
-                        return RoundRunResult.Finalized(await FinishAsync(completion.Outcome, completion.WinningTeamId, completion.Message)
-                            .ConfigureAwait(false));
-                    }
-
-                    schedule = AdvanceSchedule(
-                        schedule,
-                        BattleEncounterScheduleStepOutcome.CommandCommitted(
-                            actor.InstanceId,
-                            command.TurnConsumption,
-                            beforeEconomy,
-                            afterEconomy,
-                            hasTurnsRemaining),
-                        actor.InstanceId);
-                }
-
-                if (schedule.IsComplete ||
-                    schedule.Step is not BattleEncounterPhaseEndedScheduleStep phaseEnded ||
-                    phaseEnded.TeamId != teamId)
-                {
-                    return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                            $"Encounter schedule did not close team {teamId}'s phase.",
-                            faultCode: BattleEncounterFaultCode.ScheduleTransitionInvalid)
-                        .ConfigureAwait(false));
-                }
-
-                _cancellationToken.ThrowIfCancellationRequested();
-                BattleTurnEconomySnapshot phaseEndState = CaptureTurnEconomySnapshot(turnEconomy);
-                bool phaseEndHasTurnsRemaining = HasTurnsRemaining(turnEconomy);
-                string? phaseEndFault = ValidateEconomyAuthority(
-                    acceptedEconomyState,
-                    phaseEndState,
-                    phaseEndHasTurnsRemaining);
-                if (phaseEndFault is not null)
-                {
-                    return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                            phaseEndFault,
-                            faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                        .ConfigureAwait(false));
-                }
-
-                IReadOnlyList<BattleEncounterEvent> phaseEndEvents;
-                using var phaseEndTransaction = new BattleEncounterLifecycleTransaction(
-                    _request.Participants,
-                    _services.Lifecycle);
-                try
-                {
-                    IReadOnlyList<BattleEncounterEvent> returnedEvents =
-                        await _services.Lifecycle.ProcessPhaseEndAsync(
-                            new BattleEncounterLifecycleRequest(
-                                phaseEndTransaction.CreateEncounter(_request),
-                                phaseEndTransaction.Participants,
-                                _runState.TeamOrder),
-                            teamId,
-                            _cancellationToken)
-                        .ConfigureAwait(false);
-                    phaseEndEvents = SnapshotLifecycleEvents(returnedEvents, "phase-end");
-                }
-                catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception exception)
-                {
-                    return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                            LifecycleFailureMessage("phase-end", exception),
-                            faultCode: BattleEncounterFaultCode.LifecycleExecutionFailed)
-                        .ConfigureAwait(false));
-                }
-
-                string? postPhaseLifecycleEconomyFault = CurrentEconomyAuthorityFault(
-                    turnEconomy,
-                    acceptedEconomyState);
-                if (postPhaseLifecycleEconomyFault is not null)
-                {
-                    return RoundRunResult.Finalized(await FaultDuringBattleAsync(
-                            postPhaseLifecycleEconomyFault,
-                            faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
-                        .ConfigureAwait(false));
-                }
-
-                _cancellationToken.ThrowIfCancellationRequested();
-                phaseEndTransaction.Commit();
-
-                await AddRangeAsync(phaseEndEvents).ConfigureAwait(false);
-                await AddAsync(
-                        BattleEncounterEventKind.PhaseEnded,
-                        new BattlePhaseEndedEventPayload(teamId, phaseEndState),
-                        $"Team {teamId} phase ended.")
-                    .ConfigureAwait(false);
-
-                BattleEncounterCompletion phaseCompletion =
-                    await ReconcileAsync(null).ConfigureAwait(false);
-                if (phaseCompletion.IsComplete)
-                {
-                    return RoundRunResult.Finalized(await FinishAsync(
-                            phaseCompletion.Outcome,
-                            phaseCompletion.WinningTeamId,
-                            phaseCompletion.Message)
-                        .ConfigureAwait(false));
-                }
-
-                schedule = AdvanceSchedule(
-                    schedule,
-                    BattleEncounterScheduleStepOutcome.BoundaryCompleted());
+                schedule = phaseRun.Schedule!;
             }
 
             if (schedule.IsComplete ||
@@ -1849,6 +1187,683 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 schedule,
                 BattleEncounterScheduleStepOutcome.BoundaryCompleted());
             return RoundRunResult.ScheduleReady(schedule);
+        }
+
+        public async ValueTask<PhaseRunResult> RunPhaseAsync(
+            BattleEncounterScheduleCursor schedule,
+            BattleEncounterPhaseStartedScheduleStep phaseStarted)
+        {
+            _cancellationToken.ThrowIfCancellationRequested();
+            ContentId teamId = phaseStarted.TeamId;
+            BattleEncounterTurnEconomyStart economyStart =
+                phaseStarted.TurnEconomyStart
+                ?? throw new InvalidOperationException(
+                    "A team-phase start must select a turn-economy scope.");
+
+            _cancellationToken.ThrowIfCancellationRequested();
+            IBattleTurnEconomy turnEconomy = PortInvoker.Invoke(
+                BattleEncounterFaultCode.TurnEconomyExecutionFailed,
+                "turn-economy-factory",
+                () => _services.TurnEconomyFactory()
+                      ?? throw new InvalidOperationException("The turn-economy factory returned null."));
+            PortInvoker.InvokeAction(
+                BattleEncounterFaultCode.TurnEconomyExecutionFailed,
+                "turn-economy-start",
+                () => turnEconomy.StartPhase(economyStart.ActiveActorCount));
+            BattleTurnEconomySnapshot phaseStartState = CaptureTurnEconomySnapshot(turnEconomy);
+            bool hasTurnsRemaining = HasTurnsRemaining(turnEconomy);
+            string? phaseStartFault = ValidateEconomyState(phaseStartState, hasTurnsRemaining);
+            if (phaseStartFault is not null)
+            {
+                return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                        phaseStartFault,
+                        faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                    .ConfigureAwait(false));
+            }
+
+            BattleTurnEconomySnapshot acceptedEconomyState = phaseStartState;
+            await AddAsync(
+                    BattleEncounterEventKind.PhaseStarted,
+                    new BattlePhaseStartedEventPayload(teamId, phaseStartState),
+                    $"Team {teamId} started a phase using {phaseStartState.EconomyId} " +
+                    $"with {phaseStartState.RemainingActions} action(s).")
+                .ConfigureAwait(false);
+
+            int acceptedTurnWindowCount = 0;
+            int consecutiveFreeActions = 0;
+            Synchronize();
+            schedule = AdvanceSchedule(
+                schedule,
+                BattleEncounterScheduleStepOutcome.TurnEconomyStarted(
+                    phaseStartState,
+                    hasTurnsRemaining));
+            while (!schedule.IsComplete &&
+                   schedule.Step is BattleEncounterCommandWindowScheduleStep commandWindow)
+            {
+                _cancellationToken.ThrowIfCancellationRequested();
+                if (acceptedTurnWindowCount >= _services.PhaseProgress.MaximumCommands)
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            $"Team {teamId} exceeded the configured phase turn-window safety limit " +
+                            $"of {_services.PhaseProgress.MaximumCommands}.",
+                            faultCode: BattleEncounterFaultCode.PhaseCommandLimitExceeded)
+                        .ConfigureAwait(false));
+                }
+
+                BattleTurnEconomySnapshot beforeEconomy = CaptureTurnEconomySnapshot(turnEconomy);
+                bool beforeHasTurnsRemaining = HasTurnsRemaining(turnEconomy);
+                string? continuityFault = ValidateEconomyAuthority(
+                    acceptedEconomyState,
+                    beforeEconomy,
+                    beforeHasTurnsRemaining);
+                if (continuityFault is not null)
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            continuityFault,
+                            faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                        .ConfigureAwait(false));
+                }
+
+                BattleEncounterParticipant? scheduledActor = _request.Participants
+                    .SingleOrDefault(participant =>
+                        participant.InstanceId == commandWindow.ActorId);
+                if (scheduledActor is null ||
+                    scheduledActor.TeamId != commandWindow.TeamId ||
+                    commandWindow.TeamId != teamId ||
+                    commandWindow.TurnEconomyStart is not null)
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            $"Encounter schedule selected actor {commandWindow.ActorId} " +
+                            $"for invalid team {commandWindow.TeamId}.",
+                            commandWindow.ActorId,
+                            BattleEncounterFaultCode.ScheduleTransitionInvalid)
+                        .ConfigureAwait(false));
+                }
+
+                if (!scheduledActor.State.IsDeployed || scheduledActor.State.IsDefeated)
+                {
+                    schedule = AdvanceSchedule(
+                        schedule,
+                        BattleEncounterScheduleStepOutcome.ActorUnavailable(
+                            scheduledActor.InstanceId),
+                        scheduledActor.InstanceId);
+                    continue;
+                }
+
+                BattleEncounterParticipant actor = scheduledActor;
+                acceptedTurnWindowCount++;
+                await AddAsync(
+                        BattleEncounterEventKind.TurnStarted,
+                        new BattleTurnStartedEventPayload(actor.InstanceId, actor.TeamId),
+                        $"{actor.DisplayName}'s turn started.")
+                    .ConfigureAwait(false);
+
+                _cancellationToken.ThrowIfCancellationRequested();
+                BattleTurnStartLifecycleResult? stagedTurnStart = null;
+                IReadOnlyList<BattleEncounterEvent>? turnStartEvents = null;
+                Exception? turnStartFailure = null;
+                string? turnStartEconomyFault = null;
+                using (var turnStartTransaction = new BattleEncounterLifecycleTransaction(
+                           _request.Participants,
+                           _services.Lifecycle))
+                {
+                    try
+                    {
+                        BattleEncounterParticipant stagedActor =
+                            turnStartTransaction.GetStaged(actor);
+                        stagedTurnStart = await _services.Lifecycle.ProcessTurnStartAsync(
+                                new BattleEncounterTurnLifecycleRequest(
+                                    turnStartTransaction.CreateEncounter(_request),
+                                    stagedActor,
+                                    turnStartTransaction.Participants,
+                                    CanRecallToRoster(stagedActor)),
+                                _cancellationToken)
+                            .ConfigureAwait(false)
+                            ?? throw new InvalidOperationException(
+                                "The battle lifecycle returned a null turn-start result.");
+                        turnStartEvents = MapStatusEvents(stagedTurnStart.Events);
+                        BattleEncounterEventOwnership.RequirePortOwned(
+                            turnStartEvents,
+                            "lifecycle-turn-start",
+                            turnStartTransaction.Participants);
+                        turnStartEconomyFault = CurrentEconomyAuthorityFault(
+                            turnEconomy,
+                            beforeEconomy,
+                            actor.InstanceId);
+                        if (turnStartEconomyFault is null)
+                        {
+                            _cancellationToken.ThrowIfCancellationRequested();
+                            turnStartTransaction.Commit();
+                        }
+                    }
+                    catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (BattleEncounterPortException)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        turnStartFailure = exception;
+                    }
+                }
+
+                if (turnStartFailure is not null)
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            LifecycleFailureMessage("turn-start", turnStartFailure),
+                            actor.InstanceId,
+                            BattleEncounterFaultCode.LifecycleExecutionFailed)
+                        .ConfigureAwait(false));
+                }
+
+                if (turnStartEconomyFault is not null)
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            turnStartEconomyFault,
+                            actor.InstanceId,
+                            BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                        .ConfigureAwait(false));
+                }
+
+                BattleTurnStartLifecycleResult turnStart = stagedTurnStart
+                    ?? throw new InvalidOperationException(
+                        "The committed turn-start lifecycle result is missing.");
+                await AddRangeAsync(turnStartEvents
+                        ?? throw new InvalidOperationException(
+                            "The committed turn-start lifecycle events are missing."))
+                    .ConfigureAwait(false);
+
+                if (turnStart.Outcome != BattleTurnStartOutcome.CanAct)
+                {
+                    await AddAsync(
+                            BattleEncounterEventKind.TurnRestricted,
+                            new BattleTurnRestrictedEventPayload(actor.InstanceId, turnStart.Restriction),
+                            $"{actor.DisplayName} turn restriction: {turnStart.Outcome}.")
+                        .ConfigureAwait(false);
+                }
+
+                BattleStatusDepartureReason? turnStartDepartureReason =
+                    turnStart.Outcome switch
+                    {
+                        BattleTurnStartOutcome.FleeBattle =>
+                            BattleStatusDepartureReason.Flee,
+                        BattleTurnStartOutcome.RecallToRoster =>
+                            BattleStatusDepartureReason.RosterRecall,
+                        _ => null
+                    };
+                BattleEncounterCompletion turnStartCompletion = await ReconcileAsync(
+                        lastActor: null,
+                        explicitDepartureActor:
+                            turnStartDepartureReason.HasValue ? actor : null,
+                        explicitDepartureReason: turnStartDepartureReason)
+                    .ConfigureAwait(false);
+                if (!actor.State.IsDeployed || actor.State.IsDefeated)
+                {
+                    await AddAsync(
+                            BattleEncounterEventKind.TurnEnded,
+                            new BattleTurnEndedEventPayload(
+                                actor.InstanceId,
+                                actor.TeamId,
+                                BattleEncounterTurnEndReason.ActorUnavailable,
+                                beforeEconomy),
+                            $"{actor.DisplayName}'s turn ended before a command was committed.")
+                        .ConfigureAwait(false);
+                    if (turnStartCompletion.IsComplete)
+                    {
+                        return PhaseRunResult.Finalized(await FinishAsync(
+                                turnStartCompletion.Outcome,
+                                turnStartCompletion.WinningTeamId,
+                                turnStartCompletion.Message)
+                            .ConfigureAwait(false));
+                    }
+
+                    schedule = AdvanceSchedule(
+                        schedule,
+                        BattleEncounterScheduleStepOutcome.ActorUnavailable(
+                            actor.InstanceId),
+                        actor.InstanceId);
+                    continue;
+                }
+
+                if (turnStartCompletion.IsComplete)
+                {
+                    await AddAsync(
+                            BattleEncounterEventKind.TurnEnded,
+                            new BattleTurnEndedEventPayload(
+                                actor.InstanceId,
+                                actor.TeamId,
+                                BattleEncounterTurnEndReason.EncounterTerminated,
+                                beforeEconomy),
+                            $"{actor.DisplayName}'s turn ended with the encounter.")
+                        .ConfigureAwait(false);
+                    return PhaseRunResult.Finalized(await FinishAsync(
+                            turnStartCompletion.Outcome,
+                            turnStartCompletion.WinningTeamId,
+                            turnStartCompletion.Message)
+                        .ConfigureAwait(false));
+                }
+
+                IReadOnlyList<StatModifierLifecycleBoundary> activeStatModifierBoundaries =
+                    _services.Lifecycle is IBattleEncounterStatModifierBoundarySource boundarySource
+                        ? PortInvoker.Invoke(
+                            BattleEncounterFaultCode.LifecycleExecutionFailed,
+                            "stat-modifier-boundary-source",
+                            () => BattleEncounterTurnRequest.SnapshotActiveStatModifierBoundaries(
+                                boundarySource.GetActiveStatModifierBoundaries(
+                                    new BattleEncounterTurnLifecycleRequest(
+                                        _request,
+                                        actor,
+                                        _request.Participants,
+                                        CanRecallToRoster(actor)))
+                                ?? throw new InvalidOperationException(
+                                    "The lifecycle boundary source returned null."),
+                                "activeStatModifierBoundaries"),
+                            actor.InstanceId)
+                        : Array.Empty<StatModifierLifecycleBoundary>();
+                string? preHandlerEconomyFault = CurrentEconomyAuthorityFault(
+                    turnEconomy,
+                    beforeEconomy,
+                    actor.InstanceId);
+                if (preHandlerEconomyFault is not null)
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            preHandlerEconomyFault,
+                            actor.InstanceId,
+                            BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                        .ConfigureAwait(false));
+                }
+
+                BattleEncounterCommandResult command = await PortInvoker.InvokeAsync(
+                        BattleEncounterFaultCode.TurnHandlerExecutionFailed,
+                        "turn-handler",
+                        async () =>
+                        {
+                            BattleEncounterCommandResult returned =
+                                await _services.TurnHandler.ExecuteTurnAsync(
+                                        new BattleEncounterTurnRequest(
+                                            _request,
+                                            actor,
+                                            _request.Participants,
+                                            turnStart.Restriction,
+                                            beforeEconomy,
+                                            activeStatModifierBoundaries),
+                                        _cancellationToken)
+                                    .ConfigureAwait(false)
+                                ?? throw new InvalidOperationException(
+                                    "The battle turn handler returned null.");
+                            BattleEncounterEventOwnership.RequirePortOwned(
+                                returned.Events,
+                                "turn-handler",
+                                _request.Participants,
+                                actor.InstanceId);
+                            return returned;
+                        },
+                        actor.InstanceId)
+                    .ConfigureAwait(false);
+
+                string? postHandlerEconomyFault = CurrentEconomyAuthorityFault(
+                    turnEconomy,
+                    beforeEconomy,
+                    actor.InstanceId);
+                if (postHandlerEconomyFault is not null)
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            postHandlerEconomyFault,
+                            actor.InstanceId,
+                            BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                        .ConfigureAwait(false));
+                }
+
+                await AddRangeAsync(command.Events).ConfigureAwait(false);
+                string? preApplyEconomyFault = CurrentEconomyAuthorityFault(
+                    turnEconomy,
+                    beforeEconomy,
+                    actor.InstanceId);
+                if (preApplyEconomyFault is not null)
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            preApplyEconomyFault,
+                            actor.InstanceId,
+                            BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                        .ConfigureAwait(false));
+                }
+
+                if (command.Status is BattleEncounterCommandStatus.Cancelled)
+                {
+                    await AddAsync(
+                            BattleEncounterEventKind.TurnEnded,
+                            new BattleTurnEndedEventPayload(
+                                actor.InstanceId,
+                                actor.TeamId,
+                                BattleEncounterTurnEndReason.EncounterTerminated,
+                                beforeEconomy),
+                            $"{actor.DisplayName}'s turn ended with encounter cancellation.")
+                        .ConfigureAwait(false);
+                    return PhaseRunResult.Finalized(await FinishAsync(BattleEncounterOutcome.Cancelled, null, null).ConfigureAwait(false));
+                }
+
+                if (command.Status is BattleEncounterCommandStatus.Faulted)
+                {
+                    await AddAsync(
+                            BattleEncounterEventKind.TurnEnded,
+                            new BattleTurnEndedEventPayload(
+                                actor.InstanceId,
+                                actor.TeamId,
+                                BattleEncounterTurnEndReason.EncounterTerminated,
+                                beforeEconomy),
+                            $"{actor.DisplayName}'s turn ended with a command fault.")
+                        .ConfigureAwait(false);
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            command.FaultMessage ?? "Battle command faulted.",
+                            actor.InstanceId,
+                            BattleEncounterFaultCode.CommandExecutionFaulted,
+                            actor.TeamId,
+                            "turn-handler")
+                        .ConfigureAwait(false));
+                }
+
+                if (command.Status is BattleEncounterCommandStatus.Rejected)
+                {
+                    string rejection = command.FaultMessage ?? "Battle command was rejected.";
+                    await AddAsync(
+                            BattleEncounterEventKind.ActionRejected,
+                            new BattleActionRejectedEventPayload(
+                                actor.InstanceId,
+                                BattleEncounterCommandStatus.Rejected),
+                            rejection)
+                        .ConfigureAwait(false);
+                    await AddAsync(
+                            BattleEncounterEventKind.TurnEnded,
+                            new BattleTurnEndedEventPayload(
+                                actor.InstanceId,
+                                actor.TeamId,
+                                BattleEncounterTurnEndReason.EncounterTerminated,
+                                beforeEconomy),
+                            $"{actor.DisplayName}'s turn ended with a rejected command.")
+                        .ConfigureAwait(false);
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            rejection,
+                            actor.InstanceId,
+                            BattleEncounterFaultCode.CommandRejected,
+                            actor.TeamId,
+                            "turn-handler")
+                        .ConfigureAwait(false));
+                }
+
+                if (command.WinningTeamId is ContentId commandWinner &&
+                    !_runState.TeamOrder.Contains(commandWinner))
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            $"Battle command selected unknown winning team {commandWinner}.",
+                            actor.InstanceId,
+                            BattleEncounterFaultCode.CommandExecutionFaulted)
+                        .ConfigureAwait(false));
+                }
+
+                PortInvoker.InvokeAction(
+                    BattleEncounterFaultCode.TurnEconomyExecutionFailed,
+                    "turn-economy-apply",
+                    () => turnEconomy.Apply(command.TurnConsumption),
+                    actor.InstanceId);
+                BattleTurnEconomySnapshot afterEconomy = CaptureTurnEconomySnapshot(
+                    turnEconomy,
+                    actor.InstanceId);
+                hasTurnsRemaining = HasTurnsRemaining(turnEconomy, actor.InstanceId);
+                string? economyFault = ValidateEconomyTransition(
+                    beforeEconomy,
+                    afterEconomy,
+                    hasTurnsRemaining,
+                    command.TurnConsumption);
+                if (economyFault is not null)
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            economyFault,
+                            actor.InstanceId,
+                            BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                        .ConfigureAwait(false));
+                }
+
+                acceptedEconomyState = afterEconomy;
+                bool isContinuingFreeAction =
+                    command.TurnConsumption.Kind == ActionTurnConsumptionKind.None &&
+                    command.RequestedOutcome is null;
+                if (isContinuingFreeAction)
+                {
+                    consecutiveFreeActions++;
+                    if (consecutiveFreeActions > _services.PhaseProgress.MaximumConsecutiveFreeActions)
+                    {
+                        return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                                $"Team {teamId} exceeded the configured consecutive free-action limit " +
+                                $"of {_services.PhaseProgress.MaximumConsecutiveFreeActions}.",
+                                actor.InstanceId,
+                                BattleEncounterFaultCode.ConsecutiveFreeActionLimitExceeded)
+                            .ConfigureAwait(false));
+                    }
+                }
+                else
+                {
+                    consecutiveFreeActions = 0;
+                }
+
+                if (command.TurnConsumption.Kind != ActionTurnConsumptionKind.None)
+                {
+                    _cancellationToken.ThrowIfCancellationRequested();
+                    IReadOnlyList<BattleEncounterEvent> turnEndEvents;
+                    using var turnEndTransaction = new BattleEncounterLifecycleTransaction(
+                        _request.Participants,
+                        _services.Lifecycle);
+                    try
+                    {
+                        BattleEncounterParticipant stagedActor = turnEndTransaction.GetStaged(actor);
+                        IReadOnlyList<BattleEncounterEvent> returnedEvents =
+                            await _services.Lifecycle.ProcessTurnEndAsync(
+                                new BattleEncounterTurnLifecycleRequest(
+                                    turnEndTransaction.CreateEncounter(_request),
+                                    stagedActor,
+                                    turnEndTransaction.Participants,
+                                    CanRecallToRoster(stagedActor)),
+                                _cancellationToken)
+                            .ConfigureAwait(false);
+                        turnEndEvents = SnapshotLifecycleEvents(returnedEvents, "turn-end");
+                    }
+                    catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                                LifecycleFailureMessage("turn-end", exception),
+                                actor.InstanceId,
+                                BattleEncounterFaultCode.LifecycleExecutionFailed)
+                            .ConfigureAwait(false));
+                    }
+
+                    string? turnEndEconomyFault = CurrentEconomyAuthorityFault(
+                        turnEconomy,
+                        acceptedEconomyState,
+                        actor.InstanceId);
+                    if (turnEndEconomyFault is not null)
+                    {
+                        return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                                turnEndEconomyFault,
+                                actor.InstanceId,
+                                BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                            .ConfigureAwait(false));
+                    }
+
+                    _cancellationToken.ThrowIfCancellationRequested();
+                    turnEndTransaction.Commit();
+
+                    await AddRangeAsync(turnEndEvents).ConfigureAwait(false);
+                }
+
+                string? preEventEconomyFault = CurrentEconomyAuthorityFault(
+                    turnEconomy,
+                    acceptedEconomyState,
+                    actor.InstanceId);
+                if (preEventEconomyFault is not null)
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            preEventEconomyFault,
+                            actor.InstanceId,
+                            BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                        .ConfigureAwait(false));
+                }
+
+                await AddTurnEconomyAsync(
+                        actor.InstanceId,
+                        beforeEconomy,
+                        afterEconomy,
+                        command.TurnConsumption)
+                    .ConfigureAwait(false);
+
+                BattleEncounterCompletion completion = await ReconcileAsync(
+                        actor,
+                        turnStartDepartureReason.HasValue ? actor : null,
+                        turnStartDepartureReason)
+                    .ConfigureAwait(false);
+
+                string? postCommandEconomyFault = CurrentEconomyAuthorityFault(
+                    turnEconomy,
+                    acceptedEconomyState,
+                    actor.InstanceId);
+                if (postCommandEconomyFault is not null)
+                {
+                    return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                            postCommandEconomyFault,
+                            actor.InstanceId,
+                            BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                        .ConfigureAwait(false));
+                }
+
+                await AddAsync(
+                        BattleEncounterEventKind.TurnEnded,
+                        new BattleTurnEndedEventPayload(
+                            actor.InstanceId,
+                            actor.TeamId,
+                            BattleEncounterTurnEndReason.CommandCommitted,
+                            afterEconomy,
+                            command.TurnConsumption),
+                        $"{actor.DisplayName}'s turn ended.")
+                    .ConfigureAwait(false);
+
+                if (command.RequestedOutcome is BattleEncounterOutcome requestedOutcome)
+                {
+                    return PhaseRunResult.Finalized(await FinishAsync(requestedOutcome, command.WinningTeamId, command.FaultMessage)
+                        .ConfigureAwait(false));
+                }
+
+                if (completion.IsComplete)
+                {
+                    return PhaseRunResult.Finalized(await FinishAsync(completion.Outcome, completion.WinningTeamId, completion.Message)
+                        .ConfigureAwait(false));
+                }
+
+                schedule = AdvanceSchedule(
+                    schedule,
+                    BattleEncounterScheduleStepOutcome.CommandCommitted(
+                        actor.InstanceId,
+                        command.TurnConsumption,
+                        beforeEconomy,
+                        afterEconomy,
+                        hasTurnsRemaining),
+                    actor.InstanceId);
+            }
+
+            if (schedule.IsComplete ||
+                schedule.Step is not BattleEncounterPhaseEndedScheduleStep phaseEnded ||
+                phaseEnded.TeamId != teamId)
+            {
+                return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                        $"Encounter schedule did not close team {teamId}'s phase.",
+                        faultCode: BattleEncounterFaultCode.ScheduleTransitionInvalid)
+                    .ConfigureAwait(false));
+            }
+
+            _cancellationToken.ThrowIfCancellationRequested();
+            BattleTurnEconomySnapshot phaseEndState = CaptureTurnEconomySnapshot(turnEconomy);
+            bool phaseEndHasTurnsRemaining = HasTurnsRemaining(turnEconomy);
+            string? phaseEndFault = ValidateEconomyAuthority(
+                acceptedEconomyState,
+                phaseEndState,
+                phaseEndHasTurnsRemaining);
+            if (phaseEndFault is not null)
+            {
+                return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                        phaseEndFault,
+                        faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                    .ConfigureAwait(false));
+            }
+
+            IReadOnlyList<BattleEncounterEvent> phaseEndEvents;
+            using var phaseEndTransaction = new BattleEncounterLifecycleTransaction(
+                _request.Participants,
+                _services.Lifecycle);
+            try
+            {
+                IReadOnlyList<BattleEncounterEvent> returnedEvents =
+                    await _services.Lifecycle.ProcessPhaseEndAsync(
+                        new BattleEncounterLifecycleRequest(
+                            phaseEndTransaction.CreateEncounter(_request),
+                            phaseEndTransaction.Participants,
+                            _runState.TeamOrder),
+                        teamId,
+                        _cancellationToken)
+                    .ConfigureAwait(false);
+                phaseEndEvents = SnapshotLifecycleEvents(returnedEvents, "phase-end");
+            }
+            catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                        LifecycleFailureMessage("phase-end", exception),
+                        faultCode: BattleEncounterFaultCode.LifecycleExecutionFailed)
+                    .ConfigureAwait(false));
+            }
+
+            string? postPhaseLifecycleEconomyFault = CurrentEconomyAuthorityFault(
+                turnEconomy,
+                acceptedEconomyState);
+            if (postPhaseLifecycleEconomyFault is not null)
+            {
+                return PhaseRunResult.Finalized(await FaultDuringBattleAsync(
+                        postPhaseLifecycleEconomyFault,
+                        faultCode: BattleEncounterFaultCode.TurnEconomyTransitionInvalid)
+                    .ConfigureAwait(false));
+            }
+
+            _cancellationToken.ThrowIfCancellationRequested();
+            phaseEndTransaction.Commit();
+
+            await AddRangeAsync(phaseEndEvents).ConfigureAwait(false);
+            await AddAsync(
+                    BattleEncounterEventKind.PhaseEnded,
+                    new BattlePhaseEndedEventPayload(teamId, phaseEndState),
+                    $"Team {teamId} phase ended.")
+                .ConfigureAwait(false);
+
+            BattleEncounterCompletion phaseCompletion =
+                await ReconcileAsync(null).ConfigureAwait(false);
+            if (phaseCompletion.IsComplete)
+            {
+                return PhaseRunResult.Finalized(await FinishAsync(
+                        phaseCompletion.Outcome,
+                        phaseCompletion.WinningTeamId,
+                        phaseCompletion.Message)
+                    .ConfigureAwait(false));
+            }
+
+            schedule = AdvanceSchedule(
+                schedule,
+                BattleEncounterScheduleStepOutcome.BoundaryCompleted());
+            return PhaseRunResult.ScheduleReady(schedule);
         }
 
         public async ValueTask AddAsync(
@@ -2479,6 +2494,26 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
                 _request.Participants);
             return Array.AsReadOnly(snapshot);
         }
+    }
+
+    private sealed class PhaseRunResult
+    {
+        private PhaseRunResult(
+            BattleEncounterScheduleCursor? schedule,
+            BattleEncounterResult? terminalResult)
+        {
+            Schedule = schedule;
+            TerminalResult = terminalResult;
+        }
+
+        public BattleEncounterScheduleCursor? Schedule { get; }
+        public BattleEncounterResult? TerminalResult { get; }
+
+        public static PhaseRunResult ScheduleReady(BattleEncounterScheduleCursor schedule) =>
+            new(schedule, null);
+
+        public static PhaseRunResult Finalized(BattleEncounterResult terminalResult) =>
+            new(null, terminalResult);
     }
 
     private sealed class RoundRunResult

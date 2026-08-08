@@ -620,3 +620,75 @@ approval.
 
 Later completion entries will be appended below this one and will not rewrite
 the Stage 0 through Stage 4 evidence.
+
+### Stage 5 - Complete On 8 August 2026
+
+- **Verified boundary:** before editing, baseline commit `0b174b23` lines
+  `1352-2025` were compared directly with post-Stage-4 lines `1113-1786`.
+  Both are the complete team-phase loop, beginning with the phase-start
+  schedule step and ending immediately after boundary-completed phase schedule
+  advancement. Every referenced helper is either an existing
+  `EncounterRunContext` member or an existing class-level static helper; no
+  local-helper declaration sits outside the approved range.
+- **Baseline to destination:** baseline team-phase orchestration at
+  `BattleEncounterRunner.cs:1352-2025` moved to
+  `EncounterRunContext.RunPhaseAsync` at post-stage lines `1192-1867`.
+  `RunRoundAsync` consumes one phase result at post-stage lines `1113-1124`.
+  Private immutable `PhaseRunResult` is at post-stage lines `2499-2517`.
+- **Changed files:**
+  `src/Convergence.Framework/Encounters/BattleEncounterRunner.cs` and this
+  roadmap. No test, assertion, API baseline, external call site, notes file, or
+  other source file changed.
+- **Focused verification:** 168 passed, 0 failed, 0 skipped in the unchanged
+  `BattleEncounterRunnerTests` suite.
+- **Full verification:** 1,888 passed, 0 failed, 0 skipped: Framework 1,703,
+  DemoHost 178, ContentValidator 7.
+- **Additional gates:** strict nonincremental solution build succeeded with
+  0 warnings and 0 errors; `dotnet format --verify-no-changes` succeeded; all
+  6 public-API boundary tests passed; `git diff --check` succeeded.
+- **Hazard 1 - economy factory/start order:** after the unchanged cancellation
+  check, `PortInvoker.Invoke` creates the turn economy through the existing
+  factory. The immediately following `PortInvoker.InvokeAction` starts that
+  same economy. No snapshot, event, validation, or other operation was inserted
+  between factory creation and `StartPhase`.
+- **Hazard 2 - initial and final authority validation:** at phase start, the
+  economy snapshot, remaining-turn evidence, and `ValidateEconomyState` call
+  remain after `StartPhase` and before the accepted state or `PhaseStarted`
+  event. At phase end, snapshot capture, remaining-turn evidence, and
+  `ValidateEconomyAuthority` remain before lifecycle processing; the
+  post-lifecycle `CurrentEconomyAuthorityFault` check remains before
+  cancellation and commit. Conditions, fault codes, and terminal paths are
+  unchanged.
+- **Hazard 3 - phase counter initialization:** `acceptedTurnWindowCount = 0`
+  and `consecutiveFreeActions = 0` remain adjacent and in that order,
+  immediately after the `PhaseStarted` event and before synchronization or
+  schedule advancement.
+- **Hazard 4 - phase-end lifecycle commit timing:** the transaction is still
+  created after final economy-authority validation. The lifecycle call and
+  event snapshot remain inside the same try/catch; the same filtered
+  cancellation catch rethrows and the same general catch finalizes a typed
+  lifecycle fault. The post-lifecycle economy-authority check remains next,
+  followed by the explicit cancellation check and then transaction commit.
+  Returned lifecycle events and `PhaseEnded` are recorded only after commit.
+- **Hazard 5 - phase completion before schedule advancement:** after phase-end
+  events, reconciliation is still evaluated first. A complete result is
+  finalized and returned without advancing the schedule. Only the nonterminal
+  branch calls `AdvanceSchedule(BoundaryCompleted())`, and that advanced cursor
+  is then returned to `RunRoundAsync`.
+- **Event/fault/exception/cancellation evidence:** a direct mechanical source
+  comparison against parent commit `1aa1c6cb` matched all 670 moved body lines
+  after only four-space dedenting. Exactly 28 terminal returns gained only the
+  `PhaseRunResult.Finalized` wrapper. Event arguments and order, fault messages
+  and codes, port names, catches and filters, cancellation checks, transaction
+  scopes and commits, reconciliation, economy snapshots and counters, and
+  schedule transitions otherwise remain statement-for-statement identical.
+  The private carrier has a private constructor and two either/or factories and
+  adds no validation, exception, cancellation, or fault path. Existing economy,
+  phase-limit, scheduler, lifecycle rollback, event-order, port-fault, and
+  cancellation tests passed unchanged.
+- **Deferred observations:** none. `POST-O6-NOTES.md` was not created because
+  Stage 5 exposed no suspicious behavior.
+- **Commit:** `refactor(encounter-runner): stage 5 - move phase execution`.
+
+Later completion entries will be appended below this one and will not rewrite
+the Stage 0 through Stage 5 evidence.
