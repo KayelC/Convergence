@@ -547,5 +547,76 @@ approval.
   Stage 3 exposed no suspicious behavior.
 - **Commit:** `refactor(encounter-runner): stage 3 - move battle start phase`.
 
+### Stage 4 - Complete On 8 August 2026
+
+- **Verified boundary:** before editing, baseline commit `0b174b23` lines
+  `1328-2090` were compared directly with post-Stage-3 lines 917-1679. Both
+  are the complete outer round loop, beginning with the expected round-start
+  step and ending immediately after boundary-completed schedule advancement.
+  Every referenced helper is either an existing `EncounterRunContext` member
+  or an existing class-level static helper; no local-helper declaration sits
+  outside the approved range.
+- **Baseline to destination:** baseline round orchestration at
+  `BattleEncounterRunner.cs:1328-2090` moved to
+  `EncounterRunContext.RunRoundAsync` at post-stage lines 1088-1852.
+  `RunCoreAsync` retains the outer loop and consumes one round result at
+  post-stage lines 915-925. Private immutable `RoundRunResult` is at
+  post-stage lines 2484-2502.
+- **Changed files:**
+  `src/Convergence.Framework/Encounters/BattleEncounterRunner.cs` and this
+  roadmap. No test, assertion, API baseline, external call site, notes file, or
+  other source file changed.
+- **Focused verification:** 168 passed, 0 failed, 0 skipped in the unchanged
+  `BattleEncounterRunnerTests` suite.
+- **Full verification:** 1,888 passed, 0 failed, 0 skipped: Framework 1,703,
+  DemoHost 178, ContentValidator 7.
+- **Additional gates:** strict nonincremental solution build succeeded with
+  0 warnings and 0 errors; `dotnet format --verify-no-changes` succeeded; all
+  6 public-API boundary tests passed; `git diff --check` succeeded.
+- **Hazard 1 - expected-step validation:** `RunRoundAsync` retains the
+  cancellation check followed immediately by the same
+  `BattleEncounterRoundStartedScheduleStep` pattern check. Failure still uses
+  the same message and `ScheduleTransitionInvalid` typed fault before any
+  round number or event mutation.
+- **Hazard 2 - final-round assignment:** `round` is still read from the
+  accepted round-start step and `_runState.FinalRoundNumber = round` remains
+  the immediately following statement, before `RoundStarted` is created.
+- **Hazard 3 - round event order:** `RoundStarted` remains after final-round
+  assignment and before synchronization or the first schedule advancement.
+  At the closing boundary, lifecycle-returned round-end events remain before
+  reconciliation, while `RoundEnded` remains after reconciliation and the
+  completed-round assignment but before terminal completion or advancement.
+- **Hazard 4 - round-end transaction commit timing:** the transaction is still
+  created after the round-ended schedule-step validation. Its lifecycle call
+  and event snapshot remain inside the same try/catch boundary; the same
+  filtered cancellation catch rethrows, the same general catch finalizes a
+  typed lifecycle fault, and the explicit cancellation check still occurs
+  immediately before `roundEndTransaction.Commit()`.
+- **Hazard 5 - reconciliation before `RoundEnded`:** after commit, returned
+  lifecycle events are still added first and `ReconcileAsync(null)` is awaited
+  second. Only after reconciliation returns are `CompletedRounds` assigned and
+  the structural `RoundEnded` event recorded.
+- **Hazard 6 - completed-round assignment and schedule advancement:**
+  `_runState.CompletedRounds = round` remains before `RoundEnded`. The terminal
+  completion branch still follows that event and finalizes without advancing.
+  Only the nonterminal path advances the schedule with
+  `BoundaryCompleted()`, after which the carrier returns that advanced cursor
+  to the unchanged outer loop.
+- **Event/fault/exception/cancellation evidence:** a direct mechanical source
+  comparison against parent commit `9a444f72` matched all 760 moved body lines
+  after only captured-local-to-context-member substitutions. Exactly 32
+  terminal returns gained only the `RoundRunResult.Finalized` wrapper. Event
+  arguments and order, fault messages and codes, port names, catches and
+  filters, cancellation checks, transaction scopes and commits,
+  reconciliation, round counters, and schedule transitions otherwise remain
+  statement-for-statement identical. The private carrier has a private
+  constructor and two either/or factories and adds no validation or fault.
+  Existing scheduler drift, lifecycle rollback, event ordering, completion,
+  round metadata, round-limit draw, port-fault, and cancellation tests passed
+  unchanged.
+- **Deferred observations:** none. `POST-O6-NOTES.md` was not created because
+  Stage 4 exposed no suspicious behavior.
+- **Commit:** `refactor(encounter-runner): stage 4 - move round execution`.
+
 Later completion entries will be appended below this one and will not rewrite
-the Stage 0 through Stage 3 evidence.
+the Stage 0 through Stage 4 evidence.
