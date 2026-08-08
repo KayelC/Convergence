@@ -219,9 +219,9 @@
         "reason": "O6-R47 independently rechecked host composition, fallible event observation, primary fault authority, and the exact exported restriction-action interface."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/encounter-orchestration-runtime.md"],
-        "reason": "O6-R48 confirmed the prose but found that the command transaction diagram omits valid cancelled, rejected, and faulted handler-result branches; O6-R50 owns the correction."
+        "reason": "O6-R50 reconciled the command transaction diagram with executed, cancelled, faulted, rejected, and no-consumption runtime branches."
       }
     },
     {

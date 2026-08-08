@@ -698,17 +698,32 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("## Documentation Alignment", r48Audit, StringComparison.Ordinal);
         Assert.Contains("## Correction Checkpoints", r48Audit, StringComparison.Ordinal);
         Assert.Contains("**O6-R49 resolution, 8 August 2026**", r48Audit, StringComparison.Ordinal);
+        Assert.Contains("**O6-R50 resolution, 8 August 2026**", r48Audit, StringComparison.Ordinal);
         Assert.Contains(
             "| O6-R49 | Remove the unused automated-runner services dependency and update public API evidence | Complete |",
             r48Audit,
             StringComparison.Ordinal);
-        Assert.Contains("Order 6 should not be marked formally owner-closed until O6-R50 and O6-R51", r48Audit, StringComparison.Ordinal);
+        Assert.Contains(
+            "| O6-R50 | Correct the technical command transaction diagram and revalidate all audience guidance | Complete |",
+            r48Audit,
+            StringComparison.Ordinal);
+        Assert.Contains("Order 6 should not be marked formally owner-closed until O6-R51", r48Audit, StringComparison.Ordinal);
+
+        string encounterTechnical = File.ReadAllText(
+            RepositoryPath("docs", "technical", "encounter-orchestration-runtime.md"));
+        Assert.Contains("CommandEvents[\"Publish validated command events\"]", encounterTechnical, StringComparison.Ordinal);
+        Assert.Contains("CommandStatus{\"Returned command status\"}", encounterTechnical, StringComparison.Ordinal);
+        Assert.Contains("CommandStatus -->|\"Cancelled\"| CancelledEnd", encounterTechnical, StringComparison.Ordinal);
+        Assert.Contains("CommandStatus -->|\"Faulted\"| FaultedEnd", encounterTechnical, StringComparison.Ordinal);
+        Assert.Contains("CommandStatus -->|\"Rejected\"| RejectedEnd", encounterTechnical, StringComparison.Ordinal);
+        Assert.Contains("CommandStatus -->|\"Executed\"| ApplyEconomy", encounterTechnical, StringComparison.Ordinal);
+        Assert.Contains("Consumption -->|\"Yes\"| EconomyEvent", encounterTechnical, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
         Assert.Equal("reviewed", encounter.Mechanics.State);
         Assert.Equal("reviewed", encounter.DeveloperGuide.State);
-        Assert.Equal("existing_unreviewed", encounter.Technical.State);
+        Assert.Equal("reviewed", encounter.Technical.State);
 
         FrameworkCapability encounterCapability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");

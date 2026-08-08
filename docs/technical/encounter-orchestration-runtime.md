@@ -19,9 +19,9 @@ It covers:
 It does not define action math, status rules, rewards, recruitment, or scene
 presentation.
 
-> **Review state:** `existing_unreviewed` after O6-R48. The prose remains
-> source-aligned, but the command transaction diagram omits the valid cancelled,
-> rejected, and faulted handler-result branches. O6-R50 owns that correction.
+> **Review state:** `reviewed` after O6-R50. The command transaction diagram and
+> surrounding guidance now distinguish all valid command statuses and show that
+> only an executed command reaches turn-economy application.
 
 ## Authority Map
 
@@ -186,36 +186,67 @@ flowchart TB
     ReconcileStart["Synchronize, process departure cleanup, announce defeat, evaluate completion"]
     Handler["Handler enacts the committed restriction and returns a command"]
     ValidateHandler["Validate port-owned events and unchanged economy authority"]
+    CommandEvents["Publish validated command events"]
+    CommandStatus{"Returned command status"}
+    CancelledEnd["Publish TurnEnded as encounter terminated"]
+    CancelledFinish["Finish Cancelled after battle-end cleanup"]
+    FaultedEnd["Publish TurnEnded as encounter terminated"]
+    RejectedEnd["Publish ActionRejected and TurnEnded as encounter terminated"]
     ApplyEconomy["Apply typed ActionTurnConsumption once"]
     ValidateEconomy["Validate economy type, ID, state, liveness, and explicit termination"]
+    Consumption{"Consumption is None"}
     StageEnd["Stage owner-turn-end lifecycle when consumption is not None"]
     CommitEnd["Recheck economy authority and commit staged turn-end state"]
     EconomyEvent["Publish TurnEconomyChanged"]
     ReconcileEnd["Synchronize, bounded departure cleanup, defeat announcement, completion"]
     TurnEnd["Publish TurnEnded"]
+    Terminal{"Requested outcome or encounter completion"}
+    Finish["Finish typed terminal outcome after battle-end cleanup"]
     Advance["Return accepted before/after evidence to scheduler"]
     Rollback["Discard staged lifecycle graph"]
+    LifecycleExit["Propagate host cancellation or return typed lifecycle fault"]
     Fault["Return typed fault after cleanup attempt"]
 
     Begin --> StageStart
     StageStart --> CommitStart
     StageStart -. "cancel or failure" .-> Rollback
+    Rollback --> LifecycleExit
     CommitStart --> ReconcileStart
     ReconcileStart -->|"actor can act"| Handler
     ReconcileStart -->|"actor unavailable or encounter complete"| TurnEnd
     Handler --> ValidateHandler
-    ValidateHandler --> ApplyEconomy
+    ValidateHandler --> CommandEvents
     ValidateHandler -. "invalid result or port event" .-> Fault
+    CommandEvents --> CommandStatus
+    CommandStatus -->|"Cancelled"| CancelledEnd
+    CancelledEnd --> CancelledFinish
+    CommandStatus -->|"Faulted"| FaultedEnd
+    FaultedEnd --> Fault
+    CommandStatus -->|"Rejected"| RejectedEnd
+    RejectedEnd --> Fault
+    CommandStatus -->|"Executed"| ApplyEconomy
     ApplyEconomy --> ValidateEconomy
-    ValidateEconomy --> StageEnd
+    ValidateEconomy --> Consumption
     ValidateEconomy -. "invalid transition" .-> Fault
+    Consumption -->|"No"| StageEnd
+    Consumption -->|"Yes"| EconomyEvent
     StageEnd --> CommitEnd
     StageEnd -. "cancel or failure" .-> Rollback
     CommitEnd --> EconomyEvent
     EconomyEvent --> ReconcileEnd
     ReconcileEnd --> TurnEnd
-    TurnEnd --> Advance
+    TurnEnd --> Terminal
+    Terminal -->|"Yes"| Finish
+    Terminal -->|"No"| Advance
 ```
+
+Validated command events are retained before command status is interpreted so
+the canonical history preserves any evidence produced by a terminal command.
+`Cancelled`, `Faulted`, and `Rejected` commands do not apply turn economy and do
+not run owner-turn-end lifecycle. Rejection additionally publishes
+`ActionRejected`. Only `Executed` reaches `IBattleTurnEconomy.Apply`; an
+executed `None` consumption skips owner-turn-end lifecycle, while every other
+consumption stages that lifecycle before `TurnEconomyChanged` is published.
 
 The handler executes action mutation before returning. The runner therefore
 guards the boundaries it owns:

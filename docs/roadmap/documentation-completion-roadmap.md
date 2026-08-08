@@ -620,8 +620,13 @@ O6-R49 removes the unused `BattleExecutionServices` constructor dependency from
 `AutomatedBattleRunner`. The supplied `ISkillExecutor` is now the one documented
 action-execution authority, and active DemoHost, Godot-contract, test, and API
 baseline compositions use that unambiguous contract. Technical documentation
-remains `existing_unreviewed` until O6-R50 corrects the transaction diagram;
-formal owner closure remains held through O6-R51.
+remains `existing_unreviewed` until O6-R50 corrects the transaction diagram.
+
+O6-R50 now distinguishes all four valid command statuses, preserves command
+events before status interpretation, and shows the separate `None`-consumption
+lifecycle path. The encounter technical entry returns to `reviewed`, so the
+current totals are 30 reviewed, 24 `existing_unreviewed`, 14 missing, and 7
+`not_applicable`. Formal owner closure remains held only for O6-R51.
 
 A final bounded certification subsequently exercised 1,536 deterministic
 reserve/deployment clock operations against an independent model and restored

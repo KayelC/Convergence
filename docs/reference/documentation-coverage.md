@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 29 reviewed,
-25 existing_unreviewed, 14 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -276,13 +276,19 @@ its command transaction diagram omits the valid cancelled, rejected, and
 faulted command-result branches. Mechanics and developer guidance remain
 `reviewed` while O6-R50 owns the technical correction.
 
-The documentation matrix currently records 75 audience entries: 29 reviewed,
-25 existing_unreviewed, 14 missing, and 7 not_applicable.
+O6-R50 corrects that diagram directly from the runner's command-status and
+consumption branches. It now records validated command events before status
+interpretation, sends only `Executed` commands through turn economy, and skips
+owner-turn-end lifecycle only for `None` consumption. The technical entry
+returns to `reviewed`; O6-R51 remains the bounded closure review.
+
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|
-| `reviewed` | 29 |
-| `existing_unreviewed` | 25 |
+| `reviewed` | 30 |
+| `existing_unreviewed` | 24 |
 | `missing` | 14 |
 | `not_applicable` | 7 |
 

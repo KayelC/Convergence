@@ -120,6 +120,16 @@ Split `ValidateHandler` into explicit `Executed`, `Cancelled`, `Rejected`, and
 only `Executed` applies economy, and route the three terminal statuses to their
 actual typed finalization paths.
 
+**O6-R50 resolution, 8 August 2026**
+
+The transaction diagram now records validated command events before an explicit
+four-way status branch. `Cancelled`, `Faulted`, and `Rejected` bypass turn
+economy and owner-turn-end lifecycle; only `Executed` reaches economy
+application. The corrected diagram also shows the implemented consumption
+branch: `None` skips owner-turn-end lifecycle, while consuming commands stage it
+before publishing `TurnEconomyChanged`. Mechanics, developer, and technical
+guidance were rechecked against these source paths and now agree.
+
 ## Runtime Conclusions
 
 No high- or medium-severity runtime defect was reproduced.
@@ -211,10 +221,9 @@ must describe the page as a whole, not merely its prose.
 |---|---|---|
 | O6-R48 | Fresh source, test, and documentation audit; reopen only affected tracking | Complete |
 | O6-R49 | Remove the unused automated-runner services dependency and update public API evidence | Complete |
-| O6-R50 | Correct the technical command transaction diagram and revalidate all audience guidance | Pending |
+| O6-R50 | Correct the technical command transaction diagram and revalidate all audience guidance | Complete |
 | O6-R51 | Perform one bounded fresh closure review over the two corrections | Pending |
 
-Order 6 should not be marked formally owner-closed until O6-R50 and O6-R51 are
-complete. The remaining hold is documentation-only plus its bounded closure
-review; no encounter mechanic redesign or additional presentation work is
-required.
+Order 6 should not be marked formally owner-closed until O6-R51 is complete.
+The remaining hold is only the bounded closure review; no encounter mechanic
+redesign or additional presentation work is required.
