@@ -382,6 +382,10 @@ canonical encounter runner. It:
 - maps a successful skill escape request to the canonical `Escape` outcome;
 - returns the complete `IReadOnlyList<BattleEncounterEvent>`.
 
+Its supplied `ISkillExecutor` is the sole action-execution authority. Configure
+that executor with the intended `BattleExecutionServices`; the automated runner
+does not accept or advertise a second services graph.
+
 Its top-level outcome preserves the canonical result exactly as `Victory`,
 `Defeat`, `Escape`, `Draw`, `Faulted`, or `Cancelled`. Hosts do not need to
 infer terminal meaning from event text or collapse escape/cancellation into a

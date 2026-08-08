@@ -455,11 +455,14 @@ public interface IAutomatedBattleRunner
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Composes catalog-backed automated turns over the canonical encounter runner.
+/// The supplied <see cref="ISkillExecutor"/> is the sole action-execution authority.
+/// </summary>
 public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
 {
     private readonly ISkillExecutor _executor;
     private readonly IBattleActionSelector _selector;
-    private readonly BattleExecutionServices _services;
     private readonly IBattleEncounterLifecyclePort _lifecycle;
     private readonly BattleTurnEconomyRuleset _turnEconomy;
     private readonly IAutomatedBattleTurnRestrictionResolver _restrictionResolver;
@@ -468,7 +471,6 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
     public AutomatedBattleRunner(
         ISkillExecutor executor,
         IBattleActionSelector selector,
-        BattleExecutionServices services,
         IBattleEncounterLifecyclePort lifecycle,
         BattleTurnEconomyRuleset turnEconomy,
         IAutomatedBattleTurnRestrictionResolver restrictionResolver,
@@ -476,7 +478,6 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
     {
         _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         _selector = selector ?? throw new ArgumentNullException(nameof(selector));
-        _services = services ?? throw new ArgumentNullException(nameof(services));
         _lifecycle = lifecycle ?? throw new ArgumentNullException(nameof(lifecycle));
         _turnEconomy = turnEconomy ?? throw new ArgumentNullException(nameof(turnEconomy));
         _restrictionResolver = restrictionResolver ?? throw new ArgumentNullException(nameof(restrictionResolver));
@@ -517,7 +518,6 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         var turnHandler = new AutomatedBattleTurnHandler(
             _executor,
             _selector,
-            _services,
             request.Participants,
             _restrictionResolver,
             request.TeamKnowledgeSeeds);
@@ -575,14 +575,12 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         public AutomatedBattleTurnHandler(
             ISkillExecutor executor,
             IBattleActionSelector selector,
-            BattleExecutionServices services,
             IReadOnlyList<CatalogBattleActor> actors,
             IAutomatedBattleTurnRestrictionResolver restrictionResolver,
             IReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> knowledgeSeeds)
         {
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _selector = selector ?? throw new ArgumentNullException(nameof(selector));
-            ArgumentNullException.ThrowIfNull(services);
             _actors = actors ?? throw new ArgumentNullException(nameof(actors));
             _restrictionResolver = restrictionResolver ?? throw new ArgumentNullException(nameof(restrictionResolver));
             ArgumentNullException.ThrowIfNull(knowledgeSeeds);

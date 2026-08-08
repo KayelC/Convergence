@@ -697,7 +697,12 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("## Runtime Conclusions", r48Audit, StringComparison.Ordinal);
         Assert.Contains("## Documentation Alignment", r48Audit, StringComparison.Ordinal);
         Assert.Contains("## Correction Checkpoints", r48Audit, StringComparison.Ordinal);
-        Assert.Contains("Order 6 should not be marked formally owner-closed", r48Audit, StringComparison.Ordinal);
+        Assert.Contains("**O6-R49 resolution, 8 August 2026**", r48Audit, StringComparison.Ordinal);
+        Assert.Contains(
+            "| O6-R49 | Remove the unused automated-runner services dependency and update public API evidence | Complete |",
+            r48Audit,
+            StringComparison.Ordinal);
+        Assert.Contains("Order 6 should not be marked formally owner-closed until O6-R50 and O6-R51", r48Audit, StringComparison.Ordinal);
 
         DocumentationCapability encounter = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");

@@ -212,7 +212,6 @@ internal sealed class CleanBattleDemoHost
         var runner = new AutomatedBattleRunner(
             executor,
             new DeterministicBattleActionSelector(executor),
-            services,
             lifecycle,
             turnEconomy,
             new AutomatedBattleTurnRestrictionResolver(),

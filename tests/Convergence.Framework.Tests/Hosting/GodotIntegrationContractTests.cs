@@ -135,7 +135,6 @@ public sealed class GodotIntegrationContractTests
         AutomatedBattleResult battle = new AutomatedBattleRunner(
             executor,
             new DeterministicBattleActionSelector(executor),
-            services,
             lifecycle,
             turnEconomy,
             new AutomatedBattleTurnRestrictionResolver(),

@@ -257,7 +257,6 @@ internal sealed class CleanTrainingAnnexDemoHost
         AutomatedBattleResult battle = await new AutomatedBattleRunner(
                 skillExecutor,
                 new DeterministicBattleActionSelector(skillExecutor),
-                executionServices,
                 lifecycle,
                 turnEconomy,
                 new AutomatedBattleTurnRestrictionResolver(),

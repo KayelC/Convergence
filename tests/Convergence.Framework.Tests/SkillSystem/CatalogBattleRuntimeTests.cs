@@ -1657,7 +1657,7 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
-    public void Runner_RequiresExplicitLifecycleAndTurnEconomyDependencies()
+    public void Runner_ExposesOnlyTheAuthoritiesItUses()
     {
         ConstructorInfo constructor = Assert.Single(typeof(AutomatedBattleRunner).GetConstructors());
 
@@ -1665,7 +1665,6 @@ public sealed class CatalogBattleRuntimeTests
         [
             typeof(ISkillExecutor),
             typeof(IBattleActionSelector),
-            typeof(BattleExecutionServices),
             typeof(IBattleEncounterLifecyclePort),
             typeof(BattleTurnEconomyRuleset),
             typeof(IAutomatedBattleTurnRestrictionResolver),
@@ -2912,7 +2911,6 @@ public sealed class CatalogBattleRuntimeTests
         new(
             executor,
             selector,
-            services,
             lifecycle ?? new BattleStatusEncounterLifecyclePort(
                 new BattleStatusLifecycleService(new MinimumRandomSource()),
                 services,

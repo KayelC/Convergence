@@ -429,6 +429,10 @@ participant from the result.
 `BattleEncounterParticipant`, supplies the canonical runner services, and
 returns canonical events directly.
 
+The supplied `ISkillExecutor` owns automated action execution. The runner does
+not accept a separate `BattleExecutionServices` value, preventing two apparently
+competing execution-policy graphs from entering the same composition.
+
 `AutomatedBattleRequest` rejects an empty or null-containing participant set,
 invalid context or battle-kind IDs, an invalid optional moon-phase ID, and a
 non-positive round limit at construction. Duplicate runtime IDs intentionally

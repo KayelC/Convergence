@@ -70,6 +70,14 @@ Update the three active call sites, the public API baseline, XML/API guidance,
 and focused constructor/composition tests. Do not invent a second execution
 authority merely to preserve the parameter.
 
+**O6-R49 resolution, 8 August 2026**
+
+`AutomatedBattleRunner` now accepts only the authorities it uses. Its
+`ISkillExecutor` is explicitly documented as the sole action-execution
+authority; the unused services field and both redundant parameters are gone.
+DemoHost, Godot-contract, catalog-runtime, public API baseline, developer, and
+technical composition evidence now use the corrected six-parameter contract.
+
 ### O6-R48-D1 - Documentation: the command transaction diagram omits valid terminal command paths
 
 **Documented path**
@@ -202,10 +210,11 @@ must describe the page as a whole, not merely its prose.
 | Checkpoint | Work | State |
 |---|---|---|
 | O6-R48 | Fresh source, test, and documentation audit; reopen only affected tracking | Complete |
-| O6-R49 | Remove the unused automated-runner services dependency and update public API evidence | Pending |
+| O6-R49 | Remove the unused automated-runner services dependency and update public API evidence | Complete |
 | O6-R50 | Correct the technical command transaction diagram and revalidate all audience guidance | Pending |
 | O6-R51 | Perform one bounded fresh closure review over the two corrections | Pending |
 
-Order 6 should not be marked formally owner-closed until O6-R49 through O6-R51
-are complete. The hold is narrow: no encounter mechanic redesign or additional
-presentation work is required.
+Order 6 should not be marked formally owner-closed until O6-R50 and O6-R51 are
+complete. The remaining hold is documentation-only plus its bounded closure
+review; no encounter mechanic redesign or additional presentation work is
+required.
