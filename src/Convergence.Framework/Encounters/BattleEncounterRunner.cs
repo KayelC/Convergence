@@ -911,25 +911,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             return terminalResult;
         }
 
-        BattleEncounterScheduleCursor schedule = battleStart.Schedule!;
-        while (!schedule.IsComplete)
-        {
-            RoundRunResult roundRun =
-                await runContext.RunRoundAsync(schedule).ConfigureAwait(false);
-            if (roundRun.TerminalResult is BattleEncounterResult roundTerminalResult)
-            {
-                return roundTerminalResult;
-            }
-
-            schedule = roundRun.Schedule!;
-        }
-
-        return await runContext.FinishAsync(
-                BattleEncounterOutcome.Draw,
-                null,
-                $"Battle ended in a draw after {request.RoundLimit} round(s).")
+        return await runContext.RunScheduledRoundsAsync(battleStart.Schedule!)
             .ConfigureAwait(false);
-
     }
 
     private sealed class EncounterRunContext
@@ -1083,6 +1066,28 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
             }
 
             return BattleStartPhaseResult.ScheduleReady(StartSchedule());
+        }
+
+        public async ValueTask<BattleEncounterResult> RunScheduledRoundsAsync(
+            BattleEncounterScheduleCursor schedule)
+        {
+            while (!schedule.IsComplete)
+            {
+                RoundRunResult roundRun =
+                    await RunRoundAsync(schedule).ConfigureAwait(false);
+                if (roundRun.TerminalResult is BattleEncounterResult roundTerminalResult)
+                {
+                    return roundTerminalResult;
+                }
+
+                schedule = roundRun.Schedule!;
+            }
+
+            return await FinishAsync(
+                    BattleEncounterOutcome.Draw,
+                    null,
+                    $"Battle ended in a draw after {_request.RoundLimit} round(s).")
+                .ConfigureAwait(false);
         }
 
         public async ValueTask<RoundRunResult> RunRoundAsync(
