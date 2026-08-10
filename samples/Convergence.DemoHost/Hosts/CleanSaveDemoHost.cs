@@ -172,6 +172,8 @@ internal sealed class CleanSaveDemoHost
 
     internal static RuntimeSaveGameSnapshot BuildDemoSnapshot()
     {
+        RuntimeInstanceId shortswordInstanceId =
+            RuntimeInstanceId.Parse("clean-save-shortsword-001");
         RuntimeActorSnapshot frost = CreateActor(
             RuntimeInstanceId.Parse("frost"),
             ContentId.Parse("convergence.clean_battle_demo:frost_duelist_demo"),
@@ -179,7 +181,13 @@ internal sealed class CleanSaveDemoHost
                 ContentId.Parse("convergence.clean_battle_demo:frost_lance_demo"),
                 ContentId.Parse("convergence.skill_system_redesign_sample:ice_boost_sample")
             ],
-            [ContentId.Parse("convergence.skill_system_redesign_sample:ice_boost_sample")]);
+            [ContentId.Parse("convergence.skill_system_redesign_sample:ice_boost_sample")],
+            new RuntimeEquipmentSnapshot(
+            [
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                    EquipmentSlot.Weapon,
+                    shortswordInstanceId)
+            ]));
         RuntimeActorSnapshot ember = CreateActor(
             RuntimeInstanceId.Parse("ember"),
             ContentId.Parse("convergence.clean_battle_demo:ember_duelist_demo"),
@@ -205,16 +213,14 @@ internal sealed class CleanSaveDemoHost
             new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(ContentId.Parse("convergence.shared_effects_demo:medicine_demo"), 2)],
                 [
-                    new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(
+                    new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
                         EquipmentSlot.Weapon,
-                        [ContentId.Parse("convergence.catalog_surface_sample:shortsword_sample")])
+                        [
+                            new RuntimeEquipmentInstanceSnapshot(
+                                shortswordInstanceId,
+                                ContentId.Parse("convergence.catalog_surface_sample:shortsword_sample"))
+                        ])
                 ]),
-            new RuntimeEquipmentSnapshot(
-            [
-                new KeyValuePair<EquipmentSlot, ContentId>(
-                    EquipmentSlot.Weapon,
-                    ContentId.Parse("convergence.catalog_surface_sample:shortsword_sample"))
-            ]),
             new RuntimeWalletSnapshot(1234),
             new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(ContentId.Parse("convergence.catalog_surface_sample:sample_depths_floor_5")),
@@ -279,7 +285,8 @@ internal sealed class CleanSaveDemoHost
         RuntimeInstanceId instanceId,
         ContentId entityId,
         IEnumerable<ContentId> skillIds,
-        IEnumerable<ContentId>? passiveSkillIds = null) =>
+        IEnumerable<ContentId>? passiveSkillIds = null,
+        RuntimeEquipmentSnapshot? equipment = null) =>
         new(
             new RuntimeActorIdentitySnapshot(instanceId, entityId, ContentId.Parse("companion"), entityId.ToString()),
             new RuntimeActorAffiliationSnapshot(ContentId.Parse("host"), ContentId.Parse("player_team")),
@@ -293,7 +300,7 @@ internal sealed class CleanSaveDemoHost
                 [new KeyValuePair<ContentId, decimal>(ContentId.Parse("magic"), 8)],
                 [new KeyValuePair<ContentId, decimal>(ContentId.Parse("magic"), 8)]),
             new RuntimeSkillStateSnapshot(skillIds, skillIds),
-            new RuntimeEquipmentSnapshot(),
+            equipment ?? new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(
                 passiveSkillStates: (passiveSkillIds ?? []).Select(skillId =>
@@ -414,7 +421,6 @@ internal static class CleanSaveJsonCodec
             snapshot.Actors.Select(ToDto).ToArray(),
             ToDto(snapshot.PartyRoster),
             ToDto(snapshot.Inventory),
-            ToDto(snapshot.Equipment),
             snapshot.Wallet.Balance,
             ToDto(snapshot.Field),
             ToDto(snapshot.Compendium),
@@ -439,7 +445,6 @@ internal static class CleanSaveJsonCodec
             dto.Actors.Select(FromDto),
             FromDto(dto.PartyRoster),
             FromDto(dto.Inventory),
-            FromDto(dto.Equipment),
             new RuntimeWalletSnapshot(dto.Credits),
             FromDto(dto.Field),
             FromDto(dto.Compendium),
@@ -481,7 +486,9 @@ internal static class CleanSaveJsonCodec
                 choice.UnlockLevel,
                 choice.SkillId.ToString())).ToArray(),
             actor.CapabilityIds.Select(id => id.ToString()).ToArray(),
-            actor.Equipment.EquippedItemIds.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value.ToString()),
+            actor.Equipment.EquippedInstanceIds.ToDictionary(
+                pair => pair.Key.ToString(),
+                pair => pair.Value.ToString()),
             actor.BattleStatus.Ailments.Select(ToDto).ToArray(),
             actor.BattleStatus.Statuses.Select(ToDto).ToArray(),
             ToDto(actor.BattleStatus.StatModifiers),
@@ -523,7 +530,10 @@ internal static class CleanSaveJsonCodec
                         choice.UnlockLevel,
                         Id(choice.SkillId))),
                 dto.SkillRevision),
-            new RuntimeEquipmentSnapshot(dto.EquippedItemIds.Select(pair => new KeyValuePair<EquipmentSlot, ContentId>(Enum.Parse<EquipmentSlot>(pair.Key), Id(pair.Value)))),
+            new RuntimeEquipmentSnapshot(dto.EquippedInstanceIds.Select(pair =>
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                    Enum.Parse<EquipmentSlot>(pair.Key),
+                    Instance(pair.Value)))),
             new RuntimeBattleStatusSnapshot(
                 dto.Ailments.Select(FromDto),
                 dto.Statuses.Select(FromDto),
@@ -697,24 +707,21 @@ internal static class CleanSaveJsonCodec
     private static HostInventoryDto ToDto(RuntimeInventorySnapshot snapshot) =>
         new(
             snapshot.ItemQuantities.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value),
-            snapshot.OwnedEquipmentIds.ToDictionary(
+            snapshot.OwnedEquipmentInstances.ToDictionary(
                 pair => pair.Key.ToString(),
-                pair => pair.Value.Select(id => id.ToString()).ToArray()));
+                pair => pair.Value.Select(instance => new HostEquipmentInstanceDto(
+                    instance.InstanceId.ToString(),
+                    instance.DefinitionId.ToString())).ToArray()));
 
     private static RuntimeInventorySnapshot FromDto(HostInventoryDto dto) =>
         new(
             dto.ItemQuantities.Select(pair => new KeyValuePair<ContentId, int>(Id(pair.Key), pair.Value)),
-            dto.OwnedEquipmentIds.Select(pair => new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(
+            dto.OwnedEquipmentInstances.Select(pair =>
+                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
                 Enum.Parse<EquipmentSlot>(pair.Key),
-                pair.Value.Select(Id))));
-
-    private static HostEquipmentDto ToDto(RuntimeEquipmentSnapshot snapshot) =>
-        new(snapshot.EquippedItemIds.ToDictionary(pair => pair.Key.ToString(), pair => pair.Value.ToString()));
-
-    private static RuntimeEquipmentSnapshot FromDto(HostEquipmentDto dto) =>
-        new(dto.EquippedItemIds.Select(pair => new KeyValuePair<EquipmentSlot, ContentId>(
-            Enum.Parse<EquipmentSlot>(pair.Key),
-            Id(pair.Value))));
+                pair.Value.Select(instance => new RuntimeEquipmentInstanceSnapshot(
+                    Instance(instance.InstanceId),
+                    Id(instance.DefinitionId))))));
 
     private static HostFieldDto? ToDto(RuntimeFieldSnapshot? snapshot) =>
         snapshot is null
@@ -832,7 +839,6 @@ internal static class CleanSaveJsonCodec
         HostActorDto[] Actors,
         HostPartyRosterDto PartyRoster,
         HostInventoryDto Inventory,
-        HostEquipmentDto Equipment,
         int Credits,
         HostFieldDto? Field,
         HostCompendiumDto Compendium,
@@ -870,7 +876,7 @@ internal static class CleanSaveJsonCodec
         long SkillRevision,
         HostPendingSkillChoiceDto[]? PendingSkillChoices,
         string[]? CapabilityIds,
-        Dictionary<string, string> EquippedItemIds,
+        Dictionary<string, string> EquippedInstanceIds,
         HostTimedStateDto[] Ailments,
         HostTimedStateDto[] Statuses,
         HostStatModifierStateDto? StatModifiers,
@@ -921,8 +927,10 @@ internal static class CleanSaveJsonCodec
         int ActivationCount,
         string? TargetInstanceId);
     private sealed record HostPartyRosterDto(HostReferenceDto Owner, HostReferenceDto[] ActiveParty, HostReferenceDto[] ReserveMembers, HostReferenceDto? ActiveHostedEntity, HostReferenceDto[] HostedEntityRoster, HostReferenceDto[] CompanionRoster, int MaxActivePartySize);
-    private sealed record HostInventoryDto(Dictionary<string, int> ItemQuantities, Dictionary<string, string[]> OwnedEquipmentIds);
-    private sealed record HostEquipmentDto(Dictionary<string, string> EquippedItemIds);
+    private sealed record HostInventoryDto(
+        Dictionary<string, int> ItemQuantities,
+        Dictionary<string, HostEquipmentInstanceDto[]> OwnedEquipmentInstances);
+    private sealed record HostEquipmentInstanceDto(string InstanceId, string DefinitionId);
     private sealed record HostFieldDto(string LocationId, HostDungeonTraversalDto? DungeonTraversal);
     private sealed record HostDungeonTraversalDto(string DungeonId, string CurrentNodeId, string[] VisitedNodeIds, string[] UnlockedCheckpointIds, string[] DefeatedBossIds);
     private sealed record HostCompendiumDto(HostCompendiumEntryDto[] Entries);

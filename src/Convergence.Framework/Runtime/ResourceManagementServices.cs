@@ -21,20 +21,50 @@ public enum ResourceTransactionCode
     ShopStockUnavailable,
     NoRestorationNeeded,
     NumericOverflow,
-    InvalidShopPricing
+    InvalidShopPricing,
+    InvalidEquipmentInstanceId
 }
 
 public sealed record ResourceTransactionDiagnostic(
     ResourceTransactionCode Code,
     string Message,
     ContentId? ContentId = null,
-    EquipmentSlot? Slot = null);
+    EquipmentSlot? Slot = null,
+    RuntimeInstanceId? EquipmentInstanceId = null);
+
+public sealed record RuntimeEquipmentInstanceSnapshot
+{
+    public RuntimeEquipmentInstanceSnapshot(
+        RuntimeInstanceId instanceId,
+        ContentId definitionId)
+    {
+        if (!instanceId.IsValid)
+        {
+            throw new ArgumentException(
+                "Equipment instance ID must be valid.",
+                nameof(instanceId));
+        }
+        if (!definitionId.IsValid)
+        {
+            throw new ArgumentException(
+                "Equipment definition ID must be valid.",
+                nameof(definitionId));
+        }
+
+        InstanceId = instanceId;
+        DefinitionId = definitionId;
+    }
+
+    public RuntimeInstanceId InstanceId { get; }
+    public ContentId DefinitionId { get; }
+}
 
 public sealed record RuntimeInventorySnapshot
 {
     public RuntimeInventorySnapshot(
         IEnumerable<KeyValuePair<ContentId, int>>? itemQuantities = null,
-        IEnumerable<KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>>? ownedEquipmentIds = null)
+        IEnumerable<KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>>?
+            ownedEquipmentInstances = null)
     {
         Dictionary<ContentId, int> items = [];
         foreach ((ContentId itemId, int quantity) in itemQuantities ?? [])
@@ -50,45 +80,96 @@ public sealed record RuntimeInventorySnapshot
             }
         }
 
-        Dictionary<EquipmentSlot, IReadOnlyList<ContentId>> equipment = [];
+        Dictionary<EquipmentSlot, IReadOnlyList<RuntimeEquipmentInstanceSnapshot>> equipment = [];
         foreach (EquipmentSlot slot in Enum.GetValues<EquipmentSlot>())
         {
-            equipment[slot] = Array.AsReadOnly(Array.Empty<ContentId>());
+            equipment[slot] = Array.AsReadOnly(Array.Empty<RuntimeEquipmentInstanceSnapshot>());
         }
 
-        foreach ((EquipmentSlot slot, IEnumerable<ContentId> ids) in ownedEquipmentIds ?? [])
+        var seenInstanceIds = new HashSet<RuntimeInstanceId>();
+        foreach ((EquipmentSlot slot, IEnumerable<RuntimeEquipmentInstanceSnapshot> instances) in
+                 ownedEquipmentInstances ?? [])
         {
-            EnumDomain.RequireDefined(slot, nameof(ownedEquipmentIds));
-            ContentId[] copy = ids?.Distinct().ToArray() ?? [];
+            EnumDomain.RequireDefined(slot, nameof(ownedEquipmentInstances));
+            RuntimeEquipmentInstanceSnapshot[] copy = instances?.ToArray() ?? [];
+            foreach (RuntimeEquipmentInstanceSnapshot instance in copy)
+            {
+                ArgumentNullException.ThrowIfNull(instance);
+                if (!seenInstanceIds.Add(instance.InstanceId))
+                {
+                    throw new ArgumentException(
+                        $"Equipment instance '{instance.InstanceId}' appears more than once in inventory.",
+                        nameof(ownedEquipmentInstances));
+                }
+            }
+
             equipment[slot] = Array.AsReadOnly(copy);
         }
 
         ItemQuantities = RuntimeSnapshotCollections.Dictionary(items);
-        OwnedEquipmentIds = RuntimeSnapshotCollections.Dictionary(equipment);
+        OwnedEquipmentInstances = RuntimeSnapshotCollections.Dictionary(equipment);
     }
 
     public IReadOnlyDictionary<ContentId, int> ItemQuantities { get; }
-    public IReadOnlyDictionary<EquipmentSlot, IReadOnlyList<ContentId>> OwnedEquipmentIds { get; }
+    public IReadOnlyDictionary<EquipmentSlot, IReadOnlyList<RuntimeEquipmentInstanceSnapshot>>
+        OwnedEquipmentInstances
+    { get; }
 
     public int GetQuantity(ContentId itemId) =>
         ItemQuantities.TryGetValue(itemId, out int quantity) ? quantity : 0;
 
-    public IReadOnlyList<ContentId> GetEquipmentIds(EquipmentSlot slot) =>
-        OwnedEquipmentIds.TryGetValue(slot, out IReadOnlyList<ContentId>? ids)
-            ? ids
-            : Array.AsReadOnly(Array.Empty<ContentId>());
+    public IReadOnlyList<RuntimeEquipmentInstanceSnapshot> GetEquipmentInstances(
+        EquipmentSlot slot) =>
+        OwnedEquipmentInstances.TryGetValue(
+            slot,
+            out IReadOnlyList<RuntimeEquipmentInstanceSnapshot>? instances)
+            ? instances
+            : Array.AsReadOnly(Array.Empty<RuntimeEquipmentInstanceSnapshot>());
 
-    public bool OwnsEquipment(ContentId equipmentId, EquipmentSlot slot) =>
-        GetEquipmentIds(slot).Contains(equipmentId);
+    public bool OwnsEquipment(RuntimeInstanceId instanceId, EquipmentSlot slot) =>
+        GetEquipmentInstances(slot).Any(instance => instance.InstanceId == instanceId);
+
+    public bool TryGetEquipmentInstance(
+        RuntimeInstanceId instanceId,
+        out RuntimeEquipmentInstanceSnapshot? instance,
+        out EquipmentSlot slot)
+    {
+        foreach ((EquipmentSlot candidateSlot,
+                  IReadOnlyList<RuntimeEquipmentInstanceSnapshot> instances) in
+                 OwnedEquipmentInstances)
+        {
+            RuntimeEquipmentInstanceSnapshot? match =
+                instances.FirstOrDefault(candidate => candidate.InstanceId == instanceId);
+            if (match is not null)
+            {
+                instance = match;
+                slot = candidateSlot;
+                return true;
+            }
+        }
+
+        instance = null;
+        slot = default;
+        return false;
+    }
 
     internal RuntimeInventorySnapshot WithItems(IEnumerable<KeyValuePair<ContentId, int>> itemQuantities) =>
-        new(itemQuantities, OwnedEquipmentIds.Select(pair => new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(pair.Key, pair.Value)));
+        new(
+            itemQuantities,
+            OwnedEquipmentInstances.Select(pair =>
+                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    pair.Key,
+                    pair.Value)));
 
-    internal RuntimeInventorySnapshot WithEquipment(EquipmentSlot slot, IEnumerable<ContentId> ids)
+    internal RuntimeInventorySnapshot WithEquipment(
+        EquipmentSlot slot,
+        IEnumerable<RuntimeEquipmentInstanceSnapshot> instances)
     {
-        Dictionary<EquipmentSlot, IEnumerable<ContentId>> equipment = OwnedEquipmentIds
-            .ToDictionary(pair => pair.Key, pair => (IEnumerable<ContentId>)pair.Value);
-        equipment[slot] = ids;
+        Dictionary<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>> equipment =
+            OwnedEquipmentInstances.ToDictionary(
+                pair => pair.Key,
+                pair => (IEnumerable<RuntimeEquipmentInstanceSnapshot>)pair.Value);
+        equipment[slot] = instances;
         return new RuntimeInventorySnapshot(ItemQuantities, equipment);
     }
 }
@@ -155,8 +236,15 @@ public interface IInventoryTransitionService
     InventoryTransitionResult AddItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity, int? stackLimit = null);
     InventoryTransitionResult RemoveItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity);
     InventoryReservationResult ReserveItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity);
-    InventoryTransitionResult AddEquipment(RuntimeInventorySnapshot snapshot, ContentId equipmentId, EquipmentSlot slot);
-    InventoryTransitionResult RemoveEquipment(RuntimeInventorySnapshot snapshot, ContentId equipmentId, EquipmentSlot slot, RuntimeEquipmentSnapshot? equipped = null);
+    InventoryTransitionResult AddEquipment(
+        RuntimeInventorySnapshot snapshot,
+        RuntimeEquipmentInstanceSnapshot equipment,
+        EquipmentSlot slot);
+    InventoryTransitionResult RemoveEquipment(
+        RuntimeInventorySnapshot snapshot,
+        RuntimeInstanceId equipmentInstanceId,
+        EquipmentSlot slot,
+        IEnumerable<RuntimeEquipmentSnapshot> actorEquipment);
 }
 
 public sealed record InventoryReservationResult
@@ -313,36 +401,69 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
             new RuntimeItemReservation(this, snapshot, itemId, quantity));
     }
 
-    public InventoryTransitionResult AddEquipment(RuntimeInventorySnapshot snapshot, ContentId equipmentId, EquipmentSlot slot)
+    public InventoryTransitionResult AddEquipment(
+        RuntimeInventorySnapshot snapshot,
+        RuntimeEquipmentInstanceSnapshot equipment,
+        EquipmentSlot slot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        IReadOnlyList<ContentId> current = snapshot.GetEquipmentIds(slot);
-        if (current.Contains(equipmentId))
+        ArgumentNullException.ThrowIfNull(equipment);
+        EnumDomain.RequireDefined(slot, nameof(slot));
+        if (snapshot.TryGetEquipmentInstance(equipment.InstanceId, out _, out _))
         {
-            return Rejected(snapshot, ResourceTransactionCode.EquipmentDuplicate, $"Equipment '{equipmentId}' is already owned.", equipmentId, slot);
+            return Rejected(
+                snapshot,
+                ResourceTransactionCode.EquipmentDuplicate,
+                $"Equipment instance '{equipment.InstanceId}' is already owned.",
+                equipment.DefinitionId,
+                slot,
+                equipment.InstanceId);
         }
 
-        return Applied(snapshot, snapshot.WithEquipment(slot, current.Append(equipmentId)));
+        IReadOnlyList<RuntimeEquipmentInstanceSnapshot> current =
+            snapshot.GetEquipmentInstances(slot);
+        return Applied(snapshot, snapshot.WithEquipment(slot, current.Append(equipment)));
     }
 
     public InventoryTransitionResult RemoveEquipment(
         RuntimeInventorySnapshot snapshot,
-        ContentId equipmentId,
+        RuntimeInstanceId equipmentInstanceId,
         EquipmentSlot slot,
-        RuntimeEquipmentSnapshot? equipped = null)
+        IEnumerable<RuntimeEquipmentSnapshot> actorEquipment)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        IReadOnlyList<ContentId> current = snapshot.GetEquipmentIds(slot);
-        if (!current.Contains(equipmentId))
+        ArgumentNullException.ThrowIfNull(actorEquipment);
+        EnumDomain.RequireDefined(slot, nameof(slot));
+        IReadOnlyList<RuntimeEquipmentInstanceSnapshot> current =
+            snapshot.GetEquipmentInstances(slot);
+        RuntimeEquipmentInstanceSnapshot? owned = current.FirstOrDefault(
+            instance => instance.InstanceId == equipmentInstanceId);
+        if (owned is null)
         {
-            return Rejected(snapshot, ResourceTransactionCode.EquipmentNotOwned, $"Equipment '{equipmentId}' is not owned.", equipmentId, slot);
+            return Rejected(
+                snapshot,
+                ResourceTransactionCode.EquipmentNotOwned,
+                $"Equipment instance '{equipmentInstanceId}' is not owned in slot '{slot}'.",
+                slot: slot,
+                equipmentInstanceId: equipmentInstanceId);
         }
-        if (equipped?.EquippedItemIds.TryGetValue(slot, out ContentId equippedId) == true && equippedId == equipmentId)
+        if (actorEquipment.Any(equipment =>
+                equipment.EquippedInstanceIds.Values.Contains(equipmentInstanceId)))
         {
-            return Rejected(snapshot, ResourceTransactionCode.EquippedItemCannotBeRemoved, $"Equipment '{equipmentId}' is currently equipped.", equipmentId, slot);
+            return Rejected(
+                snapshot,
+                ResourceTransactionCode.EquippedItemCannotBeRemoved,
+                $"Equipment instance '{equipmentInstanceId}' is currently equipped.",
+                owned.DefinitionId,
+                slot,
+                equipmentInstanceId);
         }
 
-        return Applied(snapshot, snapshot.WithEquipment(slot, current.Where(id => id != equipmentId)));
+        return Applied(
+            snapshot,
+            snapshot.WithEquipment(
+                slot,
+                current.Where(instance => instance.InstanceId != equipmentInstanceId)));
     }
 
     private static InventoryTransitionResult Applied(RuntimeInventorySnapshot before, RuntimeInventorySnapshot after) =>
@@ -353,8 +474,18 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
         ResourceTransactionCode code,
         string message,
         ContentId? contentId = null,
-        EquipmentSlot? slot = null) =>
-        new(code, before, before, [new ResourceTransactionDiagnostic(code, message, contentId, slot)]);
+        EquipmentSlot? slot = null,
+        RuntimeInstanceId? equipmentInstanceId = null) =>
+        new(
+            code,
+            before,
+            before,
+            [new ResourceTransactionDiagnostic(
+                code,
+                message,
+                contentId,
+                slot,
+                equipmentInstanceId)]);
 
     private static InventoryReservationResult ReservationRejected(
         RuntimeInventorySnapshot before,
@@ -442,9 +573,10 @@ public interface IEquipmentTransitionService
     EquipmentTransitionResult Equip(
         RuntimeInventorySnapshot inventory,
         RuntimeEquipmentSnapshot equipment,
-        ContentId equipmentId,
+        RuntimeInstanceId equipmentInstanceId,
         EquipmentSlot ownedSlot,
-        EquipmentSlot targetSlot);
+        EquipmentSlot targetSlot,
+        IEnumerable<RuntimeEquipmentSnapshot> otherActorEquipment);
 
     EquipmentTransitionResult Unequip(RuntimeEquipmentSnapshot equipment, EquipmentSlot slot);
 }
@@ -454,28 +586,71 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
     public EquipmentTransitionResult Equip(
         RuntimeInventorySnapshot inventory,
         RuntimeEquipmentSnapshot equipment,
-        ContentId equipmentId,
+        RuntimeInstanceId equipmentInstanceId,
         EquipmentSlot ownedSlot,
-        EquipmentSlot targetSlot)
+        EquipmentSlot targetSlot,
+        IEnumerable<RuntimeEquipmentSnapshot> otherActorEquipment)
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(equipment);
-        if (ownedSlot != targetSlot)
+        ArgumentNullException.ThrowIfNull(otherActorEquipment);
+        EnumDomain.RequireDefined(ownedSlot, nameof(ownedSlot));
+        EnumDomain.RequireDefined(targetSlot, nameof(targetSlot));
+        RuntimeEquipmentInstanceSnapshot? owned = null;
+        if (inventory.TryGetEquipmentInstance(
+                equipmentInstanceId,
+                out RuntimeEquipmentInstanceSnapshot? candidate,
+                out EquipmentSlot actualSlot) &&
+            candidate is not null)
         {
-            return Rejected(equipment, ResourceTransactionCode.EquipmentSlotMismatch, $"Equipment '{equipmentId}' cannot be equipped in slot '{targetSlot}'.", equipmentId, targetSlot);
-        }
-        if (!inventory.OwnsEquipment(equipmentId, ownedSlot))
-        {
-            return Rejected(equipment, ResourceTransactionCode.EquipmentNotOwned, $"Equipment '{equipmentId}' is not owned.", equipmentId, ownedSlot);
-        }
-        if (equipment.EquippedItemIds.TryGetValue(targetSlot, out ContentId currentEquipmentId) &&
-            currentEquipmentId == equipmentId)
-        {
-            return Rejected(equipment, ResourceTransactionCode.EquipmentAlreadyEquipped, $"Equipment '{equipmentId}' is already equipped.", equipmentId, targetSlot);
+            owned = candidate;
+            if (actualSlot != ownedSlot)
+            {
+                return Rejected(
+                    equipment,
+                    ResourceTransactionCode.EquipmentSlotMismatch,
+                    $"Equipment instance '{equipmentInstanceId}' is owned in slot '{actualSlot}', not '{ownedSlot}'.",
+                    owned.DefinitionId,
+                    ownedSlot,
+                    equipmentInstanceId);
+            }
         }
 
-        Dictionary<EquipmentSlot, ContentId> equipped = new(equipment.EquippedItemIds);
-        equipped[targetSlot] = equipmentId;
+        if (ownedSlot != targetSlot)
+        {
+            return Rejected(
+                equipment,
+                ResourceTransactionCode.EquipmentSlotMismatch,
+                $"Equipment instance '{equipmentInstanceId}' cannot be equipped in slot '{targetSlot}'.",
+                owned?.DefinitionId,
+                targetSlot,
+                equipmentInstanceId);
+        }
+        if (owned is null)
+        {
+            return Rejected(
+                equipment,
+                ResourceTransactionCode.EquipmentNotOwned,
+                $"Equipment instance '{equipmentInstanceId}' is not owned.",
+                slot: ownedSlot,
+                equipmentInstanceId: equipmentInstanceId);
+        }
+        if (equipment.EquippedInstanceIds.Values.Contains(equipmentInstanceId) ||
+            otherActorEquipment.Any(other =>
+                other.EquippedInstanceIds.Values.Contains(equipmentInstanceId)))
+        {
+            return Rejected(
+                equipment,
+                ResourceTransactionCode.EquipmentAlreadyEquipped,
+                $"Equipment instance '{equipmentInstanceId}' is already equipped.",
+                owned.DefinitionId,
+                targetSlot,
+                equipmentInstanceId);
+        }
+
+        Dictionary<EquipmentSlot, RuntimeInstanceId> equipped =
+            new(equipment.EquippedInstanceIds);
+        equipped[targetSlot] = equipmentInstanceId;
         return new EquipmentTransitionResult(
             ResourceTransactionCode.Applied,
             equipment,
@@ -485,7 +660,9 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
     public EquipmentTransitionResult Unequip(RuntimeEquipmentSnapshot equipment, EquipmentSlot slot)
     {
         ArgumentNullException.ThrowIfNull(equipment);
-        Dictionary<EquipmentSlot, ContentId> equipped = new(equipment.EquippedItemIds);
+        EnumDomain.RequireDefined(slot, nameof(slot));
+        Dictionary<EquipmentSlot, RuntimeInstanceId> equipped =
+            new(equipment.EquippedInstanceIds);
         equipped.Remove(slot);
         return new EquipmentTransitionResult(
             ResourceTransactionCode.Applied,
@@ -498,8 +675,18 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
         ResourceTransactionCode code,
         string message,
         ContentId? contentId = null,
-        EquipmentSlot? slot = null) =>
-        new(code, before, before, [new ResourceTransactionDiagnostic(code, message, contentId, slot)]);
+        EquipmentSlot? slot = null,
+        RuntimeInstanceId? equipmentInstanceId = null) =>
+        new(
+            code,
+            before,
+            before,
+            [new ResourceTransactionDiagnostic(
+                code,
+                message,
+                contentId,
+                slot,
+                equipmentInstanceId)]);
 }
 
 public sealed record RuntimeShopOfferSnapshot
@@ -750,8 +937,19 @@ public interface IShopTransactionService
 {
     int CalculateBuyPrice(int basePrice, int luck);
     int CalculateSellPrice(int basePrice, int luck);
-    ShopTransactionResult Buy(RuntimeInventorySnapshot inventory, RuntimeWalletSnapshot wallet, RuntimeShopOfferSnapshot offer, int buyerLuck);
-    ShopTransactionResult Sell(RuntimeInventorySnapshot inventory, RuntimeWalletSnapshot wallet, RuntimeShopOfferSnapshot offer, int sellerLuck, RuntimeEquipmentSnapshot? equipped = null);
+    ShopTransactionResult Buy(
+        RuntimeInventorySnapshot inventory,
+        RuntimeWalletSnapshot wallet,
+        RuntimeShopOfferSnapshot offer,
+        int buyerLuck,
+        RuntimeInstanceId? purchasedEquipmentInstanceId);
+    ShopTransactionResult Sell(
+        RuntimeInventorySnapshot inventory,
+        RuntimeWalletSnapshot wallet,
+        RuntimeShopOfferSnapshot offer,
+        int sellerLuck,
+        RuntimeInstanceId? soldEquipmentInstanceId,
+        IEnumerable<RuntimeEquipmentSnapshot> actorEquipment);
 }
 
 public sealed class ShopTransactionService : IShopTransactionService
@@ -781,7 +979,8 @@ public sealed class ShopTransactionService : IShopTransactionService
         RuntimeInventorySnapshot inventory,
         RuntimeWalletSnapshot wallet,
         RuntimeShopOfferSnapshot offer,
-        int buyerLuck)
+        int buyerLuck,
+        RuntimeInstanceId? purchasedEquipmentInstanceId)
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(wallet);
@@ -797,7 +996,10 @@ public sealed class ShopTransactionService : IShopTransactionService
         }
 
         int price = pricing.Price;
-        InventoryTransitionResult inventoryResult = AddPurchasedContent(inventory, offer);
+        InventoryTransitionResult inventoryResult = AddPurchasedContent(
+            inventory,
+            offer,
+            purchasedEquipmentInstanceId);
         if (!inventoryResult.Applied)
         {
             return FromInventory(inventoryResult, wallet, price);
@@ -823,10 +1025,12 @@ public sealed class ShopTransactionService : IShopTransactionService
         RuntimeWalletSnapshot wallet,
         RuntimeShopOfferSnapshot offer,
         int sellerLuck,
-        RuntimeEquipmentSnapshot? equipped = null)
+        RuntimeInstanceId? soldEquipmentInstanceId,
+        IEnumerable<RuntimeEquipmentSnapshot> actorEquipment)
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(wallet);
+        ArgumentNullException.ThrowIfNull(actorEquipment);
         ShopPriceCalculation pricing = CalculatePrice(offer.BasePrice, sellerLuck, isBuying: false);
         if (!pricing.IsValid)
         {
@@ -838,7 +1042,12 @@ public sealed class ShopTransactionService : IShopTransactionService
         {
             ShopContentKind.Item => _inventory.RemoveItem(inventory, offer.ContentId, 1),
             ShopContentKind.Equipment when offer.EquipmentSlot is EquipmentSlot slot =>
-                _inventory.RemoveEquipment(inventory, offer.ContentId, slot, equipped),
+                RemoveSoldEquipment(
+                    inventory,
+                    offer,
+                    slot,
+                    soldEquipmentInstanceId,
+                    actorEquipment),
             _ => InventoryRejected(inventory, ResourceTransactionCode.EquipmentSlotMismatch, "Equipment offers require a slot.", offer.ContentId, offer.EquipmentSlot)
         };
 
@@ -864,14 +1073,77 @@ public sealed class ShopTransactionService : IShopTransactionService
 
     private InventoryTransitionResult AddPurchasedContent(
         RuntimeInventorySnapshot inventory,
-        RuntimeShopOfferSnapshot offer) =>
+        RuntimeShopOfferSnapshot offer,
+        RuntimeInstanceId? purchasedEquipmentInstanceId) =>
         offer.ContentKind switch
         {
             ShopContentKind.Item => _inventory.AddItem(inventory, offer.ContentId, 1, offer.ItemStackLimit),
-            ShopContentKind.Equipment when offer.EquipmentSlot is EquipmentSlot slot =>
-                _inventory.AddEquipment(inventory, offer.ContentId, slot),
+            ShopContentKind.Equipment when offer.EquipmentSlot is EquipmentSlot slot &&
+                                           purchasedEquipmentInstanceId is RuntimeInstanceId instanceId &&
+                                           instanceId.IsValid =>
+                _inventory.AddEquipment(
+                    inventory,
+                    new RuntimeEquipmentInstanceSnapshot(instanceId, offer.ContentId),
+                    slot),
+            ShopContentKind.Equipment => InventoryRejected(
+                inventory,
+                ResourceTransactionCode.InvalidEquipmentInstanceId,
+                "Equipment purchases require a valid host-supplied runtime instance ID.",
+                offer.ContentId,
+                offer.EquipmentSlot),
             _ => InventoryRejected(inventory, ResourceTransactionCode.EquipmentSlotMismatch, "Equipment offers require a slot.", offer.ContentId, offer.EquipmentSlot)
         };
+
+    private InventoryTransitionResult RemoveSoldEquipment(
+        RuntimeInventorySnapshot inventory,
+        RuntimeShopOfferSnapshot offer,
+        EquipmentSlot slot,
+        RuntimeInstanceId? soldEquipmentInstanceId,
+        IEnumerable<RuntimeEquipmentSnapshot> actorEquipment)
+    {
+        if (soldEquipmentInstanceId is not RuntimeInstanceId instanceId ||
+            !instanceId.IsValid)
+        {
+            return InventoryRejected(
+                inventory,
+                ResourceTransactionCode.InvalidEquipmentInstanceId,
+                "Equipment sales require a valid runtime instance ID.",
+                offer.ContentId,
+                slot);
+        }
+
+        if (!inventory.TryGetEquipmentInstance(
+                instanceId,
+                out RuntimeEquipmentInstanceSnapshot? instance,
+                out EquipmentSlot ownedSlot) ||
+            instance is null)
+        {
+            return InventoryRejected(
+                inventory,
+                ResourceTransactionCode.EquipmentNotOwned,
+                $"Equipment instance '{instanceId}' is not owned.",
+                offer.ContentId,
+                slot,
+                instanceId);
+        }
+
+        if (instance.DefinitionId != offer.ContentId || ownedSlot != slot)
+        {
+            return InventoryRejected(
+                inventory,
+                ResourceTransactionCode.EquipmentSlotMismatch,
+                $"Equipment instance '{instanceId}' does not match shop offer '{offer.ContentId}'.",
+                offer.ContentId,
+                slot,
+                instanceId);
+        }
+
+        return _inventory.RemoveEquipment(
+            inventory,
+            instanceId,
+            slot,
+            actorEquipment);
+    }
 
     private static ShopTransactionResult FromInventory(
         InventoryTransitionResult result,
@@ -890,8 +1162,18 @@ public sealed class ShopTransactionService : IShopTransactionService
         ResourceTransactionCode code,
         string message,
         ContentId? contentId,
-        EquipmentSlot? slot) =>
-        new(code, before, before, [new ResourceTransactionDiagnostic(code, message, contentId, slot)]);
+        EquipmentSlot? slot,
+        RuntimeInstanceId? equipmentInstanceId = null) =>
+        new(
+            code,
+            before,
+            before,
+            [new ResourceTransactionDiagnostic(
+                code,
+                message,
+                contentId,
+                slot,
+                equipmentInstanceId)]);
 
     private static ShopTransactionResult Rejected(
         ResourceTransactionCode code,

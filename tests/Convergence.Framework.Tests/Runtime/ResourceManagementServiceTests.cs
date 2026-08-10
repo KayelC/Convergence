@@ -56,38 +56,56 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
-    public void InventoryService_EnforcesUniqueEquipmentOwnershipAndEquippedSaleBlock()
+    public void InventoryService_AllowsDuplicateDefinitionsButRejectsDuplicateInstancesAndEquippedRemoval()
     {
         var service = new InventoryTransitionService();
         ContentId shortsword = Id("shortsword");
+        var first = new RuntimeEquipmentInstanceSnapshot(Instance("sword-001"), shortsword);
+        var second = new RuntimeEquipmentInstanceSnapshot(Instance("sword-002"), shortsword);
         var empty = new RuntimeInventorySnapshot();
 
-        InventoryTransitionResult added = service.AddEquipment(empty, shortsword, EquipmentSlot.Weapon);
-        InventoryTransitionResult duplicate = service.AddEquipment(added.After, shortsword, EquipmentSlot.Weapon);
-        var equipped = new RuntimeEquipmentSnapshot(
-            [new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, shortsword)]);
-        InventoryTransitionResult removeEquipped = service.RemoveEquipment(
+        InventoryTransitionResult added = service.AddEquipment(empty, first, EquipmentSlot.Weapon);
+        InventoryTransitionResult secondCopy = service.AddEquipment(
             added.After,
-            shortsword,
+            second,
+            EquipmentSlot.Weapon);
+        InventoryTransitionResult duplicate = service.AddEquipment(
+            secondCopy.After,
+            first,
+            EquipmentSlot.Weapon);
+        var equipped = new RuntimeEquipmentSnapshot(
+            [new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(EquipmentSlot.Weapon, first.InstanceId)]);
+        InventoryTransitionResult removeEquipped = service.RemoveEquipment(
+            secondCopy.After,
+            first.InstanceId,
             EquipmentSlot.Weapon,
-            equipped);
+            [equipped]);
 
         Assert.True(added.Applied);
-        Assert.Contains(shortsword, added.After.GetEquipmentIds(EquipmentSlot.Weapon));
+        Assert.True(secondCopy.Applied);
+        Assert.Equal(2, secondCopy.After.GetEquipmentInstances(EquipmentSlot.Weapon).Count);
+        Assert.All(
+            secondCopy.After.GetEquipmentInstances(EquipmentSlot.Weapon),
+            instance => Assert.Equal(shortsword, instance.DefinitionId));
         Assert.False(duplicate.Applied);
         Assert.Equal(ResourceTransactionCode.EquipmentDuplicate, duplicate.Code);
+        Assert.Same(secondCopy.After, duplicate.After);
         Assert.False(removeEquipped.Applied);
         Assert.Equal(ResourceTransactionCode.EquippedItemCannotBeRemoved, removeEquipped.Code);
+        Assert.Same(secondCopy.After, removeEquipped.After);
     }
 
     [Fact]
     public void EquipmentService_RequiresOwnershipAndSlotCompatibility()
     {
         ContentId shortsword = Id("shortsword");
+        RuntimeInstanceId shortswordInstanceId = Instance("sword-001");
         var inventory = new RuntimeInventorySnapshot(
-            ownedEquipmentIds:
+            ownedEquipmentInstances:
             [
-                new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(EquipmentSlot.Weapon, [shortsword])
+                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    EquipmentSlot.Weapon,
+                    [new RuntimeEquipmentInstanceSnapshot(shortswordInstanceId, shortsword)])
             ]);
         var equipment = new RuntimeEquipmentSnapshot();
         var service = new EquipmentTransitionService();
@@ -95,30 +113,36 @@ public sealed class ResourceManagementServiceTests
         EquipmentTransitionResult equipped = service.Equip(
             inventory,
             equipment,
-            shortsword,
+            shortswordInstanceId,
             EquipmentSlot.Weapon,
-            EquipmentSlot.Weapon);
+            EquipmentSlot.Weapon,
+            []);
         EquipmentTransitionResult wrongSlot = service.Equip(
             inventory,
             equipment,
-            shortsword,
+            shortswordInstanceId,
             EquipmentSlot.Weapon,
-            EquipmentSlot.Accessory);
+            EquipmentSlot.Accessory,
+            []);
         EquipmentTransitionResult notOwned = service.Equip(
             inventory,
             equipment,
-            Id("longsword"),
+            Instance("longsword-001"),
             EquipmentSlot.Weapon,
-            EquipmentSlot.Weapon);
+            EquipmentSlot.Weapon,
+            []);
         EquipmentTransitionResult alreadyEquipped = service.Equip(
             inventory,
             equipped.After,
-            shortsword,
+            shortswordInstanceId,
             EquipmentSlot.Weapon,
-            EquipmentSlot.Weapon);
+            EquipmentSlot.Weapon,
+            []);
 
         Assert.True(equipped.Applied);
-        Assert.Equal(shortsword, equipped.After.EquippedItemIds[EquipmentSlot.Weapon]);
+        Assert.Equal(
+            shortswordInstanceId,
+            equipped.After.EquippedInstanceIds[EquipmentSlot.Weapon]);
         Assert.Equal(ResourceTransactionCode.EquipmentSlotMismatch, wrongSlot.Code);
         Assert.Equal(ResourceTransactionCode.EquipmentNotOwned, notOwned.Code);
         Assert.Equal(ResourceTransactionCode.EquipmentAlreadyEquipped, alreadyEquipped.Code);
@@ -131,6 +155,8 @@ public sealed class ResourceManagementServiceTests
         ContentId sword = Id("shortsword");
         ContentId charm = Id("focus_charm");
         ContentId magic = Id("magic");
+        RuntimeInstanceId swordInstanceId = Instance("sword-001");
+        RuntimeInstanceId charmInstanceId = Instance("charm-001");
         var repository = new TestEquipmentRepository(
             Weapon(sword, power: 12, accuracy: 95),
             Accessory(
@@ -139,11 +165,24 @@ public sealed class ResourceManagementServiceTests
                 new StatModifierDefinition(magic, 2)));
         var equipment = new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, sword),
-                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Accessory, charm)
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(EquipmentSlot.Weapon, swordInstanceId),
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(EquipmentSlot.Accessory, charmInstanceId)
+            ]);
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    EquipmentSlot.Weapon,
+                    [new RuntimeEquipmentInstanceSnapshot(swordInstanceId, sword)]),
+                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    EquipmentSlot.Accessory,
+                    [new RuntimeEquipmentInstanceSnapshot(charmInstanceId, charm)])
             ]);
 
-        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver().Resolve(equipment, repository);
+        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver().Resolve(
+            inventory,
+            equipment,
+            repository);
         var statPolicy = new StandardStatResolutionPolicy();
         StatResolutionResult resolvedMagic = statPolicy.Resolve(new StatResolutionRequest(
             RuntimeStatSourceKind.Actor,
@@ -166,14 +205,29 @@ public sealed class ResourceManagementServiceTests
     {
         ContentId sword = Id("shortsword");
         ContentId missing = Id("missing_blade");
+        RuntimeInstanceId missingInstanceId = Instance("missing-001");
+        RuntimeInstanceId swordInstanceId = Instance("sword-001");
         var repository = new TestEquipmentRepository(Weapon(sword, power: 8, accuracy: 90));
         var equipment = new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, missing),
-                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Accessory, sword)
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(EquipmentSlot.Weapon, missingInstanceId),
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(EquipmentSlot.Accessory, swordInstanceId)
+            ]);
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    EquipmentSlot.Weapon,
+                    [
+                        new RuntimeEquipmentInstanceSnapshot(missingInstanceId, missing),
+                        new RuntimeEquipmentInstanceSnapshot(swordInstanceId, sword)
+                    ])
             ]);
 
-        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver().Resolve(equipment, repository);
+        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver().Resolve(
+            inventory,
+            equipment,
+            repository);
 
         Assert.Null(profile.BasicAttack);
         Assert.Empty(profile.EquippedDefinitions);
@@ -187,23 +241,15 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
-    public void EquipmentProfileResolver_DefaultEquipmentIdReturnsTypedDiagnostic()
+    public void EquipmentSnapshots_RejectInvalidInstanceIdentifiersAtConstruction()
     {
-        var equipment = new RuntimeEquipmentSnapshot(
+        Assert.Throws<ArgumentException>(() => new RuntimeEquipmentInstanceSnapshot(
+            default,
+            Id("shortsword")));
+        Assert.Throws<ArgumentException>(() => new RuntimeEquipmentSnapshot(
         [
-            new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, default)
-        ]);
-
-        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver().Resolve(
-            equipment,
-            new TestEquipmentRepository());
-
-        RuntimeEquipmentProfileDiagnostic diagnostic = Assert.Single(profile.Diagnostics);
-        Assert.Equal(RuntimeEquipmentProfileDiagnosticCode.InvalidIdentifier, diagnostic.Code);
-        Assert.Equal(EquipmentSlot.Weapon, diagnostic.Slot);
-        Assert.True(diagnostic.EquipmentId.IsEmpty);
-        Assert.Empty(profile.EquippedDefinitions);
-        Assert.Null(profile.BasicAttack);
+            new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(EquipmentSlot.Weapon, default)
+        ]));
     }
 
     [Fact]
@@ -244,8 +290,19 @@ public sealed class ResourceManagementServiceTests
         var wallet = new RuntimeWalletSnapshot(90);
         var medicine = new RuntimeShopOfferSnapshot(ShopContentKind.Item, Id("medicine"), 100);
 
-        ShopTransactionResult bought = shop.Buy(inventory, wallet, medicine, buyerLuck: 10);
-        ShopTransactionResult sold = shop.Sell(bought.AfterInventory, bought.AfterWallet, medicine, sellerLuck: 10);
+        ShopTransactionResult bought = shop.Buy(
+            inventory,
+            wallet,
+            medicine,
+            buyerLuck: 10,
+            purchasedEquipmentInstanceId: null);
+        ShopTransactionResult sold = shop.Sell(
+            bought.AfterInventory,
+            bought.AfterWallet,
+            medicine,
+            sellerLuck: 10,
+            soldEquipmentInstanceId: null,
+            actorEquipment: []);
 
         Assert.Equal(90, shop.CalculateBuyPrice(100, 10));
         Assert.Equal(60, shop.CalculateSellPrice(100, 10));
@@ -299,22 +356,36 @@ public sealed class ResourceManagementServiceTests
         Assert.Equal(29, shop.CalculateSellPrice(50, 8));
         Assert.Equal(1_073_741_823, shop.CalculateBuyPrice(int.MaxValue, int.MaxValue));
 
-        ShopTransactionResult invalidBuy = shop.Buy(inventory, wallet, ordinaryOffer, buyerLuck: -1);
-        ShopTransactionResult overflowingSell = shop.Sell(inventory, wallet, extremeOffer, sellerLuck: int.MaxValue);
+        ShopTransactionResult invalidBuy = shop.Buy(
+            inventory,
+            wallet,
+            ordinaryOffer,
+            buyerLuck: -1,
+            purchasedEquipmentInstanceId: null);
+        ShopTransactionResult overflowingSell = shop.Sell(
+            inventory,
+            wallet,
+            extremeOffer,
+            sellerLuck: int.MaxValue,
+            soldEquipmentInstanceId: null,
+            actorEquipment: []);
 
         AssertPricingRejectedWithoutMutation(invalidBuy, inventory, wallet, "cannot be negative");
         AssertPricingRejectedWithoutMutation(overflowingSell, inventory, wallet, "integer range");
     }
 
     [Fact]
-    public void ShopService_RejectsInsufficientCurrencyDuplicateEquipmentAndMissingStock()
+    public void ShopService_AllowsDuplicateDefinitionsAndRejectsDuplicateInstanceInsufficientCurrencyAndMissingStock()
     {
         var shop = new ShopTransactionService();
         ContentId sword = Id("shortsword");
+        RuntimeInstanceId ownedInstanceId = Instance("sword-001");
         var ownedSword = new RuntimeInventorySnapshot(
-            ownedEquipmentIds:
+            ownedEquipmentInstances:
             [
-                new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(EquipmentSlot.Weapon, [sword])
+                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    EquipmentSlot.Weapon,
+                    [new RuntimeEquipmentInstanceSnapshot(ownedInstanceId, sword)])
             ]);
         var wallet = new RuntimeWalletSnapshot(1_000);
         var swordOffer = new RuntimeShopOfferSnapshot(
@@ -325,10 +396,33 @@ public sealed class ResourceManagementServiceTests
         var emptyStock = swordOffer with { StockAvailable = 0 };
         var priceyItem = new RuntimeShopOfferSnapshot(ShopContentKind.Item, Id("bead"), 2_000);
 
-        ShopTransactionResult duplicate = shop.Buy(ownedSword, wallet, swordOffer, buyerLuck: 0);
-        ShopTransactionResult stock = shop.Buy(new RuntimeInventorySnapshot(), wallet, emptyStock, buyerLuck: 0);
-        ShopTransactionResult insufficient = shop.Buy(new RuntimeInventorySnapshot(), wallet, priceyItem, buyerLuck: 0);
+        ShopTransactionResult anotherCopy = shop.Buy(
+            ownedSword,
+            wallet,
+            swordOffer,
+            buyerLuck: 0,
+            purchasedEquipmentInstanceId: Instance("sword-002"));
+        ShopTransactionResult duplicate = shop.Buy(
+            ownedSword,
+            wallet,
+            swordOffer,
+            buyerLuck: 0,
+            purchasedEquipmentInstanceId: ownedInstanceId);
+        ShopTransactionResult stock = shop.Buy(
+            new RuntimeInventorySnapshot(),
+            wallet,
+            emptyStock,
+            buyerLuck: 0,
+            purchasedEquipmentInstanceId: Instance("sword-003"));
+        ShopTransactionResult insufficient = shop.Buy(
+            new RuntimeInventorySnapshot(),
+            wallet,
+            priceyItem,
+            buyerLuck: 0,
+            purchasedEquipmentInstanceId: null);
 
+        Assert.True(anotherCopy.Applied);
+        Assert.Equal(2, anotherCopy.AfterInventory.GetEquipmentInstances(EquipmentSlot.Weapon).Count);
         Assert.Equal(ResourceTransactionCode.EquipmentDuplicate, duplicate.Code);
         Assert.Equal(1_000, duplicate.AfterWallet.Balance);
         Assert.Equal(ResourceTransactionCode.ShopStockUnavailable, stock.Code);
@@ -525,6 +619,7 @@ public sealed class ResourceManagementServiceTests
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+    private static RuntimeInstanceId Instance(string value) => RuntimeInstanceId.Parse(value);
 
     private static void AssertPricingRejectedWithoutMutation(
         ShopTransactionResult result,

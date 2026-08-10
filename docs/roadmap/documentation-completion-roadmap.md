@@ -649,13 +649,14 @@ is the formal Order 4 closure authority.
 The owner-approved
 [Inventory, Equipment, And Economy Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 records the governing policy-extraction rule and decisions O7-D1 through O7-D8.
-Order 7 will directly correct equipment-instance ownership, duplicated save
-authority, and typed currency state; it will add policy seams only for authored
-slot layouts, pricing, shop stock, and recovery. Equipped-only granted skills
+O7-R2 directly corrects equipment-instance ownership and duplicated save
+authority. Later checkpoints will directly correct typed currency state and
+add policy seams only for authored slot layouts, pricing, shop stock, and
+recovery. Equipped-only granted skills
 and Defense/Evasion combat contributions are fixed integration rules rather
 than new policies.
 
-The capability is `partial` while implementation is pending. Its mechanics and
+The capability is `partial` while implementation remains open. Its mechanics and
 technical entries remain `existing_unreviewed`, and its developer guide remains
 `missing`; those audience counts do not change merely because owner intent is
 now confirmed. Order 7 closes only after the ordered runtime checkpoints,

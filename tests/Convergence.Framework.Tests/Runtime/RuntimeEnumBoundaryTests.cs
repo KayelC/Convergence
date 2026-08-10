@@ -17,9 +17,11 @@ public sealed class RuntimeEnumBoundaryTests
     {
         StatusLifetimeDefinition duration = StandardStatusLifetimes.Persistent;
 
-        AssertUndefined("equippedItemIds", () => new RuntimeEquipmentSnapshot(
+        AssertUndefined("equippedInstanceIds", () => new RuntimeEquipmentSnapshot(
         [
-            new KeyValuePair<EquipmentSlot, ContentId>(Undefined<EquipmentSlot>(), Id("equipment"))
+            new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                Undefined<EquipmentSlot>(),
+                RuntimeInstanceId.Parse("equipment-001"))
         ]));
         AssertUndefined("kind", () => new RuntimeChargeSnapshot(
             Undefined<ChargeKind>(),
@@ -47,12 +49,16 @@ public sealed class RuntimeEnumBoundaryTests
         ContentId entityId = Id("test.pack:entity");
         ContentId ailmentId = Id("test.pack:ailment");
 
-        AssertUndefined("ownedEquipmentIds", () => new RuntimeInventorySnapshot(
-            ownedEquipmentIds:
+        AssertUndefined("ownedEquipmentInstances", () => new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
             [
-                new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(
+                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
                     Undefined<EquipmentSlot>(),
-                    [Id("test.pack:equipment")])
+                    [
+                        new RuntimeEquipmentInstanceSnapshot(
+                            RuntimeInstanceId.Parse("equipment-001"),
+                            Id("test.pack:equipment"))
+                    ])
             ]));
         AssertUndefined("Element", () => new RuntimeElementalAffinityKnowledgeSnapshot(
             entityId,
@@ -120,10 +126,11 @@ public sealed class RuntimeEnumBoundaryTests
         StatusLifetimeDefinition duration = StandardStatusLifetimes.Persistent;
         RuntimeEquipmentSnapshot malformedEquipment = CloneWithProperty(
             new RuntimeEquipmentSnapshot(),
-            nameof(RuntimeEquipmentSnapshot.EquippedItemIds),
-            (IReadOnlyDictionary<EquipmentSlot, ContentId>)new Dictionary<EquipmentSlot, ContentId>
+            nameof(RuntimeEquipmentSnapshot.EquippedInstanceIds),
+            (IReadOnlyDictionary<EquipmentSlot, RuntimeInstanceId>)
+            new Dictionary<EquipmentSlot, RuntimeInstanceId>
             {
-                [Undefined<EquipmentSlot>()] = Id("convergence.catalog_surface_sample:shortsword_sample")
+                [Undefined<EquipmentSlot>()] = RuntimeInstanceId.Parse("shortsword-001")
             });
         RuntimeBattleStatusSnapshot malformedStatus = new(
             chargeState: new RuntimeChargeStateSnapshot(
@@ -174,7 +181,7 @@ public sealed class RuntimeEnumBoundaryTests
             save,
             RuntimePersistenceSnapshotTests.LoadCatalog());
 
-        AssertUndefinedDiagnostic(validation, "$.actors[0].equipment.equippedItemIds.999");
+        AssertUndefinedDiagnostic(validation, "$.actors[0].equipment.equippedInstanceIds.999");
         AssertUndefinedDiagnostic(validation, "$.actors[0].battleStatus.charges[0].kind");
         AssertUndefinedDiagnostic(validation, "$.actors[0].battleStatus.shields[0].kind");
         AssertUndefinedDiagnostic(validation, "$.actors[0].battleStatus.affinityBreaks[0].element");
@@ -184,7 +191,7 @@ public sealed class RuntimeEnumBoundaryTests
         ArgumentException restore = Assert.Throws<ArgumentException>(() => RuntimeActorState.Restore(
             malformed,
             CombatDefenseProfile.Empty));
-        Assert.Contains("$.equipment.equippedItemIds", restore.Message, StringComparison.Ordinal);
+        Assert.Contains("$.equipment.equippedInstanceIds", restore.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -195,19 +202,16 @@ public sealed class RuntimeEnumBoundaryTests
         ContentId ailmentId = Id("convergence.shared_effects_demo:poison_demo");
         RuntimeInventorySnapshot malformedInventory = CloneWithProperty(
             baseline.Inventory,
-            nameof(RuntimeInventorySnapshot.OwnedEquipmentIds),
-            (IReadOnlyDictionary<EquipmentSlot, IReadOnlyList<ContentId>>)
-            new Dictionary<EquipmentSlot, IReadOnlyList<ContentId>>
+            nameof(RuntimeInventorySnapshot.OwnedEquipmentInstances),
+            (IReadOnlyDictionary<EquipmentSlot, IReadOnlyList<RuntimeEquipmentInstanceSnapshot>>)
+            new Dictionary<EquipmentSlot, IReadOnlyList<RuntimeEquipmentInstanceSnapshot>>
             {
                 [Undefined<EquipmentSlot>()] = Array.AsReadOnly(
-                    [Id("convergence.catalog_surface_sample:shortsword_sample")])
-            });
-        RuntimeEquipmentSnapshot malformedEquipment = CloneWithProperty(
-            baseline.Equipment,
-            nameof(RuntimeEquipmentSnapshot.EquippedItemIds),
-            (IReadOnlyDictionary<EquipmentSlot, ContentId>)new Dictionary<EquipmentSlot, ContentId>
-            {
-                [Undefined<EquipmentSlot>()] = Id("convergence.catalog_surface_sample:shortsword_sample")
+                    [
+                        new RuntimeEquipmentInstanceSnapshot(
+                            RuntimeInstanceId.Parse("shortsword-001"),
+                            Id("convergence.catalog_surface_sample:shortsword_sample"))
+                    ])
             });
         var validElemental = new RuntimeElementalAffinityKnowledgeSnapshot(
             entityId,
@@ -251,7 +255,6 @@ public sealed class RuntimeEnumBoundaryTests
         RuntimeSaveGameSnapshot save = CopySave(
             baseline,
             inventory: malformedInventory,
-            equipment: malformedEquipment,
             knowledge: knowledge,
             checkpoints: new RuntimeCheckpointLogSnapshot([malformedCheckpoint]));
 
@@ -259,8 +262,7 @@ public sealed class RuntimeEnumBoundaryTests
             save,
             RuntimePersistenceSnapshotTests.LoadCatalog());
 
-        AssertUndefinedDiagnostic(validation, "$.inventory.ownedEquipmentIds.999");
-        AssertUndefinedDiagnostic(validation, "$.equipment.equippedItemIds.999");
+        AssertUndefinedDiagnostic(validation, "$.inventory.ownedEquipmentInstances.999");
         AssertUndefinedDiagnostic(validation, "$.knowledge.elementalAffinities[0].element");
         AssertUndefinedDiagnostic(validation, "$.knowledge.elementalAffinities[1].affinity");
         AssertUndefinedDiagnostic(validation, "$.knowledge.ailmentResistances[0].resistance");
@@ -297,7 +299,6 @@ public sealed class RuntimeEnumBoundaryTests
         RuntimeSaveGameSnapshot source,
         IEnumerable<RuntimeActorSnapshot>? actors = null,
         RuntimeInventorySnapshot? inventory = null,
-        RuntimeEquipmentSnapshot? equipment = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeCheckpointLogSnapshot? checkpoints = null) =>
         new(
@@ -306,7 +307,6 @@ public sealed class RuntimeEnumBoundaryTests
             actors ?? source.Actors,
             source.PartyRoster,
             inventory ?? source.Inventory,
-            equipment ?? source.Equipment,
             source.Wallet,
             source.Field,
             source.Compendium,

@@ -235,7 +235,7 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Equal(Id("player_team"), recalledSnapshot.Affiliation.TeamId);
         Assert.All(recalledSnapshot.Resources, resource => Assert.Equal(resource.Maximum, resource.Current));
         Assert.Empty(recalledSnapshot.BattleStatus.Ailments);
-        Assert.Empty(recalledSnapshot.Equipment.EquippedItemIds);
+        Assert.Empty(recalledSnapshot.Equipment.EquippedInstanceIds);
         Assert.Empty(party.CompanionRoster);
         Assert.Equal(10_000, wallet.Balance);
     }

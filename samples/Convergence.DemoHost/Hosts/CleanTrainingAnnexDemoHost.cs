@@ -410,7 +410,6 @@ internal sealed class CleanTrainingAnnexDemoHost
             actorSnapshots,
             partyRoster,
             new RuntimeInventorySnapshot(inventory),
-            new RuntimeEquipmentSnapshot(),
             new RuntimeWalletSnapshot(reward.TotalCurrency),
             field,
             new CompendiumStateSnapshot(),

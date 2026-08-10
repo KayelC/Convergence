@@ -290,18 +290,34 @@ public sealed record RuntimeActorReferenceSnapshot
 
 public sealed record RuntimeEquipmentSnapshot
 {
-    public RuntimeEquipmentSnapshot(IEnumerable<KeyValuePair<EquipmentSlot, ContentId>>? equippedItemIds = null)
+    public RuntimeEquipmentSnapshot(
+        IEnumerable<KeyValuePair<EquipmentSlot, RuntimeInstanceId>>? equippedInstanceIds = null)
     {
-        KeyValuePair<EquipmentSlot, ContentId>[] entries = equippedItemIds?.ToArray() ?? [];
-        foreach ((EquipmentSlot slot, _) in entries)
+        KeyValuePair<EquipmentSlot, RuntimeInstanceId>[] entries =
+            equippedInstanceIds?.ToArray() ?? [];
+        var seenInstanceIds = new HashSet<RuntimeInstanceId>();
+        foreach ((EquipmentSlot slot, RuntimeInstanceId instanceId) in entries)
         {
-            EnumDomain.RequireDefined(slot, nameof(equippedItemIds));
+            EnumDomain.RequireDefined(slot, nameof(equippedInstanceIds));
+            if (!instanceId.IsValid)
+            {
+                throw new ArgumentException(
+                    "Equipped equipment instance IDs must be valid.",
+                    nameof(equippedInstanceIds));
+            }
+
+            if (!seenInstanceIds.Add(instanceId))
+            {
+                throw new ArgumentException(
+                    $"Equipment instance '{instanceId}' cannot occupy more than one slot.",
+                    nameof(equippedInstanceIds));
+            }
         }
 
-        EquippedItemIds = RuntimeSnapshotCollections.Dictionary(entries);
+        EquippedInstanceIds = RuntimeSnapshotCollections.Dictionary(entries);
     }
 
-    public IReadOnlyDictionary<EquipmentSlot, ContentId> EquippedItemIds { get; }
+    public IReadOnlyDictionary<EquipmentSlot, RuntimeInstanceId> EquippedInstanceIds { get; }
 }
 
 public sealed record RuntimeTimedStateSnapshot

@@ -365,7 +365,7 @@ is published.
 
 ## Persistence
 
-Save contract v15 preserves:
+Save contract v16 preserves:
 
 - active ailments and other timed state with expiration and removal profile;
 - stat-modifier and charge-policy state;

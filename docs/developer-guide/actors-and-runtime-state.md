@@ -326,9 +326,10 @@ for later loadout editing.
 ## Save And Restore
 
 The host serializes `RuntimeSaveGameSnapshot`; Framework does not own the file
-format. Save contract v15 includes actors, the canonical party roster, pending
+format. Save contract v16 includes actors, the canonical party roster, pending
 skill choices, complete selected-policy stat-modifier state, combat-profile
-source/revision identity, and the remaining session modules.
+source/revision identity, inventory-owned equipment instances with actor
+loadout references, and the remaining session modules.
 
 Restore through `RuntimeSessionRestoreService`:
 
@@ -351,7 +352,7 @@ equipment stat modifiers.
 
 ```mermaid
 flowchart TD
-    Save["Host-deserialized save v15"] --> Validate["Validate complete aggregate"]
+    Save["Host-deserialized save v16"] --> Validate["Validate complete aggregate"]
     Validate --> Modifiers["Bind retained modifier policies"]
     Modifiers --> Profiles["Resolve actor restore profiles"]
     Profiles --> Sources["Restore owned source actors"]

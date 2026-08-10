@@ -22,6 +22,8 @@ public sealed class CleanSaveDemoHostTests
 
         Assert.Contains("\"contractVersion\"", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("\"ownerLevel\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("\"Equipment\":", json, StringComparison.Ordinal);
+        Assert.Contains("\"OwnedEquipmentInstances\"", json, StringComparison.Ordinal);
         Assert.Equal(RuntimeSaveGameSnapshot.CurrentContractVersion, restored.ContractVersion);
         Assert.Equal(snapshot.ContractVersion, restored.ContractVersion);
         Assert.Equal(snapshot.FrameworkVersion, restored.FrameworkVersion);
@@ -37,6 +39,16 @@ public sealed class CleanSaveDemoHostTests
         Assert.Equal(
             snapshot.Inventory.ItemQuantities.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)),
             restored.Inventory.ItemQuantities.OrderBy(pair => pair.Key.ToString()).Select(pair => KeyValuePair.Create(pair.Key.ToString(), pair.Value)));
+        Assert.Equal(
+            snapshot.Inventory.OwnedEquipmentInstances
+                .SelectMany(pair => pair.Value)
+                .OrderBy(instance => instance.InstanceId.ToString()),
+            restored.Inventory.OwnedEquipmentInstances
+                .SelectMany(pair => pair.Value)
+                .OrderBy(instance => instance.InstanceId.ToString()));
+        Assert.Equal(
+            snapshot.Actors[0].Equipment.EquippedInstanceIds,
+            restored.Actors[0].Equipment.EquippedInstanceIds);
         Assert.Equal(snapshot.Wallet.Balance, restored.Wallet.Balance);
         Assert.Equal(
             snapshot.Field!.DungeonTraversal!.CurrentNodeId,

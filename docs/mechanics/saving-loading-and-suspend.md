@@ -8,7 +8,7 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 
 ## Save Contents
 
-The current runtime save contract is version `15`.
+The current runtime save contract is version `16`.
 
 `RuntimeSaveGameSnapshot` contains:
 
@@ -17,7 +17,8 @@ The current runtime save contract is version `15`.
   stat-modifier state, retained charge-policy identity, and combat-profile
   source/revision identity;
 - party, reserve, Active Hosted Entity, Hosted Entity Roster, and Companion Roster references;
-- inventory and equipped items;
+- inventory-owned equipment instances and per-actor equipped-instance
+  references;
 - wallet;
 - optional navigation and dungeon traversal progress;
 - Compendium entries;
@@ -30,8 +31,8 @@ These fields describe the current aggregate shape; they do not activate every
 listed mechanic. Hosts that use Framework persistence provide neutral snapshots
 for required modules they do not use:
 
-- an inventory with no quantities or owned equipment;
-- an equipment snapshot with no equipped IDs;
+- an inventory with no quantities or owned equipment instances;
+- actors whose equipment snapshots contain no equipped-instance references;
 - a wallet with balance `0`;
 - an empty Compendium and knowledge snapshot;
 - session progress with no counters, flags, elapsed time, or moon phase;
@@ -125,6 +126,14 @@ each actor snapshot. This lets restore validate and reconstruct a Vessel's
 derived profile before profile-sensitive systems such as Battle Knowledge use
 it. Convergence supplies no automatic v14-to-v15 migration for these unreleased
 formats.
+
+Version 16 replaces equipment definition IDs used as owned copies with
+immutable equipment-instance records. Inventory is the sole owner of each
+instance; actor equipment snapshots reference those instance IDs. The former
+root equipment snapshot is removed. Validation rejects missing instances,
+duplicate instance identity, one instance assigned to multiple actors, and
+equipment IDs that collide with actor runtime IDs. Convergence supplies no
+automatic v15-to-v16 migration for these unreleased formats.
 
 ## Related Guidance
 

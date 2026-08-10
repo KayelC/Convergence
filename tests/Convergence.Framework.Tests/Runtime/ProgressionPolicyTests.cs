@@ -342,9 +342,9 @@ public sealed class ProgressionPolicyTests
             skills: [fireSkill]);
         RuntimeEquipmentSnapshot equipment = new(
         [
-            new KeyValuePair<EquipmentSlot, ContentId>(
+            new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
                 EquipmentSlot.Weapon,
-                ContentId.Parse("test.pack:practice_weapon"))
+                RuntimeInstanceId.Parse("practice-weapon-001"))
         ]);
         RuntimeActorState vessel = CreateActor(
             "profile_vessel",
@@ -1032,8 +1032,8 @@ public sealed class ProgressionPolicyTests
             expected.Stats.EffectiveStats.OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal).ToArray(),
             actual.Stats.EffectiveStats.OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal).ToArray());
         Assert.Equal(
-            expected.Equipment.EquippedItemIds.OrderBy(pair => pair.Key).ToArray(),
-            actual.Equipment.EquippedItemIds.OrderBy(pair => pair.Key).ToArray());
+            expected.Equipment.EquippedInstanceIds.OrderBy(pair => pair.Key).ToArray(),
+            actual.Equipment.EquippedInstanceIds.OrderBy(pair => pair.Key).ToArray());
         Assert.Equal(expected.Skills.LearnedSkillIds, actual.Skills.LearnedSkillIds);
         Assert.Equal(expected.Skills.EquippedSkillIds, actual.Skills.EquippedSkillIds);
         Assert.Equal(expected.BattleStatus, actual.BattleStatus);

@@ -17,9 +17,11 @@ internal sealed record TrainingAnnexShopTransactionEvidence(
     int WalletAfter,
     int OwnedCountBefore,
     int OwnedCountAfter,
-    EquipmentSlot? EquipmentSlot);
+    EquipmentSlot? EquipmentSlot,
+    RuntimeInstanceId? EquipmentInstanceId);
 
 internal sealed record TrainingAnnexEquipmentChangeEvidence(
+    RuntimeInstanceId EquipmentInstanceId,
     ContentId EquipmentId,
     EquipmentSlot Slot,
     ResourceTransactionCode Code,
@@ -187,12 +189,22 @@ internal sealed class TrainingAnnexShopController
                 offerDiagnostics);
         }
 
+        RuntimeInstanceId? purchasedEquipmentInstanceId =
+            offer.Runtime.ContentKind == ShopContentKind.Equipment
+                ? NextEquipmentInstanceId(inventory.Snapshot)
+                : null;
         ShopTransactionResult purchase = shopTransactions.Buy(
             inventory.Snapshot,
             wallet,
             offer.Runtime,
-            luck);
-        transactionEvidence.Add(ToShopEvidence(shop.Id, offer.Runtime, purchase, isPurchase: true));
+            luck,
+            purchasedEquipmentInstanceId);
+        transactionEvidence.Add(ToShopEvidence(
+            shop.Id,
+            offer.Runtime,
+            purchase,
+            isPurchase: true,
+            purchasedEquipmentInstanceId));
         if (!purchase.Applied)
         {
             await PublishShopTransactionFailureAsync("purchase", offer, purchase, cancellationToken)
@@ -219,6 +231,7 @@ internal sealed class TrainingAnnexShopController
                 player,
                 inventory,
                 offer,
+                purchasedEquipmentInstanceId!.Value,
                 slot,
                 commands,
                 equipmentEvidence,
@@ -278,13 +291,24 @@ internal sealed class TrainingAnnexShopController
                 offerDiagnostics);
         }
 
+        RuntimeInstanceId? soldEquipmentInstanceId =
+            FindSellableEquipmentInstance(
+                inventory.Snapshot,
+                offer.Runtime,
+                player.Actor.State.ToSnapshot().Equipment);
         ShopTransactionResult sale = shopTransactions.Sell(
             inventory.Snapshot,
             wallet,
             offer.Runtime,
             luck,
-            player.Actor.State.ToSnapshot().Equipment);
-        transactionEvidence.Add(ToShopEvidence(shop.Id, offer.Runtime, sale, isPurchase: false));
+            soldEquipmentInstanceId,
+            [player.Actor.State.ToSnapshot().Equipment]);
+        transactionEvidence.Add(ToShopEvidence(
+            shop.Id,
+            offer.Runtime,
+            sale,
+            isPurchase: false,
+            soldEquipmentInstanceId));
         if (!sale.Applied)
         {
             await PublishShopTransactionFailureAsync("sale", offer, sale, cancellationToken)
@@ -311,6 +335,7 @@ internal sealed class TrainingAnnexShopController
         TrainingAnnexRuntimeActor player,
         TrainingAnnexItemActionInventory inventory,
         TrainingAnnexResolvedShopOffer offer,
+        RuntimeInstanceId equipmentInstanceId,
         EquipmentSlot slot,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         List<TrainingAnnexEquipmentChangeEvidence> equipmentEvidence,
@@ -333,10 +358,12 @@ internal sealed class TrainingAnnexShopController
         EquipmentTransitionResult equipResult = equipmentTransitions.Equip(
             inventory.Snapshot,
             player.Actor.State.ToSnapshot().Equipment,
-            offer.Runtime.ContentId,
+            equipmentInstanceId,
             slot,
-            slot);
+            slot,
+            []);
         equipmentEvidence.Add(new TrainingAnnexEquipmentChangeEvidence(
+            equipmentInstanceId,
             offer.Runtime.ContentId,
             slot,
             equipResult.Code,
@@ -345,6 +372,7 @@ internal sealed class TrainingAnnexShopController
         {
             player.Actor.State.ReplaceEquipment(equipResult.After);
             RuntimeEquipmentProfile profile = equipmentProfileResolver.Resolve(
+                inventory.Snapshot,
                 equipResult.After,
                 catalog);
             string slots = string.Join(
@@ -457,7 +485,16 @@ internal sealed class TrainingAnnexShopController
         List<HostCommandOption<CleanTrainingAnnexPlayCommand>> options = offers
             .Select(offer =>
             {
-                ShopTransactionResult assessment = shopTransactions.Buy(inventory, wallet, offer.Runtime, luck);
+                RuntimeInstanceId? equipmentInstanceId =
+                    offer.Runtime.ContentKind == ShopContentKind.Equipment
+                        ? NextEquipmentInstanceId(inventory)
+                        : null;
+                ShopTransactionResult assessment = shopTransactions.Buy(
+                    inventory,
+                    wallet,
+                    offer.Runtime,
+                    luck,
+                    equipmentInstanceId);
                 int price = shopTransactions.CalculateBuyPrice(offer.Runtime.BasePrice, luck);
                 return new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.SelectShopOffer,
@@ -502,7 +539,8 @@ internal sealed class TrainingAnnexShopController
                     wallet,
                     offer.Runtime,
                     luck,
-                    equipment);
+                    FindSellableEquipmentInstance(inventory, offer.Runtime, equipment),
+                    [equipment]);
                 int price = shopTransactions.CalculateSellPrice(offer.Runtime.BasePrice, luck);
                 return new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.SelectSellOffer,
@@ -550,7 +588,8 @@ internal sealed class TrainingAnnexShopController
         {
             ShopContentKind.Item => inventory.GetQuantity(offer.ContentId) > 0,
             ShopContentKind.Equipment when offer.EquipmentSlot is EquipmentSlot slot =>
-                inventory.OwnsEquipment(offer.ContentId, slot),
+                inventory.GetEquipmentInstances(slot).Any(instance =>
+                    instance.DefinitionId == offer.ContentId),
             _ => false
         };
 
@@ -562,7 +601,9 @@ internal sealed class TrainingAnnexShopController
         {
             ShopContentKind.Item => $" (owned {inventory.GetQuantity(offer.ContentId)})",
             ShopContentKind.Equipment when offer.EquipmentSlot is EquipmentSlot slot &&
-                                           inventory.OwnsEquipment(offer.ContentId, slot) => " (owned)",
+                                           inventory.GetEquipmentInstances(slot).Any(instance =>
+                                               instance.DefinitionId == offer.ContentId) =>
+                $" (owned {inventory.GetEquipmentInstances(slot).Count(instance => instance.DefinitionId == offer.ContentId)})",
             _ => string.Empty
         };
 
@@ -587,7 +628,8 @@ internal sealed class TrainingAnnexShopController
         ContentId shopId,
         RuntimeShopOfferSnapshot offer,
         ShopTransactionResult result,
-        bool isPurchase) =>
+        bool isPurchase,
+        RuntimeInstanceId? equipmentInstanceId) =>
         new(
             shopId,
             offer.ContentId,
@@ -599,16 +641,56 @@ internal sealed class TrainingAnnexShopController
             result.AfterWallet.Balance,
             OwnedCount(result.BeforeInventory, offer),
             OwnedCount(result.AfterInventory, offer),
-            offer.EquipmentSlot);
+            offer.EquipmentSlot,
+            equipmentInstanceId);
 
     private static int OwnedCount(RuntimeInventorySnapshot inventory, RuntimeShopOfferSnapshot offer) =>
         offer.ContentKind switch
         {
             ShopContentKind.Item => inventory.GetQuantity(offer.ContentId),
             ShopContentKind.Equipment when offer.EquipmentSlot is EquipmentSlot slot =>
-                inventory.OwnsEquipment(offer.ContentId, slot) ? 1 : 0,
+                inventory.GetEquipmentInstances(slot).Count(instance =>
+                    instance.DefinitionId == offer.ContentId),
             _ => 0
         };
+
+    private static RuntimeInstanceId NextEquipmentInstanceId(
+        RuntimeInventorySnapshot inventory)
+    {
+        for (int sequence = 1; sequence < int.MaxValue; sequence++)
+        {
+            RuntimeInstanceId candidate =
+                RuntimeInstanceId.Parse($"training-annex-shop-equipment-{sequence}");
+            if (!inventory.TryGetEquipmentInstance(candidate, out _, out _))
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "No equipment runtime instance ID remained available for the shop purchase.");
+    }
+
+    private static RuntimeInstanceId? FindSellableEquipmentInstance(
+        RuntimeInventorySnapshot inventory,
+        RuntimeShopOfferSnapshot offer,
+        RuntimeEquipmentSnapshot equipment)
+    {
+        if (offer.ContentKind != ShopContentKind.Equipment ||
+            offer.EquipmentSlot is not EquipmentSlot slot)
+        {
+            return null;
+        }
+
+        RuntimeEquipmentInstanceSnapshot[] matches = inventory
+            .GetEquipmentInstances(slot)
+            .Where(instance => instance.DefinitionId == offer.ContentId)
+            .ToArray();
+        RuntimeEquipmentInstanceSnapshot? selected = matches.FirstOrDefault(instance =>
+            !equipment.EquippedInstanceIds.Values.Contains(instance.InstanceId)) ??
+            matches.FirstOrDefault();
+        return selected?.InstanceId;
+    }
 
     private async ValueTask PublishShopTransactionFailureAsync(
         string action,

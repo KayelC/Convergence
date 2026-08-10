@@ -16,13 +16,13 @@ internal static class CleanSaveTestFixture
         IEnumerable<RuntimeCheckpointEntrySnapshot>? checkpoints = null,
         RuntimePartyRosterSnapshot? partyRoster = null,
         RuntimeInventorySnapshot? inventory = null,
-        RuntimeEquipmentSnapshot? equipment = null,
         RuntimeFieldSnapshot? field = null,
         CompendiumStateSnapshot? compendium = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
         int contractVersion = RuntimeSaveGameSnapshot.CurrentContractVersion,
         bool includeDefaultField = true)
     {
+        RuntimeInstanceId shortswordInstanceId = RuntimeInstanceId.Parse("shortsword-001");
         RuntimeActorSnapshot frost = CreateActor(
             RuntimeInstanceId.Parse("frost"),
             Id("convergence.clean_battle_demo:frost_duelist_demo"),
@@ -36,7 +36,13 @@ internal static class CleanSaveTestFixture
                 new RuntimePassiveSkillStateSnapshot(
                     Id("convergence.skill_system_redesign_sample:ice_boost_sample"),
                     IsEnabled: true)
-            ]);
+            ],
+            equipment: new RuntimeEquipmentSnapshot(
+            [
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                    EquipmentSlot.Weapon,
+                    shortswordInstanceId)
+            ]));
         RuntimeActorSnapshot ember = CreateActor(
             RuntimeInstanceId.Parse("ember"),
             Id("convergence.clean_battle_demo:ember_duelist_demo"),
@@ -62,16 +68,14 @@ internal static class CleanSaveTestFixture
             inventory ?? new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Id("convergence.shared_effects_demo:medicine_demo"), 2)],
                 [
-                    new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(
+                    new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
                         EquipmentSlot.Weapon,
-                        [Id("convergence.catalog_surface_sample:shortsword_sample")])
+                        [
+                            new RuntimeEquipmentInstanceSnapshot(
+                                shortswordInstanceId,
+                                Id("convergence.catalog_surface_sample:shortsword_sample"))
+                        ])
                 ]),
-            equipment ?? new RuntimeEquipmentSnapshot(
-            [
-                new KeyValuePair<EquipmentSlot, ContentId>(
-                    EquipmentSlot.Weapon,
-                    Id("convergence.catalog_surface_sample:shortsword_sample"))
-            ]),
             new RuntimeWalletSnapshot(1234),
             field ?? (includeDefaultField
                 ? new RuntimeFieldSnapshot(
@@ -140,7 +144,8 @@ internal static class CleanSaveTestFixture
         ContentId entityId,
         IEnumerable<ContentId>? learnedSkills = null,
         IEnumerable<RuntimeTimedStateSnapshot>? ailments = null,
-        IEnumerable<RuntimePassiveSkillStateSnapshot>? passiveSkillStates = null) =>
+        IEnumerable<RuntimePassiveSkillStateSnapshot>? passiveSkillStates = null,
+        RuntimeEquipmentSnapshot? equipment = null) =>
         new(
             new RuntimeActorIdentitySnapshot(instanceId, entityId, Id("companion"), entityId.ToString()),
             new RuntimeActorAffiliationSnapshot(Id("host"), Id("player_team")),
@@ -156,7 +161,7 @@ internal static class CleanSaveTestFixture
             new RuntimeSkillStateSnapshot(
                 learnedSkills ?? [Id("convergence.clean_battle_demo:frost_lance_demo")],
                 learnedSkills ?? [Id("convergence.clean_battle_demo:frost_lance_demo")]),
-            new RuntimeEquipmentSnapshot(),
+            equipment ?? new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(ailments: ailments),
             new RuntimeBattleActivationSnapshot(passiveSkillStates: passiveSkillStates),
             [new KeyValuePair<ContentId, decimal>(Id("hp"), 40)],

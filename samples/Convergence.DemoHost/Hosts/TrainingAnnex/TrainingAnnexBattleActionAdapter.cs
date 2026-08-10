@@ -196,6 +196,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _catalog,
             _catalog,
             new EquipmentBattleBasicAttackProfileSource(
+                inventory.Snapshot,
                 _catalog,
                 basicAttackTargeting,
                 _equipmentProfileResolver));
@@ -509,6 +510,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             }
 
             RuntimeEquipmentProfile profile = _equipmentProfileResolver.Resolve(
+                _inventory.Snapshot,
                 actor.State.ToSnapshot().Equipment,
                 _catalog);
             if (profile.BasicAttack is null)

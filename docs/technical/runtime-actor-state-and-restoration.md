@@ -18,7 +18,9 @@ The source-based
 confirmed the composition, skill-choice, stage, and original save-v8
 transaction design. Subsequent corrections advanced actor restoration through
 save v9, later lifecycle work advanced it through v13, and Battle Knowledge
-authority cleanup established save v14; combat-profile identity advances the current contract to save v15.
+authority cleanup established save v14, and combat-profile identity established
+save v15. Equipment-instance ownership advances the current contract to save
+v16 and removes the duplicated root equipment authority.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives
@@ -312,7 +314,8 @@ The save aggregate contains:
 - selected stat-modifier policy IDs, ordered contributions, durations, and
   lifecycle boundaries;
 - one canonical party roster;
-- inventory, equipment, and wallet;
+- inventory-owned equipment instances, actor loadout instance references, and
+  wallet;
 - optional field and dungeon state;
 - Compendium and battle knowledge;
 - session progress;
@@ -334,7 +337,8 @@ revision. Roster ownership is not copied into actor snapshots.
 - combat-profile source existence and source-entity agreement;
 - pending skill tokens, IDs, levels, and revisions;
 - passive activation target references when per-target counting is retained;
-- inventory, equipment, field, Compendium, and knowledge references.
+- inventory equipment-instance ownership, actor loadout references, field,
+  Compendium, and knowledge references.
 
 ## Aggregate Restoration
 

@@ -12,10 +12,11 @@ Phase 8 established the clean product boundary. Framework, DemoHost, tests, and 
 
 Documentation Order 7 is open under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
-The current resource-management foundation remains usable, but the capability
-is `partial` until equipment-instance ownership, authored slot layouts,
-equipped combat contributions, stateful shop stock, explicit pricing policies,
-generic recovery, typed currencies, audience documentation, and an independent
+The current resource-management foundation remains usable. O7-R2 establishes
+equipment-instance ownership and removes the duplicated root save authority,
+but the capability remains `partial` until authored slot layouts, equipped
+combat contributions, stateful shop stock, explicit pricing policies, generic
+recovery, typed currencies, audience documentation, and an independent
 adversarial closure audit are complete.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved

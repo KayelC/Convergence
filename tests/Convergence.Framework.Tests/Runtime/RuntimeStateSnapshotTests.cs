@@ -167,8 +167,12 @@ public sealed class RuntimeStateSnapshotTests
         Assert.Equal([Id("analyze"), Id("select_hosted_entity")], roundTrip.CapabilityIds);
         Assert.True(restoredState.HasCapability(Id("analyze")));
         Assert.False(restoredState.HasCapability(Id("late_capability")));
-        Assert.Equal(Id("convergence.demo:practice_sword"), roundTrip.Equipment.EquippedItemIds[EquipmentSlot.Weapon]);
-        Assert.Equal(Id("convergence.demo:kevlar_vest"), roundTrip.Equipment.EquippedItemIds[EquipmentSlot.Armor]);
+        Assert.Equal(
+            RuntimeInstanceId.Parse("practice-sword-001"),
+            roundTrip.Equipment.EquippedInstanceIds[EquipmentSlot.Weapon]);
+        Assert.Equal(
+            RuntimeInstanceId.Parse("kevlar-vest-001"),
+            roundTrip.Equipment.EquippedInstanceIds[EquipmentSlot.Armor]);
 
         Assert.Equal(Id("poison"), Assert.Single(roundTrip.BattleStatus.Ailments).Id);
         Assert.Equal(Id("downed"), Assert.Single(roundTrip.BattleStatus.Statuses).Id);
@@ -530,8 +534,12 @@ public sealed class RuntimeStateSnapshotTests
             new RuntimeSkillStateSnapshot(learnedSkillIds ?? [Id("ember_dart"), Id("ice_boost")], [Id("ember_dart")]),
             new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, Id("convergence.demo:practice_sword")),
-                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Armor, Id("convergence.demo:kevlar_vest"))
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                    EquipmentSlot.Weapon,
+                    RuntimeInstanceId.Parse("practice-sword-001")),
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                    EquipmentSlot.Armor,
+                    RuntimeInstanceId.Parse("kevlar-vest-001"))
             ]),
             new RuntimeBattleStatusSnapshot(
                 ailments: [new RuntimeTimedStateSnapshot(Id("poison"), FieldLifetime(Turns(3)))],

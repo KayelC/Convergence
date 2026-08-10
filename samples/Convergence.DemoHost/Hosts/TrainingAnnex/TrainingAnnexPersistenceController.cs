@@ -294,6 +294,7 @@ internal sealed class TrainingAnnexPersistenceController
 
         var profileResolver = new TrainingAnnexActorRestoreProfileResolver(
             currentRoster.Player.Actor.State.InstanceId,
+            snapshot.Inventory,
             equipmentProfileResolver);
         RuntimeSessionRestoreResult aggregate = new RuntimeSessionRestoreService(
                 new RuntimeSaveValidator(
@@ -624,6 +625,7 @@ internal sealed record TrainingAnnexSaveActionResult(
 
 internal sealed class TrainingAnnexActorRestoreProfileResolver(
     RuntimeInstanceId playerInstanceId,
+    RuntimeInventorySnapshot inventory,
     IRuntimeEquipmentProfileResolver equipmentProfileResolver) : IRuntimeActorRestoreProfileResolver
 {
     public RuntimeActorRestoreProfile Resolve(RuntimeActorRestoreProfileRequest request)
@@ -636,6 +638,7 @@ internal sealed class TrainingAnnexActorRestoreProfileResolver(
         }
 
         RuntimeEquipmentProfile equipment = equipmentProfileResolver.Resolve(
+            inventory,
             request.Actor.Equipment,
             request.Catalog);
         if (equipment.Diagnostics.Count > 0)

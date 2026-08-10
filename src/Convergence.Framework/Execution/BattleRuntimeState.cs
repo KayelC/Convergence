@@ -285,7 +285,11 @@ public sealed class RuntimeActorState
                 "Runtime skill state contains duplicate, unlearned, or invalid pending entries.",
                 nameof(skillState));
         }
-        RequireValid(Equipment.EquippedItemIds.Values, nameof(equipment));
+        foreach (RuntimeInstanceId equipmentInstanceId in
+                 Equipment.EquippedInstanceIds.Values)
+        {
+            RequireValid(equipmentInstanceId, nameof(equipment));
+        }
         Passives = new BattlePassiveCollection(passiveSkills);
     }
 

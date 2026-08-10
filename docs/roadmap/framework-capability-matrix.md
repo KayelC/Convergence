@@ -19,10 +19,12 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
 `inventory_equipment_economy` is `partial`. Its immutable transaction and
-validation foundation is usable, but current source still treats equipment
-definition IDs as owned copies, fixes slots to one enum, omits authored armor,
-boots, and granted-skill behavior from battle, does not persist decremented shop
-stock, and exposes one unnamed wallet and HP/SP-specific recovery shape. The
+validation foundation is usable. O7-R2 gives each equipment copy a unique
+runtime instance ID, makes inventory its sole owner, permits separate copies of
+one definition, and removes the former root save equipment authority. Current
+source still fixes slots to one enum, omits authored armor, boots, and
+granted-skill behavior from battle, does not persist decremented shop stock,
+and exposes one unnamed wallet and HP/SP-specific recovery shape. The
 owner-approved
 [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 governs the direct data corrections, genuine policy seams, three-audience

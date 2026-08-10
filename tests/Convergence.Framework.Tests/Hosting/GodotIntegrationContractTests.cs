@@ -196,7 +196,28 @@ public sealed class GodotIntegrationContractTests
             eventSink.Events.Where(mapped => mapped.ActorId is not null),
             mapped => Assert.NotNull(mapped.ActorHandle));
 
-        RuntimeActorSnapshot actorSnapshot = ToRuntimeSnapshot(frost, level: 5);
+        RuntimeInstanceId equipmentInstanceId =
+            RuntimeInstanceId.Parse("godot-practice-blade-001");
+        RuntimeActorSnapshot actorSnapshot = ToRuntimeSnapshot(
+            frost,
+            level: 5,
+            new RuntimeEquipmentSnapshot(
+            [
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                    EquipmentSlot.Weapon,
+                    equipmentInstanceId)
+            ]));
+        var inventorySnapshot = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    EquipmentSlot.Weapon,
+                    [
+                        new RuntimeEquipmentInstanceSnapshot(
+                            equipmentInstanceId,
+                            Id("godot_practice_blade"))
+                    ])
+            ]);
         var fieldSnapshot = new RuntimeFieldSnapshot(
             new RuntimeNavigationSnapshot(Id("sample_depths_floor_7")),
             new RuntimeDungeonTraversalSnapshot(
@@ -209,6 +230,7 @@ public sealed class GodotIntegrationContractTests
         saveStore.Save(
             "slot_01",
             [actorSnapshot],
+            inventorySnapshot,
             fieldSnapshot,
             sceneRegistry.Snapshot());
 
@@ -219,6 +241,12 @@ public sealed class GodotIntegrationContractTests
         Assert.Equal(actorSnapshot.Identity, roundTripActor.Identity);
         Assert.Equal(actorSnapshot.Resources.Select(resource => resource.ResourceId), roundTripActor.Resources.Select(resource => resource.ResourceId));
         Assert.Equal(actorSnapshot.Resources.Select(resource => resource.Current), roundTripActor.Resources.Select(resource => resource.Current));
+        Assert.Equal(
+            equipmentInstanceId,
+            roundTripActor.Equipment.EquippedInstanceIds[EquipmentSlot.Weapon]);
+        RuntimeEquipmentInstanceSnapshot restoredEquipment = Assert.Single(
+            restored.Inventory.GetEquipmentInstances(EquipmentSlot.Weapon));
+        Assert.Equal(equipmentInstanceId, restoredEquipment.InstanceId);
         Assert.Equal(
             fieldSnapshot.Navigation.CurrentLocationId,
             restored.Field.Navigation.CurrentLocationId);
@@ -270,7 +298,10 @@ public sealed class GodotIntegrationContractTests
             TestStatModifierPolicy.CreatePersistent(),
             new SplitChargePolicy());
 
-    private static RuntimeActorSnapshot ToRuntimeSnapshot(CatalogBattleActor actor, int level)
+    private static RuntimeActorSnapshot ToRuntimeSnapshot(
+        CatalogBattleActor actor,
+        int level,
+        RuntimeEquipmentSnapshot? equipment = null)
     {
         RuntimeActorState state = actor.State;
         RuntimeResourceSnapshot[] resources = state.Resources.Values
@@ -289,7 +320,7 @@ public sealed class GodotIntegrationContractTests
             resources,
             new RuntimeStatBlockSnapshot(state.Stats, state.Stats),
             new RuntimeSkillStateSnapshot(state.SkillIds, state.SkillIds),
-            new RuntimeEquipmentSnapshot(),
+            equipment ?? new RuntimeEquipmentSnapshot(),
             new RuntimeBattleStatusSnapshot(),
             new RuntimeBattleActivationSnapshot(),
             resources.Select(resource => new KeyValuePair<ContentId, decimal>(resource.ResourceId, resource.Maximum)),
@@ -475,6 +506,7 @@ public sealed class GodotIntegrationContractTests
 
     private sealed record GodotSaveSnapshot(
         IReadOnlyList<RuntimeActorSnapshot> Actors,
+        RuntimeInventorySnapshot Inventory,
         RuntimeFieldSnapshot Field,
         IReadOnlyDictionary<RuntimeInstanceId, GodotSceneHandle> SceneHandles);
 
@@ -485,11 +517,13 @@ public sealed class GodotIntegrationContractTests
         public void Save(
             string slot,
             IEnumerable<RuntimeActorSnapshot> actors,
+            RuntimeInventorySnapshot inventory,
             RuntimeFieldSnapshot field,
             IReadOnlyDictionary<RuntimeInstanceId, GodotSceneHandle> sceneHandles)
         {
             _slots[slot] = new GodotSaveSnapshot(
                 Array.AsReadOnly(actors.ToArray()),
+                inventory,
                 field,
                 new ReadOnlyDictionary<RuntimeInstanceId, GodotSceneHandle>(
                     new Dictionary<RuntimeInstanceId, GodotSceneHandle>(sceneHandles)));

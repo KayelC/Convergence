@@ -97,14 +97,17 @@ public sealed class NoBattleBasicAttackProfileSource : IBattleBasicAttackProfile
 public sealed class EquipmentBattleBasicAttackProfileSource : IBattleBasicAttackProfileSource
 {
     private readonly IEquipmentDefinitionRepository _equipment;
+    private readonly RuntimeInventorySnapshot _inventory;
     private readonly IRuntimeEquipmentProfileResolver _profiles;
     private readonly TargetingDefinition _targeting;
 
     public EquipmentBattleBasicAttackProfileSource(
+        RuntimeInventorySnapshot inventory,
         IEquipmentDefinitionRepository equipment,
         TargetingDefinition targeting,
         IRuntimeEquipmentProfileResolver? profiles = null)
     {
+        _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
         _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         _targeting = targeting ?? throw new ArgumentNullException(nameof(targeting));
         _profiles = profiles ?? new RuntimeEquipmentProfileResolver();
@@ -113,7 +116,10 @@ public sealed class EquipmentBattleBasicAttackProfileSource : IBattleBasicAttack
     public BattleBasicAttackProfile? Resolve(RuntimeActorState actor)
     {
         ArgumentNullException.ThrowIfNull(actor);
-        RuntimeEquipmentProfile equipmentProfile = _profiles.Resolve(actor.Equipment, _equipment);
+        RuntimeEquipmentProfile equipmentProfile = _profiles.Resolve(
+            _inventory,
+            actor.Equipment,
+            _equipment);
         return equipmentProfile.BasicAttack is RuntimeBasicAttackProfile basicAttack
             ? new BattleBasicAttackProfile(
                 basicAttack.EquipmentId,

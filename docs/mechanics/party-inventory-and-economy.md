@@ -1,10 +1,10 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Order 7 status:** owner decisions for equipment instances, authored slot
-> layouts, equipped skills and combat contributions, stateful shop stock,
-> explicit pricing, generic recovery, and typed currencies are approved but not
-> yet implemented. This page describes the current source baseline and remains
-> unreviewed until the
+> **Order 7 status:** O7-R1 and O7-R2 establish the approved tracking and
+> equipment-instance ownership model. Authored slot layouts, equipped skills
+> and combat contributions, stateful shop stock, explicit pricing, generic
+> recovery, and typed currencies remain pending. This page remains unreviewed
+> until the complete
 > [Order 7 roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 > is implemented and independently closed.
 
@@ -67,11 +67,23 @@ composition service before presenting the selection as complete.
 
 Items are stored as typed content IDs and integer quantities. Stack limits come from clean item definitions when provided. Negative quantities, missing ownership, overflow, and stack-limit violations are rejected.
 
-Equipment ownership is unique by equipment ID in the current model. There are no per-copy equipment instances. Games needing randomized or individually enhanced equipment would need an additional instance model.
+Every owned equipment copy is an immutable `RuntimeEquipmentInstanceSnapshot`
+containing a unique runtime instance ID and one equipment definition ID.
+Inventory is the sole ownership authority. Multiple instances may reference
+the same definition; repeating one instance ID is rejected.
 
 ## Equipment
 
-Equipment definitions use typed slots and slot-specific profiles. Equip and unequip transitions validate ownership and slot compatibility. Selling equipped equipment can be blocked by the transaction service.
+Actor equipment maps the current typed slots to inventory-owned equipment
+instance IDs. Equip and unequip transitions validate ownership, slot
+compatibility, and aggregate assignment evidence. A missing instance or an
+instance already assigned to another actor rejects with unchanged before/after
+equipment state. Selling a specific equipped instance is blocked by the
+transaction service.
+
+Save contract v16 stores owned instances only in inventory and actor loadout
+references only in actor snapshots. There is no separate root equipment
+snapshot.
 
 Basic attack profiles may come from equipped weapon data, but a host can supply another clean basic-attack profile. Presentation metadata does not decide damage behavior.
 
@@ -83,7 +95,7 @@ The Framework treats currency as an unnamed numeric resource. DemoHost labels it
 
 ## Shops
 
-Shop definitions identify offered items/equipment, categories, price or pricing-policy IDs, stock policy, and availability. Runtime transactions assess ownership, stock, stack limits, equipped-sale restrictions, and wallet balance before mutation.
+Shop definitions identify offered items/equipment, categories, price or pricing-policy IDs, stock policy, and availability. Runtime transactions assess ownership, stock, stack limits, equipped-sale restrictions, and wallet balance before mutation. The host supplies a fresh runtime instance ID when purchasing equipment and identifies the exact owned instance when selling it.
 
 Buy and sell prices are policy outcomes. The supplied standard/example policies can use base price and actor stats, but a game may provide fixed, regional, reputation-based, or other pricing.
 

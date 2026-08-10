@@ -17,7 +17,7 @@ Ruleset categories stay generic. In particular, `turn_economy` identifies the po
 
 ## Version Boundary
 
-Active content uses schema version `8`, and active runtime snapshots use save contract version `15`. Schema v8 retains explicit passive targeting and adds authored status lifetimes containing both expiration and permitted removal causes. Save v15 retains the complete v14 actor state and adds the immutable source actor, source entity, and revision of the actor's current combat profile. Earlier pre-release shapes have no aliases or automatic translation; any non-current shape can be accepted only through an explicit host-supplied migration step. This is an intentional clean break made before a stable public release.
+Active content uses schema version `8`, and active runtime snapshots use save contract version `16`. Schema v8 retains explicit passive targeting and adds authored status lifetimes containing both expiration and permitted removal causes. Save v16 retains the complete v15 actor state, makes inventory the sole owner of uniquely identified equipment instances, makes actor loadouts reference those instances, and removes the former root equipment snapshot. Earlier pre-release shapes have no aliases or automatic translation; any non-current shape can be accepted only through an explicit host-supplied migration step. This is an intentional clean break made before a stable public release.
 
 ## Executable Guard
 

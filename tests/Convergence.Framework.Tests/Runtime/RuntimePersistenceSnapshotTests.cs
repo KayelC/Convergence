@@ -82,7 +82,6 @@ public sealed class RuntimePersistenceSnapshotTests
             baseline.Actors,
             baseline.PartyRoster,
             baseline.Inventory,
-            baseline.Equipment,
             baseline.Wallet,
             baseline.Field,
             baseline.Compendium,
@@ -1703,6 +1702,8 @@ public sealed class RuntimePersistenceSnapshotTests
         RuntimeActorSnapshot frost = baseline.Actors[0];
         RuntimeActorSnapshot ember = baseline.Actors[1];
         ContentId shortsword = Id("convergence.catalog_surface_sample:shortsword_sample");
+        RuntimeInstanceId shortswordInstanceId = RuntimeInstanceId.Parse("shortsword-001");
+        RuntimeInstanceId missingInstanceId = RuntimeInstanceId.Parse("missing-equipment-001");
         RuntimeActorReferenceSnapshot wrongEmberReference = new(
             ember.Identity.InstanceId,
             frost.Identity.EntityDefinitionId,
@@ -1711,13 +1712,20 @@ public sealed class RuntimePersistenceSnapshotTests
             frost,
             equipment: new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Armor, shortsword)
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                    EquipmentSlot.Armor,
+                    missingInstanceId),
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                    EquipmentSlot.Accessory,
+                    shortswordInstanceId)
             ]));
         RuntimeActorSnapshot malformedEmber = CopyActor(
             ember,
             equipment: new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, shortsword)
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                    EquipmentSlot.Weapon,
+                    shortswordInstanceId)
             ]));
         var missingHostedEntity = new RuntimeActorReferenceSnapshot(
             RuntimeInstanceId.Parse("missing_hosted_entity"),
@@ -1743,9 +1751,9 @@ public sealed class RuntimePersistenceSnapshotTests
             item.Code == RuntimeSaveValidationCode.ActorReferenceEntityMismatch &&
             item.Path == "$.partyRoster.hostedEntityRoster[0].entityDefinitionId");
         AssertDiagnostic(validation, RuntimeSaveValidationCode.DuplicatePartyRosterReference, "$.partyRoster.hostedEntityRoster[1]");
-        AssertDiagnostic(validation, RuntimeSaveValidationCode.EquipmentSlotMismatch, "$.actors[0].equipment.equippedItemIds.armor");
-        AssertDiagnostic(validation, RuntimeSaveValidationCode.EquippedEquipmentNotOwned, "$.actors[0].equipment.equippedItemIds.armor");
-        AssertDiagnostic(validation, RuntimeSaveValidationCode.EquipmentAssignedToMultipleActors, "$.actors[1].equipment.equippedItemIds.weapon");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.EquippedEquipmentNotOwned, "$.actors[0].equipment.equippedInstanceIds.armor");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.EquipmentSlotMismatch, "$.actors[0].equipment.equippedInstanceIds.accessory");
+        AssertDiagnostic(validation, RuntimeSaveValidationCode.EquipmentAssignedToMultipleActors, "$.actors[1].equipment.equippedInstanceIds.weapon");
     }
 
     [Fact]
@@ -1799,11 +1807,15 @@ public sealed class RuntimePersistenceSnapshotTests
                 companionRoster: []),
             inventory: new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Id("missing.pack:missing_item"), 1)],
-                [new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(EquipmentSlot.Weapon, [Id("missing.pack:missing_equipment")])]),
-            equipment: new RuntimeEquipmentSnapshot(
-            [
-                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Armor, Id("missing.pack:missing_armor"))
-            ]),
+                [
+                    new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                        EquipmentSlot.Weapon,
+                        [
+                            new RuntimeEquipmentInstanceSnapshot(
+                                RuntimeInstanceId.Parse("missing-equipment-001"),
+                                Id("missing.pack:missing_equipment"))
+                        ])
+                ]),
             field: new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(Id("missing_location")),
                 new RuntimeDungeonTraversalSnapshot(
@@ -1855,16 +1867,7 @@ public sealed class RuntimePersistenceSnapshotTests
             [invalidActor],
             new RuntimePartyRosterSnapshot(invalidReference, activeParty: [invalidReference]),
             new RuntimeInventorySnapshot(
-                [new KeyValuePair<ContentId, int>(default, 1)],
-                [
-                    new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(
-                        EquipmentSlot.Weapon,
-                        [default])
-                ]),
-            new RuntimeEquipmentSnapshot(
-            [
-                new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, default)
-            ]),
+                [new KeyValuePair<ContentId, int>(default, 1)]),
             baseline.Wallet,
             new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(default),
@@ -2734,7 +2737,6 @@ public sealed class RuntimePersistenceSnapshotTests
         IEnumerable<RuntimeCheckpointEntrySnapshot>? checkpoints = null,
         RuntimePartyRosterSnapshot? partyRoster = null,
         RuntimeInventorySnapshot? inventory = null,
-        RuntimeEquipmentSnapshot? equipment = null,
         RuntimeFieldSnapshot? field = null,
         CompendiumStateSnapshot? compendium = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
@@ -2759,6 +2761,15 @@ public sealed class RuntimePersistenceSnapshotTests
             RuntimeInstanceId.Parse("ember"),
             Id("convergence.clean_battle_demo:ember_duelist_demo"),
             learnedSkills: [Id("convergence.clean_battle_demo:ember_bolt_demo")]);
+        RuntimeInstanceId shortswordInstanceId = RuntimeInstanceId.Parse("shortsword-001");
+        frost = CopyActor(
+            frost,
+            equipment: new RuntimeEquipmentSnapshot(
+            [
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                    EquipmentSlot.Weapon,
+                    shortswordInstanceId)
+            ]));
         RuntimeActorReferenceSnapshot frostRef = Reference(frost);
         RuntimeActorReferenceSnapshot emberRef = Reference(ember);
 
@@ -2780,16 +2791,14 @@ public sealed class RuntimePersistenceSnapshotTests
             inventory ?? new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Id("convergence.shared_effects_demo:medicine_demo"), 2)],
                 [
-                    new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(
+                    new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
                         EquipmentSlot.Weapon,
-                        [Id("convergence.catalog_surface_sample:shortsword_sample")])
+                        [
+                            new RuntimeEquipmentInstanceSnapshot(
+                                shortswordInstanceId,
+                                Id("convergence.catalog_surface_sample:shortsword_sample"))
+                        ])
                 ]),
-            equipment ?? new RuntimeEquipmentSnapshot(
-            [
-                new KeyValuePair<EquipmentSlot, ContentId>(
-                    EquipmentSlot.Weapon,
-                    Id("convergence.catalog_surface_sample:shortsword_sample"))
-            ]),
             new RuntimeWalletSnapshot(1234),
             field ?? (includeDefaultField
                 ? new RuntimeFieldSnapshot(
@@ -2858,15 +2867,13 @@ public sealed class RuntimePersistenceSnapshotTests
         IEnumerable<ContentPackIdentity>? contentPacks = null,
         IEnumerable<RuntimeActorSnapshot>? actors = null,
         RuntimePartyRosterSnapshot? partyRoster = null,
-        RuntimeInventorySnapshot? inventory = null,
-        RuntimeEquipmentSnapshot? equipment = null) =>
+        RuntimeInventorySnapshot? inventory = null) =>
         new(
             snapshot.FrameworkVersion,
             contentPacks ?? snapshot.ContentPacks,
             actors ?? snapshot.Actors,
             partyRoster ?? snapshot.PartyRoster,
             inventory ?? snapshot.Inventory,
-            equipment ?? snapshot.Equipment,
             snapshot.Wallet,
             snapshot.Field,
             snapshot.Compendium,

@@ -100,7 +100,7 @@ internal sealed record GodotSaveActor(
     long SkillRevision,
     IReadOnlyList<GodotSavePendingSkillChoice> PendingSkillChoices,
     IReadOnlyList<string> CapabilityIds,
-    IReadOnlyDictionary<string, string> EquippedItemIds,
+    IReadOnlyDictionary<string, string> EquippedInstanceIds,
     IReadOnlyList<GodotSaveTimedState> Ailments,
     IReadOnlyList<GodotSaveTimedState> Statuses,
     GodotSaveStatModifierState? StatModifiers,
@@ -129,6 +129,15 @@ internal sealed record GodotSavePartyRoster(
 
 internal sealed record GodotSaveSceneInstance(string InstanceId, string NodePath);
 
+internal sealed record GodotSaveEquipmentInstance(
+    string InstanceId,
+    string DefinitionId);
+
+internal sealed record GodotSaveInventory(
+    IReadOnlyDictionary<string, int> ItemQuantities,
+    IReadOnlyDictionary<string, IReadOnlyList<GodotSaveEquipmentInstance>>
+        OwnedEquipmentInstances);
+
 internal sealed record GodotSaveDocument(
     int SaveContractVersion,
     string FrameworkVersion,
@@ -136,6 +145,7 @@ internal sealed record GodotSaveDocument(
     string ContentPackVersion,
     IReadOnlyList<GodotSaveActor> Actors,
     GodotSavePartyRoster PartyRoster,
+    GodotSaveInventory Inventory,
     IReadOnlyList<GodotSaveSceneInstance> SceneInstances);
 
 internal sealed record GodotSaveRestoreResult(
@@ -158,11 +168,13 @@ internal static class GodotSaveCodec
     public static string Serialize(
         IReadOnlyList<CatalogBattleActor> actors,
         RuntimePartyRosterSnapshot partyRoster,
+        RuntimeInventorySnapshot inventory,
         ContentPackIdentity pack,
         GodotSceneInstanceRegistry sceneInstances)
     {
         ArgumentNullException.ThrowIfNull(actors);
         ArgumentNullException.ThrowIfNull(partyRoster);
+        ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(pack);
         ArgumentNullException.ThrowIfNull(sceneInstances);
 
@@ -181,6 +193,7 @@ internal static class GodotSaveCodec
             pack.Version.ToString(),
             actorRecords,
             ToDto(partyRoster),
+            ToDto(inventory),
             sceneRecords);
         return JsonSerializer.Serialize(document, JsonOptions);
     }
@@ -217,8 +230,7 @@ internal static class GodotSaveCodec
             ],
             actorSnapshots,
             partyRoster,
-            new RuntimeInventorySnapshot(),
-            new RuntimeEquipmentSnapshot(),
+            FromDto(document.Inventory),
             new RuntimeWalletSnapshot(0),
             field: null,
             new CompendiumStateSnapshot(),
@@ -282,7 +294,7 @@ internal static class GodotSaveCodec
                 choice.UnlockLevel,
                 choice.SkillId.ToString())).ToArray(),
             actor.CapabilityIds.Select(id => id.ToString()).ToArray(),
-            actor.Equipment.EquippedItemIds.ToDictionary(
+            actor.Equipment.EquippedInstanceIds.ToDictionary(
                 pair => pair.Key.ToString(),
                 pair => pair.Value.ToString()),
             actor.BattleStatus.Ailments.Select(ToDto).ToArray(),
@@ -353,10 +365,10 @@ internal static class GodotSaveCodec
                         choice.UnlockLevel,
                         Id(choice.SkillId))),
                 actor.SkillRevision),
-            new RuntimeEquipmentSnapshot(actor.EquippedItemIds.Select(pair =>
-                new KeyValuePair<EquipmentSlot, ContentId>(
+            new RuntimeEquipmentSnapshot(actor.EquippedInstanceIds.Select(pair =>
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
                     Enum.Parse<EquipmentSlot>(pair.Key),
-                    Id(pair.Value)))),
+                    Instance(pair.Value)))),
             new RuntimeBattleStatusSnapshot(
                 actor.Ailments.Select(FromDto),
                 actor.Statuses.Select(FromDto),
@@ -473,6 +485,30 @@ internal static class GodotSaveCodec
             roster.HostedEntityRoster.Select(FromDto),
             roster.CompanionRoster.Select(FromDto),
             roster.MaxActivePartySize);
+
+    private static GodotSaveInventory ToDto(RuntimeInventorySnapshot inventory) =>
+        new(
+            inventory.ItemQuantities.ToDictionary(
+                pair => pair.Key.ToString(),
+                pair => pair.Value),
+            inventory.OwnedEquipmentInstances.ToDictionary(
+                pair => pair.Key.ToString(),
+                pair => (IReadOnlyList<GodotSaveEquipmentInstance>)pair.Value
+                    .Select(instance => new GodotSaveEquipmentInstance(
+                        instance.InstanceId.ToString(),
+                        instance.DefinitionId.ToString()))
+                    .ToArray()));
+
+    private static RuntimeInventorySnapshot FromDto(GodotSaveInventory inventory) =>
+        new(
+            inventory.ItemQuantities.Select(pair =>
+                new KeyValuePair<ContentId, int>(Id(pair.Key), pair.Value)),
+            inventory.OwnedEquipmentInstances.Select(pair =>
+                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    Enum.Parse<EquipmentSlot>(pair.Key),
+                    pair.Value.Select(instance => new RuntimeEquipmentInstanceSnapshot(
+                        Instance(instance.InstanceId),
+                        Id(instance.DefinitionId))))));
 
     private static GodotSaveActorReference ToDto(RuntimeActorReferenceSnapshot actor) =>
         new(

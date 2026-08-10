@@ -208,10 +208,18 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Empty(summary.PreparedEncounterIds);
         Assert.Empty(summary.PreparedEncounterActorInstanceIds);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
-        Assert.Contains(Qualified("practice_blade"), summary.Inventory.GetEquipmentIds(EquipmentSlot.Weapon));
-        Assert.Contains(Qualified("focus_charm"), summary.Inventory.GetEquipmentIds(EquipmentSlot.Accessory));
-        Assert.Equal(Qualified("practice_blade"), summary.Equipment.EquippedItemIds[EquipmentSlot.Weapon]);
-        Assert.Equal(Qualified("focus_charm"), summary.Equipment.EquippedItemIds[EquipmentSlot.Accessory]);
+        Assert.Contains(
+            summary.Inventory.GetEquipmentInstances(EquipmentSlot.Weapon),
+            instance => instance.DefinitionId == Qualified("practice_blade"));
+        Assert.Contains(
+            summary.Inventory.GetEquipmentInstances(EquipmentSlot.Accessory),
+            instance => instance.DefinitionId == Qualified("focus_charm"));
+        Assert.Equal(
+            TrainingAnnexHostSupport.PracticeBladeInstance,
+            summary.Equipment.EquippedInstanceIds[EquipmentSlot.Weapon]);
+        Assert.Equal(
+            TrainingAnnexHostSupport.FocusCharmInstance,
+            summary.Equipment.EquippedInstanceIds[EquipmentSlot.Accessory]);
         Assert.Equal(Qualified("practice_blade"), summary.EquipmentProfile.BasicAttack?.EquipmentId);
         Assert.Equal(1, summary.EquipmentProfile.StatModifiers[ContentId.Parse("magic")]);
         Assert.Empty(summary.EquipmentProfile.Diagnostics);
@@ -1741,17 +1749,25 @@ public sealed class CleanTrainingAnnexPlayHostTests
     public async Task CleanTrainingAnnexPlay_BasicAttackUsesEquippedWeaponProfile()
     {
         ContentId weightedClub = Qualified("weighted_club");
+        RuntimeInstanceId weightedClubInstanceId =
+            RuntimeInstanceId.Parse("weighted-club-001");
         var inventory = new RuntimeInventorySnapshot(
             itemQuantities:
             [
                 new KeyValuePair<ContentId, int>(Qualified("annex_tonic"), 1)
             ],
-            ownedEquipmentIds:
+            ownedEquipmentInstances:
             [
-                new KeyValuePair<EquipmentSlot, IEnumerable<ContentId>>(EquipmentSlot.Weapon, [weightedClub])
+                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    EquipmentSlot.Weapon,
+                    [new RuntimeEquipmentInstanceSnapshot(weightedClubInstanceId, weightedClub)])
             ]);
         var equipment = new RuntimeEquipmentSnapshot(
-            [new KeyValuePair<EquipmentSlot, ContentId>(EquipmentSlot.Weapon, weightedClub)]);
+            [
+                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
+                    EquipmentSlot.Weapon,
+                    weightedClubInstanceId)
+            ]);
         var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 0, 0, -1, 13);
         using var output = new StringWriter();
         var host = CreateHost(
@@ -1765,7 +1781,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
         Assert.Equal(0, exitCode);
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
-        Assert.Equal(weightedClub, summary.Equipment.EquippedItemIds[EquipmentSlot.Weapon]);
+        Assert.Equal(
+            weightedClubInstanceId,
+            summary.Equipment.EquippedInstanceIds[EquipmentSlot.Weapon]);
         Assert.Equal(weightedClub, summary.EquipmentProfile.BasicAttack?.EquipmentId);
         Assert.Contains(weightedClub, summary.ExecutedBattleActionIds);
         Assert.DoesNotContain(Qualified("practice_blade"), summary.ExecutedBattleActionIds);
@@ -2932,8 +2950,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.True(equipment.Applied);
         Assert.Equal(ResourceTransactionCode.Applied, equipment.Code);
         Assert.Equal(16, summary.Wallet.Balance);
-        Assert.Contains(Qualified("padded_jacket"), summary.Inventory.GetEquipmentIds(EquipmentSlot.Armor));
-        Assert.Equal(Qualified("padded_jacket"), summary.Equipment.EquippedItemIds[EquipmentSlot.Armor]);
+        RuntimeEquipmentInstanceSnapshot paddedJacket = Assert.Single(
+            summary.Inventory.GetEquipmentInstances(EquipmentSlot.Armor),
+            instance => instance.DefinitionId == Qualified("padded_jacket"));
+        Assert.Equal(
+            paddedJacket.InstanceId,
+            summary.Equipment.EquippedInstanceIds[EquipmentSlot.Armor]);
+        Assert.Equal(paddedJacket.InstanceId, transaction.EquipmentInstanceId);
+        Assert.Equal(paddedJacket.InstanceId, equipment.EquipmentInstanceId);
         Assert.Contains(EquipmentSlot.Armor, summary.EquipmentProfile.EquippedDefinitions.Keys);
         Assert.Equal(
             [
@@ -2950,7 +2974,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             [
                 "Annex Tonic - 47 C",
                 "Cleanse Drop - 37 C (stock 5)",
-                "Practice Blade - 112 C [Already owned]",
+                "Practice Blade - 112 C [Not enough Credits]",
                 "Padded Jacket - 84 C",
                 "Back"
             ],
@@ -2983,14 +3007,16 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Empty(summary.ShopEquipmentChanges);
         Assert.Equal(0, summary.Wallet.Balance);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
-        Assert.DoesNotContain(Qualified("padded_jacket"), summary.Inventory.GetEquipmentIds(EquipmentSlot.Armor));
+        Assert.DoesNotContain(
+            summary.Inventory.GetEquipmentInstances(EquipmentSlot.Armor),
+            instance => instance.DefinitionId == Qualified("padded_jacket"));
 
         GameIoMenuCall buyMenu = Assert.Single(io.Menus, menu => menu.Header == "Training Supply - Buy");
         Assert.Equal(
             [
                 "Annex Tonic - 47 C [Not enough Credits]",
                 "Cleanse Drop - 37 C (stock 5) [Not enough Credits]",
-                "Practice Blade - 112 C [Already owned]",
+                "Practice Blade - 112 C [Not enough Credits]",
                 "Padded Jacket - 84 C [Not enough Credits]",
                 "Back"
             ],
@@ -3031,7 +3057,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             [
                 "Annex Tonic - 47 C",
                 "Cleanse Drop - 37 C (stock 5)",
-                "Practice Blade - 112 C [Already owned]",
+                "Practice Blade - 112 C [Not enough Credits]",
                 "Padded Jacket - 84 C",
                 "Back"
             ],
@@ -3073,7 +3099,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(
             [
                 "Annex Tonic - 28 C (owned 1)",
-                "Practice Blade - 67 C (owned) [Equipped]",
+                "Practice Blade - 67 C (owned 1) [Equipped]",
                 "Back"
             ],
             sellMenu.Options);
@@ -4366,7 +4392,6 @@ public sealed class CleanTrainingAnnexPlayHostTests
             actors ?? snapshot.Actors,
             partyRoster ?? snapshot.PartyRoster,
             snapshot.Inventory,
-            snapshot.Equipment,
             snapshot.Wallet,
             field ?? snapshot.Field,
             snapshot.Compendium,

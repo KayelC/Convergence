@@ -453,6 +453,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                 partyRoster,
                 combatProfileCompositionService,
                 equipmentProfileResolver,
+                inventory.Snapshot,
                 catalog,
                 cancellationToken,
                 initializeResourcesToMaximum: true).ConfigureAwait(false))
@@ -676,6 +677,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                                     operationResult.After,
                                     combatProfileCompositionService,
                                     equipmentProfileResolver,
+                                    inventory.Snapshot,
                                     catalog,
                                     cancellationToken)
                                 .ConfigureAwait(false);
@@ -851,10 +853,11 @@ internal sealed class CleanTrainingAnnexPlayHost
                         await ApplyVictoryExperienceAsync(
                         roster,
                         partyRoster,
-                        growthServices,
-                        combatProfileCompositionService,
-                        equipmentProfileResolver,
-                        catalog,
+                            growthServices,
+                            combatProfileCompositionService,
+                            equipmentProfileResolver,
+                            inventory.Snapshot,
+                            catalog,
                         cancellationToken).ConfigureAwait(false);
                     bool growthCommitted = growthTransaction?.Applied == true;
                     growthApplied = growthCommitted;
@@ -866,6 +869,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             partyRoster,
                             combatProfileCompositionService,
                             equipmentProfileResolver,
+                            inventory.Snapshot,
                             catalog,
                             commands,
                             cancellationToken).ConfigureAwait(false);
@@ -1136,6 +1140,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                                     combatProfileCompositionService,
                                     catalog,
                                     equipmentProfileResolver.Resolve(
+                                        inventory.Snapshot,
                                         roster.Player.Actor.State.Equipment,
                                         catalog),
                                     economy,
@@ -1416,6 +1421,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     partyRoster,
                     combatProfileCompositionService,
                     equipmentProfileResolver,
+                    inventory.Snapshot,
                     catalog,
                     cancellationToken).ConfigureAwait(false))
             {
@@ -1660,11 +1666,13 @@ internal sealed class CleanTrainingAnnexPlayHost
             inventory,
             inventoryTransitions,
             TrainingAnnexHostSupport.PracticeBlade,
+            TrainingAnnexHostSupport.PracticeBladeInstance,
             EquipmentSlot.Weapon);
         inventory = AddEquipmentIfMissing(
             inventory,
             inventoryTransitions,
             TrainingAnnexHostSupport.FocusCharm,
+            TrainingAnnexHostSupport.FocusCharmInstance,
             EquipmentSlot.Accessory);
 
         return inventory;
@@ -1674,14 +1682,19 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimeInventorySnapshot inventory,
         IInventoryTransitionService inventoryTransitions,
         ContentId equipmentId,
+        RuntimeInstanceId equipmentInstanceId,
         EquipmentSlot slot)
     {
-        if (inventory.OwnsEquipment(equipmentId, slot))
+        if (inventory.GetEquipmentInstances(slot).Any(instance =>
+                instance.DefinitionId == equipmentId))
         {
             return inventory;
         }
 
-        InventoryTransitionResult result = inventoryTransitions.AddEquipment(inventory, equipmentId, slot);
+        InventoryTransitionResult result = inventoryTransitions.AddEquipment(
+            inventory,
+            new RuntimeEquipmentInstanceSnapshot(equipmentInstanceId, equipmentId),
+            slot);
         return result.Applied ? result.After : inventory;
     }
 
@@ -1719,9 +1732,18 @@ internal sealed class CleanTrainingAnnexPlayHost
         IEquipmentTransitionService equipmentTransitions)
     {
         RuntimeEquipmentSnapshot equipment = new();
-        foreach ((EquipmentSlot slot, ContentId equipmentId) in requested.EquippedItemIds.OrderBy(pair => pair.Key))
+        foreach ((EquipmentSlot slot, RuntimeInstanceId equipmentInstanceId) in
+                 requested.EquippedInstanceIds.OrderBy(pair => pair.Key))
         {
-            if (!catalog.TryGetEquipment(equipmentId, out EquipmentDefinition? definition) || definition is null)
+            if (!inventory.TryGetEquipmentInstance(
+                    equipmentInstanceId,
+                    out RuntimeEquipmentInstanceSnapshot? instance,
+                    out EquipmentSlot ownedSlot) ||
+                instance is null ||
+                !catalog.TryGetEquipment(
+                    instance.DefinitionId,
+                    out EquipmentDefinition? definition) ||
+                definition is null)
             {
                 continue;
             }
@@ -1729,9 +1751,10 @@ internal sealed class CleanTrainingAnnexPlayHost
             EquipmentTransitionResult result = equipmentTransitions.Equip(
                 inventory,
                 equipment,
-                equipmentId,
-                definition.Slot,
-                slot);
+                equipmentInstanceId,
+                ownedSlot,
+                slot,
+                []);
             if (result.Applied)
             {
                 equipment = result.After;
@@ -1749,12 +1772,21 @@ internal sealed class CleanTrainingAnnexPlayHost
         ContentId equipmentId)
     {
         EquipmentDefinition definition = catalog.GetRequiredEquipment(equipmentId);
+        RuntimeEquipmentInstanceSnapshot? instance = inventory
+            .GetEquipmentInstances(definition.Slot)
+            .FirstOrDefault(candidate => candidate.DefinitionId == equipmentId);
+        if (instance is null)
+        {
+            return equipment;
+        }
+
         EquipmentTransitionResult result = equipmentTransitions.Equip(
             inventory,
             equipment,
-            equipmentId,
+            instance.InstanceId,
             definition.Slot,
-            definition.Slot);
+            definition.Slot,
+            []);
         return result.Applied ? result.After : equipment;
     }
 
@@ -2153,7 +2185,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             preparedBattleEventCount,
             inventory,
             equipment,
-            equipmentProfileResolver.Resolve(equipment, equipmentRepository),
+            equipmentProfileResolver.Resolve(inventory, equipment, equipmentRepository),
             executedFieldActionIds.ToArray(),
             cancelledFieldTargetSelections,
             commands.ToArray());
@@ -2177,11 +2209,13 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimePartyRosterSnapshot partyRoster,
         IRuntimeActorCombatProfileCompositionService compositionService,
         IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+        RuntimeInventorySnapshot inventory,
         IEquipmentDefinitionRepository equipmentRepository,
         CancellationToken cancellationToken,
         bool initializeResourcesToMaximum = false)
     {
         RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
+            inventory,
             roster.Player.Actor.State.ToSnapshot().Equipment,
             equipmentRepository);
         if (equipmentProfile.Diagnostics.Count > 0)
@@ -2272,6 +2306,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         GrowthRulesetServices growthServices,
         IRuntimeActorCombatProfileCompositionService combatProfileCompositionService,
         IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+        RuntimeInventorySnapshot inventory,
         GameDataCatalog catalog,
         CancellationToken cancellationToken)
     {
@@ -2295,6 +2330,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             resources: sourceBefore.Resources,
             baseResourceValues: sourceBefore.BaseResourceValues));
         RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
+            inventory,
             playerBefore.Equipment,
             catalog);
         if (equipmentProfile.Diagnostics.Count > 0)
@@ -2376,6 +2412,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         RuntimePartyRosterSnapshot partyRoster,
         IRuntimeActorCombatProfileCompositionService combatProfileCompositionService,
         IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+        RuntimeInventorySnapshot inventory,
         GameDataCatalog catalog,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         CancellationToken cancellationToken)
@@ -2445,6 +2482,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             }
 
             RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
+                inventory,
                 roster.Player.Actor.State.Equipment,
                 catalog);
             if (equipmentProfile.Diagnostics.Count > 0)

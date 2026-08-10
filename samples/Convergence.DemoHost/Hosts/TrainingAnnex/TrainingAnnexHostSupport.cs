@@ -98,6 +98,10 @@ internal static class TrainingAnnexHostSupport
     public static readonly ContentId AnnexTonic = Qualified("annex_tonic");
     public static readonly ContentId PracticeBlade = Qualified("practice_blade");
     public static readonly ContentId FocusCharm = Qualified("focus_charm");
+    public static readonly RuntimeInstanceId PracticeBladeInstance =
+        RuntimeInstanceId.Parse("training-annex-practice-blade-001");
+    public static readonly RuntimeInstanceId FocusCharmInstance =
+        RuntimeInstanceId.Parse("training-annex-focus-charm-001");
     public static readonly ContentId SteadySampleNegotiation = Qualified("steady_sample");
     public static readonly ContentId SampleCreditsDemand = ContentId.Parse("sample_credits");
     public static readonly ContentId NegotiationAcquisitionSource = ContentId.Parse("negotiation");
@@ -566,7 +570,6 @@ internal static class TrainingAnnexHostSupport
                 playerReference,
                 activeParty: [playerReference]),
             inventory ?? new RuntimeInventorySnapshot(),
-            new RuntimeEquipmentSnapshot(),
             wallet ?? new RuntimeWalletSnapshot(0),
             field,
             compendium ?? new CompendiumStateSnapshot(),

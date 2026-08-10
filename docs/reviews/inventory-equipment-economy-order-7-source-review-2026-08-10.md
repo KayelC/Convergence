@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 documentation/tracking complete; O7-R2 through O7-R11 pending
+**Implementation status:** O7-R1 and O7-R2 complete; O7-R3 through O7-R11 pending
 
 ## Purpose
 
@@ -180,7 +180,7 @@ gate are complete.
 | ID | Approved decision | Implementation kind | Status |
 |---|---|---|---|
 | O7-G1 | Introduce a policy/default pair only for a real game-variable rule. Correct identity and data-shape errors directly. Do not add speculative policy surface. | Governing design rule | Approved |
-| O7-D1 | Every owned equipment copy has a unique runtime instance ID and references one equipment definition. Different actors may equip different instances of the same definition. | Direct data-model correction | Approved |
+| O7-D1 | Every owned equipment copy has a unique runtime instance ID and references one equipment definition. Different actors may equip different instances of the same definition. | Direct data-model correction | Approved; implemented by O7-R2 |
 | O7-D2 | Equipment slot IDs are authored `ContentId` values. `IEquipmentSlotLayoutPolicy` owns valid layouts, and `StandardEquipmentSlotLayoutPolicy` supplies Weapon, Armor, Boots, and Accessory behavior. | Policy family | Approved |
 | O7-D3 | Equipped granted skills are available only while the granting instance is equipped. They are not learned and consume no move-list slot. | Fixed runtime rule | Approved |
 | O7-D4 | Equipment Defense and Evasion are numeric contributions to the existing `ProductionCombatRuleset` inputs. Equipment does not own a parallel damage or hit formula. | Direct integration correction | Approved |
@@ -420,3 +420,108 @@ Order 7 remains open until O7-R2 through O7-R10 are implemented and O7-R11
 independently audits the result. Unit tests alone do not close it. The final
 closure record must identify intended invariants, realistic reachable paths,
 concrete consequences, reproducible evidence, and any trusted host boundaries.
+
+## Checkpoint Completion Record
+
+### O7-R1: Record Decisions And Correct Tracking
+
+- **Baseline and commit:** `3947226f..803c2f38`; commit
+  `803c2f38` (`docs: approve order 7 ownership authority roadmap`).
+- **Actual destination:** this source review, the capability/documentation
+  matrices, active product and documentation roadmaps, and current baseline
+  mechanics/gameplay guidance.
+- **Changed files:** `docs/gameplay-systems.md`,
+  `docs/mechanics/party-inventory-and-economy.md`, `docs/reviews/README.md`,
+  this source review, `docs/roadmap/documentation-completion-roadmap.md`,
+  `docs/roadmap/framework-capability-matrix.md`,
+  `docs/roadmap/product-roadmap.md`,
+  `tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json`,
+  and
+  `tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json`.
+- **Verification:** the reproduced post-R1 baseline was 1,703 Framework tests,
+  178 DemoHost tests, and 7 ContentValidator tests: 1,888 total, 0 failed,
+  0 skipped. The commit changed no runtime or sample-host source.
+- **Tracking evidence:** `inventory_equipment_economy` is `partial`, Order 7
+  is explicitly open, and O7-G1/O7-D1 through O7-D8 are retained as approved
+  authority rather than reported as implemented behavior.
+
+### O7-R2: Establish Equipment Instance Ownership
+
+- **Baseline and commit:** `803c2f38..this checkpoint commit`; commit subject
+  `runtime: establish equipment instance ownership`.
+- **Actual destination:** `RuntimeEquipmentInstanceSnapshot` and
+  `RuntimeInventorySnapshot.OwnedEquipmentInstances` own equipment copies;
+  `RuntimeEquipmentSnapshot.EquippedInstanceIds` stores actor loadout
+  references; save contract v16 stores only inventory ownership plus actor
+  references.
+- **Changed Framework files:**
+  `Execution/BattleActionAuthorization.cs`, `Execution/BattleRuntimeState.cs`,
+  `PublicAPI.Shipped.txt`, `Runtime/ResourceManagementServices.cs`,
+  `Runtime/RuntimeActorSnapshotIntegrity.cs`,
+  `Runtime/RuntimeEquipmentProfiles.cs`,
+  `Runtime/RuntimePersistenceSnapshots.cs`,
+  `Runtime/RuntimeSessionRestoration.cs`, and
+  `Runtime/RuntimeStateSnapshots.cs` under `src/Convergence.Framework`.
+- **Changed host files:** `CleanSaveDemoHost.cs`,
+  `CleanTrainingAnnexDemoHost.cs`, `CleanTrainingAnnexPlayHost.cs`,
+  `TrainingAnnexBattleActionAdapter.cs`, `TrainingAnnexHostSupport.cs`,
+  `TrainingAnnexPersistenceController.cs`, and
+  `TrainingAnnexShopController.cs` under `samples/Convergence.DemoHost`, plus
+  `Infrastructure/GodotSaveCodec.cs` and
+  `Scripts/ConvergenceSmokeRoot.cs` under `samples/Convergence.GodotHost`.
+- **Changed test files:** `CleanSaveDemoHostTests.cs`,
+  `CleanTrainingAnnexPlayHostTests.cs`, `CleanSaveTestFixture.cs`,
+  `GodotIntegrationContractTests.cs`,
+  `BattleKnowledgeExecutionTransitionTests.cs`,
+  `CompendiumRuntimeServiceTests.cs`, `ProgressionPolicyTests.cs`,
+  `ResourceManagementServiceTests.cs`, `RuntimeEnumBoundaryTests.cs`,
+  `RuntimePersistenceSnapshotTests.cs`, `RuntimeStateSnapshotTests.cs`, the
+  new `EquipmentInstanceOwnershipTests.cs`, and both active matrix fixtures.
+- **Changed active documentation:** `architecture.md`, `project-vision.md`,
+  `public-api-contract.md`, `terminology-boundary.md`,
+  `gameplay-systems.md`, `godot-integration-contract.md`, the saving,
+  party/economy, and actor mechanics pages, the actor/stat/status developer
+  guides, the actor/stat/status/knowledge technical guides, the two affected
+  combat decisions, the three active product/documentation/capability
+  roadmaps, the completed actor roadmap's current-state banner, and this
+  completion record.
+- **Focused tests:** 93 Framework equipment/resource/persistence/Godot-contract
+  tests and 127 DemoHost save/Training Annex tests passed; 0 failed and 0
+  skipped. The dedicated `EquipmentInstanceOwnershipTests` class contains 7
+  passing ownership-boundary tests.
+- **Full suite:** 1,710 Framework tests, 178 DemoHost tests, and 7
+  ContentValidator tests passed: 1,895 total, 0 failed, 0 skipped.
+- **Build and integration:** the nonincremental .NET 8 solution build passed
+  with 0 warnings and 0 errors; formatting and `git diff --check` passed; all
+  four noninteractive DemoHost modes and scripted Training Annex exit passed;
+  6 packs, 36 documents, and 98 definitions passed content validation; the
+  real Godot 4.7.1 headless consumer emitted `CONVERGENCE_GODOT_SMOKE_OK`,
+  restored 3 actors under save contract v16, and exited 0.
+
+#### Explicit O7-R2 Authority Evidence
+
+1. **Instance IDs are unique.** Inventory construction rejects one equipment
+   instance ID in multiple entries; add/purchase rejects a previously owned
+   instance ID; save validation rejects equipment IDs colliding with actor
+   runtime IDs. Separate instance IDs may reference one definition and may be
+   equipped by separate actors.
+2. **Missing, duplicate, and multiply-equipped instances reject atomically.**
+   Transition tests assert the exact original `Before` and `After` snapshots
+   for missing equip, duplicate add, already-equipped assignment, and equipped
+   removal. Save tests reject a missing actor loadout reference and one
+   instance assigned to two actors. No rejected operation exposes a partially
+   changed inventory, actor equipment snapshot, or wallet.
+3. **The root save equipment authority is gone, not dormant.**
+   `RuntimeSaveGameSnapshot` has no `Equipment` constructor parameter or
+   property; `RuntimeRestoredSession` has no root `Equipment` property; the
+   public API baseline removes all three contracts. A reflection regression
+   verifies their physical absence and save contract v16.
+4. **All four requested surfaces migrated.** Framework transition/profile/save
+   tests use instance ownership; DemoHost JSON and Training Annex tests retain
+   exact instance IDs through purchase, equip, sale, save, and restore; the
+   Godot-shaped contract stores inventory instances plus actor references; and
+   persistence tests validate v16 ownership, catalog resolution, missing
+   references, multiple assignments, and removal of the root authority.
+5. **Scope guard held.** No equipment-ownership policy was introduced.
+   `EquipmentSlot`, combat contribution gaps, shop-stock behavior, pricing,
+   recovery, and currency behavior remain for O7-R3 through O7-R8.

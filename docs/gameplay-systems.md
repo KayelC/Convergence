@@ -141,15 +141,16 @@ while also occupying an active-party slot. Encounter presence remains separate
 actor state.
 
 Transition services enforce runtime-ID uniqueness, approved overlap roles,
-roster capacity, deploy/recall/swap/consume behavior, item stacks, unique
-equipment ownership, equip compatibility, wallet arithmetic, shop
+roster capacity, deploy/recall/swap/consume behavior, item stacks,
+inventory-owned equipment-instance identity, equip compatibility, wallet arithmetic, shop
 transactions, and restoration transactions. Hosts own UI and durable inventory
 storage.
 
-Order 7 is open. Current equipment ownership still identifies a copy by its
-definition ID, equipment slots are fixed, limited stock is not returned as
-durable runtime state, and wallet/recovery contracts remain single-currency and
-HP/SP-specific. The owner-approved
+Order 7 is open. O7-R2 now gives each equipment copy a unique runtime instance
+ID, permits separate copies of one definition, makes inventory the sole owner,
+and removes the former root save equipment authority. Equipment slots remain
+fixed, limited stock is not returned as durable runtime state, and
+wallet/recovery contracts remain single-currency and HP/SP-specific. The owner-approved
 [Order 7 roadmap](reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 defines the direct authority corrections and narrowly justified policy seams;
 this section is not closure evidence for those pending changes.
@@ -164,7 +165,7 @@ Fusion services resolve typed recipes and strategy policies, build deterministic
 
 ## Persistence
 
-Versioned snapshots cover actors, party and rosters, inventory, equipment, wallet, optional field/traversal state, Compendium, knowledge, session progress, and checkpoint breadcrumbs. Validation rejects inconsistent IDs, references, numeric domains, timed state, capacities, and catalog provenance before restore. Aggregate restoration resolves actor profiles, restores Hosted Entity dependencies before Vessels, and exposes no partial session on rejection. Hosts own serialization, slots, suspend-save storage, scene reconstruction, and UI.
+Versioned snapshots cover actors, party and rosters, inventory-owned equipment instances, actor loadout references, wallet, optional field/traversal state, Compendium, knowledge, session progress, and checkpoint breadcrumbs. Validation rejects inconsistent IDs, references, numeric domains, timed state, capacities, and catalog provenance before restore. Aggregate restoration resolves actor profiles, restores Hosted Entity dependencies before Vessels, and exposes no partial session on rejection. Hosts own serialization, slots, suspend-save storage, scene reconstruction, and UI.
 
 ## Demonstration Coverage
 
