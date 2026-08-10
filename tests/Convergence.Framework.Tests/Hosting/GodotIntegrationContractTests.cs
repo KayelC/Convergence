@@ -203,15 +203,15 @@ public sealed class GodotIntegrationContractTests
             level: 5,
             new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    StandardEquipmentSlotIds.Weapon,
                     equipmentInstanceId)
             ]));
         var inventorySnapshot = new RuntimeInventorySnapshot(
             ownedEquipmentInstances:
             [
-                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Weapon,
                     [
                         new RuntimeEquipmentInstanceSnapshot(
                             equipmentInstanceId,
@@ -243,9 +243,9 @@ public sealed class GodotIntegrationContractTests
         Assert.Equal(actorSnapshot.Resources.Select(resource => resource.Current), roundTripActor.Resources.Select(resource => resource.Current));
         Assert.Equal(
             equipmentInstanceId,
-            roundTripActor.Equipment.EquippedInstanceIds[EquipmentSlot.Weapon]);
+            roundTripActor.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Weapon]);
         RuntimeEquipmentInstanceSnapshot restoredEquipment = Assert.Single(
-            restored.Inventory.GetEquipmentInstances(EquipmentSlot.Weapon));
+            restored.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Weapon));
         Assert.Equal(equipmentInstanceId, restoredEquipment.InstanceId);
         Assert.Equal(
             fieldSnapshot.Navigation.CurrentLocationId,

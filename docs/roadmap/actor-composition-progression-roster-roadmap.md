@@ -5,7 +5,7 @@
 **Completed implementation authority. D1-D6 are approved, implemented, and
 verified across Checkpoints 0-8.**
 
-**Current product state:** runtime save contract v16 is authoritative; the
+**Current product state:** runtime save contract v17 is authoritative; the
 Framework Capability Matrix records 22 complete, 1 partial, and 2 intentionally
 deferred capabilities. O6-R29 through O6-R31 corrected the two bounded
 encounter paths and reconciled their documentation; O6-R32 independently

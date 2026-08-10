@@ -120,7 +120,7 @@ public sealed class OriginalCleanContentSliceTests
         Assert.IsType<RemoveAilmentEffectDefinition>(Assert.Single(cleanse.Usage!.Effects));
         Assert.IsType<ReviveEffectDefinition>(Assert.Single(revive.Usage!.Effects));
 
-        Assert.Equal(EquipmentSlot.Weapon, weapon.Slot);
+        Assert.Equal(StandardEquipmentSlotIds.Weapon, weapon.SlotId);
         Assert.Equal(DamageElement.Physical, weapon.Weapon!.BasicAttack.Element);
         Assert.IsType<NeverCriticalDefinition>(weapon.Weapon.BasicAttack.Critical);
         Assert.Equal(Id("training_supply"), shop.CategoryId);
@@ -428,11 +428,11 @@ public sealed class OriginalCleanContentSliceTests
             [ShopContentKind.Item, ShopContentKind.Item, ShopContentKind.Equipment, ShopContentKind.Equipment],
             shop.Offers.Select(offer => offer.ContentKind).ToArray());
         Assert.All(shop.Offers, offer => Assert.IsType<FixedShopPriceDefinition>(offer.Price));
-        Assert.Equal(EquipmentSlot.Armor, armor.Slot);
+        Assert.Equal(StandardEquipmentSlotIds.Armor, armor.SlotId);
         Assert.NotNull(armor.Armor);
-        Assert.Equal(EquipmentSlot.Boots, boots.Slot);
+        Assert.Equal(StandardEquipmentSlotIds.Boots, boots.SlotId);
         Assert.NotNull(boots.Boots);
-        Assert.Equal(EquipmentSlot.Accessory, accessory.Slot);
+        Assert.Equal(StandardEquipmentSlotIds.Accessory, accessory.SlotId);
         Assert.Contains(accessory.Accessory!.StatModifiers, modifier => modifier.StatId == Id("magic") && modifier.Value == 1);
 
         NegotiationDemandDefinition demand = Assert.Single(negotiation.Demands);

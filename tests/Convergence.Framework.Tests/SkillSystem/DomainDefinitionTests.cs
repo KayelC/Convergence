@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using Convergence.Catalog;
 using Convergence.Content;
+using Convergence.Runtime;
 using Xunit;
 
 namespace Convergence.Framework.Tests.Content;
@@ -186,7 +187,7 @@ public sealed class DomainDefinitionTests
             ContentId.Parse("ember_blade"),
             "Ember Blade",
             "Test weapon.",
-            EquipmentSlot.Weapon,
+            StandardEquipmentSlotIds.Weapon,
             10,
             weapon: new EquipmentWeaponProfileDefinition(new EquipmentBasicAttackDefinition(
                 DamageElement.Physical,

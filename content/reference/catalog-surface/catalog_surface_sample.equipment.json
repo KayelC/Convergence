@@ -1,12 +1,12 @@
 {
-  "$schema": "urn:convergence:schema:content:v8:equipment",
-  "schemaVersion": 8,
+  "$schema": "urn:convergence:schema:content:v9:equipment",
+  "schemaVersion": 9,
   "equipment": [
     {
       "id": "shortsword_sample",
       "displayName": "Shortsword",
       "description": "A simple physical weapon sample.",
-      "slot": "weapon",
+      "slotId": "weapon",
       "baseValue": 1200,
       "weapon": {
         "basicAttack": {
@@ -24,7 +24,7 @@
       "id": "training_coat_sample",
       "displayName": "Training Coat",
       "description": "A light armor sample.",
-      "slot": "armor",
+      "slotId": "armor",
       "baseValue": 500,
       "armor": {
         "defense": 12,
@@ -35,7 +35,7 @@
       "id": "rubber_soles_sample",
       "displayName": "Rubber Soles",
       "description": "A basic boots sample.",
-      "slot": "boots",
+      "slotId": "boots",
       "baseValue": 800,
       "boots": {
         "evasion": 5
@@ -45,7 +45,7 @@
       "id": "strength_wristband_sample",
       "displayName": "Strength Wristband",
       "description": "A small strength accessory sample.",
-      "slot": "accessory",
+      "slotId": "accessory",
       "baseValue": 3000,
       "accessory": {
         "statModifiers": [

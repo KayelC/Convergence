@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v9:equipment",
+  "type": "object", "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "equipment"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v9:equipment" },
+    "schemaVersion": { "const": 9 },
+    "equipment": { "type": "array", "items": { "$ref": "#/$defs/equipmentRecord" } }
+  },
+  "$defs": {
+    "equipmentRecord": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "displayName", "description", "slotId", "baseValue"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "slotId": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/contentId" },
+        "baseValue": { "type": "number", "minimum": 0 },
+        "grantedSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/contentId" } },
+        "weapon": {
+          "type": "object", "additionalProperties": false, "required": ["basicAttack"],
+          "properties": {
+            "basicAttack": {
+              "type": "object", "additionalProperties": false,
+              "required": ["element", "power", "accuracy", "critical", "isLongRange"],
+              "properties": {
+                "element": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/damageElement" },
+                "power": { "type": "integer", "minimum": 0 },
+                "accuracy": { "type": "integer", "minimum": 0, "maximum": 100 },
+                "critical": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/critical" },
+                "isLongRange": { "type": "boolean" },
+                "primaryEffectId": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/localId" },
+                "secondaryEffects": {
+                  "type": "array", "minItems": 1,
+                  "items": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/effect" }
+                }
+              }
+            }
+          }
+        },
+        "armor": {
+          "type": "object", "additionalProperties": false, "required": ["defense", "evasion"],
+          "properties": { "defense": { "type": "integer", "minimum": 0 }, "evasion": { "type": "integer", "minimum": 0 } }
+        },
+        "boots": {
+          "type": "object", "additionalProperties": false, "required": ["evasion"],
+          "properties": { "evasion": { "type": "integer", "minimum": 0 } }
+        },
+        "accessory": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "statModifiers": {
+              "type": "array",
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["statId", "value"],
+                "properties": { "statId": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/contentId" }, "value": { "type": "integer" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

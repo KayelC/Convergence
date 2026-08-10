@@ -171,13 +171,13 @@
       "frameworkTests": [
         "ResourceManagementServiceTests",
         "EquipmentInstanceOwnershipTests",
+        "EquipmentSlotLayoutTests",
         "RuntimePersistenceSnapshotTests"
       ],
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Equipment slots remain fixed enum values pending an authored slot-layout policy.",
         "Authored equipment-granted skills and armor/boots Defense and Evasion values are not consumed by canonical battle execution.",
         "Limited shop stock is checked but not persisted or decremented, and authored price/stock policies are not bound by the standard economy ruleset.",
         "Recovery is HP/SP-specific and the wallet is one unnamed balance rather than a typed currency ledger."

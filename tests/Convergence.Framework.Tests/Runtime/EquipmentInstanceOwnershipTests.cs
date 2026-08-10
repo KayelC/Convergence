@@ -20,26 +20,26 @@ public sealed class EquipmentInstanceOwnershipTests
         var inventory = new RuntimeInventorySnapshot(
             ownedEquipmentInstances:
             [
-                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Weapon,
                     [first, second])
             ]);
 
-        Assert.Equal(2, inventory.GetEquipmentInstances(EquipmentSlot.Weapon).Count);
+        Assert.Equal(2, inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Weapon).Count);
         Assert.True(inventory.TryGetEquipmentInstance(
             FirstSword,
             out RuntimeEquipmentInstanceSnapshot? resolved,
-            out EquipmentSlot slot));
+            out ContentId slot));
         Assert.Equal(Shortsword, resolved!.DefinitionId);
-        Assert.Equal(EquipmentSlot.Weapon, slot);
+        Assert.Equal(StandardEquipmentSlotIds.Weapon, slot);
         Assert.Throws<ArgumentException>(() => new RuntimeInventorySnapshot(
             ownedEquipmentInstances:
             [
-                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Weapon,
                     [first]),
-                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                    EquipmentSlot.Accessory,
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Accessory,
                     [first])
             ]));
     }
@@ -51,8 +51,8 @@ public sealed class EquipmentInstanceOwnershipTests
         var empty = new RuntimeEquipmentSnapshot();
         var firstActor = new RuntimeEquipmentSnapshot(
         [
-            new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                EquipmentSlot.Weapon,
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Weapon,
                 FirstSword)
         ]);
         var service = new EquipmentTransitionService();
@@ -61,15 +61,15 @@ public sealed class EquipmentInstanceOwnershipTests
             inventory,
             empty,
             Instance("missing-001"),
-            EquipmentSlot.Weapon,
-            EquipmentSlot.Weapon,
+            StandardEquipmentSlotIds.Weapon,
+            StandardEquipmentSlotIds.Weapon,
             [firstActor]);
         EquipmentTransitionResult multiplyEquipped = service.Equip(
             inventory,
             empty,
             FirstSword,
-            EquipmentSlot.Weapon,
-            EquipmentSlot.Weapon,
+            StandardEquipmentSlotIds.Weapon,
+            StandardEquipmentSlotIds.Weapon,
             [firstActor]);
 
         Assert.Equal(ResourceTransactionCode.EquipmentNotOwned, missing.Code);
@@ -81,6 +81,61 @@ public sealed class EquipmentInstanceOwnershipTests
     }
 
     [Fact]
+    public void CustomSlotLayout_PreservesCrossActorOwnershipAndDrivesSaveCompatibility()
+    {
+        ContentId mainHand = Id("main_hand");
+        RuntimeInventorySnapshot inventory = Inventory(FirstSword);
+        var empty = new RuntimeEquipmentSnapshot();
+        var occupiedByOtherActor = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(mainHand, FirstSword)
+        ]);
+        var layout = new MainHandEquipmentSlotLayoutPolicy(mainHand);
+        var service = new EquipmentTransitionService(layout);
+
+        EquipmentTransitionResult collision = service.Equip(
+            inventory,
+            empty,
+            FirstSword,
+            StandardEquipmentSlotIds.Weapon,
+            mainHand,
+            [occupiedByOtherActor]);
+        EquipmentTransitionResult applied = service.Equip(
+            inventory,
+            empty,
+            FirstSword,
+            StandardEquipmentSlotIds.Weapon,
+            mainHand,
+            []);
+
+        Assert.Equal(ResourceTransactionCode.EquipmentAlreadyEquipped, collision.Code);
+        Assert.Same(empty, collision.Before);
+        Assert.Same(empty, collision.After);
+        Assert.True(applied.Applied);
+        Assert.Equal(FirstSword, applied.After.EquippedInstanceIds[mainHand]);
+
+        RuntimeSaveGameSnapshot baseline = RuntimePersistenceSnapshotTests.CreateSaveSnapshot();
+        RuntimeActorSnapshot customActor = WithEquipment(baseline.Actors[0], FirstSword, mainHand);
+        RuntimeSaveGameSnapshot snapshot = CopySave(
+            baseline,
+            [customActor, baseline.Actors[1]],
+            inventory);
+        GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
+
+        RuntimeSaveValidationResult standardValidation =
+            new RuntimeSaveValidator().Validate(snapshot, catalog);
+        RuntimeSaveValidationResult customValidation =
+            new RuntimeSaveValidator(equipmentSlotLayout: layout).Validate(snapshot, catalog);
+
+        Assert.Contains(standardValidation.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.EquipmentSlotMismatch &&
+            diagnostic.Path == "$.actors[0].equipment.equippedInstanceIds.main_hand");
+        Assert.True(
+            customValidation.IsValid,
+            string.Join(Environment.NewLine, customValidation.Diagnostics.Select(item => item.Message)));
+    }
+
+    [Fact]
     public void InventoryTransition_RejectsDuplicateAndEquippedRemovalAtomically()
     {
         RuntimeInventorySnapshot inventory = Inventory(FirstSword);
@@ -88,19 +143,19 @@ public sealed class EquipmentInstanceOwnershipTests
         var duplicate = new RuntimeEquipmentInstanceSnapshot(FirstSword, Shortsword);
         var equipped = new RuntimeEquipmentSnapshot(
         [
-            new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                EquipmentSlot.Weapon,
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Weapon,
                 FirstSword)
         ]);
 
         InventoryTransitionResult duplicateResult = service.AddEquipment(
             inventory,
             duplicate,
-            EquipmentSlot.Weapon);
+            StandardEquipmentSlotIds.Weapon);
         InventoryTransitionResult removeResult = service.RemoveEquipment(
             inventory,
             FirstSword,
-            EquipmentSlot.Weapon,
+            StandardEquipmentSlotIds.Weapon,
             [equipped]);
 
         Assert.Equal(ResourceTransactionCode.EquipmentDuplicate, duplicateResult.Code);
@@ -199,7 +254,7 @@ public sealed class EquipmentInstanceOwnershipTests
     [Fact]
     public void SaveContract_HasNoSeparateRootEquipmentAuthority()
     {
-        Assert.Equal(16, RuntimeSaveGameSnapshot.CurrentContractVersion);
+        Assert.Equal(17, RuntimeSaveGameSnapshot.CurrentContractVersion);
         Assert.Null(typeof(RuntimeSaveGameSnapshot).GetProperty("Equipment"));
         Assert.DoesNotContain(
             typeof(RuntimeSaveGameSnapshot).GetConstructors()
@@ -213,15 +268,16 @@ public sealed class EquipmentInstanceOwnershipTests
         new(
             ownedEquipmentInstances:
             [
-                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Weapon,
                     instanceIds.Select(instanceId =>
                         new RuntimeEquipmentInstanceSnapshot(instanceId, Shortsword)))
             ]);
 
     private static RuntimeActorSnapshot WithEquipment(
         RuntimeActorSnapshot actor,
-        RuntimeInstanceId equipmentInstanceId) =>
+        RuntimeInstanceId equipmentInstanceId,
+        ContentId? slotId = null) =>
         new(
             actor.Identity,
             actor.Affiliation,
@@ -232,8 +288,8 @@ public sealed class EquipmentInstanceOwnershipTests
             actor.Skills,
             new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    slotId ?? StandardEquipmentSlotIds.Weapon,
                     equipmentInstanceId)
             ]),
             actor.BattleStatus,
@@ -264,4 +320,37 @@ public sealed class EquipmentInstanceOwnershipTests
 
     private static ContentId Id(string value) => ContentId.Parse(value);
     private static RuntimeInstanceId Instance(string value) => RuntimeInstanceId.Parse(value);
+
+    private sealed class MainHandEquipmentSlotLayoutPolicy(ContentId mainHand)
+        : IEquipmentSlotLayoutPolicy
+    {
+        private readonly IReadOnlyList<ContentId> _slotIds =
+            Array.AsReadOnly([StandardEquipmentSlotIds.Weapon, mainHand]);
+
+        public IReadOnlyList<ContentId> SlotIds => _slotIds;
+
+        public EquipmentSlotLayoutResult ValidateDefinition(EquipmentDefinition definition)
+        {
+            ArgumentNullException.ThrowIfNull(definition);
+            return definition.SlotId == StandardEquipmentSlotIds.Weapon &&
+                   definition.Weapon is not null &&
+                   definition.Armor is null &&
+                   definition.Boots is null &&
+                   definition.Accessory is null
+                ? EquipmentSlotLayoutResult.Compatible
+                : new EquipmentSlotLayoutResult(
+                    EquipmentSlotLayoutCode.ProfileMismatch,
+                    "The main-hand layout accepts weapon-profile definitions only.");
+        }
+
+        public EquipmentSlotLayoutResult ValidateAssignment(
+            ContentId authoredSlotId,
+            ContentId targetSlotId) =>
+            authoredSlotId == StandardEquipmentSlotIds.Weapon &&
+            (targetSlotId == StandardEquipmentSlotIds.Weapon || targetSlotId == mainHand)
+                ? EquipmentSlotLayoutResult.Compatible
+                : new EquipmentSlotLayoutResult(
+                    EquipmentSlotLayoutCode.AssignmentMismatch,
+                    "The authored weapon slot maps to main_hand only.");
+    }
 }

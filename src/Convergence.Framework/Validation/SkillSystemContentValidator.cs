@@ -1,17 +1,24 @@
 using Convergence.Battle;
 using Convergence.Content;
+using Convergence.Runtime;
 
 namespace Convergence.Validation;
 
 public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 {
-    private const int SupportedSchemaVersion = 8;
+    private const int SupportedSchemaVersion = 9;
+    private readonly IEquipmentSlotLayoutPolicy _equipmentSlotLayout;
+
+    public SkillSystemContentValidator(IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null)
+    {
+        _equipmentSlotLayout = equipmentSlotLayout ?? StandardEquipmentSlotLayoutPolicy.Instance;
+    }
 
     public ContentValidationResult Validate(SkillSystemValidationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var context = new ValidationContext(request);
+        var context = new ValidationContext(request, _equipmentSlotLayout);
         context.ValidateDocuments();
         context.ValidateRecords();
 
@@ -25,6 +32,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
         private readonly SkillSystemValidationRequest _request;
         private readonly string _packId;
         private readonly SkillSystemRegistrationSnapshot _registrations;
+        private readonly IEquipmentSlotLayoutPolicy _equipmentSlotLayout;
         private readonly List<RecordSource<SkillDefinition>> _skills;
         private readonly List<RecordSource<EntityDefinition>> _entities;
         private readonly List<RecordSource<RaceDefinition>> _races;
@@ -50,11 +58,14 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
         private readonly Dictionary<ContentId, List<RecordSource<FusionRecipeDefinition>>> _fusionIndex;
         private readonly Dictionary<ContentId, List<RecordSource<RulesetDefinition>>> _rulesetIndex;
 
-        public ValidationContext(SkillSystemValidationRequest request)
+        public ValidationContext(
+            SkillSystemValidationRequest request,
+            IEquipmentSlotLayoutPolicy equipmentSlotLayout)
         {
             _request = request;
             _packId = request.Manifest.Id;
             _registrations = request.Registrations;
+            _equipmentSlotLayout = equipmentSlotLayout;
             _skills = Flatten(request.SkillDocuments, "skill", "skills", definition => definition.Id);
             _entities = Flatten(request.EntityDocuments, "entity", "entities", definition => definition.Id);
             _races = Flatten(request.RaceDocuments, "race", "races", definition => definition.Id);
@@ -719,24 +730,15 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     source.Path + $".grantedSkillIds[{index}]", _skillIndex, "skill");
             }
 
-            int profileCount =
-                (equipment.Weapon is null ? 0 : 1) +
-                (equipment.Armor is null ? 0 : 1) +
-                (equipment.Boots is null ? 0 : 1) +
-                (equipment.Accessory is null ? 0 : 1);
-            if (profileCount != 1)
+            EquipmentSlotLayoutResult layout =
+                _equipmentSlotLayout.ValidateDefinition(equipment);
+            if (!layout.IsCompatible)
             {
-                Add(source, source.Path, ContentValidationErrorCode.ShapeInvalid,
-                    "Equipment records require exactly one slot profile.");
-            }
-
-            if ((equipment.Slot == EquipmentSlot.Weapon && equipment.Weapon is null) ||
-                (equipment.Slot == EquipmentSlot.Armor && equipment.Armor is null) ||
-                (equipment.Slot == EquipmentSlot.Boots && equipment.Boots is null) ||
-                (equipment.Slot == EquipmentSlot.Accessory && equipment.Accessory is null))
-            {
-                Add(source, source.Path, ContentValidationErrorCode.ShapeInvalid,
-                    "Equipment slot must match its declared profile.");
+                Add(
+                    source,
+                    source.Path + ".slotId",
+                    ContentValidationErrorCode.ShapeInvalid,
+                    layout.Message ?? "Equipment slot layout is incompatible.");
             }
 
             if (equipment.Weapon is EquipmentWeaponProfileDefinition weapon)

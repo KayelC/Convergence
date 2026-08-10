@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v8:skills",
-  "schemaVersion": 8,
+  "$schema": "urn:convergence:schema:content:v9:skills",
+  "schemaVersion": 9,
   "skills": [
     {
       "id": "ice_boost_sample",

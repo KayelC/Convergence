@@ -161,7 +161,6 @@ public sealed class SkillSystemJsonDeserializer : ISkillSystemDocumentDeserializ
         options.Converters.Add(new StrictSnakeCaseEnumConverter<CompanionFleeOutcome>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<ItemKind>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<ItemConsumptionMode>());
-        options.Converters.Add(new StrictSnakeCaseEnumConverter<EquipmentSlot>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<ShopContentKind>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<ShopPriceKind>());
         options.Converters.Add(new StrictSnakeCaseEnumConverter<ShopStockKind>());

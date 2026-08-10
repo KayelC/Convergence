@@ -366,8 +366,8 @@ internal static class GodotSaveCodec
                         Id(choice.SkillId))),
                 actor.SkillRevision),
             new RuntimeEquipmentSnapshot(actor.EquippedInstanceIds.Select(pair =>
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    Enum.Parse<EquipmentSlot>(pair.Key),
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    Id(pair.Key),
                     Instance(pair.Value)))),
             new RuntimeBattleStatusSnapshot(
                 actor.Ailments.Select(FromDto),
@@ -504,8 +504,8 @@ internal static class GodotSaveCodec
             inventory.ItemQuantities.Select(pair =>
                 new KeyValuePair<ContentId, int>(Id(pair.Key), pair.Value)),
             inventory.OwnedEquipmentInstances.Select(pair =>
-                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                    Enum.Parse<EquipmentSlot>(pair.Key),
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    Id(pair.Key),
                     pair.Value.Select(instance => new RuntimeEquipmentInstanceSnapshot(
                         Instance(instance.InstanceId),
                         Id(instance.DefinitionId))))));

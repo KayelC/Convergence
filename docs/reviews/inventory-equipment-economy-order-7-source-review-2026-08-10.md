@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 and O7-R2 complete; O7-R3 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R3 complete; O7-R4 through O7-R11 pending
 
 ## Purpose
 
@@ -181,7 +181,7 @@ gate are complete.
 |---|---|---|---|
 | O7-G1 | Introduce a policy/default pair only for a real game-variable rule. Correct identity and data-shape errors directly. Do not add speculative policy surface. | Governing design rule | Approved |
 | O7-D1 | Every owned equipment copy has a unique runtime instance ID and references one equipment definition. Different actors may equip different instances of the same definition. | Direct data-model correction | Approved; implemented by O7-R2 |
-| O7-D2 | Equipment slot IDs are authored `ContentId` values. `IEquipmentSlotLayoutPolicy` owns valid layouts, and `StandardEquipmentSlotLayoutPolicy` supplies Weapon, Armor, Boots, and Accessory behavior. | Policy family | Approved |
+| O7-D2 | Equipment slot IDs are authored `ContentId` values. `IEquipmentSlotLayoutPolicy` owns valid layouts, and `StandardEquipmentSlotLayoutPolicy` supplies Weapon, Armor, Boots, and Accessory behavior. | Policy family | Approved; implemented by O7-R3 |
 | O7-D3 | Equipped granted skills are available only while the granting instance is equipped. They are not learned and consume no move-list slot. | Fixed runtime rule | Approved |
 | O7-D4 | Equipment Defense and Evasion are numeric contributions to the existing `ProductionCombatRuleset` inputs. Equipment does not own a parallel damage or hit formula. | Direct integration correction | Approved |
 | O7-D5 | Runtime shop stock is stateful. Buying decrements limited stock. Standard selling does not replenish stock; a supplied policy may choose otherwise. | Policy family plus runtime state | Approved |
@@ -525,3 +525,83 @@ concrete consequences, reproducible evidence, and any trusted host boundaries.
 5. **Scope guard held.** No equipment-ownership policy was introduced.
    `EquipmentSlot`, combat contribution gaps, shop-stock behavior, pricing,
    recovery, and currency behavior remain for O7-R3 through O7-R8.
+
+### O7-R3: Author Equipment Slot Layouts
+
+- **Baseline and commit:** `147265ff..this checkpoint commit`; commit subject
+  `runtime: author equipment slot layouts`.
+- **Actual destination:** `EquipmentDefinition.SlotId`, inventory and actor
+  equipment dictionaries keyed by `ContentId`, the
+  `IEquipmentSlotLayoutPolicy` boundary, and the supplied
+  `StandardEquipmentSlotLayoutPolicy` with stable `weapon`, `armor`, `boots`,
+  and `accessory` IDs. Save contract v17 persists the authored key shape.
+- **Changed Framework files:** `Catalog/DefinitionQualifier.cs`,
+  `Content/ContentSurfaceDefinitions.cs`,
+  `Content/SkillSystemJsonDeserializer.cs`, `PublicAPI.Shipped.txt`, the new
+  `Runtime/EquipmentSlotLayouts.cs`, `Runtime/ResourceManagementServices.cs`,
+  `Runtime/RuntimeActorSnapshotIntegrity.cs`,
+  `Runtime/RuntimeEquipmentProfiles.cs`,
+  `Runtime/RuntimePersistenceSnapshots.cs`,
+  `Runtime/RuntimeStateSnapshots.cs`, `Serialization/SchemaDtos.cs`,
+  `Serialization/SkillSystemDtoMapper.cs`, and
+  `Validation/SkillSystemContentValidator.cs`.
+- **Changed wire/content files:** the strict Draft 2020-12 set under
+  `schemas/content/v9`, all 36 active documents under `content`, the
+  ContentValidator and CI schema roots, and all active pack identities. The
+  equipment wire property is `slotId`; active packs are version `0.9.0` and
+  declare schema v9.
+- **Changed host files:** DemoHost save, Training Annex boot/restore/shop
+  integration, and Godot save/smoke integration now serialize and route slot
+  IDs without enum parsing. Standard DemoHost labels preserve the existing
+  Weapon/Armor/Boots/Accessory presentation.
+- **Changed tests and tracking:** the new `EquipmentSlotLayoutTests`, expanded
+  `EquipmentInstanceOwnershipTests`, resource, persistence, schema, catalog,
+  Godot-contract, DemoHost, source-inventory, capability, and documentation
+  synchronization coverage, plus current architecture, content-contract,
+  terminology, mechanics, quality-gate, and roadmap guidance.
+- **Focused tests:** 271 Framework slot-layout, equipment-instance,
+  resource-management, persistence, schema, active-content, and Godot-contract
+  tests passed; 0 failed and 0 skipped. The dedicated slot-layout class contains
+  3 passing policy/key-boundary tests, and the equipment-ownership class
+  contains 8 passing instance-authority tests.
+- **Full suite:** 1,719 Framework tests, 178 DemoHost tests, and 7
+  ContentValidator tests passed: 1,904 total, 0 failed, 0 skipped.
+- **Build and content integration:** the nonincremental .NET 8 solution build
+  passed with 0 warnings and 0 errors; formatting and `git diff --check`
+  passed. The authoring validator loaded 6 packs, 36 documents, and 98
+  qualified definitions through schema v9, strict deserialization, semantic
+  validation, dependency/registration checks, and catalog construction. All
+  five DemoHost modes passed, including scripted Training Annex exit, and the
+  real Godot 4.7.1 headless smoke path restored save contract v17 successfully.
+
+#### Explicit O7-R3 Parity-Hazard Evidence
+
+1. **Standard four-slot decisions are unchanged.** The supplied policy exposes
+   exactly `weapon`, `armor`, `boots`, and `accessory`. A complete 4-by-4
+   slot/profile matrix proves that each existing matching profile is accepted,
+   every former mismatch is rejected, unsupported IDs are rejected, and only
+   same-ID assignments are valid. All existing standard-policy packs load.
+2. **O7-R2 atomic rejection remains intact under `ContentId` keys.** Inventory
+   and actor snapshot construction reject one instance ID repeated under two
+   authored slot IDs. Missing equip, duplicate add, already-equipped assign,
+   multiply-equipped save state, and equipped removal retain identical
+   `Before`/`After` snapshots on rejection.
+3. **O7-R2 cross-actor collision detection remains intact.** `Equip` still
+   checks the target actor and every supplied other-actor equipment snapshot by
+   instance ID before constructing the result. Both the standard layout and a
+   custom `weapon` to `main_hand` mapping reject a collision atomically.
+4. **Save contract advances sequentially to v17.** The preceding current
+   contract was v16. `CurrentContractVersion` is now 17, constructor/API/host
+   codecs use 17, and validation explicitly rejects v16 alongside the earlier
+   unsupported pre-release versions. No version collision or skip occurred.
+5. **Compatibility belongs to the selected policy.** Content semantic
+   validation, shop-offer resolution, equipment transitions, equipment-profile
+   resolution, and save validation all call the injected layout policy. A
+   custom policy accepts a layout that the standard policy rejects, including
+   transition and save validation. Active source contains no `EquipmentSlot`
+   enum or implicit enum/profile comparison; JSON Schema validates `slotId`
+   structure while semantic policy owns vocabulary and compatibility.
+6. **Scope guard held.** O7-R3 does not resolve granted skills, feed
+   armor/boots contributions into combat, or alter pricing, shop stock,
+   recovery, currency, or their policy surfaces. Those remain O7-R4 through
+   O7-R8 work.

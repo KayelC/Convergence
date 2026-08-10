@@ -115,7 +115,7 @@ precedence and intersects equally strong limited-action sets. Implement
 
 `ChanceSkipOrFleeAilmentTurnBehaviorDefinition` must use either
 `CompanionFleeOutcome.RecallToRoster` or
-`CompanionFleeOutcome.EscapeBattle`. Schema-v8 JSON and the built-in strict
+`CompanionFleeOutcome.EscapeBattle`. Schema-v9 JSON and the built-in strict
 converter reject any other wire value. The semantic content validator applies
 the same rule to programmatic definitions and custom deserializers. Direct
 lifecycle execution also rejects an undefined enum before staged Guard clearing
@@ -157,7 +157,7 @@ and descriptions may be changed without changing behavior.
 
 ## Authoring A Passive Trigger
 
-Schema-v8 content must declare targeting explicitly:
+Schema-v9 content must declare targeting explicitly:
 
 ```json
 {
@@ -365,7 +365,7 @@ is published.
 
 ## Persistence
 
-Save contract v16 preserves:
+Save contract v17 preserves:
 
 - active ailments and other timed state with expiration and removal profile;
 - stat-modifier and charge-policy state;
@@ -401,7 +401,7 @@ than rebuilding state from icons or display names.
 
 ## JSON Lifetime Authoring
 
-Schema-v8 JSON constructs the same `StatusLifetimeDefinition` available to
+Schema-v9 JSON constructs the same `StatusLifetimeDefinition` available to
 programmatic integrations. Ailments use `defaultLifetime`; applicable typed
 effects use `lifetime`. Each contains `expiration` and
 `allowedRemovalCauses`, so content does not acquire hidden Deployment,

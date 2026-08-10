@@ -209,17 +209,17 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Empty(summary.PreparedEncounterActorInstanceIds);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Contains(
-            summary.Inventory.GetEquipmentInstances(EquipmentSlot.Weapon),
+            summary.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Weapon),
             instance => instance.DefinitionId == Qualified("practice_blade"));
         Assert.Contains(
-            summary.Inventory.GetEquipmentInstances(EquipmentSlot.Accessory),
+            summary.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Accessory),
             instance => instance.DefinitionId == Qualified("focus_charm"));
         Assert.Equal(
             TrainingAnnexHostSupport.PracticeBladeInstance,
-            summary.Equipment.EquippedInstanceIds[EquipmentSlot.Weapon]);
+            summary.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Weapon]);
         Assert.Equal(
             TrainingAnnexHostSupport.FocusCharmInstance,
-            summary.Equipment.EquippedInstanceIds[EquipmentSlot.Accessory]);
+            summary.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Accessory]);
         Assert.Equal(Qualified("practice_blade"), summary.EquipmentProfile.BasicAttack?.EquipmentId);
         Assert.Equal(1, summary.EquipmentProfile.StatModifiers[ContentId.Parse("magic")]);
         Assert.Empty(summary.EquipmentProfile.Diagnostics);
@@ -1758,14 +1758,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
             ],
             ownedEquipmentInstances:
             [
-                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Weapon,
                     [new RuntimeEquipmentInstanceSnapshot(weightedClubInstanceId, weightedClub)])
             ]);
         var equipment = new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    StandardEquipmentSlotIds.Weapon,
                     weightedClubInstanceId)
             ]);
         var io = new ScriptedGameIO().QueueMenu(6, 6, 9, 10, 0, 0, -1, 13);
@@ -1783,7 +1783,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Equal(
             weightedClubInstanceId,
-            summary.Equipment.EquippedInstanceIds[EquipmentSlot.Weapon]);
+            summary.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Weapon]);
         Assert.Equal(weightedClub, summary.EquipmentProfile.BasicAttack?.EquipmentId);
         Assert.Contains(weightedClub, summary.ExecutedBattleActionIds);
         Assert.DoesNotContain(Qualified("practice_blade"), summary.ExecutedBattleActionIds);
@@ -2946,19 +2946,19 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, transaction.OwnedCountBefore);
         Assert.Equal(1, transaction.OwnedCountAfter);
         Assert.Equal(Qualified("padded_jacket"), equipment.EquipmentId);
-        Assert.Equal(EquipmentSlot.Armor, equipment.Slot);
+        Assert.Equal(StandardEquipmentSlotIds.Armor, equipment.SlotId);
         Assert.True(equipment.Applied);
         Assert.Equal(ResourceTransactionCode.Applied, equipment.Code);
         Assert.Equal(16, summary.Wallet.Balance);
         RuntimeEquipmentInstanceSnapshot paddedJacket = Assert.Single(
-            summary.Inventory.GetEquipmentInstances(EquipmentSlot.Armor),
+            summary.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Armor),
             instance => instance.DefinitionId == Qualified("padded_jacket"));
         Assert.Equal(
             paddedJacket.InstanceId,
-            summary.Equipment.EquippedInstanceIds[EquipmentSlot.Armor]);
+            summary.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Armor]);
         Assert.Equal(paddedJacket.InstanceId, transaction.EquipmentInstanceId);
         Assert.Equal(paddedJacket.InstanceId, equipment.EquipmentInstanceId);
-        Assert.Contains(EquipmentSlot.Armor, summary.EquipmentProfile.EquippedDefinitions.Keys);
+        Assert.Contains(StandardEquipmentSlotIds.Armor, summary.EquipmentProfile.EquippedDefinitions.Keys);
         Assert.Equal(
             [
                 CleanTrainingAnnexPlayCommand.OpenShop,
@@ -3008,7 +3008,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, summary.Wallet.Balance);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.DoesNotContain(
-            summary.Inventory.GetEquipmentInstances(EquipmentSlot.Armor),
+            summary.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Armor),
             instance => instance.DefinitionId == Qualified("padded_jacket"));
 
         GameIoMenuCall buyMenu = Assert.Single(io.Menus, menu => menu.Header == "Training Supply - Buy");
@@ -4628,7 +4628,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 ["id"] = "weighted_club",
                 ["displayName"] = "Weighted Club",
                 ["description"] = "Test-only alternate weapon.",
-                ["slot"] = "weapon",
+                ["slotId"] = "weapon",
                 ["baseValue"] = 1,
                 ["weapon"] = new JsonObject
                 {

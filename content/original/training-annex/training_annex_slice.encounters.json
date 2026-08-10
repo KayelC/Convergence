@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v8:encounters",
-  "schemaVersion": 8,
+  "$schema": "urn:convergence:schema:content:v9:encounters",
+  "schemaVersion": 9,
   "encounters": [
     {
       "id": "ashling_drill",

@@ -1667,13 +1667,13 @@ internal sealed class CleanTrainingAnnexPlayHost
             inventoryTransitions,
             TrainingAnnexHostSupport.PracticeBlade,
             TrainingAnnexHostSupport.PracticeBladeInstance,
-            EquipmentSlot.Weapon);
+            StandardEquipmentSlotIds.Weapon);
         inventory = AddEquipmentIfMissing(
             inventory,
             inventoryTransitions,
             TrainingAnnexHostSupport.FocusCharm,
             TrainingAnnexHostSupport.FocusCharmInstance,
-            EquipmentSlot.Accessory);
+            StandardEquipmentSlotIds.Accessory);
 
         return inventory;
     }
@@ -1683,7 +1683,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IInventoryTransitionService inventoryTransitions,
         ContentId equipmentId,
         RuntimeInstanceId equipmentInstanceId,
-        EquipmentSlot slot)
+        ContentId slot)
     {
         if (inventory.GetEquipmentInstances(slot).Any(instance =>
                 instance.DefinitionId == equipmentId))
@@ -1732,13 +1732,15 @@ internal sealed class CleanTrainingAnnexPlayHost
         IEquipmentTransitionService equipmentTransitions)
     {
         RuntimeEquipmentSnapshot equipment = new();
-        foreach ((EquipmentSlot slot, RuntimeInstanceId equipmentInstanceId) in
-                 requested.EquippedInstanceIds.OrderBy(pair => pair.Key))
+        foreach ((ContentId slot, RuntimeInstanceId equipmentInstanceId) in
+                 requested.EquippedInstanceIds.OrderBy(
+                     pair => pair.Key.Value,
+                     StringComparer.Ordinal))
         {
             if (!inventory.TryGetEquipmentInstance(
                     equipmentInstanceId,
                     out RuntimeEquipmentInstanceSnapshot? instance,
-                    out EquipmentSlot ownedSlot) ||
+                    out ContentId ownedSlot) ||
                 instance is null ||
                 !catalog.TryGetEquipment(
                     instance.DefinitionId,
@@ -1773,7 +1775,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     {
         EquipmentDefinition definition = catalog.GetRequiredEquipment(equipmentId);
         RuntimeEquipmentInstanceSnapshot? instance = inventory
-            .GetEquipmentInstances(definition.Slot)
+            .GetEquipmentInstances(definition.SlotId)
             .FirstOrDefault(candidate => candidate.DefinitionId == equipmentId);
         if (instance is null)
         {
@@ -1784,8 +1786,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             inventory,
             equipment,
             instance.InstanceId,
-            definition.Slot,
-            definition.Slot,
+                definition.SlotId,
+                definition.SlotId,
             []);
         return result.Applied ? result.After : equipment;
     }

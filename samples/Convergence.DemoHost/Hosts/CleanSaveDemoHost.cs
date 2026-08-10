@@ -184,8 +184,8 @@ internal sealed class CleanSaveDemoHost
             [ContentId.Parse("convergence.skill_system_redesign_sample:ice_boost_sample")],
             new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    StandardEquipmentSlotIds.Weapon,
                     shortswordInstanceId)
             ]));
         RuntimeActorSnapshot ember = CreateActor(
@@ -198,10 +198,10 @@ internal sealed class CleanSaveDemoHost
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.8.0")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.8.0")),
-                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.8.0")),
-                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.8.0"))
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.9.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.9.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.9.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.9.0"))
             ],
             [frost, ember],
             new RuntimePartyRosterSnapshot(
@@ -213,8 +213,8 @@ internal sealed class CleanSaveDemoHost
             new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(ContentId.Parse("convergence.shared_effects_demo:medicine_demo"), 2)],
                 [
-                    new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                        EquipmentSlot.Weapon,
+                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                        StandardEquipmentSlotIds.Weapon,
                         [
                             new RuntimeEquipmentInstanceSnapshot(
                                 shortswordInstanceId,
@@ -531,8 +531,8 @@ internal static class CleanSaveJsonCodec
                         Id(choice.SkillId))),
                 dto.SkillRevision),
             new RuntimeEquipmentSnapshot(dto.EquippedInstanceIds.Select(pair =>
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    Enum.Parse<EquipmentSlot>(pair.Key),
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    Id(pair.Key),
                     Instance(pair.Value)))),
             new RuntimeBattleStatusSnapshot(
                 dto.Ailments.Select(FromDto),
@@ -717,8 +717,8 @@ internal static class CleanSaveJsonCodec
         new(
             dto.ItemQuantities.Select(pair => new KeyValuePair<ContentId, int>(Id(pair.Key), pair.Value)),
             dto.OwnedEquipmentInstances.Select(pair =>
-                new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                Enum.Parse<EquipmentSlot>(pair.Key),
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                Id(pair.Key),
                 pair.Value.Select(instance => new RuntimeEquipmentInstanceSnapshot(
                     Instance(instance.InstanceId),
                     Id(instance.DefinitionId))))));

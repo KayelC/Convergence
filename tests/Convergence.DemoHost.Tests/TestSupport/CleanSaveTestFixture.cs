@@ -39,8 +39,8 @@ internal static class CleanSaveTestFixture
             ],
             equipment: new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    StandardEquipmentSlotIds.Weapon,
                     shortswordInstanceId)
             ]));
         RuntimeActorSnapshot ember = CreateActor(
@@ -53,10 +53,10 @@ internal static class CleanSaveTestFixture
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.8.0")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.8.0")),
-                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.8.0")),
-                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.8.0"))
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.9.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.9.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.9.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.9.0"))
             ],
             actors ?? [frost, ember],
             partyRoster ?? new RuntimePartyRosterSnapshot(
@@ -68,8 +68,8 @@ internal static class CleanSaveTestFixture
             inventory ?? new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Id("convergence.shared_effects_demo:medicine_demo"), 2)],
                 [
-                    new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                        EquipmentSlot.Weapon,
+                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                        StandardEquipmentSlotIds.Weapon,
                         [
                             new RuntimeEquipmentInstanceSnapshot(
                                 shortswordInstanceId,

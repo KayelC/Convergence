@@ -149,7 +149,7 @@ internal sealed class EquipmentDto
     public required string Id { get; init; }
     public required string DisplayName { get; init; }
     public required string Description { get; init; }
-    public required EquipmentSlot Slot { get; init; }
+    public required string SlotId { get; init; }
     public required decimal BaseValue { get; init; }
     public List<string> GrantedSkillIds { get; init; } = [];
     public EquipmentWeaponProfileDto? Weapon { get; init; }

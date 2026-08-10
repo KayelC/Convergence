@@ -41,7 +41,7 @@ Godot owns visible enemies, trigger volumes, patrols, spawn points, boss scenes,
 
 The framework exposes serializer-neutral runtime snapshots and restores them
 against a `GameDataCatalog` through `IRuntimeSessionRestoreService`. Runtime
-save contract v16 stores one canonical party roster, inventory-owned equipment
+save contract v17 stores one canonical party roster, inventory-owned equipment
 instances with actor loadout references, complete source actor
 progression and move-list state, complete selected-policy stat-modifier
 contributions, typed status lifetimes, and optional per-target passive

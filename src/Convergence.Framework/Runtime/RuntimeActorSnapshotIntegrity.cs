@@ -278,14 +278,6 @@ internal static class RuntimeActorSnapshotIntegrity
         RuntimeActorSnapshot snapshot,
         ICollection<RuntimeActorSnapshotIntegrityDiagnostic> diagnostics)
     {
-        foreach (EquipmentSlot slot in snapshot.Equipment.EquippedInstanceIds.Keys)
-        {
-            ValidateEnumValue(
-                slot,
-                $"$.equipment.equippedInstanceIds.{slot.ToString().ToLowerInvariant()}",
-                diagnostics);
-        }
-
         for (int index = 0; index < snapshot.BattleStatus.Charges.Count; index++)
         {
             ValidateEnumValue(
@@ -383,12 +375,16 @@ internal static class RuntimeActorSnapshotIntegrity
         }
         ValidateContentIds(snapshot.CapabilityIds, "$.capabilityIds", diagnostics);
 
-        foreach ((EquipmentSlot slot, RuntimeInstanceId equipmentInstanceId) in
+        foreach ((ContentId slotId, RuntimeInstanceId equipmentInstanceId) in
                  snapshot.Equipment.EquippedInstanceIds)
         {
+            ValidateContentId(
+                slotId,
+                $"$.equipment.equippedInstanceIds.{slotId}",
+                diagnostics);
             ValidateRuntimeInstanceId(
                 equipmentInstanceId,
-                $"$.equipment.equippedInstanceIds.{slot.ToString().ToLowerInvariant()}",
+                $"$.equipment.equippedInstanceIds.{slotId}",
                 diagnostics);
         }
 

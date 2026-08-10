@@ -322,7 +322,7 @@ Charge state is policy-owned; supplied hit/evasion uses
 authored accuracy, explicit Agility coefficients, typed modifiers, exact
 probability bounds, and no hidden Luck. Critical eligibility and chance are
 separate replaceable policies. Instant defeat uses authored chance, explicit
-resistance multipliers, bypass semantics, and one roll. Schema v8 requires
+resistance multipliers, bypass semantics, and one roll. Schema v9 requires
 weapon basic attacks to declare critical behavior.
 
 Every attempted damage hit now carries immutable accuracy, critical, affinity,

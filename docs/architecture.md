@@ -24,7 +24,7 @@ Session restore is aggregate and framework-owned. Hosts decode their save envelo
 ## Content Flow
 
 Host-supplied JSON is checked against the strict Draft 2020-12 contracts in
-`schemas/content/v8` before Framework deserialization and semantic catalog
+`schemas/content/v9` before Framework deserialization and semantic catalog
 validation. JSON Schema owns document shape; Framework validation owns graph,
 dependency-visibility, registration, and host-capability rules. This keeps the
 reusable assembly free of schema-evaluation and filesystem dependencies while
@@ -59,6 +59,13 @@ Runtime actors are identified by `RuntimeInstanceId` and content records by
 `ContentId`. Actor state, party and rosters, inventory, equipment, wallet,
 navigation, traversal, Compendium, knowledge, and session state have immutable
 snapshot boundaries.
+
+Inventory is the sole owner of equipment instances. Actor loadouts reference
+those runtime instance IDs under authored slot `ContentId` keys. The selected
+`IEquipmentSlotLayoutPolicy` validates definition profiles and assignment
+compatibility; the supplied standard policy preserves the conventional weapon,
+armor, boots, and accessory layout without making those four positions a
+framework-wide enum.
 
 Battle knowledge deliberately uses two snapshot authorities. Persistent facts
 are keyed by entity definition and belong to session persistence. Encounter
@@ -142,7 +149,7 @@ extension and can use only an opportunity already retained by the economy. See
 
 Navigation, dungeon traversal, Action Token, ailments/passives, party and rosters, economy, negotiation, fusion, Compendium, and persistence are independently composable. A developer does not need to register or instantiate a module that their game does not use.
 
-Runtime save contract v16 is a deliberately broad interoperability aggregate,
+Runtime save contract v17 is a deliberately broad interoperability aggregate,
 not the module activation mechanism. When a host chooses to use it, required
 but unused components are represented by neutral snapshots. The minimal party
 roster still identifies the session owner while its placement and ownership
@@ -157,7 +164,7 @@ The supported distribution is a Git checkout, submodule, subtree, or copied sour
 
 ## Pre-Release Contract Boundary
 
-The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `8` and runtime save contract version `16` are deliberate pre-release breaks with no compatibility aliases. Save v16 retains the complete v15 actor state while replacing definition-ID-as-copy equipment ownership with inventory-owned equipment instances and removing the former root equipment snapshot. Actor loadouts contain only owned instance references. Persistent knowledge remains in `RuntimeKnowledgeSnapshot`; current-target analysis remains in `RuntimeEncounterKnowledgeSnapshot` and is not part of an ordinary session save. Save validation rejects missing or contradictory combat-profile source references, missing or multiply assigned equipment instances, equipment/actor ID collisions, a retained passive target that is absent from the aggregate actor set, missing enabled/disabled state for an equipped passive, and multiple active ailments in one exclusivity group. Save validation and aggregate restoration must bind retained stat-modifier and charge policies explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
+The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `9` and runtime save contract version `17` are deliberate pre-release breaks with no compatibility aliases. Save v17 retains the complete v16 equipment-instance ownership state while replacing fixed slot-enum keys with authored `ContentId` slot keys. Actor loadouts still contain only inventory-owned instance references. Persistent knowledge remains in `RuntimeKnowledgeSnapshot`; current-target analysis remains in `RuntimeEncounterKnowledgeSnapshot` and is not part of an ordinary session save. Save validation rejects missing or contradictory combat-profile source references, missing or multiply assigned equipment instances, equipment/actor ID collisions, slot-layout incompatibility, a retained passive target that is absent from the aggregate actor set, missing enabled/disabled state for an equipped passive, and multiple active ailments in one exclusivity group. Save validation and aggregate restoration must bind retained stat-modifier and charge policies explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
 
 Assembly version `0.1.0` is guarded by a checked-in textual API baseline. The
 [Public API Contract](public-api-contract.md) identifies the supported

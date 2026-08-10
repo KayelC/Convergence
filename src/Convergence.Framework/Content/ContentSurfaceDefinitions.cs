@@ -1,13 +1,5 @@
 namespace Convergence.Content;
 
-public enum EquipmentSlot
-{
-    Weapon,
-    Armor,
-    Boots,
-    Accessory
-}
-
 public enum ShopContentKind
 {
     Item,
@@ -153,7 +145,7 @@ public sealed record EquipmentDefinition
         ContentId id,
         string displayName,
         string description,
-        EquipmentSlot slot,
+        ContentId slotId,
         decimal baseValue,
         IEnumerable<ContentId>? grantedSkillIds = null,
         EquipmentWeaponProfileDefinition? weapon = null,
@@ -164,7 +156,12 @@ public sealed record EquipmentDefinition
         Id = id;
         DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
         Description = description ?? throw new ArgumentNullException(nameof(description));
-        Slot = slot;
+        if (!slotId.IsValid)
+        {
+            throw new ArgumentException("Equipment slot ID must be valid.", nameof(slotId));
+        }
+
+        SlotId = slotId;
         BaseValue = baseValue;
         GrantedSkillIds = DefinitionCollections.Snapshot(grantedSkillIds);
         Weapon = weapon;
@@ -176,7 +173,7 @@ public sealed record EquipmentDefinition
     public ContentId Id { get; }
     public string DisplayName { get; }
     public string Description { get; }
-    public EquipmentSlot Slot { get; }
+    public ContentId SlotId { get; }
     public decimal BaseValue { get; }
     public IReadOnlyList<ContentId> GrantedSkillIds { get; }
     public EquipmentWeaponProfileDefinition? Weapon { get; }

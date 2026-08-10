@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v9:skills",
+  "type": "object", "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "skills"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v9:skills" },
+    "schemaVersion": { "const": 9 },
+    "skills": { "type": "array", "items": { "$ref": "#/$defs/skill" } }
+  },
+  "$defs": {
+    "skill": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "displayName", "description", "activation", "inheritanceGroupId", "inheritance"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "activation": { "enum": ["active", "passive"] },
+        "menuGroup": { "enum": ["offense", "ailment", "recovery", "buff", "debuff", "utility"] },
+        "inheritanceGroupId": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/inheritanceGroup" },
+        "inheritance": {
+          "type": "object", "additionalProperties": false,
+          "required": ["isInheritable"],
+          "properties": {
+            "isInheritable": { "type": "boolean" },
+            "exclusiveOwnerEntityIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/contentId" } }
+          }
+        },
+        "mutation": {
+          "type": "object", "additionalProperties": false,
+          "required": ["familyId", "tier"],
+          "properties": {
+            "familyId": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/contentId" },
+            "tier": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "costs": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["resourceId", "amount"],
+            "properties": {
+              "resourceId": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/contentId" },
+              "amount": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/amount" },
+              "canReduceToZero": { "type": "boolean" }
+            }
+          }
+        },
+        "targeting": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/targeting" },
+        "effects": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/effect" } },
+        "triggers": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/passiveTrigger" } },
+        "modifiers": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/ruleModifier" } },
+        "availability": {
+          "type": "object", "additionalProperties": false,
+          "required": ["contexts"],
+          "properties": {
+            "contexts": { "type": "array", "minItems": 1, "items": { "$ref": "urn:convergence:schema:content:v9:shared#/$defs/contentId" } }
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "properties": { "activation": { "const": "active" } },
+          "required": ["menuGroup", "targeting", "effects", "availability"],
+          "not": { "anyOf": [{ "required": ["triggers"] }, { "required": ["modifiers"] }] }
+        },
+        {
+          "properties": {
+            "activation": { "const": "passive" },
+            "inheritanceGroupId": { "const": "passive" }
+          },
+          "not": { "anyOf": [{ "required": ["menuGroup"] }, { "required": ["costs"] }, { "required": ["targeting"] }, { "required": ["effects"] }, { "required": ["availability"] }] },
+          "anyOf": [
+            { "required": ["triggers"], "properties": { "triggers": { "minItems": 1 } } },
+            { "required": ["modifiers"], "properties": { "modifiers": { "minItems": 1 } } }
+          ]
+        }
+      ]
+    }
+  }
+}

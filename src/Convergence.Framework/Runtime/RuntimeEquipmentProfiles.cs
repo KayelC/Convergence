@@ -13,7 +13,7 @@ public enum RuntimeEquipmentProfileDiagnosticCode
 
 public sealed record RuntimeEquipmentProfileDiagnostic(
     RuntimeEquipmentProfileDiagnosticCode Code,
-    EquipmentSlot Slot,
+    ContentId SlotId,
     RuntimeInstanceId EquipmentInstanceId,
     ContentId EquipmentId,
     string Message);
@@ -26,7 +26,7 @@ public sealed record RuntimeBasicAttackProfile(
 public sealed record RuntimeEquipmentProfile
 {
     public RuntimeEquipmentProfile(
-        IEnumerable<KeyValuePair<EquipmentSlot, EquipmentDefinition>>? equippedDefinitions = null,
+        IEnumerable<KeyValuePair<ContentId, EquipmentDefinition>>? equippedDefinitions = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? statModifiers = null,
         RuntimeBasicAttackProfile? basicAttack = null,
         IEnumerable<RuntimeEquipmentProfileDiagnostic>? diagnostics = null)
@@ -37,7 +37,7 @@ public sealed record RuntimeEquipmentProfile
         Diagnostics = RuntimeSnapshotCollections.List(diagnostics);
     }
 
-    public IReadOnlyDictionary<EquipmentSlot, EquipmentDefinition> EquippedDefinitions { get; }
+    public IReadOnlyDictionary<ContentId, EquipmentDefinition> EquippedDefinitions { get; }
     public IReadOnlyDictionary<ContentId, decimal> StatModifiers { get; }
     public RuntimeBasicAttackProfile? BasicAttack { get; }
     public IReadOnlyList<RuntimeEquipmentProfileDiagnostic> Diagnostics { get; }
@@ -53,6 +53,13 @@ public interface IRuntimeEquipmentProfileResolver
 
 public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileResolver
 {
+    private readonly IEquipmentSlotLayoutPolicy _slotLayout;
+
+    public RuntimeEquipmentProfileResolver(IEquipmentSlotLayoutPolicy? slotLayout = null)
+    {
+        _slotLayout = slotLayout ?? StandardEquipmentSlotLayoutPolicy.Instance;
+    }
+
     public RuntimeEquipmentProfile Resolve(
         RuntimeInventorySnapshot inventory,
         RuntimeEquipmentSnapshot equipment,
@@ -62,19 +69,19 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
         ArgumentNullException.ThrowIfNull(equipment);
         ArgumentNullException.ThrowIfNull(equipmentRepository);
 
-        var definitions = new List<KeyValuePair<EquipmentSlot, EquipmentDefinition>>();
+        var definitions = new List<KeyValuePair<ContentId, EquipmentDefinition>>();
         var statModifiers = new Dictionary<ContentId, decimal>();
         var diagnostics = new List<RuntimeEquipmentProfileDiagnostic>();
         RuntimeBasicAttackProfile? basicAttack = null;
 
-        foreach ((EquipmentSlot slot, RuntimeInstanceId equipmentInstanceId) in
-                 equipment.EquippedInstanceIds.OrderBy(pair => pair.Key))
+        foreach ((ContentId slotId, RuntimeInstanceId equipmentInstanceId) in
+                 equipment.EquippedInstanceIds.OrderBy(pair => pair.Key.Value, StringComparer.Ordinal))
         {
             if (!equipmentInstanceId.IsValid)
             {
                 diagnostics.Add(new RuntimeEquipmentProfileDiagnostic(
                     RuntimeEquipmentProfileDiagnosticCode.InvalidIdentifier,
-                    slot,
+                    slotId,
                     equipmentInstanceId,
                     default,
                     "Equipped equipment instance ID cannot be empty."));
@@ -84,26 +91,29 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
             if (!inventory.TryGetEquipmentInstance(
                     equipmentInstanceId,
                     out RuntimeEquipmentInstanceSnapshot? instance,
-                    out EquipmentSlot ownedSlot) ||
+                    out ContentId ownedSlotId) ||
                 instance is null)
             {
                 diagnostics.Add(new RuntimeEquipmentProfileDiagnostic(
                     RuntimeEquipmentProfileDiagnosticCode.MissingEquipmentInstance,
-                    slot,
+                    slotId,
                     equipmentInstanceId,
                     default,
                     $"Equipped equipment instance '{equipmentInstanceId}' is not owned."));
                 continue;
             }
 
-            if (ownedSlot != slot)
+            EquipmentSlotLayoutResult inventoryAssignment =
+                _slotLayout.ValidateAssignment(ownedSlotId, slotId);
+            if (!inventoryAssignment.IsCompatible)
             {
                 diagnostics.Add(new RuntimeEquipmentProfileDiagnostic(
                     RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
-                    slot,
+                    slotId,
                     equipmentInstanceId,
                     instance.DefinitionId,
-                    $"Equipment instance '{equipmentInstanceId}' is owned for slot '{ownedSlot}', not '{slot}'."));
+                    inventoryAssignment.Message ??
+                    $"Equipment instance '{equipmentInstanceId}' is owned for slot '{ownedSlotId}', not '{slotId}'."));
                 continue;
             }
 
@@ -113,26 +123,32 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
             {
                 diagnostics.Add(new RuntimeEquipmentProfileDiagnostic(
                     RuntimeEquipmentProfileDiagnosticCode.MissingEquipmentDefinition,
-                    slot,
+                    slotId,
                     equipmentInstanceId,
                     equipmentId,
                     $"Equipped item '{equipmentId}' was not found."));
                 continue;
             }
 
-            if (definition.Slot != slot)
+            EquipmentSlotLayoutResult definitionLayout =
+                _slotLayout.ValidateDefinition(definition);
+            EquipmentSlotLayoutResult definitionAssignment =
+                _slotLayout.ValidateAssignment(definition.SlotId, slotId);
+            if (!definitionLayout.IsCompatible || !definitionAssignment.IsCompatible)
             {
                 diagnostics.Add(new RuntimeEquipmentProfileDiagnostic(
                     RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
-                    slot,
+                    slotId,
                     equipmentInstanceId,
                     equipmentId,
-                    $"Equipped item '{equipmentId}' is authored for slot '{definition.Slot}', not '{slot}'."));
+                    definitionLayout.Message ??
+                    definitionAssignment.Message ??
+                    $"Equipped item '{equipmentId}' is not compatible with slot '{slotId}'."));
                 continue;
             }
 
-            definitions.Add(new KeyValuePair<EquipmentSlot, EquipmentDefinition>(slot, definition));
-            if (slot == EquipmentSlot.Weapon && definition.Weapon is EquipmentWeaponProfileDefinition weapon)
+            definitions.Add(new KeyValuePair<ContentId, EquipmentDefinition>(slotId, definition));
+            if (definition.Weapon is EquipmentWeaponProfileDefinition weapon)
             {
                 basicAttack = new RuntimeBasicAttackProfile(
                     equipmentInstanceId,
@@ -140,7 +156,7 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
                     weapon.BasicAttack);
             }
 
-            if (slot == EquipmentSlot.Accessory && definition.Accessory is EquipmentAccessoryProfileDefinition accessory)
+            if (definition.Accessory is EquipmentAccessoryProfileDefinition accessory)
             {
                 foreach (StatModifierDefinition modifier in accessory.StatModifiers)
                 {

@@ -221,7 +221,7 @@ The supplied common lifetimes are:
 | Persistent | Same Field permissions with no automatic duration |
 | Protected persistent | Everything except scripted removal |
 
-Schema-v8 content authors both lifetime decisions directly. An ailment or
+Schema-v9 content authors both lifetime decisions directly. An ailment or
 status-producing effect selects its expiration and the exact causes allowed to
 remove it. The supplied profiles above remain convenient programmatic defaults;
 JSON content is not forced to choose one of them.

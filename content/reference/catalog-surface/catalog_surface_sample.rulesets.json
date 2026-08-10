@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v8:rulesets",
-  "schemaVersion": 8,
+  "$schema": "urn:convergence:schema:content:v9:rulesets",
+  "schemaVersion": 9,
   "rulesets": [
     {
       "id": "standard_damage_sample",

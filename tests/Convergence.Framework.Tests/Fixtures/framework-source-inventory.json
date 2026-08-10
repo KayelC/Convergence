@@ -573,6 +573,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Runtime/EquipmentSlotLayouts.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Runtime/NavigationTransitions.cs",
       "owner": "runtime_services",
       "publicSurface": "exported"

@@ -292,7 +292,7 @@ public partial class ConvergenceSmokeRoot : Node
             [player, enemy, hostedEntity],
             partyRoster,
             new RuntimeInventorySnapshot(),
-            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.8.0")),
+            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.9.0")),
             sceneInstances);
         ChargePolicyRegistry chargePolicies = ChargePolicyRegistry.CreateStandard();
         var restoreService = new RuntimeSessionRestoreService(

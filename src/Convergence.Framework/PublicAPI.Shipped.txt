@@ -928,16 +928,9 @@ Convergence.Content.EquipmentDefinition.Boots.get -> Convergence.Content.Equipme
 Convergence.Content.EquipmentDefinition.Description.get -> string!
 Convergence.Content.EquipmentDefinition.DisplayName.get -> string!
 Convergence.Content.EquipmentDefinition.Equals(Convergence.Content.EquipmentDefinition? other) -> bool
-Convergence.Content.EquipmentDefinition.EquipmentDefinition(Convergence.Content.ContentId id, string! displayName, string! description, Convergence.Content.EquipmentSlot slot, decimal baseValue, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? grantedSkillIds = null, Convergence.Content.EquipmentWeaponProfileDefinition? weapon = null, Convergence.Content.EquipmentArmorProfileDefinition? armor = null, Convergence.Content.EquipmentBootsProfileDefinition? boots = null, Convergence.Content.EquipmentAccessoryProfileDefinition? accessory = null) -> void
 Convergence.Content.EquipmentDefinition.GrantedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
 Convergence.Content.EquipmentDefinition.Id.get -> Convergence.Content.ContentId
-Convergence.Content.EquipmentDefinition.Slot.get -> Convergence.Content.EquipmentSlot
 Convergence.Content.EquipmentDefinition.Weapon.get -> Convergence.Content.EquipmentWeaponProfileDefinition?
-Convergence.Content.EquipmentSlot
-Convergence.Content.EquipmentSlot.Accessory = 3 -> Convergence.Content.EquipmentSlot
-Convergence.Content.EquipmentSlot.Armor = 1 -> Convergence.Content.EquipmentSlot
-Convergence.Content.EquipmentSlot.Boots = 2 -> Convergence.Content.EquipmentSlot
-Convergence.Content.EquipmentSlot.Weapon = 0 -> Convergence.Content.EquipmentSlot
 Convergence.Content.EquipmentWeaponProfileDefinition
 Convergence.Content.EquipmentWeaponProfileDefinition.<Clone>$() -> Convergence.Content.EquipmentWeaponProfileDefinition!
 Convergence.Content.EquipmentWeaponProfileDefinition.BasicAttack.get -> Convergence.Content.EquipmentBasicAttackDefinition!
@@ -4742,8 +4735,6 @@ Convergence.Runtime.EquipmentTransitionResult.Diagnostics.get -> System.Collecti
 Convergence.Runtime.EquipmentTransitionResult.Equals(Convergence.Runtime.EquipmentTransitionResult? other) -> bool
 Convergence.Runtime.EquipmentTransitionResult.EquipmentTransitionResult(Convergence.Runtime.ResourceTransactionCode code, Convergence.Runtime.RuntimeEquipmentSnapshot! before, Convergence.Runtime.RuntimeEquipmentSnapshot! after, System.Collections.Generic.IEnumerable<Convergence.Runtime.ResourceTransactionDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.EquipmentTransitionService
-Convergence.Runtime.EquipmentTransitionService.EquipmentTransitionService() -> void
-Convergence.Runtime.EquipmentTransitionService.Unequip(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Content.EquipmentSlot slot) -> Convergence.Runtime.EquipmentTransitionResult!
 Convergence.Runtime.ForgetPendingSkillCommand
 Convergence.Runtime.ForgetPendingSkillCommand.Equals(Convergence.Runtime.ForgetPendingSkillCommand? other) -> bool
 Convergence.Runtime.ForgetPendingSkillCommand.ForgetPendingSkillCommand(Convergence.Runtime.RuntimeSkillChoiceToken token, int expectedSourceLevel, long expectedSkillRevision) -> void
@@ -4784,7 +4775,6 @@ Convergence.Runtime.IEncounterPreparationService.Prepare(Convergence.Runtime.Run
 Convergence.Runtime.IEncounterStartPlanner
 Convergence.Runtime.IEncounterStartPlanner.Plan(Convergence.Runtime.EncounterStartRequest! request) -> Convergence.Runtime.EncounterStartPlanResult!
 Convergence.Runtime.IEquipmentTransitionService
-Convergence.Runtime.IEquipmentTransitionService.Unequip(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Content.EquipmentSlot slot) -> Convergence.Runtime.EquipmentTransitionResult!
 Convergence.Runtime.IExperienceCurve
 Convergence.Runtime.IExperienceCurve.GetRequiredExperience(int level) -> long
 Convergence.Runtime.IHospitalRestorationService
@@ -5143,8 +5133,6 @@ Convergence.Runtime.ResourceTransactionDiagnostic.ContentId.init -> void
 Convergence.Runtime.ResourceTransactionDiagnostic.Equals(Convergence.Runtime.ResourceTransactionDiagnostic? other) -> bool
 Convergence.Runtime.ResourceTransactionDiagnostic.Message.get -> string!
 Convergence.Runtime.ResourceTransactionDiagnostic.Message.init -> void
-Convergence.Runtime.ResourceTransactionDiagnostic.Slot.get -> Convergence.Content.EquipmentSlot?
-Convergence.Runtime.ResourceTransactionDiagnostic.Slot.init -> void
 Convergence.Runtime.RetainLearnedRuntimeSkillPolicy
 Convergence.Runtime.RetainLearnedRuntimeSkillPolicy.Replace(Convergence.Runtime.RuntimeSkillReplacementRequest! request) -> Convergence.Runtime.RuntimeSkillReplacementResult!
 Convergence.Runtime.RetainLearnedRuntimeSkillPolicy.RetainLearnedRuntimeSkillPolicy() -> void
@@ -5578,8 +5566,6 @@ Convergence.Runtime.RuntimeEquipmentProfile.<Clone>$() -> Convergence.Runtime.Ru
 Convergence.Runtime.RuntimeEquipmentProfile.BasicAttack.get -> Convergence.Runtime.RuntimeBasicAttackProfile?
 Convergence.Runtime.RuntimeEquipmentProfile.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeEquipmentProfileDiagnostic!>!
 Convergence.Runtime.RuntimeEquipmentProfile.Equals(Convergence.Runtime.RuntimeEquipmentProfile? other) -> bool
-Convergence.Runtime.RuntimeEquipmentProfile.EquippedDefinitions.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.EquipmentSlot, Convergence.Content.EquipmentDefinition!>!
-Convergence.Runtime.RuntimeEquipmentProfile.RuntimeEquipmentProfile(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.EquipmentSlot, Convergence.Content.EquipmentDefinition!>>? equippedDefinitions = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? statModifiers = null, Convergence.Runtime.RuntimeBasicAttackProfile? basicAttack = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentProfileDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.RuntimeEquipmentProfile.StatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeEquipmentProfileDiagnostic!
@@ -5590,11 +5576,8 @@ Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.EquipmentId.get -> Converg
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.EquipmentId.init -> void
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.Message.get -> string!
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.Message.init -> void
-Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.Slot.get -> Convergence.Content.EquipmentSlot
-Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.Slot.init -> void
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileResolver
-Convergence.Runtime.RuntimeEquipmentProfileResolver.RuntimeEquipmentProfileResolver() -> void
 Convergence.Runtime.RuntimeEquipmentSnapshot
 Convergence.Runtime.RuntimeEquipmentSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeEquipmentSnapshot!
 Convergence.Runtime.RuntimeEquipmentSnapshot.Equals(Convergence.Runtime.RuntimeEquipmentSnapshot? other) -> bool
@@ -6187,7 +6170,6 @@ Convergence.Runtime.RuntimeShopOfferResolutionResult.RequireOffer() -> Convergen
 Convergence.Runtime.RuntimeShopOfferResolutionResult.RuntimeShopOfferResolutionResult(Convergence.Runtime.RuntimeShopOfferSnapshot? offer, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.RuntimeShopOfferResolver
 Convergence.Runtime.RuntimeShopOfferResolver.Resolve(Convergence.Content.ShopOfferDefinition! offer, Convergence.Catalog.IItemDefinitionRepository! itemRepository, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository) -> Convergence.Runtime.RuntimeShopOfferResolutionResult!
-Convergence.Runtime.RuntimeShopOfferResolver.RuntimeShopOfferResolver() -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot
 Convergence.Runtime.RuntimeShopOfferSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeShopOfferSnapshot!
 Convergence.Runtime.RuntimeShopOfferSnapshot.BasePrice.get -> int
@@ -6196,13 +6178,9 @@ Convergence.Runtime.RuntimeShopOfferSnapshot.ContentId.get -> Convergence.Conten
 Convergence.Runtime.RuntimeShopOfferSnapshot.ContentId.init -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.ContentKind.get -> Convergence.Content.ShopContentKind
 Convergence.Runtime.RuntimeShopOfferSnapshot.ContentKind.init -> void
-Convergence.Runtime.RuntimeShopOfferSnapshot.Deconstruct(out Convergence.Content.ShopContentKind ContentKind, out Convergence.Content.ContentId ContentId, out int BasePrice, out Convergence.Content.EquipmentSlot? EquipmentSlot, out int? ItemStackLimit, out int? StockAvailable) -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.Equals(Convergence.Runtime.RuntimeShopOfferSnapshot? other) -> bool
-Convergence.Runtime.RuntimeShopOfferSnapshot.EquipmentSlot.get -> Convergence.Content.EquipmentSlot?
-Convergence.Runtime.RuntimeShopOfferSnapshot.EquipmentSlot.init -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.ItemStackLimit.get -> int?
 Convergence.Runtime.RuntimeShopOfferSnapshot.ItemStackLimit.init -> void
-Convergence.Runtime.RuntimeShopOfferSnapshot.RuntimeShopOfferSnapshot(Convergence.Content.ShopContentKind ContentKind, Convergence.Content.ContentId ContentId, int BasePrice, Convergence.Content.EquipmentSlot? EquipmentSlot = null, int? ItemStackLimit = null, int? StockAvailable = null) -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.StockAvailable.get -> int?
 Convergence.Runtime.RuntimeShopOfferSnapshot.StockAvailable.init -> void
 Convergence.Runtime.RuntimeSkillChoiceCommand
@@ -6676,7 +6654,6 @@ Convergence.Validation.IContentParameterValidator.Validate(System.Collections.Ge
 Convergence.Validation.ISkillSystemContentValidator
 Convergence.Validation.ISkillSystemContentValidator.Validate(Convergence.Validation.SkillSystemValidationRequest! request) -> Convergence.Validation.ContentValidationResult!
 Convergence.Validation.SkillSystemContentValidator
-Convergence.Validation.SkillSystemContentValidator.SkillSystemContentValidator() -> void
 Convergence.Validation.SkillSystemContentValidator.Validate(Convergence.Validation.SkillSystemValidationRequest! request) -> Convergence.Validation.ContentValidationResult!
 Convergence.Validation.SkillSystemRegistrationBuilder
 Convergence.Validation.SkillSystemRegistrationBuilder.Build() -> Convergence.Validation.SkillSystemRegistrationSnapshot!
@@ -9907,7 +9884,6 @@ Convergence.Runtime.RuntimeSaveValidationDiagnostic.ChargePolicyCode.get -> Conv
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.ChargePolicyCode.init -> void
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSaveValidationCode Code, out string! Message, out Convergence.Runtime.RuntimeInstanceId? InstanceId, out Convergence.Content.ContentId? ContentId, out string? Path, out Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode, out Convergence.Execution.ChargePolicyDiagnosticCode? ChargePolicyCode) -> void
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.RuntimeSaveValidationDiagnostic(Convergence.Runtime.RuntimeSaveValidationCode Code, string! Message, Convergence.Runtime.RuntimeInstanceId? InstanceId = null, Convergence.Content.ContentId? ContentId = null, string? Path = null, Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode = null, Convergence.Execution.ChargePolicyDiagnosticCode? ChargePolicyCode = null) -> void
-Convergence.Runtime.RuntimeSaveValidator.RuntimeSaveValidator(Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null) -> void
 Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.ChargePolicyResolutionFailed = 7 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
 Convergence.Runtime.RuntimeSessionRestoreService.RuntimeSessionRestoreService(Convergence.Runtime.IRuntimeSaveValidator! validator, Convergence.Encounters.ICatalogBattleActorFactory! actorFactory, Convergence.Runtime.IRuntimeActorRestoreProfileResolver! profileResolver, Convergence.Runtime.IRuntimeSaveMigrationService? migration = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null) -> void
 override Convergence.Execution.ChargeApplicationAssessment.Equals(object? obj) -> bool
@@ -11613,22 +11589,13 @@ static Convergence.Encounters.BattleRoundEndedEventPayload.operator !=(Convergen
 static Convergence.Encounters.BattleRoundEndedEventPayload.operator ==(Convergence.Encounters.BattleRoundEndedEventPayload? left, Convergence.Encounters.BattleRoundEndedEventPayload? right) -> bool
 static Convergence.Encounters.BattleTurnEndedEventPayload.operator !=(Convergence.Encounters.BattleTurnEndedEventPayload? left, Convergence.Encounters.BattleTurnEndedEventPayload? right) -> bool
 static Convergence.Encounters.BattleTurnEndedEventPayload.operator ==(Convergence.Encounters.BattleTurnEndedEventPayload? left, Convergence.Encounters.BattleTurnEndedEventPayload? right) -> bool
-const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 16 -> int
 Convergence.Execution.EquipmentBattleBasicAttackProfileSource.EquipmentBattleBasicAttackProfileSource(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Catalog.IEquipmentDefinitionRepository! equipment, Convergence.Content.TargetingDefinition! targeting, Convergence.Runtime.IRuntimeEquipmentProfileResolver? profiles = null) -> void
-Convergence.Runtime.EquipmentTransitionService.Equip(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.EquipmentSlot ownedSlot, Convergence.Content.EquipmentSlot targetSlot, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! otherActorEquipment) -> Convergence.Runtime.EquipmentTransitionResult!
-Convergence.Runtime.IEquipmentTransitionService.Equip(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.EquipmentSlot ownedSlot, Convergence.Content.EquipmentSlot targetSlot, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! otherActorEquipment) -> Convergence.Runtime.EquipmentTransitionResult!
-Convergence.Runtime.IInventoryTransitionService.AddEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot! equipment, Convergence.Content.EquipmentSlot slot) -> Convergence.Runtime.InventoryTransitionResult!
-Convergence.Runtime.IInventoryTransitionService.RemoveEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.EquipmentSlot slot, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.InventoryTransitionResult!
-Convergence.Runtime.InventoryTransitionService.AddEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot! equipment, Convergence.Content.EquipmentSlot slot) -> Convergence.Runtime.InventoryTransitionResult!
-Convergence.Runtime.InventoryTransitionService.RemoveEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.EquipmentSlot slot, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.InventoryTransitionResult!
 Convergence.Runtime.IRuntimeEquipmentProfileResolver.Resolve(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository) -> Convergence.Runtime.RuntimeEquipmentProfile!
 Convergence.Runtime.IShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId) -> Convergence.Runtime.ShopTransactionResult!
 Convergence.Runtime.IShopTransactionService.Sell(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int sellerLuck, Convergence.Runtime.RuntimeInstanceId? soldEquipmentInstanceId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.ShopTransactionResult!
 Convergence.Runtime.ResourceTransactionCode.InvalidEquipmentInstanceId = 16 -> Convergence.Runtime.ResourceTransactionCode
-Convergence.Runtime.ResourceTransactionDiagnostic.Deconstruct(out Convergence.Runtime.ResourceTransactionCode Code, out string! Message, out Convergence.Content.ContentId? ContentId, out Convergence.Content.EquipmentSlot? Slot, out Convergence.Runtime.RuntimeInstanceId? EquipmentInstanceId) -> void
 Convergence.Runtime.ResourceTransactionDiagnostic.EquipmentInstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
 Convergence.Runtime.ResourceTransactionDiagnostic.EquipmentInstanceId.init -> void
-Convergence.Runtime.ResourceTransactionDiagnostic.ResourceTransactionDiagnostic(Convergence.Runtime.ResourceTransactionCode Code, string! Message, Convergence.Content.ContentId? ContentId = null, Convergence.Content.EquipmentSlot? Slot = null, Convergence.Runtime.RuntimeInstanceId? EquipmentInstanceId = null) -> void
 Convergence.Runtime.RuntimeBasicAttackProfile.Deconstruct(out Convergence.Runtime.RuntimeInstanceId EquipmentInstanceId, out Convergence.Content.ContentId EquipmentId, out Convergence.Content.EquipmentBasicAttackDefinition! BasicAttack) -> void
 Convergence.Runtime.RuntimeBasicAttackProfile.EquipmentInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.RuntimeBasicAttackProfile.EquipmentInstanceId.init -> void
@@ -11639,23 +11606,13 @@ Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.DefinitionId.get -> Converg
 Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.Equals(Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? other) -> bool
 Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.InstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.RuntimeEquipmentInstanceSnapshot(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.ContentId definitionId) -> void
-Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode Code, out Convergence.Content.EquipmentSlot Slot, out Convergence.Runtime.RuntimeInstanceId EquipmentInstanceId, out Convergence.Content.ContentId EquipmentId, out string! Message) -> void
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.EquipmentInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.EquipmentInstanceId.init -> void
-Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.RuntimeEquipmentProfileDiagnostic(Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode Code, Convergence.Content.EquipmentSlot Slot, Convergence.Runtime.RuntimeInstanceId EquipmentInstanceId, Convergence.Content.ContentId EquipmentId, string! Message) -> void
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.InvalidIdentifier = 2 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.MissingEquipmentDefinition = 0 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.MissingEquipmentInstance = 3 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch = 1 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileResolver.Resolve(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository) -> Convergence.Runtime.RuntimeEquipmentProfile!
-Convergence.Runtime.RuntimeEquipmentSnapshot.EquippedInstanceIds.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.EquipmentSlot, Convergence.Runtime.RuntimeInstanceId>!
-Convergence.Runtime.RuntimeEquipmentSnapshot.RuntimeEquipmentSnapshot(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.EquipmentSlot, Convergence.Runtime.RuntimeInstanceId>>? equippedInstanceIds = null) -> void
-Convergence.Runtime.RuntimeInventorySnapshot.GetEquipmentInstances(Convergence.Content.EquipmentSlot slot) -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeEquipmentInstanceSnapshot!>!
-Convergence.Runtime.RuntimeInventorySnapshot.OwnedEquipmentInstances.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.EquipmentSlot, System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeEquipmentInstanceSnapshot!>!>!
-Convergence.Runtime.RuntimeInventorySnapshot.OwnsEquipment(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.EquipmentSlot slot) -> bool
-Convergence.Runtime.RuntimeInventorySnapshot.RuntimeInventorySnapshot(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, int>>? itemQuantities = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.EquipmentSlot, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentInstanceSnapshot!>!>>? ownedEquipmentInstances = null) -> void
-Convergence.Runtime.RuntimeInventorySnapshot.TryGetEquipmentInstance(Convergence.Runtime.RuntimeInstanceId instanceId, out Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? instance, out Convergence.Content.EquipmentSlot slot) -> bool
-Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 16) -> void
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateEquipmentInstanceId = 90 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.EquipmentInstanceIdCollidesWithActor = 91 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.ShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId) -> Convergence.Runtime.ShopTransactionResult!
@@ -11665,3 +11622,78 @@ override Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.GetHashCode() -> i
 override Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.ToString() -> string!
 static Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.operator !=(Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? left, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.operator ==(Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? left, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? right) -> bool
+const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 17 -> int
+Convergence.Content.EquipmentDefinition.EquipmentDefinition(Convergence.Content.ContentId id, string! displayName, string! description, Convergence.Content.ContentId slotId, decimal baseValue, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? grantedSkillIds = null, Convergence.Content.EquipmentWeaponProfileDefinition? weapon = null, Convergence.Content.EquipmentArmorProfileDefinition? armor = null, Convergence.Content.EquipmentBootsProfileDefinition? boots = null, Convergence.Content.EquipmentAccessoryProfileDefinition? accessory = null) -> void
+Convergence.Content.EquipmentDefinition.SlotId.get -> Convergence.Content.ContentId
+Convergence.Runtime.EquipmentSlotLayoutCode
+Convergence.Runtime.EquipmentSlotLayoutCode.AssignmentMismatch = 3 -> Convergence.Runtime.EquipmentSlotLayoutCode
+Convergence.Runtime.EquipmentSlotLayoutCode.Compatible = 0 -> Convergence.Runtime.EquipmentSlotLayoutCode
+Convergence.Runtime.EquipmentSlotLayoutCode.ProfileMismatch = 2 -> Convergence.Runtime.EquipmentSlotLayoutCode
+Convergence.Runtime.EquipmentSlotLayoutCode.UnsupportedSlot = 1 -> Convergence.Runtime.EquipmentSlotLayoutCode
+Convergence.Runtime.EquipmentSlotLayoutResult
+Convergence.Runtime.EquipmentSlotLayoutResult.<Clone>$() -> Convergence.Runtime.EquipmentSlotLayoutResult!
+Convergence.Runtime.EquipmentSlotLayoutResult.Code.get -> Convergence.Runtime.EquipmentSlotLayoutCode
+Convergence.Runtime.EquipmentSlotLayoutResult.Code.init -> void
+Convergence.Runtime.EquipmentSlotLayoutResult.Deconstruct(out Convergence.Runtime.EquipmentSlotLayoutCode Code, out string? Message) -> void
+Convergence.Runtime.EquipmentSlotLayoutResult.Equals(Convergence.Runtime.EquipmentSlotLayoutResult? other) -> bool
+Convergence.Runtime.EquipmentSlotLayoutResult.EquipmentSlotLayoutResult(Convergence.Runtime.EquipmentSlotLayoutCode Code, string? Message = null) -> void
+Convergence.Runtime.EquipmentSlotLayoutResult.IsCompatible.get -> bool
+Convergence.Runtime.EquipmentSlotLayoutResult.Message.get -> string?
+Convergence.Runtime.EquipmentSlotLayoutResult.Message.init -> void
+Convergence.Runtime.EquipmentTransitionService.Equip(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.ContentId ownedSlotId, Convergence.Content.ContentId targetSlotId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! otherActorEquipment) -> Convergence.Runtime.EquipmentTransitionResult!
+Convergence.Runtime.EquipmentTransitionService.EquipmentTransitionService(Convergence.Runtime.IEquipmentSlotLayoutPolicy? slotLayout = null) -> void
+Convergence.Runtime.EquipmentTransitionService.Unequip(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Content.ContentId slotId) -> Convergence.Runtime.EquipmentTransitionResult!
+Convergence.Runtime.IEquipmentSlotLayoutPolicy
+Convergence.Runtime.IEquipmentSlotLayoutPolicy.SlotIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+Convergence.Runtime.IEquipmentSlotLayoutPolicy.ValidateAssignment(Convergence.Content.ContentId authoredSlotId, Convergence.Content.ContentId targetSlotId) -> Convergence.Runtime.EquipmentSlotLayoutResult!
+Convergence.Runtime.IEquipmentSlotLayoutPolicy.ValidateDefinition(Convergence.Content.EquipmentDefinition! definition) -> Convergence.Runtime.EquipmentSlotLayoutResult!
+Convergence.Runtime.IEquipmentTransitionService.Equip(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.ContentId ownedSlotId, Convergence.Content.ContentId targetSlotId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! otherActorEquipment) -> Convergence.Runtime.EquipmentTransitionResult!
+Convergence.Runtime.IEquipmentTransitionService.Unequip(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Content.ContentId slotId) -> Convergence.Runtime.EquipmentTransitionResult!
+Convergence.Runtime.IInventoryTransitionService.AddEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot! equipment, Convergence.Content.ContentId slotId) -> Convergence.Runtime.InventoryTransitionResult!
+Convergence.Runtime.IInventoryTransitionService.RemoveEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.ContentId slotId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.InventoryTransitionResult!
+Convergence.Runtime.InventoryTransitionService.AddEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot! equipment, Convergence.Content.ContentId slotId) -> Convergence.Runtime.InventoryTransitionResult!
+Convergence.Runtime.InventoryTransitionService.RemoveEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.ContentId slotId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.InventoryTransitionResult!
+Convergence.Runtime.ResourceTransactionDiagnostic.Deconstruct(out Convergence.Runtime.ResourceTransactionCode Code, out string! Message, out Convergence.Content.ContentId? ContentId, out Convergence.Content.ContentId? SlotId, out Convergence.Runtime.RuntimeInstanceId? EquipmentInstanceId) -> void
+Convergence.Runtime.ResourceTransactionDiagnostic.ResourceTransactionDiagnostic(Convergence.Runtime.ResourceTransactionCode Code, string! Message, Convergence.Content.ContentId? ContentId = null, Convergence.Content.ContentId? SlotId = null, Convergence.Runtime.RuntimeInstanceId? EquipmentInstanceId = null) -> void
+Convergence.Runtime.ResourceTransactionDiagnostic.SlotId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.ResourceTransactionDiagnostic.SlotId.init -> void
+Convergence.Runtime.RuntimeEquipmentProfile.EquippedDefinitions.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Content.EquipmentDefinition!>!
+Convergence.Runtime.RuntimeEquipmentProfile.RuntimeEquipmentProfile(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Content.EquipmentDefinition!>>? equippedDefinitions = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? statModifiers = null, Convergence.Runtime.RuntimeBasicAttackProfile? basicAttack = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentProfileDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode Code, out Convergence.Content.ContentId SlotId, out Convergence.Runtime.RuntimeInstanceId EquipmentInstanceId, out Convergence.Content.ContentId EquipmentId, out string! Message) -> void
+Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.RuntimeEquipmentProfileDiagnostic(Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode Code, Convergence.Content.ContentId SlotId, Convergence.Runtime.RuntimeInstanceId EquipmentInstanceId, Convergence.Content.ContentId EquipmentId, string! Message) -> void
+Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.SlotId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.SlotId.init -> void
+Convergence.Runtime.RuntimeEquipmentProfileResolver.RuntimeEquipmentProfileResolver(Convergence.Runtime.IEquipmentSlotLayoutPolicy? slotLayout = null) -> void
+Convergence.Runtime.RuntimeEquipmentSnapshot.EquippedInstanceIds.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Runtime.RuntimeInstanceId>!
+Convergence.Runtime.RuntimeEquipmentSnapshot.RuntimeEquipmentSnapshot(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Runtime.RuntimeInstanceId>>? equippedInstanceIds = null) -> void
+Convergence.Runtime.RuntimeInventorySnapshot.GetEquipmentInstances(Convergence.Content.ContentId slotId) -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeEquipmentInstanceSnapshot!>!
+Convergence.Runtime.RuntimeInventorySnapshot.OwnedEquipmentInstances.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeEquipmentInstanceSnapshot!>!>!
+Convergence.Runtime.RuntimeInventorySnapshot.OwnsEquipment(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.ContentId slotId) -> bool
+Convergence.Runtime.RuntimeInventorySnapshot.RuntimeInventorySnapshot(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, int>>? itemQuantities = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentInstanceSnapshot!>!>>? ownedEquipmentInstances = null) -> void
+Convergence.Runtime.RuntimeInventorySnapshot.TryGetEquipmentInstance(Convergence.Runtime.RuntimeInstanceId instanceId, out Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? instance, out Convergence.Content.ContentId slotId) -> bool
+Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 17) -> void
+Convergence.Runtime.RuntimeSaveValidator.RuntimeSaveValidator(Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null, Convergence.Runtime.IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null) -> void
+Convergence.Runtime.RuntimeShopOfferResolutionCode.EquipmentSlotProfileMismatch = 6 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+Convergence.Runtime.RuntimeShopOfferResolver.RuntimeShopOfferResolver(Convergence.Runtime.IEquipmentSlotLayoutPolicy? slotLayout = null) -> void
+Convergence.Runtime.RuntimeShopOfferSnapshot.Deconstruct(out Convergence.Content.ShopContentKind ContentKind, out Convergence.Content.ContentId ContentId, out int BasePrice, out Convergence.Content.ContentId? EquipmentSlotId, out int? ItemStackLimit, out int? StockAvailable) -> void
+Convergence.Runtime.RuntimeShopOfferSnapshot.EquipmentSlotId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.RuntimeShopOfferSnapshot.EquipmentSlotId.init -> void
+Convergence.Runtime.RuntimeShopOfferSnapshot.RuntimeShopOfferSnapshot(Convergence.Content.ShopContentKind ContentKind, Convergence.Content.ContentId ContentId, int BasePrice, Convergence.Content.ContentId? EquipmentSlotId = null, int? ItemStackLimit = null, int? StockAvailable = null) -> void
+Convergence.Runtime.StandardEquipmentSlotIds
+Convergence.Runtime.StandardEquipmentSlotLayoutPolicy
+Convergence.Runtime.StandardEquipmentSlotLayoutPolicy.SlotIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+Convergence.Runtime.StandardEquipmentSlotLayoutPolicy.ValidateAssignment(Convergence.Content.ContentId authoredSlotId, Convergence.Content.ContentId targetSlotId) -> Convergence.Runtime.EquipmentSlotLayoutResult!
+Convergence.Runtime.StandardEquipmentSlotLayoutPolicy.ValidateDefinition(Convergence.Content.EquipmentDefinition! definition) -> Convergence.Runtime.EquipmentSlotLayoutResult!
+Convergence.Validation.SkillSystemContentValidator.SkillSystemContentValidator(Convergence.Runtime.IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null) -> void
+override Convergence.Runtime.EquipmentSlotLayoutResult.Equals(object? obj) -> bool
+override Convergence.Runtime.EquipmentSlotLayoutResult.GetHashCode() -> int
+override Convergence.Runtime.EquipmentSlotLayoutResult.ToString() -> string!
+static Convergence.Runtime.EquipmentSlotLayoutResult.Compatible.get -> Convergence.Runtime.EquipmentSlotLayoutResult!
+static Convergence.Runtime.EquipmentSlotLayoutResult.operator !=(Convergence.Runtime.EquipmentSlotLayoutResult? left, Convergence.Runtime.EquipmentSlotLayoutResult? right) -> bool
+static Convergence.Runtime.EquipmentSlotLayoutResult.operator ==(Convergence.Runtime.EquipmentSlotLayoutResult? left, Convergence.Runtime.EquipmentSlotLayoutResult? right) -> bool
+static Convergence.Runtime.StandardEquipmentSlotIds.Accessory.get -> Convergence.Content.ContentId
+static Convergence.Runtime.StandardEquipmentSlotIds.All.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+static Convergence.Runtime.StandardEquipmentSlotIds.Armor.get -> Convergence.Content.ContentId
+static Convergence.Runtime.StandardEquipmentSlotIds.Boots.get -> Convergence.Content.ContentId
+static Convergence.Runtime.StandardEquipmentSlotIds.Weapon.get -> Convergence.Content.ContentId
+static Convergence.Runtime.StandardEquipmentSlotLayoutPolicy.Instance.get -> Convergence.Runtime.StandardEquipmentSlotLayoutPolicy!

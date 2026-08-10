@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v8:races",
-  "schemaVersion": 8,
+  "$schema": "urn:convergence:schema:content:v9:races",
+  "schemaVersion": 9,
   "races": [
     {
       "id": "annex_spirit",

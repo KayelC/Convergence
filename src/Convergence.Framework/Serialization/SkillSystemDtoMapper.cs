@@ -135,29 +135,11 @@ internal static class SkillSystemDtoMapper
 
     private static EquipmentDefinition MapEquipment(EquipmentDto dto, string path)
     {
-        int profileCount =
-            (dto.Weapon is null ? 0 : 1) +
-            (dto.Armor is null ? 0 : 1) +
-            (dto.Boots is null ? 0 : 1) +
-            (dto.Accessory is null ? 0 : 1);
-        if (profileCount != 1)
-        {
-            throw new SchemaMappingException(path, "Equipment records require exactly one slot profile.");
-        }
-
-        if ((dto.Slot == EquipmentSlot.Weapon && dto.Weapon is null) ||
-            (dto.Slot == EquipmentSlot.Armor && dto.Armor is null) ||
-            (dto.Slot == EquipmentSlot.Boots && dto.Boots is null) ||
-            (dto.Slot == EquipmentSlot.Accessory && dto.Accessory is null))
-        {
-            throw new SchemaMappingException(path, "Equipment slot must match its declared profile.");
-        }
-
         return new EquipmentDefinition(
             Id(dto.Id),
             dto.DisplayName,
             dto.Description,
-            dto.Slot,
+            Id(dto.SlotId),
             dto.BaseValue,
             (dto.GrantedSkillIds ?? []).Select(Id),
             dto.Weapon is null

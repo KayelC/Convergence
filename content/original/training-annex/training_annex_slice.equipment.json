@@ -1,12 +1,12 @@
 {
-  "$schema": "urn:convergence:schema:content:v8:equipment",
-  "schemaVersion": 8,
+  "$schema": "urn:convergence:schema:content:v9:equipment",
+  "schemaVersion": 9,
   "equipment": [
     {
       "id": "practice_blade",
       "displayName": "Practice Blade",
       "description": "A generic physical weapon example.",
-      "slot": "weapon",
+      "slotId": "weapon",
       "baseValue": 120,
       "weapon": {
         "basicAttack": {
@@ -24,7 +24,7 @@
       "id": "padded_jacket",
       "displayName": "Padded Jacket",
       "description": "A generic light armor example.",
-      "slot": "armor",
+      "slotId": "armor",
       "baseValue": 90,
       "armor": {
         "defense": 6,
@@ -35,7 +35,7 @@
       "id": "light_steps",
       "displayName": "Light Steps",
       "description": "A generic boots example.",
-      "slot": "boots",
+      "slotId": "boots",
       "baseValue": 80,
       "boots": {
         "evasion": 4
@@ -45,7 +45,7 @@
       "id": "focus_charm",
       "displayName": "Focus Charm",
       "description": "A generic accessory example.",
-      "slot": "accessory",
+      "slotId": "accessory",
       "baseValue": 110,
       "accessory": {
         "statModifiers": [

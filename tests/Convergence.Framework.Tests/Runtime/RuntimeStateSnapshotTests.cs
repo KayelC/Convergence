@@ -169,10 +169,10 @@ public sealed class RuntimeStateSnapshotTests
         Assert.False(restoredState.HasCapability(Id("late_capability")));
         Assert.Equal(
             RuntimeInstanceId.Parse("practice-sword-001"),
-            roundTrip.Equipment.EquippedInstanceIds[EquipmentSlot.Weapon]);
+            roundTrip.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Weapon]);
         Assert.Equal(
             RuntimeInstanceId.Parse("kevlar-vest-001"),
-            roundTrip.Equipment.EquippedInstanceIds[EquipmentSlot.Armor]);
+            roundTrip.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Armor]);
 
         Assert.Equal(Id("poison"), Assert.Single(roundTrip.BattleStatus.Ailments).Id);
         Assert.Equal(Id("downed"), Assert.Single(roundTrip.BattleStatus.Statuses).Id);
@@ -534,11 +534,11 @@ public sealed class RuntimeStateSnapshotTests
             new RuntimeSkillStateSnapshot(learnedSkillIds ?? [Id("ember_dart"), Id("ice_boost")], [Id("ember_dart")]),
             new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    StandardEquipmentSlotIds.Weapon,
                     RuntimeInstanceId.Parse("practice-sword-001")),
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    EquipmentSlot.Armor,
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    StandardEquipmentSlotIds.Armor,
                     RuntimeInstanceId.Parse("kevlar-vest-001"))
             ]),
             new RuntimeBattleStatusSnapshot(

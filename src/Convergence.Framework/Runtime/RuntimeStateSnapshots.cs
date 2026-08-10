@@ -291,14 +291,20 @@ public sealed record RuntimeActorReferenceSnapshot
 public sealed record RuntimeEquipmentSnapshot
 {
     public RuntimeEquipmentSnapshot(
-        IEnumerable<KeyValuePair<EquipmentSlot, RuntimeInstanceId>>? equippedInstanceIds = null)
+        IEnumerable<KeyValuePair<ContentId, RuntimeInstanceId>>? equippedInstanceIds = null)
     {
-        KeyValuePair<EquipmentSlot, RuntimeInstanceId>[] entries =
+        KeyValuePair<ContentId, RuntimeInstanceId>[] entries =
             equippedInstanceIds?.ToArray() ?? [];
         var seenInstanceIds = new HashSet<RuntimeInstanceId>();
-        foreach ((EquipmentSlot slot, RuntimeInstanceId instanceId) in entries)
+        foreach ((ContentId slotId, RuntimeInstanceId instanceId) in entries)
         {
-            EnumDomain.RequireDefined(slot, nameof(equippedInstanceIds));
+            if (!slotId.IsValid)
+            {
+                throw new ArgumentException(
+                    "Equipped equipment slot IDs must be valid.",
+                    nameof(equippedInstanceIds));
+            }
+
             if (!instanceId.IsValid)
             {
                 throw new ArgumentException(
@@ -317,7 +323,7 @@ public sealed record RuntimeEquipmentSnapshot
         EquippedInstanceIds = RuntimeSnapshotCollections.Dictionary(entries);
     }
 
-    public IReadOnlyDictionary<EquipmentSlot, RuntimeInstanceId> EquippedInstanceIds { get; }
+    public IReadOnlyDictionary<ContentId, RuntimeInstanceId> EquippedInstanceIds { get; }
 }
 
 public sealed record RuntimeTimedStateSnapshot

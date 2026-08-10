@@ -1,7 +1,7 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Order 7 status:** O7-R1 and O7-R2 establish the approved tracking and
-> equipment-instance ownership model. Authored slot layouts, equipped skills
+> **Order 7 status:** O7-R1 through O7-R3 establish the approved tracking,
+> equipment-instance ownership, and authored slot-layout model. Equipped skills
 > and combat contributions, stateful shop stock, explicit pricing, generic
 > recovery, and typed currencies remain pending. This page remains unreviewed
 > until the complete
@@ -74,16 +74,19 @@ the same definition; repeating one instance ID is rejected.
 
 ## Equipment
 
-Actor equipment maps the current typed slots to inventory-owned equipment
-instance IDs. Equip and unequip transitions validate ownership, slot
-compatibility, and aggregate assignment evidence. A missing instance or an
+Actor equipment maps authored slot `ContentId` values to inventory-owned
+equipment instance IDs. The selected `IEquipmentSlotLayoutPolicy` determines
+which definition profiles and assignments are compatible. The supplied
+standard policy retains weapon, armor, boots, and accessory positions; games
+may select a different layout. Equip and unequip transitions validate
+ownership, policy compatibility, and aggregate assignment evidence. A missing instance or an
 instance already assigned to another actor rejects with unchanged before/after
 equipment state. Selling a specific equipped instance is blocked by the
 transaction service.
 
-Save contract v16 stores owned instances only in inventory and actor loadout
-references only in actor snapshots. There is no separate root equipment
-snapshot.
+Save contract v17 stores owned instances only in inventory and actor loadout
+references only in actor snapshots, all under authored slot IDs. There is no
+separate root equipment snapshot.
 
 Basic attack profiles may come from equipped weapon data, but a host can supply another clean basic-attack profile. Presentation metadata does not decide damage behavior.
 

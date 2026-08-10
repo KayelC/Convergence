@@ -438,7 +438,7 @@ results instead of being discarded.
 
 ## Persistence And Restore
 
-Runtime save contract v16 serializes the status lifetime rather than only the
+Runtime save contract v17 serializes the status lifetime rather than only the
 remaining number. This preserves expiration kind, event or phase identity,
 reserve behavior, and allowed removal causes.
 
@@ -498,7 +498,7 @@ storage mutators.
 
 ## Authored Lifetime Boundary
 
-Schema v8 maps authored lifetime policy without inference. Each ailment
+Schema v9 maps authored lifetime policy without inference. Each ailment
 `defaultLifetime` and each applicable status-producing effect `lifetime`
 contains an expiration definition plus the exact typed removal causes allowed
 for that state. `SkillSystemDtoMapper.MapStatusLifetime` preserves both parts

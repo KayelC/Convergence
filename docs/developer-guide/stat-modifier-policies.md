@@ -13,7 +13,7 @@ separate choice for numeric combat impact.
 
 ## Author A Ruleset
 
-Schema-v8 content selects a factory with the unqualified `policyId` field. A
+Schema-v9 content selects a factory with the unqualified `policyId` field. A
 bounded persistent or timed-contribution policy also requires both bounds:
 
 ```json
@@ -189,7 +189,7 @@ supplied policies preserve swap state and clear on the other terminal scopes.
 
 ## Persistence And Restore
 
-Save contract v16 stores canonical modifier state in
+Save contract v17 stores canonical modifier state in
 `RuntimeBattleStatusSnapshot.StatModifiers`. Host JSON DTOs must preserve:
 
 - the qualified policy ID;

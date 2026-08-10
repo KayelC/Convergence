@@ -105,7 +105,7 @@ internal static class DefinitionQualifier
             ContentReference(packId, definition.Id),
             definition.DisplayName,
             definition.Description,
-            definition.Slot,
+            definition.SlotId,
             definition.BaseValue,
             definition.GrantedSkillIds.Select(id => ContentReference(packId, id)),
             definition.Weapon is null

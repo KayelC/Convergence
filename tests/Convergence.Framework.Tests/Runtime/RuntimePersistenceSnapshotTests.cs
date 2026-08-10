@@ -68,7 +68,7 @@ public sealed class RuntimePersistenceSnapshotTests
     [Fact]
     public void PersistenceSnapshots_RejectInvalidPackIdentityAndNullDictionaryValues()
     {
-        SemanticVersion version = SemanticVersion.Parse("0.8.0");
+        SemanticVersion version = SemanticVersion.Parse("0.9.0");
         Assert.Throws<ArgumentException>(() => new ContentPackIdentity(null!, version));
         Assert.Throws<ArgumentException>(() => new ContentPackIdentity(" ", version));
 
@@ -1712,19 +1712,19 @@ public sealed class RuntimePersistenceSnapshotTests
             frost,
             equipment: new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    EquipmentSlot.Armor,
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    StandardEquipmentSlotIds.Armor,
                     missingInstanceId),
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    EquipmentSlot.Accessory,
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    StandardEquipmentSlotIds.Accessory,
                     shortswordInstanceId)
             ]));
         RuntimeActorSnapshot malformedEmber = CopyActor(
             ember,
             equipment: new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    StandardEquipmentSlotIds.Weapon,
                     shortswordInstanceId)
             ]));
         var missingHostedEntity = new RuntimeActorReferenceSnapshot(
@@ -1808,8 +1808,8 @@ public sealed class RuntimePersistenceSnapshotTests
             inventory: new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Id("missing.pack:missing_item"), 1)],
                 [
-                    new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                        EquipmentSlot.Weapon,
+                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                        StandardEquipmentSlotIds.Weapon,
                         [
                             new RuntimeEquipmentInstanceSnapshot(
                                 RuntimeInstanceId.Parse("missing-equipment-001"),
@@ -2527,10 +2527,10 @@ public sealed class RuntimePersistenceSnapshotTests
             CreateSaveSnapshot(),
             contentPacks:
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.8.0")),
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.9.0")),
                 new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("9.9.9")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.8.0")),
-                new ContentPackIdentity("missing.pack", SemanticVersion.Parse("0.8.0"))
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.9.0")),
+                new ContentPackIdentity("missing.pack", SemanticVersion.Parse("0.9.0"))
             ]);
 
         RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, catalog);
@@ -2557,6 +2557,10 @@ public sealed class RuntimePersistenceSnapshotTests
     [InlineData(10)]
     [InlineData(11)]
     [InlineData(12)]
+    [InlineData(13)]
+    [InlineData(14)]
+    [InlineData(15)]
+    [InlineData(16)]
     public void RuntimeSaveValidator_RejectsUnsupportedContractVersion(int unsupportedVersion)
     {
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
@@ -2766,8 +2770,8 @@ public sealed class RuntimePersistenceSnapshotTests
             frost,
             equipment: new RuntimeEquipmentSnapshot(
             [
-                new KeyValuePair<EquipmentSlot, RuntimeInstanceId>(
-                    EquipmentSlot.Weapon,
+                new KeyValuePair<ContentId, RuntimeInstanceId>(
+                    StandardEquipmentSlotIds.Weapon,
                     shortswordInstanceId)
             ]));
         RuntimeActorReferenceSnapshot frostRef = Reference(frost);
@@ -2776,10 +2780,10 @@ public sealed class RuntimePersistenceSnapshotTests
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.8.0")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.8.0")),
-                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.8.0")),
-                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.8.0"))
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.9.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.9.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.9.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.9.0"))
             ],
             actors ?? [frost, ember],
             partyRoster ?? new RuntimePartyRosterSnapshot(
@@ -2791,8 +2795,8 @@ public sealed class RuntimePersistenceSnapshotTests
             inventory ?? new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Id("convergence.shared_effects_demo:medicine_demo"), 2)],
                 [
-                    new KeyValuePair<EquipmentSlot, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                        EquipmentSlot.Weapon,
+                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                        StandardEquipmentSlotIds.Weapon,
                         [
                             new RuntimeEquipmentInstanceSnapshot(
                                 shortswordInstanceId,

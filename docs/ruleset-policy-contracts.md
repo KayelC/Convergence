@@ -132,7 +132,7 @@ Unknown parameters, nonnumeric values, and invalid combined configuration
 produce typed `RulesetBindingDiagnostic` values. The standard factory does not
 silently ignore them.
 
-Schema v8 and semantic validation impose the absolute `1..1024` authoring
+Schema v9 and semantic validation impose the absolute `1..1024` authoring
 range. The selected standard configuration imposes its own ceiling, default
 `64`, and rejects an effect whose authored maximum exceeds it before hit-count
 randomness, allocation, or mutation. A game may deliberately raise the

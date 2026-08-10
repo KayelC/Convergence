@@ -17,13 +17,13 @@ internal sealed record TrainingAnnexShopTransactionEvidence(
     int WalletAfter,
     int OwnedCountBefore,
     int OwnedCountAfter,
-    EquipmentSlot? EquipmentSlot,
+    ContentId? EquipmentSlotId,
     RuntimeInstanceId? EquipmentInstanceId);
 
 internal sealed record TrainingAnnexEquipmentChangeEvidence(
     RuntimeInstanceId EquipmentInstanceId,
     ContentId EquipmentId,
-    EquipmentSlot Slot,
+    ContentId SlotId,
     ResourceTransactionCode Code,
     bool Applied);
 
@@ -222,7 +222,7 @@ internal sealed class TrainingAnnexShopController
             .ConfigureAwait(false);
 
         if (offer.Runtime.ContentKind == ShopContentKind.Equipment &&
-            offer.Runtime.EquipmentSlot is EquipmentSlot slot)
+            offer.Runtime.EquipmentSlotId is ContentId slot)
         {
             await PromptEquipPurchasedEquipmentAsync(
                 catalog,
@@ -336,7 +336,7 @@ internal sealed class TrainingAnnexShopController
         TrainingAnnexItemActionInventory inventory,
         TrainingAnnexResolvedShopOffer offer,
         RuntimeInstanceId equipmentInstanceId,
-        EquipmentSlot slot,
+        ContentId slot,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         List<TrainingAnnexEquipmentChangeEvidence> equipmentEvidence,
         CancellationToken cancellationToken)
@@ -378,10 +378,10 @@ internal sealed class TrainingAnnexShopController
             string slots = string.Join(
                 ", ",
                 profile.EquippedDefinitions
-                    .OrderBy(pair => pair.Key)
-                    .Select(pair => $"{pair.Key}: {pair.Value.DisplayName}"));
+                    .OrderBy(pair => pair.Key.Value, StringComparer.Ordinal)
+                    .Select(pair => $"{FormatSlot(pair.Key)}: {pair.Value.DisplayName}"));
             await _eventSink.PublishAsync(
-                $"Equipped {offer.DisplayName} in {slot}; equipment profile now [{slots}].",
+                $"Equipped {offer.DisplayName} in {FormatSlot(slot)}; equipment profile now [{slots}].",
                 cancellationToken).ConfigureAwait(false);
             return;
         }
@@ -569,13 +569,13 @@ internal sealed class TrainingAnnexShopController
 
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateEquipPurchasedEquipmentMenu(
         TrainingAnnexResolvedShopOffer offer,
-        EquipmentSlot slot) =>
+        ContentId slot) =>
         new(
             $"Equip {offer.DisplayName}?",
             [
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.EquipPurchasedEquipment,
-                    $"Equip to {slot}"),
+                    $"Equip to {FormatSlot(slot)}"),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.Back,
                     "Keep in Inventory")
@@ -587,7 +587,7 @@ internal sealed class TrainingAnnexShopController
         offer.ContentKind switch
         {
             ShopContentKind.Item => inventory.GetQuantity(offer.ContentId) > 0,
-            ShopContentKind.Equipment when offer.EquipmentSlot is EquipmentSlot slot =>
+            ShopContentKind.Equipment when offer.EquipmentSlotId is ContentId slot =>
                 inventory.GetEquipmentInstances(slot).Any(instance =>
                     instance.DefinitionId == offer.ContentId),
             _ => false
@@ -600,7 +600,7 @@ internal sealed class TrainingAnnexShopController
         offer.ContentKind switch
         {
             ShopContentKind.Item => $" (owned {inventory.GetQuantity(offer.ContentId)})",
-            ShopContentKind.Equipment when offer.EquipmentSlot is EquipmentSlot slot &&
+            ShopContentKind.Equipment when offer.EquipmentSlotId is ContentId slot &&
                                            inventory.GetEquipmentInstances(slot).Any(instance =>
                                                instance.DefinitionId == offer.ContentId) =>
                 $" (owned {inventory.GetEquipmentInstances(slot).Count(instance => instance.DefinitionId == offer.ContentId)})",
@@ -641,18 +641,25 @@ internal sealed class TrainingAnnexShopController
             result.AfterWallet.Balance,
             OwnedCount(result.BeforeInventory, offer),
             OwnedCount(result.AfterInventory, offer),
-            offer.EquipmentSlot,
+            offer.EquipmentSlotId,
             equipmentInstanceId);
 
     private static int OwnedCount(RuntimeInventorySnapshot inventory, RuntimeShopOfferSnapshot offer) =>
         offer.ContentKind switch
         {
             ShopContentKind.Item => inventory.GetQuantity(offer.ContentId),
-            ShopContentKind.Equipment when offer.EquipmentSlot is EquipmentSlot slot =>
+            ShopContentKind.Equipment when offer.EquipmentSlotId is ContentId slot =>
                 inventory.GetEquipmentInstances(slot).Count(instance =>
                     instance.DefinitionId == offer.ContentId),
             _ => 0
         };
+
+    private static string FormatSlot(ContentId slotId) =>
+        slotId == StandardEquipmentSlotIds.Weapon ? "Weapon" :
+        slotId == StandardEquipmentSlotIds.Armor ? "Armor" :
+        slotId == StandardEquipmentSlotIds.Boots ? "Boots" :
+        slotId == StandardEquipmentSlotIds.Accessory ? "Accessory" :
+        slotId.ToString();
 
     private static RuntimeInstanceId NextEquipmentInstanceId(
         RuntimeInventorySnapshot inventory)
@@ -677,7 +684,7 @@ internal sealed class TrainingAnnexShopController
         RuntimeEquipmentSnapshot equipment)
     {
         if (offer.ContentKind != ShopContentKind.Equipment ||
-            offer.EquipmentSlot is not EquipmentSlot slot)
+            offer.EquipmentSlotId is not ContentId slot)
         {
             return null;
         }

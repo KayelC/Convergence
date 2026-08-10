@@ -333,7 +333,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 16;
+    public const int CurrentContractVersion = 17;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -391,18 +391,22 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
     private readonly IRuntimeMoveListCapacityPolicy _moveListCapacityPolicy;
     private readonly IRuntimeRulesetBindingResolver? _rulesetBindings;
     private readonly IChargePolicyResolver? _chargePolicies;
+    private readonly IEquipmentSlotLayoutPolicy _equipmentSlotLayout;
 
     public RuntimeSaveValidator(
         IRosterCapacityPolicy? rosterCapacityPolicy = null,
         IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null,
         IRuntimeRulesetBindingResolver? rulesetBindings = null,
-        IChargePolicyResolver? chargePolicies = null)
+        IChargePolicyResolver? chargePolicies = null,
+        IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null)
     {
         _rosterCapacityPolicy = rosterCapacityPolicy ?? NoLimitRosterCapacityPolicy.Instance;
         _moveListCapacityPolicy = moveListCapacityPolicy ??
             new SharedRuntimeMoveListCapacityPolicy();
         _rulesetBindings = rulesetBindings;
         _chargePolicies = chargePolicies;
+        _equipmentSlotLayout = equipmentSlotLayout ??
+            StandardEquipmentSlotLayoutPolicy.Instance;
     }
 
     public RuntimeSaveValidationResult Validate(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
@@ -554,15 +558,21 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
         ValidateContentIdKeys(snapshot.Inventory.ItemQuantities.Keys, "$.inventory.itemQuantities", diagnostics);
-        foreach ((EquipmentSlot slot,
+        foreach ((ContentId slotId,
                   IReadOnlyList<RuntimeEquipmentInstanceSnapshot> instances) in
-                 snapshot.Inventory.OwnedEquipmentInstances.OrderBy(pair => pair.Key))
+                 snapshot.Inventory.OwnedEquipmentInstances.OrderBy(
+                     pair => pair.Key.Value,
+                     StringComparer.Ordinal))
         {
+            ValidateContentId(
+                slotId,
+                $"$.inventory.ownedEquipmentInstances.{SlotPath(slotId)}",
+                diagnostics);
             for (int index = 0; index < instances.Count; index++)
             {
                 RuntimeEquipmentInstanceSnapshot instance = instances[index];
                 string path =
-                    $"$.inventory.ownedEquipmentInstances.{SlotPath(slot)}[{index}]";
+                    $"$.inventory.ownedEquipmentInstances.{SlotPath(slotId)}[{index}]";
                 ValidateRuntimeInstanceId(
                     instance.InstanceId,
                     path + ".instanceId",
@@ -575,12 +585,16 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         }
         for (int actorIndex = 0; actorIndex < snapshot.Actors.Count; actorIndex++)
         {
-            foreach ((EquipmentSlot slot, RuntimeInstanceId equipmentInstanceId) in
+            foreach ((ContentId slotId, RuntimeInstanceId equipmentInstanceId) in
                      snapshot.Actors[actorIndex].Equipment.EquippedInstanceIds)
             {
+                ValidateContentId(
+                    slotId,
+                    $"$.actors[{actorIndex}].equipment.equippedInstanceIds.{SlotPath(slotId)}",
+                    diagnostics);
                 ValidateRuntimeInstanceId(
                     equipmentInstanceId,
-                    $"$.actors[{actorIndex}].equipment.equippedInstanceIds.{SlotPath(slot)}",
+                    $"$.actors[{actorIndex}].equipment.equippedInstanceIds.{SlotPath(slotId)}",
                     diagnostics);
             }
         }
@@ -664,26 +678,6 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         RuntimeSaveGameSnapshot snapshot,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
-        foreach (EquipmentSlot slot in snapshot.Inventory.OwnedEquipmentInstances.Keys)
-        {
-            ValidateEnumValue(
-                slot,
-                $"$.inventory.ownedEquipmentInstances.{SlotPath(slot)}",
-                diagnostics);
-        }
-
-        for (int actorIndex = 0; actorIndex < snapshot.Actors.Count; actorIndex++)
-        {
-            foreach (EquipmentSlot slot in
-                     snapshot.Actors[actorIndex].Equipment.EquippedInstanceIds.Keys)
-            {
-                ValidateEnumValue(
-                    slot,
-                    $"$.actors[{actorIndex}].equipment.equippedInstanceIds.{SlotPath(slot)}",
-                    diagnostics);
-            }
-        }
-
         for (int index = 0; index < snapshot.Knowledge.ElementalAffinities.Count; index++)
         {
             RuntimeElementalAffinityKnowledgeSnapshot entry = snapshot.Knowledge.ElementalAffinities[index];
@@ -1375,7 +1369,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             path + ".entityDefinitionId"));
     }
 
-    private static void ValidateInventory(
+    private void ValidateInventory(
         RuntimeInventorySnapshot inventory,
         IEnumerable<RuntimeInstanceId> actorInstanceIds,
         GameDataCatalog catalog,
@@ -1395,15 +1389,17 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 
         var seenInstanceIds = new HashSet<RuntimeInstanceId>();
         var actorIds = new HashSet<RuntimeInstanceId>(actorInstanceIds);
-        foreach ((EquipmentSlot slot,
+        foreach ((ContentId slotId,
                   IReadOnlyList<RuntimeEquipmentInstanceSnapshot> instances) in
-                 inventory.OwnedEquipmentInstances.OrderBy(pair => pair.Key))
+                 inventory.OwnedEquipmentInstances.OrderBy(
+                     pair => pair.Key.Value,
+                     StringComparer.Ordinal))
         {
             for (int index = 0; index < instances.Count; index++)
             {
                 RuntimeEquipmentInstanceSnapshot instance = instances[index];
                 string path =
-                    $"$.inventory.ownedEquipmentInstances.{SlotPath(slot)}[{index}]";
+                    $"$.inventory.ownedEquipmentInstances.{SlotPath(slotId)}[{index}]";
                 if (!seenInstanceIds.Add(instance.InstanceId))
                 {
                     diagnostics.Add(new RuntimeSaveValidationDiagnostic(
@@ -1434,19 +1430,28 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                         ContentId: equipmentId,
                         Path: path + ".definitionId"));
                 }
-                else if (definition.Slot != slot)
+                else
                 {
-                    diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                        RuntimeSaveValidationCode.EquipmentSlotMismatch,
-                        $"Equipment '{equipmentId}' is stored as '{slot}', but its catalog slot is '{definition.Slot}'.",
-                        ContentId: equipmentId,
-                        Path: path + ".definitionId"));
+                    EquipmentSlotLayoutResult definitionLayout =
+                        _equipmentSlotLayout.ValidateDefinition(definition);
+                    EquipmentSlotLayoutResult assignment =
+                        _equipmentSlotLayout.ValidateAssignment(definition.SlotId, slotId);
+                    if (!definitionLayout.IsCompatible || !assignment.IsCompatible)
+                    {
+                        diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                            RuntimeSaveValidationCode.EquipmentSlotMismatch,
+                            definitionLayout.Message ??
+                            assignment.Message ??
+                            $"Equipment '{equipmentId}' is not compatible with inventory slot '{slotId}'.",
+                            ContentId: equipmentId,
+                            Path: path + ".definitionId"));
+                    }
                 }
             }
         }
     }
 
-    private static void ValidateEquipment(
+    private void ValidateEquipment(
         RuntimeEquipmentSnapshot equipment,
         RuntimeInventorySnapshot inventory,
         GameDataCatalog catalog,
@@ -1454,15 +1459,17 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         string path,
         RuntimeInstanceId? actorInstanceId)
     {
-        foreach ((EquipmentSlot slot, RuntimeInstanceId equipmentInstanceId) in
-                 equipment.EquippedInstanceIds.OrderBy(pair => pair.Key))
+        foreach ((ContentId slotId, RuntimeInstanceId equipmentInstanceId) in
+                 equipment.EquippedInstanceIds.OrderBy(
+                     pair => pair.Key.Value,
+                     StringComparer.Ordinal))
         {
             string equipmentPath =
-                $"{path}.equippedInstanceIds.{SlotPath(slot)}";
+                $"{path}.equippedInstanceIds.{SlotPath(slotId)}";
             if (!inventory.TryGetEquipmentInstance(
                     equipmentInstanceId,
                     out RuntimeEquipmentInstanceSnapshot? instance,
-                    out EquipmentSlot ownedSlot) ||
+                    out ContentId ownedSlotId) ||
                 instance is null)
             {
                 diagnostics.Add(new RuntimeSaveValidationDiagnostic(
@@ -1485,20 +1492,33 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     ContentId: equipmentId,
                     Path: equipmentPath));
             }
-            else if (definition.Slot != slot || ownedSlot != slot)
+            else
             {
-                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                    RuntimeSaveValidationCode.EquipmentSlotMismatch,
-                    $"Equipment instance '{equipmentInstanceId}' is assigned to '{slot}', " +
-                    $"but inventory/catalog placement is '{ownedSlot}'/'{definition.Slot}'.",
-                    actorInstanceId,
-                    equipmentId,
-                    equipmentPath));
+                EquipmentSlotLayoutResult definitionLayout =
+                    _equipmentSlotLayout.ValidateDefinition(definition);
+                EquipmentSlotLayoutResult inventoryAssignment =
+                    _equipmentSlotLayout.ValidateAssignment(definition.SlotId, ownedSlotId);
+                EquipmentSlotLayoutResult actorAssignment =
+                    _equipmentSlotLayout.ValidateAssignment(ownedSlotId, slotId);
+                if (!definitionLayout.IsCompatible ||
+                    !inventoryAssignment.IsCompatible ||
+                    !actorAssignment.IsCompatible)
+                {
+                    diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                        RuntimeSaveValidationCode.EquipmentSlotMismatch,
+                        definitionLayout.Message ??
+                        inventoryAssignment.Message ??
+                        actorAssignment.Message ??
+                        $"Equipment instance '{equipmentInstanceId}' is not compatible with slot '{slotId}'.",
+                        actorInstanceId,
+                        equipmentId,
+                        equipmentPath));
+                }
             }
         }
     }
 
-    private static void ValidateActorEquipment(
+    private void ValidateActorEquipment(
         IReadOnlyList<RuntimeActorSnapshot> actors,
         RuntimeInventorySnapshot inventory,
         GameDataCatalog catalog,
@@ -1517,8 +1537,10 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 equipmentPath,
                 actor.Identity.InstanceId);
 
-            foreach ((EquipmentSlot slot, RuntimeInstanceId equipmentInstanceId) in
-                     actor.Equipment.EquippedInstanceIds.OrderBy(pair => pair.Key))
+            foreach ((ContentId slotId, RuntimeInstanceId equipmentInstanceId) in
+                     actor.Equipment.EquippedInstanceIds.OrderBy(
+                         pair => pair.Key.Value,
+                         StringComparer.Ordinal))
             {
                 if (assignments.TryAdd(
                         equipmentInstanceId,
@@ -1532,12 +1554,12 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     $"Equipment instance '{equipmentInstanceId}' is assigned to more than one actor or slot.",
                     actor.Identity.InstanceId,
                     Path:
-                        $"{equipmentPath}.equippedInstanceIds.{SlotPath(slot)}"));
+                        $"{equipmentPath}.equippedInstanceIds.{SlotPath(slotId)}"));
             }
         }
     }
 
-    private static string SlotPath(EquipmentSlot slot) => slot.ToString().ToLowerInvariant();
+    private static string SlotPath(ContentId slotId) => slotId.ToString();
 
     private static void ValidateField(
         RuntimeFieldSnapshot field,

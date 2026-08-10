@@ -310,12 +310,12 @@ action-outcome aggregation. Authored ruleset binding returns a neutral coherent
 `CombatExecutionPolicySet`; the hit, critical, and instant-defeat authorities it
 advertises are the exact authorities its executors call.
 
-Content is currently schema v8 and active packs are version `0.8.0`. Weapon
+Content is currently schema v9 and active packs are version `0.9.0`. Weapon
 basic attacks must declare critical behavior. One authored damage effect is
 limited to `1..1024` hits; the supplied standard policy defaults to a stricter
 `64`-hit execution ceiling. Authored probabilities are inclusive `0..100` and
 are rejected before execution, while only policy-derived chances may clamp.
-Save contract v16 retains charge policy identity and rejects restoration under
+Save contract v17 retains charge policy identity and rejects restoration under
 incompatible charge semantics.
 
 The final source-first review corrected active schema validation, normalized

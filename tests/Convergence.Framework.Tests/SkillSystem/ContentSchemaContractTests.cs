@@ -7,7 +7,7 @@ namespace Convergence.Framework.Tests.SkillSystem;
 
 public sealed class ContentSchemaContractTests
 {
-    private const string SchemaPrefix = "urn:convergence:schema:content:v8:";
+    private const string SchemaPrefix = "urn:convergence:schema:content:v9:";
 
     [Fact]
     public void ActiveContentDocuments_ValidateAgainstTheirDeclaredDraft202012Schemas()
@@ -181,6 +181,11 @@ public sealed class ContentSchemaContractTests
             .AsObject()
             .Remove("critical");
 
+        JsonObject retiredEquipmentSlot = equipment.DeepClone().AsObject();
+        JsonObject retiredEquipmentRecord = retiredEquipmentSlot["equipment"]![0]!.AsObject();
+        retiredEquipmentRecord["slot"] = retiredEquipmentRecord["slotId"]!.DeepClone();
+        retiredEquipmentRecord.Remove("slotId");
+
         JsonObject ambiguousCondition = skill.DeepClone().AsObject();
         JsonObject firstSkill = ambiguousCondition["skills"]![0]!.AsObject();
         firstSkill["effects"]![0]!["when"] = new JsonObject
@@ -210,6 +215,7 @@ public sealed class ContentSchemaContractTests
             { "skills", missingPassiveTriggerTargeting.ToJsonString() },
             { "items", invalidItemUsage.ToJsonString() },
             { "equipment", missingBasicAttackCritical.ToJsonString() },
+            { "equipment", retiredEquipmentSlot.ToJsonString() },
             { "skills", ambiguousCondition.ToJsonString() },
             { "skills", qualifiedEffectId.ToJsonString() },
             { "skills", incompleteDependency.ToJsonString() }
@@ -392,11 +398,11 @@ public sealed class ContentSchemaContractTests
             $"{{\"id\":\"active_skill\",\"displayName\":\"Active\",\"description\":\"\",\"activation\":\"active\",\"menuGroup\":\"offense\",\"inheritanceGroupId\":\"physical\",\"inheritance\":{{\"isInheritable\":true}},\"targeting\":{sharedTargeting},\"effects\":[{damage}],\"availability\":{{\"contexts\":[\"battle\"]}}}}",
             """{"id":"passive_skill","displayName":"Passive","description":"","activation":"passive","inheritanceGroupId":"passive","inheritance":{"isInheritable":true},"triggers":[{"event":"owner_turn_end","targeting":{"scope":"owner","lifeState":"any","includeReserveActors":true},"effects":[{"type":"restore_resource","resourceId":"hp","amount":{"type":"flat","value":1}}]}]}""");
         Add(variants, SchemaPrefix + "equipment#/$defs/equipmentRecord",
-            """{"id":"weapon","displayName":"Weapon","description":"","slot":"weapon","baseValue":1,"weapon":{"basicAttack":{"element":"physical","power":10,"accuracy":100,"critical":{"mode":"chance","chance":10},"isLongRange":false}}}""",
-            """{"id":"composite_weapon","displayName":"Composite Weapon","description":"","slot":"weapon","baseValue":1,"weapon":{"basicAttack":{"element":"physical","power":10,"accuracy":100,"critical":{"mode":"never"},"isLongRange":false,"primaryEffectId":"weapon_contact","secondaryEffects":[{"type":"damage","elementId":"fire","power":5,"accuracy":25,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1},"contactMode":"shared_contact","dependency":{"sourceEffectId":"weapon_contact","requirement":"positive_damage","scope":"same_target"}}]}}}""",
-            """{"id":"armor","displayName":"Armor","description":"","slot":"armor","baseValue":1,"armor":{"defense":2,"evasion":0}}""",
-            """{"id":"boots","displayName":"Boots","description":"","slot":"boots","baseValue":1,"boots":{"evasion":2}}""",
-            """{"id":"accessory","displayName":"Accessory","description":"","slot":"accessory","baseValue":1,"accessory":{"statModifiers":[{"statId":"luck","value":1}]}}""");
+            """{"id":"weapon","displayName":"Weapon","description":"","slotId":"weapon","baseValue":1,"weapon":{"basicAttack":{"element":"physical","power":10,"accuracy":100,"critical":{"mode":"chance","chance":10},"isLongRange":false}}}""",
+            """{"id":"composite_weapon","displayName":"Composite Weapon","description":"","slotId":"weapon","baseValue":1,"weapon":{"basicAttack":{"element":"physical","power":10,"accuracy":100,"critical":{"mode":"never"},"isLongRange":false,"primaryEffectId":"weapon_contact","secondaryEffects":[{"type":"damage","elementId":"fire","power":5,"accuracy":25,"critical":{"mode":"never"},"hits":{"minimum":1,"maximum":1},"contactMode":"shared_contact","dependency":{"sourceEffectId":"weapon_contact","requirement":"positive_damage","scope":"same_target"}}]}}}""",
+            """{"id":"armor","displayName":"Armor","description":"","slotId":"armor","baseValue":1,"armor":{"defense":2,"evasion":0}}""",
+            """{"id":"boots","displayName":"Boots","description":"","slotId":"boots","baseValue":1,"boots":{"evasion":2}}""",
+            """{"id":"accessory","displayName":"Accessory","description":"","slotId":"accessory","baseValue":1,"accessory":{"statModifiers":[{"statId":"luck","value":1}]}}""");
 
         return variants;
     }
@@ -414,7 +420,7 @@ public sealed class ContentSchemaContractTests
 
     private static string ContentRoot() => Path.Combine(AppContext.BaseDirectory, "Content");
 
-    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v8");
+    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v9");
 
     private static string Describe(EvaluationResults result)
     {
