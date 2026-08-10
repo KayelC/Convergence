@@ -146,6 +146,14 @@ equipment ownership, equip compatibility, wallet arithmetic, shop
 transactions, and restoration transactions. Hosts own UI and durable inventory
 storage.
 
+Order 7 is open. Current equipment ownership still identifies a copy by its
+definition ID, equipment slots are fixed, limited stock is not returned as
+durable runtime state, and wallet/recovery contracts remain single-currency and
+HP/SP-specific. The owner-approved
+[Order 7 roadmap](reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+defines the direct authority corrections and narrowly justified policy seams;
+this section is not closure evidence for those pending changes.
+
 ## Navigation, Traversal, And Encounter Preparation
 
 Generic navigation uses arbitrary `ContentId` locations and injected access policy. Optional dungeon traversal uses arbitrary node IDs and injected traversal policy. Neither service prescribes scenes, menus, floors, or automatic battles. Hosts explicitly trigger authored encounters; preparation services hydrate ordered runtime actors from catalog formations.

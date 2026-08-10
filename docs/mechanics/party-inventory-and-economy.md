@@ -1,5 +1,13 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
+> **Order 7 status:** owner decisions for equipment instances, authored slot
+> layouts, equipped skills and combat contributions, stateful shop stock,
+> explicit pricing, generic recovery, and typed currencies are approved but not
+> yet implemented. This page describes the current source baseline and remains
+> unreviewed until the
+> [Order 7 roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+> is implemented and independently closed.
+
 ## Party And Ownership Graph
 
 Framework party state distinguishes active party members, reserve members, an

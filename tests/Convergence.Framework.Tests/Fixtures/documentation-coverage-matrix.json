@@ -265,17 +265,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "Resource-management rules exist but still require owner confirmation."
+        "reason": "Order 7 ownership and policy decisions are approved, but the mechanics page remains current-baseline guidance until implementation and owner review are complete."
       },
       "developerGuide": {
         "state": "missing",
         "documents": [],
-        "reason": "Inventory reservations, equipment profiles, wallet, shop, and restoration composition need a guide."
+        "reason": "The approved equipment-instance, slot-policy, pricing, stock, recovery, and typed-currency integration still needs a post-implementation developer guide."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/gameplay-systems.md"],
-        "reason": "Atomic transaction and arithmetic invariants need a reviewed technical page."
+        "reason": "Order 7 is open; canonical equipment/save authority and atomic inventory, stock, currency, pricing, recovery, and combat-contribution invariants need a dedicated reviewed technical page."
       }
     },
     {

@@ -8,7 +8,15 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+
+Documentation Order 7 is open under the owner-approved
+[Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
+The current resource-management foundation remains usable, but the capability
+is `partial` until equipment-instance ownership, authored slot layouts,
+equipped combat contributions, stateful shop stock, explicit pricing policies,
+generic recovery, typed currencies, audience documentation, and an independent
+adversarial closure audit are complete.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).

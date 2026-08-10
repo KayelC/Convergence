@@ -1,0 +1,422 @@
+# Inventory, Equipment, And Economy Order 7 Source Review And Approved Roadmap
+
+**Date:** 10 August 2026
+
+**Capability:** `inventory_equipment_economy`
+
+**Source baseline:** `21b0a016` (`refactor(encounter-runner): stage 7 - move scheduled round loop`)
+
+**Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
+
+**Implementation status:** O7-R1 documentation/tracking complete; O7-R2 through O7-R11 pending
+
+## Purpose
+
+This record is the active source of truth for Documentation Order 7. It
+preserves the owner's approved ownership and policy boundaries, reports the
+current source honestly, and turns the approved decisions into an ordered
+implementation and review sequence.
+
+This is not evidence that the target design already exists. Current behavior is
+established by source and tests until the relevant checkpoint changes it. The
+approved target behavior is established by the decision ledger below. Audience
+documentation becomes current authority only after implementation, executable
+evidence, owner review, and the final adversarial closure audit agree.
+
+## Review Method
+
+The opening review inspected current active source and tests rather than relying
+on older reports. The inspected boundaries included:
+
+- `ContentSurfaceDefinitions.cs` and the active equipment/shop DTO mapping;
+- `ResourceManagementServices.cs`;
+- `RuntimeEquipmentProfiles.cs`;
+- `RuntimeStateSnapshots.cs` and `RuntimePersistenceSnapshots.cs`;
+- `RuntimeRulesetPolicyFactories.cs`;
+- `ProductionCombatRuleset.cs` and its hit/damage request contracts;
+- `TrainingAnnexShopController.cs` and active Training Annex shop content;
+- `ResourceManagementServiceTests` and persistence tests; and
+- the active capability and documentation matrices.
+
+## Source-Verified Starting Point
+
+The existing implementation provides a useful host-neutral foundation:
+
+- immutable inventory, equipment, wallet, shop, and restoration results;
+- typed rejection codes and diagnostics;
+- checked integer and decimal arithmetic at transaction boundaries;
+- item reservation and commit/rollback support for battle actions;
+- item stack, ownership, equipped-sale, affordability, and stock-availability
+  checks;
+- catalog-backed shop offer resolution for fixed prices and limited/unlimited
+  stock definitions;
+- weapon basic-attack profiles and accessory stat modifiers; and
+- save validation for inventory/equipment definitions, slots, ownership, and
+  actor equipment references.
+
+The following limitations are also present in the current source and are the
+reason Order 7 is open:
+
+1. `RuntimeInventorySnapshot` stores equipment definition IDs under the fixed
+   `EquipmentSlot` enum. Owning a definition therefore means owning at most one
+   copy of it.
+2. Actor equipment also maps the fixed enum directly to definition IDs. There
+   is no runtime equipment-instance identity.
+3. `RuntimeSaveGameSnapshot` stores a root equipment snapshot while every actor
+   already stores its own equipment. Those authorities are validated
+   independently and are not required to agree.
+4. `EquipmentArmorProfileDefinition.Defense`, armor/boots `Evasion`, and
+   `EquipmentDefinition.GrantedSkillIds` are authored and validated, but
+   `RuntimeEquipmentProfileResolver` currently consumes only weapon basic
+   attacks and accessory stat modifiers.
+5. Limited stock is copied into `RuntimeShopOfferSnapshot.StockAvailable` and
+   checked during purchase, but a successful purchase returns no updated stock
+   state. Reopening the sample shop reconstructs the original quantity.
+6. Policy-shaped price and stock definitions exist in content, but the standard
+   shop resolver rejects both. The standard economy ruleset accepts no policy
+   parameters and `ShopTransactionService` embeds Luck-based price arithmetic.
+7. `RuntimeHospitalPatientSnapshot` hardcodes HP, SP, and two booleans. The
+   restoration service embeds one cost formula and clears ailment/persistence
+   flags without consulting typed resource IDs or legal ailment removal.
+8. `RuntimeWalletSnapshot` stores one unnamed balance, so transactions cannot
+   name which currency they debit or credit.
+
+The active capability matrix previously reported this capability as `complete`
+with no gaps. That statement did not match the source above or the approved
+work. Order 7 reclassifies it as `partial` until the implementation and closure
+gate are complete.
+
+## Owner Decision Set
+
+> ORDER 7 - OWNERSHIP AND AUTHORITY DECISIONS
+>
+> GENERAL PRINCIPLE (apply this to every decision below, and to any judgment
+> call not explicitly covered here)
+> Wrap something in an I<X>Policy / Standard<X>Policy pair - matching the
+> existing convention already used for stat resolution, resource growth,
+> roster capacity, navigation, and disclosure rules - only where different
+> games would legitimately want different formulas or behavior. Where the
+> current implementation is simply wrong (an identity model, a data shape),
+> fix it directly instead of wrapping it in a policy interface. Do not
+> introduce a policy for a design axis that has only one concrete behavior
+> today and no known second use case - that's speculative abstraction, not
+> modularity, and it costs real interface surface for no current benefit.
+>
+> DECISIONS
+>
+> 1. Equipment ownership - APPROVED, implement as a direct fix, not a policy.
+>    Each equipped item becomes a runtime instance with its own ID, referencing
+>    one equipment definition. Two actors can equip separate copies of the same
+>    definition. This is a data-model correction, not a behavioral variability
+>    point.
+>
+> 2. Equipment slots - APPROVED as a policy.
+>    Slots become developer-authored content IDs. Introduce
+>    IEquipmentSlotLayoutPolicy with a StandardEquipmentSlotLayoutPolicy default
+>    that reproduces the current Weapon/Armor/Boots/Accessory layout exactly,
+>    so no existing content breaks. Follow the same interface/default-impl
+>    shape already used elsewhere in Runtime.
+>
+> 3. Equipment-granted skills - APPROVED behavior, NOT a policy.
+>    Granted skills remain available only while equipped, do not become
+>    learned, do not consume move-list slots. Implement this as a fixed rule.
+>    Do not create a policy interface for this - there is no second behavior
+>    to make pluggable right now. If a real second use case shows up later,
+>    extract it then.
+>
+> 4. Defense/evasion ratings - APPROVED.
+>    Right now, armor and boots can be authored with Defense/Evasion values,
+>    but nothing in combat actually reads them - equipping different armor
+>    currently has zero effect on a fight. Fix this by having equipment
+>    contribute plain numbers into the SAME combat formula that already
+>    handles base stats (ProductionCombatRuleset), not by writing a second,
+>    equipment-specific formula for what Defense/Evasion means in combat.
+>
+>    Equipment is a SOURCE of stat contributions, not a second decision-maker
+>    about what those contributions do. One formula owner, fed from multiple
+>    sources (base stats, equipment, buffs, etc.) - not two formulas that can
+>    quietly drift apart over time, which is the same class of problem as the
+>    dual equipment-save-authority bug already flagged elsewhere in this doc.
+>
+> 5. Shop stock - APPROVED as a policy.
+>    Buying decrements limited stock. Selling does not replenish it unless a
+>    supplied policy says otherwise. Standard implementation matches current
+>    (non-)replenishing behavior.
+>
+> 6. Pricing - APPROVED as a policy, and treat this as closing an existing
+>    gap, not adding new scope.
+>    Standard price = purchase price + configurable resale percentage.
+>    Luck-adjusted pricing becomes an optional supplied policy rather than a
+>    hidden internal formula the standard economy bundle can't be configured
+>    around. This brings the economy bundle in line with the
+>    IRuntimeEconomyRulesetPolicyFactory convention the rest of the framework
+>    already follows - it isn't new complexity, it's fixing the one place that
+>    fell out of step with your own pattern.
+>
+> 7. Recovery - APPROVED as a policy, scoped narrowly.
+>    Rename generically, configure by resource ID, following the same shape as
+>    the existing IResourceGrowthPolicy/StandardResourceGrowthPolicy pair.
+>    Build exactly one StandardHospitalRecoveryPolicy that does what the
+>    actual game needs: full HP/SP restore, cures only legally removable
+>    ailments, clears configured temporary state. Do not build additional
+>    sample policies for stamina, mana, multi-resource, or per-treatment-type
+>    recovery - there is no current game requirement for them, and they can be
+>    added later against a real need without disturbing this interface.
+>
+> 8. Currency - APPROVED, implement as a direct data-model fix, not a policy.
+>    Typed currency ledger keyed by currency content ID. A single-currency
+>    game populates one entry and should incur no added friction - confirm
+>    this with a convenience accessor for "the" currency when only one is
+>    defined, so the common case doesn't get more verbose for the sake of the
+>    general case.
+>
+> SCOPE NOTE
+> Order 7 remains open, per your own recommendation, until this decision set
+> is implemented and adversarially audited the same way Orders 1-6 were -
+> not just implemented and unit-tested. Proceed with updating any relevant documents that state these approvals so that we will have a source of truth / roadmap for Order 7 implementations.
+
+## Approved Decision Ledger
+
+| ID | Approved decision | Implementation kind | Status |
+|---|---|---|---|
+| O7-G1 | Introduce a policy/default pair only for a real game-variable rule. Correct identity and data-shape errors directly. Do not add speculative policy surface. | Governing design rule | Approved |
+| O7-D1 | Every owned equipment copy has a unique runtime instance ID and references one equipment definition. Different actors may equip different instances of the same definition. | Direct data-model correction | Approved |
+| O7-D2 | Equipment slot IDs are authored `ContentId` values. `IEquipmentSlotLayoutPolicy` owns valid layouts, and `StandardEquipmentSlotLayoutPolicy` supplies Weapon, Armor, Boots, and Accessory behavior. | Policy family | Approved |
+| O7-D3 | Equipped granted skills are available only while the granting instance is equipped. They are not learned and consume no move-list slot. | Fixed runtime rule | Approved |
+| O7-D4 | Equipment Defense and Evasion are numeric contributions to the existing `ProductionCombatRuleset` inputs. Equipment does not own a parallel damage or hit formula. | Direct integration correction | Approved |
+| O7-D5 | Runtime shop stock is stateful. Buying decrements limited stock. Standard selling does not replenish stock; a supplied policy may choose otherwise. | Policy family plus runtime state | Approved |
+| O7-D6 | The standard pricing policy uses authored purchase price and configurable resale percentage. Luck-adjusted pricing remains available as an optional supplied policy, not hidden standard behavior. | Policy family | Approved |
+| O7-D7 | Recovery is generic and resource-ID driven. Supply exactly one `StandardHospitalRecoveryPolicy` for full configured HP/SP recovery, legal ailment cures, and configured temporary-state cleanup. | Policy family, narrowly scoped | Approved |
+| O7-D8 | Replace the unnamed wallet with a currency ledger keyed by currency `ContentId`. Supply a convenience accessor that succeeds only when exactly one currency exists. | Direct data-model correction | Approved |
+
+## Target Authority Model
+
+### Equipment
+
+The inventory aggregate owns equipment-instance records. Each record contains a
+unique runtime instance ID and a definition ID. An actor's equipment state maps
+an authored slot ID to an owned equipment instance ID. Definition IDs describe
+what an item is; instance IDs identify which copy is owned or equipped.
+
+There must be one durable authority for equipment ownership and placement. The
+separate root save equipment snapshot is retired rather than kept as a second
+copy. Save validation proves that every equipped instance exists in inventory,
+is referenced by at most one actor/slot, resolves to a definition, and is valid
+for the selected slot layout.
+
+### Equipment Effects
+
+The canonical equipment profile resolves from equipped instance IDs through
+their definitions. It contributes:
+
+- the equipped basic-attack profile;
+- equipped-only granted skills;
+- existing typed stat modifiers;
+- additive Defense contributions to the standard combat stat input; and
+- additive Evasion contributions to the standard hit-resolution input.
+
+The existing combat ruleset remains the sole owner of what Defense and Evasion
+mean. Equipment composition only supplies values to that ruleset.
+
+### Shops And Pricing
+
+Authored offers need stable runtime identity before stock can be durable; stock
+must never be keyed only by list position. A runtime shop-stock snapshot records
+remaining quantities for limited offers. Purchase assessment and commit produce
+inventory, currency, and stock before/after values as one atomic result.
+
+Pricing policy selection is explicit. The standard policy preserves an authored
+purchase price and derives resale value from a configurable percentage using one
+documented deterministic rounding rule. The supplied Luck-adjusted policy keeps
+the existing Luck-sensitive option for games that choose it.
+
+### Recovery
+
+The generic recovery service operates on typed actor resources, ailment state,
+configured temporary state, and a named currency entry. Its selected policy
+produces the quote and requested treatment plan. The service validates and
+stages the complete actor/currency transition before publishing either side.
+
+`StandardHospitalRecoveryPolicy` is the only supplied recovery behavior in this
+order. Other game-specific recovery designs may implement the interface later;
+Order 7 does not create speculative examples for them.
+
+### Currency
+
+The currency ledger stores nonnegative balances by currency `ContentId`.
+Credit, debit, shop, recovery, and persistence requests name their currency.
+For a ledger containing exactly one entry, a convenience member exposes that
+entry without requiring the common single-currency game to repeat its ID at
+every presentation boundary. Empty and multi-currency ledgers cannot pretend to
+have one unambiguous default.
+
+## Ordered Implementation Checkpoints
+
+Each checkpoint must be an isolated green commit. A checkpoint is not complete
+merely because focused tests pass; its source, public API, content/save wire
+shape, active integrations, and affected documentation must remain coherent.
+
+### O7-R1: Record Decisions And Correct Tracking
+
+- add this source review and index it;
+- mark `inventory_equipment_economy` as `partial` with source-verified gaps;
+- record Order 7 as open in active roadmaps and audience tracking;
+- add no runtime behavior.
+
+### O7-R2: Establish Equipment Instance Ownership
+
+- replace definition-ID-as-copy ownership with immutable equipment-instance
+  records containing a runtime instance ID and definition ID;
+- make inventory the sole owner of those instances;
+- allow multiple instances to reference the same definition;
+- make actor equipment reference instance IDs;
+- reject missing, duplicated, or multiply equipped instance IDs atomically;
+- remove the separate root save equipment authority and advance the unreleased
+  save contract for the breaking shape change; and
+- migrate Framework, DemoHost, Godot-contract, and persistence tests together.
+
+This is a direct correction. No equipment-ownership policy is introduced.
+
+### O7-R3: Author Equipment Slot Layouts
+
+- replace `EquipmentSlot` wire/runtime identity with authored `ContentId` slot
+  IDs;
+- add `IEquipmentSlotLayoutPolicy` and
+  `StandardEquipmentSlotLayoutPolicy`;
+- provide stable standard IDs for Weapon, Armor, Boots, and Accessory;
+- validate definition/slot/profile compatibility through the selected policy;
+- update active content and strict schemas in one explicit pre-release schema
+  revision; and
+- preserve the current four-slot behavior under the standard policy.
+
+### O7-R4: Complete Equipment Combat Contributions
+
+- resolve granted skills from currently equipped instances only;
+- merge them into canonical action authorization without writing them into
+  learned skills or move-list slots;
+- remove availability immediately when the granting instance is unequipped;
+- feed armor Defense into the canonical damage-defense input;
+- feed armor/boots Evasion into the canonical hit-resolution input;
+- retain weapon basic attacks and existing accessory modifiers; and
+- prove actor creation, Vessel composition, equipment changes, battle
+  assessment/execution, and restore resolve the same equipment profile.
+
+No granted-skill policy and no equipment-specific combat formula are added.
+
+### O7-R5: Introduce Typed Currency Ledger Authority
+
+- replace the unnamed wallet balance with immutable balances keyed by currency
+  `ContentId`;
+- require every credit/debit transaction to identify its currency;
+- add the single-currency convenience accessor with explicit empty/multiple
+  rejection;
+- migrate shops, recovery, Compendium/economy consumers, saves, DemoHost, and
+  Godot-contract evidence;
+- validate duplicate IDs, negative balances, overflow, and missing referenced
+  currency entries; and
+- advance the unreleased save contract for the breaking shape change.
+
+This is a direct correction. No currency policy is introduced.
+
+### O7-R6: Bind Explicit Pricing Policies
+
+- introduce the typed pricing-policy contract and standard implementation;
+- make authored purchase price exact under the standard policy;
+- make resale percentage configurable and define deterministic rounding;
+- supply the current Luck-adjusted formula as a separately selected policy;
+- let the standard economy ruleset factory bind the selected policy and its
+  parameters;
+- replace unsupported-policy rejection with typed factory resolution; and
+- preserve overflow, negative-input, affordability, and rollback guarantees.
+
+### O7-R7: Make Shop Stock Stateful And Policy-Owned
+
+- give authored offers stable identity suitable for runtime state and saves;
+- add immutable runtime stock snapshots for limited offers;
+- introduce the stock-policy contract and standard implementation;
+- decrement limited stock exactly once on a successful purchase;
+- leave stock unchanged on every rejected or rolled-back purchase;
+- keep standard sales non-replenishing;
+- permit a supplied policy to replenish on sale; and
+- commit inventory, currency, and stock as one atomic result.
+
+### O7-R8: Generalize Recovery Through One Supplied Policy
+
+- replace the HP/SP-specific patient DTO boundary with typed resource and actor
+  state inputs;
+- introduce the generic recovery policy contract;
+- supply only `StandardHospitalRecoveryPolicy`;
+- configure the restored resource IDs, removable ailment handling, temporary
+  state cleanup, cost inputs, and currency ID;
+- cure only ailments the canonical ailment-removal boundary permits;
+- stage actor and currency changes atomically; and
+- preserve current full-restore behavior under the standard configuration.
+
+### O7-R9: Certify Cross-System And Wire Integrity
+
+- load every active content pack under the revised schema;
+- validate saves and aggregate restoration against equipment instances,
+  authored slots, stock state, and typed currencies;
+- prove rejected and cancelled operations preserve every before-state;
+- prove stale or forged instance/offer/currency references cannot commit;
+- run all DemoHost modes and Godot headless integration; and
+- update the public API baseline only for deliberate approved contracts.
+
+### O7-R10: Complete Three-Audience Documentation
+
+- revise the player-facing mechanics page around observable ownership,
+  equipping, granted skills, prices, stock, and recovery;
+- add a developer guide for policy composition, instance IDs, transaction
+  application, saves, and Godot integration;
+- add a technical authority/state-machine document with atomic transaction and
+  restore diagrams;
+- cross-link current API and content-authoring references; and
+- promote no audience entry until source, tests, diagrams, and owner intent
+  agree.
+
+### O7-R11: Independent Adversarial Closure Audit
+
+- reread current source without treating this roadmap as implementation proof;
+- exercise duplicate equipment copies, forged/stale instance IDs, slot-policy
+  rejection, equipped-skill removal, combat contribution parity, stock races,
+  rejected multi-ledger transactions, legal/illegal ailment cures, and restore;
+- review all three audience documents against the code;
+- run the complete local release gate; and
+- return the capability to `complete` only if no realistic reachable defect or
+  documentation contradiction remains.
+
+## Per-Checkpoint Verification
+
+Every implementation checkpoint requires, as applicable:
+
+- focused Order 7 tests;
+- the complete `dotnet test Convergence.sln --no-restore` suite;
+- nonincremental .NET 8 Framework and solution builds with zero warnings;
+- strict content schema, semantic validation, and catalog construction;
+- API-baseline and XML-documentation checks;
+- all DemoHost modes and scripted Training Annex coverage;
+- Godot headless smoke when an integration contract changes;
+- documentation links, matrix synchronization, terminology, and format gates;
+- framework forbidden-reference checks; and
+- `git diff --check`.
+
+Tests must cover both accepted and hostile paths. For every rejected atomic
+operation, inventory/equipment, actor state, stock, and currency before/after
+snapshots must prove that no partial mutation escaped.
+
+## Scope Guard
+
+Order 7 does not add presentation UI, proprietary content, a second equipment
+combat formula, speculative granted-skill behavior, speculative recovery sample
+policies, or a currency policy. It does not start Order 8 navigation work.
+
+Breaking pre-release content, save, and API changes required by the approved
+data-model corrections are made explicitly and coherently. They are not hidden
+behind compatibility aliases that would preserve two competing authorities.
+
+## Closure Rule
+
+Order 7 remains open until O7-R2 through O7-R10 are implemented and O7-R11
+independently audits the result. Unit tests alone do not close it. The final
+closure record must identify intended invariants, realistic reachable paths,
+concrete consequences, reproducible evidence, and any trusted host boundaries.
