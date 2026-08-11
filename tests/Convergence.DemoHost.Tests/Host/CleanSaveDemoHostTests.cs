@@ -49,7 +49,9 @@ public sealed class CleanSaveDemoHostTests
         Assert.Equal(
             snapshot.Actors[0].Equipment.EquippedInstanceIds,
             restored.Actors[0].Equipment.EquippedInstanceIds);
-        Assert.Equal(snapshot.Wallet.Balance, restored.Wallet.Balance);
+        Assert.Equal(
+            snapshot.CurrencyLedger.GetSingleCurrency(),
+            restored.CurrencyLedger.GetSingleCurrency());
         Assert.Equal(
             snapshot.Field!.DungeonTraversal!.CurrentNodeId,
             restored.Field!.DungeonTraversal!.CurrentNodeId);
@@ -533,7 +535,9 @@ public sealed class CleanSaveDemoHostTests
         Assert.Equal(42, restored.Sequence);
         Assert.Equal(record.Snapshot.ContractVersion, restored.Snapshot.ContractVersion);
         Assert.Equal(record.Snapshot.ContentPacks, restored.Snapshot.ContentPacks);
-        Assert.Equal(record.Snapshot.Wallet.Balance, restored.Snapshot.Wallet.Balance);
+        Assert.Equal(
+            record.Snapshot.CurrencyLedger.GetSingleCurrency(),
+            restored.Snapshot.CurrencyLedger.GetSingleCurrency());
     }
 
     [Fact]

@@ -50,9 +50,9 @@ public sealed class FrameworkNeutralityTests
     }
 
     [Fact]
-    public void WalletAndEconomyPublicContracts_UseNeutralCurrencyTermsOnly()
+    public void CurrencyLedgerAndEconomyPublicContracts_UseNeutralCurrencyTermsOnly()
     {
-        Assert.Null(typeof(RuntimeWalletSnapshot).GetProperty(
+        Assert.Null(typeof(RuntimeCurrencyLedgerSnapshot).GetProperty(
             string.Concat("Mac", "ca"),
             BindingFlags.Public | BindingFlags.Instance));
         Assert.Equal(

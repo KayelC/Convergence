@@ -327,7 +327,7 @@ for later loadout editing.
 ## Save And Restore
 
 The host serializes `RuntimeSaveGameSnapshot`; Framework does not own the file
-format. Save contract v17 includes actors, the canonical party roster, pending
+format. Save contract v18 includes actors, the canonical party roster, pending
 skill choices, complete selected-policy stat-modifier state, combat-profile
 source/revision identity, inventory-owned equipment instances with actor
 loadout references, and the remaining session modules.
@@ -363,7 +363,7 @@ move-list IDs.
 
 ```mermaid
 flowchart TD
-    Save["Host-deserialized save v17"] --> Validate["Validate complete aggregate"]
+    Save["Host-deserialized save v18"] --> Validate["Validate complete aggregate"]
     Validate --> Modifiers["Bind retained modifier policies"]
     Modifiers --> Profiles["Resolve actor restore profiles"]
     Profiles --> Sources["Restore owned source actors"]

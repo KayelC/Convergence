@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R4 complete; O7-R5 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R5 complete; O7-R6 through O7-R11 pending
 
 ## Purpose
 
@@ -187,7 +187,7 @@ gate are complete.
 | O7-D5 | Runtime shop stock is stateful. Buying decrements limited stock. Standard selling does not replenish stock; a supplied policy may choose otherwise. | Policy family plus runtime state | Approved |
 | O7-D6 | The standard pricing policy uses authored purchase price and configurable resale percentage. Luck-adjusted pricing remains available as an optional supplied policy, not hidden standard behavior. | Policy family | Approved |
 | O7-D7 | Recovery is generic and resource-ID driven. Supply exactly one `StandardHospitalRecoveryPolicy` for full configured HP/SP recovery, legal ailment cures, and configured temporary-state cleanup. | Policy family, narrowly scoped | Approved |
-| O7-D8 | Replace the unnamed wallet with a currency ledger keyed by currency `ContentId`. Supply a convenience accessor that succeeds only when exactly one currency exists. | Direct data-model correction | Approved |
+| O7-D8 | Replace the unnamed wallet with a currency ledger keyed by currency `ContentId`. Supply a convenience accessor that succeeds only when exactly one currency exists. | Direct data-model correction | Approved; implemented by O7-R5 |
 
 ## Target Authority Model
 
@@ -691,3 +691,91 @@ concrete consequences, reproducible evidence, and any trusted host boundaries.
 6. **Scope guard held.** No granted-skill policy, equipment-specific combat
    formula, currency ledger, pricing, shop-stock, or recovery work was added.
    O7-R5 remains unstarted.
+
+### O7-R5: Introduce Typed Currency Ledger Authority
+
+- **Baseline and commit:** `0d7ec4c6..this checkpoint commit`; commit subject
+  `runtime: add typed currency ledger`.
+- **Actual destination:** `RuntimeCurrencyLedgerSnapshot` owns immutable
+  balances keyed by qualified currency `ContentId`;
+  `IEconomyTransactionService` exposes only explicit
+  `(ledger, currencyId, amount)` credit/debit paths; shop, recovery, Compendium,
+  reward, and negotiation transactions carry that ID through immutable results;
+  save contract v18 and both sample codecs persist the complete ledger.
+- **Changed Framework files:** `Runtime/ResourceManagementServices.cs`,
+  `Fusion/CompendiumRuntimeServices.cs`,
+  `Runtime/RuntimePersistenceSnapshots.cs`,
+  `Runtime/RuntimeSessionRestoration.cs`, and `PublicAPI.Shipped.txt`.
+- **Changed host files:** `CleanSaveDemoHost.cs`,
+  `CleanTrainingAnnexDemoHost.cs`, the Training Annex play, acquisition,
+  reward, Compendium, negotiation, persistence, recovery, shop, and shared
+  support controllers, plus `GodotSaveCodec.cs` and
+  `ConvergenceSmokeRoot.cs`.
+- **Changed tests and documentation:** Framework resource, Compendium,
+  persistence, ruleset, equipment, Battle Knowledge, enum-boundary,
+  neutrality, and Godot-contract tests; DemoHost save and Training Annex tests;
+  the capability/documentation matrices; and current architecture, save,
+  mechanics, Godot, API, terminology, roadmap, and supporting lifecycle guides.
+- **Focused tests:** 147 Framework currency/resource/Compendium/persistence/
+  Godot/documentation tests and 128 DemoHost save/Training Annex tests passed:
+  275 total, 0 failed, 0 skipped.
+- **Full suite:** 1,732 Framework tests, 179 DemoHost tests, and 7
+  ContentValidator tests passed: 1,918 total, 0 failed, 0 skipped.
+- **Single-currency comparison:** the complete pre-change and post-change
+  64-line Training Annex demo outputs are byte-for-byte identical, both with
+  SHA-256
+  `960062028CDE0FCAA6BA80C7B6B02CD3609B5E245A6F2B7BB5C4094573353BE3`.
+  Both award 1 EXP and 14 Credits and validate the resulting save with zero
+  diagnostics. The save demo advances from v17 to v18 and changes only the
+  expected host-owned JSON ledger shape; actor, inventory, dungeon, validation,
+  restore, and terminal outcomes remain unchanged.
+
+#### Explicit O7-R5 Parity-Hazard Evidence
+
+1. **Single-currency behavior remains identical.** Training Annex constructs
+   exactly one canonical `credits` entry and all consumers explicitly select
+   it. The byte-identical demo comparison above preserves balances, the
+   14-Credit reward, and every transaction/outcome event. Focused shop,
+   recovery, negotiation, Compendium, reward, save, and host tests preserve
+   their pre-migration applied/rejected outcomes.
+2. **The convenience accessor rejects ambiguity explicitly.**
+   `GetSingleCurrency()` returns the ID and balance only when the ledger has
+   exactly one entry. Empty and multi-currency ledgers throw
+   `RuntimeCurrencyLedgerException` with distinct `EmptyCurrencyLedger` and
+   `AmbiguousCurrencyLedger` diagnostics; neither path selects a default.
+3. **Every transaction names its currency.** The public economy interface has
+   only three-argument credit/debit methods taking ledger, `ContentId`, and
+   amount. A reflection regression pins that shape, the public API baseline
+   removes the old implicit contracts, and active-source search finds no
+   `RuntimeWalletSnapshot`, `WalletTransactionResult`, or two-argument
+   compatibility path.
+4. **Invalid ledger and transaction states have distinct typed diagnostics.**
+   Duplicate IDs reject with `DuplicateCurrencyId`, negative balances with
+   `NegativeCurrencyBalance`, checked credit overflow with `NumericOverflow`,
+   and a transaction naming an absent entry with `CurrencyNotFound`. Each test
+   also proves the original immutable ledger remains unchanged.
+5. **Save contract advances sequentially to v18.** O7-R4 left v17 current.
+   `CurrentContractVersion` is now 18, save construction, aggregate restoration,
+   DemoHost JSON, and Godot JSON use the ledger shape, and validation explicitly
+   rejects v17 alongside older unsupported versions. There is no version skip
+   or collision.
+
+#### O7-R5 Consumer-Migration Checklist
+
+- **Shops:** `Buy` and `Sell` receive the currency ID and return before/after
+  ledgers; inventory changes remain atomic when payment rejects.
+- **Recovery:** restoration names its currency and returns the same ledger on
+  no-op, insufficient-funds, missing-currency, and other rejected paths.
+- **Compendium/economy:** recall requests/results carry the selected currency;
+  battle rewards and negotiation donations use explicit credit/debit calls.
+- **Saves:** the aggregate root stores one ledger authority under save v18;
+  validation and restoration preserve every entry.
+- **DemoHost:** Training Annex uses one canonical Credits ID across shops,
+  recovery, Compendium, negotiation, rewards, summaries, and save capture;
+  Clean Save serializes currency IDs and balances rather than a scalar.
+- **Godot:** the reference codec serializes/deserializes ordered currency
+  entries, smoke evidence restores Credits, and the Godot-shaped contract test
+  round-trips two distinct currencies without placing Godot or serializer types
+  in Framework.
+- **Scope guard held:** no currency policy, pricing-policy, stock-policy, or
+  recovery-policy work was introduced. O7-R6 remains pending.

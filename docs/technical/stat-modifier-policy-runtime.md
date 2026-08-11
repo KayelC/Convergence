@@ -321,14 +321,14 @@ domain. `StandardStatStageScalingPolicy` remains table-defined for `-4..+4`.
 
 ## Save And Aggregate Restore
 
-Save contract v17 serializes canonical state under
+Save contract v18 serializes canonical state under
 `RuntimeBattleStatusSnapshot.StatModifiers`. Validation performs neutral checks,
 catalog lookup of the saved qualified policy ID, authored factory binding, and
 selected-policy compatibility validation.
 
 ```mermaid
 flowchart TD
-    S["RuntimeSaveGameSnapshot v17"] --> N["Neutral save validation"]
+    S["RuntimeSaveGameSnapshot v18"] --> N["Neutral save validation"]
     N --> C{"Policy ruleset exists in catalog?"}
     C -->|"no"| R["Reject aggregate restore"]
     C -->|"yes"| B["Bind authored stat-modifier policy"]

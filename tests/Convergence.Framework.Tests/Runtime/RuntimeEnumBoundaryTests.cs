@@ -268,7 +268,7 @@ public sealed class RuntimeEnumBoundaryTests
             actors ?? source.Actors,
             source.PartyRoster,
             inventory ?? source.Inventory,
-            source.Wallet,
+            source.CurrencyLedger,
             source.Field,
             source.Compendium,
             knowledge ?? source.Knowledge,

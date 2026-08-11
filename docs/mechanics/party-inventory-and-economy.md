@@ -1,10 +1,10 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Order 7 status:** O7-R1 through O7-R4 establish the approved tracking,
+> **Order 7 status:** O7-R1 through O7-R5 establish the approved tracking,
 > equipment-instance ownership, authored slot-layout model, equipped-only skill
-> grants, and Defense/Evasion combat contributions. Stateful shop stock,
-> explicit pricing, generic
-> recovery, and typed currencies remain pending. This page remains unreviewed
+> grants, Defense/Evasion combat contributions, and typed currency-ledger
+> authority. Stateful shop stock, explicit pricing, and generic recovery remain
+> pending. This page remains unreviewed
 > until the complete
 > [Order 7 roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 > is implemented and independently closed.
@@ -85,7 +85,7 @@ instance already assigned to another actor rejects with unchanged before/after
 equipment state. Selling a specific equipped instance is blocked by the
 transaction service.
 
-Save contract v17 stores owned instances only in inventory and actor loadout
+Save contract v18 stores owned instances only in inventory and actor loadout
 references only in actor snapshots, all under authored slot IDs. There is no
 separate root equipment snapshot.
 
@@ -114,15 +114,26 @@ formula. A missing contribution is exactly zero. Basic attacks may come from
 equipped weapon data, but a host can supply another clean basic-attack profile.
 Presentation metadata does not decide behavior.
 
-## Wallet And Economy
+## Currency Ledger And Economy
 
-Currency is represented by a nonnegative wallet balance. Credit and debit operations are atomic, checked for overflow, and reject insufficient funds or negative transaction values.
+Currency state is an immutable ledger keyed by qualified currency `ContentId`.
+Every credit and debit names the affected currency explicitly. Transactions are
+atomic, preserve every unrelated balance, use checked integer arithmetic, and
+return typed diagnostics for a missing currency, negative amount, insufficient
+funds, or overflow.
 
-The Framework treats currency as an unnamed numeric resource. DemoHost labels its sample currency Credits; each game owns its player-facing terminology.
+Ledger construction rejects invalid or duplicate currency IDs and negative
+balances. `GetSingleCurrency()` is a convenience for the common one-currency
+game: it returns that one ID and balance, but explicitly rejects an empty or
+multi-currency ledger rather than choosing a default. DemoHost registers one
+`credits` ID; other games own both their currency IDs and player-facing names.
+
+Save contract v18 stores the complete typed ledger. Version 17's unnamed
+single balance is unsupported unless a host deliberately supplies a migration.
 
 ## Shops
 
-Shop definitions identify offered items/equipment, categories, price or pricing-policy IDs, stock policy, and availability. Runtime transactions assess ownership, stock, stack limits, equipped-sale restrictions, and wallet balance before mutation. The host supplies a fresh runtime instance ID when purchasing equipment and identifies the exact owned instance when selling it.
+Shop definitions identify offered items/equipment, categories, price or pricing-policy IDs, stock policy, and availability. Runtime transactions assess ownership, stock, stack limits, equipped-sale restrictions, and the explicitly selected currency balance before mutation. The host supplies a fresh runtime instance ID when purchasing equipment and identifies the exact owned instance when selling it.
 
 Buy and sell prices are policy outcomes. The supplied standard/example policies can use base price and actor stats, but a game may provide fixed, regional, reputation-based, or other pricing.
 

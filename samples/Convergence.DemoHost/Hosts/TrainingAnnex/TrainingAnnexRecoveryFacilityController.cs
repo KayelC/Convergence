@@ -9,8 +9,8 @@ internal sealed record TrainingAnnexHospitalRestorationEvidence(
     RuntimeInstanceId PatientId,
     ResourceTransactionCode Code,
     int Cost,
-    int WalletBefore,
-    int WalletAfter,
+    int CurrencyLedgerBefore,
+    int CurrencyLedgerAfter,
     int HpBefore,
     int HpAfter,
     int MaxHp,
@@ -23,7 +23,7 @@ internal sealed record TrainingAnnexHospitalRestorationEvidence(
     bool HasEncounterPersistenceAfter);
 
 internal sealed record TrainingAnnexRecoveryFacilityResult(
-    RuntimeWalletSnapshot Wallet,
+    RuntimeCurrencyLedgerSnapshot CurrencyLedger,
     IReadOnlyList<TrainingAnnexHospitalRestorationEvidence> Restorations);
 
 internal sealed class TrainingAnnexRecoveryFacilityController
@@ -45,7 +45,7 @@ internal sealed class TrainingAnnexRecoveryFacilityController
     public async ValueTask<TrainingAnnexRecoveryFacilityResult> OpenAsync(
         IHospitalRestorationService hospital,
         TrainingAnnexRuntimeActor patient,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         CancellationToken cancellationToken)
     {
@@ -55,11 +55,15 @@ internal sealed class TrainingAnnexRecoveryFacilityController
         ArgumentNullException.ThrowIfNull(commands);
 
         RuntimeHospitalPatientSnapshot patientSnapshot = CapturePatient(patient.Actor.State);
-        HospitalRestorationResult assessment = hospital.Restore(patientSnapshot, wallet);
+        HospitalRestorationResult assessment = hospital.Restore(
+            patientSnapshot,
+            wallet,
+            TrainingAnnexHostSupport.CreditsCurrency);
         var evidence = new List<TrainingAnnexHospitalRestorationEvidence>();
 
         await _eventSink.PublishAsync(
-            $"Recovery facility opened: {patient.Actor.Entity.DisplayName}; wallet {wallet.Balance} C.",
+            $"Recovery facility opened: {patient.Actor.Entity.DisplayName}; wallet " +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(wallet)} C.",
             cancellationToken).ConfigureAwait(false);
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection =
             await _commandSource.ReadAsync(
@@ -75,7 +79,10 @@ internal sealed class TrainingAnnexRecoveryFacilityController
         }
 
         commands.Add(selection.Command);
-        HospitalRestorationResult restoration = hospital.Restore(CapturePatient(patient.Actor.State), wallet);
+        HospitalRestorationResult restoration = hospital.Restore(
+            CapturePatient(patient.Actor.State),
+            wallet,
+            TrainingAnnexHostSupport.CreditsCurrency);
         evidence.Add(ToEvidence(restoration));
         if (!restoration.Applied)
         {
@@ -85,9 +92,14 @@ internal sealed class TrainingAnnexRecoveryFacilityController
         }
 
         ApplyRestoration(patient.Actor.State, restoration.AfterPatient, _statModifiers);
-        wallet = restoration.AfterWallet;
+        wallet = restoration.AfterCurrencyLedger;
         await _eventSink.PublishAsync(
-            $"Recovery complete: {patient.Actor.Entity.DisplayName}; HP {restoration.BeforePatient.CurrentHp}->{restoration.AfterPatient.CurrentHp}/{restoration.AfterPatient.MaxHp}; SP {restoration.BeforePatient.CurrentSp}->{restoration.AfterPatient.CurrentSp}/{restoration.AfterPatient.MaxSp}; wallet {restoration.BeforeWallet.Balance}->{restoration.AfterWallet.Balance}.",
+            $"Recovery complete: {patient.Actor.Entity.DisplayName}; HP " +
+            $"{restoration.BeforePatient.CurrentHp}->{restoration.AfterPatient.CurrentHp}/" +
+            $"{restoration.AfterPatient.MaxHp}; SP {restoration.BeforePatient.CurrentSp}->" +
+            $"{restoration.AfterPatient.CurrentSp}/{restoration.AfterPatient.MaxSp}; wallet " +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(restoration.BeforeCurrencyLedger)}->" +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(restoration.AfterCurrencyLedger)}.",
             cancellationToken).ConfigureAwait(false);
         return new TrainingAnnexRecoveryFacilityResult(wallet, evidence);
     }
@@ -173,8 +185,8 @@ internal sealed class TrainingAnnexRecoveryFacilityController
             result.BeforePatient.PatientId,
             result.Code,
             result.Cost,
-            result.BeforeWallet.Balance,
-            result.AfterWallet.Balance,
+            TrainingAnnexHostSupport.GetCreditsBalance(result.BeforeCurrencyLedger),
+            TrainingAnnexHostSupport.GetCreditsBalance(result.AfterCurrencyLedger),
             result.BeforePatient.CurrentHp,
             result.AfterPatient.CurrentHp,
             result.BeforePatient.MaxHp,

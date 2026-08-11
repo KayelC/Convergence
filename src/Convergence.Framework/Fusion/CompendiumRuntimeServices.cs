@@ -27,7 +27,8 @@ public enum CompendiumRuntimeDiagnosticCode
     InsufficientCurrency,
     ActorCreationFailed,
     RosterPlacementRejected,
-    WalletRejected,
+    CurrencyNotFound,
+    CurrencyTransactionRejected,
     InvalidRecallCost,
     InvalidIdentifier
 }
@@ -82,7 +83,8 @@ public enum CompendiumRecallTransactionCode
     InsufficientCurrency,
     ActorCreationFailed,
     RosterPlacementRejected,
-    WalletRejected,
+    CurrencyNotFound,
+    CurrencyTransactionRejected,
     InvalidRecallCost
 }
 
@@ -92,7 +94,8 @@ public sealed record CompendiumRecallTransactionRequest
         CompendiumStateSnapshot compendium,
         RuntimePartyRosterSnapshot partyRoster,
         RuntimeActorSnapshot partyOwner,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
+        ContentId currencyId,
         ContentId entityId,
         RuntimeInstanceId recalledInstanceId,
         ContentId commandAuthorityId,
@@ -108,7 +111,8 @@ public sealed record CompendiumRecallTransactionRequest
         Compendium = compendium ?? throw new ArgumentNullException(nameof(compendium));
         PartyRoster = partyRoster ?? throw new ArgumentNullException(nameof(partyRoster));
         PartyOwner = partyOwner ?? throw new ArgumentNullException(nameof(partyOwner));
-        Wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
+        CurrencyLedger = currencyLedger ?? throw new ArgumentNullException(nameof(currencyLedger));
+        CurrencyId = currencyId;
         EntityId = entityId;
         RecalledInstanceId = recalledInstanceId;
         CommandAuthorityId = commandAuthorityId;
@@ -120,7 +124,8 @@ public sealed record CompendiumRecallTransactionRequest
     public CompendiumStateSnapshot Compendium { get; }
     public RuntimePartyRosterSnapshot PartyRoster { get; }
     public RuntimeActorSnapshot PartyOwner { get; }
-    public RuntimeWalletSnapshot Wallet { get; }
+    public RuntimeCurrencyLedgerSnapshot CurrencyLedger { get; }
+    public ContentId CurrencyId { get; }
     public ContentId EntityId { get; }
     public RuntimeInstanceId RecalledInstanceId { get; }
     public ContentId CommandAuthorityId { get; }
@@ -136,8 +141,9 @@ public sealed record CompendiumRecallTransactionResult
         CompendiumStateSnapshot compendium,
         RuntimePartyRosterSnapshot beforePartyRoster,
         RuntimePartyRosterSnapshot afterPartyRoster,
-        RuntimeWalletSnapshot beforeWallet,
-        RuntimeWalletSnapshot afterWallet,
+        RuntimeCurrencyLedgerSnapshot beforeCurrencyLedger,
+        RuntimeCurrencyLedgerSnapshot afterCurrencyLedger,
+        ContentId currencyId,
         int cost = 0,
         CompendiumEntrySnapshot? entry = null,
         CatalogBattleActor? actor = null,
@@ -147,8 +153,11 @@ public sealed record CompendiumRecallTransactionResult
         Compendium = compendium ?? throw new ArgumentNullException(nameof(compendium));
         BeforePartyRoster = beforePartyRoster ?? throw new ArgumentNullException(nameof(beforePartyRoster));
         AfterPartyRoster = afterPartyRoster ?? throw new ArgumentNullException(nameof(afterPartyRoster));
-        BeforeWallet = beforeWallet ?? throw new ArgumentNullException(nameof(beforeWallet));
-        AfterWallet = afterWallet ?? throw new ArgumentNullException(nameof(afterWallet));
+        BeforeCurrencyLedger = beforeCurrencyLedger ??
+            throw new ArgumentNullException(nameof(beforeCurrencyLedger));
+        AfterCurrencyLedger = afterCurrencyLedger ??
+            throw new ArgumentNullException(nameof(afterCurrencyLedger));
+        CurrencyId = currencyId;
         Cost = cost;
         Entry = entry;
         Actor = actor;
@@ -160,8 +169,9 @@ public sealed record CompendiumRecallTransactionResult
     public CompendiumStateSnapshot Compendium { get; }
     public RuntimePartyRosterSnapshot BeforePartyRoster { get; }
     public RuntimePartyRosterSnapshot AfterPartyRoster { get; }
-    public RuntimeWalletSnapshot BeforeWallet { get; }
-    public RuntimeWalletSnapshot AfterWallet { get; }
+    public RuntimeCurrencyLedgerSnapshot BeforeCurrencyLedger { get; }
+    public RuntimeCurrencyLedgerSnapshot AfterCurrencyLedger { get; }
+    public ContentId CurrencyId { get; }
     public int Cost { get; }
     public CompendiumEntrySnapshot? Entry { get; }
     public CatalogBattleActor? Actor { get; }
@@ -322,6 +332,18 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (!request.CurrencyId.IsValid ||
+            !request.CurrencyLedger.TryGetBalance(request.CurrencyId, out int currencyBalance))
+        {
+            return RecallRejected(
+                request,
+                CompendiumRecallTransactionCode.CurrencyNotFound,
+                CompendiumRuntimeDiagnosticCode.CurrencyNotFound,
+                request.CurrencyId.IsValid
+                    ? $"Currency '{request.CurrencyId}' is not present in the ledger."
+                    : "Currency ID cannot be empty.");
+        }
+
         if (!request.EntityId.IsValid || !request.RecalledInstanceId.IsValid ||
             !request.CommandAuthorityId.IsValid || !request.TeamId.IsValid)
         {
@@ -407,7 +429,7 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             assessment = _compendium.AssessRecall(
                 request.Compendium,
                 entry.EntityId,
-                request.Wallet.Balance,
+                currencyBalance,
                 alreadyOwned,
                 placement.Applied || placement.Code != PartyRosterTransitionCode.RosterFull,
                 request.BasePrice);
@@ -487,22 +509,25 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
                 assessment.Cost);
         }
 
-        RuntimeWalletSnapshot afterWallet = request.Wallet;
+        RuntimeCurrencyLedgerSnapshot afterCurrencyLedger = request.CurrencyLedger;
         if (assessment.Cost > 0)
         {
-            WalletTransactionResult payment = _economy.Debit(request.Wallet, assessment.Cost);
+            CurrencyTransactionResult payment = _economy.Debit(
+                request.CurrencyLedger,
+                request.CurrencyId,
+                assessment.Cost);
             if (!payment.Applied)
             {
                 return RecallRejected(
                     request,
-                    CompendiumRecallTransactionCode.WalletRejected,
-                    CompendiumRuntimeDiagnosticCode.WalletRejected,
+                    CompendiumRecallTransactionCode.CurrencyTransactionRejected,
+                    CompendiumRuntimeDiagnosticCode.CurrencyTransactionRejected,
                     "The configured recall payment was rejected.",
                     entry,
                     assessment.Cost);
             }
 
-            afterWallet = payment.After;
+            afterCurrencyLedger = payment.After;
         }
 
         return new CompendiumRecallTransactionResult(
@@ -510,8 +535,9 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             request.Compendium,
             request.PartyRoster,
             placement.After,
-            request.Wallet,
-            afterWallet,
+            request.CurrencyLedger,
+            afterCurrencyLedger,
+            request.CurrencyId,
             assessment.Cost,
             entry,
             materialized.RequireActor());
@@ -647,8 +673,9 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             request.Compendium,
             request.PartyRoster,
             request.PartyRoster,
-            request.Wallet,
-            request.Wallet,
+            request.CurrencyLedger,
+            request.CurrencyLedger,
+            request.CurrencyId,
             entry: entry,
             diagnostics: RuntimeDiagnostics(diagnostics, entry.EntityId, request.RecalledInstanceId));
 
@@ -696,8 +723,9 @@ public sealed class CompendiumRuntimeService : ICompendiumRuntimeService
             request.Compendium,
             request.PartyRoster,
             request.PartyRoster,
-            request.Wallet,
-            request.Wallet,
+            request.CurrencyLedger,
+            request.CurrencyLedger,
+            request.CurrencyId,
             cost,
             entry,
             diagnostics:

@@ -21,6 +21,7 @@ public partial class ConvergenceSmokeRoot : Node
     private static readonly ContentId EnemyTeam = ContentId.Parse("enemy_team");
     private static readonly ContentId Hp = ContentId.Parse("hp");
     private static readonly ContentId Sp = ContentId.Parse("sp");
+    private static readonly ContentId CreditsCurrency = Qualified("credits");
 
     public override async void _Ready()
     {
@@ -292,6 +293,7 @@ public partial class ConvergenceSmokeRoot : Node
             [player, enemy, hostedEntity],
             partyRoster,
             new RuntimeInventorySnapshot(),
+            RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 250),
             new ContentPackIdentity(PackId, SemanticVersion.Parse("0.9.0")),
             sceneInstances);
         ChargePolicyRegistry chargePolicies = ChargePolicyRegistry.CreateStandard();
@@ -330,6 +332,7 @@ public partial class ConvergenceSmokeRoot : Node
             restoredPlayer.State.Stats[StandardProgressionIds.Strength] !=
             restoredHostedEntity.State.Stats[StandardProgressionIds.Strength] ||
             !EquivalentModifierState(savedModifierState, restoredModifierState) ||
+            session.CurrencyLedger.GetRequiredBalance(CreditsCurrency) != 250 ||
             restored.SceneInstances.Count != 3)
         {
             throw new InvalidOperationException("The Godot-owned save did not preserve runtime and scene state.");
@@ -337,7 +340,7 @@ public partial class ConvergenceSmokeRoot : Node
 
         GD.Print(
             $"GODOT_SAVE_OK actors={session.Snapshot.Actors.Count} " +
-            $"contract={session.Snapshot.ContractVersion} aggregate_restore=true");
+            $"contract={session.Snapshot.ContractVersion} credits=250 aggregate_restore=true");
 
         JsonObject invalidDocument = JsonNode.Parse(saveJson)?.AsObject() ??
             throw new InvalidDataException("Godot save JSON could not be parsed for rejection proof.");

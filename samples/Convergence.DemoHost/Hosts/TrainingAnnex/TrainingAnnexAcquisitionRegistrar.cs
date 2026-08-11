@@ -31,7 +31,7 @@ internal sealed class TrainingAnnexAcquisitionRegistrar
         TrainingAnnexBattleKnowledgeState playerKnowledge,
         TrainingAnnexRuntimeActor acquiredActor,
         RuntimePartyRosterSnapshot partyRoster,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         ContentId acquisitionSourceId,
         CancellationToken cancellationToken)
     {
@@ -103,7 +103,7 @@ internal sealed class TrainingAnnexAcquisitionRegistrar
         ContentId acquisitionSourceId,
         CompendiumActorRegistrationResult registration,
         RuntimePartyRosterSnapshot partyRoster,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         FamiliarKnowledgeImportResult? imported = null) =>
         new(
             TrainingAnnexCompendiumAction.Acquisition,
@@ -112,8 +112,8 @@ internal sealed class TrainingAnnexAcquisitionRegistrar
             registration.Code,
             null,
             0,
-            wallet.Balance,
-            wallet.Balance,
+            TrainingAnnexHostSupport.GetCreditsBalance(wallet),
+            TrainingAnnexHostSupport.GetCreditsBalance(wallet),
             partyRoster.CompanionRoster.Count,
             partyRoster.CompanionRoster.Count,
             imported?.After.ElementalAffinities.Count(entry => entry.EntityId == entityId) ?? 0,

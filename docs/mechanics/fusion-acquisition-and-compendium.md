@@ -78,11 +78,17 @@ This separation gives the Compendium a meaningful loop:
 
 ## Recall
 
-Recall checks that the entry and catalog entity exist, the entity is eligible, the player does not already own it, a destination roster slot is available, the runtime ID is unique, and the wallet can pay the configured price.
+Recall checks that the entry and catalog entity exist, the entity is eligible,
+the player does not already own it, a destination roster slot is available, the
+runtime ID is unique, and the explicitly selected currency balance can pay the
+configured price.
 
 Pricing is an injected policy. Recall can be free, unavailable, fixed-price, linear, or game-specific. Convergence does not require a currency name or formula.
 
-On success, recall rebuilds an actor from the saved level, progression, base stats, learned/equipped skills, and catalog defaults for other state. It places the actor in the selected roster and debits the wallet atomically. Battle status and temporary effects are not copied into the entry.
+On success, recall rebuilds an actor from the saved level, progression, base
+stats, learned/equipped skills, and catalog defaults for other state. It places
+the actor in the selected roster and debits the named currency atomically.
+Battle status and temporary effects are not copied into the entry.
 
 ## Familiar Knowledge
 

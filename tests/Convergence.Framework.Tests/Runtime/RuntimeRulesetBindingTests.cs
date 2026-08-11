@@ -111,7 +111,11 @@ public sealed class RuntimeRulesetBindingTests
             .RequireService();
         Assert.Equal(90, resources.Shop.CalculateBuyPrice(100, luck: 10));
         Assert.Equal(60, resources.Shop.CalculateSellPrice(100, luck: 10));
-        Assert.True(resources.Economy.Debit(new RuntimeWalletSnapshot(10), 5).Applied);
+        ContentId creditsCurrency = Id("credits");
+        Assert.True(resources.Economy.Debit(
+            RuntimeCurrencyLedgerSnapshot.Single(creditsCurrency, 10),
+            creditsCurrency,
+            5).Applied);
         Assert.Equal(30, resources.Hospital.CalculateRestorationCost(new RuntimeHospitalPatientSnapshot(
             RuntimeInstanceId.Parse("patient"),
             currentHp: 5,

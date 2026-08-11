@@ -95,6 +95,7 @@ internal static class TrainingAnnexHostSupport
     public static readonly ContentId SealedWing = Qualified("sealed_wing");
     public static readonly ContentId ReviewCheckpoint = Qualified("review_checkpoint");
     public static readonly ContentId TrainingSupply = Qualified("training_supply");
+    public static readonly ContentId CreditsCurrency = Qualified("credits");
     public static readonly ContentId AnnexTonic = Qualified("annex_tonic");
     public static readonly ContentId PracticeBlade = Qualified("practice_blade");
     public static readonly ContentId FocusCharm = Qualified("focus_charm");
@@ -465,7 +466,7 @@ internal static class TrainingAnnexHostSupport
         RuntimeFieldSnapshot? field = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
-        RuntimeWalletSnapshot? wallet = null,
+        RuntimeCurrencyLedgerSnapshot? currencyLedger = null,
         RuntimeSessionProgressSnapshot? session = null,
         IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
         CompendiumStateSnapshot? compendium = null) =>
@@ -475,7 +476,7 @@ internal static class TrainingAnnexHostSupport
             field,
             knowledge,
             inventory,
-            wallet,
+            currencyLedger,
             session,
             hostContext,
             compendium);
@@ -486,7 +487,7 @@ internal static class TrainingAnnexHostSupport
         RuntimeFieldSnapshot? field = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
-        RuntimeWalletSnapshot? wallet = null,
+        RuntimeCurrencyLedgerSnapshot? currencyLedger = null,
         RuntimeSessionProgressSnapshot? session = null,
         IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
         CompendiumStateSnapshot? compendium = null)
@@ -505,7 +506,7 @@ internal static class TrainingAnnexHostSupport
             field,
             knowledge,
             inventory,
-            wallet,
+            currencyLedger,
             session,
             hostContext,
             compendium);
@@ -516,7 +517,7 @@ internal static class TrainingAnnexHostSupport
         RuntimeFieldSnapshot? field = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
-        RuntimeWalletSnapshot? wallet = null,
+        RuntimeCurrencyLedgerSnapshot? currencyLedger = null,
         RuntimeSessionProgressSnapshot? session = null,
         IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
         CompendiumStateSnapshot? compendium = null)
@@ -533,7 +534,7 @@ internal static class TrainingAnnexHostSupport
             field,
             knowledge,
             inventory,
-            wallet,
+            currencyLedger,
             session,
             hostContext,
             compendium);
@@ -546,7 +547,7 @@ internal static class TrainingAnnexHostSupport
         RuntimeFieldSnapshot? field = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
-        RuntimeWalletSnapshot? wallet = null,
+        RuntimeCurrencyLedgerSnapshot? currencyLedger = null,
         RuntimeSessionProgressSnapshot? session = null,
         IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
         CompendiumStateSnapshot? compendium = null)
@@ -570,7 +571,7 @@ internal static class TrainingAnnexHostSupport
                 playerReference,
                 activeParty: [playerReference]),
             inventory ?? new RuntimeInventorySnapshot(),
-            wallet ?? new RuntimeWalletSnapshot(0),
+            currencyLedger ?? CreateCreditsLedger(0),
             field,
             compendium ?? new CompendiumStateSnapshot(),
             knowledge ?? new RuntimeKnowledgeSnapshot(),
@@ -588,6 +589,15 @@ internal static class TrainingAnnexHostSupport
     }
 
     public static ContentId Qualified(string localId) => ContentId.Parse($"{PackId}:{localId}");
+
+    public static RuntimeCurrencyLedgerSnapshot CreateCreditsLedger(int balance) =>
+        RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, balance);
+
+    public static int GetCreditsBalance(RuntimeCurrencyLedgerSnapshot currencyLedger)
+    {
+        ArgumentNullException.ThrowIfNull(currencyLedger);
+        return currencyLedger.GetRequiredBalance(CreditsCurrency);
+    }
 
     public static RuntimeProgressionSnapshot InitialProgression(EntityDefinition entity, int level) =>
         new(

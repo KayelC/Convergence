@@ -21,7 +21,8 @@ save v9, later lifecycle work advanced it through v13, and Battle Knowledge
 authority cleanup established save v14, and combat-profile identity established
 save v15. Equipment-instance ownership advances the current contract to save
 v16 and removes the duplicated root equipment authority. Authored equipment
-slot IDs advance it to the current save v17 shape.
+slot IDs advanced it to save v17. Typed currency-ledger authority advances the
+current contract to save v18.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives
@@ -316,7 +317,7 @@ The save aggregate contains:
   lifecycle boundaries;
 - one canonical party roster;
 - inventory-owned equipment instances, actor loadout instance references, and
-  wallet;
+  currency balances keyed by qualified content ID;
 - optional field and dungeon state;
 - Compendium and battle knowledge;
 - session progress;

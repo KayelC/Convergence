@@ -238,7 +238,7 @@ call sites; the service does not observe ownership transactions implicitly.
 - catalog existence for every referenced ailment; and
 - valid enum and content-ID domains.
 
-Save v17 contains no actor-local Analyze field. Persistent defense disclosure
+Save v18 contains no actor-local Analyze field. Persistent defense disclosure
 belongs only in `RuntimeSaveGameSnapshot.Knowledge`; current-target analysis
 belongs only in `RuntimeEncounterKnowledgeSnapshot` and ends with its
 encounter. Actor snapshots retain the exact combat-profile identity used to

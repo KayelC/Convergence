@@ -7,6 +7,8 @@ namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class ResourceManagementServiceTests
 {
+    private static readonly ContentId CreditsCurrency = Id("credits");
+
     [Fact]
     public void InventoryService_AddsRemovesAndReservesItemsWithImmutableSnapshots()
     {
@@ -306,29 +308,144 @@ public sealed class ResourceManagementServiceTests
     public void EconomyService_AppliesAtomicCreditTransactions()
     {
         var service = new EconomyTransactionService();
-        var empty = new RuntimeWalletSnapshot(0);
+        RuntimeCurrencyLedgerSnapshot empty = Ledger(0);
 
-        WalletTransactionResult added = service.Credit(empty, 100);
-        WalletTransactionResult spent = service.Debit(added.After, 40);
-        WalletTransactionResult insufficient = service.Debit(spent.After, 100);
-        WalletTransactionResult negative = service.Credit(spent.After, -1);
-        var maximum = new RuntimeWalletSnapshot(int.MaxValue);
-        WalletTransactionResult overflow = service.Credit(maximum, 1);
+        CurrencyTransactionResult added = service.Credit(empty, CreditsCurrency, 100);
+        CurrencyTransactionResult spent = service.Debit(added.After, CreditsCurrency, 40);
+        CurrencyTransactionResult insufficient = service.Debit(spent.After, CreditsCurrency, 100);
+        CurrencyTransactionResult negative = service.Credit(spent.After, CreditsCurrency, -1);
+        RuntimeCurrencyLedgerSnapshot maximum = Ledger(int.MaxValue);
+        CurrencyTransactionResult overflow = service.Credit(maximum, CreditsCurrency, 1);
 
-        Assert.Equal(100, added.After.Balance);
-        Assert.Equal(60, spent.After.Balance);
+        Assert.Equal(100, Balance(added.After));
+        Assert.Equal(60, Balance(spent.After));
         Assert.False(insufficient.Applied);
         Assert.Same(spent.After, insufficient.Before);
         Assert.Same(insufficient.Before, insufficient.After);
-        Assert.Equal(60, insufficient.After.Balance);
+        Assert.Equal(60, Balance(insufficient.After));
         Assert.Equal(ResourceTransactionCode.InvalidCurrencyAmount, negative.Code);
         Assert.Same(spent.After, negative.After);
-        Assert.Equal(ResourceTransactionCode.InvalidCurrencyAmount, overflow.Code);
+        Assert.Equal(ResourceTransactionCode.NumericOverflow, overflow.Code);
         Assert.Same(maximum, overflow.Before);
         Assert.Same(maximum, overflow.After);
         Assert.Contains(overflow.Diagnostics, diagnostic =>
-            diagnostic.Code == ResourceTransactionCode.InvalidCurrencyAmount &&
+            diagnostic.Code == ResourceTransactionCode.NumericOverflow &&
             diagnostic.Message.Contains("integer range", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CurrencyLedger_RequiresAnUnambiguousSingleCurrency()
+    {
+        RuntimeCurrencyLedgerSnapshot single = Ledger(75);
+        var empty = new RuntimeCurrencyLedgerSnapshot();
+        var multiple = new RuntimeCurrencyLedgerSnapshot(
+        [
+            new KeyValuePair<ContentId, int>(CreditsCurrency, 75),
+            new KeyValuePair<ContentId, int>(Id("tokens"), 3)
+        ]);
+
+        RuntimeCurrencyBalanceSnapshot selected = single.GetSingleCurrency();
+        RuntimeCurrencyLedgerException emptyFailure =
+            Assert.Throws<RuntimeCurrencyLedgerException>(() => empty.GetSingleCurrency());
+        RuntimeCurrencyLedgerException multipleFailure =
+            Assert.Throws<RuntimeCurrencyLedgerException>(() => multiple.GetSingleCurrency());
+
+        Assert.Equal(CreditsCurrency, selected.CurrencyId);
+        Assert.Equal(75, selected.Balance);
+        Assert.Equal(ResourceTransactionCode.EmptyCurrencyLedger, emptyFailure.Diagnostic.Code);
+        Assert.Equal(ResourceTransactionCode.AmbiguousCurrencyLedger, multipleFailure.Diagnostic.Code);
+    }
+
+    [Fact]
+    public void CurrencyBalanceSnapshot_ProtectsItsValidatedImmutableShape()
+    {
+        RuntimeCurrencyLedgerException invalidId =
+            Assert.Throws<RuntimeCurrencyLedgerException>(() =>
+                new RuntimeCurrencyBalanceSnapshot(default, 1));
+        RuntimeCurrencyLedgerException negative =
+            Assert.Throws<RuntimeCurrencyLedgerException>(() =>
+                new RuntimeCurrencyBalanceSnapshot(CreditsCurrency, -1));
+
+        Assert.Equal(ResourceTransactionCode.InvalidCurrencyId, invalidId.Diagnostic.Code);
+        Assert.Equal(ResourceTransactionCode.NegativeCurrencyBalance, negative.Diagnostic.Code);
+        Assert.False(typeof(RuntimeCurrencyBalanceSnapshot)
+            .GetProperty(nameof(RuntimeCurrencyBalanceSnapshot.CurrencyId))!
+            .CanWrite);
+        Assert.False(typeof(RuntimeCurrencyBalanceSnapshot)
+            .GetProperty(nameof(RuntimeCurrencyBalanceSnapshot.Balance))!
+            .CanWrite);
+    }
+
+    [Fact]
+    public void CurrencyLedger_RejectsDuplicateAndNegativeBalancesWithTypedDiagnostics()
+    {
+        RuntimeCurrencyLedgerException duplicate = Assert.Throws<RuntimeCurrencyLedgerException>(() =>
+            new RuntimeCurrencyLedgerSnapshot(
+            [
+                new KeyValuePair<ContentId, int>(CreditsCurrency, 1),
+                new KeyValuePair<ContentId, int>(CreditsCurrency, 2)
+            ]));
+        RuntimeCurrencyLedgerException negative = Assert.Throws<RuntimeCurrencyLedgerException>(() =>
+            RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, -1));
+
+        Assert.Equal(ResourceTransactionCode.DuplicateCurrencyId, duplicate.Diagnostic.Code);
+        Assert.Equal(CreditsCurrency, duplicate.Diagnostic.CurrencyId);
+        Assert.Equal(ResourceTransactionCode.NegativeCurrencyBalance, negative.Diagnostic.Code);
+        Assert.Equal(CreditsCurrency, negative.Diagnostic.CurrencyId);
+    }
+
+    [Fact]
+    public void EconomyService_RejectsMissingCurrencyWithoutChangingOtherBalances()
+    {
+        var service = new EconomyTransactionService();
+        RuntimeCurrencyLedgerSnapshot ledger = Ledger(50);
+        ContentId missing = Id("tokens");
+
+        CurrencyTransactionResult result = service.Debit(ledger, missing, 1);
+
+        Assert.False(result.Applied);
+        Assert.Equal(ResourceTransactionCode.CurrencyNotFound, result.Code);
+        Assert.Equal(missing, result.CurrencyId);
+        Assert.Same(ledger, result.Before);
+        Assert.Same(ledger, result.After);
+        ResourceTransactionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ResourceTransactionCode.CurrencyNotFound, diagnostic.Code);
+        Assert.Equal(missing, diagnostic.CurrencyId);
+        Assert.Equal(50, Balance(result.After));
+    }
+
+    [Fact]
+    public void EconomyService_ChangesOnlyTheExplicitlyNamedCurrency()
+    {
+        ContentId tokens = Id("tokens");
+        var service = new EconomyTransactionService();
+        var ledger = new RuntimeCurrencyLedgerSnapshot(
+        [
+            new KeyValuePair<ContentId, int>(CreditsCurrency, 50),
+            new KeyValuePair<ContentId, int>(tokens, 3)
+        ]);
+
+        CurrencyTransactionResult result = service.Debit(ledger, CreditsCurrency, 10);
+
+        Assert.True(result.Applied);
+        Assert.Equal(CreditsCurrency, result.CurrencyId);
+        Assert.Equal(40, result.After.GetRequiredBalance(CreditsCurrency));
+        Assert.Equal(3, result.After.GetRequiredBalance(tokens));
+        Assert.Equal(50, ledger.GetRequiredBalance(CreditsCurrency));
+        Assert.Equal(3, ledger.GetRequiredBalance(tokens));
+    }
+
+    [Fact]
+    public void EconomyContract_ExposesOnlyExplicitCurrencyTransactions()
+    {
+        Assert.All(typeof(IEconomyTransactionService).GetMethods(), method =>
+        {
+            Assert.Contains(method.Name, new[] { nameof(IEconomyTransactionService.Credit), nameof(IEconomyTransactionService.Debit) });
+            Assert.Equal(3, method.GetParameters().Length);
+            Assert.Equal(typeof(RuntimeCurrencyLedgerSnapshot), method.GetParameters()[0].ParameterType);
+            Assert.Equal(typeof(ContentId), method.GetParameters()[1].ParameterType);
+            Assert.Equal(typeof(int), method.GetParameters()[2].ParameterType);
+        });
     }
 
     [Fact]
@@ -337,18 +454,20 @@ public sealed class ResourceManagementServiceTests
         var inventoryService = new InventoryTransitionService();
         var shop = new ShopTransactionService(inventoryService, new EconomyTransactionService());
         var inventory = new RuntimeInventorySnapshot();
-        var wallet = new RuntimeWalletSnapshot(90);
+        RuntimeCurrencyLedgerSnapshot wallet = Ledger(90);
         var medicine = new RuntimeShopOfferSnapshot(ShopContentKind.Item, Id("medicine"), 100);
 
         ShopTransactionResult bought = shop.Buy(
             inventory,
             wallet,
+            CreditsCurrency,
             medicine,
             buyerLuck: 10,
             purchasedEquipmentInstanceId: null);
         ShopTransactionResult sold = shop.Sell(
             bought.AfterInventory,
-            bought.AfterWallet,
+            bought.AfterCurrencyLedger,
+            CreditsCurrency,
             medicine,
             sellerLuck: 10,
             soldEquipmentInstanceId: null,
@@ -357,10 +476,10 @@ public sealed class ResourceManagementServiceTests
         Assert.Equal(90, shop.CalculateBuyPrice(100, 10));
         Assert.Equal(60, shop.CalculateSellPrice(100, 10));
         Assert.True(bought.Applied);
-        Assert.Equal(0, bought.AfterWallet.Balance);
+        Assert.Equal(0, Balance(bought.AfterCurrencyLedger));
         Assert.Equal(1, bought.AfterInventory.GetQuantity(Id("medicine")));
         Assert.True(sold.Applied);
-        Assert.Equal(60, sold.AfterWallet.Balance);
+        Assert.Equal(60, Balance(sold.AfterCurrencyLedger));
         Assert.Equal(0, sold.AfterInventory.GetQuantity(Id("medicine")));
     }
 
@@ -394,7 +513,7 @@ public sealed class ResourceManagementServiceTests
         ContentId medicine = Id("medicine");
         var inventory = new RuntimeInventorySnapshot(
             [new KeyValuePair<ContentId, int>(medicine, 1)]);
-        var wallet = new RuntimeWalletSnapshot(100);
+        RuntimeCurrencyLedgerSnapshot wallet = Ledger(100);
         var ordinaryOffer = new RuntimeShopOfferSnapshot(ShopContentKind.Item, medicine, 100);
         var extremeOffer = new RuntimeShopOfferSnapshot(ShopContentKind.Item, medicine, int.MaxValue);
 
@@ -409,12 +528,14 @@ public sealed class ResourceManagementServiceTests
         ShopTransactionResult invalidBuy = shop.Buy(
             inventory,
             wallet,
+            CreditsCurrency,
             ordinaryOffer,
             buyerLuck: -1,
             purchasedEquipmentInstanceId: null);
         ShopTransactionResult overflowingSell = shop.Sell(
             inventory,
             wallet,
+            CreditsCurrency,
             extremeOffer,
             sellerLuck: int.MaxValue,
             soldEquipmentInstanceId: null,
@@ -437,7 +558,7 @@ public sealed class ResourceManagementServiceTests
                     StandardEquipmentSlotIds.Weapon,
                     [new RuntimeEquipmentInstanceSnapshot(ownedInstanceId, sword)])
             ]);
-        var wallet = new RuntimeWalletSnapshot(1_000);
+        RuntimeCurrencyLedgerSnapshot wallet = Ledger(1_000);
         var swordOffer = new RuntimeShopOfferSnapshot(
             ShopContentKind.Equipment,
             sword,
@@ -449,24 +570,28 @@ public sealed class ResourceManagementServiceTests
         ShopTransactionResult anotherCopy = shop.Buy(
             ownedSword,
             wallet,
+            CreditsCurrency,
             swordOffer,
             buyerLuck: 0,
             purchasedEquipmentInstanceId: Instance("sword-002"));
         ShopTransactionResult duplicate = shop.Buy(
             ownedSword,
             wallet,
+            CreditsCurrency,
             swordOffer,
             buyerLuck: 0,
             purchasedEquipmentInstanceId: ownedInstanceId);
         ShopTransactionResult stock = shop.Buy(
             new RuntimeInventorySnapshot(),
             wallet,
+            CreditsCurrency,
             emptyStock,
             buyerLuck: 0,
             purchasedEquipmentInstanceId: Instance("sword-003"));
         ShopTransactionResult insufficient = shop.Buy(
             new RuntimeInventorySnapshot(),
             wallet,
+            CreditsCurrency,
             priceyItem,
             buyerLuck: 0,
             purchasedEquipmentInstanceId: null);
@@ -474,7 +599,7 @@ public sealed class ResourceManagementServiceTests
         Assert.True(anotherCopy.Applied);
         Assert.Equal(2, anotherCopy.AfterInventory.GetEquipmentInstances(StandardEquipmentSlotIds.Weapon).Count);
         Assert.Equal(ResourceTransactionCode.EquipmentDuplicate, duplicate.Code);
-        Assert.Equal(1_000, duplicate.AfterWallet.Balance);
+        Assert.Equal(1_000, Balance(duplicate.AfterCurrencyLedger));
         Assert.Equal(ResourceTransactionCode.ShopStockUnavailable, stock.Code);
         Assert.Equal(ResourceTransactionCode.InsufficientCurrency, insufficient.Code);
     }
@@ -625,22 +750,28 @@ public sealed class ResourceManagementServiceTests
             maxSp: 20,
             hasAilment: true,
             hasEncounterPersistence: true);
-        var wallet = new RuntimeWalletSnapshot(120);
+        RuntimeCurrencyLedgerSnapshot wallet = Ledger(120);
 
-        HospitalRestorationResult restored = service.Restore(patient, wallet);
-        HospitalRestorationResult fullHealth = service.Restore(restored.AfterPatient, restored.AfterWallet);
-        HospitalRestorationResult insufficient = service.Restore(patient, new RuntimeWalletSnapshot(1));
+        HospitalRestorationResult restored = service.Restore(patient, wallet, CreditsCurrency);
+        HospitalRestorationResult fullHealth = service.Restore(
+            restored.AfterPatient,
+            restored.AfterCurrencyLedger,
+            CreditsCurrency);
+        HospitalRestorationResult insufficient = service.Restore(
+            patient,
+            Ledger(1),
+            CreditsCurrency);
 
         Assert.True(restored.Applied);
         Assert.Equal(120, restored.Cost);
-        Assert.Equal(0, restored.AfterWallet.Balance);
+        Assert.Equal(0, Balance(restored.AfterCurrencyLedger));
         Assert.Equal(restored.AfterPatient.MaxHp, restored.AfterPatient.CurrentHp);
         Assert.Equal(restored.AfterPatient.MaxSp, restored.AfterPatient.CurrentSp);
         Assert.False(restored.AfterPatient.HasAilment);
         Assert.False(restored.AfterPatient.HasEncounterPersistence);
         Assert.Equal(ResourceTransactionCode.NoRestorationNeeded, fullHealth.Code);
         Assert.Equal(ResourceTransactionCode.InsufficientCurrency, insufficient.Code);
-        Assert.Equal(1, insufficient.AfterWallet.Balance);
+        Assert.Equal(1, Balance(insufficient.AfterCurrencyLedger));
     }
 
     [Fact]
@@ -654,27 +785,31 @@ public sealed class ResourceManagementServiceTests
             currentSp: 0,
             maxSp: int.MaxValue,
             hasAilment: false);
-        var wallet = new RuntimeWalletSnapshot(0);
+        RuntimeCurrencyLedgerSnapshot wallet = Ledger(0);
 
         int cost = service.CalculateRestorationCost(patient);
-        HospitalRestorationResult result = service.Restore(patient, wallet);
+        HospitalRestorationResult result = service.Restore(patient, wallet, CreditsCurrency);
 
         Assert.Equal(int.MaxValue, cost);
         Assert.False(result.Applied);
         Assert.Equal(ResourceTransactionCode.InsufficientCurrency, result.Code);
         Assert.Same(patient, result.BeforePatient);
         Assert.Same(patient, result.AfterPatient);
-        Assert.Same(wallet, result.BeforeWallet);
-        Assert.Same(wallet, result.AfterWallet);
+        Assert.Same(wallet, result.BeforeCurrencyLedger);
+        Assert.Same(wallet, result.AfterCurrencyLedger);
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);
     private static RuntimeInstanceId Instance(string value) => RuntimeInstanceId.Parse(value);
+    private static RuntimeCurrencyLedgerSnapshot Ledger(int balance) =>
+        RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, balance);
+    private static int Balance(RuntimeCurrencyLedgerSnapshot ledger) =>
+        ledger.GetRequiredBalance(CreditsCurrency);
 
     private static void AssertPricingRejectedWithoutMutation(
         ShopTransactionResult result,
         RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         string expectedMessage)
     {
         Assert.False(result.Applied);
@@ -682,8 +817,8 @@ public sealed class ResourceManagementServiceTests
         Assert.Equal(0, result.Price);
         Assert.Same(inventory, result.BeforeInventory);
         Assert.Same(inventory, result.AfterInventory);
-        Assert.Same(wallet, result.BeforeWallet);
-        Assert.Same(wallet, result.AfterWallet);
+        Assert.Same(wallet, result.BeforeCurrencyLedger);
+        Assert.Same(wallet, result.AfterCurrencyLedger);
         ResourceTransactionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(ResourceTransactionCode.InvalidShopPricing, diagnostic.Code);
         Assert.Contains(expectedMessage, diagnostic.Message, StringComparison.Ordinal);

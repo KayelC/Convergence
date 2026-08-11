@@ -228,7 +228,7 @@ public sealed record RuntimeRestoredSession
     public IReadOnlyDictionary<RuntimeInstanceId, CatalogBattleActor> ActorsByInstanceId { get; }
     public RuntimePartyRosterSnapshot PartyRoster => Snapshot.PartyRoster;
     public RuntimeInventorySnapshot Inventory => Snapshot.Inventory;
-    public RuntimeWalletSnapshot Wallet => Snapshot.Wallet;
+    public RuntimeCurrencyLedgerSnapshot CurrencyLedger => Snapshot.CurrencyLedger;
     public RuntimeFieldSnapshot? Field => Snapshot.Field;
     public CompendiumStateSnapshot Compendium => Snapshot.Compendium;
     public RuntimeKnowledgeSnapshot Knowledge => Snapshot.Knowledge;
@@ -588,7 +588,7 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
             actors.Select(actor => actor.State.ToSnapshot()),
             source.PartyRoster,
             source.Inventory,
-            source.Wallet,
+            source.CurrencyLedger,
             source.Field,
             source.Compendium,
             source.Knowledge,

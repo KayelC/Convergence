@@ -22,7 +22,13 @@ public enum ResourceTransactionCode
     NoRestorationNeeded,
     NumericOverflow,
     InvalidShopPricing,
-    InvalidEquipmentInstanceId
+    InvalidEquipmentInstanceId,
+    InvalidCurrencyId,
+    DuplicateCurrencyId,
+    NegativeCurrencyBalance,
+    CurrencyNotFound,
+    EmptyCurrencyLedger,
+    AmbiguousCurrencyLedger
 }
 
 public sealed record ResourceTransactionDiagnostic(
@@ -30,7 +36,8 @@ public sealed record ResourceTransactionDiagnostic(
     string Message,
     ContentId? ContentId = null,
     ContentId? SlotId = null,
-    RuntimeInstanceId? EquipmentInstanceId = null);
+    RuntimeInstanceId? EquipmentInstanceId = null,
+    ContentId? CurrencyId = null);
 
 public sealed record RuntimeEquipmentInstanceSnapshot
 {
@@ -175,19 +182,160 @@ public sealed record RuntimeInventorySnapshot
     }
 }
 
-public sealed record RuntimeWalletSnapshot
+public sealed record RuntimeCurrencyBalanceSnapshot
 {
-    public RuntimeWalletSnapshot(int balance)
+    public RuntimeCurrencyBalanceSnapshot(ContentId currencyId, int balance)
     {
+        if (!currencyId.IsValid)
+        {
+            throw new RuntimeCurrencyLedgerException(
+                new ResourceTransactionDiagnostic(
+                    ResourceTransactionCode.InvalidCurrencyId,
+                    "Currency ID cannot be empty.",
+                    CurrencyId: currencyId),
+                nameof(currencyId));
+        }
         if (balance < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(balance), "Currency balance cannot be negative.");
+            throw new RuntimeCurrencyLedgerException(
+                new ResourceTransactionDiagnostic(
+                    ResourceTransactionCode.NegativeCurrencyBalance,
+                    $"Currency '{currencyId}' balance cannot be negative.",
+                    CurrencyId: currencyId),
+                nameof(balance));
         }
 
+        CurrencyId = currencyId;
         Balance = balance;
     }
 
+    public ContentId CurrencyId { get; }
     public int Balance { get; }
+}
+
+public sealed class RuntimeCurrencyLedgerException : ArgumentException
+{
+    public RuntimeCurrencyLedgerException(
+        ResourceTransactionDiagnostic diagnostic,
+        string? parameterName = null)
+        : base(
+            (diagnostic ?? throw new ArgumentNullException(nameof(diagnostic))).Message,
+            parameterName)
+    {
+        Diagnostic = diagnostic;
+    }
+
+    public ResourceTransactionDiagnostic Diagnostic { get; }
+}
+
+public sealed record RuntimeCurrencyLedgerSnapshot
+{
+    public RuntimeCurrencyLedgerSnapshot(
+        IEnumerable<KeyValuePair<ContentId, int>>? balances = null)
+    {
+        var resolved = new Dictionary<ContentId, int>();
+        foreach ((ContentId currencyId, int balance) in balances ?? [])
+        {
+            if (!currencyId.IsValid)
+            {
+                throw InvalidLedger(
+                    ResourceTransactionCode.InvalidCurrencyId,
+                    "Currency ID cannot be empty.",
+                    currencyId,
+                    nameof(balances));
+            }
+            if (balance < 0)
+            {
+                throw InvalidLedger(
+                    ResourceTransactionCode.NegativeCurrencyBalance,
+                    $"Currency '{currencyId}' balance cannot be negative.",
+                    currencyId,
+                    nameof(balances));
+            }
+            if (!resolved.TryAdd(currencyId, balance))
+            {
+                throw InvalidLedger(
+                    ResourceTransactionCode.DuplicateCurrencyId,
+                    $"Currency '{currencyId}' appears more than once.",
+                    currencyId,
+                    nameof(balances));
+            }
+        }
+
+        Balances = RuntimeSnapshotCollections.Dictionary(resolved);
+    }
+
+    public IReadOnlyDictionary<ContentId, int> Balances { get; }
+
+    public static RuntimeCurrencyLedgerSnapshot Single(
+        ContentId currencyId,
+        int balance) =>
+        new([new KeyValuePair<ContentId, int>(currencyId, balance)]);
+
+    public bool TryGetBalance(ContentId currencyId, out int balance) =>
+        Balances.TryGetValue(currencyId, out balance);
+
+    public int GetRequiredBalance(ContentId currencyId)
+    {
+        if (!currencyId.IsValid)
+        {
+            throw InvalidLedger(
+                ResourceTransactionCode.InvalidCurrencyId,
+                "Currency ID cannot be empty.",
+                currencyId,
+                nameof(currencyId));
+        }
+        if (!Balances.TryGetValue(currencyId, out int balance))
+        {
+            throw InvalidLedger(
+                ResourceTransactionCode.CurrencyNotFound,
+                $"Currency '{currencyId}' is not present in the ledger.",
+                currencyId,
+                nameof(currencyId));
+        }
+
+        return balance;
+    }
+
+    public RuntimeCurrencyBalanceSnapshot GetSingleCurrency()
+    {
+        if (Balances.Count == 0)
+        {
+            throw InvalidLedger(
+                ResourceTransactionCode.EmptyCurrencyLedger,
+                "The currency ledger is empty and has no single currency.");
+        }
+        if (Balances.Count != 1)
+        {
+            throw InvalidLedger(
+                ResourceTransactionCode.AmbiguousCurrencyLedger,
+                "The currency ledger contains multiple currencies and has no unambiguous single currency.");
+        }
+
+        KeyValuePair<ContentId, int> balance = Balances.Single();
+        return new RuntimeCurrencyBalanceSnapshot(balance.Key, balance.Value);
+    }
+
+    internal RuntimeCurrencyLedgerSnapshot WithBalance(
+        ContentId currencyId,
+        int balance)
+    {
+        Dictionary<ContentId, int> next = Balances.ToDictionary();
+        next[currencyId] = balance;
+        return new RuntimeCurrencyLedgerSnapshot(next);
+    }
+
+    private static RuntimeCurrencyLedgerException InvalidLedger(
+        ResourceTransactionCode code,
+        string message,
+        ContentId? currencyId = null,
+        string? parameterName = null) =>
+        new(
+            new ResourceTransactionDiagnostic(
+                code,
+                message,
+                CurrencyId: currencyId),
+            parameterName);
 }
 
 public sealed record InventoryTransitionResult
@@ -211,24 +359,30 @@ public sealed record InventoryTransitionResult
     public IReadOnlyList<ResourceTransactionDiagnostic> Diagnostics { get; }
 }
 
-public sealed record WalletTransactionResult
+public sealed record CurrencyTransactionResult
 {
-    public WalletTransactionResult(
+    public CurrencyTransactionResult(
         ResourceTransactionCode code,
-        RuntimeWalletSnapshot before,
-        RuntimeWalletSnapshot after,
+        RuntimeCurrencyLedgerSnapshot before,
+        RuntimeCurrencyLedgerSnapshot after,
+        ContentId currencyId,
+        int amount,
         IEnumerable<ResourceTransactionDiagnostic>? diagnostics = null)
     {
         Code = code;
         Before = before ?? throw new ArgumentNullException(nameof(before));
         After = after ?? throw new ArgumentNullException(nameof(after));
+        CurrencyId = currencyId;
+        Amount = amount;
         Diagnostics = RuntimeSnapshotCollections.List(diagnostics);
     }
 
     public ResourceTransactionCode Code { get; }
     public bool Applied => Code == ResourceTransactionCode.Applied;
-    public RuntimeWalletSnapshot Before { get; }
-    public RuntimeWalletSnapshot After { get; }
+    public RuntimeCurrencyLedgerSnapshot Before { get; }
+    public RuntimeCurrencyLedgerSnapshot After { get; }
+    public ContentId CurrencyId { get; }
+    public int Amount { get; }
     public IReadOnlyList<ResourceTransactionDiagnostic> Diagnostics { get; }
 }
 
@@ -506,54 +660,137 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
 
 public interface IEconomyTransactionService
 {
-    WalletTransactionResult Credit(RuntimeWalletSnapshot snapshot, int amount);
-    WalletTransactionResult Debit(RuntimeWalletSnapshot snapshot, int amount);
+    CurrencyTransactionResult Credit(
+        RuntimeCurrencyLedgerSnapshot ledger,
+        ContentId currencyId,
+        int amount);
+    CurrencyTransactionResult Debit(
+        RuntimeCurrencyLedgerSnapshot ledger,
+        ContentId currencyId,
+        int amount);
 }
 
 public sealed class EconomyTransactionService : IEconomyTransactionService
 {
-    public WalletTransactionResult Credit(RuntimeWalletSnapshot snapshot, int amount)
+    public CurrencyTransactionResult Credit(
+        RuntimeCurrencyLedgerSnapshot ledger,
+        ContentId currencyId,
+        int amount)
     {
-        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(ledger);
+        if (!currencyId.IsValid)
+        {
+            return Rejected(
+                ledger,
+                currencyId,
+                amount,
+                ResourceTransactionCode.InvalidCurrencyId,
+                "Currency ID cannot be empty.");
+        }
+        if (!ledger.TryGetBalance(currencyId, out int balance))
+        {
+            return Rejected(
+                ledger,
+                currencyId,
+                amount,
+                ResourceTransactionCode.CurrencyNotFound,
+                $"Currency '{currencyId}' is not present in the ledger.");
+        }
         if (amount < 0)
         {
-            return Rejected(snapshot, ResourceTransactionCode.InvalidCurrencyAmount, "Currency amount cannot be negative.");
+            return Rejected(
+                ledger,
+                currencyId,
+                amount,
+                ResourceTransactionCode.InvalidCurrencyAmount,
+                "Currency amount cannot be negative.");
         }
 
-        if (amount > int.MaxValue - snapshot.Balance)
+        if (amount > int.MaxValue - balance)
         {
-            return Rejected(snapshot, ResourceTransactionCode.InvalidCurrencyAmount, "Currency balance cannot exceed the supported integer range.");
+            return Rejected(
+                ledger,
+                currencyId,
+                amount,
+                ResourceTransactionCode.NumericOverflow,
+                $"Currency '{currencyId}' balance cannot exceed the supported integer range.");
         }
 
-        return new WalletTransactionResult(
+        return new CurrencyTransactionResult(
             ResourceTransactionCode.Applied,
-            snapshot,
-            new RuntimeWalletSnapshot(snapshot.Balance + amount));
+            ledger,
+            ledger.WithBalance(currencyId, balance + amount),
+            currencyId,
+            amount);
     }
 
-    public WalletTransactionResult Debit(RuntimeWalletSnapshot snapshot, int amount)
+    public CurrencyTransactionResult Debit(
+        RuntimeCurrencyLedgerSnapshot ledger,
+        ContentId currencyId,
+        int amount)
     {
-        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(ledger);
+        if (!currencyId.IsValid)
+        {
+            return Rejected(
+                ledger,
+                currencyId,
+                amount,
+                ResourceTransactionCode.InvalidCurrencyId,
+                "Currency ID cannot be empty.");
+        }
+        if (!ledger.TryGetBalance(currencyId, out int balance))
+        {
+            return Rejected(
+                ledger,
+                currencyId,
+                amount,
+                ResourceTransactionCode.CurrencyNotFound,
+                $"Currency '{currencyId}' is not present in the ledger.");
+        }
         if (amount < 0)
         {
-            return Rejected(snapshot, ResourceTransactionCode.InvalidCurrencyAmount, "Currency amount cannot be negative.");
+            return Rejected(
+                ledger,
+                currencyId,
+                amount,
+                ResourceTransactionCode.InvalidCurrencyAmount,
+                "Currency amount cannot be negative.");
         }
-        if (snapshot.Balance < amount)
+        if (balance < amount)
         {
-            return Rejected(snapshot, ResourceTransactionCode.InsufficientCurrency, "Insufficient currency.");
+            return Rejected(
+                ledger,
+                currencyId,
+                amount,
+                ResourceTransactionCode.InsufficientCurrency,
+                $"Insufficient currency '{currencyId}'.");
         }
 
-        return new WalletTransactionResult(
+        return new CurrencyTransactionResult(
             ResourceTransactionCode.Applied,
-            snapshot,
-            new RuntimeWalletSnapshot(snapshot.Balance - amount));
+            ledger,
+            ledger.WithBalance(currencyId, balance - amount),
+            currencyId,
+            amount);
     }
 
-    private static WalletTransactionResult Rejected(
-        RuntimeWalletSnapshot before,
+    private static CurrencyTransactionResult Rejected(
+        RuntimeCurrencyLedgerSnapshot before,
+        ContentId currencyId,
+        int amount,
         ResourceTransactionCode code,
         string message) =>
-        new(code, before, before, [new ResourceTransactionDiagnostic(code, message)]);
+        new(
+            code,
+            before,
+            before,
+            currencyId,
+            amount,
+            [new ResourceTransactionDiagnostic(
+                code,
+                message,
+                CurrencyId: currencyId)]);
 }
 
 public sealed record EquipmentTransitionResult
@@ -977,16 +1214,20 @@ public sealed record ShopTransactionResult
         ResourceTransactionCode code,
         RuntimeInventorySnapshot beforeInventory,
         RuntimeInventorySnapshot afterInventory,
-        RuntimeWalletSnapshot beforeWallet,
-        RuntimeWalletSnapshot afterWallet,
+        RuntimeCurrencyLedgerSnapshot beforeCurrencyLedger,
+        RuntimeCurrencyLedgerSnapshot afterCurrencyLedger,
+        ContentId currencyId,
         int price,
         IEnumerable<ResourceTransactionDiagnostic>? diagnostics = null)
     {
         Code = code;
         BeforeInventory = beforeInventory ?? throw new ArgumentNullException(nameof(beforeInventory));
         AfterInventory = afterInventory ?? throw new ArgumentNullException(nameof(afterInventory));
-        BeforeWallet = beforeWallet ?? throw new ArgumentNullException(nameof(beforeWallet));
-        AfterWallet = afterWallet ?? throw new ArgumentNullException(nameof(afterWallet));
+        BeforeCurrencyLedger = beforeCurrencyLedger ??
+            throw new ArgumentNullException(nameof(beforeCurrencyLedger));
+        AfterCurrencyLedger = afterCurrencyLedger ??
+            throw new ArgumentNullException(nameof(afterCurrencyLedger));
+        CurrencyId = currencyId;
         Price = price;
         Diagnostics = RuntimeSnapshotCollections.List(diagnostics);
     }
@@ -995,8 +1236,9 @@ public sealed record ShopTransactionResult
     public bool Applied => Code == ResourceTransactionCode.Applied;
     public RuntimeInventorySnapshot BeforeInventory { get; }
     public RuntimeInventorySnapshot AfterInventory { get; }
-    public RuntimeWalletSnapshot BeforeWallet { get; }
-    public RuntimeWalletSnapshot AfterWallet { get; }
+    public RuntimeCurrencyLedgerSnapshot BeforeCurrencyLedger { get; }
+    public RuntimeCurrencyLedgerSnapshot AfterCurrencyLedger { get; }
+    public ContentId CurrencyId { get; }
     public int Price { get; }
     public IReadOnlyList<ResourceTransactionDiagnostic> Diagnostics { get; }
 }
@@ -1007,13 +1249,15 @@ public interface IShopTransactionService
     int CalculateSellPrice(int basePrice, int luck);
     ShopTransactionResult Buy(
         RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
+        ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         int buyerLuck,
         RuntimeInstanceId? purchasedEquipmentInstanceId);
     ShopTransactionResult Sell(
         RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
+        ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         int sellerLuck,
         RuntimeInstanceId? soldEquipmentInstanceId,
@@ -1045,22 +1289,31 @@ public sealed class ShopTransactionService : IShopTransactionService
 
     public ShopTransactionResult Buy(
         RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
+        ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         int buyerLuck,
         RuntimeInstanceId? purchasedEquipmentInstanceId)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        ArgumentNullException.ThrowIfNull(wallet);
+        ArgumentNullException.ThrowIfNull(currencyLedger);
         ShopPriceCalculation pricing = CalculatePrice(offer.BasePrice, buyerLuck, isBuying: true);
         if (!pricing.IsValid)
         {
-            return PricingRejected(inventory, wallet, offer, pricing);
+            return PricingRejected(inventory, currencyLedger, currencyId, offer, pricing);
         }
 
         if (offer.StockAvailable is <= 0)
         {
-            return Rejected(ResourceTransactionCode.ShopStockUnavailable, inventory, wallet, pricing.Price, "Shop stock is unavailable.", offer.ContentId, offer.EquipmentSlotId);
+            return Rejected(
+                ResourceTransactionCode.ShopStockUnavailable,
+                inventory,
+                currencyLedger,
+                currencyId,
+                pricing.Price,
+                "Shop stock is unavailable.",
+                offer.ContentId,
+                offer.EquipmentSlotId);
         }
 
         int price = pricing.Price;
@@ -1070,39 +1323,42 @@ public sealed class ShopTransactionService : IShopTransactionService
             purchasedEquipmentInstanceId);
         if (!inventoryResult.Applied)
         {
-            return FromInventory(inventoryResult, wallet, price);
+            return FromInventory(inventoryResult, currencyLedger, currencyId, price);
         }
 
-        WalletTransactionResult walletResult = _economy.Debit(wallet, price);
-        if (!walletResult.Applied)
+        CurrencyTransactionResult currencyResult =
+            _economy.Debit(currencyLedger, currencyId, price);
+        if (!currencyResult.Applied)
         {
-            return FromWallet(walletResult, inventory, price);
+            return FromCurrency(currencyResult, inventory, price);
         }
 
         return new ShopTransactionResult(
             ResourceTransactionCode.Applied,
             inventory,
             inventoryResult.After,
-            wallet,
-            walletResult.After,
+            currencyLedger,
+            currencyResult.After,
+            currencyId,
             price);
     }
 
     public ShopTransactionResult Sell(
         RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
+        ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         int sellerLuck,
         RuntimeInstanceId? soldEquipmentInstanceId,
         IEnumerable<RuntimeEquipmentSnapshot> actorEquipment)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        ArgumentNullException.ThrowIfNull(wallet);
+        ArgumentNullException.ThrowIfNull(currencyLedger);
         ArgumentNullException.ThrowIfNull(actorEquipment);
         ShopPriceCalculation pricing = CalculatePrice(offer.BasePrice, sellerLuck, isBuying: false);
         if (!pricing.IsValid)
         {
-            return PricingRejected(inventory, wallet, offer, pricing);
+            return PricingRejected(inventory, currencyLedger, currencyId, offer, pricing);
         }
 
         int price = pricing.Price;
@@ -1121,21 +1377,23 @@ public sealed class ShopTransactionService : IShopTransactionService
 
         if (!inventoryResult.Applied)
         {
-            return FromInventory(inventoryResult, wallet, price);
+            return FromInventory(inventoryResult, currencyLedger, currencyId, price);
         }
 
-        WalletTransactionResult walletResult = _economy.Credit(wallet, price);
-        if (!walletResult.Applied)
+        CurrencyTransactionResult currencyResult =
+            _economy.Credit(currencyLedger, currencyId, price);
+        if (!currencyResult.Applied)
         {
-            return FromWallet(walletResult, inventory, price);
+            return FromCurrency(currencyResult, inventory, price);
         }
 
         return new ShopTransactionResult(
             ResourceTransactionCode.Applied,
             inventory,
             inventoryResult.After,
-            wallet,
-            walletResult.After,
+            currencyLedger,
+            currencyResult.After,
+            currencyId,
             price);
     }
 
@@ -1215,15 +1473,32 @@ public sealed class ShopTransactionService : IShopTransactionService
 
     private static ShopTransactionResult FromInventory(
         InventoryTransitionResult result,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
+        ContentId currencyId,
         int price) =>
-        new(result.Code, result.Before, result.After, wallet, wallet, price, result.Diagnostics);
+        new(
+            result.Code,
+            result.Before,
+            result.After,
+            currencyLedger,
+            currencyLedger,
+            currencyId,
+            price,
+            result.Diagnostics);
 
-    private static ShopTransactionResult FromWallet(
-        WalletTransactionResult result,
+    private static ShopTransactionResult FromCurrency(
+        CurrencyTransactionResult result,
         RuntimeInventorySnapshot inventory,
         int price) =>
-        new(result.Code, inventory, inventory, result.Before, result.After, price, result.Diagnostics);
+        new(
+            result.Code,
+            inventory,
+            inventory,
+            result.Before,
+            result.After,
+            result.CurrencyId,
+            price,
+            result.Diagnostics);
 
     private static InventoryTransitionResult InventoryRejected(
         RuntimeInventorySnapshot before,
@@ -1246,22 +1521,38 @@ public sealed class ShopTransactionService : IShopTransactionService
     private static ShopTransactionResult Rejected(
         ResourceTransactionCode code,
         RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
+        ContentId currencyId,
         int price,
         string message,
         ContentId? contentId = null,
         ContentId? slotId = null) =>
-        new(code, inventory, inventory, wallet, wallet, price, [new ResourceTransactionDiagnostic(code, message, contentId, slotId)]);
+        new(
+            code,
+            inventory,
+            inventory,
+            currencyLedger,
+            currencyLedger,
+            currencyId,
+            price,
+            [new ResourceTransactionDiagnostic(
+                code,
+                message,
+                contentId,
+                slotId,
+                CurrencyId: currencyId)]);
 
     private static ShopTransactionResult PricingRejected(
         RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
+        ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         ShopPriceCalculation pricing) =>
         Rejected(
             ResourceTransactionCode.InvalidShopPricing,
             inventory,
-            wallet,
+            currencyLedger,
+            currencyId,
             price: 0,
             pricing.Message,
             offer.ContentId,
@@ -1382,16 +1673,20 @@ public sealed record HospitalRestorationResult
         ResourceTransactionCode code,
         RuntimeHospitalPatientSnapshot beforePatient,
         RuntimeHospitalPatientSnapshot afterPatient,
-        RuntimeWalletSnapshot beforeWallet,
-        RuntimeWalletSnapshot afterWallet,
+        RuntimeCurrencyLedgerSnapshot beforeCurrencyLedger,
+        RuntimeCurrencyLedgerSnapshot afterCurrencyLedger,
+        ContentId currencyId,
         int cost,
         IEnumerable<ResourceTransactionDiagnostic>? diagnostics = null)
     {
         Code = code;
         BeforePatient = beforePatient ?? throw new ArgumentNullException(nameof(beforePatient));
         AfterPatient = afterPatient ?? throw new ArgumentNullException(nameof(afterPatient));
-        BeforeWallet = beforeWallet ?? throw new ArgumentNullException(nameof(beforeWallet));
-        AfterWallet = afterWallet ?? throw new ArgumentNullException(nameof(afterWallet));
+        BeforeCurrencyLedger = beforeCurrencyLedger ??
+            throw new ArgumentNullException(nameof(beforeCurrencyLedger));
+        AfterCurrencyLedger = afterCurrencyLedger ??
+            throw new ArgumentNullException(nameof(afterCurrencyLedger));
+        CurrencyId = currencyId;
         Cost = cost;
         Diagnostics = RuntimeSnapshotCollections.List(diagnostics);
     }
@@ -1400,8 +1695,9 @@ public sealed record HospitalRestorationResult
     public bool Applied => Code == ResourceTransactionCode.Applied;
     public RuntimeHospitalPatientSnapshot BeforePatient { get; }
     public RuntimeHospitalPatientSnapshot AfterPatient { get; }
-    public RuntimeWalletSnapshot BeforeWallet { get; }
-    public RuntimeWalletSnapshot AfterWallet { get; }
+    public RuntimeCurrencyLedgerSnapshot BeforeCurrencyLedger { get; }
+    public RuntimeCurrencyLedgerSnapshot AfterCurrencyLedger { get; }
+    public ContentId CurrencyId { get; }
     public int Cost { get; }
     public IReadOnlyList<ResourceTransactionDiagnostic> Diagnostics { get; }
 }
@@ -1409,7 +1705,10 @@ public sealed record HospitalRestorationResult
 public interface IHospitalRestorationService
 {
     int CalculateRestorationCost(RuntimeHospitalPatientSnapshot patient);
-    HospitalRestorationResult Restore(RuntimeHospitalPatientSnapshot patient, RuntimeWalletSnapshot wallet);
+    HospitalRestorationResult Restore(
+        RuntimeHospitalPatientSnapshot patient,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
+        ContentId currencyId);
 }
 
 public sealed class HospitalRestorationService : IHospitalRestorationService
@@ -1428,17 +1727,26 @@ public sealed class HospitalRestorationService : IHospitalRestorationService
         return cost >= int.MaxValue ? int.MaxValue : (int)cost;
     }
 
-    public HospitalRestorationResult Restore(RuntimeHospitalPatientSnapshot patient, RuntimeWalletSnapshot wallet)
+    public HospitalRestorationResult Restore(
+        RuntimeHospitalPatientSnapshot patient,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
+        ContentId currencyId)
     {
         ArgumentNullException.ThrowIfNull(patient);
-        ArgumentNullException.ThrowIfNull(wallet);
+        ArgumentNullException.ThrowIfNull(currencyLedger);
         int cost = CalculateRestorationCost(patient);
         if (cost <= 0 && !patient.HasAilment && !patient.HasEncounterPersistence)
         {
-            return Rejected(ResourceTransactionCode.NoRestorationNeeded, patient, wallet, cost, "The patient does not need restoration.");
+            return Rejected(
+                ResourceTransactionCode.NoRestorationNeeded,
+                patient,
+                currencyLedger,
+                currencyId,
+                cost,
+                "The patient does not need restoration.");
         }
 
-        WalletTransactionResult spend = _economy.Debit(wallet, cost);
+        CurrencyTransactionResult spend = _economy.Debit(currencyLedger, currencyId, cost);
         if (!spend.Applied)
         {
             return new HospitalRestorationResult(
@@ -1447,6 +1755,7 @@ public sealed class HospitalRestorationService : IHospitalRestorationService
                 patient,
                 spend.Before,
                 spend.After,
+                currencyId,
                 cost,
                 spend.Diagnostics);
         }
@@ -1463,16 +1772,29 @@ public sealed class HospitalRestorationService : IHospitalRestorationService
             ResourceTransactionCode.Applied,
             patient,
             after,
-            wallet,
+            currencyLedger,
             spend.After,
+            currencyId,
             cost);
     }
 
     private static HospitalRestorationResult Rejected(
         ResourceTransactionCode code,
         RuntimeHospitalPatientSnapshot patient,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
+        ContentId currencyId,
         int cost,
         string message) =>
-        new(code, patient, patient, wallet, wallet, cost, [new ResourceTransactionDiagnostic(code, message)]);
+        new(
+            code,
+            patient,
+            patient,
+            currencyLedger,
+            currencyLedger,
+            currencyId,
+            cost,
+            [new ResourceTransactionDiagnostic(
+                code,
+                message,
+                CurrencyId: currencyId)]);
 }

@@ -18,8 +18,8 @@ internal sealed record TrainingAnnexNegotiationEvidence(
     RecruitmentTransactionStatus? RecruitmentStatus,
     RecruitmentTransactionErrorCode? RecruitmentErrorCode,
     PartyRosterTransitionCode? RosterTransitionCode,
-    int WalletBefore,
-    int WalletAfter,
+    int CurrencyLedgerBefore,
+    int CurrencyLedgerAfter,
     int CompanionRosterCountBefore,
     int CompanionRosterCountAfter,
     bool Recruited,
@@ -27,7 +27,7 @@ internal sealed record TrainingAnnexNegotiationEvidence(
 
 internal sealed record TrainingAnnexNegotiationInteractionResult(
     RuntimePartyRosterSnapshot PartyRoster,
-    RuntimeWalletSnapshot Wallet,
+    RuntimeCurrencyLedgerSnapshot CurrencyLedger,
     IReadOnlyList<TrainingAnnexNegotiationEvidence> Evidence);
 
 internal sealed class TrainingAnnexNegotiationController
@@ -61,7 +61,7 @@ internal sealed class TrainingAnnexNegotiationController
         GameDataCatalog catalog,
         TrainingAnnexActorRoster roster,
         RuntimePartyRosterSnapshot party,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         IEconomyTransactionService economy,
         ISet<ContentId> recruitedThisSession,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
@@ -87,7 +87,8 @@ internal sealed class TrainingAnnexNegotiationController
         }
 
         await _eventSink.PublishAsync(
-            $"Negotiation opened: {negotiation.DisplayName}; {TargetSummary(candidates)}; wallet {wallet.Balance} C.",
+            $"Negotiation opened: {negotiation.DisplayName}; {TargetSummary(candidates)}; wallet " +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(wallet)} C.",
             cancellationToken).ConfigureAwait(false);
 
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> targetSelection =
@@ -163,10 +164,13 @@ internal sealed class TrainingAnnexNegotiationController
                 Evidence(target, session, party, party, wallet, wallet, recruitment, rosterTransition, false));
         }
 
-        RuntimeWalletSnapshot nextWallet = wallet;
+        RuntimeCurrencyLedgerSnapshot nextCurrencyLedger = wallet;
         if (session.CurrencySpent > 0)
         {
-            WalletTransactionResult spend = economy.Debit(wallet, session.CurrencySpent);
+            CurrencyTransactionResult spend = economy.Debit(
+                wallet,
+                TrainingAnnexHostSupport.CreditsCurrency,
+                session.CurrencySpent);
             if (!spend.Applied)
             {
                 await _eventSink.PublishAsync(
@@ -178,22 +182,25 @@ internal sealed class TrainingAnnexNegotiationController
                     Evidence(target, session, party, party, wallet, wallet, recruitment, rosterTransition, false));
             }
 
-            nextWallet = spend.After;
+            nextCurrencyLedger = spend.After;
         }
 
         recruitedThisSession.Add(target.Actor.Entity.Id);
         await _eventSink.PublishAsync(
-            $"Recruitment applied: {target.Actor.Entity.DisplayName} joined Companion roster; wallet {wallet.Balance}->{nextWallet.Balance} C; Companion roster {party.CompanionRoster.Count}->{rosterTransition.After.CompanionRoster.Count}.",
+            $"Recruitment applied: {target.Actor.Entity.DisplayName} joined Companion roster; wallet " +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(wallet)}->" +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(nextCurrencyLedger)} C; Companion roster " +
+            $"{party.CompanionRoster.Count}->{rosterTransition.After.CompanionRoster.Count}.",
             cancellationToken).ConfigureAwait(false);
         return Result(
             rosterTransition.After,
-            nextWallet,
-            Evidence(target, session, party, rosterTransition.After, wallet, nextWallet, recruitment, rosterTransition, true));
+            nextCurrencyLedger,
+            Evidence(target, session, party, rosterTransition.After, wallet, nextCurrencyLedger, recruitment, rosterTransition, true));
     }
 
     private static TrainingAnnexNegotiationInteractionResult Result(
         RuntimePartyRosterSnapshot party,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         TrainingAnnexNegotiationEvidence evidence) =>
         new(party, wallet, [evidence]);
 
@@ -202,7 +209,7 @@ internal sealed class TrainingAnnexNegotiationController
         TrainingAnnexRuntimeActor target,
         TrainingAnnexRuntimeActor player,
         RuntimePartyRosterSnapshot party,
-        RuntimeWalletSnapshot wallet)
+        RuntimeCurrencyLedgerSnapshot wallet)
     {
         RuntimeActorSnapshot playerSnapshot = player.Actor.State.ToSnapshot();
         return new NegotiationSessionRequest(
@@ -216,7 +223,7 @@ internal sealed class TrainingAnnexNegotiationController
             hasRecruitmentCapacity: HasOpenCompanionRosterSlot(
                 party,
                 playerSnapshot),
-            currentCurrency: wallet.Balance,
+            currentCurrency: TrainingAnnexHostSupport.GetCreditsBalance(wallet),
             questions: negotiation.Questions.Select(question => new NegotiationQuestionPrompt(
                 question.Text,
                 question.Answers.Select(answer => new NegotiationAnswerOption(answer.Text, answer.Score)))),
@@ -350,8 +357,8 @@ internal sealed class TrainingAnnexNegotiationController
         NegotiationSessionResult session,
         RuntimePartyRosterSnapshot beforeParty,
         RuntimePartyRosterSnapshot afterParty,
-        RuntimeWalletSnapshot beforeWallet,
-        RuntimeWalletSnapshot afterWallet,
+        RuntimeCurrencyLedgerSnapshot beforeCurrencyLedger,
+        RuntimeCurrencyLedgerSnapshot afterCurrencyLedger,
         RecruitmentTransactionResult? recruitment,
         PartyRosterTransitionResult? rosterTransition,
         bool recruited) =>
@@ -366,8 +373,8 @@ internal sealed class TrainingAnnexNegotiationController
             recruitment?.Status,
             recruitment?.ErrorCode,
             rosterTransition?.Code,
-            beforeWallet.Balance,
-            afterWallet.Balance,
+            TrainingAnnexHostSupport.GetCreditsBalance(beforeCurrencyLedger),
+            TrainingAnnexHostSupport.GetCreditsBalance(afterCurrencyLedger),
             beforeParty.CompanionRoster.Count,
             afterParty.CompanionRoster.Count,
             recruited,

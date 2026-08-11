@@ -39,6 +39,10 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Equal(
             Id("convergence.catalog_surface_sample:sample_depths"),
             valid.Field!.DungeonTraversal!.DungeonId);
+        Assert.Equal(
+            1234,
+            valid.CurrencyLedger.GetRequiredBalance(
+                Id("convergence.catalog_surface_sample:credits")));
         Assert.Equal(2, valid.Checkpoints.Entries.Count);
     }
 
@@ -82,7 +86,7 @@ public sealed class RuntimePersistenceSnapshotTests
             baseline.Actors,
             baseline.PartyRoster,
             baseline.Inventory,
-            baseline.Wallet,
+            baseline.CurrencyLedger,
             baseline.Field,
             baseline.Compendium,
             baseline.Knowledge,
@@ -1868,7 +1872,7 @@ public sealed class RuntimePersistenceSnapshotTests
             new RuntimePartyRosterSnapshot(invalidReference, activeParty: [invalidReference]),
             new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(default, 1)]),
-            baseline.Wallet,
+            baseline.CurrencyLedger,
             new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(default),
                 new RuntimeDungeonTraversalSnapshot(default, default)),
@@ -2561,6 +2565,7 @@ public sealed class RuntimePersistenceSnapshotTests
     [InlineData(14)]
     [InlineData(15)]
     [InlineData(16)]
+    [InlineData(17)]
     public void RuntimeSaveValidator_RejectsUnsupportedContractVersion(int unsupportedVersion)
     {
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
@@ -2803,7 +2808,9 @@ public sealed class RuntimePersistenceSnapshotTests
                                 Id("convergence.catalog_surface_sample:shortsword_sample"))
                         ])
                 ]),
-            new RuntimeWalletSnapshot(1234),
+            RuntimeCurrencyLedgerSnapshot.Single(
+                Id("convergence.catalog_surface_sample:credits"),
+                1234),
             field ?? (includeDefaultField
                 ? new RuntimeFieldSnapshot(
                     new RuntimeNavigationSnapshot(Id("convergence.catalog_surface_sample:sample_depths_floor_5")),
@@ -2878,7 +2885,7 @@ public sealed class RuntimePersistenceSnapshotTests
             actors ?? snapshot.Actors,
             partyRoster ?? snapshot.PartyRoster,
             inventory ?? snapshot.Inventory,
-            snapshot.Wallet,
+            snapshot.CurrencyLedger,
             snapshot.Field,
             snapshot.Compendium,
             snapshot.Knowledge,

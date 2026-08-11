@@ -410,7 +410,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             actorSnapshots,
             partyRoster,
             new RuntimeInventorySnapshot(inventory),
-            new RuntimeWalletSnapshot(reward.TotalCurrency),
+            TrainingAnnexHostSupport.CreateCreditsLedger(reward.TotalCurrency),
             field,
             new CompendiumStateSnapshot(),
             new RuntimeKnowledgeSnapshot(),

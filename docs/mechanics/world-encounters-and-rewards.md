@@ -38,6 +38,8 @@ When recruitment succeeds and the game enables a Compendium, the host should pas
 
 Reward services calculate immutable experience and currency totals from defeated participants and the active reward policy. Calculation and application are separate steps.
 
-**Framework rule:** aggregate arithmetic cannot wrap on extreme input. Application uses progression and wallet services, allowing the host to present a preview before committing.
+**Framework rule:** aggregate arithmetic cannot wrap on extreme input.
+Application uses progression and explicit currency-ledger services, allowing
+the host to present a preview before committing.
 
 **Configured rule:** reward formulas, participating recipients, reserve sharing, bonus conditions, and terminology belong to the selected ruleset or host composition.

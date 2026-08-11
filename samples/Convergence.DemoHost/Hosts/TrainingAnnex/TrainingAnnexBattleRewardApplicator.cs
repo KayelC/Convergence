@@ -28,7 +28,7 @@ internal sealed class TrainingAnnexBattleRewardApplicator
         GameDataCatalog catalog,
         RuntimeEquipmentProfile equipmentProfile,
         IEconomyTransactionService economy,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
         CancellationToken cancellationToken)
     {
         TrainingAnnexRuntimeActor player = roster.Player;
@@ -47,18 +47,25 @@ internal sealed class TrainingAnnexBattleRewardApplicator
             resources: sourceBefore.Resources,
             baseResourceValues: sourceBefore.BaseResourceValues));
 
-        WalletTransactionResult walletMutation = economy.Credit(wallet, reward.TotalCurrency);
+        CurrencyTransactionResult currencyMutation = economy.Credit(
+            currencyLedger,
+            TrainingAnnexHostSupport.CreditsCurrency,
+            reward.TotalCurrency);
 
-        if (!walletMutation.Applied)
+        if (!currencyMutation.Applied)
         {
-            foreach (ResourceTransactionDiagnostic diagnostic in walletMutation.Diagnostics)
+            foreach (ResourceTransactionDiagnostic diagnostic in currencyMutation.Diagnostics)
             {
                 await _eventSink.PublishAsync(
                     $"[{diagnostic.Code}]: {diagnostic.Message}",
                     cancellationToken).ConfigureAwait(false);
             }
 
-            return new TrainingAnnexBattleRewardApplication(false, growth, wallet, walletMutation);
+            return new TrainingAnnexBattleRewardApplication(
+                false,
+                growth,
+                currencyLedger,
+                currencyMutation);
         }
 
         RuntimeActorGrowthCompositionResult progressionMutation =
@@ -83,7 +90,11 @@ internal sealed class TrainingAnnexBattleRewardApplicator
                     cancellationToken).ConfigureAwait(false);
             }
 
-            return new TrainingAnnexBattleRewardApplication(false, growth, wallet, walletMutation);
+            return new TrainingAnnexBattleRewardApplication(
+                false,
+                growth,
+                currencyLedger,
+                currencyMutation);
         }
 
         RuntimeActorSnapshot sourceAfter = progressionMutation.GrowthActorAfter;
@@ -98,10 +109,15 @@ internal sealed class TrainingAnnexBattleRewardApplicator
             $"lifetime {sourceBefore.Progression.LifetimeExperience}->" +
             $"{sourceAfter.Progression.LifetimeExperience}; Vessel " +
             $"{player.Actor.Entity.DisplayName} remains level {playerAfter.Progression.Level}; " +
-            $"wallet {wallet.Balance}->{walletMutation.After.Balance}.",
+            $"wallet {TrainingAnnexHostSupport.GetCreditsBalance(currencyLedger)}->" +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(currencyMutation.After)}.",
             cancellationToken).ConfigureAwait(false);
 
-        return new TrainingAnnexBattleRewardApplication(true, growth, walletMutation.After, walletMutation);
+        return new TrainingAnnexBattleRewardApplication(
+            true,
+            growth,
+            currencyMutation.After,
+            currencyMutation);
     }
 
     public static RuntimeSessionProgressSnapshot RecordSessionProgress(
@@ -128,5 +144,5 @@ internal sealed class TrainingAnnexBattleRewardApplicator
 internal sealed record TrainingAnnexBattleRewardApplication(
     bool Applied,
     LevelGrowthResult Growth,
-    RuntimeWalletSnapshot Wallet,
-    WalletTransactionResult WalletTransaction);
+    RuntimeCurrencyLedgerSnapshot CurrencyLedger,
+    CurrencyTransactionResult CurrencyTransaction);

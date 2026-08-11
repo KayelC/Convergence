@@ -13,6 +13,9 @@ namespace Convergence.DemoHost;
 
 internal sealed class CleanSaveDemoHost
 {
+    private static readonly ContentId CreditsCurrency =
+        ContentId.Parse("convergence.catalog_surface_sample:credits");
+
     private readonly IContentPackTextSource _contentSource;
     private readonly IHostEventSink<string> _eventSink;
 
@@ -221,7 +224,7 @@ internal sealed class CleanSaveDemoHost
                                 ContentId.Parse("convergence.catalog_surface_sample:shortsword_sample"))
                         ])
                 ]),
-            new RuntimeWalletSnapshot(1234),
+            RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 1234),
             new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(ContentId.Parse("convergence.catalog_surface_sample:sample_depths_floor_5")),
                 new RuntimeDungeonTraversalSnapshot(
@@ -421,7 +424,12 @@ internal static class CleanSaveJsonCodec
             snapshot.Actors.Select(ToDto).ToArray(),
             ToDto(snapshot.PartyRoster),
             ToDto(snapshot.Inventory),
-            snapshot.Wallet.Balance,
+            snapshot.CurrencyLedger.Balances
+                .Select(balance => new HostCurrencyBalanceDto(
+                    balance.Key.ToString(),
+                    balance.Value))
+                .OrderBy(balance => balance.CurrencyId, StringComparer.Ordinal)
+                .ToArray(),
             ToDto(snapshot.Field),
             ToDto(snapshot.Compendium),
             ToDto(snapshot.Knowledge),
@@ -445,7 +453,11 @@ internal static class CleanSaveJsonCodec
             dto.Actors.Select(FromDto),
             FromDto(dto.PartyRoster),
             FromDto(dto.Inventory),
-            new RuntimeWalletSnapshot(dto.Credits),
+            new RuntimeCurrencyLedgerSnapshot(
+                dto.CurrencyBalances.Select(balance =>
+                    new KeyValuePair<ContentId, int>(
+                        Id(balance.CurrencyId),
+                        balance.Balance))),
             FromDto(dto.Field),
             FromDto(dto.Compendium),
             FromDto(dto.Knowledge),
@@ -839,7 +851,7 @@ internal static class CleanSaveJsonCodec
         HostActorDto[] Actors,
         HostPartyRosterDto PartyRoster,
         HostInventoryDto Inventory,
-        int Credits,
+        HostCurrencyBalanceDto[] CurrencyBalances,
         HostFieldDto? Field,
         HostCompendiumDto Compendium,
         HostKnowledgeDto Knowledge,
@@ -848,6 +860,8 @@ internal static class CleanSaveJsonCodec
         Dictionary<string, string> HostContext);
 
     private sealed record HostContentPackDto(string Id, string Version);
+
+    private sealed record HostCurrencyBalanceDto(string CurrencyId, int Balance);
 
     private sealed record HostActorDto(
         string InstanceId,

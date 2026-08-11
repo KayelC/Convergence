@@ -19,8 +19,8 @@ internal sealed record TrainingAnnexCompendiumEvidence(
     CompendiumRegistrationCode? RegistrationCode,
     CompendiumRecallTransactionCode? RecallCode,
     int Cost,
-    int WalletBefore,
-    int WalletAfter,
+    int CurrencyLedgerBefore,
+    int CurrencyLedgerAfter,
     int CompanionRosterBefore,
     int CompanionRosterAfter,
     int ImportedElementalAffinities,
@@ -32,7 +32,7 @@ internal sealed record TrainingAnnexCompendiumEvidence(
 internal sealed record TrainingAnnexCompendiumInteractionResult(
     CompendiumStateSnapshot Compendium,
     RuntimePartyRosterSnapshot PartyRoster,
-    RuntimeWalletSnapshot Wallet,
+    RuntimeCurrencyLedgerSnapshot CurrencyLedger,
     TrainingAnnexActorRoster Roster,
     TrainingAnnexBattleKnowledgeState PlayerKnowledge,
     IReadOnlyList<TrainingAnnexCompendiumEvidence> Evidence);
@@ -59,7 +59,7 @@ internal sealed class TrainingAnnexCompendiumController
     public async ValueTask<TrainingAnnexCompendiumInteractionResult> OpenAsync(
         CompendiumStateSnapshot compendium,
         RuntimePartyRosterSnapshot partyRoster,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         TrainingAnnexActorRoster roster,
         TrainingAnnexBattleKnowledgeState playerKnowledge,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
@@ -99,7 +99,7 @@ internal sealed class TrainingAnnexCompendiumController
     private async ValueTask<TrainingAnnexCompendiumInteractionResult> RegisterAsync(
         CompendiumStateSnapshot compendium,
         RuntimePartyRosterSnapshot partyRoster,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         TrainingAnnexActorRoster roster,
         TrainingAnnexBattleKnowledgeState playerKnowledge,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
@@ -163,7 +163,7 @@ internal sealed class TrainingAnnexCompendiumController
     private async ValueTask<TrainingAnnexCompendiumInteractionResult> RecallAsync(
         CompendiumStateSnapshot compendium,
         RuntimePartyRosterSnapshot partyRoster,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         TrainingAnnexActorRoster roster,
         TrainingAnnexBattleKnowledgeState playerKnowledge,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
@@ -195,6 +195,7 @@ internal sealed class TrainingAnnexCompendiumController
             partyRoster,
             owner,
             wallet,
+            TrainingAnnexHostSupport.CreditsCurrency,
             selectedId.Value,
             instanceId,
             owner.Affiliation.CommandAuthorityId,
@@ -220,12 +221,16 @@ internal sealed class TrainingAnnexCompendiumController
         TrainingAnnexBattleKnowledgeState nextKnowledge =
             TrainingAnnexBattleKnowledgeState.FromSnapshot(imported.After);
         await _eventSink.PublishAsync(
-            $"Compendium recall applied: {recall.Entry.DisplayName}; wallet {recall.BeforeWallet.Balance}->{recall.AfterWallet.Balance} C; Companion roster {recall.BeforePartyRoster.CompanionRoster.Count}->{recall.AfterPartyRoster.CompanionRoster.Count}.",
+            $"Compendium recall applied: {recall.Entry.DisplayName}; wallet " +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(recall.BeforeCurrencyLedger)}->" +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(recall.AfterCurrencyLedger)} C; Companion roster " +
+            $"{recall.BeforePartyRoster.CompanionRoster.Count}->" +
+            $"{recall.AfterPartyRoster.CompanionRoster.Count}.",
             cancellationToken).ConfigureAwait(false);
         return new TrainingAnnexCompendiumInteractionResult(
             compendium,
             recall.AfterPartyRoster,
-            recall.AfterWallet,
+            recall.AfterCurrencyLedger,
             nextRoster,
             nextKnowledge,
             [Evidence(selectedId.Value, recall, imported)]);
@@ -348,7 +353,7 @@ internal sealed class TrainingAnnexCompendiumController
     private static TrainingAnnexCompendiumInteractionResult Unchanged(
         CompendiumStateSnapshot compendium,
         RuntimePartyRosterSnapshot partyRoster,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         TrainingAnnexActorRoster roster,
         TrainingAnnexBattleKnowledgeState playerKnowledge) =>
         new(compendium, partyRoster, wallet, roster, playerKnowledge, []);
@@ -357,7 +362,7 @@ internal sealed class TrainingAnnexCompendiumController
         ContentId entityId,
         CompendiumActorRegistrationResult registration,
         RuntimePartyRosterSnapshot partyRoster,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         FamiliarKnowledgeImportResult? imported = null) =>
         new(
             TrainingAnnexCompendiumAction.Register,
@@ -366,8 +371,8 @@ internal sealed class TrainingAnnexCompendiumController
             registration.Code,
             null,
             0,
-            wallet.Balance,
-            wallet.Balance,
+            TrainingAnnexHostSupport.GetCreditsBalance(wallet),
+            TrainingAnnexHostSupport.GetCreditsBalance(wallet),
             partyRoster.CompanionRoster.Count,
             partyRoster.CompanionRoster.Count,
             ImportedElementCount(imported, entityId),
@@ -387,8 +392,8 @@ internal sealed class TrainingAnnexCompendiumController
             null,
             recall.Code,
             recall.Cost,
-            recall.BeforeWallet.Balance,
-            recall.AfterWallet.Balance,
+            TrainingAnnexHostSupport.GetCreditsBalance(recall.BeforeCurrencyLedger),
+            TrainingAnnexHostSupport.GetCreditsBalance(recall.AfterCurrencyLedger),
             recall.BeforePartyRoster.CompanionRoster.Count,
             recall.AfterPartyRoster.CompanionRoster.Count,
             ImportedElementCount(imported, entityId),

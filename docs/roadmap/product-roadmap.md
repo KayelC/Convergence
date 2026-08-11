@@ -18,8 +18,11 @@ O7-R3 replaces fixed slot enums with authored slot IDs governed by an explicit
 layout policy while preserving the standard four-slot behavior. O7-R4 routes
 equipped-only skill grants, armor Defense, and armor/boots Evasion through one
 canonical equipment profile and the existing action/damage/hit authorities.
-The capability remains `partial` until stateful shop stock, explicit pricing policies, generic
-recovery, typed currencies, audience documentation, and an independent
+O7-R5 establishes an immutable currency ledger keyed by `ContentId`, explicit
+currency selection for every transaction, save contract v18, and host-owned
+serialization in DemoHost and Godot. The capability remains `partial` until
+stateful shop stock, explicit pricing policies, generic recovery, audience
+documentation, and an independent
 adversarial closure audit are complete.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved

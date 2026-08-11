@@ -148,12 +148,12 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     BattleRewardResult? PreparedBattleRewardPreview,
     BattleRewardResult? AppliedBattleReward,
     int AppliedBattleRewardLevelUpCount,
-    WalletTransactionResult? AppliedWalletTransaction,
+    CurrencyTransactionResult? AppliedCurrencyTransaction,
     IReadOnlyList<TrainingAnnexShopTransactionEvidence> ShopTransactions,
     IReadOnlyList<TrainingAnnexEquipmentChangeEvidence> ShopEquipmentChanges,
     IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> ShopOfferDiagnostics,
     IReadOnlyList<TrainingAnnexHospitalRestorationEvidence> HospitalRestorations,
-    RuntimeWalletSnapshot Wallet,
+    RuntimeCurrencyLedgerSnapshot CurrencyLedger,
     RuntimeSessionProgressSnapshot SessionProgress,
     int ManualSaveCount,
     int ManualLoadCount,
@@ -183,7 +183,7 @@ internal sealed class CleanTrainingAnnexPlayHost
     private readonly TrainingAnnexSaveSlotStore _saveSlots;
     private readonly RuntimeInventorySnapshot? _initialInventory;
     private readonly RuntimeEquipmentSnapshot? _initialEquipment;
-    private readonly RuntimeWalletSnapshot? _initialWallet;
+    private readonly RuntimeCurrencyLedgerSnapshot? _initialCurrencyLedger;
     private readonly Func<
         ISkillDefinitionRepository,
         IStatResolutionPolicy,
@@ -200,7 +200,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         TrainingAnnexSaveSlotStore? saveSlots = null,
         RuntimeInventorySnapshot? initialInventory = null,
         RuntimeEquipmentSnapshot? initialEquipment = null,
-        RuntimeWalletSnapshot? initialWallet = null,
+        RuntimeCurrencyLedgerSnapshot? initialCurrencyLedger = null,
         Func<
             ISkillDefinitionRepository,
             IStatResolutionPolicy,
@@ -216,7 +216,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         _saveSlots = saveSlots ?? new TrainingAnnexSaveSlotStore();
         _initialInventory = initialInventory;
         _initialEquipment = initialEquipment;
-        _initialWallet = initialWallet;
+        _initialCurrencyLedger = initialCurrencyLedger;
         _combatProfileCompositionFactory = combatProfileCompositionFactory ??
             ((skills, stats, resources, rosterCapacity) =>
                 new RuntimeActorCombatProfileCompositionService(
@@ -477,7 +477,8 @@ internal sealed class CleanTrainingAnnexPlayHost
             _eventSink,
             rulesetResolver,
             rosterCapacityPolicy);
-        RuntimeWalletSnapshot wallet = _initialWallet ?? new RuntimeWalletSnapshot(0);
+        RuntimeCurrencyLedgerSnapshot wallet =
+            _initialCurrencyLedger ?? TrainingAnnexHostSupport.CreateCreditsLedger(0);
         RuntimeSessionProgressSnapshot sessionProgress = new();
         RuntimeFieldSnapshot field = new(
             new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
@@ -512,7 +513,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         BattleRewardResult? preparedBattleRewardPreview = null;
         BattleRewardResult? appliedBattleReward = null;
         int appliedBattleRewardLevelUpCount = 0;
-        WalletTransactionResult? appliedWalletTransaction = null;
+        CurrencyTransactionResult? appliedCurrencyTransaction = null;
         var shopTransactions = new List<TrainingAnnexShopTransactionEvidence>();
         var shopEquipmentChanges = new List<TrainingAnnexEquipmentChangeEvidence>();
         var shopOfferDiagnostics = new List<RuntimeShopOfferResolutionDiagnostic>();
@@ -599,7 +600,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     preparedBattleRewardPreview,
                     appliedBattleReward,
                     appliedBattleRewardLevelUpCount,
-                    appliedWalletTransaction,
+                    appliedCurrencyTransaction,
                     shopTransactions,
                     shopEquipmentChanges,
                     shopOfferDiagnostics,
@@ -728,7 +729,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                                     commands,
                                     cancellationToken).ConfigureAwait(false);
                         partyRoster = negotiation.PartyRoster;
-                        wallet = negotiation.Wallet;
+                        wallet = negotiation.CurrencyLedger;
                         negotiations.AddRange(negotiation.Evidence);
                         foreach (TrainingAnnexNegotiationEvidence recruited in
                                  negotiation.Evidence.Where(evidence => evidence.Recruited))
@@ -829,7 +830,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                                     cancellationToken).ConfigureAwait(false);
                         compendium = interaction.Compendium;
                         partyRoster = interaction.PartyRoster;
-                        wallet = interaction.Wallet;
+                        wallet = interaction.CurrencyLedger;
                         roster = interaction.Roster;
                         playerBattleKnowledge = interaction.PlayerKnowledge;
                         compendiumEvidence.AddRange(interaction.Evidence);
@@ -951,7 +952,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             preparedBattleRewardPreview,
                             appliedBattleReward,
                             appliedBattleRewardLevelUpCount,
-                            appliedWalletTransaction,
+                            appliedCurrencyTransaction,
                             shopTransactions,
                             shopEquipmentChanges,
                             shopOfferDiagnostics,
@@ -1149,8 +1150,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                                     cancellationToken).ConfigureAwait(false);
                             if (rewardApplication.Applied)
                             {
-                                wallet = rewardApplication.Wallet;
-                                appliedWalletTransaction = rewardApplication.WalletTransaction;
+                                wallet = rewardApplication.CurrencyLedger;
+                                appliedCurrencyTransaction = rewardApplication.CurrencyTransaction;
                                 appliedBattleReward = battle.RewardPreview;
                                 appliedBattleRewardLevelUpCount = rewardApplication.Growth.LevelUps.Count;
                                 growthApplied = true;
@@ -1341,7 +1342,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                                 partyRoster = restored.PartyRoster;
                                 field = restored.Field;
                                 inventory = new TrainingAnnexItemActionInventory(restored.Inventory, inventoryTransitions);
-                                wallet = restored.Wallet;
+                                wallet = restored.CurrencyLedger;
                                 sessionProgress = restored.SessionProgress;
                                 compendium = restored.Compendium;
                                 playerBattleKnowledge = restored.PlayerBattleKnowledge;
@@ -1390,7 +1391,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             wallet,
                             commands,
                             cancellationToken).ConfigureAwait(false);
-                        wallet = shopResult.Wallet;
+                        wallet = shopResult.CurrencyLedger;
                         shopTransactions.AddRange(shopResult.Transactions);
                         shopEquipmentChanges.AddRange(shopResult.EquipmentChanges);
                         shopOfferDiagnostics.AddRange(shopResult.OfferDiagnostics);
@@ -1409,7 +1410,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                                     wallet,
                                     commands,
                                     cancellationToken).ConfigureAwait(false);
-                        wallet = recoveryResult.Wallet;
+                        wallet = recoveryResult.CurrencyLedger;
                         hospitalRestorations.AddRange(recoveryResult.Restorations);
                         break;
                     }
@@ -2077,12 +2078,12 @@ internal sealed class CleanTrainingAnnexPlayHost
         BattleRewardResult? preparedBattleRewardPreview,
         BattleRewardResult? appliedBattleReward,
         int appliedBattleRewardLevelUpCount,
-        WalletTransactionResult? appliedWalletTransaction,
+        CurrencyTransactionResult? appliedCurrencyTransaction,
         IReadOnlyList<TrainingAnnexShopTransactionEvidence> shopTransactions,
         IReadOnlyList<TrainingAnnexEquipmentChangeEvidence> shopEquipmentChanges,
         IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> shopOfferDiagnostics,
         IReadOnlyList<TrainingAnnexHospitalRestorationEvidence> hospitalRestorations,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         RuntimeSessionProgressSnapshot sessionProgress,
         int manualSaveCount,
         int manualLoadCount,
@@ -2170,7 +2171,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             preparedBattleRewardPreview,
             appliedBattleReward,
             appliedBattleRewardLevelUpCount,
-            appliedWalletTransaction,
+            appliedCurrencyTransaction,
             shopTransactions.ToArray(),
             shopEquipmentChanges.ToArray(),
             shopOfferDiagnostics.ToArray(),

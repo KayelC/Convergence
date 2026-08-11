@@ -3707,18 +3707,15 @@ Convergence.Fusion.CompendiumRecallTransactionCode.DuplicateRuntimeInstanceId = 
 Convergence.Fusion.CompendiumRecallTransactionCode.EntityNotEligible = 2 -> Convergence.Fusion.CompendiumRecallTransactionCode
 Convergence.Fusion.CompendiumRecallTransactionCode.InsufficientCurrency = 8 -> Convergence.Fusion.CompendiumRecallTransactionCode
 Convergence.Fusion.CompendiumRecallTransactionCode.InvalidEntry = 3 -> Convergence.Fusion.CompendiumRecallTransactionCode
-Convergence.Fusion.CompendiumRecallTransactionCode.InvalidRecallCost = 12 -> Convergence.Fusion.CompendiumRecallTransactionCode
 Convergence.Fusion.CompendiumRecallTransactionCode.MissingEntry = 1 -> Convergence.Fusion.CompendiumRecallTransactionCode
 Convergence.Fusion.CompendiumRecallTransactionCode.RecallUnavailable = 7 -> Convergence.Fusion.CompendiumRecallTransactionCode
 Convergence.Fusion.CompendiumRecallTransactionCode.RosterFull = 6 -> Convergence.Fusion.CompendiumRecallTransactionCode
 Convergence.Fusion.CompendiumRecallTransactionCode.RosterPlacementRejected = 10 -> Convergence.Fusion.CompendiumRecallTransactionCode
-Convergence.Fusion.CompendiumRecallTransactionCode.WalletRejected = 11 -> Convergence.Fusion.CompendiumRecallTransactionCode
 Convergence.Fusion.CompendiumRecallTransactionRequest
 Convergence.Fusion.CompendiumRecallTransactionRequest.<Clone>$() -> Convergence.Fusion.CompendiumRecallTransactionRequest!
 Convergence.Fusion.CompendiumRecallTransactionRequest.BasePrice.get -> int?
 Convergence.Fusion.CompendiumRecallTransactionRequest.CommandAuthorityId.get -> Convergence.Content.ContentId
 Convergence.Fusion.CompendiumRecallTransactionRequest.Compendium.get -> Convergence.Fusion.CompendiumStateSnapshot!
-Convergence.Fusion.CompendiumRecallTransactionRequest.CompendiumRecallTransactionRequest(Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeActorSnapshot! partyOwner, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Content.ContentId entityId, Convergence.Runtime.RuntimeInstanceId recalledInstanceId, Convergence.Content.ContentId commandAuthorityId, Convergence.Content.ContentId teamId, Convergence.Fusion.CompendiumRecallRosterKind rosterKind, int? basePrice = null) -> void
 Convergence.Fusion.CompendiumRecallTransactionRequest.EntityId.get -> Convergence.Content.ContentId
 Convergence.Fusion.CompendiumRecallTransactionRequest.Equals(Convergence.Fusion.CompendiumRecallTransactionRequest? other) -> bool
 Convergence.Fusion.CompendiumRecallTransactionRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
@@ -3726,18 +3723,14 @@ Convergence.Fusion.CompendiumRecallTransactionRequest.PartyOwner.get -> Converge
 Convergence.Fusion.CompendiumRecallTransactionRequest.RecalledInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Fusion.CompendiumRecallTransactionRequest.RosterKind.get -> Convergence.Fusion.CompendiumRecallRosterKind
 Convergence.Fusion.CompendiumRecallTransactionRequest.TeamId.get -> Convergence.Content.ContentId
-Convergence.Fusion.CompendiumRecallTransactionRequest.Wallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Fusion.CompendiumRecallTransactionResult
 Convergence.Fusion.CompendiumRecallTransactionResult.<Clone>$() -> Convergence.Fusion.CompendiumRecallTransactionResult!
 Convergence.Fusion.CompendiumRecallTransactionResult.Actor.get -> Convergence.Encounters.CatalogBattleActor?
 Convergence.Fusion.CompendiumRecallTransactionResult.AfterPartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
-Convergence.Fusion.CompendiumRecallTransactionResult.AfterWallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Fusion.CompendiumRecallTransactionResult.Applied.get -> bool
 Convergence.Fusion.CompendiumRecallTransactionResult.BeforePartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
-Convergence.Fusion.CompendiumRecallTransactionResult.BeforeWallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Fusion.CompendiumRecallTransactionResult.Code.get -> Convergence.Fusion.CompendiumRecallTransactionCode
 Convergence.Fusion.CompendiumRecallTransactionResult.Compendium.get -> Convergence.Fusion.CompendiumStateSnapshot!
-Convergence.Fusion.CompendiumRecallTransactionResult.CompendiumRecallTransactionResult(Convergence.Fusion.CompendiumRecallTransactionCode code, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimePartyRosterSnapshot! beforePartyRoster, Convergence.Runtime.RuntimePartyRosterSnapshot! afterPartyRoster, Convergence.Runtime.RuntimeWalletSnapshot! beforeWallet, Convergence.Runtime.RuntimeWalletSnapshot! afterWallet, int cost = 0, Convergence.Fusion.CompendiumEntrySnapshot? entry = null, Convergence.Encounters.CatalogBattleActor? actor = null, System.Collections.Generic.IEnumerable<Convergence.Fusion.CompendiumRuntimeDiagnostic!>? diagnostics = null) -> void
 Convergence.Fusion.CompendiumRecallTransactionResult.Cost.get -> int
 Convergence.Fusion.CompendiumRecallTransactionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Fusion.CompendiumRuntimeDiagnostic!>!
 Convergence.Fusion.CompendiumRecallTransactionResult.Entry.get -> Convergence.Fusion.CompendiumEntrySnapshot?
@@ -3784,8 +3777,6 @@ Convergence.Fusion.CompendiumRuntimeDiagnosticCode.EntityMissing = 0 -> Converge
 Convergence.Fusion.CompendiumRuntimeDiagnosticCode.EntityNotEligible = 1 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
 Convergence.Fusion.CompendiumRuntimeDiagnosticCode.EquippedSkillNotLearned = 9 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
 Convergence.Fusion.CompendiumRuntimeDiagnosticCode.InsufficientCurrency = 15 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
-Convergence.Fusion.CompendiumRuntimeDiagnosticCode.InvalidIdentifier = 20 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
-Convergence.Fusion.CompendiumRuntimeDiagnosticCode.InvalidRecallCost = 19 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
 Convergence.Fusion.CompendiumRuntimeDiagnosticCode.InvalidStatValue = 3 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
 Convergence.Fusion.CompendiumRuntimeDiagnosticCode.MissingEntry = 10 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
 Convergence.Fusion.CompendiumRuntimeDiagnosticCode.MissingSkill = 8 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
@@ -3794,7 +3785,6 @@ Convergence.Fusion.CompendiumRuntimeDiagnosticCode.RecallUnavailable = 14 -> Con
 Convergence.Fusion.CompendiumRuntimeDiagnosticCode.RosterFull = 13 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
 Convergence.Fusion.CompendiumRuntimeDiagnosticCode.RosterPlacementRejected = 17 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
 Convergence.Fusion.CompendiumRuntimeDiagnosticCode.UnknownStat = 5 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
-Convergence.Fusion.CompendiumRuntimeDiagnosticCode.WalletRejected = 18 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
 Convergence.Fusion.CompendiumRuntimeService
 Convergence.Fusion.CompendiumRuntimeService.CompendiumRuntimeService(Convergence.Catalog.IEntityDefinitionRepository! entities, Convergence.Catalog.ISkillDefinitionRepository! skills, Convergence.Encounters.ICatalogBattleActorFactory! actors, Convergence.Runtime.IResourceGrowthPolicy! resourceGrowth, Convergence.Fusion.ICompendiumService? compendium = null, Convergence.Runtime.IPartyRosterTransitionService? partyRoster = null, Convergence.Runtime.IEconomyTransactionService? economy = null) -> void
 Convergence.Fusion.CompendiumRuntimeService.GetRecallPricing(Convergence.Fusion.CompendiumEntrySnapshot! entry, int? basePrice = null) -> Convergence.Fusion.CompendiumRecallPricingDecision!
@@ -4629,8 +4619,6 @@ Convergence.Runtime.DismissCompanionRequest.OwnerActor.init -> void
 Convergence.Runtime.DismissCompanionRequest.Snapshot.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.DismissCompanionRequest.Snapshot.init -> void
 Convergence.Runtime.EconomyTransactionService
-Convergence.Runtime.EconomyTransactionService.Credit(Convergence.Runtime.RuntimeWalletSnapshot! snapshot, int amount) -> Convergence.Runtime.WalletTransactionResult!
-Convergence.Runtime.EconomyTransactionService.Debit(Convergence.Runtime.RuntimeWalletSnapshot! snapshot, int amount) -> Convergence.Runtime.WalletTransactionResult!
 Convergence.Runtime.EconomyTransactionService.EconomyTransactionService() -> void
 Convergence.Runtime.EncounterPreparationDiagnostic
 Convergence.Runtime.EncounterPreparationDiagnostic.<Clone>$() -> Convergence.Runtime.EncounterPreparationDiagnostic!
@@ -4763,22 +4751,16 @@ Convergence.Runtime.GrowthRulesetServices.StatAllocationService.init -> void
 Convergence.Runtime.HospitalRestorationResult
 Convergence.Runtime.HospitalRestorationResult.<Clone>$() -> Convergence.Runtime.HospitalRestorationResult!
 Convergence.Runtime.HospitalRestorationResult.AfterPatient.get -> Convergence.Runtime.RuntimeHospitalPatientSnapshot!
-Convergence.Runtime.HospitalRestorationResult.AfterWallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Runtime.HospitalRestorationResult.Applied.get -> bool
 Convergence.Runtime.HospitalRestorationResult.BeforePatient.get -> Convergence.Runtime.RuntimeHospitalPatientSnapshot!
-Convergence.Runtime.HospitalRestorationResult.BeforeWallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Runtime.HospitalRestorationResult.Code.get -> Convergence.Runtime.ResourceTransactionCode
 Convergence.Runtime.HospitalRestorationResult.Cost.get -> int
 Convergence.Runtime.HospitalRestorationResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.ResourceTransactionDiagnostic!>!
 Convergence.Runtime.HospitalRestorationResult.Equals(Convergence.Runtime.HospitalRestorationResult? other) -> bool
-Convergence.Runtime.HospitalRestorationResult.HospitalRestorationResult(Convergence.Runtime.ResourceTransactionCode code, Convergence.Runtime.RuntimeHospitalPatientSnapshot! beforePatient, Convergence.Runtime.RuntimeHospitalPatientSnapshot! afterPatient, Convergence.Runtime.RuntimeWalletSnapshot! beforeWallet, Convergence.Runtime.RuntimeWalletSnapshot! afterWallet, int cost, System.Collections.Generic.IEnumerable<Convergence.Runtime.ResourceTransactionDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.HospitalRestorationService
 Convergence.Runtime.HospitalRestorationService.CalculateRestorationCost(Convergence.Runtime.RuntimeHospitalPatientSnapshot! patient) -> int
 Convergence.Runtime.HospitalRestorationService.HospitalRestorationService(Convergence.Runtime.IEconomyTransactionService? economy = null) -> void
-Convergence.Runtime.HospitalRestorationService.Restore(Convergence.Runtime.RuntimeHospitalPatientSnapshot! patient, Convergence.Runtime.RuntimeWalletSnapshot! wallet) -> Convergence.Runtime.HospitalRestorationResult!
 Convergence.Runtime.IEconomyTransactionService
-Convergence.Runtime.IEconomyTransactionService.Credit(Convergence.Runtime.RuntimeWalletSnapshot! snapshot, int amount) -> Convergence.Runtime.WalletTransactionResult!
-Convergence.Runtime.IEconomyTransactionService.Debit(Convergence.Runtime.RuntimeWalletSnapshot! snapshot, int amount) -> Convergence.Runtime.WalletTransactionResult!
 Convergence.Runtime.IEncounterPreparationService
 Convergence.Runtime.IEncounterPreparationService.Prepare(Convergence.Runtime.RuntimeEncounterTriggerRequest! request) -> Convergence.Runtime.EncounterPreparationResult!
 Convergence.Runtime.IEncounterStartPlanner
@@ -4788,7 +4770,6 @@ Convergence.Runtime.IExperienceCurve
 Convergence.Runtime.IExperienceCurve.GetRequiredExperience(int level) -> long
 Convergence.Runtime.IHospitalRestorationService
 Convergence.Runtime.IHospitalRestorationService.CalculateRestorationCost(Convergence.Runtime.RuntimeHospitalPatientSnapshot! patient) -> int
-Convergence.Runtime.IHospitalRestorationService.Restore(Convergence.Runtime.RuntimeHospitalPatientSnapshot! patient, Convergence.Runtime.RuntimeWalletSnapshot! wallet) -> Convergence.Runtime.HospitalRestorationResult!
 Convergence.Runtime.IInventoryTransitionService
 Convergence.Runtime.IInventoryTransitionService.AddItem(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Content.ContentId itemId, int quantity, int? stackLimit = null) -> Convergence.Runtime.InventoryTransitionResult!
 Convergence.Runtime.IInventoryTransitionService.RemoveItem(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Content.ContentId itemId, int quantity) -> Convergence.Runtime.InventoryTransitionResult!
@@ -5887,7 +5868,6 @@ Convergence.Runtime.RuntimeRestoredSession.PartyRoster.get -> Convergence.Runtim
 Convergence.Runtime.RuntimeRestoredSession.Progress.get -> Convergence.Runtime.RuntimeSessionProgressSnapshot!
 Convergence.Runtime.RuntimeRestoredSession.RuntimeRestoredSession(Convergence.Runtime.RuntimeSaveGameSnapshot! snapshot, System.Collections.Generic.IEnumerable<Convergence.Encounters.CatalogBattleActor!>! actors) -> void
 Convergence.Runtime.RuntimeRestoredSession.Snapshot.get -> Convergence.Runtime.RuntimeSaveGameSnapshot!
-Convergence.Runtime.RuntimeRestoredSession.Wallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Runtime.RuntimeRosterKind
 Convergence.Runtime.RuntimeRosterKind.Companion = 1 -> Convergence.Runtime.RuntimeRosterKind
 Convergence.Runtime.RuntimeRosterKind.HostedEntity = 0 -> Convergence.Runtime.RuntimeRosterKind
@@ -5928,7 +5908,6 @@ Convergence.Runtime.RuntimeSaveGameSnapshot.Inventory.get -> Convergence.Runtime
 Convergence.Runtime.RuntimeSaveGameSnapshot.Knowledge.get -> Convergence.Runtime.RuntimeKnowledgeSnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.Session.get -> Convergence.Runtime.RuntimeSessionProgressSnapshot!
-Convergence.Runtime.RuntimeSaveGameSnapshot.Wallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Runtime.RuntimeSaveKind
 Convergence.Runtime.RuntimeSaveKind.Manual = 0 -> Convergence.Runtime.RuntimeSaveKind
 Convergence.Runtime.RuntimeSaveKind.Suspend = 1 -> Convergence.Runtime.RuntimeSaveKind
@@ -6373,11 +6352,9 @@ Convergence.Runtime.RuntimeTimedStateSnapshot.<Clone>$() -> Convergence.Runtime.
 Convergence.Runtime.RuntimeTimedStateSnapshot.Duration.get -> Convergence.Content.DurationDefinition!
 Convergence.Runtime.RuntimeTimedStateSnapshot.Equals(Convergence.Runtime.RuntimeTimedStateSnapshot? other) -> bool
 Convergence.Runtime.RuntimeTimedStateSnapshot.Id.get -> Convergence.Content.ContentId
-Convergence.Runtime.RuntimeWalletSnapshot
-Convergence.Runtime.RuntimeWalletSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeWalletSnapshot!
-Convergence.Runtime.RuntimeWalletSnapshot.Balance.get -> int
-Convergence.Runtime.RuntimeWalletSnapshot.Equals(Convergence.Runtime.RuntimeWalletSnapshot? other) -> bool
-Convergence.Runtime.RuntimeWalletSnapshot.RuntimeWalletSnapshot(int balance) -> void
+Convergence.Runtime.RuntimeCurrencyLedgerSnapshot
+Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.Equals(Convergence.Runtime.RuntimeCurrencyLedgerSnapshot? other) -> bool
 Convergence.Runtime.SelectActiveHostedEntityRequest
 Convergence.Runtime.SelectActiveHostedEntityRequest.<Clone>$() -> Convergence.Runtime.SelectActiveHostedEntityRequest!
 Convergence.Runtime.SelectActiveHostedEntityRequest.Deconstruct(out Convergence.Runtime.RuntimePartyRosterSnapshot! Snapshot, out Convergence.Runtime.RuntimeActorSnapshot! OwnerActor, out Convergence.Runtime.RuntimeInstanceId HostedEntityInstanceId) -> void
@@ -6398,15 +6375,12 @@ Convergence.Runtime.SharedRuntimeMoveListCapacityPolicy.SharedRuntimeMoveListCap
 Convergence.Runtime.ShopTransactionResult
 Convergence.Runtime.ShopTransactionResult.<Clone>$() -> Convergence.Runtime.ShopTransactionResult!
 Convergence.Runtime.ShopTransactionResult.AfterInventory.get -> Convergence.Runtime.RuntimeInventorySnapshot!
-Convergence.Runtime.ShopTransactionResult.AfterWallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Runtime.ShopTransactionResult.Applied.get -> bool
 Convergence.Runtime.ShopTransactionResult.BeforeInventory.get -> Convergence.Runtime.RuntimeInventorySnapshot!
-Convergence.Runtime.ShopTransactionResult.BeforeWallet.get -> Convergence.Runtime.RuntimeWalletSnapshot!
 Convergence.Runtime.ShopTransactionResult.Code.get -> Convergence.Runtime.ResourceTransactionCode
 Convergence.Runtime.ShopTransactionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.ResourceTransactionDiagnostic!>!
 Convergence.Runtime.ShopTransactionResult.Equals(Convergence.Runtime.ShopTransactionResult? other) -> bool
 Convergence.Runtime.ShopTransactionResult.Price.get -> int
-Convergence.Runtime.ShopTransactionResult.ShopTransactionResult(Convergence.Runtime.ResourceTransactionCode code, Convergence.Runtime.RuntimeInventorySnapshot! beforeInventory, Convergence.Runtime.RuntimeInventorySnapshot! afterInventory, Convergence.Runtime.RuntimeWalletSnapshot! beforeWallet, Convergence.Runtime.RuntimeWalletSnapshot! afterWallet, int price, System.Collections.Generic.IEnumerable<Convergence.Runtime.ResourceTransactionDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.ShopTransactionService
 Convergence.Runtime.ShopTransactionService.CalculateBuyPrice(int basePrice, int luck) -> int
 Convergence.Runtime.ShopTransactionService.CalculateSellPrice(int basePrice, int luck) -> int
@@ -6562,15 +6536,14 @@ Convergence.Runtime.TieredRosterCapacityPolicy
 Convergence.Runtime.TieredRosterCapacityPolicy.GetCapacity(Convergence.Runtime.RuntimeRosterKind rosterKind, int ownerLevel) -> int
 Convergence.Runtime.TieredRosterCapacityPolicy.TieredRosterCapacityPolicy(System.Collections.Generic.IEnumerable<Convergence.Runtime.RosterCapacityTier!>! tiers) -> void
 Convergence.Runtime.TieredRosterCapacityPolicy.Tiers.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RosterCapacityTier!>!
-Convergence.Runtime.WalletTransactionResult
-Convergence.Runtime.WalletTransactionResult.<Clone>$() -> Convergence.Runtime.WalletTransactionResult!
-Convergence.Runtime.WalletTransactionResult.After.get -> Convergence.Runtime.RuntimeWalletSnapshot!
-Convergence.Runtime.WalletTransactionResult.Applied.get -> bool
-Convergence.Runtime.WalletTransactionResult.Before.get -> Convergence.Runtime.RuntimeWalletSnapshot!
-Convergence.Runtime.WalletTransactionResult.Code.get -> Convergence.Runtime.ResourceTransactionCode
-Convergence.Runtime.WalletTransactionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.ResourceTransactionDiagnostic!>!
-Convergence.Runtime.WalletTransactionResult.Equals(Convergence.Runtime.WalletTransactionResult? other) -> bool
-Convergence.Runtime.WalletTransactionResult.WalletTransactionResult(Convergence.Runtime.ResourceTransactionCode code, Convergence.Runtime.RuntimeWalletSnapshot! before, Convergence.Runtime.RuntimeWalletSnapshot! after, System.Collections.Generic.IEnumerable<Convergence.Runtime.ResourceTransactionDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.CurrencyTransactionResult
+Convergence.Runtime.CurrencyTransactionResult.<Clone>$() -> Convergence.Runtime.CurrencyTransactionResult!
+Convergence.Runtime.CurrencyTransactionResult.After.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Runtime.CurrencyTransactionResult.Applied.get -> bool
+Convergence.Runtime.CurrencyTransactionResult.Before.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Runtime.CurrencyTransactionResult.Code.get -> Convergence.Runtime.ResourceTransactionCode
+Convergence.Runtime.CurrencyTransactionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.ResourceTransactionDiagnostic!>!
+Convergence.Runtime.CurrencyTransactionResult.Equals(Convergence.Runtime.CurrencyTransactionResult? other) -> bool
 Convergence.TurnEconomy.ActionTokenTurnEconomy
 Convergence.TurnEconomy.ActionTokenTurnEconomy.ActionTokenTurnEconomy() -> void
 Convergence.TurnEconomy.ActionTokenTurnEconomy.Apply(Convergence.Execution.ActionTurnConsumption! consumption) -> void
@@ -8285,9 +8258,9 @@ override Convergence.Runtime.RuntimeStatStageSnapshot.ToString() -> string!
 override Convergence.Runtime.RuntimeTimedStateSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeTimedStateSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeTimedStateSnapshot.ToString() -> string!
-override Convergence.Runtime.RuntimeWalletSnapshot.Equals(object? obj) -> bool
-override Convergence.Runtime.RuntimeWalletSnapshot.GetHashCode() -> int
-override Convergence.Runtime.RuntimeWalletSnapshot.ToString() -> string!
+override Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.GetHashCode() -> int
+override Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.ToString() -> string!
 override Convergence.Runtime.SelectActiveHostedEntityRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.SelectActiveHostedEntityRequest.GetHashCode() -> int
 override Convergence.Runtime.SelectActiveHostedEntityRequest.ToString() -> string!
@@ -8333,9 +8306,9 @@ override Convergence.Runtime.SwapDeployedCompanionRequest.ToString() -> string!
 override Convergence.Runtime.SwapPartyMemberRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.SwapPartyMemberRequest.GetHashCode() -> int
 override Convergence.Runtime.SwapPartyMemberRequest.ToString() -> string!
-override Convergence.Runtime.WalletTransactionResult.Equals(object? obj) -> bool
-override Convergence.Runtime.WalletTransactionResult.GetHashCode() -> int
-override Convergence.Runtime.WalletTransactionResult.ToString() -> string!
+override Convergence.Runtime.CurrencyTransactionResult.Equals(object? obj) -> bool
+override Convergence.Runtime.CurrencyTransactionResult.GetHashCode() -> int
+override Convergence.Runtime.CurrencyTransactionResult.ToString() -> string!
 override Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot.<Clone>$() -> Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot!
 override Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot.Equals(object? obj) -> bool
 override Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot.GetHashCode() -> int
@@ -9465,8 +9438,8 @@ static Convergence.Runtime.RuntimeStatStageSnapshot.operator !=(Convergence.Runt
 static Convergence.Runtime.RuntimeStatStageSnapshot.operator ==(Convergence.Runtime.RuntimeStatStageSnapshot? left, Convergence.Runtime.RuntimeStatStageSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeTimedStateSnapshot.operator !=(Convergence.Runtime.RuntimeTimedStateSnapshot? left, Convergence.Runtime.RuntimeTimedStateSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeTimedStateSnapshot.operator ==(Convergence.Runtime.RuntimeTimedStateSnapshot? left, Convergence.Runtime.RuntimeTimedStateSnapshot? right) -> bool
-static Convergence.Runtime.RuntimeWalletSnapshot.operator !=(Convergence.Runtime.RuntimeWalletSnapshot? left, Convergence.Runtime.RuntimeWalletSnapshot? right) -> bool
-static Convergence.Runtime.RuntimeWalletSnapshot.operator ==(Convergence.Runtime.RuntimeWalletSnapshot? left, Convergence.Runtime.RuntimeWalletSnapshot? right) -> bool
+static Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.operator !=(Convergence.Runtime.RuntimeCurrencyLedgerSnapshot? left, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot? right) -> bool
+static Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.operator ==(Convergence.Runtime.RuntimeCurrencyLedgerSnapshot? left, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot? right) -> bool
 static Convergence.Runtime.SelectActiveHostedEntityRequest.operator !=(Convergence.Runtime.SelectActiveHostedEntityRequest? left, Convergence.Runtime.SelectActiveHostedEntityRequest? right) -> bool
 static Convergence.Runtime.SelectActiveHostedEntityRequest.operator ==(Convergence.Runtime.SelectActiveHostedEntityRequest? left, Convergence.Runtime.SelectActiveHostedEntityRequest? right) -> bool
 static Convergence.Runtime.ShopTransactionResult.operator !=(Convergence.Runtime.ShopTransactionResult? left, Convergence.Runtime.ShopTransactionResult? right) -> bool
@@ -9529,8 +9502,8 @@ static Convergence.Runtime.SwapDeployedCompanionRequest.operator !=(Convergence.
 static Convergence.Runtime.SwapDeployedCompanionRequest.operator ==(Convergence.Runtime.SwapDeployedCompanionRequest? left, Convergence.Runtime.SwapDeployedCompanionRequest? right) -> bool
 static Convergence.Runtime.SwapPartyMemberRequest.operator !=(Convergence.Runtime.SwapPartyMemberRequest? left, Convergence.Runtime.SwapPartyMemberRequest? right) -> bool
 static Convergence.Runtime.SwapPartyMemberRequest.operator ==(Convergence.Runtime.SwapPartyMemberRequest? left, Convergence.Runtime.SwapPartyMemberRequest? right) -> bool
-static Convergence.Runtime.WalletTransactionResult.operator !=(Convergence.Runtime.WalletTransactionResult? left, Convergence.Runtime.WalletTransactionResult? right) -> bool
-static Convergence.Runtime.WalletTransactionResult.operator ==(Convergence.Runtime.WalletTransactionResult? left, Convergence.Runtime.WalletTransactionResult? right) -> bool
+static Convergence.Runtime.CurrencyTransactionResult.operator !=(Convergence.Runtime.CurrencyTransactionResult? left, Convergence.Runtime.CurrencyTransactionResult? right) -> bool
+static Convergence.Runtime.CurrencyTransactionResult.operator ==(Convergence.Runtime.CurrencyTransactionResult? left, Convergence.Runtime.CurrencyTransactionResult? right) -> bool
 static Convergence.TurnEconomy.ActionTokenTurnEconomy.EconomyId.get -> Convergence.Content.ContentId
 static Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot.operator !=(Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot? left, Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot? right) -> bool
 static Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot.operator ==(Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot? left, Convergence.TurnEconomy.ActionTokenTurnEconomySnapshot? right) -> bool
@@ -11612,8 +11585,6 @@ static Convergence.Encounters.BattleTurnEndedEventPayload.operator !=(Convergenc
 static Convergence.Encounters.BattleTurnEndedEventPayload.operator ==(Convergence.Encounters.BattleTurnEndedEventPayload? left, Convergence.Encounters.BattleTurnEndedEventPayload? right) -> bool
 Convergence.Execution.EquipmentBattleBasicAttackProfileSource.EquipmentBattleBasicAttackProfileSource(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Catalog.IEquipmentDefinitionRepository! equipment, Convergence.Content.TargetingDefinition! targeting, Convergence.Runtime.IRuntimeEquipmentProfileResolver? profiles = null) -> void
 Convergence.Runtime.IRuntimeEquipmentProfileResolver.Resolve(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository) -> Convergence.Runtime.RuntimeEquipmentProfile!
-Convergence.Runtime.IShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId) -> Convergence.Runtime.ShopTransactionResult!
-Convergence.Runtime.IShopTransactionService.Sell(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int sellerLuck, Convergence.Runtime.RuntimeInstanceId? soldEquipmentInstanceId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.ShopTransactionResult!
 Convergence.Runtime.ResourceTransactionCode.InvalidEquipmentInstanceId = 16 -> Convergence.Runtime.ResourceTransactionCode
 Convergence.Runtime.ResourceTransactionDiagnostic.EquipmentInstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
 Convergence.Runtime.ResourceTransactionDiagnostic.EquipmentInstanceId.init -> void
@@ -11636,14 +11607,11 @@ Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch = 
 Convergence.Runtime.RuntimeEquipmentProfileResolver.Resolve(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository) -> Convergence.Runtime.RuntimeEquipmentProfile!
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateEquipmentInstanceId = 90 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.EquipmentInstanceIdCollidesWithActor = 91 -> Convergence.Runtime.RuntimeSaveValidationCode
-Convergence.Runtime.ShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId) -> Convergence.Runtime.ShopTransactionResult!
-Convergence.Runtime.ShopTransactionService.Sell(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int sellerLuck, Convergence.Runtime.RuntimeInstanceId? soldEquipmentInstanceId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.ShopTransactionResult!
 override Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.ToString() -> string!
 static Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.operator !=(Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? left, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.operator ==(Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? left, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? right) -> bool
-const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 17 -> int
 Convergence.Content.EquipmentDefinition.EquipmentDefinition(Convergence.Content.ContentId id, string! displayName, string! description, Convergence.Content.ContentId slotId, decimal baseValue, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? grantedSkillIds = null, Convergence.Content.EquipmentWeaponProfileDefinition? weapon = null, Convergence.Content.EquipmentArmorProfileDefinition? armor = null, Convergence.Content.EquipmentBootsProfileDefinition? boots = null, Convergence.Content.EquipmentAccessoryProfileDefinition? accessory = null) -> void
 Convergence.Content.EquipmentDefinition.SlotId.get -> Convergence.Content.ContentId
 Convergence.Runtime.EquipmentSlotLayoutCode
@@ -11674,8 +11642,6 @@ Convergence.Runtime.IInventoryTransitionService.AddEquipment(Convergence.Runtime
 Convergence.Runtime.IInventoryTransitionService.RemoveEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.ContentId slotId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.InventoryTransitionResult!
 Convergence.Runtime.InventoryTransitionService.AddEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot! equipment, Convergence.Content.ContentId slotId) -> Convergence.Runtime.InventoryTransitionResult!
 Convergence.Runtime.InventoryTransitionService.RemoveEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.ContentId slotId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.InventoryTransitionResult!
-Convergence.Runtime.ResourceTransactionDiagnostic.Deconstruct(out Convergence.Runtime.ResourceTransactionCode Code, out string! Message, out Convergence.Content.ContentId? ContentId, out Convergence.Content.ContentId? SlotId, out Convergence.Runtime.RuntimeInstanceId? EquipmentInstanceId) -> void
-Convergence.Runtime.ResourceTransactionDiagnostic.ResourceTransactionDiagnostic(Convergence.Runtime.ResourceTransactionCode Code, string! Message, Convergence.Content.ContentId? ContentId = null, Convergence.Content.ContentId? SlotId = null, Convergence.Runtime.RuntimeInstanceId? EquipmentInstanceId = null) -> void
 Convergence.Runtime.ResourceTransactionDiagnostic.SlotId.get -> Convergence.Content.ContentId?
 Convergence.Runtime.ResourceTransactionDiagnostic.SlotId.init -> void
 Convergence.Runtime.RuntimeEquipmentProfile.EquippedDefinitions.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Content.EquipmentDefinition!>!
@@ -11693,7 +11659,6 @@ Convergence.Runtime.RuntimeInventorySnapshot.OwnedEquipmentInstances.get -> Syst
 Convergence.Runtime.RuntimeInventorySnapshot.OwnsEquipment(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.ContentId slotId) -> bool
 Convergence.Runtime.RuntimeInventorySnapshot.RuntimeInventorySnapshot(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, int>>? itemQuantities = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentInstanceSnapshot!>!>>? ownedEquipmentInstances = null) -> void
 Convergence.Runtime.RuntimeInventorySnapshot.TryGetEquipmentInstance(Convergence.Runtime.RuntimeInstanceId instanceId, out Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? instance, out Convergence.Content.ContentId slotId) -> bool
-Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeWalletSnapshot! wallet, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 17) -> void
 Convergence.Runtime.RuntimeSaveValidator.RuntimeSaveValidator(Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null, Convergence.Runtime.IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null) -> void
 Convergence.Runtime.RuntimeShopOfferResolutionCode.EquipmentSlotProfileMismatch = 6 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolver.RuntimeShopOfferResolver(Convergence.Runtime.IEquipmentSlotLayoutPolicy? slotLayout = null) -> void
@@ -11719,3 +11684,72 @@ static Convergence.Runtime.StandardEquipmentSlotIds.Armor.get -> Convergence.Con
 static Convergence.Runtime.StandardEquipmentSlotIds.Boots.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardEquipmentSlotIds.Weapon.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardEquipmentSlotLayoutPolicy.Instance.get -> Convergence.Runtime.StandardEquipmentSlotLayoutPolicy!
+const Convergence.Runtime.RuntimeSaveGameSnapshot.CurrentContractVersion = 18 -> int
+Convergence.Fusion.CompendiumRecallTransactionCode.CurrencyNotFound = 11 -> Convergence.Fusion.CompendiumRecallTransactionCode
+Convergence.Fusion.CompendiumRecallTransactionCode.CurrencyTransactionRejected = 12 -> Convergence.Fusion.CompendiumRecallTransactionCode
+Convergence.Fusion.CompendiumRecallTransactionCode.InvalidRecallCost = 13 -> Convergence.Fusion.CompendiumRecallTransactionCode
+Convergence.Fusion.CompendiumRecallTransactionRequest.CompendiumRecallTransactionRequest(Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeActorSnapshot! partyOwner, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Content.ContentId currencyId, Convergence.Content.ContentId entityId, Convergence.Runtime.RuntimeInstanceId recalledInstanceId, Convergence.Content.ContentId commandAuthorityId, Convergence.Content.ContentId teamId, Convergence.Fusion.CompendiumRecallRosterKind rosterKind, int? basePrice = null) -> void
+Convergence.Fusion.CompendiumRecallTransactionRequest.CurrencyId.get -> Convergence.Content.ContentId
+Convergence.Fusion.CompendiumRecallTransactionRequest.CurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Fusion.CompendiumRecallTransactionResult.AfterCurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Fusion.CompendiumRecallTransactionResult.BeforeCurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Fusion.CompendiumRecallTransactionResult.CompendiumRecallTransactionResult(Convergence.Fusion.CompendiumRecallTransactionCode code, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimePartyRosterSnapshot! beforePartyRoster, Convergence.Runtime.RuntimePartyRosterSnapshot! afterPartyRoster, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! beforeCurrencyLedger, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! afterCurrencyLedger, Convergence.Content.ContentId currencyId, int cost = 0, Convergence.Fusion.CompendiumEntrySnapshot? entry = null, Convergence.Encounters.CatalogBattleActor? actor = null, System.Collections.Generic.IEnumerable<Convergence.Fusion.CompendiumRuntimeDiagnostic!>? diagnostics = null) -> void
+Convergence.Fusion.CompendiumRecallTransactionResult.CurrencyId.get -> Convergence.Content.ContentId
+Convergence.Fusion.CompendiumRuntimeDiagnosticCode.CurrencyNotFound = 18 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
+Convergence.Fusion.CompendiumRuntimeDiagnosticCode.CurrencyTransactionRejected = 19 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
+Convergence.Fusion.CompendiumRuntimeDiagnosticCode.InvalidIdentifier = 21 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
+Convergence.Fusion.CompendiumRuntimeDiagnosticCode.InvalidRecallCost = 20 -> Convergence.Fusion.CompendiumRuntimeDiagnosticCode
+Convergence.Runtime.CurrencyTransactionResult.Amount.get -> int
+Convergence.Runtime.CurrencyTransactionResult.CurrencyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.CurrencyTransactionResult.CurrencyTransactionResult(Convergence.Runtime.ResourceTransactionCode code, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! before, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! after, Convergence.Content.ContentId currencyId, int amount, System.Collections.Generic.IEnumerable<Convergence.Runtime.ResourceTransactionDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.EconomyTransactionService.Credit(Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! ledger, Convergence.Content.ContentId currencyId, int amount) -> Convergence.Runtime.CurrencyTransactionResult!
+Convergence.Runtime.EconomyTransactionService.Debit(Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! ledger, Convergence.Content.ContentId currencyId, int amount) -> Convergence.Runtime.CurrencyTransactionResult!
+Convergence.Runtime.HospitalRestorationResult.AfterCurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Runtime.HospitalRestorationResult.BeforeCurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Runtime.HospitalRestorationResult.CurrencyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.HospitalRestorationResult.HospitalRestorationResult(Convergence.Runtime.ResourceTransactionCode code, Convergence.Runtime.RuntimeHospitalPatientSnapshot! beforePatient, Convergence.Runtime.RuntimeHospitalPatientSnapshot! afterPatient, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! beforeCurrencyLedger, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! afterCurrencyLedger, Convergence.Content.ContentId currencyId, int cost, System.Collections.Generic.IEnumerable<Convergence.Runtime.ResourceTransactionDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.HospitalRestorationService.Restore(Convergence.Runtime.RuntimeHospitalPatientSnapshot! patient, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Content.ContentId currencyId) -> Convergence.Runtime.HospitalRestorationResult!
+Convergence.Runtime.IEconomyTransactionService.Credit(Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! ledger, Convergence.Content.ContentId currencyId, int amount) -> Convergence.Runtime.CurrencyTransactionResult!
+Convergence.Runtime.IEconomyTransactionService.Debit(Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! ledger, Convergence.Content.ContentId currencyId, int amount) -> Convergence.Runtime.CurrencyTransactionResult!
+Convergence.Runtime.IHospitalRestorationService.Restore(Convergence.Runtime.RuntimeHospitalPatientSnapshot! patient, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Content.ContentId currencyId) -> Convergence.Runtime.HospitalRestorationResult!
+Convergence.Runtime.IShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId) -> Convergence.Runtime.ShopTransactionResult!
+Convergence.Runtime.IShopTransactionService.Sell(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int sellerLuck, Convergence.Runtime.RuntimeInstanceId? soldEquipmentInstanceId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.ShopTransactionResult!
+Convergence.Runtime.ResourceTransactionCode.AmbiguousCurrencyLedger = 22 -> Convergence.Runtime.ResourceTransactionCode
+Convergence.Runtime.ResourceTransactionCode.CurrencyNotFound = 20 -> Convergence.Runtime.ResourceTransactionCode
+Convergence.Runtime.ResourceTransactionCode.DuplicateCurrencyId = 18 -> Convergence.Runtime.ResourceTransactionCode
+Convergence.Runtime.ResourceTransactionCode.EmptyCurrencyLedger = 21 -> Convergence.Runtime.ResourceTransactionCode
+Convergence.Runtime.ResourceTransactionCode.InvalidCurrencyId = 17 -> Convergence.Runtime.ResourceTransactionCode
+Convergence.Runtime.ResourceTransactionCode.NegativeCurrencyBalance = 19 -> Convergence.Runtime.ResourceTransactionCode
+Convergence.Runtime.ResourceTransactionDiagnostic.CurrencyId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.ResourceTransactionDiagnostic.CurrencyId.init -> void
+Convergence.Runtime.ResourceTransactionDiagnostic.Deconstruct(out Convergence.Runtime.ResourceTransactionCode Code, out string! Message, out Convergence.Content.ContentId? ContentId, out Convergence.Content.ContentId? SlotId, out Convergence.Runtime.RuntimeInstanceId? EquipmentInstanceId, out Convergence.Content.ContentId? CurrencyId) -> void
+Convergence.Runtime.ResourceTransactionDiagnostic.ResourceTransactionDiagnostic(Convergence.Runtime.ResourceTransactionCode Code, string! Message, Convergence.Content.ContentId? ContentId = null, Convergence.Content.ContentId? SlotId = null, Convergence.Runtime.RuntimeInstanceId? EquipmentInstanceId = null, Convergence.Content.ContentId? CurrencyId = null) -> void
+Convergence.Runtime.RuntimeCurrencyBalanceSnapshot
+Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeCurrencyBalanceSnapshot!
+Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.Balance.get -> int
+Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.CurrencyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.Equals(Convergence.Runtime.RuntimeCurrencyBalanceSnapshot? other) -> bool
+Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.RuntimeCurrencyBalanceSnapshot(Convergence.Content.ContentId currencyId, int balance) -> void
+Convergence.Runtime.RuntimeCurrencyLedgerException
+Convergence.Runtime.RuntimeCurrencyLedgerException.Diagnostic.get -> Convergence.Runtime.ResourceTransactionDiagnostic!
+Convergence.Runtime.RuntimeCurrencyLedgerException.RuntimeCurrencyLedgerException(Convergence.Runtime.ResourceTransactionDiagnostic! diagnostic, string? parameterName = null) -> void
+Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.Balances.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, int>!
+Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.GetRequiredBalance(Convergence.Content.ContentId currencyId) -> int
+Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.GetSingleCurrency() -> Convergence.Runtime.RuntimeCurrencyBalanceSnapshot!
+Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.RuntimeCurrencyLedgerSnapshot(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, int>>? balances = null) -> void
+Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.TryGetBalance(Convergence.Content.ContentId currencyId, out int balance) -> bool
+Convergence.Runtime.RuntimeRestoredSession.CurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Runtime.RuntimeSaveGameSnapshot.CurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 18) -> void
+Convergence.Runtime.ShopTransactionResult.AfterCurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Runtime.ShopTransactionResult.BeforeCurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Runtime.ShopTransactionResult.CurrencyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.ShopTransactionResult.ShopTransactionResult(Convergence.Runtime.ResourceTransactionCode code, Convergence.Runtime.RuntimeInventorySnapshot! beforeInventory, Convergence.Runtime.RuntimeInventorySnapshot! afterInventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! beforeCurrencyLedger, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! afterCurrencyLedger, Convergence.Content.ContentId currencyId, int price, System.Collections.Generic.IEnumerable<Convergence.Runtime.ResourceTransactionDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.ShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId) -> Convergence.Runtime.ShopTransactionResult!
+Convergence.Runtime.ShopTransactionService.Sell(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int sellerLuck, Convergence.Runtime.RuntimeInstanceId? soldEquipmentInstanceId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.ShopTransactionResult!
+override Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.GetHashCode() -> int
+override Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.ToString() -> string!
+static Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.operator !=(Convergence.Runtime.RuntimeCurrencyBalanceSnapshot? left, Convergence.Runtime.RuntimeCurrencyBalanceSnapshot? right) -> bool
+static Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.operator ==(Convergence.Runtime.RuntimeCurrencyBalanceSnapshot? left, Convergence.Runtime.RuntimeCurrencyBalanceSnapshot? right) -> bool
+static Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.Single(Convergence.Content.ContentId currencyId, int balance) -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!

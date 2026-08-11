@@ -226,11 +226,17 @@ public sealed class GodotIntegrationContractTests
                 visitedNodeIds: [Id("floor_1"), Id("floor_5"), Id("floor_7")],
                 unlockedCheckpointIds: [Id("terminal_1"), Id("terminal_5"), Id("terminal_7")],
                 defeatedBossIds: [Id("demo_guardian")]));
+        var currencyLedger = new RuntimeCurrencyLedgerSnapshot(
+        [
+            new KeyValuePair<ContentId, int>(Id("credits"), 125),
+            new KeyValuePair<ContentId, int>(Id("arena_tokens"), 4)
+        ]);
         var saveStore = new GodotSaveSnapshotStore();
         saveStore.Save(
             "slot_01",
             [actorSnapshot],
             inventorySnapshot,
+            currencyLedger,
             fieldSnapshot,
             sceneRegistry.Snapshot());
 
@@ -247,6 +253,8 @@ public sealed class GodotIntegrationContractTests
         RuntimeEquipmentInstanceSnapshot restoredEquipment = Assert.Single(
             restored.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Weapon));
         Assert.Equal(equipmentInstanceId, restoredEquipment.InstanceId);
+        Assert.Equal(125, restored.CurrencyLedger.GetRequiredBalance(Id("credits")));
+        Assert.Equal(4, restored.CurrencyLedger.GetRequiredBalance(Id("arena_tokens")));
         Assert.Equal(
             fieldSnapshot.Navigation.CurrentLocationId,
             restored.Field.Navigation.CurrentLocationId);
@@ -507,6 +515,7 @@ public sealed class GodotIntegrationContractTests
     private sealed record GodotSaveSnapshot(
         IReadOnlyList<RuntimeActorSnapshot> Actors,
         RuntimeInventorySnapshot Inventory,
+        RuntimeCurrencyLedgerSnapshot CurrencyLedger,
         RuntimeFieldSnapshot Field,
         IReadOnlyDictionary<RuntimeInstanceId, GodotSceneHandle> SceneHandles);
 
@@ -518,12 +527,14 @@ public sealed class GodotIntegrationContractTests
             string slot,
             IEnumerable<RuntimeActorSnapshot> actors,
             RuntimeInventorySnapshot inventory,
+            RuntimeCurrencyLedgerSnapshot currencyLedger,
             RuntimeFieldSnapshot field,
             IReadOnlyDictionary<RuntimeInstanceId, GodotSceneHandle> sceneHandles)
         {
             _slots[slot] = new GodotSaveSnapshot(
                 Array.AsReadOnly(actors.ToArray()),
                 inventory,
+                currencyLedger,
                 field,
                 new ReadOnlyDictionary<RuntimeInstanceId, GodotSceneHandle>(
                     new Dictionary<RuntimeInstanceId, GodotSceneHandle>(sceneHandles)));

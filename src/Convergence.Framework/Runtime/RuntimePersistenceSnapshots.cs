@@ -333,7 +333,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 17;
+    public const int CurrentContractVersion = 18;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -341,7 +341,7 @@ public sealed record RuntimeSaveGameSnapshot
         IEnumerable<RuntimeActorSnapshot> actors,
         RuntimePartyRosterSnapshot partyRoster,
         RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
         RuntimeFieldSnapshot? field,
         CompendiumStateSnapshot compendium,
         RuntimeKnowledgeSnapshot knowledge,
@@ -361,7 +361,7 @@ public sealed record RuntimeSaveGameSnapshot
         Actors = RuntimePersistenceCollections.List(actors);
         PartyRoster = partyRoster ?? throw new ArgumentNullException(nameof(partyRoster));
         Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
-        Wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
+        CurrencyLedger = currencyLedger ?? throw new ArgumentNullException(nameof(currencyLedger));
         Field = field;
         Compendium = compendium ?? throw new ArgumentNullException(nameof(compendium));
         Knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
@@ -376,7 +376,7 @@ public sealed record RuntimeSaveGameSnapshot
     public IReadOnlyList<RuntimeActorSnapshot> Actors { get; }
     public RuntimePartyRosterSnapshot PartyRoster { get; }
     public RuntimeInventorySnapshot Inventory { get; }
-    public RuntimeWalletSnapshot Wallet { get; }
+    public RuntimeCurrencyLedgerSnapshot CurrencyLedger { get; }
     public RuntimeFieldSnapshot? Field { get; }
     public CompendiumStateSnapshot Compendium { get; }
     public RuntimeKnowledgeSnapshot Knowledge { get; }

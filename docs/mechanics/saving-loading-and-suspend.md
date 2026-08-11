@@ -8,7 +8,7 @@ No Framework public API exposes `System.Text.Json`, filesystem paths, Godot reso
 
 ## Save Contents
 
-The current runtime save contract is version `17`.
+The current runtime save contract is version `18`.
 
 `RuntimeSaveGameSnapshot` contains:
 
@@ -19,7 +19,7 @@ The current runtime save contract is version `17`.
 - party, reserve, Active Hosted Entity, Hosted Entity Roster, and Companion Roster references;
 - inventory-owned equipment instances and per-actor equipped-instance
   references;
-- wallet;
+- immutable currency balances keyed by currency content ID;
 - optional navigation and dungeon traversal progress;
 - Compendium entries;
 - player knowledge;
@@ -33,7 +33,7 @@ for required modules they do not use:
 
 - an inventory with no quantities or owned equipment instances;
 - actors whose equipment snapshots contain no equipped-instance references;
-- a wallet with balance `0`;
+- an empty currency ledger, or the game's explicit currency entries with zero balances;
 - an empty Compendium and knowledge snapshot;
 - session progress with no counters, flags, elapsed time, or moon phase;
 - a party roster that identifies the saved session owner but has empty active,
@@ -144,6 +144,12 @@ supplies no automatic v16-to-v17 migration for these unreleased formats.
 The restore profile carries both numeric contributions and granted skill IDs;
 passive grants are therefore validated and restored through the same passive
 snapshot integrity boundary as learned passive skills.
+
+Version 18 replaces the unnamed wallet balance with an immutable currency
+ledger keyed by qualified `ContentId`. Every transaction names its currency;
+single-currency hosts may use the explicit convenience accessor only when the
+ledger contains exactly one entry. Convergence supplies no automatic
+v17-to-v18 migration for these unreleased formats.
 
 ## Related Guidance
 

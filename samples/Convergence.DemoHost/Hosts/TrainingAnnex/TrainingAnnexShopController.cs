@@ -13,8 +13,8 @@ internal sealed record TrainingAnnexShopTransactionEvidence(
     bool IsPurchase,
     ResourceTransactionCode Code,
     int Price,
-    int WalletBefore,
-    int WalletAfter,
+    int CurrencyLedgerBefore,
+    int CurrencyLedgerAfter,
     int OwnedCountBefore,
     int OwnedCountAfter,
     ContentId? EquipmentSlotId,
@@ -28,7 +28,7 @@ internal sealed record TrainingAnnexEquipmentChangeEvidence(
     bool Applied);
 
 internal sealed record TrainingAnnexShopInteractionResult(
-    RuntimeWalletSnapshot Wallet,
+    RuntimeCurrencyLedgerSnapshot CurrencyLedger,
     IReadOnlyList<TrainingAnnexShopTransactionEvidence> Transactions,
     IReadOnlyList<TrainingAnnexEquipmentChangeEvidence> EquipmentChanges,
     IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> OfferDiagnostics);
@@ -63,7 +63,7 @@ internal sealed class TrainingAnnexShopController
         IRuntimeEquipmentProfileResolver equipmentProfileResolver,
         TrainingAnnexRuntimeActor player,
         TrainingAnnexItemActionInventory inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         CancellationToken cancellationToken)
     {
@@ -77,7 +77,8 @@ internal sealed class TrainingAnnexShopController
         var equipmentEvidence = new List<TrainingAnnexEquipmentChangeEvidence>();
 
         await _eventSink.PublishAsync(
-            $"Shop opened: {shop.DisplayName}; wallet {wallet.Balance} C.",
+            $"Shop opened: {shop.DisplayName}; wallet " +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(wallet)} C.",
             cancellationToken).ConfigureAwait(false);
         foreach (RuntimeShopOfferResolutionDiagnostic diagnostic in offerDiagnostics)
         {
@@ -152,7 +153,7 @@ internal sealed class TrainingAnnexShopController
         IRuntimeEquipmentProfileResolver equipmentProfileResolver,
         TrainingAnnexRuntimeActor player,
         TrainingAnnexItemActionInventory inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         int luck,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         List<TrainingAnnexShopTransactionEvidence> transactionEvidence,
@@ -196,6 +197,7 @@ internal sealed class TrainingAnnexShopController
         ShopTransactionResult purchase = shopTransactions.Buy(
             inventory.Snapshot,
             wallet,
+            TrainingAnnexHostSupport.CreditsCurrency,
             offer.Runtime,
             luck,
             purchasedEquipmentInstanceId);
@@ -217,7 +219,7 @@ internal sealed class TrainingAnnexShopController
         }
 
         inventory.Replace(purchase.AfterInventory);
-        wallet = purchase.AfterWallet;
+        wallet = purchase.AfterCurrencyLedger;
         await PublishShopTransactionSuccessAsync("Bought", offer, purchase, inventory.Snapshot, cancellationToken)
             .ConfigureAwait(false);
 
@@ -247,7 +249,7 @@ internal sealed class TrainingAnnexShopController
         IShopTransactionService shopTransactions,
         TrainingAnnexRuntimeActor player,
         TrainingAnnexItemActionInventory inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         int luck,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         List<TrainingAnnexShopTransactionEvidence> transactionEvidence,
@@ -299,6 +301,7 @@ internal sealed class TrainingAnnexShopController
         ShopTransactionResult sale = shopTransactions.Sell(
             inventory.Snapshot,
             wallet,
+            TrainingAnnexHostSupport.CreditsCurrency,
             offer.Runtime,
             luck,
             soldEquipmentInstanceId,
@@ -321,7 +324,7 @@ internal sealed class TrainingAnnexShopController
         }
 
         inventory.Replace(sale.AfterInventory);
-        wallet = sale.AfterWallet;
+        wallet = sale.AfterCurrencyLedger;
         await PublishShopTransactionSuccessAsync("Sold", offer, sale, inventory.Snapshot, cancellationToken)
             .ConfigureAwait(false);
 
@@ -459,9 +462,9 @@ internal sealed class TrainingAnnexShopController
 
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateShopSessionMenu(
         ShopCatalogDefinition shop,
-        RuntimeWalletSnapshot wallet) =>
+        RuntimeCurrencyLedgerSnapshot wallet) =>
         new(
-            $"{shop.DisplayName} - Wallet {wallet.Balance} C",
+            $"{shop.DisplayName} - Wallet {TrainingAnnexHostSupport.GetCreditsBalance(wallet)} C",
             [
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.ShopBuy,
@@ -478,7 +481,7 @@ internal sealed class TrainingAnnexShopController
         ShopCatalogDefinition shop,
         IEnumerable<TrainingAnnexResolvedShopOffer> offers,
         RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         IShopTransactionService shopTransactions,
         int luck)
     {
@@ -492,6 +495,7 @@ internal sealed class TrainingAnnexShopController
                 ShopTransactionResult assessment = shopTransactions.Buy(
                     inventory,
                     wallet,
+                    TrainingAnnexHostSupport.CreditsCurrency,
                     offer.Runtime,
                     luck,
                     equipmentInstanceId);
@@ -525,7 +529,7 @@ internal sealed class TrainingAnnexShopController
         ShopCatalogDefinition shop,
         IEnumerable<TrainingAnnexResolvedShopOffer> offers,
         RuntimeInventorySnapshot inventory,
-        RuntimeWalletSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot wallet,
         RuntimeEquipmentSnapshot equipment,
         IShopTransactionService shopTransactions,
         int luck)
@@ -537,6 +541,7 @@ internal sealed class TrainingAnnexShopController
                 ShopTransactionResult assessment = shopTransactions.Sell(
                     inventory,
                     wallet,
+                    TrainingAnnexHostSupport.CreditsCurrency,
                     offer.Runtime,
                     luck,
                     FindSellableEquipmentInstance(inventory, offer.Runtime, equipment),
@@ -637,8 +642,8 @@ internal sealed class TrainingAnnexShopController
             isPurchase,
             result.Code,
             result.Price,
-            result.BeforeWallet.Balance,
-            result.AfterWallet.Balance,
+            TrainingAnnexHostSupport.GetCreditsBalance(result.BeforeCurrencyLedger),
+            TrainingAnnexHostSupport.GetCreditsBalance(result.AfterCurrencyLedger),
             OwnedCount(result.BeforeInventory, offer),
             OwnedCount(result.AfterInventory, offer),
             offer.EquipmentSlotId,
@@ -724,7 +729,9 @@ internal sealed class TrainingAnnexShopController
             ? $"quantity {result.BeforeInventory.GetQuantity(offer.Runtime.ContentId)}->{inventory.GetQuantity(offer.Runtime.ContentId)}"
             : $"owned {OwnedCount(result.BeforeInventory, offer.Runtime)}->{OwnedCount(inventory, offer.Runtime)}";
         await _eventSink.PublishAsync(
-            $"Shop transaction: {action} {offer.DisplayName} for {result.Price} C; wallet {result.BeforeWallet.Balance}->{result.AfterWallet.Balance}; {owned}.",
+            $"Shop transaction: {action} {offer.DisplayName} for {result.Price} C; wallet " +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(result.BeforeCurrencyLedger)}->" +
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(result.AfterCurrencyLedger)}; {owned}.",
             cancellationToken).ConfigureAwait(false);
     }
 }

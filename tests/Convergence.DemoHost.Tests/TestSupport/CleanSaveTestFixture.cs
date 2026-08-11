@@ -76,7 +76,9 @@ internal static class CleanSaveTestFixture
                                 Id("convergence.catalog_surface_sample:shortsword_sample"))
                         ])
                 ]),
-            new RuntimeWalletSnapshot(1234),
+            RuntimeCurrencyLedgerSnapshot.Single(
+                Id("convergence.catalog_surface_sample:credits"),
+                1234),
             field ?? (includeDefaultField
                 ? new RuntimeFieldSnapshot(
                     new RuntimeNavigationSnapshot(Id("convergence.catalog_surface_sample:sample_depths_floor_5")),

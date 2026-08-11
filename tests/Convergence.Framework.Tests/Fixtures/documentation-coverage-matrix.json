@@ -265,7 +265,7 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "Order 7 equipment-instance ownership, slot layouts, equipped skill grants, and combat contributions are implemented, but the mechanics page remains existing-unreviewed until the remaining stock, pricing, recovery, currency, and closure checkpoints are complete."
+        "reason": "Order 7 equipment-instance ownership, slot layouts, equipped skill grants, combat contributions, and typed currency-ledger authority are implemented, but the mechanics page remains existing-unreviewed until the remaining stock, pricing, recovery, and closure checkpoints are complete."
       },
       "developerGuide": {
         "state": "missing",
@@ -275,7 +275,7 @@
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/gameplay-systems.md"],
-        "reason": "Order 7 is open; equipment-instance/save authority, slot layouts, and combat contributions are implemented, while atomic stock, currency, pricing, and recovery invariants still need a dedicated reviewed technical page."
+        "reason": "Order 7 is open; equipment-instance/save authority, slot layouts, combat contributions, and typed currency-ledger authority are implemented, while atomic stock, pricing, and recovery invariants still need a dedicated reviewed technical page."
       }
     },
     {
@@ -381,7 +381,7 @@
           "docs/developer-guide/actors-and-runtime-state.md",
           "docs/godot-integration-contract.md"
         ],
-        "reason": "The reviewed guides cover host-owned encoding, save v17 actor state, restore profiles, aggregate restore, and scene application."
+        "reason": "The reviewed guides cover host-owned encoding, save v18 actor state, restore profiles, aggregate restore, and scene application."
       },
       "technical": {
         "state": "reviewed",

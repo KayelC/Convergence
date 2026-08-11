@@ -230,7 +230,7 @@ Battle Knowledge has two state authorities. Durable entity-defense facts use
 `RuntimeKnowledgeSnapshot`; current-target facts and Analyze disclosures use
 `RuntimeEncounterKnowledgeSnapshot`. Canonical Analyze returns
 `BattleAnalysisResult` and commits through the encounter transition. Save
-contract v17 contains only the durable knowledge snapshot and deliberately
+contract v18 contains only the durable knowledge snapshot and deliberately
 omits current encounter analysis.
 
 Every runtime actor exposes one immutable `RuntimeCombatProfileIdentitySnapshot`
@@ -272,11 +272,12 @@ application as an independently timed signed contribution, derives a bounded
 aggregate, refreshes the oldest same-sign contribution at a configured cap,
 and uses the same typed lifecycle-boundary contract per contribution.
 
-Save contract v17 retains the canonical roster and pending skill-choice
+Save contract v18 retains the canonical roster and pending skill-choice
 authorities established by v9 and stores complete stat-modifier policy state.
 It also stores and validates each actor's combat-profile source and revision,
 inventory-owned equipment instances, and actor loadout instance references.
-The aggregate exposes no second root equipment authority.
+The aggregate exposes no second root equipment authority and carries an
+immutable currency ledger keyed by `ContentId` rather than an unnamed balance.
 `RuntimeSessionRestoreService` binds retained modifier policies explicitly,
 derives the Active Hosted Entity dependency from `RuntimePartyRosterSnapshot`,
 restores owned actors first, and returns a normalized aggregate whose derived

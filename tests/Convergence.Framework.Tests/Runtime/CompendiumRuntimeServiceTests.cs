@@ -12,6 +12,8 @@ namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class CompendiumRuntimeServiceTests
 {
+    private static readonly ContentId CreditsCurrency = Id("credits");
+
     [Fact]
     public void RegisterActor_CapturesAnImmutableCatalogIdentifiedSnapshot()
     {
@@ -203,13 +205,14 @@ public sealed class CompendiumRuntimeServiceTests
             new CompendiumStateSnapshot(),
             sourceSnapshot).After;
         RuntimePartyRosterSnapshot party = EmptyParty();
-        RuntimeWalletSnapshot wallet = new(10_000);
+        RuntimeCurrencyLedgerSnapshot wallet = RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 10_000);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
             OwnerActor(party),
             wallet,
+            CreditsCurrency,
             context.Entity.Id,
             RuntimeInstanceId.Parse("recalled_ashling"),
             Id("player_controller"),
@@ -218,7 +221,9 @@ public sealed class CompendiumRuntimeServiceTests
 
         Assert.True(result.Applied);
         Assert.Equal(CompendiumRecallTransactionCode.Applied, result.Code);
-        Assert.Equal(wallet.Balance - result.Cost, result.AfterWallet.Balance);
+        Assert.Equal(
+            wallet.GetRequiredBalance(CreditsCurrency) - result.Cost,
+            result.AfterCurrencyLedger.GetRequiredBalance(CreditsCurrency));
         RuntimeActorReferenceSnapshot stockEntry = Assert.Single(result.AfterPartyRoster.CompanionRoster);
         Assert.Equal(RuntimeInstanceId.Parse("recalled_ashling"), stockEntry.InstanceId);
         CatalogBattleActor recalled = Assert.IsType<CatalogBattleActor>(result.Actor);
@@ -237,13 +242,13 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Empty(recalledSnapshot.BattleStatus.Ailments);
         Assert.Empty(recalledSnapshot.Equipment.EquippedInstanceIds);
         Assert.Empty(party.CompanionRoster);
-        Assert.Equal(10_000, wallet.Balance);
+        Assert.Equal(10_000, wallet.GetRequiredBalance(CreditsCurrency));
     }
 
     [Theory]
     [InlineData(true, 10_000, CompendiumRecallTransactionCode.DuplicateOwned)]
     [InlineData(false, 0, CompendiumRecallTransactionCode.InsufficientCurrency)]
-    public void Recall_RejectionsPreservePartyAndWallet(
+    public void Recall_RejectionsPreservePartyAndCurrencyLedger(
         bool alreadyOwned,
         int credits,
         CompendiumRecallTransactionCode expected)
@@ -258,13 +263,14 @@ public sealed class CompendiumRuntimeServiceTests
             companionRoster: alreadyOwned
                 ? [Reference(source)]
                 : []);
-        RuntimeWalletSnapshot wallet = new(credits);
+        RuntimeCurrencyLedgerSnapshot wallet = RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, credits);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
             OwnerActor(party),
             wallet,
+            CreditsCurrency,
             context.Entity.Id,
             RuntimeInstanceId.Parse("recalled_ashling"),
             Id("player_controller"),
@@ -274,7 +280,7 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.False(result.Applied);
         Assert.Equal(expected, result.Code);
         Assert.Same(party, result.AfterPartyRoster);
-        Assert.Same(wallet, result.AfterWallet);
+        Assert.Same(wallet, result.AfterCurrencyLedger);
         Assert.Null(result.Actor);
     }
 
@@ -284,13 +290,14 @@ public sealed class CompendiumRuntimeServiceTests
         TestContext context = CreateContext();
         var service = context.CreateService();
         RuntimePartyRosterSnapshot party = EmptyParty();
-        RuntimeWalletSnapshot wallet = new(10_000);
+        RuntimeCurrencyLedgerSnapshot wallet = RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 10_000);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             new CompendiumStateSnapshot(),
             party,
             OwnerActor(party),
             wallet,
+            CreditsCurrency,
             default,
             default,
             default,
@@ -301,11 +308,11 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Equal(CompendiumRecallTransactionCode.InvalidEntry, result.Code);
         Assert.Equal(CompendiumRuntimeDiagnosticCode.InvalidIdentifier, Assert.Single(result.Diagnostics).Code);
         Assert.Same(party, result.AfterPartyRoster);
-        Assert.Same(wallet, result.AfterWallet);
+        Assert.Same(wallet, result.AfterCurrencyLedger);
     }
 
     [Fact]
-    public void Recall_WithoutPricingPolicyIsUnavailableAndFreePolicyRequiresNoWalletBalance()
+    public void Recall_WithoutPricingPolicyIsUnavailableAndFreePolicyRequiresNoCurrencyLedgerBalance()
     {
         TestContext context = CreateContext();
         CatalogBattleActor source = context.CreateActor("owned_ashling");
@@ -313,7 +320,7 @@ public sealed class CompendiumRuntimeServiceTests
             new CompendiumStateSnapshot(),
             source.State.ToSnapshot()).After;
         RuntimePartyRosterSnapshot party = EmptyParty();
-        RuntimeWalletSnapshot emptyWallet = new(0);
+        RuntimeCurrencyLedgerSnapshot emptyCurrencyLedger = RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 0);
         var registrationOnly = new CompendiumRuntimeService(
             context.Catalog,
             context.Catalog,
@@ -330,7 +337,8 @@ public sealed class CompendiumRuntimeServiceTests
             compendium,
             party,
             OwnerActor(party),
-            emptyWallet,
+            emptyCurrencyLedger,
+            CreditsCurrency,
             context.Entity.Id,
             RuntimeInstanceId.Parse("unavailable_recall"),
             Id("player_controller"),
@@ -340,7 +348,8 @@ public sealed class CompendiumRuntimeServiceTests
             compendium,
             party,
             OwnerActor(party),
-            emptyWallet,
+            emptyCurrencyLedger,
+            CreditsCurrency,
             context.Entity.Id,
             RuntimeInstanceId.Parse("free_recall"),
             Id("player_controller"),
@@ -352,11 +361,11 @@ public sealed class CompendiumRuntimeServiceTests
 
         Assert.Equal(CompendiumRecallTransactionCode.RecallUnavailable, unavailable.Code);
         Assert.Same(party, unavailable.AfterPartyRoster);
-        Assert.Same(emptyWallet, unavailable.AfterWallet);
+        Assert.Same(emptyCurrencyLedger, unavailable.AfterCurrencyLedger);
         Assert.Null(unavailable.Actor);
         Assert.True(free.Applied);
         Assert.Equal(0, free.Cost);
-        Assert.Same(emptyWallet, free.AfterWallet);
+        Assert.Same(emptyCurrencyLedger, free.AfterCurrencyLedger);
         Assert.Single(free.AfterPartyRoster.CompanionRoster);
     }
 
@@ -384,13 +393,14 @@ public sealed class CompendiumRuntimeServiceTests
             context.CreateActor("registered_ashling").State.ToSnapshot()).After;
         RuntimeInstanceId recalledId = RuntimeInstanceId.Parse("recalled_collision");
         RuntimePartyRosterSnapshot party = PartyWithCollision(collisionLocation, recalledId);
-        RuntimeWalletSnapshot wallet = new(10_000);
+        RuntimeCurrencyLedgerSnapshot wallet = RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 10_000);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
             OwnerActor(party),
             wallet,
+            CreditsCurrency,
             context.Entity.Id,
             recalledId,
             Id("player_controller"),
@@ -401,8 +411,8 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Equal(CompendiumRecallTransactionCode.DuplicateRuntimeInstanceId, result.Code);
         Assert.Same(party, result.BeforePartyRoster);
         Assert.Same(party, result.AfterPartyRoster);
-        Assert.Same(wallet, result.BeforeWallet);
-        Assert.Same(wallet, result.AfterWallet);
+        Assert.Same(wallet, result.BeforeCurrencyLedger);
+        Assert.Same(wallet, result.AfterCurrencyLedger);
         Assert.Null(result.Actor);
         CompendiumRuntimeDiagnostic diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(CompendiumRuntimeDiagnosticCode.DuplicateRuntimeInstanceId, diagnostic.Code);
@@ -420,13 +430,14 @@ public sealed class CompendiumRuntimeServiceTests
             new CompendiumStateSnapshot(),
             source.State.ToSnapshot()).After;
         RuntimePartyRosterSnapshot party = EmptyParty();
-        RuntimeWalletSnapshot wallet = new(10_000);
+        RuntimeCurrencyLedgerSnapshot wallet = RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 10_000);
 
         CompendiumRecallTransactionResult full = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
             OwnerActor(party),
             wallet,
+            CreditsCurrency,
             context.Entity.Id,
             RuntimeInstanceId.Parse("recalled_ashling"),
             Id("player_controller"),
@@ -435,7 +446,7 @@ public sealed class CompendiumRuntimeServiceTests
 
         Assert.Equal(CompendiumRecallTransactionCode.RosterFull, full.Code);
         Assert.Same(party, full.AfterPartyRoster);
-        Assert.Same(wallet, full.AfterWallet);
+        Assert.Same(wallet, full.AfterCurrencyLedger);
     }
 
     [Fact]
@@ -459,13 +470,14 @@ public sealed class CompendiumRuntimeServiceTests
                 ])
         ]);
         RuntimePartyRosterSnapshot party = EmptyParty();
-        RuntimeWalletSnapshot wallet = new(int.MaxValue);
+        RuntimeCurrencyLedgerSnapshot wallet = RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, int.MaxValue);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
             OwnerActor(party),
             wallet,
+            CreditsCurrency,
             context.Entity.Id,
             RuntimeInstanceId.Parse("recalled_ashling"),
             Id("player_controller"),
@@ -474,7 +486,7 @@ public sealed class CompendiumRuntimeServiceTests
 
         Assert.Equal(CompendiumRecallTransactionCode.InvalidRecallCost, result.Code);
         Assert.Same(party, result.AfterPartyRoster);
-        Assert.Same(wallet, result.AfterWallet);
+        Assert.Same(wallet, result.AfterCurrencyLedger);
         Assert.Equal(CompendiumRuntimeDiagnosticCode.InvalidRecallCost, Assert.Single(result.Diagnostics).Code);
     }
 
@@ -510,13 +522,14 @@ public sealed class CompendiumRuntimeServiceTests
                 equippedSkillIds: [equippedSkillId, equippedSkillId])
         ]);
         RuntimePartyRosterSnapshot party = EmptyParty();
-        RuntimeWalletSnapshot wallet = new(10_000);
+        RuntimeCurrencyLedgerSnapshot wallet = RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 10_000);
 
         CompendiumRecallTransactionResult result = service.Recall(new CompendiumRecallTransactionRequest(
             compendium,
             party,
             OwnerActor(party),
             wallet,
+            CreditsCurrency,
             context.Entity.Id,
             RuntimeInstanceId.Parse("invalid_recall"),
             Id("player_controller"),
@@ -527,8 +540,8 @@ public sealed class CompendiumRuntimeServiceTests
         Assert.Equal(CompendiumRecallTransactionCode.InvalidEntry, result.Code);
         Assert.Same(party, result.BeforePartyRoster);
         Assert.Same(party, result.AfterPartyRoster);
-        Assert.Same(wallet, result.BeforeWallet);
-        Assert.Same(wallet, result.AfterWallet);
+        Assert.Same(wallet, result.BeforeCurrencyLedger);
+        Assert.Same(wallet, result.AfterCurrencyLedger);
         Assert.Equal(0, result.Cost);
         Assert.Null(result.Actor);
         Assert.Equal(0, actors.CreateCalls);
@@ -1201,13 +1214,19 @@ public sealed class CompendiumRuntimeServiceTests
 
         public int SpendCalls { get; private set; }
 
-        public WalletTransactionResult Credit(RuntimeWalletSnapshot snapshot, int amount) =>
-            _inner.Credit(snapshot, amount);
+        public CurrencyTransactionResult Credit(
+            RuntimeCurrencyLedgerSnapshot snapshot,
+            ContentId currencyId,
+            int amount) =>
+            _inner.Credit(snapshot, currencyId, amount);
 
-        public WalletTransactionResult Debit(RuntimeWalletSnapshot snapshot, int amount)
+        public CurrencyTransactionResult Debit(
+            RuntimeCurrencyLedgerSnapshot snapshot,
+            ContentId currencyId,
+            int amount)
         {
             SpendCalls++;
-            return _inner.Debit(snapshot, amount);
+            return _inner.Debit(snapshot, currencyId, amount);
         }
     }
 

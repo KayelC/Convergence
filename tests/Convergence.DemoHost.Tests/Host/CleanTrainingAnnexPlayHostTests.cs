@@ -181,11 +181,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, summary.StartupSnapshotDiagnosticCount);
         Assert.Null(summary.PreparedBattleRewardPreview);
         Assert.Null(summary.AppliedBattleReward);
-        Assert.Null(summary.AppliedWalletTransaction);
+        Assert.Null(summary.AppliedCurrencyTransaction);
         Assert.Empty(summary.ShopTransactions);
         Assert.Empty(summary.ShopEquipmentChanges);
         Assert.Empty(summary.HospitalRestorations);
-        Assert.Equal(0, summary.Wallet.Balance);
+        Assert.Equal(0, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Empty(summary.SessionProgress.Counters);
         Assert.Empty(summary.SessionProgress.Flags);
         Assert.Equal(0, summary.ManualSaveCount);
@@ -543,7 +543,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(100));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
 
         int exitCode = await host.RunAsync();
 
@@ -560,11 +560,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(RecruitmentTransactionErrorCode.None, negotiation.RecruitmentErrorCode);
         Assert.Equal(PartyRosterTransitionCode.Applied, negotiation.RosterTransitionCode);
         Assert.True(negotiation.Recruited);
-        Assert.Equal(100, negotiation.WalletBefore);
-        Assert.Equal(50, negotiation.WalletAfter);
+        Assert.Equal(100, negotiation.CurrencyLedgerBefore);
+        Assert.Equal(50, negotiation.CurrencyLedgerAfter);
         Assert.Equal(2, negotiation.CompanionRosterCountBefore);
         Assert.Equal(3, negotiation.CompanionRosterCountAfter);
-        Assert.Equal(50, summary.Wallet.Balance);
+        Assert.Equal(50, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Contains(
             summary.PartyRoster.CompanionRoster,
             actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
@@ -739,11 +739,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
-    public async Task CleanTrainingAnnexPlay_RecallsRegisteredActorAtomicallyThroughRosterAndWallet()
+    public async Task CleanTrainingAnnexPlay_RecallsRegisteredActorAtomicallyThroughRosterAndCurrencyLedger()
     {
         var io = new ScriptedGameIO().QueueMenu(20, 0, 3, 15, 4, 20, 1, 0, 9);
         using var output = new StringWriter();
-        var host = CreateHost(io, output, initialWallet: new RuntimeWalletSnapshot(5_000));
+        var host = CreateHost(io, output, initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(5_000));
 
         int exitCode = await host.RunAsync();
 
@@ -756,11 +756,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.True(recall.Applied);
         Assert.Equal(CompendiumRecallTransactionCode.Applied, recall.RecallCode);
         Assert.Equal(3_850, recall.Cost);
-        Assert.Equal(5_000, recall.WalletBefore);
-        Assert.Equal(1_150, recall.WalletAfter);
+        Assert.Equal(5_000, recall.CurrencyLedgerBefore);
+        Assert.Equal(1_150, recall.CurrencyLedgerAfter);
         Assert.Equal(2, recall.CompanionRosterBefore);
         Assert.Equal(3, recall.CompanionRosterAfter);
-        Assert.Equal(1_150, summary.Wallet.Balance);
+        Assert.Equal(1_150, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Contains(summary.PartyRoster.CompanionRoster, actor =>
             actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1") &&
             actor.EntityDefinitionId == Qualified("ward_shell"));
@@ -773,11 +773,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
-    public async Task CleanTrainingAnnexPlay_RecallRejectionDoesNotChangeRosterOrSpendWallet()
+    public async Task CleanTrainingAnnexPlay_RecallRejectionDoesNotChangeRosterOrSpendCurrencyLedger()
     {
         var io = new ScriptedGameIO().QueueMenu(20, 0, 3, 15, 4, 20, 1, 0, 9);
         using var output = new StringWriter();
-        var host = CreateHost(io, output, initialWallet: new RuntimeWalletSnapshot(0));
+        var host = CreateHost(io, output, initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(0));
 
         int exitCode = await host.RunAsync();
 
@@ -786,7 +786,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         TrainingAnnexCompendiumEvidence recall = summary.CompendiumEvidence[1];
         Assert.False(recall.Applied);
         Assert.Equal(CompendiumRecallTransactionCode.InsufficientCurrency, recall.RecallCode);
-        Assert.Equal(0, summary.Wallet.Balance);
+        Assert.Equal(0, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(2, summary.PartyRoster.CompanionRoster.Count);
         Assert.DoesNotContain(summary.PartyRoster.CompanionRoster, actor =>
             actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1"));
@@ -827,7 +827,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     {
         var io = new ScriptedGameIO().QueueMenu(20, 0, 3, 15, 4, 20, 1, 0, 10, 0, 10, 1, 9);
         using var output = new StringWriter();
-        var host = CreateHost(io, output, initialWallet: new RuntimeWalletSnapshot(5_000));
+        var host = CreateHost(io, output, initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(5_000));
 
         int exitCode = await host.RunAsync();
 
@@ -835,7 +835,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Equal(1, summary.ManualSaveCount);
         Assert.Equal(1, summary.ManualLoadCount);
-        Assert.Equal(1_150, summary.Wallet.Balance);
+        Assert.Equal(1_150, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Contains(summary.PartyRoster.CompanionRoster, actor =>
             actor.InstanceId == RuntimeInstanceId.Parse("recall_ward_shell_1") &&
             actor.EntityDefinitionId == Qualified("ward_shell"));
@@ -1101,7 +1101,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(100));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
 
         int exitCode = await host.RunAsync();
 
@@ -1234,7 +1234,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             catalog,
             roster,
             party,
-            new RuntimeWalletSnapshot(100),
+            TrainingAnnexHostSupport.CreateCreditsLedger(100),
             new EconomyTransactionService(),
             new HashSet<ContentId>(),
             commands,
@@ -1244,7 +1244,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(Qualified("bramble_runner"), evidence.TargetEntityId);
         Assert.Equal(RuntimeInstanceId.Parse("enemy_bramble_runner"), evidence.TargetInstanceId);
         Assert.True(evidence.Recruited);
-        Assert.Equal(50, evidence.WalletAfter);
+        Assert.Equal(50, evidence.CurrencyLedgerAfter);
         Assert.Contains(
             result.PartyRoster.CompanionRoster,
             actor => actor.InstanceId == RuntimeInstanceId.Parse("enemy_bramble_runner"));
@@ -1272,7 +1272,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             io,
             output,
             new NegotiationDemandAmountContentPackTextSource(ContentRoot(), 30),
-            initialWallet: new RuntimeWalletSnapshot(100));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
 
         int exitCode = await host.RunAsync();
 
@@ -1281,9 +1281,9 @@ public sealed class CleanTrainingAnnexPlayHostTests
         TrainingAnnexNegotiationEvidence negotiation = Assert.Single(summary.Negotiations);
         Assert.Equal(NegotiationOutcomeKind.Success, negotiation.Outcome);
         Assert.Equal(30, negotiation.CreditsSpent);
-        Assert.Equal(100, negotiation.WalletBefore);
-        Assert.Equal(70, negotiation.WalletAfter);
-        Assert.Equal(70, summary.Wallet.Balance);
+        Assert.Equal(100, negotiation.CurrencyLedgerBefore);
+        Assert.Equal(70, negotiation.CurrencyLedgerAfter);
+        Assert.Equal(70, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Contains(
             "Recruitment applied: Bramble Runner joined Companion roster; wallet 100->70 C; Companion roster 2->3.",
             output.ToString(),
@@ -1299,7 +1299,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(100));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
 
         int exitCode = await host.RunAsync();
 
@@ -1311,11 +1311,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(negotiation.Recruited);
         Assert.Null(negotiation.RecruitmentStatus);
         Assert.Null(negotiation.RosterTransitionCode);
-        Assert.Equal(100, negotiation.WalletBefore);
-        Assert.Equal(100, negotiation.WalletAfter);
+        Assert.Equal(100, negotiation.CurrencyLedgerBefore);
+        Assert.Equal(100, negotiation.CurrencyLedgerAfter);
         Assert.Equal(2, negotiation.CompanionRosterCountBefore);
         Assert.Equal(2, negotiation.CompanionRosterCountAfter);
-        Assert.Equal(100, summary.Wallet.Balance);
+        Assert.Equal(100, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.DoesNotContain(
             summary.PartyRoster.CompanionRoster,
             actor => actor.InstanceId == RuntimeInstanceId.Parse("replacement_bramble_runner"));
@@ -1331,7 +1331,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(100));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
 
         int exitCode = await host.RunAsync();
 
@@ -1342,7 +1342,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(NegotiationOutcomeReason.Cancelled, negotiation.Reason);
         Assert.Equal(0, negotiation.CreditsSpent);
         Assert.False(negotiation.Recruited);
-        Assert.Equal(100, summary.Wallet.Balance);
+        Assert.Equal(100, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(2, summary.PartyRoster.CompanionRoster.Count);
         Assert.Contains(
             "Negotiation event: Information; Bramble Runner seems disappointed...",
@@ -1363,7 +1363,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(100));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
 
         int exitCode = await host.RunAsync();
 
@@ -1374,7 +1374,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(NegotiationOutcomeReason.Cancelled, negotiation.Reason);
         Assert.Equal(0, negotiation.CreditsSpent);
         Assert.False(negotiation.Recruited);
-        Assert.Equal(100, summary.Wallet.Balance);
+        Assert.Equal(100, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(2, summary.PartyRoster.CompanionRoster.Count);
         Assert.DoesNotContain("CreditsRefused", output.ToString(), StringComparison.Ordinal);
         Assert.Contains(
@@ -1392,7 +1392,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(40));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(40));
 
         int exitCode = await host.RunAsync();
 
@@ -1405,11 +1405,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(negotiation.Recruited);
         Assert.Null(negotiation.RecruitmentStatus);
         Assert.Null(negotiation.RosterTransitionCode);
-        Assert.Equal(40, negotiation.WalletBefore);
-        Assert.Equal(40, negotiation.WalletAfter);
+        Assert.Equal(40, negotiation.CurrencyLedgerBefore);
+        Assert.Equal(40, negotiation.CurrencyLedgerAfter);
         Assert.Equal(2, negotiation.CompanionRosterCountBefore);
         Assert.Equal(2, negotiation.CompanionRosterCountAfter);
-        Assert.Equal(40, summary.Wallet.Balance);
+        Assert.Equal(40, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.DoesNotContain(
             summary.Commands,
             command => command == CleanTrainingAnnexPlayCommand.SelectNegotiationDemand);
@@ -1431,7 +1431,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(100));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
 
         int exitCode = await host.RunAsync();
 
@@ -1446,8 +1446,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(second.Recruited);
         Assert.Equal(3, second.CompanionRosterCountBefore);
         Assert.Equal(3, second.CompanionRosterCountAfter);
-        Assert.Equal(50, second.WalletBefore);
-        Assert.Equal(50, second.WalletAfter);
+        Assert.Equal(50, second.CurrencyLedgerBefore);
+        Assert.Equal(50, second.CurrencyLedgerAfter);
         Assert.Single(
             summary.PartyRoster.CompanionRoster,
             actor => actor.EntityDefinitionId == Qualified("bramble_runner"));
@@ -1647,18 +1647,18 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(1, summary.AppliedBattleReward!.TotalExperience);
         Assert.Equal(14, summary.AppliedBattleReward.TotalCurrency);
         Assert.Equal(0, summary.AppliedBattleRewardLevelUpCount);
-        WalletTransactionResult walletTransaction = Assert.IsType<WalletTransactionResult>(
-            summary.AppliedWalletTransaction);
+        CurrencyTransactionResult walletTransaction = Assert.IsType<CurrencyTransactionResult>(
+            summary.AppliedCurrencyTransaction);
         Assert.True(walletTransaction.Applied);
-        Assert.Equal(0, walletTransaction.Before.Balance);
-        Assert.Equal(14, walletTransaction.After.Balance);
+        Assert.Equal(0, walletTransaction.Before.GetSingleCurrency().Balance);
+        Assert.Equal(14, walletTransaction.After.GetSingleCurrency().Balance);
         Assert.True(summary.GrowthApplied);
         Assert.Equal(0, summary.LevelUpCount);
         Assert.Equal(0, summary.PlayerProgression.Experience);
         Assert.Equal(0, summary.PlayerProgression.LifetimeExperience);
         Assert.Equal(1, summary.ActiveHostedEntityProgression?.Experience);
         Assert.Equal(1, summary.ActiveHostedEntityProgression?.LifetimeExperience);
-        Assert.Equal(14, summary.Wallet.Balance);
+        Assert.Equal(14, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(1, summary.SessionProgress.Counters[ContentId.Parse("training_annex_victories")]);
         Assert.Equal(1, summary.SessionProgress.Counters[ContentId.Parse("training_annex_exp")]);
         Assert.Equal(14, summary.SessionProgress.Counters[ContentId.Parse("training_annex_credits")]);
@@ -1698,8 +1698,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.True(summary.PreparedBattleStarted);
         Assert.Equal(BattleEncounterOutcome.Cancelled, summary.PreparedBattleOutcome);
         Assert.Null(summary.AppliedBattleReward);
-        Assert.Null(summary.AppliedWalletTransaction);
-        Assert.Equal(0, summary.Wallet.Balance);
+        Assert.Null(summary.AppliedCurrencyTransaction);
+        Assert.Equal(0, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Empty(summary.SessionProgress.Counters);
         Assert.Contains(Qualified("practice_blade"), summary.ExecutedBattleActionIds);
         Assert.Contains(Qualified("ash_spark"), summary.ExecutedBattleActionIds);
@@ -2887,7 +2887,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(100));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
 
         int exitCode = await host.RunAsync();
 
@@ -2900,12 +2900,12 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(ShopContentKind.Item, transaction.ContentKind);
         Assert.Equal(ResourceTransactionCode.Applied, transaction.Code);
         Assert.Equal(47, transaction.Price);
-        Assert.Equal(100, transaction.WalletBefore);
-        Assert.Equal(53, transaction.WalletAfter);
+        Assert.Equal(100, transaction.CurrencyLedgerBefore);
+        Assert.Equal(53, transaction.CurrencyLedgerAfter);
         Assert.Equal(1, transaction.OwnedCountBefore);
         Assert.Equal(2, transaction.OwnedCountAfter);
         Assert.Empty(summary.ShopEquipmentChanges);
-        Assert.Equal(53, summary.Wallet.Balance);
+        Assert.Equal(53, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(2, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(
             [
@@ -2930,7 +2930,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(100));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
 
         int exitCode = await host.RunAsync();
 
@@ -2941,15 +2941,15 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(Qualified("padded_jacket"), transaction.OfferId);
         Assert.Equal(ShopContentKind.Equipment, transaction.ContentKind);
         Assert.Equal(84, transaction.Price);
-        Assert.Equal(100, transaction.WalletBefore);
-        Assert.Equal(16, transaction.WalletAfter);
+        Assert.Equal(100, transaction.CurrencyLedgerBefore);
+        Assert.Equal(16, transaction.CurrencyLedgerAfter);
         Assert.Equal(0, transaction.OwnedCountBefore);
         Assert.Equal(1, transaction.OwnedCountAfter);
         Assert.Equal(Qualified("padded_jacket"), equipment.EquipmentId);
         Assert.Equal(StandardEquipmentSlotIds.Armor, equipment.SlotId);
         Assert.True(equipment.Applied);
         Assert.Equal(ResourceTransactionCode.Applied, equipment.Code);
-        Assert.Equal(16, summary.Wallet.Balance);
+        Assert.Equal(16, summary.CurrencyLedger.GetSingleCurrency().Balance);
         RuntimeEquipmentInstanceSnapshot paddedJacket = Assert.Single(
             summary.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Armor),
             instance => instance.DefinitionId == Qualified("padded_jacket"));
@@ -3005,7 +3005,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Empty(summary.ShopTransactions);
         Assert.Empty(summary.ShopEquipmentChanges);
-        Assert.Equal(0, summary.Wallet.Balance);
+        Assert.Equal(0, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.DoesNotContain(
             summary.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Armor),
@@ -3038,7 +3038,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             io,
             output,
             new RuntimeUnsupportedShopOfferContentPackTextSource(ContentRoot()),
-            initialWallet: new RuntimeWalletSnapshot(100));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
 
         int exitCode = await host.RunAsync();
 
@@ -3049,7 +3049,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(Qualified("annex_tonic"), diagnostic.ContentId);
         Assert.Empty(summary.ShopTransactions);
         Assert.Empty(summary.ShopEquipmentChanges);
-        Assert.Equal(100, summary.Wallet.Balance);
+        Assert.Equal(100, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
 
         GameIoMenuCall buyMenu = Assert.Single(io.Menus, menu => menu.Header == "Training Supply - Buy");
@@ -3088,11 +3088,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(Qualified("annex_tonic"), transaction.OfferId);
         Assert.Equal(ResourceTransactionCode.Applied, transaction.Code);
         Assert.Equal(28, transaction.Price);
-        Assert.Equal(0, transaction.WalletBefore);
-        Assert.Equal(28, transaction.WalletAfter);
+        Assert.Equal(0, transaction.CurrencyLedgerBefore);
+        Assert.Equal(28, transaction.CurrencyLedgerAfter);
         Assert.Equal(1, transaction.OwnedCountBefore);
         Assert.Equal(0, transaction.OwnedCountAfter);
-        Assert.Equal(28, summary.Wallet.Balance);
+        Assert.Equal(28, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(0, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
 
         GameIoMenuCall sellMenu = Assert.Single(io.Menus, menu => menu.Header == "Training Supply - Sell");
@@ -3112,14 +3112,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
-    public async Task CleanTrainingAnnexPlay_RecoveryFacilityRestoresResourcesAndSpendsWallet()
+    public async Task CleanTrainingAnnexPlay_RecoveryFacilityRestoresResourcesAndSpendsCurrencyLedger()
     {
         var io = new ScriptedGameIO().QueueMenu(3, 12, 0, 9);
         using var output = new StringWriter();
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(20));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(20));
 
         int exitCode = await host.RunAsync();
 
@@ -3129,8 +3129,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(RuntimeInstanceId.Parse("echo_adept"), restoration.PatientId);
         Assert.Equal(ResourceTransactionCode.Applied, restoration.Code);
         Assert.Equal(10, restoration.Cost);
-        Assert.Equal(20, restoration.WalletBefore);
-        Assert.Equal(10, restoration.WalletAfter);
+        Assert.Equal(20, restoration.CurrencyLedgerBefore);
+        Assert.Equal(10, restoration.CurrencyLedgerAfter);
         Assert.Equal(70, restoration.HpBefore);
         Assert.Equal(80, restoration.HpAfter);
         Assert.Equal(80, restoration.MaxHp);
@@ -3141,7 +3141,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(restoration.HasAilmentAfter);
         Assert.False(restoration.HadEncounterPersistenceBefore);
         Assert.False(restoration.HasEncounterPersistenceAfter);
-        Assert.Equal(10, summary.Wallet.Balance);
+        Assert.Equal(10, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(80, Resource(summary, "hp").Current);
         Assert.Equal(
             [
@@ -3209,7 +3209,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         TrainingAnnexRecoveryFacilityResult result = await controller.OpenAsync(
             new HospitalRestorationService(),
             player,
-            new RuntimeWalletSnapshot(20),
+            TrainingAnnexHostSupport.CreateCreditsLedger(20),
             commands,
             CancellationToken.None);
 
@@ -3219,7 +3219,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.False(restoration.HasAilmentAfter);
         Assert.True(restoration.HadEncounterPersistenceBefore);
         Assert.False(restoration.HasEncounterPersistenceAfter);
-        Assert.Equal(10, result.Wallet.Balance);
+        Assert.Equal(10, result.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(80, state.GetRequiredResource(StandardProgressionIds.Hp).Current);
         Assert.Empty(state.Ailments);
         Assert.False(state.IsGuarding);
@@ -3248,7 +3248,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, exitCode);
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Empty(summary.HospitalRestorations);
-        Assert.Equal(0, summary.Wallet.Balance);
+        Assert.Equal(0, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(70, Resource(summary, "hp").Current);
 
         GameIoMenuCall recoveryMenu = Assert.Single(io.Menus, menu => menu.Header == "Recovery Facility");
@@ -3274,14 +3274,14 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(20));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(20));
 
         int exitCode = await host.RunAsync();
 
         Assert.Equal(0, exitCode);
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         Assert.Empty(summary.HospitalRestorations);
-        Assert.Equal(20, summary.Wallet.Balance);
+        Assert.Equal(20, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(80, Resource(summary, "hp").Current);
 
         GameIoMenuCall recoveryMenu = Assert.Single(io.Menus, menu => menu.Header == "Recovery Facility");
@@ -3483,7 +3483,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
-    public async Task CleanTrainingAnnexPlay_ManualSaveLoadRestoresProgressionInventoryWalletFieldAndKnowledge()
+    public async Task CleanTrainingAnnexPlay_ManualSaveLoadRestoresProgressionInventoryCurrencyLedgerFieldAndKnowledge()
     {
         var io = new ScriptedGameIO().QueueMenu(10, 0, 4, 10, 1, 9);
         using var output = new StringWriter();
@@ -3505,7 +3505,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, summary.PlayerProgression.LifetimeExperience);
         Assert.Equal(0, summary.PlayerProgression.UnspentStatPoints);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
-        Assert.Equal(0, summary.Wallet.Balance);
+        Assert.Equal(0, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(Qualified("staging_area"), summary.FinalLocationId);
         Assert.Empty(summary.BattleKnowledge.ElementalAffinities);
         Assert.Equal(
@@ -4104,7 +4104,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.TrainingAnnexEntrance)),
             new RuntimeKnowledgeSnapshot(),
             new RuntimeInventorySnapshot([new KeyValuePair<ContentId, int>(Qualified("annex_tonic"), 1)]),
-            new RuntimeWalletSnapshot(50),
+            TrainingAnnexHostSupport.CreateCreditsLedger(50),
             new RuntimeSessionProgressSnapshot(),
             encounterTriggerConsumed: true,
             preparedBattleStarted: true,
@@ -4178,7 +4178,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
-    public async Task TrainingAnnexBattleRewardApplicator_RejectedWalletDoesNotMutateProgression()
+    public async Task TrainingAnnexBattleRewardApplicator_RejectedCurrencyLedgerDoesNotMutateProgression()
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();
         TrainingAnnexActorRoster roster = TrainingAnnexHostSupport.CreateActorRoster(catalog).RequireRoster();
@@ -4205,20 +4205,20 @@ public sealed class CleanTrainingAnnexPlayHostTests
             catalog,
             new RuntimeEquipmentProfile(),
             new RejectingEconomyTransactionService(),
-            new RuntimeWalletSnapshot(0),
+            TrainingAnnexHostSupport.CreateCreditsLedger(0),
             CancellationToken.None);
 
         Assert.False(result.Applied);
         Assert.Equal(before.Progression, growthActor.Actor.State.ToSnapshot().Progression);
-        Assert.Equal(0, result.Wallet.Balance);
-        Assert.False(result.WalletTransaction.Applied);
-        Assert.Equal(ResourceTransactionCode.InsufficientCurrency, result.WalletTransaction.Code);
-        Assert.Same(result.WalletTransaction.Before, result.WalletTransaction.After);
+        Assert.Equal(0, result.CurrencyLedger.GetSingleCurrency().Balance);
+        Assert.False(result.CurrencyTransaction.Applied);
+        Assert.Equal(ResourceTransactionCode.InsufficientCurrency, result.CurrencyTransaction.Code);
+        Assert.Same(result.CurrencyTransaction.Before, result.CurrencyTransaction.After);
         Assert.Contains("[InsufficientCurrency]: blocked for test", output.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task CleanTrainingAnnexPlay_RewardAddsToInjectedWalletThroughBoundEconomy()
+    public async Task CleanTrainingAnnexPlay_RewardAddsToInjectedCurrencyLedgerThroughBoundEconomy()
     {
         var io = new ScriptedGameIO().QueueMenu(
             6, 6, 9, 10,
@@ -4232,18 +4232,18 @@ public sealed class CleanTrainingAnnexPlayHostTests
         var host = CreateHost(
             io,
             output,
-            initialWallet: new RuntimeWalletSnapshot(100));
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
 
         int exitCode = await host.RunAsync();
 
         Assert.Equal(0, exitCode);
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
-        WalletTransactionResult transaction = Assert.IsType<WalletTransactionResult>(
-            summary.AppliedWalletTransaction);
+        CurrencyTransactionResult transaction = Assert.IsType<CurrencyTransactionResult>(
+            summary.AppliedCurrencyTransaction);
         Assert.True(transaction.Applied);
-        Assert.Equal(100, transaction.Before.Balance);
-        Assert.Equal(114, transaction.After.Balance);
-        Assert.Equal(114, summary.Wallet.Balance);
+        Assert.Equal(100, transaction.Before.GetSingleCurrency().Balance);
+        Assert.Equal(114, transaction.After.GetSingleCurrency().Balance);
+        Assert.Equal(114, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Contains("wallet 100->114", output.ToString(), StringComparison.Ordinal);
         io.AssertConsumed();
     }
@@ -4277,7 +4277,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(0, summary.PlayerProgression.LifetimeExperience);
         Assert.Equal(1, summary.ActiveHostedEntityProgression?.Experience);
         Assert.Equal(1, summary.ActiveHostedEntityProgression?.LifetimeExperience);
-        Assert.Equal(14, summary.Wallet.Balance);
+        Assert.Equal(14, summary.CurrencyLedger.GetSingleCurrency().Balance);
         Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
         Assert.Equal(70, Resource(summary, "hp").Current);
         Assert.Equal(1, summary.SessionProgress.Counters[ContentId.Parse("training_annex_victories")]);
@@ -4432,7 +4432,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             new RuntimeKnowledgeSnapshot(),
             new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Qualified("annex_tonic"), 1)]),
-            new RuntimeWalletSnapshot(0),
+            TrainingAnnexHostSupport.CreateCreditsLedger(0),
             new RuntimeSessionProgressSnapshot());
         return new RuntimeSaveRecord(
             RuntimeSaveKind.Manual,
@@ -4452,7 +4452,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             actors ?? snapshot.Actors,
             partyRoster ?? snapshot.PartyRoster,
             snapshot.Inventory,
-            snapshot.Wallet,
+            snapshot.CurrencyLedger,
             field ?? snapshot.Field,
             snapshot.Compendium,
             snapshot.Knowledge,
@@ -4497,7 +4497,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         TrainingAnnexSaveSlotStore? saveSlots = null,
         RuntimeInventorySnapshot? initialInventory = null,
         RuntimeEquipmentSnapshot? initialEquipment = null,
-        RuntimeWalletSnapshot? initialWallet = null,
+        RuntimeCurrencyLedgerSnapshot? initialCurrencyLedger = null,
         Func<
             ISkillDefinitionRepository,
             IStatResolutionPolicy,
@@ -4513,7 +4513,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             saveSlots,
             initialInventory,
             initialEquipment,
-            initialWallet,
+            initialCurrencyLedger,
             combatProfileCompositionFactory);
 
     private static string ContentRoot() => Path.Combine(AppContext.BaseDirectory, "Content");
@@ -4612,19 +4612,35 @@ public sealed class CleanTrainingAnnexPlayHostTests
 
     private sealed class RejectingEconomyTransactionService : IEconomyTransactionService
     {
-        public WalletTransactionResult Credit(RuntimeWalletSnapshot snapshot, int amount) =>
+        public CurrencyTransactionResult Credit(
+            RuntimeCurrencyLedgerSnapshot snapshot,
+            ContentId currencyId,
+            int amount) =>
             new(
                 ResourceTransactionCode.InsufficientCurrency,
                 snapshot,
                 snapshot,
-                [new ResourceTransactionDiagnostic(ResourceTransactionCode.InsufficientCurrency, "blocked for test")]);
+                currencyId,
+                amount,
+                [new ResourceTransactionDiagnostic(
+                    ResourceTransactionCode.InsufficientCurrency,
+                    "blocked for test",
+                    CurrencyId: currencyId)]);
 
-        public WalletTransactionResult Debit(RuntimeWalletSnapshot snapshot, int amount) =>
+        public CurrencyTransactionResult Debit(
+            RuntimeCurrencyLedgerSnapshot snapshot,
+            ContentId currencyId,
+            int amount) =>
             new(
                 ResourceTransactionCode.InsufficientCurrency,
                 snapshot,
                 snapshot,
-                [new ResourceTransactionDiagnostic(ResourceTransactionCode.InsufficientCurrency, "blocked for test")]);
+                currencyId,
+                amount,
+                [new ResourceTransactionDiagnostic(
+                    ResourceTransactionCode.InsufficientCurrency,
+                    "blocked for test",
+                    CurrencyId: currencyId)]);
     }
 
     private sealed class RecordingContentPackTextSource(string root) : IContentPackTextSource

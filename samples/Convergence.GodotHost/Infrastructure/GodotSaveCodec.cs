@@ -138,6 +138,8 @@ internal sealed record GodotSaveInventory(
     IReadOnlyDictionary<string, IReadOnlyList<GodotSaveEquipmentInstance>>
         OwnedEquipmentInstances);
 
+internal sealed record GodotSaveCurrencyBalance(string CurrencyId, int Balance);
+
 internal sealed record GodotSaveDocument(
     int SaveContractVersion,
     string FrameworkVersion,
@@ -146,6 +148,7 @@ internal sealed record GodotSaveDocument(
     IReadOnlyList<GodotSaveActor> Actors,
     GodotSavePartyRoster PartyRoster,
     GodotSaveInventory Inventory,
+    IReadOnlyList<GodotSaveCurrencyBalance> CurrencyBalances,
     IReadOnlyList<GodotSaveSceneInstance> SceneInstances);
 
 internal sealed record GodotSaveRestoreResult(
@@ -169,12 +172,14 @@ internal static class GodotSaveCodec
         IReadOnlyList<CatalogBattleActor> actors,
         RuntimePartyRosterSnapshot partyRoster,
         RuntimeInventorySnapshot inventory,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
         ContentPackIdentity pack,
         GodotSceneInstanceRegistry sceneInstances)
     {
         ArgumentNullException.ThrowIfNull(actors);
         ArgumentNullException.ThrowIfNull(partyRoster);
         ArgumentNullException.ThrowIfNull(inventory);
+        ArgumentNullException.ThrowIfNull(currencyLedger);
         ArgumentNullException.ThrowIfNull(pack);
         ArgumentNullException.ThrowIfNull(sceneInstances);
 
@@ -194,6 +199,12 @@ internal static class GodotSaveCodec
             actorRecords,
             ToDto(partyRoster),
             ToDto(inventory),
+            currencyLedger.Balances
+                .Select(balance => new GodotSaveCurrencyBalance(
+                    balance.Key.ToString(),
+                    balance.Value))
+                .OrderBy(balance => balance.CurrencyId, StringComparer.Ordinal)
+                .ToArray(),
             sceneRecords);
         return JsonSerializer.Serialize(document, JsonOptions);
     }
@@ -231,7 +242,11 @@ internal static class GodotSaveCodec
             actorSnapshots,
             partyRoster,
             FromDto(document.Inventory),
-            new RuntimeWalletSnapshot(0),
+            new RuntimeCurrencyLedgerSnapshot(
+                document.CurrencyBalances.Select(balance =>
+                    new KeyValuePair<ContentId, int>(
+                        Id(balance.CurrencyId),
+                        balance.Balance))),
             field: null,
             new CompendiumStateSnapshot(),
             new RuntimeKnowledgeSnapshot(),
