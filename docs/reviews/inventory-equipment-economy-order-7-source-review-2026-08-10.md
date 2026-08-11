@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R6 complete; O7-R7 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R6 complete; O7-R7 design recorded and implementation pending; O7-R8 through O7-R11 pending
 
 ## Purpose
 
@@ -388,6 +388,69 @@ path. O7-R7 remains the sole owner of durable stock changes.
 - keep standard sales non-replenishing;
 - permit a supplied policy to replenish on sale; and
 - commit inventory, currency, and stock as one atomic result.
+
+#### O7-R7 Approved Extraction Design
+
+Shop stock identity is the pair `(shopId, offerId)`. `shopId` identifies the
+qualified catalog shop and `offerId` is a required, shop-local authored ID.
+The offered item or equipment ID is not used as offer identity: one shop may
+sell the same definition through more than one offer, and two shops may reuse
+the same local offer ID without colliding. List position is presentation order
+only and never enters runtime state or a save.
+
+Content advances from schema v9 to v10 and active packs advance from `0.9.0`
+to `0.10.0`. Every offer requires an `id`. A policy-shaped stock definition
+requires both `stockPolicyId` and a positive authored `quantity`; its remaining
+parameter object configures the selected factory. Unlimited stock omits a
+quantity and policy. Fixed limited stock binds the supplied standard stock
+policy automatically. Duplicate offer IDs within one shop, malformed policy
+configuration, and unresolved stock-policy IDs are rejected before a runtime
+offer is produced. There is no fallback after an explicitly selected stock
+policy fails.
+
+Each resolved runtime offer carries one immutable stock profile:
+
+- unlimited offers are untracked and never create a quantity entry;
+- fixed limited offers carry their authored initial quantity and the bound
+  `standard_shop_stock` policy; and
+- policy-shaped offers carry their authored initial quantity and one bound
+  host-registered stock policy.
+
+`IShopStockPolicy` receives only the operation and current remaining quantity
+and returns a typed next-quantity result. `StandardShopStockPolicy` decrements
+one unit for a successful purchase, rejects a purchase at zero, and leaves the
+quantity unchanged on resale. A custom `IShopStockPolicyFactory` may supply a
+different resale transition, including replenishment. Policy exceptions and
+invalid returned quantities become typed rejection results; cancellation is
+propagated rather than disguised as policy failure.
+
+`RuntimeShopStockSnapshot` is the sole durable stock authority. It stores
+immutable entries for limited and policy-controlled offers, keyed by the
+composite shop/offer identity. Initial state is built from resolved runtime
+offers. Save validation cross-checks every entry against the catalog, rejects
+duplicate or negative entries, rejects stock for unlimited or missing offers,
+and requires one entry for every limited or policy-controlled offer. Runtime
+save contract v18 therefore advances sequentially to v19; Framework restore,
+DemoHost JSON, and Godot-owned JSON all carry the same snapshot.
+
+`IShopTransactionService.Buy` and `Sell` receive the current inventory,
+currency ledger, and stock snapshot. They calculate immutable candidates and
+return all three before/after pairs in one `ShopTransactionResult`. A purchase
+commits exactly one stock transition only after pricing, inventory, currency,
+and stock all accept. Any rejection, policy failure, or later-stage rollback
+returns the original inventory, currency, and stock as every after-state.
+Standard sales leave stock unchanged; a custom bound stock policy may return a
+replenished candidate that commits atomically with inventory removal and the
+currency credit.
+
+Training Annex keeps one stock snapshot for the session, displays its live
+quantity, threads it through repeated shop openings, and saves/restores it.
+The clean save demo and Godot contract encode the same framework snapshot;
+neither host reconstructs remaining stock from authored content after restore.
+
+This checkpoint does not change pricing formulas, add a currency policy, add
+recovery behavior, or start O7-R8. It adds no stock presentation framework and
+does not make a shop transaction service own mutable live state.
 
 ### O7-R8: Generalize Recovery Through One Supplied Policy
 
