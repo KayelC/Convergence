@@ -4757,7 +4757,11 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 ["price"] = new JsonObject
                 {
                     ["kind"] = "policy",
-                    ["pricingPolicyId"] = "standard_economy"
+                    ["pricingPolicyId"] = "standard_economy",
+                    ["parameters"] = new JsonObject
+                    {
+                        ["purchasePrice"] = 50
+                    }
                 },
                 ["stock"] = new JsonObject
                 {

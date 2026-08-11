@@ -20,9 +20,10 @@ equipped-only skill grants, armor Defense, and armor/boots Evasion through one
 canonical equipment profile and the existing action/damage/hit authorities.
 O7-R5 establishes an immutable currency ledger keyed by `ContentId`, explicit
 currency selection for every transaction, save contract v18, and host-owned
-serialization in DemoHost and Godot. The capability remains `partial` until
-stateful shop stock, explicit pricing policies, generic recovery, audience
-documentation, and an independent
+serialization in DemoHost and Godot. O7-R6 binds exact-authored-price standard
+pricing and optional Luck-adjusted pricing through typed factories selected by
+the economy ruleset or an explicit offer. The capability remains `partial`
+until stateful shop stock, generic recovery, audience documentation, and an independent
 adversarial closure audit are complete.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved

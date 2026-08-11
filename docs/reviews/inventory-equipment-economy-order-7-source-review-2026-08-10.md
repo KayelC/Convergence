@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R5 complete; O7-R6 design recorded and implementation pending; O7-R7 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R6 complete; O7-R7 through O7-R11 pending
 
 ## Purpose
 
@@ -185,7 +185,7 @@ gate are complete.
 | O7-D3 | Equipped granted skills are available only while the granting instance is equipped. They are not learned and consume no move-list slot. | Fixed runtime rule | Approved; implemented by O7-R4 |
 | O7-D4 | Equipment Defense and Evasion are numeric contributions to the existing `ProductionCombatRuleset` inputs. Equipment does not own a parallel damage or hit formula. | Direct integration correction | Approved; implemented by O7-R4 |
 | O7-D5 | Runtime shop stock is stateful. Buying decrements limited stock. Standard selling does not replenish stock; a supplied policy may choose otherwise. | Policy family plus runtime state | Approved |
-| O7-D6 | The standard pricing policy uses authored purchase price and configurable resale percentage. Luck-adjusted pricing remains available as an optional supplied policy, not hidden standard behavior. | Policy family | Approved |
+| O7-D6 | The standard pricing policy uses authored purchase price and configurable resale percentage. Luck-adjusted pricing remains available as an optional supplied policy, not hidden standard behavior. | Policy family | Approved; implemented by O7-R6 |
 | O7-D7 | Recovery is generic and resource-ID driven. Supply exactly one `StandardHospitalRecoveryPolicy` for full configured HP/SP recovery, legal ailment cures, and configured temporary-state cleanup. | Policy family, narrowly scoped | Approved |
 | O7-D8 | Replace the unnamed wallet with a currency ledger keyed by currency `ContentId`. Supply a convenience accessor that succeeds only when exactly one currency exists. | Direct data-model correction | Approved; implemented by O7-R5 |
 
@@ -828,3 +828,88 @@ concrete consequences, reproducible evidence, and any trusted host boundaries.
   in Framework.
 - **Scope guard held:** no currency policy, pricing-policy, stock-policy, or
   recovery-policy work was introduced. O7-R6 remains pending.
+
+### O7-R6: Bind Explicit Pricing Policies
+
+- **Baseline and commit:** `44538eab..this checkpoint commit`; commit subject
+  `runtime: bind explicit shop pricing policies`.
+- **Actual destination:** `IShopPricingPolicy` owns runtime purchase/resale
+  calculation; `ShopPricingPolicyFactoryRegistry` resolves supplied policy IDs;
+  `RuntimeShopPricingProfile` carries one authored purchase price and bound
+  policy through offer resolution, assessment, display, and execution; and the
+  `standard_economy` ruleset factory explicitly selects the default policy and
+  its parameters.
+- **Changed Framework files:** the new
+  `Runtime/ShopPricingPolicies.cs`, `Runtime/ResourceManagementServices.cs`,
+  `Runtime/RuntimeRulesetBindings.cs`,
+  `Runtime/RuntimeRulesetPolicyFactories.cs`, and `PublicAPI.Shipped.txt`.
+- **Changed content and host files:** both active economy ruleset documents and
+  the active registration fixture; DemoHost clean-save/Training Annex binding
+  and shop integration; and the Godot smoke registration surface. Training
+  Annex explicitly selects `luck_adjusted_shop_pricing`; the catalog-surface
+  reference pack explicitly selects `standard_shop_pricing` with a `0.50`
+  resale percentage.
+- **Changed tests and documentation:** the new `ShopPricingPolicyTests`,
+  resource-management and ruleset-binding coverage, active-content/catalog/
+  persistence registration fixtures, DemoHost shop regressions, source and
+  capability/documentation inventories, and current architecture, gameplay,
+  economy, ruleset, and roadmap guidance.
+- **Focused tests:** 89 Framework pricing/resource/ruleset tests and 5 DemoHost
+  shop tests passed: 94 total, 0 failed, 0 skipped. The dedicated
+  `ShopPricingPolicyTests` class contributes 18 passing policy/factory/runtime
+  boundary tests.
+- **Full suite:** 1,750 Framework tests, 179 DemoHost tests, and 7
+  ContentValidator tests passed: 1,936 total, 0 failed, 0 skipped.
+- **Build and integration:** strict nonincremental Framework, solution, and
+  trim-aware Release Framework builds passed with 0 warnings and 0 errors;
+  formatting and `git diff --check` passed. The authoring validator loaded 6
+  packs, 36 documents, and 98 qualified definitions. All four noninteractive
+  DemoHost modes and scripted Training Annex exit passed. The real Godot 4.7.1
+  smoke consumer emitted `CONVERGENCE_GODOT_SMOKE_OK`, restored save v18, and
+  exited 0.
+- **Contract versions:** pricing profiles are transient runtime authority, so
+  this checkpoint deliberately retains content schema v9, active pack version
+  `0.9.0`, and runtime save contract v18. The existing ruleset parameter-object
+  schema already expresses the newly required policy selection; no saved-state
+  or wire-document shape was added.
+
+#### Explicit O7-R6 Authority Evidence
+
+1. **Standard pricing is exact and configurable.** `standard_shop_pricing`
+   returns the authored purchase price unchanged. Resale multiplies that price
+   by the configured nonnegative percentage, defaults to `0.50`, and truncates
+   the nonnegative decimal result toward zero. Focused tests pin exact purchase,
+   default/configured resale, fractional truncation, and numeric overflow.
+2. **Luck pricing is optional and behavior-compatible.** The old formula exists
+   only in `luck_adjusted_shop_pricing`: purchase uses
+   `max(0.50, 1 - Luck * 0.01)` and resale uses `0.50 + Luck * 0.01`, both with
+   truncation toward zero. Training Annex explicitly selects it, preserving the
+   established 47-Credit Annex Tonic purchase, 28-Credit resale, 112-Credit
+   Practice Blade purchase, and 84-Credit Padded Jacket purchase.
+3. **Authored policy selection is typed and has no fallback.** Fixed-price
+   offers use the economy ruleset's bound default. Policy-shaped offers require
+   one whole nonnegative `purchasePrice`, remove that operand before binding the
+   remaining factory parameters, and resolve the explicitly named registered
+   factory. Missing, malformed, unknown, throwing, mismatched, and silently
+   rejecting factories produce typed diagnostics; an explicit offer failure
+   never falls back to the economy default.
+4. **One pricing profile is authoritative.** `RuntimeShopOfferResolver` creates
+   the immutable profile once. `ShopTransactionService` uses that profile for
+   quote, assessment, and execution, while the Training Annex menus display the
+   transaction assessment's `Price`; no host-side price formula or reconstruction
+   remains.
+5. **Input and transaction safety remain intact.** Negative authored prices,
+   negative Luck, fractional/overflowing policy purchase prices, calculation
+   overflow, and custom runtime-policy failure are rejected before inventory or
+   currency changes. Affordability and inventory rejection retain equal
+   before/after snapshots; a later currency rejection does not expose the
+   tentative immutable inventory result. Cancellation is propagated rather than
+   disguised as pricing failure.
+6. **The standard economy factory is extensible without becoming implicit.** It
+   requires `pricingPolicyId`, accepts an optional `pricingParameters` object,
+   maps pricing diagnostics to precise ruleset parameter paths, and accepts
+   host-registered typed factories through `CreateStandard(shopPricing)`.
+7. **Scope guard held.** No durable shop-stock identity or mutation, sale
+   replenishment, recovery policy, currency policy, save shape, schema family,
+   or presentation framework was introduced. O7-R7 remains the sole owner of
+   stateful stock behavior, and O7-R8 remains the sole owner of recovery policy.

@@ -26,9 +26,11 @@ replaces fixed slot identity with authored `ContentId` values under a selected
 layout policy. O7-R4 derives granted skills, Defense, and Evasion from the same
 live equipment profile used for weapon attacks and accessory modifiers. O7-R5
 provides an immutable currency ledger keyed by `ContentId` and requires every
-transaction to select a currency explicitly. Current source still does not
-persist decremented shop stock, bind authored pricing policies, or generalize
-the HP/SP-specific recovery shape. The
+transaction to select a currency explicitly. O7-R6 binds an explicit default
+pricing factory through `standard_economy`, resolves offer-level policy
+overrides without fallback, and supplies exact-authored-price and optional
+Luck-adjusted policies. Current source still does not persist decremented shop
+stock or generalize the HP/SP-specific recovery shape. The
 owner-approved
 [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 governs the direct data corrections, genuine policy seams, three-audience

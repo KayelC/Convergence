@@ -4888,8 +4888,6 @@ Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory
 Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.BattleTurnEconomyRuleset!>!
 Convergence.Runtime.IRuntimeTurnEconomyRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Runtime.IShopTransactionService
-Convergence.Runtime.IShopTransactionService.CalculateBuyPrice(int basePrice, int luck) -> int
-Convergence.Runtime.IShopTransactionService.CalculateSellPrice(int basePrice, int luck) -> int
 Convergence.Runtime.IStatAllocationService
 Convergence.Runtime.IStatAllocationService.Allocate(Convergence.Runtime.StatAllocationRequest! request) -> Convergence.Runtime.StatAllocationResult!
 Convergence.Runtime.IStatAllocationService.Rollback(Convergence.Runtime.StatRollbackRequest! request) -> Convergence.Runtime.StatAllocationResult!
@@ -5072,7 +5070,6 @@ Convergence.Runtime.ResourceCurrentAdjustmentMode.LevelUpDelta = 1 -> Convergenc
 Convergence.Runtime.ResourceCurrentAdjustmentMode.PreserveCurrent = 0 -> Convergence.Runtime.ResourceCurrentAdjustmentMode
 Convergence.Runtime.ResourceManagementRulesetServices
 Convergence.Runtime.ResourceManagementRulesetServices.<Clone>$() -> Convergence.Runtime.ResourceManagementRulesetServices!
-Convergence.Runtime.ResourceManagementRulesetServices.Deconstruct(out Convergence.Runtime.IInventoryTransitionService! Inventory, out Convergence.Runtime.IEquipmentTransitionService! Equipment, out Convergence.Runtime.IEconomyTransactionService! Economy, out Convergence.Runtime.IShopTransactionService! Shop, out Convergence.Runtime.IHospitalRestorationService! Hospital) -> void
 Convergence.Runtime.ResourceManagementRulesetServices.Economy.get -> Convergence.Runtime.IEconomyTransactionService!
 Convergence.Runtime.ResourceManagementRulesetServices.Economy.init -> void
 Convergence.Runtime.ResourceManagementRulesetServices.Equals(Convergence.Runtime.ResourceManagementRulesetServices? other) -> bool
@@ -5082,7 +5079,6 @@ Convergence.Runtime.ResourceManagementRulesetServices.Hospital.get -> Convergenc
 Convergence.Runtime.ResourceManagementRulesetServices.Hospital.init -> void
 Convergence.Runtime.ResourceManagementRulesetServices.Inventory.get -> Convergence.Runtime.IInventoryTransitionService!
 Convergence.Runtime.ResourceManagementRulesetServices.Inventory.init -> void
-Convergence.Runtime.ResourceManagementRulesetServices.ResourceManagementRulesetServices(Convergence.Runtime.IInventoryTransitionService! Inventory, Convergence.Runtime.IEquipmentTransitionService! Equipment, Convergence.Runtime.IEconomyTransactionService! Economy, Convergence.Runtime.IShopTransactionService! Shop, Convergence.Runtime.IHospitalRestorationService! Hospital) -> void
 Convergence.Runtime.ResourceManagementRulesetServices.Shop.get -> Convergence.Runtime.IShopTransactionService!
 Convergence.Runtime.ResourceManagementRulesetServices.Shop.init -> void
 Convergence.Runtime.ResourceRecalculationRequest
@@ -6146,18 +6142,15 @@ Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidFixedPrice = 4 -> Conv
 Convergence.Runtime.RuntimeShopOfferResolutionCode.MissingEquipmentDefinition = 2 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.MissingItemDefinition = 1 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.UnsupportedPricePolicy = 3 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
-Convergence.Runtime.RuntimeShopOfferResolutionCode.UnsupportedStockPolicy = 5 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic!
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.Code.get -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.Code.init -> void
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.ContentId.get -> Convergence.Content.ContentId
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.ContentId.init -> void
-Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeShopOfferResolutionCode Code, out Convergence.Content.ContentId ContentId, out string! Message) -> void
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.Equals(Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic? other) -> bool
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.Message.get -> string!
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.Message.init -> void
-Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.RuntimeShopOfferResolutionDiagnostic(Convergence.Runtime.RuntimeShopOfferResolutionCode Code, Convergence.Content.ContentId ContentId, string! Message) -> void
 Convergence.Runtime.RuntimeShopOfferResolutionResult
 Convergence.Runtime.RuntimeShopOfferResolutionResult.<Clone>$() -> Convergence.Runtime.RuntimeShopOfferResolutionResult!
 Convergence.Runtime.RuntimeShopOfferResolutionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic!>!
@@ -6170,8 +6163,6 @@ Convergence.Runtime.RuntimeShopOfferResolver
 Convergence.Runtime.RuntimeShopOfferResolver.Resolve(Convergence.Content.ShopOfferDefinition! offer, Convergence.Catalog.IItemDefinitionRepository! itemRepository, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository) -> Convergence.Runtime.RuntimeShopOfferResolutionResult!
 Convergence.Runtime.RuntimeShopOfferSnapshot
 Convergence.Runtime.RuntimeShopOfferSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeShopOfferSnapshot!
-Convergence.Runtime.RuntimeShopOfferSnapshot.BasePrice.get -> int
-Convergence.Runtime.RuntimeShopOfferSnapshot.BasePrice.init -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.ContentId.get -> Convergence.Content.ContentId
 Convergence.Runtime.RuntimeShopOfferSnapshot.ContentId.init -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.ContentKind.get -> Convergence.Content.ShopContentKind
@@ -6382,8 +6373,6 @@ Convergence.Runtime.ShopTransactionResult.Diagnostics.get -> System.Collections.
 Convergence.Runtime.ShopTransactionResult.Equals(Convergence.Runtime.ShopTransactionResult? other) -> bool
 Convergence.Runtime.ShopTransactionResult.Price.get -> int
 Convergence.Runtime.ShopTransactionService
-Convergence.Runtime.ShopTransactionService.CalculateBuyPrice(int basePrice, int luck) -> int
-Convergence.Runtime.ShopTransactionService.CalculateSellPrice(int basePrice, int luck) -> int
 Convergence.Runtime.ShopTransactionService.ShopTransactionService(Convergence.Runtime.IInventoryTransitionService? inventory = null, Convergence.Runtime.IEconomyTransactionService? economy = null) -> void
 Convergence.Runtime.StandardLevelGrowthPolicy
 Convergence.Runtime.StandardLevelGrowthPolicy.ApplyExperience(Convergence.Runtime.LevelGrowthRequest! request) -> Convergence.Runtime.LevelGrowthResult!
@@ -11660,12 +11649,8 @@ Convergence.Runtime.RuntimeInventorySnapshot.OwnsEquipment(Convergence.Runtime.R
 Convergence.Runtime.RuntimeInventorySnapshot.RuntimeInventorySnapshot(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, int>>? itemQuantities = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentInstanceSnapshot!>!>>? ownedEquipmentInstances = null) -> void
 Convergence.Runtime.RuntimeInventorySnapshot.TryGetEquipmentInstance(Convergence.Runtime.RuntimeInstanceId instanceId, out Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? instance, out Convergence.Content.ContentId slotId) -> bool
 Convergence.Runtime.RuntimeSaveValidator.RuntimeSaveValidator(Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null, Convergence.Runtime.IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null) -> void
-Convergence.Runtime.RuntimeShopOfferResolutionCode.EquipmentSlotProfileMismatch = 6 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
-Convergence.Runtime.RuntimeShopOfferResolver.RuntimeShopOfferResolver(Convergence.Runtime.IEquipmentSlotLayoutPolicy? slotLayout = null) -> void
-Convergence.Runtime.RuntimeShopOfferSnapshot.Deconstruct(out Convergence.Content.ShopContentKind ContentKind, out Convergence.Content.ContentId ContentId, out int BasePrice, out Convergence.Content.ContentId? EquipmentSlotId, out int? ItemStackLimit, out int? StockAvailable) -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.EquipmentSlotId.get -> Convergence.Content.ContentId?
 Convergence.Runtime.RuntimeShopOfferSnapshot.EquipmentSlotId.init -> void
-Convergence.Runtime.RuntimeShopOfferSnapshot.RuntimeShopOfferSnapshot(Convergence.Content.ShopContentKind ContentKind, Convergence.Content.ContentId ContentId, int BasePrice, Convergence.Content.ContentId? EquipmentSlotId = null, int? ItemStackLimit = null, int? StockAvailable = null) -> void
 Convergence.Runtime.StandardEquipmentSlotIds
 Convergence.Runtime.StandardEquipmentSlotLayoutPolicy
 Convergence.Runtime.StandardEquipmentSlotLayoutPolicy.SlotIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
@@ -11753,3 +11738,145 @@ override Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.ToString() -> string
 static Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.operator !=(Convergence.Runtime.RuntimeCurrencyBalanceSnapshot? left, Convergence.Runtime.RuntimeCurrencyBalanceSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeCurrencyBalanceSnapshot.operator ==(Convergence.Runtime.RuntimeCurrencyBalanceSnapshot? left, Convergence.Runtime.RuntimeCurrencyBalanceSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeCurrencyLedgerSnapshot.Single(Convergence.Content.ContentId currencyId, int balance) -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+const Convergence.Runtime.LuckAdjustedShopPricingPolicy.BaseResaleMultiplier = 0.50 -> decimal
+const Convergence.Runtime.LuckAdjustedShopPricingPolicy.LuckPriceStep = 0.01 -> decimal
+const Convergence.Runtime.LuckAdjustedShopPricingPolicy.MinimumPurchaseMultiplier = 0.50 -> decimal
+const Convergence.Runtime.StandardShopPricingPolicy.DefaultResalePercentage = 0.50 -> decimal
+Convergence.Runtime.BoundShopPricingPolicy
+Convergence.Runtime.BoundShopPricingPolicy.<Clone>$() -> Convergence.Runtime.BoundShopPricingPolicy!
+Convergence.Runtime.BoundShopPricingPolicy.BoundShopPricingPolicy(Convergence.Content.ContentId policyId, Convergence.Runtime.IShopPricingPolicy! policy) -> void
+Convergence.Runtime.BoundShopPricingPolicy.Equals(Convergence.Runtime.BoundShopPricingPolicy? other) -> bool
+Convergence.Runtime.BoundShopPricingPolicy.Policy.get -> Convergence.Runtime.IShopPricingPolicy!
+Convergence.Runtime.BoundShopPricingPolicy.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.IShopPricingPolicy
+Convergence.Runtime.IShopPricingPolicy.Calculate(Convergence.Runtime.ShopPriceCalculationRequest! request) -> Convergence.Runtime.ShopPriceCalculationResult!
+Convergence.Runtime.IShopPricingPolicyFactory
+Convergence.Runtime.IShopPricingPolicyFactory.Create(System.Collections.Generic.IReadOnlyDictionary<string!, object?>! parameters) -> Convergence.Runtime.ShopPricingPolicyBindingResult!
+Convergence.Runtime.IShopPricingPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.IShopTransactionService.CalculateBuyPrice(Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int luck) -> int
+Convergence.Runtime.IShopTransactionService.CalculateSellPrice(Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int luck) -> int
+Convergence.Runtime.LuckAdjustedShopPricingPolicy
+Convergence.Runtime.LuckAdjustedShopPricingPolicy.Calculate(Convergence.Runtime.ShopPriceCalculationRequest! request) -> Convergence.Runtime.ShopPriceCalculationResult!
+Convergence.Runtime.LuckAdjustedShopPricingPolicy.LuckAdjustedShopPricingPolicy() -> void
+Convergence.Runtime.ResourceManagementRulesetServices.Deconstruct(out Convergence.Runtime.IInventoryTransitionService! Inventory, out Convergence.Runtime.IEquipmentTransitionService! Equipment, out Convergence.Runtime.IEconomyTransactionService! Economy, out Convergence.Runtime.IRuntimeShopOfferResolver! ShopOffers, out Convergence.Runtime.IShopTransactionService! Shop, out Convergence.Runtime.IHospitalRestorationService! Hospital) -> void
+Convergence.Runtime.ResourceManagementRulesetServices.ResourceManagementRulesetServices(Convergence.Runtime.IInventoryTransitionService! Inventory, Convergence.Runtime.IEquipmentTransitionService! Equipment, Convergence.Runtime.IEconomyTransactionService! Economy, Convergence.Runtime.IRuntimeShopOfferResolver! ShopOffers, Convergence.Runtime.IShopTransactionService! Shop, Convergence.Runtime.IHospitalRestorationService! Hospital) -> void
+Convergence.Runtime.ResourceManagementRulesetServices.ShopOffers.get -> Convergence.Runtime.IRuntimeShopOfferResolver!
+Convergence.Runtime.ResourceManagementRulesetServices.ShopOffers.init -> void
+Convergence.Runtime.RuntimeShopOfferResolutionCode.EquipmentSlotProfileMismatch = 7 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidPricePolicyConfiguration = 5 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+Convergence.Runtime.RuntimeShopOfferResolutionCode.UnsupportedStockPolicy = 6 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeShopOfferResolutionCode Code, out Convergence.Content.ContentId ContentId, out string! Message, out Convergence.Runtime.ShopPricingPolicyDiagnostic? PricingDiagnostic) -> void
+Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.PricingDiagnostic.get -> Convergence.Runtime.ShopPricingPolicyDiagnostic?
+Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.PricingDiagnostic.init -> void
+Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.RuntimeShopOfferResolutionDiagnostic(Convergence.Runtime.RuntimeShopOfferResolutionCode Code, Convergence.Content.ContentId ContentId, string! Message, Convergence.Runtime.ShopPricingPolicyDiagnostic? PricingDiagnostic = null) -> void
+Convergence.Runtime.RuntimeShopOfferResolver.RuntimeShopOfferResolver(Convergence.Runtime.BoundShopPricingPolicy! defaultPricing, Convergence.Runtime.ShopPricingPolicyFactoryRegistry! pricingFactories, Convergence.Runtime.IEquipmentSlotLayoutPolicy? slotLayout = null) -> void
+Convergence.Runtime.RuntimeShopOfferSnapshot.Deconstruct(out Convergence.Content.ShopContentKind ContentKind, out Convergence.Content.ContentId ContentId, out Convergence.Runtime.RuntimeShopPricingProfile! Pricing, out Convergence.Content.ContentId? EquipmentSlotId, out int? ItemStackLimit, out int? StockAvailable) -> void
+Convergence.Runtime.RuntimeShopOfferSnapshot.Pricing.get -> Convergence.Runtime.RuntimeShopPricingProfile!
+Convergence.Runtime.RuntimeShopOfferSnapshot.Pricing.init -> void
+Convergence.Runtime.RuntimeShopOfferSnapshot.RuntimeShopOfferSnapshot(Convergence.Content.ShopContentKind ContentKind, Convergence.Content.ContentId ContentId, Convergence.Runtime.RuntimeShopPricingProfile! Pricing, Convergence.Content.ContentId? EquipmentSlotId = null, int? ItemStackLimit = null, int? StockAvailable = null) -> void
+Convergence.Runtime.RuntimeShopPricingProfile
+Convergence.Runtime.RuntimeShopPricingProfile.<Clone>$() -> Convergence.Runtime.RuntimeShopPricingProfile!
+Convergence.Runtime.RuntimeShopPricingProfile.AuthoredPurchasePrice.get -> int
+Convergence.Runtime.RuntimeShopPricingProfile.Calculate(Convergence.Runtime.ShopPriceOperation operation, int luck) -> Convergence.Runtime.ShopPriceCalculationResult!
+Convergence.Runtime.RuntimeShopPricingProfile.Equals(Convergence.Runtime.RuntimeShopPricingProfile? other) -> bool
+Convergence.Runtime.RuntimeShopPricingProfile.Policy.get -> Convergence.Runtime.BoundShopPricingPolicy!
+Convergence.Runtime.RuntimeShopPricingProfile.RuntimeShopPricingProfile(int authoredPurchasePrice, Convergence.Runtime.BoundShopPricingPolicy! policy) -> void
+Convergence.Runtime.ShopPriceCalculationCode
+Convergence.Runtime.ShopPriceCalculationCode.Applied = 0 -> Convergence.Runtime.ShopPriceCalculationCode
+Convergence.Runtime.ShopPriceCalculationCode.NegativeLuck = 2 -> Convergence.Runtime.ShopPriceCalculationCode
+Convergence.Runtime.ShopPriceCalculationCode.NegativePurchasePrice = 1 -> Convergence.Runtime.ShopPriceCalculationCode
+Convergence.Runtime.ShopPriceCalculationCode.NumericOverflow = 3 -> Convergence.Runtime.ShopPriceCalculationCode
+Convergence.Runtime.ShopPriceCalculationCode.PolicyRejected = 4 -> Convergence.Runtime.ShopPriceCalculationCode
+Convergence.Runtime.ShopPriceCalculationRequest
+Convergence.Runtime.ShopPriceCalculationRequest.<Clone>$() -> Convergence.Runtime.ShopPriceCalculationRequest!
+Convergence.Runtime.ShopPriceCalculationRequest.AuthoredPurchasePrice.get -> int
+Convergence.Runtime.ShopPriceCalculationRequest.Equals(Convergence.Runtime.ShopPriceCalculationRequest? other) -> bool
+Convergence.Runtime.ShopPriceCalculationRequest.Luck.get -> int
+Convergence.Runtime.ShopPriceCalculationRequest.Operation.get -> Convergence.Runtime.ShopPriceOperation
+Convergence.Runtime.ShopPriceCalculationRequest.ShopPriceCalculationRequest(int authoredPurchasePrice, int luck, Convergence.Runtime.ShopPriceOperation operation) -> void
+Convergence.Runtime.ShopPriceCalculationResult
+Convergence.Runtime.ShopPriceCalculationResult.<Clone>$() -> Convergence.Runtime.ShopPriceCalculationResult!
+Convergence.Runtime.ShopPriceCalculationResult.Code.get -> Convergence.Runtime.ShopPriceCalculationCode
+Convergence.Runtime.ShopPriceCalculationResult.Equals(Convergence.Runtime.ShopPriceCalculationResult? other) -> bool
+Convergence.Runtime.ShopPriceCalculationResult.IsSuccess.get -> bool
+Convergence.Runtime.ShopPriceCalculationResult.Message.get -> string?
+Convergence.Runtime.ShopPriceCalculationResult.Price.get -> int
+Convergence.Runtime.ShopPriceCalculationResult.ShopPriceCalculationResult(Convergence.Runtime.ShopPriceCalculationCode code, int price = 0, string? message = null) -> void
+Convergence.Runtime.ShopPriceOperation
+Convergence.Runtime.ShopPriceOperation.Purchase = 0 -> Convergence.Runtime.ShopPriceOperation
+Convergence.Runtime.ShopPriceOperation.Resale = 1 -> Convergence.Runtime.ShopPriceOperation
+Convergence.Runtime.ShopPricingPolicyBindingResult
+Convergence.Runtime.ShopPricingPolicyBindingResult.<Clone>$() -> Convergence.Runtime.ShopPricingPolicyBindingResult!
+Convergence.Runtime.ShopPricingPolicyBindingResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.ShopPricingPolicyDiagnostic!>!
+Convergence.Runtime.ShopPricingPolicyBindingResult.Equals(Convergence.Runtime.ShopPricingPolicyBindingResult? other) -> bool
+Convergence.Runtime.ShopPricingPolicyBindingResult.IsSuccess.get -> bool
+Convergence.Runtime.ShopPricingPolicyBindingResult.Policy.get -> Convergence.Runtime.BoundShopPricingPolicy?
+Convergence.Runtime.ShopPricingPolicyBindingResult.RequirePolicy() -> Convergence.Runtime.BoundShopPricingPolicy!
+Convergence.Runtime.ShopPricingPolicyBindingResult.ShopPricingPolicyBindingResult(Convergence.Runtime.BoundShopPricingPolicy? policy, System.Collections.Generic.IEnumerable<Convergence.Runtime.ShopPricingPolicyDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.ShopPricingPolicyDiagnostic
+Convergence.Runtime.ShopPricingPolicyDiagnostic.<Clone>$() -> Convergence.Runtime.ShopPricingPolicyDiagnostic!
+Convergence.Runtime.ShopPricingPolicyDiagnostic.Code.get -> Convergence.Runtime.ShopPricingPolicyDiagnosticCode
+Convergence.Runtime.ShopPricingPolicyDiagnostic.Code.init -> void
+Convergence.Runtime.ShopPricingPolicyDiagnostic.Deconstruct(out Convergence.Runtime.ShopPricingPolicyDiagnosticCode Code, out string! Message, out string? ParameterName, out Convergence.Content.ContentId? PolicyId) -> void
+Convergence.Runtime.ShopPricingPolicyDiagnostic.Equals(Convergence.Runtime.ShopPricingPolicyDiagnostic? other) -> bool
+Convergence.Runtime.ShopPricingPolicyDiagnostic.Message.get -> string!
+Convergence.Runtime.ShopPricingPolicyDiagnostic.Message.init -> void
+Convergence.Runtime.ShopPricingPolicyDiagnostic.ParameterName.get -> string?
+Convergence.Runtime.ShopPricingPolicyDiagnostic.ParameterName.init -> void
+Convergence.Runtime.ShopPricingPolicyDiagnostic.PolicyId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.ShopPricingPolicyDiagnostic.PolicyId.init -> void
+Convergence.Runtime.ShopPricingPolicyDiagnostic.ShopPricingPolicyDiagnostic(Convergence.Runtime.ShopPricingPolicyDiagnosticCode Code, string! Message, string? ParameterName = null, Convergence.Content.ContentId? PolicyId = null) -> void
+Convergence.Runtime.ShopPricingPolicyDiagnosticCode
+Convergence.Runtime.ShopPricingPolicyDiagnosticCode.InvalidParameterType = 3 -> Convergence.Runtime.ShopPricingPolicyDiagnosticCode
+Convergence.Runtime.ShopPricingPolicyDiagnosticCode.InvalidParameterValue = 4 -> Convergence.Runtime.ShopPricingPolicyDiagnosticCode
+Convergence.Runtime.ShopPricingPolicyDiagnosticCode.MissingParameter = 1 -> Convergence.Runtime.ShopPricingPolicyDiagnosticCode
+Convergence.Runtime.ShopPricingPolicyDiagnosticCode.PolicyFactoryFailure = 5 -> Convergence.Runtime.ShopPricingPolicyDiagnosticCode
+Convergence.Runtime.ShopPricingPolicyDiagnosticCode.UnknownParameter = 2 -> Convergence.Runtime.ShopPricingPolicyDiagnosticCode
+Convergence.Runtime.ShopPricingPolicyDiagnosticCode.UnsupportedPolicy = 0 -> Convergence.Runtime.ShopPricingPolicyDiagnosticCode
+Convergence.Runtime.ShopPricingPolicyFactoryRegistry
+Convergence.Runtime.ShopPricingPolicyFactoryRegistry.Bind(Convergence.Content.ContentId policyId, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! parameters) -> Convergence.Runtime.ShopPricingPolicyBindingResult!
+Convergence.Runtime.ShopPricingPolicyFactoryRegistry.PolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
+Convergence.Runtime.ShopPricingPolicyFactoryRegistry.ShopPricingPolicyFactoryRegistry(System.Collections.Generic.IEnumerable<Convergence.Runtime.IShopPricingPolicyFactory!>? factories = null) -> void
+Convergence.Runtime.ShopTransactionService.CalculateBuyPrice(Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int luck) -> int
+Convergence.Runtime.ShopTransactionService.CalculateSellPrice(Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int luck) -> int
+Convergence.Runtime.StandardShopPricingPolicy
+Convergence.Runtime.StandardShopPricingPolicy.Calculate(Convergence.Runtime.ShopPriceCalculationRequest! request) -> Convergence.Runtime.ShopPriceCalculationResult!
+Convergence.Runtime.StandardShopPricingPolicy.ResalePercentage.get -> decimal
+Convergence.Runtime.StandardShopPricingPolicy.StandardShopPricingPolicy(decimal resalePercentage = 0.50) -> void
+Convergence.Runtime.StandardShopPricingPolicyIds
+override Convergence.Runtime.BoundShopPricingPolicy.Equals(object? obj) -> bool
+override Convergence.Runtime.BoundShopPricingPolicy.GetHashCode() -> int
+override Convergence.Runtime.BoundShopPricingPolicy.ToString() -> string!
+override Convergence.Runtime.RuntimeShopPricingProfile.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeShopPricingProfile.GetHashCode() -> int
+override Convergence.Runtime.RuntimeShopPricingProfile.ToString() -> string!
+override Convergence.Runtime.ShopPriceCalculationRequest.Equals(object? obj) -> bool
+override Convergence.Runtime.ShopPriceCalculationRequest.GetHashCode() -> int
+override Convergence.Runtime.ShopPriceCalculationRequest.ToString() -> string!
+override Convergence.Runtime.ShopPriceCalculationResult.Equals(object? obj) -> bool
+override Convergence.Runtime.ShopPriceCalculationResult.GetHashCode() -> int
+override Convergence.Runtime.ShopPriceCalculationResult.ToString() -> string!
+override Convergence.Runtime.ShopPricingPolicyBindingResult.Equals(object? obj) -> bool
+override Convergence.Runtime.ShopPricingPolicyBindingResult.GetHashCode() -> int
+override Convergence.Runtime.ShopPricingPolicyBindingResult.ToString() -> string!
+override Convergence.Runtime.ShopPricingPolicyDiagnostic.Equals(object? obj) -> bool
+override Convergence.Runtime.ShopPricingPolicyDiagnostic.GetHashCode() -> int
+override Convergence.Runtime.ShopPricingPolicyDiagnostic.ToString() -> string!
+static Convergence.Runtime.BoundShopPricingPolicy.operator !=(Convergence.Runtime.BoundShopPricingPolicy? left, Convergence.Runtime.BoundShopPricingPolicy? right) -> bool
+static Convergence.Runtime.BoundShopPricingPolicy.operator ==(Convergence.Runtime.BoundShopPricingPolicy? left, Convergence.Runtime.BoundShopPricingPolicy? right) -> bool
+static Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.CreateStandard(System.Collections.Generic.IEnumerable<Convergence.Runtime.IShopPricingPolicyFactory!>? shopPricing) -> Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry!
+static Convergence.Runtime.RuntimeShopPricingProfile.operator !=(Convergence.Runtime.RuntimeShopPricingProfile? left, Convergence.Runtime.RuntimeShopPricingProfile? right) -> bool
+static Convergence.Runtime.RuntimeShopPricingProfile.operator ==(Convergence.Runtime.RuntimeShopPricingProfile? left, Convergence.Runtime.RuntimeShopPricingProfile? right) -> bool
+static Convergence.Runtime.ShopPriceCalculationRequest.operator !=(Convergence.Runtime.ShopPriceCalculationRequest? left, Convergence.Runtime.ShopPriceCalculationRequest? right) -> bool
+static Convergence.Runtime.ShopPriceCalculationRequest.operator ==(Convergence.Runtime.ShopPriceCalculationRequest? left, Convergence.Runtime.ShopPriceCalculationRequest? right) -> bool
+static Convergence.Runtime.ShopPriceCalculationResult.Applied(int price) -> Convergence.Runtime.ShopPriceCalculationResult!
+static Convergence.Runtime.ShopPriceCalculationResult.operator !=(Convergence.Runtime.ShopPriceCalculationResult? left, Convergence.Runtime.ShopPriceCalculationResult? right) -> bool
+static Convergence.Runtime.ShopPriceCalculationResult.operator ==(Convergence.Runtime.ShopPriceCalculationResult? left, Convergence.Runtime.ShopPriceCalculationResult? right) -> bool
+static Convergence.Runtime.ShopPriceCalculationResult.Rejected(Convergence.Runtime.ShopPriceCalculationCode code, string! message) -> Convergence.Runtime.ShopPriceCalculationResult!
+static Convergence.Runtime.ShopPricingPolicyBindingResult.operator !=(Convergence.Runtime.ShopPricingPolicyBindingResult? left, Convergence.Runtime.ShopPricingPolicyBindingResult? right) -> bool
+static Convergence.Runtime.ShopPricingPolicyBindingResult.operator ==(Convergence.Runtime.ShopPricingPolicyBindingResult? left, Convergence.Runtime.ShopPricingPolicyBindingResult? right) -> bool
+static Convergence.Runtime.ShopPricingPolicyDiagnostic.operator !=(Convergence.Runtime.ShopPricingPolicyDiagnostic? left, Convergence.Runtime.ShopPricingPolicyDiagnostic? right) -> bool
+static Convergence.Runtime.ShopPricingPolicyDiagnostic.operator ==(Convergence.Runtime.ShopPricingPolicyDiagnostic? left, Convergence.Runtime.ShopPricingPolicyDiagnostic? right) -> bool
+static Convergence.Runtime.ShopPricingPolicyFactoryRegistry.CreateStandard(System.Collections.Generic.IEnumerable<Convergence.Runtime.IShopPricingPolicyFactory!>? additionalFactories = null) -> Convergence.Runtime.ShopPricingPolicyFactoryRegistry!
+static Convergence.Runtime.StandardShopPricingPolicyIds.LuckAdjusted.get -> Convergence.Content.ContentId
+static Convergence.Runtime.StandardShopPricingPolicyIds.Standard.get -> Convergence.Content.ContentId

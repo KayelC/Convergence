@@ -58,6 +58,7 @@ internal sealed class TrainingAnnexShopController
 
     public async ValueTask<TrainingAnnexShopInteractionResult> OpenTrainingSupplyAsync(
         GameDataCatalog catalog,
+        IRuntimeShopOfferResolver shopOffers,
         IShopTransactionService shopTransactions,
         IEquipmentTransitionService equipmentTransitions,
         IRuntimeEquipmentProfileResolver equipmentProfileResolver,
@@ -70,7 +71,8 @@ internal sealed class TrainingAnnexShopController
         ShopCatalogDefinition shop = catalog.GetRequiredShop(TrainingAnnexHostSupport.TrainingSupply);
         RuntimeActorSnapshot playerSnapshot = player.Actor.State.ToSnapshot();
         int luck = StatAsInt(playerSnapshot, StandardProgressionIds.Luck);
-        TrainingAnnexShopOfferResolutionResult offerResolution = ResolveShopOffers(catalog, shop);
+        TrainingAnnexShopOfferResolutionResult offerResolution =
+            ResolveShopOffers(catalog, shop, shopOffers);
         IReadOnlyList<TrainingAnnexResolvedShopOffer> offers = offerResolution.Offers;
         IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> offerDiagnostics = offerResolution.Diagnostics;
         var transactionEvidence = new List<TrainingAnnexShopTransactionEvidence>();
@@ -407,9 +409,10 @@ internal sealed class TrainingAnnexShopController
 
     private static TrainingAnnexShopOfferResolutionResult ResolveShopOffers(
         GameDataCatalog catalog,
-        ShopCatalogDefinition shop)
+        ShopCatalogDefinition shop,
+        IRuntimeShopOfferResolver resolver)
     {
-        var resolver = new RuntimeShopOfferResolver();
+        ArgumentNullException.ThrowIfNull(resolver);
         var offers = new List<TrainingAnnexResolvedShopOffer>();
         var diagnostics = new List<RuntimeShopOfferResolutionDiagnostic>();
         foreach (ShopOfferDefinition offer in shop.Offers)
@@ -499,10 +502,9 @@ internal sealed class TrainingAnnexShopController
                     offer.Runtime,
                     luck,
                     equipmentInstanceId);
-                int price = shopTransactions.CalculateBuyPrice(offer.Runtime.BasePrice, luck);
                 return new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.SelectShopOffer,
-                    $"{offer.DisplayName} - {price} C{StockLabel(offer.Runtime)}{TransactionLabel(assessment)}",
+                    $"{offer.DisplayName} - {assessment.Price} C{StockLabel(offer.Runtime)}{TransactionLabel(assessment)}",
                     assessment.Applied,
                     offer.Description,
                     HostCommandSelectionIdentity.ForContent(offer.Runtime.ContentId));
@@ -546,10 +548,9 @@ internal sealed class TrainingAnnexShopController
                     luck,
                     FindSellableEquipmentInstance(inventory, offer.Runtime, equipment),
                     [equipment]);
-                int price = shopTransactions.CalculateSellPrice(offer.Runtime.BasePrice, luck);
                 return new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.SelectSellOffer,
-                    $"{offer.DisplayName} - {price} C{OwnedLabel(inventory, offer.Runtime)}{TransactionLabel(assessment)}",
+                    $"{offer.DisplayName} - {assessment.Price} C{OwnedLabel(inventory, offer.Runtime)}{TransactionLabel(assessment)}",
                     assessment.Applied,
                     offer.Description,
                     HostCommandSelectionIdentity.ForContent(offer.Runtime.ContentId));

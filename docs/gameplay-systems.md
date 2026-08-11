@@ -142,9 +142,9 @@ actor state.
 
 Transition services enforce runtime-ID uniqueness, approved overlap roles,
 roster capacity, deploy/recall/swap/consume behavior, item stacks,
-inventory-owned equipment-instance identity, equip compatibility, typed currency-ledger arithmetic, shop
-transactions, and restoration transactions. Hosts own UI and durable inventory
-storage.
+inventory-owned equipment-instance identity, equip compatibility, typed
+currency-ledger arithmetic, policy-bound shop pricing, shop transactions, and
+restoration transactions. Hosts own UI and durable inventory storage.
 
 Order 7 is open. O7-R2 now gives each equipment copy a unique runtime instance
 ID, permits separate copies of one definition, makes inventory the sole owner,
@@ -156,8 +156,13 @@ selection resolve that profile live, while actor composition and restoration
 consume its numeric contributions. O7-R5 replaces the unnamed balance with an
 immutable ledger keyed by currency `ContentId`; every shop, recovery,
 Compendium, reward, and negotiation transaction now names its currency.
-Limited stock is not returned as durable runtime state, pricing policies remain
-unbound, and recovery remains HP/SP-specific. The owner-approved
+O7-R6 makes authored purchase price exact under the supplied standard pricing
+policy, makes resale percentage configurable with truncation toward zero,
+retains Luck adjustment only as an explicitly selected optional policy, and
+resolves offer-level policy configuration through typed host-registerable
+factories without fallback. The same resolved offer profile drives assessment
+and execution. Limited stock is not returned as durable runtime state, and
+recovery remains HP/SP-specific. The owner-approved
 [Order 7 roadmap](reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 defines the direct authority corrections and narrowly justified policy seams;
 this section is not closure evidence for those pending changes.

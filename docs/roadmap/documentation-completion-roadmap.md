@@ -653,8 +653,10 @@ O7-R2 directly corrects equipment-instance ownership and duplicated save
 authority. O7-R3 implements authored slot layouts, O7-R4 implements the fixed
 equipped-only skill-grant and Defense/Evasion integration rules without adding
 policies or equipment-specific combat formulas, and O7-R5 implements typed
-currency-ledger authority as a direct data correction. Later checkpoints add
-policy seams only for pricing, shop stock, and recovery.
+currency-ledger authority as a direct data correction. O7-R6 binds explicit
+standard and optional Luck-adjusted shop-pricing policies through the economy
+ruleset and typed offer factories. Later checkpoints add policy seams only for
+shop stock and recovery.
 
 The capability is `partial` while implementation remains open. Its mechanics and
 technical entries remain `existing_unreviewed`, and its developer guide remains

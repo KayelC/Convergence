@@ -362,14 +362,34 @@ host's command model determines reasonable bounds. The supplied examples use
 turn windows that reach turn-start lifecycle, including a window whose
 committed lifecycle removes the actor before handler execution.
 
-## Fixed Supplied Policies
+## Standard Economy
 
-`standard_growth` and `standard_economy` currently accept no parameters and
-reject unknown ones. Their formulas remain the supplied fixed implementations
-for `0.1.0`.
-They are nevertheless replaceable: author another registered `policyId` and
-provide the matching typed factory. This keeps replacement explicit without
-pretending that unsupported tuning values are implemented.
+`standard_economy` requires `pricingPolicyId`, a valid unqualified ID resolved
+through the registered `IShopPricingPolicyFactory` set. It accepts an optional
+`pricingParameters` object and rejects missing IDs, unsupported policies,
+unknown parameters, wrong types, and rejected factory configuration with typed
+binding diagnostics. It binds inventory, equipment, currency, offer resolution,
+shop transactions, and recovery as one resource-management service set.
+
+The supplied pricing factories are:
+
+| Policy ID | Parameters | Behavior |
+|---|---|---|
+| `standard_shop_pricing` | optional nonnegative decimal `resalePercentage`, default `0.50` | Purchase is the exact authored purchase price; resale multiplies by the percentage and truncates toward zero. |
+| `luck_adjusted_shop_pricing` | none | Purchase uses `max(0.50, 1.00 - Luck * 0.01)`; resale uses `0.50 + Luck * 0.01`; results truncate toward zero. |
+
+Every offer still supplies one nonnegative whole authored purchase price. A
+fixed-price offer uses the economy default. A policy-shaped offer requires
+`purchasePrice` in its own parameter object and passes its remaining parameters
+to the selected factory. Explicit offer-policy rejection never falls back to
+the economy default.
+
+## Fixed Growth Policy
+
+`standard_growth` currently accepts no parameters and rejects unknown ones.
+Its formulas remain the supplied fixed implementation for `0.1.0`. A game may
+replace it by authoring another registered `policyId` and supplying the matching
+typed factory.
 
 ## Related Guidance
 

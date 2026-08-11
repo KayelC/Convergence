@@ -82,7 +82,10 @@
       "displayName": "Training Annex Economy",
       "description": "Binds the slice to the standard economy policy.",
       "category": "economy",
-      "policyId": "standard_economy"
+      "policyId": "standard_economy",
+      "parameters": {
+        "pricingPolicyId": "luck_adjusted_shop_pricing"
+      }
     }
   ]
 }

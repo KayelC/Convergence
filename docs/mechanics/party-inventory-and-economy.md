@@ -1,11 +1,11 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Order 7 status:** O7-R1 through O7-R5 establish the approved tracking,
+> **Order 7 status:** O7-R1 through O7-R6 establish the approved tracking,
 > equipment-instance ownership, authored slot-layout model, equipped-only skill
 > grants, Defense/Evasion combat contributions, and typed currency-ledger
-> authority. Stateful shop stock, explicit pricing, and generic recovery remain
-> pending. This page remains unreviewed
-> until the complete
+> authority, plus explicit standard and optional Luck-adjusted shop pricing.
+> Stateful shop stock and generic recovery remain pending. This page remains
+> unreviewed until the complete
 > [Order 7 roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 > is implemented and independently closed.
 
@@ -133,9 +133,33 @@ single balance is unsupported unless a host deliberately supplies a migration.
 
 ## Shops
 
-Shop definitions identify offered items/equipment, categories, price or pricing-policy IDs, stock policy, and availability. Runtime transactions assess ownership, stock, stack limits, equipped-sale restrictions, and the explicitly selected currency balance before mutation. The host supplies a fresh runtime instance ID when purchasing equipment and identifies the exact owned instance when selling it.
+Shop definitions identify offered items/equipment, categories, an authored
+purchase price, stock policy, and availability. Runtime transactions assess
+ownership, stock, stack limits, equipped-sale restrictions, pricing, and the
+explicitly selected currency balance before mutation. The host supplies a
+fresh runtime instance ID when purchasing equipment and identifies the exact
+owned instance when selling it.
 
-Buy and sell prices are policy outcomes. The supplied standard/example policies can use base price and actor stats, but a game may provide fixed, regional, reputation-based, or other pricing.
+The economy ruleset explicitly selects the default shop-pricing policy. A
+fixed-price offer applies that default to its authored purchase price. A
+policy-shaped offer supplies `purchasePrice`, selects one registered pricing
+factory, and may configure it for that offer. Invalid explicit configuration
+rejects that offer; it never silently falls back to the economy default.
+
+The supplied `standard_shop_pricing` policy charges exactly the authored
+purchase price. Its resale price is the purchase price multiplied by a
+configurable nonnegative resale percentage, defaulting to `0.50`; fractional
+results truncate toward zero. The optional
+`luck_adjusted_shop_pricing` policy preserves the sample's Luck-sensitive
+rule: buying uses `max(0.50, 1.00 - Luck * 0.01)`, selling uses
+`0.50 + Luck * 0.01`, and both truncate toward zero. Games choose this policy
+explicitly; it is not hidden standard behavior.
+
+One resolved pricing profile drives menu assessment and the committed
+transaction. Negative input, overflow, unavailable currency, unaffordability,
+and a failing custom policy reject before inventory or currency mutation.
+Limited stock is still only assessed in the current checkpoint; durable stock
+decrement and replenishment policy remain Order 7 work.
 
 ## Recovery Facilities
 

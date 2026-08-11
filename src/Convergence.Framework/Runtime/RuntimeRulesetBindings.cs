@@ -81,6 +81,7 @@ public sealed record ResourceManagementRulesetServices(
     IInventoryTransitionService Inventory,
     IEquipmentTransitionService Equipment,
     IEconomyTransactionService Economy,
+    IRuntimeShopOfferResolver ShopOffers,
     IShopTransactionService Shop,
     IHospitalRestorationService Hospital);
 

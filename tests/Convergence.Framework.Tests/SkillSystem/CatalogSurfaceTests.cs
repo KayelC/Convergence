@@ -714,6 +714,8 @@ public sealed class CatalogSurfaceTests
                 "standard_action_token",
                 "standard_roster_capacity",
                 "standard_economy",
+                "standard_shop_pricing",
+                "luck_adjusted_shop_pricing",
                 "return_to_lobby",
                 "standard_accident",
                 "standard_mutation")

@@ -455,7 +455,11 @@ public sealed class ResourceManagementServiceTests
         var shop = new ShopTransactionService(inventoryService, new EconomyTransactionService());
         var inventory = new RuntimeInventorySnapshot();
         RuntimeCurrencyLedgerSnapshot wallet = Ledger(90);
-        var medicine = new RuntimeShopOfferSnapshot(ShopContentKind.Item, Id("medicine"), 100);
+        RuntimeShopOfferSnapshot medicine = Offer(
+            ShopContentKind.Item,
+            Id("medicine"),
+            100,
+            LuckPricing());
 
         ShopTransactionResult bought = shop.Buy(
             inventory,
@@ -473,8 +477,8 @@ public sealed class ResourceManagementServiceTests
             soldEquipmentInstanceId: null,
             actorEquipment: []);
 
-        Assert.Equal(90, shop.CalculateBuyPrice(100, 10));
-        Assert.Equal(60, shop.CalculateSellPrice(100, 10));
+        Assert.Equal(90, shop.CalculateBuyPrice(medicine, 10));
+        Assert.Equal(60, shop.CalculateSellPrice(medicine, 10));
         Assert.True(bought.Applied);
         Assert.Equal(0, Balance(bought.AfterCurrencyLedger));
         Assert.Equal(1, bought.AfterInventory.GetQuantity(Id("medicine")));
@@ -484,23 +488,23 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
-    public void RuntimeShopOfferSnapshot_RejectsNegativeBasePriceAtConstructionAndCloneBoundaries()
+    public void RuntimeShopOfferSnapshot_RejectsInvalidPricingAtConstructionAndCloneBoundaries()
     {
         ArgumentOutOfRangeException construction = Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new RuntimeShopOfferSnapshot(ShopContentKind.Item, Id("invalid"), -1));
-        var valid = new RuntimeShopOfferSnapshot(ShopContentKind.Item, Id("medicine"), 100);
+            new RuntimeShopPricingProfile(-1, StandardPricing()));
+        RuntimeShopOfferSnapshot valid = Offer(ShopContentKind.Item, Id("medicine"), 100);
 
-        ArgumentOutOfRangeException cloning = Assert.Throws<ArgumentOutOfRangeException>(() =>
-            _ = valid with { BasePrice = -1 });
+        ArgumentNullException cloning = Assert.Throws<ArgumentNullException>(() =>
+            _ = valid with { Pricing = null! });
 
-        Assert.Equal("BasePrice", construction.ParamName);
-        Assert.Equal("BasePrice", cloning.ParamName);
-        Assert.Equal(100, valid.BasePrice);
+        Assert.Equal("authoredPurchasePrice", construction.ParamName);
+        Assert.Equal("Pricing", cloning.ParamName);
+        Assert.Equal(100, valid.Pricing.AuthoredPurchasePrice);
 
-        var (kind, contentId, basePrice, slot, stackLimit, stock) = valid;
+        var (kind, contentId, pricing, slot, stackLimit, stock) = valid;
         Assert.Equal(ShopContentKind.Item, kind);
         Assert.Equal(Id("medicine"), contentId);
-        Assert.Equal(100, basePrice);
+        Assert.Same(valid.Pricing, pricing);
         Assert.Null(slot);
         Assert.Null(stackLimit);
         Assert.Null(stock);
@@ -514,16 +518,25 @@ public sealed class ResourceManagementServiceTests
         var inventory = new RuntimeInventorySnapshot(
             [new KeyValuePair<ContentId, int>(medicine, 1)]);
         RuntimeCurrencyLedgerSnapshot wallet = Ledger(100);
-        var ordinaryOffer = new RuntimeShopOfferSnapshot(ShopContentKind.Item, medicine, 100);
-        var extremeOffer = new RuntimeShopOfferSnapshot(ShopContentKind.Item, medicine, int.MaxValue);
+        RuntimeShopOfferSnapshot ordinaryOffer = Offer(
+            ShopContentKind.Item,
+            medicine,
+            100,
+            LuckPricing());
+        RuntimeShopOfferSnapshot extremeOffer = Offer(
+            ShopContentKind.Item,
+            medicine,
+            int.MaxValue,
+            LuckPricing());
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => shop.CalculateBuyPrice(-1, 0));
-        Assert.Throws<ArgumentOutOfRangeException>(() => shop.CalculateBuyPrice(100, -1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => shop.CalculateSellPrice(100, -1));
-        Assert.Throws<OverflowException>(() => shop.CalculateSellPrice(int.MaxValue, int.MaxValue));
-        Assert.Equal(13, shop.CalculateBuyPrice(20, 35));
-        Assert.Equal(29, shop.CalculateSellPrice(50, 8));
-        Assert.Equal(1_073_741_823, shop.CalculateBuyPrice(int.MaxValue, int.MaxValue));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new RuntimeShopPricingProfile(-1, LuckPricing()));
+        Assert.Throws<ArgumentOutOfRangeException>(() => shop.CalculateBuyPrice(ordinaryOffer, -1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => shop.CalculateSellPrice(ordinaryOffer, -1));
+        Assert.Throws<OverflowException>(() => shop.CalculateSellPrice(extremeOffer, int.MaxValue));
+        Assert.Equal(13, shop.CalculateBuyPrice(Offer(ShopContentKind.Item, medicine, 20, LuckPricing()), 35));
+        Assert.Equal(29, shop.CalculateSellPrice(Offer(ShopContentKind.Item, medicine, 50, LuckPricing()), 8));
+        Assert.Equal(1_073_741_823, shop.CalculateBuyPrice(extremeOffer, int.MaxValue));
 
         ShopTransactionResult invalidBuy = shop.Buy(
             inventory,
@@ -559,13 +572,14 @@ public sealed class ResourceManagementServiceTests
                     [new RuntimeEquipmentInstanceSnapshot(ownedInstanceId, sword)])
             ]);
         RuntimeCurrencyLedgerSnapshot wallet = Ledger(1_000);
-        var swordOffer = new RuntimeShopOfferSnapshot(
+        RuntimeShopOfferSnapshot swordOffer = Offer(
             ShopContentKind.Equipment,
             sword,
             100,
+            StandardPricing(),
             StandardEquipmentSlotIds.Weapon);
         var emptyStock = swordOffer with { StockAvailable = 0 };
-        var priceyItem = new RuntimeShopOfferSnapshot(ShopContentKind.Item, Id("bead"), 2_000);
+        RuntimeShopOfferSnapshot priceyItem = Offer(ShopContentKind.Item, Id("bead"), 2_000);
 
         ShopTransactionResult anotherCopy = shop.Buy(
             ownedSword,
@@ -607,7 +621,7 @@ public sealed class ResourceManagementServiceTests
     [Fact]
     public void ShopOfferResolver_MapsAuthoredItemAndEquipmentOffersIntoRuntimeOffers()
     {
-        var resolver = new RuntimeShopOfferResolver();
+        RuntimeShopOfferResolver resolver = ShopOfferResolver();
         ContentId medicine = Q("medicine");
         ContentId blade = Q("blade");
         var catalog = new GameDataCatalog(
@@ -663,13 +677,13 @@ public sealed class ResourceManagementServiceTests
         RuntimeShopOfferSnapshot equipmentSnapshot = equipment.RequireOffer();
         Assert.Equal(ShopContentKind.Item, itemSnapshot.ContentKind);
         Assert.Equal(medicine, itemSnapshot.ContentId);
-        Assert.Equal(25, itemSnapshot.BasePrice);
+        Assert.Equal(25, itemSnapshot.Pricing.AuthoredPurchasePrice);
         Assert.Equal(10, itemSnapshot.ItemStackLimit);
         Assert.Equal(3, itemSnapshot.StockAvailable);
         Assert.Null(itemSnapshot.EquipmentSlotId);
         Assert.Equal(ShopContentKind.Equipment, equipmentSnapshot.ContentKind);
         Assert.Equal(blade, equipmentSnapshot.ContentId);
-        Assert.Equal(100, equipmentSnapshot.BasePrice);
+        Assert.Equal(100, equipmentSnapshot.Pricing.AuthoredPurchasePrice);
         Assert.Equal(StandardEquipmentSlotIds.Weapon, equipmentSnapshot.EquipmentSlotId);
         Assert.Null(equipmentSnapshot.ItemStackLimit);
         Assert.Null(equipmentSnapshot.StockAvailable);
@@ -678,7 +692,7 @@ public sealed class ResourceManagementServiceTests
     [Fact]
     public void ShopOfferResolver_RejectsUnsupportedOrMalformedOffersWithoutRuntimeFallbacks()
     {
-        var resolver = new RuntimeShopOfferResolver();
+        RuntimeShopOfferResolver resolver = ShopOfferResolver();
         ContentId medicine = Q("medicine");
         ContentId missingBlade = Q("missing_blade");
         var catalog = new GameDataCatalog(
@@ -706,7 +720,9 @@ public sealed class ResourceManagementServiceTests
         var policyPrice = new ShopOfferDefinition(
             ShopContentKind.Item,
             medicine,
-            new PolicyShopPriceDefinition(Id("dynamic_price")),
+            new PolicyShopPriceDefinition(
+                Id("dynamic_price"),
+                [new KeyValuePair<string, object?>("purchasePrice", 100)]),
             new UnlimitedShopStockDefinition());
         var fractionalPrice = new ShopOfferDefinition(
             ShopContentKind.Item,
@@ -805,6 +821,47 @@ public sealed class ResourceManagementServiceTests
         RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, balance);
     private static int Balance(RuntimeCurrencyLedgerSnapshot ledger) =>
         ledger.GetRequiredBalance(CreditsCurrency);
+
+    private static BoundShopPricingPolicy StandardPricing(decimal resalePercentage = 0.50m) =>
+        new(
+            StandardShopPricingPolicyIds.Standard,
+            new StandardShopPricingPolicy(resalePercentage));
+
+    private static BoundShopPricingPolicy LuckPricing() =>
+        new(
+            StandardShopPricingPolicyIds.LuckAdjusted,
+            new LuckAdjustedShopPricingPolicy());
+
+    private static RuntimeShopPricingProfile Pricing(
+        int purchasePrice,
+        BoundShopPricingPolicy? policy = null) =>
+        new(purchasePrice, policy ?? StandardPricing());
+
+    private static RuntimeShopOfferSnapshot Offer(
+        ShopContentKind contentKind,
+        ContentId contentId,
+        int purchasePrice,
+        BoundShopPricingPolicy? policy = null,
+        ContentId? equipmentSlotId = null,
+        int? itemStackLimit = null,
+        int? stockAvailable = null) =>
+        new(
+            contentKind,
+            contentId,
+            Pricing(purchasePrice, policy),
+            equipmentSlotId,
+            itemStackLimit,
+            stockAvailable);
+
+    private static RuntimeShopOfferResolver ShopOfferResolver(
+        BoundShopPricingPolicy? defaultPricing = null)
+    {
+        ShopPricingPolicyFactoryRegistry factories =
+            ShopPricingPolicyFactoryRegistry.CreateStandard();
+        return new RuntimeShopOfferResolver(
+            defaultPricing ?? StandardPricing(),
+            factories);
+    }
 
     private static void AssertPricingRejectedWithoutMutation(
         ShopTransactionResult result,

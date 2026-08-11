@@ -265,7 +265,7 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "Order 7 equipment-instance ownership, slot layouts, equipped skill grants, combat contributions, and typed currency-ledger authority are implemented, but the mechanics page remains existing-unreviewed until the remaining stock, pricing, recovery, and closure checkpoints are complete."
+        "reason": "Order 7 equipment-instance ownership, slot layouts, equipped skill grants, combat contributions, typed currency-ledger authority, and explicit pricing-policy binding are implemented, but the mechanics page remains existing-unreviewed until the remaining stock, recovery, and closure checkpoints are complete."
       },
       "developerGuide": {
         "state": "missing",
@@ -275,7 +275,7 @@
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/gameplay-systems.md"],
-        "reason": "Order 7 is open; equipment-instance/save authority, slot layouts, combat contributions, and typed currency-ledger authority are implemented, while atomic stock, pricing, and recovery invariants still need a dedicated reviewed technical page."
+        "reason": "Order 7 is open; equipment-instance/save authority, slot layouts, combat contributions, typed currency-ledger authority, and pricing-policy binding are implemented, while atomic stock and recovery invariants still need a dedicated reviewed technical page."
       }
     },
     {

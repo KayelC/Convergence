@@ -3120,6 +3120,8 @@ public sealed class RuntimePersistenceSnapshotTests
                 "standard_action_token",
                 "standard_roster_capacity",
                 "standard_economy",
+                "standard_shop_pricing",
+                "luck_adjusted_shop_pricing",
                 "standard_moon_phase",
                 "return_to_lobby",
                 "standard_accident",

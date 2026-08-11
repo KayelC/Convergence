@@ -968,19 +968,19 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
 
 public sealed record RuntimeShopOfferSnapshot
 {
-    private readonly int _basePrice;
+    private readonly RuntimeShopPricingProfile _pricing;
 
     public RuntimeShopOfferSnapshot(
         ShopContentKind ContentKind,
         ContentId ContentId,
-        int BasePrice,
+        RuntimeShopPricingProfile Pricing,
         ContentId? EquipmentSlotId = null,
         int? ItemStackLimit = null,
         int? StockAvailable = null)
     {
         this.ContentKind = ContentKind;
         this.ContentId = ContentId;
-        this.BasePrice = BasePrice;
+        _pricing = Pricing ?? throw new ArgumentNullException(nameof(Pricing));
         if (EquipmentSlotId is ContentId slotId && !slotId.IsValid)
         {
             throw new ArgumentException(
@@ -995,18 +995,10 @@ public sealed record RuntimeShopOfferSnapshot
 
     public ShopContentKind ContentKind { get; init; }
     public ContentId ContentId { get; init; }
-    public int BasePrice
+    public RuntimeShopPricingProfile Pricing
     {
-        get => _basePrice;
-        init
-        {
-            if (value < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(BasePrice), value, "Shop base price cannot be negative.");
-            }
-
-            _basePrice = value;
-        }
+        get => _pricing;
+        init => _pricing = value ?? throw new ArgumentNullException(nameof(Pricing));
     }
     public ContentId? EquipmentSlotId { get; init; }
     public int? ItemStackLimit { get; init; }
@@ -1015,14 +1007,14 @@ public sealed record RuntimeShopOfferSnapshot
     public void Deconstruct(
         out ShopContentKind ContentKind,
         out ContentId ContentId,
-        out int BasePrice,
+        out RuntimeShopPricingProfile Pricing,
         out ContentId? EquipmentSlotId,
         out int? ItemStackLimit,
         out int? StockAvailable)
     {
         ContentKind = this.ContentKind;
         ContentId = this.ContentId;
-        BasePrice = this.BasePrice;
+        Pricing = this.Pricing;
         EquipmentSlotId = this.EquipmentSlotId;
         ItemStackLimit = this.ItemStackLimit;
         StockAvailable = this.StockAvailable;
@@ -1036,6 +1028,7 @@ public enum RuntimeShopOfferResolutionCode
     MissingEquipmentDefinition,
     UnsupportedPricePolicy,
     InvalidFixedPrice,
+    InvalidPricePolicyConfiguration,
     UnsupportedStockPolicy,
     EquipmentSlotProfileMismatch
 }
@@ -1043,7 +1036,8 @@ public enum RuntimeShopOfferResolutionCode
 public sealed record RuntimeShopOfferResolutionDiagnostic(
     RuntimeShopOfferResolutionCode Code,
     ContentId ContentId,
-    string Message);
+    string Message,
+    ShopPricingPolicyDiagnostic? PricingDiagnostic = null);
 
 public sealed record RuntimeShopOfferResolutionResult
 {
@@ -1078,9 +1072,16 @@ public interface IRuntimeShopOfferResolver
 public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
 {
     private readonly IEquipmentSlotLayoutPolicy _slotLayout;
+    private readonly BoundShopPricingPolicy _defaultPricing;
+    private readonly ShopPricingPolicyFactoryRegistry _pricingFactories;
 
-    public RuntimeShopOfferResolver(IEquipmentSlotLayoutPolicy? slotLayout = null)
+    public RuntimeShopOfferResolver(
+        BoundShopPricingPolicy defaultPricing,
+        ShopPricingPolicyFactoryRegistry pricingFactories,
+        IEquipmentSlotLayoutPolicy? slotLayout = null)
     {
+        _defaultPricing = defaultPricing ?? throw new ArgumentNullException(nameof(defaultPricing));
+        _pricingFactories = pricingFactories ?? throw new ArgumentNullException(nameof(pricingFactories));
         _slotLayout = slotLayout ?? StandardEquipmentSlotLayoutPolicy.Instance;
     }
 
@@ -1094,7 +1095,7 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
         ArgumentNullException.ThrowIfNull(equipmentRepository);
 
         var diagnostics = new List<RuntimeShopOfferResolutionDiagnostic>();
-        int? basePrice = ResolvePrice(offer, diagnostics);
+        RuntimeShopPricingProfile? pricing = ResolvePrice(offer, diagnostics);
         int? stock = ResolveStock(offer, diagnostics);
         ContentId? equipmentSlotId = null;
         int? itemStackLimit = null;
@@ -1142,7 +1143,7 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
             }
         }
 
-        if (diagnostics.Count > 0 || basePrice is null)
+        if (diagnostics.Count > 0 || pricing is null)
         {
             return new RuntimeShopOfferResolutionResult(null, diagnostics);
         }
@@ -1151,37 +1152,113 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
             new RuntimeShopOfferSnapshot(
                 offer.ContentKind,
                 offer.ContentId,
-                basePrice.Value,
+                pricing,
                 equipmentSlotId,
                 itemStackLimit,
                 stock));
     }
 
-    private static int? ResolvePrice(
+    private RuntimeShopPricingProfile? ResolvePrice(
         ShopOfferDefinition offer,
         ICollection<RuntimeShopOfferResolutionDiagnostic> diagnostics)
     {
-        if (offer.Price is not FixedShopPriceDefinition fixedPrice)
+        if (offer.Price is FixedShopPriceDefinition fixedPrice)
+        {
+            int? fixedPurchasePrice = ResolveWholePurchasePrice(
+                offer,
+                fixedPrice.BasePrice,
+                RuntimeShopOfferResolutionCode.InvalidFixedPrice,
+                "fixed price",
+                diagnostics);
+            return fixedPurchasePrice is int price
+                ? new RuntimeShopPricingProfile(price, _defaultPricing)
+                : null;
+        }
+
+        if (offer.Price is not PolicyShopPriceDefinition policyPrice)
         {
             diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
                 RuntimeShopOfferResolutionCode.UnsupportedPricePolicy,
                 offer.ContentId,
-                $"Shop offer '{offer.ContentId}' uses pricing kind '{offer.Price.Kind}', which is not supported by the standard runtime shop resolver yet."));
+                $"Shop offer '{offer.ContentId}' uses unsupported pricing kind '{offer.Price.Kind}'."));
             return null;
         }
 
-        if (fixedPrice.BasePrice < 0 ||
-            fixedPrice.BasePrice > int.MaxValue ||
-            decimal.Truncate(fixedPrice.BasePrice) != fixedPrice.BasePrice)
+        if (!policyPrice.Parameters.TryGetValue("purchasePrice", out object? rawPurchasePrice) ||
+            !RulesetPolicyFactoryParameters.TryReadDecimal(rawPurchasePrice, out decimal authoredPurchasePrice))
         {
             diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
-                RuntimeShopOfferResolutionCode.InvalidFixedPrice,
+                RuntimeShopOfferResolutionCode.InvalidPricePolicyConfiguration,
                 offer.ContentId,
-                $"Shop offer '{offer.ContentId}' has fixed price '{fixedPrice.BasePrice}', which must be a nonnegative whole integer."));
+                $"Shop offer '{offer.ContentId}' policy price requires a decimal 'purchasePrice' parameter.",
+                new ShopPricingPolicyDiagnostic(
+                    policyPrice.Parameters.ContainsKey("purchasePrice")
+                        ? ShopPricingPolicyDiagnosticCode.InvalidParameterType
+                        : ShopPricingPolicyDiagnosticCode.MissingParameter,
+                    $"Shop pricing policy '{policyPrice.PricingPolicyId}' requires a decimal 'purchasePrice' parameter.",
+                    "purchasePrice",
+                    policyPrice.PricingPolicyId)));
             return null;
         }
 
-        return (int)fixedPrice.BasePrice;
+        int? purchasePrice = ResolveWholePurchasePrice(
+            offer,
+            authoredPurchasePrice,
+            RuntimeShopOfferResolutionCode.InvalidPricePolicyConfiguration,
+            "policy purchase price",
+            diagnostics);
+        if (purchasePrice is null)
+        {
+            return null;
+        }
+
+        var policyParameters = new Dictionary<string, object?>(StringComparer.Ordinal);
+        foreach ((string key, object? value) in policyPrice.Parameters)
+        {
+            if (!string.Equals(key, "purchasePrice", StringComparison.Ordinal))
+            {
+                policyParameters.Add(key, value);
+            }
+        }
+
+        ShopPricingPolicyBindingResult binding =
+            _pricingFactories.Bind(policyPrice.PricingPolicyId, policyParameters);
+        if (!binding.IsSuccess || binding.Policy is null)
+        {
+            foreach (ShopPricingPolicyDiagnostic diagnostic in binding.Diagnostics)
+            {
+                diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                    diagnostic.Code == ShopPricingPolicyDiagnosticCode.UnsupportedPolicy
+                        ? RuntimeShopOfferResolutionCode.UnsupportedPricePolicy
+                        : RuntimeShopOfferResolutionCode.InvalidPricePolicyConfiguration,
+                    offer.ContentId,
+                    $"Shop offer '{offer.ContentId}' pricing rejected: {diagnostic.Message}",
+                    diagnostic));
+            }
+
+            return null;
+        }
+
+        return new RuntimeShopPricingProfile(purchasePrice.Value, binding.Policy);
+    }
+
+    private static int? ResolveWholePurchasePrice(
+        ShopOfferDefinition offer,
+        decimal value,
+        RuntimeShopOfferResolutionCode code,
+        string description,
+        ICollection<RuntimeShopOfferResolutionDiagnostic> diagnostics)
+    {
+        if (value < 0 || value > int.MaxValue || decimal.Truncate(value) != value)
+        {
+            diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                code,
+                offer.ContentId,
+                $"Shop offer '{offer.ContentId}' has {description} '{value}', which must be a nonnegative whole integer."));
+            return null;
+        }
+
+        return (int)value;
     }
 
     private static int? ResolveStock(
@@ -1245,8 +1322,8 @@ public sealed record ShopTransactionResult
 
 public interface IShopTransactionService
 {
-    int CalculateBuyPrice(int basePrice, int luck);
-    int CalculateSellPrice(int basePrice, int luck);
+    int CalculateBuyPrice(RuntimeShopOfferSnapshot offer, int luck);
+    int CalculateSellPrice(RuntimeShopOfferSnapshot offer, int luck);
     ShopTransactionResult Buy(
         RuntimeInventorySnapshot inventory,
         RuntimeCurrencyLedgerSnapshot currencyLedger,
@@ -1266,10 +1343,6 @@ public interface IShopTransactionService
 
 public sealed class ShopTransactionService : IShopTransactionService
 {
-    private const decimal MinimumBuyMultiplier = 0.5m;
-    private const decimal BaseSellMultiplier = 0.50m;
-    private const decimal LuckPriceStep = 0.01m;
-
     private readonly IInventoryTransitionService _inventory;
     private readonly IEconomyTransactionService _economy;
 
@@ -1281,11 +1354,23 @@ public sealed class ShopTransactionService : IShopTransactionService
         _economy = economy ?? new EconomyTransactionService();
     }
 
-    public int CalculateBuyPrice(int basePrice, int luck) =>
-        RequirePrice(CalculatePrice(basePrice, luck, isBuying: true), basePrice, luck);
+    public int CalculateBuyPrice(RuntimeShopOfferSnapshot offer, int luck)
+    {
+        ArgumentNullException.ThrowIfNull(offer);
+        return RequirePrice(
+            offer.Pricing.Calculate(ShopPriceOperation.Purchase, luck),
+            offer,
+            luck);
+    }
 
-    public int CalculateSellPrice(int basePrice, int luck) =>
-        RequirePrice(CalculatePrice(basePrice, luck, isBuying: false), basePrice, luck);
+    public int CalculateSellPrice(RuntimeShopOfferSnapshot offer, int luck)
+    {
+        ArgumentNullException.ThrowIfNull(offer);
+        return RequirePrice(
+            offer.Pricing.Calculate(ShopPriceOperation.Resale, luck),
+            offer,
+            luck);
+    }
 
     public ShopTransactionResult Buy(
         RuntimeInventorySnapshot inventory,
@@ -1297,8 +1382,10 @@ public sealed class ShopTransactionService : IShopTransactionService
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(currencyLedger);
-        ShopPriceCalculation pricing = CalculatePrice(offer.BasePrice, buyerLuck, isBuying: true);
-        if (!pricing.IsValid)
+        ArgumentNullException.ThrowIfNull(offer);
+        ShopPriceCalculationResult pricing =
+            offer.Pricing.Calculate(ShopPriceOperation.Purchase, buyerLuck);
+        if (!pricing.IsSuccess)
         {
             return PricingRejected(inventory, currencyLedger, currencyId, offer, pricing);
         }
@@ -1355,8 +1442,10 @@ public sealed class ShopTransactionService : IShopTransactionService
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(currencyLedger);
         ArgumentNullException.ThrowIfNull(actorEquipment);
-        ShopPriceCalculation pricing = CalculatePrice(offer.BasePrice, sellerLuck, isBuying: false);
-        if (!pricing.IsValid)
+        ArgumentNullException.ThrowIfNull(offer);
+        ShopPriceCalculationResult pricing =
+            offer.Pricing.Calculate(ShopPriceOperation.Resale, sellerLuck);
+        if (!pricing.IsSuccess)
         {
             return PricingRejected(inventory, currencyLedger, currencyId, offer, pricing);
         }
@@ -1547,88 +1636,36 @@ public sealed class ShopTransactionService : IShopTransactionService
         RuntimeCurrencyLedgerSnapshot currencyLedger,
         ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
-        ShopPriceCalculation pricing) =>
+        ShopPriceCalculationResult pricing) =>
         Rejected(
             ResourceTransactionCode.InvalidShopPricing,
             inventory,
             currencyLedger,
             currencyId,
             price: 0,
-            pricing.Message,
+            pricing.Message ?? "Shop pricing policy rejected the transaction.",
             offer.ContentId,
             offer.EquipmentSlotId);
 
-    private static ShopPriceCalculation CalculatePrice(int basePrice, int luck, bool isBuying)
-    {
-        string operation = isBuying ? "buy" : "sell";
-        if (basePrice < 0)
-        {
-            return ShopPriceCalculation.Invalid(
-                ShopPriceFailure.NegativeBasePrice,
-                $"Shop {operation} base price cannot be negative (received {basePrice}).");
-        }
-
-        if (luck < 0)
-        {
-            return ShopPriceCalculation.Invalid(
-                ShopPriceFailure.NegativeLuck,
-                $"Shop {operation} Luck cannot be negative (received {luck}).");
-        }
-
-        decimal multiplier = isBuying
-            ? Math.Max(MinimumBuyMultiplier, 1m - (luck * LuckPriceStep))
-            : BaseSellMultiplier + (luck * LuckPriceStep);
-        decimal calculated = decimal.Truncate(checked(basePrice * multiplier));
-        if (calculated > int.MaxValue)
-        {
-            return ShopPriceCalculation.Invalid(
-                ShopPriceFailure.ExceedsIntegerRange,
-                $"Shop {operation} price for base price {basePrice} and Luck {luck} exceeds the supported integer range.");
-        }
-
-        return ShopPriceCalculation.Valid(decimal.ToInt32(calculated));
-    }
-
     private static int RequirePrice(
-        ShopPriceCalculation pricing,
-        int basePrice,
+        ShopPriceCalculationResult pricing,
+        RuntimeShopOfferSnapshot offer,
         int luck) =>
-        pricing.Failure switch
+        pricing.Code switch
         {
-            ShopPriceFailure.None => pricing.Price,
-            ShopPriceFailure.NegativeBasePrice => throw new ArgumentOutOfRangeException(
-                nameof(basePrice),
-                basePrice,
+            ShopPriceCalculationCode.Applied => pricing.Price,
+            ShopPriceCalculationCode.NegativePurchasePrice => throw new ArgumentOutOfRangeException(
+                nameof(offer),
+                offer.Pricing.AuthoredPurchasePrice,
                 pricing.Message),
-            ShopPriceFailure.NegativeLuck => throw new ArgumentOutOfRangeException(
+            ShopPriceCalculationCode.NegativeLuck => throw new ArgumentOutOfRangeException(
                 nameof(luck),
                 luck,
                 pricing.Message),
-            ShopPriceFailure.ExceedsIntegerRange => throw new OverflowException(pricing.Message),
-            _ => throw new InvalidOperationException("Unknown shop pricing failure.")
+            ShopPriceCalculationCode.NumericOverflow => throw new OverflowException(pricing.Message),
+            ShopPriceCalculationCode.PolicyRejected => throw new InvalidOperationException(pricing.Message),
+            _ => throw new InvalidOperationException("Unknown shop pricing result code.")
         };
-
-    private enum ShopPriceFailure
-    {
-        None,
-        NegativeBasePrice,
-        NegativeLuck,
-        ExceedsIntegerRange
-    }
-
-    private readonly record struct ShopPriceCalculation(
-        int Price,
-        ShopPriceFailure Failure,
-        string Message)
-    {
-        public bool IsValid => Failure == ShopPriceFailure.None;
-
-        public static ShopPriceCalculation Valid(int price) =>
-            new(price, ShopPriceFailure.None, string.Empty);
-
-        public static ShopPriceCalculation Invalid(ShopPriceFailure failure, string message) =>
-            new(0, failure, message);
-    }
 }
 
 public sealed record RuntimeHospitalPatientSnapshot

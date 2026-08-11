@@ -109,8 +109,12 @@ public sealed class RuntimeRulesetBindingTests
             catalog,
             Qualified("standard_economy_sample"))
             .RequireService();
-        Assert.Equal(90, resources.Shop.CalculateBuyPrice(100, luck: 10));
-        Assert.Equal(60, resources.Shop.CalculateSellPrice(100, luck: 10));
+        ShopCatalogDefinition shop = catalog.GetRequiredShop(Qualified("sample_outfitter"));
+        RuntimeShopOfferSnapshot pricedOffer = resources.ShopOffers
+            .Resolve(shop.Offers[1], catalog, catalog)
+            .RequireOffer();
+        Assert.Equal(150, resources.Shop.CalculateBuyPrice(pricedOffer, luck: 10));
+        Assert.Equal(75, resources.Shop.CalculateSellPrice(pricedOffer, luck: 10));
         ContentId creditsCurrency = Id("credits");
         Assert.True(resources.Economy.Debit(
             RuntimeCurrencyLedgerSnapshot.Single(creditsCurrency, 10),
@@ -191,10 +195,18 @@ public sealed class RuntimeRulesetBindingTests
         var inventory = new InventoryTransitionService();
         var equipment = new EquipmentTransitionService();
         var economyTransactions = new EconomyTransactionService();
+        ShopPricingPolicyFactoryRegistry pricingFactories =
+            ShopPricingPolicyFactoryRegistry.CreateStandard();
+        BoundShopPricingPolicy pricing = pricingFactories
+            .Bind(
+                StandardShopPricingPolicyIds.Standard,
+                new Dictionary<string, object?>())
+            .RequirePolicy();
         var economy = new ResourceManagementRulesetServices(
             inventory,
             equipment,
             economyTransactions,
+            new RuntimeShopOfferResolver(pricing, pricingFactories),
             new ShopTransactionService(inventory, economyTransactions),
             new HospitalRestorationService(economyTransactions));
         var turn = new BattleTurnEconomyRuleset(

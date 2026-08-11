@@ -100,7 +100,13 @@
       "displayName": "Standard Economy Policy",
       "description": "Names the host-owned economy policy.",
       "category": "economy",
-      "policyId": "standard_economy"
+      "policyId": "standard_economy",
+      "parameters": {
+        "pricingPolicyId": "standard_shop_pricing",
+        "pricingParameters": {
+          "resalePercentage": 0.5
+        }
+      }
     }
   ]
 }

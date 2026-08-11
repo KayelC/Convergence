@@ -114,7 +114,14 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
     public IReadOnlyCollection<ContentId> TurnEconomyPolicyIds => SnapshotIds(_turnEconomy);
 
     public static RuntimeRulesetPolicyFactoryRegistry CreateStandard() =>
-        new(
+        CreateStandard(shopPricing: null);
+
+    public static RuntimeRulesetPolicyFactoryRegistry CreateStandard(
+        IEnumerable<IShopPricingPolicyFactory>? shopPricing)
+    {
+        ShopPricingPolicyFactoryRegistry pricingFactories =
+            ShopPricingPolicyFactoryRegistry.CreateStandard(shopPricing);
+        return new RuntimeRulesetPolicyFactoryRegistry(
             combat: [new StandardCombatRulesetPolicyFactory()],
             reward: [new StandardRewardRulesetPolicyFactory()],
             stat: [new StandardStatRulesetPolicyFactory()],
@@ -126,12 +133,13 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
             ],
             growth: [new StandardGrowthRulesetPolicyFactory()],
             rosterCapacity: [new StandardRosterCapacityRulesetPolicyFactory()],
-            economy: [new StandardEconomyRulesetPolicyFactory()],
+            economy: [new StandardEconomyRulesetPolicyFactory(pricingFactories)],
             turnEconomy:
             [
                 new StandardActionRulesetPolicyFactory(),
                 new StandardActionTokenRulesetPolicyFactory()
             ]);
+    }
 
     internal IRuntimeCombatRulesetPolicyFactory? FindCombat(ContentId policyId) =>
         Find(_combat, policyId);
@@ -948,28 +956,137 @@ internal sealed class StandardRosterCapacityRulesetPolicyFactory : IRuntimeRoste
     }
 }
 
-internal sealed class StandardEconomyRulesetPolicyFactory : IRuntimeEconomyRulesetPolicyFactory
+internal sealed class StandardEconomyRulesetPolicyFactory(
+    ShopPricingPolicyFactoryRegistry pricingFactories) : IRuntimeEconomyRulesetPolicyFactory
 {
+    private readonly ShopPricingPolicyFactoryRegistry _pricingFactories =
+        pricingFactories ?? throw new ArgumentNullException(nameof(pricingFactories));
+
     public ContentId PolicyId => StandardRulesetPolicyIds.StandardEconomy;
 
     public RulesetBindingResult<ResourceManagementRulesetServices> Create(RulesetDefinition definition)
     {
-        List<RulesetBindingDiagnostic> diagnostics = RulesetPolicyFactoryDiagnostics.RequireNoParameters(definition);
+        ArgumentNullException.ThrowIfNull(definition);
+        var diagnostics = new List<RulesetBindingDiagnostic>();
+        ContentId pricingPolicyId = default;
+        IReadOnlyDictionary<string, object?> pricingParameters =
+            new Dictionary<string, object?>(StringComparer.Ordinal);
+
+        foreach ((string key, object? value) in definition.Parameters)
+        {
+            switch (key)
+            {
+                case "pricingPolicyId":
+                    if (value is not string text)
+                    {
+                        RulesetPolicyFactoryDiagnostics.InvalidType(
+                            definition,
+                            key,
+                            "a valid unqualified content ID string",
+                            diagnostics);
+                        break;
+                    }
+
+                    try
+                    {
+                        pricingPolicyId = ContentId.Parse(text);
+                        if (pricingPolicyId.IsQualified)
+                        {
+                            throw new ArgumentException("Pricing policy ID must be unqualified.");
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+                        diagnostics.Add(new RulesetBindingDiagnostic(
+                            RulesetBindingDiagnosticCode.InvalidIdentifier,
+                            definition.Id,
+                            $"Ruleset '{definition.Id}' parameter '{key}' must be a valid unqualified content ID.",
+                            key,
+                            PolicyId: definition.PolicyId));
+                    }
+                    break;
+                case "pricingParameters":
+                    if (value is IReadOnlyDictionary<string, object?> readOnly)
+                    {
+                        pricingParameters = readOnly;
+                    }
+                    else
+                    {
+                        RulesetPolicyFactoryDiagnostics.InvalidType(
+                            definition,
+                            key,
+                            "an object",
+                            diagnostics);
+                    }
+                    break;
+                default:
+                    RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
+                    break;
+            }
+        }
+
+        if (!definition.Parameters.ContainsKey("pricingPolicyId"))
+        {
+            RulesetPolicyFactoryDiagnostics.MissingParameter(
+                definition,
+                "pricingPolicyId",
+                diagnostics);
+        }
+
         if (diagnostics.Count > 0)
         {
+            return new RulesetBindingResult<ResourceManagementRulesetServices>(null, diagnostics);
+        }
+
+        ShopPricingPolicyBindingResult pricingBinding =
+            _pricingFactories.Bind(pricingPolicyId, pricingParameters);
+        if (!pricingBinding.IsSuccess || pricingBinding.Policy is null)
+        {
+            foreach (ShopPricingPolicyDiagnostic pricingDiagnostic in pricingBinding.Diagnostics)
+            {
+                diagnostics.Add(MapPricingDiagnostic(definition, pricingDiagnostic));
+            }
+
             return new RulesetBindingResult<ResourceManagementRulesetServices>(null, diagnostics);
         }
 
         var inventory = new InventoryTransitionService();
         var equipment = new EquipmentTransitionService();
         var economy = new EconomyTransactionService();
+        var shopOffers = new RuntimeShopOfferResolver(
+            pricingBinding.Policy,
+            _pricingFactories);
         return new RulesetBindingResult<ResourceManagementRulesetServices>(new ResourceManagementRulesetServices(
             inventory,
             equipment,
             economy,
+            shopOffers,
             new ShopTransactionService(inventory, economy),
             new HospitalRestorationService(economy)));
     }
+
+    private static RulesetBindingDiagnostic MapPricingDiagnostic(
+        RulesetDefinition definition,
+        ShopPricingPolicyDiagnostic diagnostic) =>
+        new(
+            diagnostic.Code switch
+            {
+                ShopPricingPolicyDiagnosticCode.UnsupportedPolicy => RulesetBindingDiagnosticCode.UnsupportedPolicy,
+                ShopPricingPolicyDiagnosticCode.MissingParameter => RulesetBindingDiagnosticCode.MissingParameter,
+                ShopPricingPolicyDiagnosticCode.UnknownParameter => RulesetBindingDiagnosticCode.UnknownParameter,
+                ShopPricingPolicyDiagnosticCode.InvalidParameterType => RulesetBindingDiagnosticCode.InvalidParameterType,
+                ShopPricingPolicyDiagnosticCode.InvalidParameterValue => RulesetBindingDiagnosticCode.InvalidParameterValue,
+                ShopPricingPolicyDiagnosticCode.PolicyFactoryFailure => RulesetBindingDiagnosticCode.PolicyFactoryFailure,
+                _ => RulesetBindingDiagnosticCode.PolicyFactoryFailure
+            },
+            definition.Id,
+            diagnostic.Message,
+            diagnostic.ParameterName is null
+                ? "pricingPolicyId"
+                : $"pricingParameters.{diagnostic.ParameterName}",
+            ExpectedCategory: RulesetCategory.Economy,
+            ActualCategory: definition.Category,
+            PolicyId: diagnostic.PolicyId);
 }
 
 internal sealed class StandardActionRulesetPolicyFactory : IRuntimeTurnEconomyRulesetPolicyFactory

@@ -76,6 +76,16 @@ action authorization, while passive grants feed the existing passive runtime.
 Numeric contributions enter actor composition and then the existing production
 damage/hit policies; the equipment layer owns no parallel combat formula.
 
+The bound economy service owns one `IRuntimeShopOfferResolver`. Its selected
+default `IShopPricingPolicy` resolves fixed authored purchase prices, while an
+explicit policy-shaped offer may select another factory from the same
+`ShopPricingPolicyFactoryRegistry`. Resolution produces one transient immutable
+pricing profile carried by the runtime offer. Host quotes and atomic shop
+transactions consume that profile rather than rebuilding price logic in a
+presentation adapter. The supplied standard policy preserves authored purchase
+price and derives resale from a configured percentage; Luck adjustment is a
+separately selected optional policy.
+
 Battle knowledge deliberately uses two snapshot authorities. Persistent facts
 are keyed by entity definition and belong to session persistence. Encounter
 facts are keyed by runtime target identity, take query precedence for that

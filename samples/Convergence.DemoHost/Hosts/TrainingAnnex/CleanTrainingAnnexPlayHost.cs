@@ -1383,6 +1383,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         var shopResult = await new TrainingAnnexShopController(_eventSink, _commandSource)
                             .OpenTrainingSupplyAsync(
                             catalog,
+                            resourceManagement.ShopOffers,
                             resourceManagement.Shop,
                             equipmentTransitions,
                             equipmentProfileResolver,
