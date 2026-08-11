@@ -67,6 +67,15 @@ compatibility; the supplied standard policy preserves the conventional weapon,
 armor, boots, and accessory layout without making those four positions a
 framework-wide enum.
 
+`RuntimeActorEquipmentProfileSource` is the shared live projection from
+inventory ownership, actor equipment instance references, catalog definitions,
+and slot-layout validation. Weapon attacks, equipped-only skill grants,
+accessory modifiers, armor Defense, and armor/boots Evasion are all derived
+there. Grants remain outside learned/move-list state: active grants feed live
+action authorization, while passive grants feed the existing passive runtime.
+Numeric contributions enter actor composition and then the existing production
+damage/hit policies; the equipment layer owns no parallel combat formula.
+
 Battle knowledge deliberately uses two snapshot authorities. Persistent facts
 are keyed by entity definition and belong to session persistence. Encounter
 facts are keyed by runtime target identity, take query precedence for that

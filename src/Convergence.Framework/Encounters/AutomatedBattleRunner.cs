@@ -50,7 +50,8 @@ public sealed record BattleActionSelectionRequest(
         ContentId battleKindId,
         ContentId? moonPhaseId,
         IBattleKnowledgeView knowledge,
-        IEnumerable<StatModifierLifecycleBoundary>? activeStatModifierBoundaries)
+        IEnumerable<StatModifierLifecycleBoundary>? activeStatModifierBoundaries,
+        IRuntimeActorEquipmentProfileSource? equipmentProfiles = null)
         : this(actor, participants, contextId, battleKindId, moonPhaseId, knowledge)
     {
         ActiveStatModifierBoundaries = new EffectExecutionEnvironment(
@@ -58,10 +59,13 @@ public sealed record BattleActionSelectionRequest(
             battleKindId,
             moonPhaseId,
             activeStatModifierBoundaries).ActiveStatModifierBoundaries;
+        EquipmentProfiles = equipmentProfiles ?? NoRuntimeActorEquipmentProfileSource.Instance;
     }
 
     public IReadOnlyList<StatModifierLifecycleBoundary> ActiveStatModifierBoundaries { get; private init; } =
         Array.Empty<StatModifierLifecycleBoundary>();
+    public IRuntimeActorEquipmentProfileSource EquipmentProfiles { get; private init; } =
+        NoRuntimeActorEquipmentProfileSource.Instance;
 }
 
 public interface IBattleActionSelector
@@ -84,9 +88,11 @@ public sealed class DeterministicBattleActionSelector : IBattleActionSelector
         Candidate? best = null;
         RuntimeActorState[] states = request.Participants.Select(participant => participant.State).ToArray();
 
-        for (int loadoutIndex = 0; loadoutIndex < request.Actor.ActiveSkills.Count; loadoutIndex++)
+        IReadOnlyList<SkillDefinition> activeSkills =
+            request.Actor.GetAvailableActiveSkills(request.EquipmentProfiles);
+        for (int loadoutIndex = 0; loadoutIndex < activeSkills.Count; loadoutIndex++)
         {
-            SkillDefinition skill = request.Actor.ActiveSkills[loadoutIndex];
+            SkillDefinition skill = activeSkills[loadoutIndex];
             if (skill.Availability is null || !skill.Availability.ContextIds.Contains(request.ContextId))
             {
                 continue;
@@ -298,7 +304,8 @@ public sealed record AutomatedBattleRequest
             battleKindId,
             moonPhaseId,
             roundLimit,
-            teamKnowledgeSeeds: null)
+            teamKnowledgeSeeds: null,
+            equipmentProfiles: null)
     {
     }
 
@@ -309,6 +316,25 @@ public sealed record AutomatedBattleRequest
         ContentId? moonPhaseId,
         int roundLimit,
         IEnumerable<KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>>? teamKnowledgeSeeds)
+        : this(
+            participants,
+            contextId,
+            battleKindId,
+            moonPhaseId,
+            roundLimit,
+            teamKnowledgeSeeds,
+            equipmentProfiles: null)
+    {
+    }
+
+    public AutomatedBattleRequest(
+        IEnumerable<CatalogBattleActor> participants,
+        ContentId contextId,
+        ContentId battleKindId,
+        ContentId? moonPhaseId,
+        int roundLimit,
+        IEnumerable<KeyValuePair<ContentId, RuntimeEncounterKnowledgeSnapshot>>? teamKnowledgeSeeds,
+        IRuntimeActorEquipmentProfileSource? equipmentProfiles)
     {
         CatalogBattleActor[] participantSnapshot =
             participants?.ToArray() ?? throw new ArgumentNullException(nameof(participants));
@@ -360,6 +386,7 @@ public sealed record AutomatedBattleRequest
         MoonPhaseId = moonPhaseId;
         RoundLimit = roundLimit;
         TeamKnowledgeSeeds = ValidateKnowledgeSeeds(Participants, teamKnowledgeSeeds);
+        EquipmentProfiles = equipmentProfiles ?? NoRuntimeActorEquipmentProfileSource.Instance;
     }
 
     public IReadOnlyList<CatalogBattleActor> Participants { get; }
@@ -368,6 +395,7 @@ public sealed record AutomatedBattleRequest
     public ContentId? MoonPhaseId { get; }
     public int RoundLimit { get; }
     public IReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> TeamKnowledgeSeeds { get; }
+    public IRuntimeActorEquipmentProfileSource EquipmentProfiles { get; }
 
     private static IReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> ValidateKnowledgeSeeds(
         IReadOnlyList<CatalogBattleActor> participants,
@@ -520,7 +548,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
             _selector,
             request.Participants,
             _restrictionResolver,
-            request.TeamKnowledgeSeeds);
+            request.TeamKnowledgeSeeds,
+            request.EquipmentProfiles);
         var services = new BattleEncounterServices(
             new ParticipantOrderInitiativePolicy(),
             new TeamPhaseRoundRobinBattleEncounterSchedulePolicy(),
@@ -571,18 +600,21 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
         private readonly IBattleKnowledgeExecutionTransitionService _knowledgeTransitions =
             new BattleKnowledgeExecutionTransitionService();
         private readonly IAutomatedBattleTurnRestrictionResolver _restrictionResolver;
+        private readonly IRuntimeActorEquipmentProfileSource _equipmentProfiles;
 
         public AutomatedBattleTurnHandler(
             ISkillExecutor executor,
             IBattleActionSelector selector,
             IReadOnlyList<CatalogBattleActor> actors,
             IAutomatedBattleTurnRestrictionResolver restrictionResolver,
-            IReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> knowledgeSeeds)
+            IReadOnlyDictionary<ContentId, RuntimeEncounterKnowledgeSnapshot> knowledgeSeeds,
+            IRuntimeActorEquipmentProfileSource equipmentProfiles)
         {
             _executor = executor ?? throw new ArgumentNullException(nameof(executor));
             _selector = selector ?? throw new ArgumentNullException(nameof(selector));
             _actors = actors ?? throw new ArgumentNullException(nameof(actors));
             _restrictionResolver = restrictionResolver ?? throw new ArgumentNullException(nameof(restrictionResolver));
+            _equipmentProfiles = equipmentProfiles ?? throw new ArgumentNullException(nameof(equipmentProfiles));
             ArgumentNullException.ThrowIfNull(knowledgeSeeds);
             _knowledge = _actors.Select(actor => actor.State.TeamId).Distinct()
                 .ToDictionary(
@@ -622,7 +654,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 request.Encounter.BattleKindId,
                 request.Encounter.MoonPhaseId,
                 KnowledgeView(actor.State.TeamId),
-                request.ActiveStatModifierBoundaries);
+                request.ActiveStatModifierBoundaries,
+                _equipmentProfiles);
             BattleActionSelection selection = _selector.Select(selectionRequest);
             if (selection.Status == BattleActionSelectionStatus.Pass)
             {
@@ -656,7 +689,8 @@ public sealed class AutomatedBattleRunner : IAutomatedBattleRunner
                 return FaultedAutomatedAction(actor, validationDiagnostic!, events);
             }
 
-            BattleActionAuthorizationResult authorization = actor.AuthorizeSkill(selection.Skill);
+            BattleActionAuthorizationResult authorization =
+                actor.AuthorizeSkill(selection.Skill, _equipmentProfiles);
             if (!authorization.IsAuthorized)
             {
                 string diagnostic = string.Join(

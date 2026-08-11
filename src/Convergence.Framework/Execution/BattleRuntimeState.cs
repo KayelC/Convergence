@@ -178,6 +178,7 @@ public sealed class RuntimeActorState
     private readonly Dictionary<ContentId, BattleOtherStatusState> _otherStatuses = [];
     private readonly HashSet<ContentId> _skillIds;
     private readonly HashSet<ContentId> _capabilityIds;
+    private readonly Dictionary<ContentId, SkillDefinition> _equipmentGrantedPassiveSkills = [];
     private IReadOnlyDictionary<ContentId, decimal> _baseStats;
     private IReadOnlyDictionary<ContentId, decimal> _effectiveStats;
     private IReadOnlyDictionary<ContentId, decimal> _baseResourceValues;
@@ -302,11 +303,20 @@ public sealed class RuntimeActorState
         IReadOnlySet<ContentId>? registeredEventIds = null,
         IReadOnlySet<ContentId>? registeredPhaseIds = null,
         IStatModifierPolicyService? statModifierPolicy = null,
-        IChargePolicyService? chargePolicy = null)
+        IChargePolicyService? chargePolicy = null,
+        IEnumerable<SkillDefinition>? equipmentGrantedSkills = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(defenseProfile);
-        SkillDefinition[] passiveDefinitions = (passiveSkills ?? []).ToArray();
+        SkillDefinition[] learnedPassiveDefinitions = (passiveSkills ?? []).ToArray();
+        SkillDefinition[] equipmentPassiveDefinitions = (equipmentGrantedSkills ?? [])
+            .Where(skill => skill.Activation == SkillActivation.Passive)
+            .ToArray();
+        SkillDefinition[] passiveDefinitions = learnedPassiveDefinitions
+            .Concat(equipmentPassiveDefinitions)
+            .GroupBy(skill => skill.Id)
+            .Select(group => group.First())
+            .ToArray();
         AilmentDefinition[] ailmentDefinitions = (ailments ?? []).ToArray();
         IReadOnlyList<RuntimeActorSnapshotIntegrityDiagnostic> integrityDiagnostics =
             RuntimeActorSnapshotIntegrity.ValidateForRestore(
@@ -346,6 +356,7 @@ public sealed class RuntimeActorState
             snapshot.Skills,
             snapshot.Equipment,
             snapshot.CombatProfileIdentity);
+        state.ReplaceEquipmentGrantedPassiveSkills(equipmentPassiveDefinitions);
         state.RestoreBattleStatus(
             snapshot.BattleStatus,
             ailmentDefinitions.ToDictionary(ailment => ailment.Id),
@@ -444,7 +455,17 @@ public sealed class RuntimeActorState
 
     public void ReplaceEquipment(RuntimeEquipmentSnapshot equipment)
     {
-        Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
+        ArgumentNullException.ThrowIfNull(equipment);
+        var nextPassives = new BattlePassiveCollection(Passives.Entries
+            .Where(entry =>
+                !_equipmentGrantedPassiveSkills.ContainsKey(entry.Skill.Id) ||
+                Skills.EquippedSkillIds.Contains(entry.Skill.Id))
+            .Select(entry => entry.Skill));
+        PreservePassiveRuntimeState(Passives, nextPassives);
+
+        Equipment = equipment;
+        _equipmentGrantedPassiveSkills.Clear();
+        Passives.ReplaceFrom(nextPassives);
     }
 
     public void ApplyAilment(AilmentDefinition definition, StatusLifetimeDefinition lifetime)
@@ -1088,6 +1109,8 @@ public sealed class RuntimeActorState
             new(source._otherStatuses);
         ContentId[] skillIds = source._skillIds.ToArray();
         ContentId[] capabilityIds = source._capabilityIds.ToArray();
+        Dictionary<ContentId, SkillDefinition> equipmentGrantedPassiveSkills =
+            new(source._equipmentGrantedPassiveSkills);
         IReadOnlyDictionary<ContentId, decimal> baseStats = Snapshot(source._baseStats);
         IReadOnlyDictionary<ContentId, decimal> effectiveStats = Snapshot(source._effectiveStats);
         IReadOnlyDictionary<ContentId, decimal> baseResourceValues =
@@ -1112,6 +1135,7 @@ public sealed class RuntimeActorState
         _skillIds.UnionWith(skillIds);
         _capabilityIds.Clear();
         _capabilityIds.UnionWith(capabilityIds);
+        ReplaceDictionary(_equipmentGrantedPassiveSkills, equipmentGrantedPassiveSkills);
         _baseStats = baseStats;
         _effectiveStats = effectiveStats;
         _baseResourceValues = baseResourceValues;
@@ -1155,7 +1179,8 @@ public sealed class RuntimeActorState
         RuntimeSkillStateSnapshot skills,
         IEnumerable<SkillDefinition> equippedSkillDefinitions,
         RuntimeInstanceId sourceActorInstanceId,
-        ContentId sourceEntityDefinitionId)
+        ContentId sourceEntityDefinitionId,
+        IEnumerable<SkillDefinition>? equipmentGrantedSkills = null)
     {
         ArgumentNullException.ThrowIfNull(defenseProfile);
         ArgumentNullException.ThrowIfNull(skills);
@@ -1181,6 +1206,7 @@ public sealed class RuntimeActorState
         PrepareSkillState(
             skills,
             equippedSkillDefinitions,
+            equipmentGrantedSkills,
             out RuntimeSkillStateSnapshot nextSkillState,
             out ContentId[] equippedSkillIds,
             out BattlePassiveCollection nextPassives);
@@ -1201,6 +1227,7 @@ public sealed class RuntimeActorState
         Skills = nextSkillState;
         _skillIds.Clear();
         _skillIds.UnionWith(equippedSkillIds);
+        ReplaceEquipmentGrantedPassiveSkills(equipmentGrantedSkills);
         Passives.ReplaceFrom(nextPassives);
         CombatProfileIdentity = nextProfileIdentity;
     }
@@ -1219,6 +1246,7 @@ public sealed class RuntimeActorState
         PrepareSkillState(
             skills,
             equippedSkillDefinitions,
+            _equipmentGrantedPassiveSkills.Values,
             out RuntimeSkillStateSnapshot nextSkillState,
             out ContentId[] equippedSkillIds,
             out BattlePassiveCollection nextPassives);
@@ -1261,6 +1289,7 @@ public sealed class RuntimeActorState
     private static void PrepareSkillState(
         RuntimeSkillStateSnapshot skills,
         IEnumerable<SkillDefinition> equippedSkillDefinitions,
+        IEnumerable<SkillDefinition>? equipmentGrantedSkills,
         out RuntimeSkillStateSnapshot nextSkillState,
         out ContentId[] equippedSkillIds,
         out BattlePassiveCollection nextPassives)
@@ -1300,13 +1329,38 @@ public sealed class RuntimeActorState
                 nameof(equippedSkillDefinitions));
         }
 
+        SkillDefinition[] grantedDefinitions = (equipmentGrantedSkills ?? []).ToArray();
+        if (grantedDefinitions.Any(definition => definition is null || !definition.Id.IsValid) ||
+            grantedDefinitions.Select(definition => definition.Id).Distinct().Count() !=
+            grantedDefinitions.Length)
+        {
+            throw new ArgumentException(
+                "Equipment-granted skill definitions must be non-null, valid, and unique.",
+                nameof(equipmentGrantedSkills));
+        }
+
         nextSkillState = new RuntimeSkillStateSnapshot(
             learnedSkillIds,
             equippedSkillIds,
             pendingChoices,
             skills.Revision);
         nextPassives = new BattlePassiveCollection(
-            definitions.Where(definition => definition.Activation == SkillActivation.Passive));
+            definitions
+                .Concat(grantedDefinitions)
+                .Where(definition => definition.Activation == SkillActivation.Passive)
+                .GroupBy(definition => definition.Id)
+                .Select(group => group.First()));
+    }
+
+    private void ReplaceEquipmentGrantedPassiveSkills(
+        IEnumerable<SkillDefinition>? equipmentGrantedSkills)
+    {
+        SkillDefinition[] passives = (equipmentGrantedSkills ?? [])
+            .Where(skill => skill.Activation == SkillActivation.Passive)
+            .ToArray();
+        ReplaceDictionary(
+            _equipmentGrantedPassiveSkills,
+            passives.Select(skill => new KeyValuePair<ContentId, SkillDefinition>(skill.Id, skill)));
     }
 
     private static void PreservePassiveRuntimeState(

@@ -1143,6 +1143,7 @@ internal static class RuntimeSkillProgressionTransactionSupport
             request.MissingHostedEntityBehavior,
             request.PartyRoster,
             runtimeActors,
-            request.EquipmentStatModifiers);
+            request.EquipmentStatModifiers,
+            request.EquipmentGrantedSkillIds);
     }
 }

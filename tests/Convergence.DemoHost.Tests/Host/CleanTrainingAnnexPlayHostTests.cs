@@ -3526,6 +3526,66 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task Order7R4_TrainingAnnexRestoreRebuildsTheSameEquipmentCombatProfile()
+    {
+        ContentId armorId = Qualified("padded_jacket");
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("padded-jacket-001");
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Armor,
+                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
+            ]);
+        var equipment = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Armor,
+                armorInstanceId)
+        ]);
+        var io = new ScriptedGameIO().QueueMenu(10, 0, 4, 10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            source: new EquipmentGrantedPassiveContentSource(ContentRoot()),
+            initialInventory: inventory,
+            initialEquipment: equipment);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary =
+            Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.Equal(1, summary.ManualLoadCount);
+        Assert.Equal(
+            armorInstanceId,
+            summary.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Armor]);
+        Assert.Equal(
+            6,
+            summary.EquipmentProfile.StatModifiers[StandardProgressionIds.Defense]);
+        Assert.Equal(
+            1,
+            summary.EquipmentProfile.StatModifiers[StandardProgressionIds.Evasion]);
+        Assert.Equal([Qualified("steady_breath")], summary.EquipmentProfile.GrantedSkillIds);
+        Assert.Equal([Qualified("steady_breath")], summary.LoadedPassiveSkillIds);
+        Assert.Equal(0, summary.PassiveSkillCount);
+        Assert.DoesNotContain(
+            Qualified("steady_breath"),
+            Assert.IsType<RuntimeSkillStateSnapshot>(summary.ActiveHostedEntitySkills).EquippedSkillIds);
+        Assert.Equal(
+            6,
+            summary.PlayerStats.EffectiveStats[StandardProgressionIds.Defense]);
+        Assert.Equal(
+            1,
+            summary.PlayerStats.EffectiveStats[StandardProgressionIds.Evasion]);
+        Assert.Empty(summary.EquipmentProfile.Diagnostics);
+        Assert.Contains("Manual save restored", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_BattleBackRetriesTheSameTurnBeforeExecutingACommand()
     {
         var io = new ScriptedGameIO().QueueMenu(
@@ -4909,6 +4969,55 @@ public sealed class CleanTrainingAnnexPlayHostTests
                         ["level"] = 3,
                         ["count"] = 1
                     });
+                    text = document.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+                }
+
+                documents.Add(new ContentDocumentText(path, path, text));
+            }
+
+            return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+    }
+
+    private sealed class EquipmentGrantedPassiveContentSource(string root) : IContentPackTextSource
+    {
+        public async ValueTask<ContentPackTextBundle> ReadAsync(
+            ContentPackTextRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            string manifest = await File.ReadAllTextAsync(
+                TestContentPath.ResolveManifest(root, request.ManifestPath),
+                cancellationToken);
+            var documents = new List<ContentDocumentText>();
+            foreach (string path in request.DocumentPaths)
+            {
+                string text = await File.ReadAllTextAsync(
+                    TestContentPath.ResolveDocument(root, request.ManifestPath, path),
+                    cancellationToken);
+                if (path.EndsWith(".entities.json", StringComparison.Ordinal))
+                {
+                    JsonObject document = JsonNode.Parse(text)?.AsObject() ??
+                        throw new InvalidOperationException("Training Annex entities JSON could not be parsed.");
+                    JsonObject mentor = document["entities"]?.AsArray()
+                        .Select(node => node?.AsObject())
+                        .Single(node => node?["id"]?.GetValue<string>() == "annex_mentor") ??
+                        throw new InvalidOperationException("Annex Mentor was not found.");
+                    JsonArray baseSkills = mentor["baseSkillIds"]?.AsArray() ??
+                        throw new InvalidOperationException("Annex Mentor has no base-skill list.");
+                    JsonNode steadyBreath = baseSkills.Single(node =>
+                        node?.GetValue<string>() == "steady_breath")!;
+                    baseSkills.Remove(steadyBreath);
+                    text = document.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+                }
+                else if (path.EndsWith(".equipment.json", StringComparison.Ordinal))
+                {
+                    JsonObject document = JsonNode.Parse(text)?.AsObject() ??
+                        throw new InvalidOperationException("Training Annex equipment JSON could not be parsed.");
+                    JsonObject armor = document["equipment"]?.AsArray()
+                        .Select(node => node?.AsObject())
+                        .Single(node => node?["id"]?.GetValue<string>() == "padded_jacket") ??
+                        throw new InvalidOperationException("Padded Jacket was not found.");
+                    armor["grantedSkillIds"] = new JsonArray("steady_breath");
                     text = document.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
                 }
 

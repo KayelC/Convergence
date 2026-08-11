@@ -235,15 +235,17 @@ Convergence.Battle.ProductionCombatStats
 Convergence.Battle.ProductionCombatStats.<Clone>$() -> Convergence.Battle.ProductionCombatStats!
 Convergence.Battle.ProductionCombatStats.Agility.get -> decimal
 Convergence.Battle.ProductionCombatStats.Agility.init -> void
-Convergence.Battle.ProductionCombatStats.Deconstruct(out decimal Strength, out decimal Magic, out decimal Vitality, out decimal Agility, out decimal Luck, out decimal Defense) -> void
+Convergence.Battle.ProductionCombatStats.Deconstruct(out decimal Strength, out decimal Magic, out decimal Vitality, out decimal Agility, out decimal Luck, out decimal Defense, out decimal Evasion) -> void
 Convergence.Battle.ProductionCombatStats.Defense.get -> decimal
 Convergence.Battle.ProductionCombatStats.Defense.init -> void
+Convergence.Battle.ProductionCombatStats.Evasion.get -> decimal
+Convergence.Battle.ProductionCombatStats.Evasion.init -> void
 Convergence.Battle.ProductionCombatStats.Equals(Convergence.Battle.ProductionCombatStats? other) -> bool
 Convergence.Battle.ProductionCombatStats.Luck.get -> decimal
 Convergence.Battle.ProductionCombatStats.Luck.init -> void
 Convergence.Battle.ProductionCombatStats.Magic.get -> decimal
 Convergence.Battle.ProductionCombatStats.Magic.init -> void
-Convergence.Battle.ProductionCombatStats.ProductionCombatStats(decimal Strength, decimal Magic, decimal Vitality, decimal Agility, decimal Luck, decimal Defense = 0) -> void
+Convergence.Battle.ProductionCombatStats.ProductionCombatStats(decimal Strength, decimal Magic, decimal Vitality, decimal Agility, decimal Luck, decimal Defense = 0, decimal Evasion = 0) -> void
 Convergence.Battle.ProductionCombatStats.Strength.get -> decimal
 Convergence.Battle.ProductionCombatStats.Strength.init -> void
 Convergence.Battle.ProductionCombatStats.Vitality.get -> decimal
@@ -1657,9 +1659,11 @@ Convergence.Encounters.AutomatedBattleRequest
 Convergence.Encounters.AutomatedBattleRequest.<Clone>$() -> Convergence.Encounters.AutomatedBattleRequest!
 Convergence.Encounters.AutomatedBattleRequest.AutomatedBattleRequest(System.Collections.Generic.IEnumerable<Convergence.Encounters.CatalogBattleActor!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId battleKindId, Convergence.Content.ContentId? moonPhaseId, int roundLimit) -> void
 Convergence.Encounters.AutomatedBattleRequest.AutomatedBattleRequest(System.Collections.Generic.IEnumerable<Convergence.Encounters.CatalogBattleActor!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId battleKindId, Convergence.Content.ContentId? moonPhaseId, int roundLimit, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!>>? teamKnowledgeSeeds) -> void
+Convergence.Encounters.AutomatedBattleRequest.AutomatedBattleRequest(System.Collections.Generic.IEnumerable<Convergence.Encounters.CatalogBattleActor!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId battleKindId, Convergence.Content.ContentId? moonPhaseId, int roundLimit, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Knowledge.RuntimeEncounterKnowledgeSnapshot!>>? teamKnowledgeSeeds, Convergence.Runtime.IRuntimeActorEquipmentProfileSource? equipmentProfiles) -> void
 Convergence.Encounters.AutomatedBattleRequest.BattleKindId.get -> Convergence.Content.ContentId
 Convergence.Encounters.AutomatedBattleRequest.ContextId.get -> Convergence.Content.ContentId
 Convergence.Encounters.AutomatedBattleRequest.Equals(Convergence.Encounters.AutomatedBattleRequest? other) -> bool
+Convergence.Encounters.AutomatedBattleRequest.EquipmentProfiles.get -> Convergence.Runtime.IRuntimeActorEquipmentProfileSource!
 Convergence.Encounters.AutomatedBattleRequest.MoonPhaseId.get -> Convergence.Content.ContentId?
 Convergence.Encounters.AutomatedBattleRequest.Participants.get -> System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>!
 Convergence.Encounters.AutomatedBattleRequest.RoundLimit.get -> int
@@ -1745,13 +1749,14 @@ Convergence.Encounters.BattleActionSelectionRequest.ActiveStatModifierBoundaries
 Convergence.Encounters.BattleActionSelectionRequest.Actor.get -> Convergence.Encounters.CatalogBattleActor!
 Convergence.Encounters.BattleActionSelectionRequest.Actor.init -> void
 Convergence.Encounters.BattleActionSelectionRequest.BattleActionSelectionRequest(Convergence.Encounters.CatalogBattleActor! Actor, System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>! Participants, Convergence.Content.ContentId ContextId, Convergence.Content.ContentId BattleKindId, Convergence.Content.ContentId? MoonPhaseId, Convergence.Knowledge.IBattleKnowledgeView! Knowledge) -> void
-Convergence.Encounters.BattleActionSelectionRequest.BattleActionSelectionRequest(Convergence.Encounters.CatalogBattleActor! actor, System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId battleKindId, Convergence.Content.ContentId? moonPhaseId, Convergence.Knowledge.IBattleKnowledgeView! knowledge, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? activeStatModifierBoundaries) -> void
+Convergence.Encounters.BattleActionSelectionRequest.BattleActionSelectionRequest(Convergence.Encounters.CatalogBattleActor! actor, System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>! participants, Convergence.Content.ContentId contextId, Convergence.Content.ContentId battleKindId, Convergence.Content.ContentId? moonPhaseId, Convergence.Knowledge.IBattleKnowledgeView! knowledge, System.Collections.Generic.IEnumerable<Convergence.Runtime.StatModifierLifecycleBoundary!>? activeStatModifierBoundaries, Convergence.Runtime.IRuntimeActorEquipmentProfileSource? equipmentProfiles = null) -> void
 Convergence.Encounters.BattleActionSelectionRequest.BattleKindId.get -> Convergence.Content.ContentId
 Convergence.Encounters.BattleActionSelectionRequest.BattleKindId.init -> void
 Convergence.Encounters.BattleActionSelectionRequest.ContextId.get -> Convergence.Content.ContentId
 Convergence.Encounters.BattleActionSelectionRequest.ContextId.init -> void
 Convergence.Encounters.BattleActionSelectionRequest.Deconstruct(out Convergence.Encounters.CatalogBattleActor! Actor, out System.Collections.Generic.IReadOnlyList<Convergence.Encounters.CatalogBattleActor!>! Participants, out Convergence.Content.ContentId ContextId, out Convergence.Content.ContentId BattleKindId, out Convergence.Content.ContentId? MoonPhaseId, out Convergence.Knowledge.IBattleKnowledgeView! Knowledge) -> void
 Convergence.Encounters.BattleActionSelectionRequest.Equals(Convergence.Encounters.BattleActionSelectionRequest? other) -> bool
+Convergence.Encounters.BattleActionSelectionRequest.EquipmentProfiles.get -> Convergence.Runtime.IRuntimeActorEquipmentProfileSource!
 Convergence.Encounters.BattleActionSelectionRequest.Knowledge.get -> Convergence.Knowledge.IBattleKnowledgeView!
 Convergence.Encounters.BattleActionSelectionRequest.Knowledge.init -> void
 Convergence.Encounters.BattleActionSelectionRequest.MoonPhaseId.get -> Convergence.Content.ContentId?
@@ -2208,6 +2213,8 @@ Convergence.Encounters.BattleTurnStartedEventPayload.TeamId.get -> Convergence.C
 Convergence.Encounters.BattleTurnStartedEventPayload.TeamId.init -> void
 Convergence.Encounters.CatalogBattleActor
 Convergence.Encounters.CatalogBattleActor.ActiveSkills.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.SkillDefinition!>!
+Convergence.Encounters.CatalogBattleActor.GetAvailableActiveSkills(Convergence.Runtime.IRuntimeActorEquipmentProfileSource! equipmentProfiles) -> System.Collections.Generic.IReadOnlyList<Convergence.Content.SkillDefinition!>!
+Convergence.Encounters.CatalogBattleActor.GetAvailableSkills(Convergence.Runtime.IRuntimeActorEquipmentProfileSource! equipmentProfiles) -> System.Collections.Generic.IReadOnlyList<Convergence.Content.SkillDefinition!>!
 Convergence.Encounters.CatalogBattleActor.Entity.get -> Convergence.Content.EntityDefinition!
 Convergence.Encounters.CatalogBattleActor.SkillLoadout.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.SkillDefinition!>!
 Convergence.Encounters.CatalogBattleActor.State.get -> Convergence.Execution.RuntimeActorState!
@@ -2283,6 +2290,7 @@ Convergence.Encounters.CatalogBattleActorFactory.Restore(Convergence.Encounters.
 Convergence.Encounters.CatalogBattleActorRestoreRequest
 Convergence.Encounters.CatalogBattleActorRestoreRequest.<Clone>$() -> Convergence.Encounters.CatalogBattleActorRestoreRequest!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.Equals(Convergence.Encounters.CatalogBattleActorRestoreRequest? other) -> bool
+Convergence.Encounters.CatalogBattleActorRestoreRequest.EquipmentGrantedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Encounters.CatalogBattleActorRestoreRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
 Convergence.Encounters.CatalogBattleActorRestoreRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
@@ -2804,8 +2812,9 @@ Convergence.Execution.BattleBasicAttackProfile.BattleBasicAttackProfile(Converge
 Convergence.Execution.BattleBasicAttackProfile.Targeting.get -> Convergence.Content.TargetingDefinition!
 Convergence.Execution.CatalogBattleActionAuthorizationPolicy
 Convergence.Execution.CatalogBattleActionAuthorizationPolicy.Authorize(Convergence.Execution.RuntimeActorState! actor, Convergence.Execution.BattleActionCommand! command) -> Convergence.Execution.BattleActionAuthorizationResult!
-Convergence.Execution.CatalogBattleActionAuthorizationPolicy.CatalogBattleActionAuthorizationPolicy(Convergence.Catalog.ISkillDefinitionRepository! skills, Convergence.Catalog.IItemDefinitionRepository! items, Convergence.Execution.IBattleBasicAttackProfileSource! basicAttacks) -> void
+Convergence.Execution.CatalogBattleActionAuthorizationPolicy.CatalogBattleActionAuthorizationPolicy(Convergence.Catalog.ISkillDefinitionRepository! skills, Convergence.Catalog.IItemDefinitionRepository! items, Convergence.Execution.IBattleBasicAttackProfileSource! basicAttacks, Convergence.Runtime.IRuntimeActorEquipmentProfileSource? equipmentProfiles = null) -> void
 Convergence.Execution.EquipmentBattleBasicAttackProfileSource
+Convergence.Execution.EquipmentBattleBasicAttackProfileSource.EquipmentBattleBasicAttackProfileSource(Convergence.Runtime.IRuntimeActorEquipmentProfileSource! equipmentProfiles, Convergence.Content.TargetingDefinition! targeting) -> void
 Convergence.Execution.EquipmentBattleBasicAttackProfileSource.Resolve(Convergence.Execution.RuntimeActorState! actor) -> Convergence.Execution.BattleBasicAttackProfile?
 Convergence.Execution.NoBattleBasicAttackProfileSource
 Convergence.Execution.NoBattleBasicAttackProfileSource.Resolve(Convergence.Execution.RuntimeActorState! actor) -> Convergence.Execution.BattleBasicAttackProfile?
@@ -4844,6 +4853,8 @@ Convergence.Runtime.IRuntimeEconomyRulesetPolicyFactory
 Convergence.Runtime.IRuntimeEconomyRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.ResourceManagementRulesetServices!>!
 Convergence.Runtime.IRuntimeEconomyRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
 Convergence.Runtime.IRuntimeEquipmentProfileResolver
+Convergence.Runtime.IRuntimeActorEquipmentProfileSource
+Convergence.Runtime.IRuntimeActorEquipmentProfileSource.Resolve(Convergence.Execution.RuntimeActorState! actor) -> Convergence.Runtime.RuntimeEquipmentProfile!
 Convergence.Runtime.IRuntimeGrowthRulesetPolicyFactory
 Convergence.Runtime.IRuntimeGrowthRulesetPolicyFactory.Create(Convergence.Content.RulesetDefinition! definition) -> Convergence.Runtime.RulesetBindingResult<Convergence.Runtime.GrowthRulesetServices!>!
 Convergence.Runtime.IRuntimeGrowthRulesetPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
@@ -5219,10 +5230,11 @@ Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest
 Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest!
 Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
 Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.Equals(Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest? other) -> bool
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.EquipmentGrantedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
 Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
-Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.RuntimeActorCombatProfileCompositionRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
+Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.RuntimeActorCombatProfileCompositionRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? equipmentGrantedSkillIds = null) -> void
 Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.RuntimeActors.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
 Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest.SourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
 Convergence.Runtime.RuntimeActorCombatProfileCompositionResult
@@ -5315,9 +5327,10 @@ Convergence.Runtime.RuntimeActorReferenceSnapshot.RuntimeActorReferenceSnapshot(
 Convergence.Runtime.RuntimeActorRestoreProfile
 Convergence.Runtime.RuntimeActorRestoreProfile.<Clone>$() -> Convergence.Runtime.RuntimeActorRestoreProfile!
 Convergence.Runtime.RuntimeActorRestoreProfile.Equals(Convergence.Runtime.RuntimeActorRestoreProfile? other) -> bool
+Convergence.Runtime.RuntimeActorRestoreProfile.EquipmentGrantedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeActorRestoreProfile.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Runtime.RuntimeActorRestoreProfile.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
-Convergence.Runtime.RuntimeActorRestoreProfile.RuntimeActorRestoreProfile(Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null) -> void
+Convergence.Runtime.RuntimeActorRestoreProfile.RuntimeActorRestoreProfile(Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? equipmentGrantedSkillIds = null) -> void
 Convergence.Runtime.RuntimeActorRestoreProfile.StatSourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
 Convergence.Runtime.RuntimeActorRestoreProfileRequest
 Convergence.Runtime.RuntimeActorRestoreProfileRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorRestoreProfileRequest!
@@ -5566,7 +5579,13 @@ Convergence.Runtime.RuntimeEquipmentProfile.<Clone>$() -> Convergence.Runtime.Ru
 Convergence.Runtime.RuntimeEquipmentProfile.BasicAttack.get -> Convergence.Runtime.RuntimeBasicAttackProfile?
 Convergence.Runtime.RuntimeEquipmentProfile.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeEquipmentProfileDiagnostic!>!
 Convergence.Runtime.RuntimeEquipmentProfile.Equals(Convergence.Runtime.RuntimeEquipmentProfile? other) -> bool
+static Convergence.Runtime.RuntimeEquipmentProfile.Empty.get -> Convergence.Runtime.RuntimeEquipmentProfile!
+Convergence.Runtime.RuntimeEquipmentProfile.GrantedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
 Convergence.Runtime.RuntimeEquipmentProfile.StatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
+Convergence.Runtime.NoRuntimeActorEquipmentProfileSource
+Convergence.Runtime.NoRuntimeActorEquipmentProfileSource.Resolve(Convergence.Execution.RuntimeActorState! actor) -> Convergence.Runtime.RuntimeEquipmentProfile!
+Convergence.Runtime.RuntimeActorEquipmentProfileSource
+Convergence.Runtime.RuntimeActorEquipmentProfileSource.Resolve(Convergence.Execution.RuntimeActorState! actor) -> Convergence.Runtime.RuntimeEquipmentProfile!
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeEquipmentProfileDiagnostic!
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.Code.get -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
@@ -9323,6 +9342,7 @@ static Convergence.Runtime.RuntimeEncounterTriggerRequest.operator !=(Convergenc
 static Convergence.Runtime.RuntimeEncounterTriggerRequest.operator ==(Convergence.Runtime.RuntimeEncounterTriggerRequest? left, Convergence.Runtime.RuntimeEncounterTriggerRequest? right) -> bool
 static Convergence.Runtime.RuntimeEquipmentProfile.operator !=(Convergence.Runtime.RuntimeEquipmentProfile? left, Convergence.Runtime.RuntimeEquipmentProfile? right) -> bool
 static Convergence.Runtime.RuntimeEquipmentProfile.operator ==(Convergence.Runtime.RuntimeEquipmentProfile? left, Convergence.Runtime.RuntimeEquipmentProfile? right) -> bool
+static Convergence.Runtime.NoRuntimeActorEquipmentProfileSource.Instance.get -> Convergence.Runtime.NoRuntimeActorEquipmentProfileSource!
 static Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.operator !=(Convergence.Runtime.RuntimeEquipmentProfileDiagnostic? left, Convergence.Runtime.RuntimeEquipmentProfileDiagnostic? right) -> bool
 static Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.operator ==(Convergence.Runtime.RuntimeEquipmentProfileDiagnostic? left, Convergence.Runtime.RuntimeEquipmentProfileDiagnostic? right) -> bool
 static Convergence.Runtime.RuntimeEquipmentSnapshot.operator !=(Convergence.Runtime.RuntimeEquipmentSnapshot? left, Convergence.Runtime.RuntimeEquipmentSnapshot? right) -> bool
@@ -9460,6 +9480,7 @@ static Convergence.Runtime.StandardProgressionIds.Attack.get -> Convergence.Cont
 static Convergence.Runtime.StandardProgressionIds.Companion.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardProgressionIds.CoreStats.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
 static Convergence.Runtime.StandardProgressionIds.Defense.get -> Convergence.Content.ContentId
+static Convergence.Runtime.StandardProgressionIds.Evasion.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardProgressionIds.Hp.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardProgressionIds.IndependentActor.get -> Convergence.Content.ContentId
 static Convergence.Runtime.StandardProgressionIds.Luck.get -> Convergence.Content.ContentId
@@ -9786,7 +9807,7 @@ abstract Convergence.Execution.ChargePolicyServiceBase.Normalize(Convergence.Con
 Convergence.Battle.ProductionCombatStatus.Deconstruct(out bool IsGuarding, out bool IsRigidBody) -> void
 Convergence.Battle.ProductionCombatStatus.ProductionCombatStatus(bool IsGuarding = false, bool IsRigidBody = false) -> void
 Convergence.Content.ChargeKind.General = 2 -> Convergence.Content.ChargeKind
-Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, Convergence.Runtime.IStatModifierPolicyService? statModifierPolicy = null, Convergence.Execution.IChargePolicyService? chargePolicy = null) -> void
+Convergence.Encounters.CatalogBattleActorRestoreRequest.CatalogBattleActorRestoreRequest(Convergence.Runtime.RuntimeActorSnapshot! snapshot, Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, Convergence.Runtime.IStatModifierPolicyService? statModifierPolicy = null, Convergence.Execution.IChargePolicyService? chargePolicy = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? equipmentGrantedSkillIds = null) -> void
 Convergence.Encounters.CatalogBattleActorRestoreRequest.ChargePolicy.get -> Convergence.Execution.IChargePolicyService?
 Convergence.Execution.BattleExecutionServices.Charges.get -> Convergence.Execution.IChargePolicyService!
 Convergence.Execution.ChargeApplicationAssessment
@@ -11658,12 +11679,13 @@ Convergence.Runtime.ResourceTransactionDiagnostic.ResourceTransactionDiagnostic(
 Convergence.Runtime.ResourceTransactionDiagnostic.SlotId.get -> Convergence.Content.ContentId?
 Convergence.Runtime.ResourceTransactionDiagnostic.SlotId.init -> void
 Convergence.Runtime.RuntimeEquipmentProfile.EquippedDefinitions.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Content.EquipmentDefinition!>!
-Convergence.Runtime.RuntimeEquipmentProfile.RuntimeEquipmentProfile(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Content.EquipmentDefinition!>>? equippedDefinitions = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? statModifiers = null, Convergence.Runtime.RuntimeBasicAttackProfile? basicAttack = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentProfileDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.RuntimeEquipmentProfile.RuntimeEquipmentProfile(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Content.EquipmentDefinition!>>? equippedDefinitions = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? statModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? grantedSkillIds = null, Convergence.Runtime.RuntimeBasicAttackProfile? basicAttack = null, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentProfileDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode Code, out Convergence.Content.ContentId SlotId, out Convergence.Runtime.RuntimeInstanceId EquipmentInstanceId, out Convergence.Content.ContentId EquipmentId, out string! Message) -> void
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.RuntimeEquipmentProfileDiagnostic(Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode Code, Convergence.Content.ContentId SlotId, Convergence.Runtime.RuntimeInstanceId EquipmentInstanceId, Convergence.Content.ContentId EquipmentId, string! Message) -> void
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.SlotId.get -> Convergence.Content.ContentId
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.SlotId.init -> void
 Convergence.Runtime.RuntimeEquipmentProfileResolver.RuntimeEquipmentProfileResolver(Convergence.Runtime.IEquipmentSlotLayoutPolicy? slotLayout = null) -> void
+Convergence.Runtime.RuntimeActorEquipmentProfileSource.RuntimeActorEquipmentProfileSource(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Catalog.IEquipmentDefinitionRepository! equipment, Convergence.Runtime.IRuntimeEquipmentProfileResolver? profiles = null) -> void
 Convergence.Runtime.RuntimeEquipmentSnapshot.EquippedInstanceIds.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Runtime.RuntimeInstanceId>!
 Convergence.Runtime.RuntimeEquipmentSnapshot.RuntimeEquipmentSnapshot(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, Convergence.Runtime.RuntimeInstanceId>>? equippedInstanceIds = null) -> void
 Convergence.Runtime.RuntimeInventorySnapshot.GetEquipmentInstances(Convergence.Content.ContentId slotId) -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeEquipmentInstanceSnapshot!>!

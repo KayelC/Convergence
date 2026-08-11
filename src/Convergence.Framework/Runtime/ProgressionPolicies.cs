@@ -22,6 +22,7 @@ public static class StandardProgressionIds
     public static ContentId MagicalAttack { get; } = ContentId.Parse("magical_attack");
     public static ContentId Attack { get; } = ContentId.Parse("attack");
     public static ContentId Defense { get; } = ContentId.Parse("defense");
+    public static ContentId Evasion { get; } = ContentId.Parse("evasion");
     public static ContentId AgilityTrack { get; } = ContentId.Parse("agility");
 
     public static IReadOnlyList<ContentId> CoreStats { get; } = Array.AsReadOnly(

@@ -67,7 +67,8 @@ The Framework, not the presentation host, is the canonical authority for which
 skills, items, and basic attacks an actor may execute.
 
 - A skill action must reference a skill in the actor's authorized equipped
-  action loadout.
+  action loadout or the skill-grant set derived from currently equipped
+  inventory-owned instances.
 - An item action must reference the canonical catalog definition; inventory
   ownership is then validated independently by the reservation port.
 - A basic attack must reference the actor's resolved basic-attack profile.

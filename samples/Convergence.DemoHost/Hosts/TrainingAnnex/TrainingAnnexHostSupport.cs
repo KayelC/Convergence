@@ -655,7 +655,8 @@ internal static class TrainingAnnexHostSupport
             MissingHostedEntityBehavior.RejectStatResolution,
             partyRoster,
             activeState is null ? [] : [activeState],
-            equipmentProfile.StatModifiers);
+            equipmentProfile.StatModifiers,
+            equipmentProfile.GrantedSkillIds);
     }
 
     public static IReadOnlyDictionary<ContentId, decimal> InitialBaseResourceValues(int level) =>

@@ -1,8 +1,9 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Order 7 status:** O7-R1 through O7-R3 establish the approved tracking,
-> equipment-instance ownership, and authored slot-layout model. Equipped skills
-> and combat contributions, stateful shop stock, explicit pricing, generic
+> **Order 7 status:** O7-R1 through O7-R4 establish the approved tracking,
+> equipment-instance ownership, authored slot-layout model, equipped-only skill
+> grants, and Defense/Evasion combat contributions. Stateful shop stock,
+> explicit pricing, generic
 > recovery, and typed currencies remain pending. This page remains unreviewed
 > until the complete
 > [Order 7 roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
@@ -88,7 +89,30 @@ Save contract v17 stores owned instances only in inventory and actor loadout
 references only in actor snapshots, all under authored slot IDs. There is no
 separate root equipment snapshot.
 
-Basic attack profiles may come from equipped weapon data, but a host can supply another clean basic-attack profile. Presentation metadata does not decide damage behavior.
+`RuntimeEquipmentProfileResolver` derives one immutable profile from the
+current actor equipment, inventory ownership, definitions, and selected slot
+layout. That profile supplies:
+
+- the equipped weapon's basic attack;
+- accessory stat modifiers;
+- armor Defense;
+- armor and boots Evasion; and
+- distinct skill IDs granted by currently equipped instances.
+
+Granted skills are derived availability, not learned state. Active grants enter
+canonical action authorization; passive grants enter the canonical passive
+collection and therefore use the existing modifier and lifecycle dispatch.
+Neither kind is copied into learned skills or occupies a move-list slot. Both
+disappear as soon as the granting instance is unequipped. Active authorization
+is repeated at execution, so an assessment prepared before unequip cannot spend
+resources or apply an effect afterward.
+
+Defense and Evasion are ordinary numeric inputs. Defense joins target Vitality
+inside the existing standard damage formula; Evasion joins the target's
+existing hit-resolution modifiers. Equipment does not own another combat
+formula. A missing contribution is exactly zero. Basic attacks may come from
+equipped weapon data, but a host can supply another clean basic-attack profile.
+Presentation metadata does not decide behavior.
 
 ## Wallet And Economy
 

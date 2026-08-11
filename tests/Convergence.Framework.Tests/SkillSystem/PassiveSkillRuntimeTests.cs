@@ -37,6 +37,20 @@ public sealed class PassiveSkillRuntimeTests
     }
 
     [Fact]
+    public void Order7R4_EquipmentReplacementDoesNotRemoveNonEquipmentPassives()
+    {
+        SkillDefinition intrinsicPassive = PassiveSkill("intrinsic_passive");
+        RuntimeActorState actor = Actor(
+            "intrinsic_actor",
+            PlayerTeam,
+            passiveSkills: [intrinsicPassive]);
+
+        actor.ReplaceEquipment(new RuntimeEquipmentSnapshot());
+
+        Assert.Equal(intrinsicPassive.Id, Assert.Single(actor.Passives.Entries).Skill.Id);
+    }
+
+    [Fact]
     public void PassiveCollection_RejectsDefinitionIncoherentActivationWithoutDiscardingCurrentCounts()
     {
         ContentId eventId = ContentId.Parse("limited_support");

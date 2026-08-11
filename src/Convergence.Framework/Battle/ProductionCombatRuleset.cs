@@ -197,7 +197,8 @@ public sealed record ProductionCombatStats(
     decimal Vitality,
     decimal Agility,
     decimal Luck,
-    decimal Defense = 0m);
+    decimal Defense = 0m,
+    decimal Evasion = 0m);
 
 public sealed record ProductionCombatStatus(
     bool IsGuarding = false,
@@ -242,7 +243,7 @@ public sealed record ProductionCombatantProfile
     private static void ValidateStats(ProductionCombatStats stats)
     {
         if (stats.Strength < 0 || stats.Magic < 0 || stats.Vitality < 0 ||
-            stats.Agility < 0 || stats.Luck < 0 || stats.Defense < 0)
+            stats.Agility < 0 || stats.Luck < 0 || stats.Defense < 0 || stats.Evasion < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(stats), "Combat stats cannot be negative.");
         }
@@ -910,6 +911,18 @@ public sealed class ProductionCombatRuleset :
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        IReadOnlyList<NumericRuleModifierDefinition> evasionModifiers =
+            request.Target.Stats.Evasion == 0m
+                ? request.EvasionModifiers
+                : Array.AsReadOnly(
+                [
+                    .. request.EvasionModifiers,
+                    new NumericRuleModifierDefinition(
+                        NumericRuleModifierType.Evasion,
+                        ModifierOperation.Add,
+                        request.Target.Stats.Evasion)
+                ]);
+
         return _hitPolicy.Resolve(new HitResolutionRequest(
             request.AuthoredAccuracy,
             request.Attacker.Stats.Agility,
@@ -917,7 +930,7 @@ public sealed class ProductionCombatRuleset :
             request.Attacker.Modifiers.HitMultiplier,
             request.Target.Modifiers.EvasionMultiplier,
             request.AccuracyModifiers,
-            request.EvasionModifiers,
+            evasionModifiers,
             request.Target.Status.IsRigidBody));
     }
 
@@ -1137,6 +1150,8 @@ public sealed class ProductionCombatRuleset :
         decimal vitality = actor.Stats.GetValueOrDefault(StandardProgressionIds.Vitality);
         decimal agility = actor.Stats.GetValueOrDefault(StandardProgressionIds.Agility);
         decimal luck = actor.Stats.GetValueOrDefault(StandardProgressionIds.Luck);
+        decimal defense = actor.Stats.GetValueOrDefault(StandardProgressionIds.Defense);
+        decimal evasionRating = actor.Stats.GetValueOrDefault(StandardProgressionIds.Evasion);
         decimal damageDealt = 1m;
         RuntimeStatStageSnapshot[] stages = actor.StatStages
             .Select(pair => new RuntimeStatStageSnapshot(pair.Key, pair.Value.Stage, pair.Value.Duration))
@@ -1178,7 +1193,7 @@ public sealed class ProductionCombatRuleset :
 
         return new ProductionCombatantProfile(
             actor.Progression.Level,
-            new ProductionCombatStats(strength, magic, vitality, agility, luck),
+            new ProductionCombatStats(strength, magic, vitality, agility, luck, defense, evasionRating),
             new ProductionCombatStatus(
                 IsGuarding: actor.IsGuarding,
                 IsRigidBody: rigid),

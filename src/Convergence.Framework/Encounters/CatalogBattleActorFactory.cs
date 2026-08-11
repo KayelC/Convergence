@@ -38,7 +38,8 @@ public sealed record CatalogBattleActorRestoreRequest
         IEnumerable<RuntimeActorState>? runtimeActors = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
         IStatModifierPolicyService? statModifierPolicy = null,
-        IChargePolicyService? chargePolicy = null)
+        IChargePolicyService? chargePolicy = null,
+        IEnumerable<ContentId>? equipmentGrantedSkillIds = null)
         : this(
             snapshot,
             statSourceKind,
@@ -48,6 +49,7 @@ public sealed record CatalogBattleActorRestoreRequest
             equipmentStatModifiers,
             statModifierPolicy,
             chargePolicy,
+            equipmentGrantedSkillIds,
             preserveValidatedSnapshot: false)
     {
     }
@@ -61,6 +63,7 @@ public sealed record CatalogBattleActorRestoreRequest
         IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers,
         IStatModifierPolicyService? statModifierPolicy,
         IChargePolicyService? chargePolicy,
+        IEnumerable<ContentId>? equipmentGrantedSkillIds,
         bool preserveValidatedSnapshot)
     {
         if (!Enum.IsDefined(statSourceKind))
@@ -79,6 +82,7 @@ public sealed record CatalogBattleActorRestoreRequest
         PartyRoster = partyRoster;
         RuntimeActors = Array.AsReadOnly((runtimeActors ?? []).ToArray());
         EquipmentStatModifiers = RuntimeSnapshotCollections.Dictionary(equipmentStatModifiers);
+        EquipmentGrantedSkillIds = RuntimeSnapshotCollections.List(equipmentGrantedSkillIds);
         StatModifierPolicy = statModifierPolicy;
         ChargePolicy = chargePolicy;
         PreserveValidatedSnapshot = preserveValidatedSnapshot;
@@ -90,6 +94,7 @@ public sealed record CatalogBattleActorRestoreRequest
     public RuntimePartyRosterSnapshot? PartyRoster { get; }
     public IReadOnlyList<RuntimeActorState> RuntimeActors { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
+    public IReadOnlyList<ContentId> EquipmentGrantedSkillIds { get; }
     public IStatModifierPolicyService? StatModifierPolicy { get; }
     public IChargePolicyService? ChargePolicy { get; }
     internal bool PreserveValidatedSnapshot { get; }
@@ -105,6 +110,7 @@ public sealed record CatalogBattleActorRestoreRequest
             equipmentStatModifiers: null,
             statModifierPolicy: null,
             chargePolicy: null,
+            equipmentGrantedSkillIds: null,
             preserveValidatedSnapshot: true);
 }
 
@@ -187,8 +193,36 @@ public sealed class CatalogBattleActor
     public IReadOnlyList<SkillDefinition> ActiveSkills => Array.AsReadOnly(
         SkillLoadout.Where(skill => skill.Activation == SkillActivation.Active).ToArray());
 
-    internal BattleActionAuthorizationResult AuthorizeSkill(SkillDefinition skill) =>
-        CatalogSkillActionAuthorization.Authorize(State, skill, _skills);
+    public IReadOnlyList<SkillDefinition> GetAvailableSkills(
+        IRuntimeActorEquipmentProfileSource equipmentProfiles)
+    {
+        ArgumentNullException.ThrowIfNull(equipmentProfiles);
+        RuntimeEquipmentProfile profile = equipmentProfiles.Resolve(State);
+        return Array.AsReadOnly(
+            State.Skills.EquippedSkillIds
+                .Concat(profile.GrantedSkillIds)
+                .Distinct()
+                .Select(_skills.GetRequiredSkill)
+                .ToArray());
+    }
+
+    public IReadOnlyList<SkillDefinition> GetAvailableActiveSkills(
+        IRuntimeActorEquipmentProfileSource equipmentProfiles) =>
+        Array.AsReadOnly(
+            GetAvailableSkills(equipmentProfiles)
+                .Where(skill => skill.Activation == SkillActivation.Active)
+                .ToArray());
+
+    internal BattleActionAuthorizationResult AuthorizeSkill(
+        SkillDefinition skill,
+        IRuntimeActorEquipmentProfileSource? equipmentProfiles = null) =>
+        CatalogSkillActionAuthorization.Authorize(
+            State,
+            skill,
+            _skills,
+            (equipmentProfiles ?? NoRuntimeActorEquipmentProfileSource.Instance)
+                .Resolve(State)
+                .GrantedSkillIds);
 }
 
 public sealed class CatalogBattleActorCreationResult
@@ -584,6 +618,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         ContentId[] skillIds = snapshot.Skills.LearnedSkillIds
             .Concat(snapshot.Skills.EquippedSkillIds)
             .Concat(snapshot.Skills.PendingChoices.Select(choice => choice.SkillId))
+            .Concat(request.EquipmentGrantedSkillIds)
             .Distinct()
             .ToArray();
         var resolvedSkills = new Dictionary<ContentId, SkillDefinition>();
@@ -676,6 +711,9 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         SkillDefinition[] loadout = snapshot.Skills.EquippedSkillIds
             .Select(skillId => resolvedSkills[skillId])
             .ToArray();
+        SkillDefinition[] equipmentGrantedSkills = request.EquipmentGrantedSkillIds
+            .Select(skillId => resolvedSkills[skillId])
+            .ToArray();
         RuntimeMoveListCapacityViolation? capacityViolation =
             RuntimeMoveListCapacityValidation.ValidateCurrent(
                 snapshot.Identity,
@@ -701,7 +739,8 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 registeredEventIds: _durationVocabulary?.RegisteredEventIds,
                 registeredPhaseIds: _durationVocabulary?.RegisteredPhaseIds,
                 statModifierPolicy: request.StatModifierPolicy,
-                chargePolicy: request.ChargePolicy);
+                chargePolicy: request.ChargePolicy,
+                equipmentGrantedSkills: equipmentGrantedSkills);
 
             if (!request.PreserveValidatedSnapshot)
             {
@@ -713,7 +752,8 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                         request.MissingHostedEntityBehavior,
                         request.PartyRoster,
                         request.RuntimeActors,
-                        request.EquipmentStatModifiers));
+                        request.EquipmentStatModifiers,
+                        request.EquipmentGrantedSkillIds));
                 if (!composition.Applied)
                 {
                     diagnostics.AddRange(composition.Diagnostics.Select(diagnostic =>

@@ -463,7 +463,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     $"$.actors[{index}].identity.actorKindId"));
             }
 
-            ValidateActorRestoreContract(actor, catalog, diagnostics, index);
+            ValidateActorRestoreContract(actor, snapshot.Inventory, catalog, diagnostics, index);
         }
 
         ValidatePartyReferences(snapshot.PartyRoster, actors, _rosterCapacityPolicy, diagnostics);
@@ -903,15 +903,30 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 
     private void ValidateActorRestoreContract(
         RuntimeActorSnapshot actor,
+        RuntimeInventorySnapshot inventory,
         GameDataCatalog catalog,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics,
         int actorIndex)
     {
-        SkillDefinition[] equippedPassiveSkills = actor.Skills.EquippedSkillIds
+        IEnumerable<SkillDefinition> learnedPassiveSkills = actor.Skills.EquippedSkillIds
             .Where(skillId =>
                 catalog.Skills.TryGetValue(skillId, out SkillDefinition? skill) &&
                 skill.Activation == SkillActivation.Passive)
-            .Select(skillId => catalog.Skills[skillId])
+            .Select(skillId => catalog.Skills[skillId]);
+        RuntimeEquipmentProfile equipmentProfile = new RuntimeEquipmentProfileResolver(
+                _equipmentSlotLayout)
+            .Resolve(inventory, actor.Equipment, catalog);
+        IEnumerable<SkillDefinition> equipmentPassiveSkills = equipmentProfile.Diagnostics.Count == 0
+            ? equipmentProfile.GrantedSkillIds
+                .Where(skillId =>
+                    catalog.Skills.TryGetValue(skillId, out SkillDefinition? skill) &&
+                    skill.Activation == SkillActivation.Passive)
+                .Select(skillId => catalog.Skills[skillId])
+            : [];
+        SkillDefinition[] equippedPassiveSkills = learnedPassiveSkills
+            .Concat(equipmentPassiveSkills)
+            .GroupBy(skill => skill.Id)
+            .Select(group => group.First())
             .ToArray();
         IReadOnlyList<RuntimeActorSnapshotIntegrityDiagnostic> integrityDiagnostics =
             RuntimeActorSnapshotIntegrity.ValidateForRestore(

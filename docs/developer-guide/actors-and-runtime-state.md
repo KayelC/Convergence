@@ -174,7 +174,8 @@ To use the standard Vessel model:
 1. create the Vessel and its owned Hosted Entity as separate runtime actors;
 2. include the Hosted Entity in `HostedEntityRoster`;
 3. select it as `ActiveHostedEntity`;
-4. resolve equipment contributions;
+4. resolve the current equipment profile once from inventory ownership, actor
+   instance references, catalog definitions, and the selected slot layout;
 5. call `IRuntimeActorCombatProfileCompositionService.Compose`.
 
 ```csharp
@@ -347,8 +348,18 @@ RuntimeRestoredSession session = restored.RequireSession();
 ```
 
 The host supplies `IRuntimeActorRestoreProfileResolver` to state whether each
-actor uses its own profile or the Active Hosted Entity profile, plus any
-equipment stat modifiers.
+actor uses its own profile or the Active Hosted Entity profile, plus the
+current equipment profile's stat modifiers and granted skill IDs.
+
+Resolve those modifiers through the same `RuntimeEquipmentProfileResolver`
+used after creation and after equipment changes. For a restored actor, pass its
+saved `RuntimeEquipmentSnapshot` together with the restored aggregate inventory
+and catalog. This rebuilds Defense, Evasion, and accessory contributions from
+the same source that supplies weapon attacks and equipped-only skill grants;
+do not serialize a second derived equipment profile. Active grants are checked
+live during command authorization, while restored passive grants are loaded
+into the actor's passive collection without entering its learned or equipped
+move-list IDs.
 
 ```mermaid
 flowchart TD

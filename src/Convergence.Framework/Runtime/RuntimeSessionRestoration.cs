@@ -156,7 +156,8 @@ public sealed record RuntimeActorRestoreProfile
     public RuntimeActorRestoreProfile(
         RuntimeStatSourceKind statSourceKind,
         MissingHostedEntityBehavior missingHostedEntityBehavior,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null)
+        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
+        IEnumerable<ContentId>? equipmentGrantedSkillIds = null)
     {
         if (!Enum.IsDefined(statSourceKind))
         {
@@ -169,11 +170,13 @@ public sealed record RuntimeActorRestoreProfile
         StatSourceKind = statSourceKind;
         MissingHostedEntityBehavior = missingHostedEntityBehavior;
         EquipmentStatModifiers = RuntimePersistenceCollections.Dictionary(equipmentStatModifiers);
+        EquipmentGrantedSkillIds = RuntimePersistenceCollections.List(equipmentGrantedSkillIds);
     }
 
     public RuntimeStatSourceKind StatSourceKind { get; }
     public MissingHostedEntityBehavior MissingHostedEntityBehavior { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
+    public IReadOnlyList<ContentId> EquipmentGrantedSkillIds { get; }
 }
 
 public sealed record RuntimeActorRestoreProfileRequest(
@@ -540,7 +543,8 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
                     activeHostedEntity is null ? [] : [activeHostedEntity],
                     profile.EquipmentStatModifiers,
                     statModifierPolicies.GetValueOrDefault(actorId),
-                    chargePolicies.GetValueOrDefault(actorId)));
+                    chargePolicies.GetValueOrDefault(actorId),
+                    profile.EquipmentGrantedSkillIds));
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

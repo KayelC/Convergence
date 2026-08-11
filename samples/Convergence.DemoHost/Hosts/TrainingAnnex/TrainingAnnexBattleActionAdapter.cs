@@ -192,14 +192,17 @@ internal sealed class TrainingAnnexBattleActionAdapter
             TargetSelection.Single,
             TargetLifeState.Alive,
             AllowSelf: false);
+        var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
+            inventory.Snapshot,
+            _catalog,
+            _equipmentProfileResolver);
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             _catalog,
             _catalog,
             new EquipmentBattleBasicAttackProfileSource(
-                inventory.Snapshot,
-                _catalog,
-                basicAttackTargeting,
-                _equipmentProfileResolver));
+                equipmentProfiles,
+                basicAttackTargeting),
+            equipmentProfiles);
 
         var turnHandler = new TrainingAnnexManualBattleTurnHandler(
             _catalog,
@@ -211,7 +214,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 _services,
                 authorization),
             enemySelector,
-            _equipmentProfileResolver,
+            equipmentProfiles,
             playerBattleKnowledge,
             actors,
             player,
@@ -300,7 +303,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private readonly IHostCommandSource<CleanTrainingAnnexPlayCommand> _commands;
         private readonly IBattleActionExecutor _actions;
         private readonly IBattleActionSelector _enemySelector;
-        private readonly IRuntimeEquipmentProfileResolver _equipmentProfileResolver;
+        private readonly IRuntimeActorEquipmentProfileSource _equipmentProfiles;
         private readonly TrainingAnnexBattleKnowledgeState _playerBattleKnowledge;
         private readonly IBattleKnowledgeExecutionTransitionService _knowledgeTransitions;
         private readonly IReadOnlyList<CatalogBattleActor> _actors;
@@ -325,7 +328,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             IHostCommandSource<CleanTrainingAnnexPlayCommand> commands,
             IBattleActionExecutor actions,
             IBattleActionSelector enemySelector,
-            IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+            IRuntimeActorEquipmentProfileSource equipmentProfiles,
             TrainingAnnexBattleKnowledgeState playerBattleKnowledge,
             IReadOnlyList<CatalogBattleActor> actors,
             TrainingAnnexRuntimeActor player,
@@ -338,7 +341,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
             _commands = commands;
             _actions = actions;
             _enemySelector = enemySelector ?? throw new ArgumentNullException(nameof(enemySelector));
-            _equipmentProfileResolver = equipmentProfileResolver ?? throw new ArgumentNullException(nameof(equipmentProfileResolver));
+            _equipmentProfiles = equipmentProfiles ?? throw new ArgumentNullException(nameof(equipmentProfiles));
             _playerBattleKnowledge = playerBattleKnowledge ?? throw new ArgumentNullException(nameof(playerBattleKnowledge));
             _knowledgeTransitions = new BattleKnowledgeExecutionTransitionService();
             _actors = actors;
@@ -509,10 +512,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
                 return null;
             }
 
-            RuntimeEquipmentProfile profile = _equipmentProfileResolver.Resolve(
-                _inventory.Snapshot,
-                actor.State.ToSnapshot().Equipment,
-                _catalog);
+            RuntimeEquipmentProfile profile = _equipmentProfiles.Resolve(actor.State);
             if (profile.BasicAttack is null)
             {
                 await _events.PublishAsync(
@@ -970,7 +970,7 @@ internal sealed class TrainingAnnexBattleActionAdapter
         private IReadOnlyList<SkillDefinition> KnownBattleSkills(CatalogBattleActor actor)
         {
             int level = _player.Actor.State.ToSnapshot().Progression.Level;
-            return actor.SkillLoadout
+            return actor.GetAvailableActiveSkills(_equipmentProfiles)
                 .Concat(actor.Entity.SkillUnlocks
                     .Where(unlock => unlock.Level <= level)
                     .Select(unlock => _catalog.GetRequiredSkill(unlock.SkillId)))

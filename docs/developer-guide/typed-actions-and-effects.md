@@ -16,6 +16,7 @@ authorization policy.
 using Convergence.Catalog;
 using Convergence.Content;
 using Convergence.Execution;
+using Convergence.Runtime;
 
 TargetingDefinition basicTargeting = new(
     TargetRelation.Enemy,
@@ -23,11 +24,18 @@ TargetingDefinition basicTargeting = new(
     TargetLifeState.Alive,
     AllowSelf: false);
 
+IRuntimeActorEquipmentProfileSource equipmentProfiles =
+    new RuntimeActorEquipmentProfileSource(inventorySnapshot, catalog);
+
 IBattleBasicAttackProfileSource basicAttacks =
-    new EquipmentBattleBasicAttackProfileSource(catalog, basicTargeting);
+    new EquipmentBattleBasicAttackProfileSource(equipmentProfiles, basicTargeting);
 
 IBattleActionAuthorizationPolicy authorization =
-    new CatalogBattleActionAuthorizationPolicy(catalog, catalog, basicAttacks);
+    new CatalogBattleActionAuthorizationPolicy(
+        catalog,
+        catalog,
+        basicAttacks,
+        equipmentProfiles);
 
 var skillExecutor = new SkillExecutor(executionServices);
 var itemExecutor = new ItemExecutor(executionServices);
@@ -58,12 +66,25 @@ uses no random draw, commits no cost or inventory, and consumes no turn.
 ## Build Only Authorized Commands
 
 A skill command must carry the same canonical definition returned by the
-catalog, and the actor must have its qualified ID equipped.
+catalog. Its qualified ID must either be equipped in the actor's move list or
+be granted by a currently equipped instance in the supplied equipment profile.
 
 ```csharp
 SkillDefinition skill = catalog.GetRequiredSkill(skillId);
 var command = new SkillBattleActionCommand(skill, [targetId]);
 ```
+
+Do not copy equipment grants into `RuntimeSkillStateSnapshot`. Reuse the same
+`IRuntimeActorEquipmentProfileSource` for menus, basic attacks, canonical
+authorization, and automated action selection. An unequip then removes the
+grant on the next resolution, including the execution-time recheck of an
+already prepared assessment.
+
+For passive grants, pass the same profile's `GrantedSkillIds` into actor combat
+profile composition and restore-profile resolution. The composition service
+loads passive definitions into `BattlePassiveCollection` without adding them to
+the move list. Replacing equipment clears derived passive grants immediately;
+recomposition then loads only those supplied by the new profile.
 
 For a basic attack, resolve the actor profile and build the command from that
 profile without changing any component:

@@ -135,6 +135,16 @@ duplicate instance identity, one instance assigned to multiple actors, and
 equipment IDs that collide with actor runtime IDs. Convergence supplies no
 automatic v15-to-v16 migration for these unreleased formats.
 
+Version 17 replaces the fixed equipment-slot wire enum with authored
+`ContentId` slot keys. Inventory instance ownership and actor loadout references
+remain the sole saved equipment authorities; Defense, Evasion, granted skills,
+basic attacks, and accessory modifiers are derived again from catalog
+definitions after load rather than duplicated into the save. Convergence
+supplies no automatic v16-to-v17 migration for these unreleased formats.
+The restore profile carries both numeric contributions and granted skill IDs;
+passive grants are therefore validated and restored through the same passive
+snapshot integrity boundary as learned passive skills.
+
 ## Related Guidance
 
 - [Actors And Runtime State](../developer-guide/actors-and-runtime-state.md)

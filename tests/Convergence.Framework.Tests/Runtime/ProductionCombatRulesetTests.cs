@@ -50,6 +50,77 @@ public sealed class ProductionCombatRulesetTests
         Assert.Equal(50, hit.Damage);
     }
 
+    [Fact]
+    public void Order7R4_ZeroEquipmentContributionsAreExactNoOpsAndPositiveValuesUseExistingFormulas()
+    {
+        var noEquipmentStats = new ProductionCombatStats(20, 20, 20, 20, 20);
+        var explicitZeroStats = new ProductionCombatStats(
+            20,
+            20,
+            20,
+            20,
+            20,
+            Defense: 0,
+            Evasion: 0);
+        var equippedDefenseStats = new ProductionCombatStats(
+            20,
+            20,
+            20,
+            20,
+            20,
+            Defense: 10,
+            Evasion: 0);
+        var equippedEvasionStats = new ProductionCombatStats(
+            20,
+            20,
+            20,
+            20,
+            20,
+            Defense: 0,
+            Evasion: 10);
+        ProductionDamageResolutionRequest DamageAgainst(ProductionCombatStats targetStats) =>
+            new(
+                Actor(stats: noEquipmentStats),
+                Actor(stats: targetStats),
+                DamageElement.Physical,
+                ElementalAffinity.Normal,
+                100,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1));
+        ProductionHitCheckRequest HitAgainst(ProductionCombatStats targetStats) =>
+            new(
+                Actor(stats: noEquipmentStats),
+                Actor(stats: targetStats),
+                authoredAccuracy: 80);
+
+        ProductionDamageResolutionHit implicitZeroDamage = Assert.Single(
+            Rules().ResolveDamage(DamageAgainst(noEquipmentStats)).Hits);
+        ProductionDamageResolutionHit explicitZeroDamage = Assert.Single(
+            Rules().ResolveDamage(DamageAgainst(explicitZeroStats)).Hits);
+        ProductionDamageResolutionHit equippedDefenseDamage = Assert.Single(
+            Rules().ResolveDamage(DamageAgainst(equippedDefenseStats)).Hits);
+        HitResolutionResult implicitZeroHit = Rules(0.5m).CheckHit(HitAgainst(noEquipmentStats));
+        HitResolutionResult explicitZeroHit = Rules(0.5m).CheckHit(HitAgainst(explicitZeroStats));
+        HitResolutionResult equippedEvasionHit = Rules(0.5m).CheckHit(HitAgainst(equippedEvasionStats));
+
+        Assert.Equal(50m, implicitZeroDamage.Damage);
+        Assert.Equal(implicitZeroDamage.HitIndex, explicitZeroDamage.HitIndex);
+        Assert.Equal(implicitZeroDamage.Hit, explicitZeroDamage.Hit);
+        Assert.Equal(implicitZeroDamage.Damage, explicitZeroDamage.Damage);
+        Assert.Equal(implicitZeroDamage.Critical, explicitZeroDamage.Critical);
+        Assert.Equal(implicitZeroDamage.HitResolution, explicitZeroDamage.HitResolution);
+        Assert.Equal(implicitZeroDamage.CriticalResolution, explicitZeroDamage.CriticalResolution);
+        Assert.Equal(implicitZeroDamage.ResolvedAffinity, explicitZeroDamage.ResolvedAffinity);
+        Assert.Equal(implicitZeroDamage.ChargeKind, explicitZeroDamage.ChargeKind);
+        Assert.Equal(implicitZeroDamage.ChargeMultiplier, explicitZeroDamage.ChargeMultiplier);
+        Assert.True(equippedDefenseDamage.Damage < implicitZeroDamage.Damage);
+        Assert.Equal(80, implicitZeroHit.FinalChance);
+        Assert.Equal(implicitZeroHit, explicitZeroHit);
+        Assert.Equal(70, equippedEvasionHit.FinalChance);
+        Assert.Equal(10m, equippedEvasionHit.ResolvedEvasionScore - implicitZeroHit.ResolvedEvasionScore);
+    }
+
     [Theory]
     [MemberData(nameof(AffinityDamageCases))]
     public void DamagePolicy_UsesApprovedAffinityMultipliers(

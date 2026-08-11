@@ -328,7 +328,7 @@ selected-policy compatibility validation.
 
 ```mermaid
 flowchart TD
-    S["RuntimeSaveGameSnapshot v16"] --> N["Neutral save validation"]
+    S["RuntimeSaveGameSnapshot v17"] --> N["Neutral save validation"]
     N --> C{"Policy ruleset exists in catalog?"}
     C -->|"no"| R["Reject aggregate restore"]
     C -->|"yes"| B["Bind authored stat-modifier policy"]

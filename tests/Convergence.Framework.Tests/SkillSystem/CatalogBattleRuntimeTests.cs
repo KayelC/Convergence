@@ -85,6 +85,86 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void Order7R4_FactoryActorAndAutomatedSelectionUseTheLiveEquipmentProfile()
+    {
+        SkillDefinition grantedSkill = Active("test.pack:equipment_skill", DamageElement.Ice);
+        EntityDefinition entity = Entity("test.pack:equipment_actor", []);
+        var skillRepository = new SkillRepository(grantedSkill);
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            skillRepository,
+            new TestInitializationPolicy());
+        CatalogBattleActor actor = factory.Create(new CatalogBattleActorCreationRequest(
+            entity.Id,
+            RuntimeInstanceId.Parse("equipment_actor"),
+            PlayerTeam,
+            1,
+            IsDeployed: true,
+            Id("test_host"))).RequireActor();
+        CatalogBattleActor target = RuntimeCatalogActor(
+            "equipment_target",
+            "equipment_target",
+            EnemyTeam);
+        ContentId armorId = Id("test.pack:skill_armor");
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("skill-armor-001");
+        var armor = new EquipmentDefinition(
+            armorId,
+            "Skill Armor",
+            "Grants one active skill.",
+            StandardEquipmentSlotIds.Armor,
+            10,
+            grantedSkillIds: [grantedSkill.Id],
+            armor: new EquipmentArmorProfileDefinition(2, 1));
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Armor,
+                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
+            ]);
+        actor.State.ReplaceEquipment(new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Armor,
+                armorInstanceId)
+        ]));
+        var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
+            inventory,
+            new EquipmentRepository(armor));
+        var executor = new SkillExecutor(Services(LoadDemoCatalog()));
+        var selector = new DeterministicBattleActionSelector(executor);
+
+        BattleActionSelection selected = selector.Select(new BattleActionSelectionRequest(
+            actor,
+            [actor, target],
+            Battle,
+            NormalBattle,
+            NewMoon,
+            KnowledgeView(),
+            activeStatModifierBoundaries: null,
+            equipmentProfiles));
+        actor.State.ReplaceEquipment(new RuntimeEquipmentSnapshot());
+        BattleActionSelection afterUnequip = selector.Select(new BattleActionSelectionRequest(
+            actor,
+            [actor, target],
+            Battle,
+            NormalBattle,
+            NewMoon,
+            KnowledgeView(),
+            activeStatModifierBoundaries: null,
+            equipmentProfiles));
+
+        Assert.Empty(actor.SkillLoadout);
+        Assert.Equal(BattleActionSelectionStatus.Selected, selected.Status);
+        Assert.NotNull(selected.Skill);
+        Assert.Equal(grantedSkill.Id, selected.Skill.Id);
+        Assert.True(selected.Assessment?.CanExecute);
+        Assert.Equal(BattleActionSelectionStatus.Pass, afterUnequip.Status);
+        Assert.Empty(actor.State.Skills.LearnedSkillIds);
+        Assert.Empty(actor.State.Skills.EquippedSkillIds);
+    }
+
+    [Fact]
     public void ActorFactory_PreservesSameLevelUnlockOrderAndSuppressesFirstOccurrenceDuplicates()
     {
         SkillDefinition first = Active("test.pack:first", DamageElement.Fire);
@@ -3380,6 +3460,19 @@ public sealed class CatalogBattleRuntimeTests
             new ReadOnlyDictionary<ContentId, SkillDefinition>(skills.ToDictionary(skill => skill.Id));
         public bool TryGetSkill(ContentId id, out SkillDefinition? definition) => _skills.TryGetValue(id, out definition);
         public SkillDefinition GetRequiredSkill(ContentId id) => _skills[id];
+    }
+
+    private sealed class EquipmentRepository(params EquipmentDefinition[] equipment)
+        : IEquipmentDefinitionRepository
+    {
+        private readonly IReadOnlyDictionary<ContentId, EquipmentDefinition> _equipment =
+            new ReadOnlyDictionary<ContentId, EquipmentDefinition>(
+                equipment.ToDictionary(definition => definition.Id));
+
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? definition) =>
+            _equipment.TryGetValue(id, out definition);
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) => _equipment[id];
     }
 
     private sealed class TestInitializationPolicy : IBattleActorInitializationPolicy

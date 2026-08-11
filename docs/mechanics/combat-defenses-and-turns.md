@@ -68,11 +68,12 @@ each landed hit to the attacker, and Absorb restores the target. Rule modifiers
 from typed passives are applied to each hit at the execution boundary after the
 damage policy returns and before the resource mutation is committed.
 
-Damage never reads Luck. Equipment contributes to this formula only through
-the runtime fields currently composed by the actor/equipment modules. Weapon
-basic attacks may now compose ordered typed secondary effects. Full armor
-defense/evasion, granted skills, and other equipment behavior remain separate
-work.
+Damage never reads Luck. The canonical runtime equipment profile contributes
+armor Defense to `target Defense`; armor and boots do not own a separate damage
+formula. Weapon basic attacks may compose ordered typed secondary effects, and
+equipped instances may grant skills without adding those skills to the actor's
+move list. Active grants use live command authorization; passive grants use the
+same modifier and lifecycle pipeline as equipped passive skills.
 
 One authored damage effect may request between `1` and `1024` hits. The supplied
 standard policy applies a second, game-selected ceiling before hit-count
@@ -94,13 +95,15 @@ For the supplied policy, before explicit modifiers:
 
 ```text
 accuracy score = authored accuracy + attacker Agility * 2
-evasion score  = target Agility * 2
+evasion score  = target Agility * 2 + target Evasion
 raw chance     = resolved accuracy score - resolved evasion score
 final chance   = floor(clamp(raw chance, configured minimum, configured maximum))
 ```
 
 The coefficient `2` on each side is the supplied default and is configurable.
 Typed additive modifiers are combined before typed multiplicative modifiers.
+The target Evasion value is a typed additive input to that same modifier stack;
+the standard equipment profile derives it from equipped armor and boots.
 The policy rolls once per attempted hit only when the final chance is between
 zero and one hundred.
 

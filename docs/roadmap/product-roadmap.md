@@ -15,9 +15,10 @@ Documentation Order 7 is open under the owner-approved
 The current resource-management foundation remains usable. O7-R2 establishes
 equipment-instance ownership and removes the duplicated root save authority;
 O7-R3 replaces fixed slot enums with authored slot IDs governed by an explicit
-layout policy while preserving the standard four-slot behavior. The capability
-remains `partial` until equipped combat contributions, stateful shop stock,
-explicit pricing policies, generic
+layout policy while preserving the standard four-slot behavior. O7-R4 routes
+equipped-only skill grants, armor Defense, and armor/boots Evasion through one
+canonical equipment profile and the existing action/damage/hit authorities.
+The capability remains `partial` until stateful shop stock, explicit pricing policies, generic
 recovery, typed currencies, audience documentation, and an independent
 adversarial closure audit are complete.
 

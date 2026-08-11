@@ -66,9 +66,17 @@ identity but deliberately does not decide which slot/profile combinations a
 game supports. Semantic validation delegates that decision to the selected
 `IEquipmentSlotLayoutPolicy`. The supplied
 `StandardEquipmentSlotLayoutPolicy` recognizes stable `weapon`, `armor`,
-`boots`, and `accessory` IDs and requires exactly the matching legacy profile;
+`boots`, and `accessory` IDs and requires exactly the matching standard profile;
 a custom policy may author a different vocabulary or mapping without changing
 the equipment wire shape.
+
+An equipment definition may grant skill IDs. These references do not alter an
+actor's learned skills or move-list capacity: the runtime exposes them only
+while an owning instance is currently equipped. Active grants are executable
+through canonical action authorization; passive grants participate in the
+existing passive modifier and lifecycle services. Standard armor `defense` and
+`evasion`, boots `evasion`, accessory stat modifiers, and weapon basic attacks
+are resolved together into the actor's current equipment profile.
 
 Effects may expose a local `effectId` and later effects may declare a typed
 `dependency` on an earlier ID in the same sequence. Local IDs cannot carry a

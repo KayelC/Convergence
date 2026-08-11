@@ -114,6 +114,109 @@ public sealed class ProgressionPolicyTests
     }
 
     [Fact]
+    public void Order7R4_VesselCompositionAddsAndRemovesTheCanonicalEquipmentCombatProfile()
+    {
+        RuntimeActorState hostedEntity = CreateActor("equipment_hosted", 20m);
+        RuntimeActorState vessel = CreateActor("equipment_vessel", 5m, hpCurrent: 90m);
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
+        ContentId armorId = ContentId.Parse("test.pack:armor");
+        ContentId bootsId = ContentId.Parse("test.pack:boots");
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("armor-001");
+        RuntimeInstanceId bootsInstanceId = RuntimeInstanceId.Parse("boots-001");
+        SkillDefinition equipmentPassive = new(
+            ContentId.Parse("test.pack:equipment_passive"),
+            "Equipment Passive",
+            "A passive supplied only by equipped armor.",
+            SkillActivation.Passive,
+            null,
+            InheritanceGroup.Passive,
+            new SkillInheritanceDefinition(true),
+            modifiers:
+            [
+                new NumericRuleModifierDefinition(
+                    NumericRuleModifierType.DamageDealt,
+                    ModifierOperation.Add,
+                    2m)
+            ]);
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Armor,
+                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)]),
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Boots,
+                    [new RuntimeEquipmentInstanceSnapshot(bootsInstanceId, bootsId)])
+            ]);
+        vessel.ReplaceEquipment(new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Armor,
+                armorInstanceId),
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Boots,
+                bootsInstanceId)
+        ]));
+        var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
+            inventory,
+            new EquipmentRepository(
+                new EquipmentDefinition(
+                    armorId,
+                    "Armor",
+                    "Contributes Defense and Evasion.",
+                    StandardEquipmentSlotIds.Armor,
+                    10,
+                    grantedSkillIds: [equipmentPassive.Id],
+                    armor: new EquipmentArmorProfileDefinition(6, 1)),
+                new EquipmentDefinition(
+                    bootsId,
+                    "Boots",
+                    "Contributes Evasion.",
+                    StandardEquipmentSlotIds.Boots,
+                    10,
+                    boots: new EquipmentBootsProfileDefinition(4))));
+        var service = new RuntimeActorCombatProfileCompositionService(
+            _stats,
+            _resources,
+            new SkillRepository(equipmentPassive));
+
+        RuntimeEquipmentProfile equippedProfile = equipmentProfiles.Resolve(vessel);
+        RuntimeActorCombatProfileCompositionResult equipped = service.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                partyRoster,
+                [hostedEntity],
+                equippedProfile.StatModifiers,
+                equippedProfile.GrantedSkillIds));
+        Assert.Equal(equipmentPassive.Id, Assert.Single(vessel.Passives.Entries).Skill.Id);
+        Assert.DoesNotContain(equipmentPassive.Id, vessel.Skills.LearnedSkillIds);
+        Assert.DoesNotContain(equipmentPassive.Id, vessel.Skills.EquippedSkillIds);
+        vessel.ReplaceEquipment(new RuntimeEquipmentSnapshot());
+        Assert.Empty(vessel.Passives.Entries);
+        RuntimeEquipmentProfile unequippedProfile = equipmentProfiles.Resolve(vessel);
+        RuntimeActorCombatProfileCompositionResult unequipped = service.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
+                vessel,
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                partyRoster,
+                [hostedEntity],
+                unequippedProfile.StatModifiers,
+                unequippedProfile.GrantedSkillIds));
+
+        Assert.True(equipped.Applied);
+        Assert.Equal(6, equipped.After.Stats.EffectiveStats[StandardProgressionIds.Defense]);
+        Assert.Equal(5, equipped.After.Stats.EffectiveStats[StandardProgressionIds.Evasion]);
+        Assert.Empty(equippedProfile.Diagnostics);
+        Assert.True(unequipped.Applied);
+        Assert.DoesNotContain(StandardProgressionIds.Defense, unequipped.After.Stats.EffectiveStats.Keys);
+        Assert.DoesNotContain(StandardProgressionIds.Evasion, unequipped.After.Stats.EffectiveStats.Keys);
+        Assert.Empty(unequippedProfile.StatModifiers);
+    }
+
+    [Fact]
     public void ActorComposition_MissingHostedEntityPolicyEitherRejectsOrUsesActorStats()
     {
         RuntimeActorState rejectedActor = CreateActor("rejected_vessel", 7m);
@@ -1165,6 +1268,18 @@ public sealed class ProgressionPolicyTests
             _skills.TryGetValue(id, out definition);
 
         public SkillDefinition GetRequiredSkill(ContentId id) => _skills[id];
+    }
+
+    private sealed class EquipmentRepository(params EquipmentDefinition[] equipment) :
+        IEquipmentDefinitionRepository
+    {
+        private readonly IReadOnlyDictionary<ContentId, EquipmentDefinition> _equipment =
+            equipment.ToDictionary(definition => definition.Id);
+
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? definition) =>
+            _equipment.TryGetValue(id, out definition);
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) => _equipment[id];
     }
 
     private sealed class EmptyAilmentRepository : IAilmentDefinitionRepository

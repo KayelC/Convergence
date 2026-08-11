@@ -149,7 +149,7 @@ The supplied hit policy resolves these inspectable scores:
 ```text
 accuracy = (authored accuracy + attacker Agility * attacker coefficient
             + additive Accuracy modifiers) * Accuracy multipliers
-evasion  = (target Agility * target coefficient
+evasion  = (target Agility * target coefficient + target Evasion
             + additive Evasion modifiers) * Evasion multipliers
 chance   = clamp(accuracy - evasion, minimum, maximum)
 ```

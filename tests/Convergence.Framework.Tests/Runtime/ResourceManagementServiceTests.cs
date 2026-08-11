@@ -201,6 +201,56 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
+    public void Order7R4_EquipmentProfileResolvesGrantedSkillsAndCombatContributionsTogether()
+    {
+        ContentId sword = Id("shortsword");
+        ContentId armor = Id("padded_armor");
+        ContentId boots = Id("trail_boots");
+        ContentId charm = Id("focus_charm");
+        ContentId armorSkill = Id("armor_skill");
+        ContentId bootsSkill = Id("boots_skill");
+        RuntimeInstanceId swordInstanceId = Instance("sword-001");
+        RuntimeInstanceId armorInstanceId = Instance("armor-001");
+        RuntimeInstanceId bootsInstanceId = Instance("boots-001");
+        RuntimeInstanceId charmInstanceId = Instance("charm-001");
+        var repository = new TestEquipmentRepository(
+            Weapon(sword, power: 12, accuracy: 95),
+            Armor(armor, defense: 6, evasion: 1, armorSkill),
+            Boots(boots, evasion: 4, armorSkill, bootsSkill),
+            Accessory(charm, new StatModifierDefinition(StandardProgressionIds.Magic, 3)));
+        var equipment = new RuntimeEquipmentSnapshot(
+        [
+            new(StandardEquipmentSlotIds.Weapon, swordInstanceId),
+            new(StandardEquipmentSlotIds.Armor, armorInstanceId),
+            new(StandardEquipmentSlotIds.Boots, bootsInstanceId),
+            new(StandardEquipmentSlotIds.Accessory, charmInstanceId)
+        ]);
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                Owned(StandardEquipmentSlotIds.Weapon, swordInstanceId, sword),
+                Owned(StandardEquipmentSlotIds.Armor, armorInstanceId, armor),
+                Owned(StandardEquipmentSlotIds.Boots, bootsInstanceId, boots),
+                Owned(StandardEquipmentSlotIds.Accessory, charmInstanceId, charm)
+            ]);
+
+        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver().Resolve(
+            inventory,
+            equipment,
+            repository);
+
+        Assert.Empty(profile.Diagnostics);
+        Assert.Equal(sword, profile.BasicAttack?.EquipmentId);
+        Assert.Equal(12, profile.BasicAttack?.BasicAttack.Power);
+        Assert.Equal(3, profile.StatModifiers[StandardProgressionIds.Magic]);
+        Assert.Equal(6, profile.StatModifiers[StandardProgressionIds.Defense]);
+        Assert.Equal(5, profile.StatModifiers[StandardProgressionIds.Evasion]);
+        Assert.Equal([armorSkill, bootsSkill], profile.GrantedSkillIds);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<ContentId>)profile.GrantedSkillIds).Add(Id("unexpected")));
+    }
+
+    [Fact]
     public void EquipmentProfileResolver_ReportsMissingAndSlotMismatchedDefinitions()
     {
         ContentId sword = Id("shortsword");
@@ -664,6 +714,39 @@ public sealed class ResourceManagementServiceTests
             StandardEquipmentSlotIds.Accessory,
             baseValue: 10,
             accessory: new EquipmentAccessoryProfileDefinition(modifiers));
+
+    private static EquipmentDefinition Armor(
+        ContentId id,
+        int defense,
+        int evasion,
+        params ContentId[] grantedSkillIds) =>
+        new(
+            id,
+            id.ToString(),
+            "test armor",
+            StandardEquipmentSlotIds.Armor,
+            baseValue: 10,
+            grantedSkillIds: grantedSkillIds,
+            armor: new EquipmentArmorProfileDefinition(defense, evasion));
+
+    private static EquipmentDefinition Boots(
+        ContentId id,
+        int evasion,
+        params ContentId[] grantedSkillIds) =>
+        new(
+            id,
+            id.ToString(),
+            "test boots",
+            StandardEquipmentSlotIds.Boots,
+            baseValue: 10,
+            grantedSkillIds: grantedSkillIds,
+            boots: new EquipmentBootsProfileDefinition(evasion));
+
+    private static KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>> Owned(
+        ContentId slotId,
+        RuntimeInstanceId instanceId,
+        ContentId definitionId) =>
+        new(slotId, [new RuntimeEquipmentInstanceSnapshot(instanceId, definitionId)]);
 
     private sealed class TestEquipmentRepository(params EquipmentDefinition[] definitions) : IEquipmentDefinitionRepository
     {

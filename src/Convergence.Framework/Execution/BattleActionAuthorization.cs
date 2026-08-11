@@ -96,9 +96,7 @@ public sealed class NoBattleBasicAttackProfileSource : IBattleBasicAttackProfile
 
 public sealed class EquipmentBattleBasicAttackProfileSource : IBattleBasicAttackProfileSource
 {
-    private readonly IEquipmentDefinitionRepository _equipment;
-    private readonly RuntimeInventorySnapshot _inventory;
-    private readonly IRuntimeEquipmentProfileResolver _profiles;
+    private readonly IRuntimeActorEquipmentProfileSource _equipmentProfiles;
     private readonly TargetingDefinition _targeting;
 
     public EquipmentBattleBasicAttackProfileSource(
@@ -107,19 +105,24 @@ public sealed class EquipmentBattleBasicAttackProfileSource : IBattleBasicAttack
         TargetingDefinition targeting,
         IRuntimeEquipmentProfileResolver? profiles = null)
     {
-        _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
-        _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
+        ArgumentNullException.ThrowIfNull(inventory);
+        ArgumentNullException.ThrowIfNull(equipment);
         _targeting = targeting ?? throw new ArgumentNullException(nameof(targeting));
-        _profiles = profiles ?? new RuntimeEquipmentProfileResolver();
+        _equipmentProfiles = new RuntimeActorEquipmentProfileSource(inventory, equipment, profiles);
+    }
+
+    public EquipmentBattleBasicAttackProfileSource(
+        IRuntimeActorEquipmentProfileSource equipmentProfiles,
+        TargetingDefinition targeting)
+    {
+        _equipmentProfiles = equipmentProfiles ?? throw new ArgumentNullException(nameof(equipmentProfiles));
+        _targeting = targeting ?? throw new ArgumentNullException(nameof(targeting));
     }
 
     public BattleBasicAttackProfile? Resolve(RuntimeActorState actor)
     {
         ArgumentNullException.ThrowIfNull(actor);
-        RuntimeEquipmentProfile equipmentProfile = _profiles.Resolve(
-            _inventory,
-            actor.Equipment,
-            _equipment);
+        RuntimeEquipmentProfile equipmentProfile = _equipmentProfiles.Resolve(actor);
         return equipmentProfile.BasicAttack is RuntimeBasicAttackProfile basicAttack
             ? new BattleBasicAttackProfile(
                 basicAttack.EquipmentId,
@@ -141,15 +144,18 @@ public sealed class CatalogBattleActionAuthorizationPolicy : IBattleActionAuthor
     private readonly ISkillDefinitionRepository _skills;
     private readonly IItemDefinitionRepository _items;
     private readonly IBattleBasicAttackProfileSource _basicAttacks;
+    private readonly IRuntimeActorEquipmentProfileSource _equipmentProfiles;
 
     public CatalogBattleActionAuthorizationPolicy(
         ISkillDefinitionRepository skills,
         IItemDefinitionRepository items,
-        IBattleBasicAttackProfileSource basicAttacks)
+        IBattleBasicAttackProfileSource basicAttacks,
+        IRuntimeActorEquipmentProfileSource? equipmentProfiles = null)
     {
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _items = items ?? throw new ArgumentNullException(nameof(items));
         _basicAttacks = basicAttacks ?? throw new ArgumentNullException(nameof(basicAttacks));
+        _equipmentProfiles = equipmentProfiles ?? NoRuntimeActorEquipmentProfileSource.Instance;
     }
 
     public BattleActionAuthorizationResult Authorize(
@@ -171,7 +177,11 @@ public sealed class CatalogBattleActionAuthorizationPolicy : IBattleActionAuthor
     private BattleActionAuthorizationResult AuthorizeSkill(
         RuntimeActorState actor,
         SkillBattleActionCommand command) =>
-        CatalogSkillActionAuthorization.Authorize(actor, command.Skill, _skills);
+        CatalogSkillActionAuthorization.Authorize(
+            actor,
+            command.Skill,
+            _skills,
+            _equipmentProfiles.Resolve(actor).GrantedSkillIds);
 
     private BattleActionAuthorizationResult AuthorizeItem(ItemBattleActionCommand command)
     {
@@ -228,24 +238,25 @@ internal static class CatalogSkillActionAuthorization
     public static BattleActionAuthorizationResult Authorize(
         RuntimeActorState actor,
         SkillDefinition skill,
-        ISkillDefinitionRepository skills)
+        ISkillDefinitionRepository skills,
+        IEnumerable<ContentId>? grantedSkillIds = null)
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(skill);
         ArgumentNullException.ThrowIfNull(skills);
 
-        if (!actor.HasSkill(skill.Id))
+        if (!actor.HasSkill(skill.Id) && !(grantedSkillIds?.Contains(skill.Id) ?? false))
         {
             return BattleActionAuthorizationResult.Rejected(
                 BattleActionAuthorizationDiagnosticCode.SkillNotEquipped,
-                $"Actor '{actor.InstanceId}' does not have skill '{skill.Id}' equipped.");
+                $"Actor '{actor.InstanceId}' does not have skill '{skill.Id}' equipped or granted by equipment.");
         }
 
         if (!skills.TryGetSkill(skill.Id, out SkillDefinition? canonical) || canonical is null)
         {
             return BattleActionAuthorizationResult.Rejected(
                 BattleActionAuthorizationDiagnosticCode.SkillDefinitionMissing,
-                $"Equipped skill '{skill.Id}' is not available from the authorization catalog.");
+                $"Available skill '{skill.Id}' is not available from the authorization catalog.");
         }
 
         return ReferenceEquals(canonical, skill)

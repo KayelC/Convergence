@@ -42,7 +42,8 @@ public sealed record RuntimeActorCombatProfileCompositionRequest
         MissingHostedEntityBehavior missingHostedEntityBehavior,
         RuntimePartyRosterSnapshot? partyRoster = null,
         IEnumerable<RuntimeActorState>? runtimeActors = null,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null)
+        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
+        IEnumerable<ContentId>? equipmentGrantedSkillIds = null)
     {
         if (!Enum.IsDefined(sourceKind))
         {
@@ -66,6 +67,7 @@ public sealed record RuntimeActorCombatProfileCompositionRequest
                     nameof(runtimeActors)))
             .ToArray());
         EquipmentStatModifiers = RuntimeSnapshotCollections.Dictionary(equipmentStatModifiers);
+        EquipmentGrantedSkillIds = RuntimeSnapshotCollections.List(equipmentGrantedSkillIds);
     }
 
     public RuntimeActorState Actor { get; }
@@ -74,6 +76,7 @@ public sealed record RuntimeActorCombatProfileCompositionRequest
     public RuntimePartyRosterSnapshot? PartyRoster { get; }
     public IReadOnlyList<RuntimeActorState> RuntimeActors { get; }
     public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
+    public IReadOnlyList<ContentId> EquipmentGrantedSkillIds { get; }
 }
 
 public sealed record RuntimeActorCombatProfileCompositionResult
@@ -293,12 +296,31 @@ public sealed class RuntimeActorCombatProfileCompositionService :
             }
         }
 
-        var resolutions = new List<StatResolutionResult>(StandardProgressionIds.CoreStats.Count);
-        HashSet<ContentId> composedStatIds = [.. StandardProgressionIds.CoreStats];
+        ContentId[] equipmentCombatStatIds =
+        [
+            StandardProgressionIds.Defense,
+            StandardProgressionIds.Evasion
+        ];
+        IReadOnlyDictionary<ContentId, decimal> combatStatSource =
+            resolvedSource == RuntimeStatSourceKind.ActiveHostedEntity
+                ? hostedStats
+                : actor.BaseStats;
+        ContentId[] equipmentCombatStatsToResolve = equipmentCombatStatIds
+            .Where(statId =>
+                combatStatSource.ContainsKey(statId) ||
+                request.EquipmentStatModifiers.ContainsKey(statId))
+            .ToArray();
+        var resolutions = new List<StatResolutionResult>(
+            StandardProgressionIds.CoreStats.Count + equipmentCombatStatsToResolve.Length);
+        HashSet<ContentId> composedStatIds =
+        [
+            .. StandardProgressionIds.CoreStats,
+            .. equipmentCombatStatIds
+        ];
         var effectiveStats = before.Stats.EffectiveStats
             .Where(pair => !composedStatIds.Contains(pair.Key))
             .ToDictionary(pair => pair.Key, pair => pair.Value);
-        foreach (ContentId statId in StandardProgressionIds.CoreStats)
+        foreach (ContentId statId in StandardProgressionIds.CoreStats.Concat(equipmentCombatStatsToResolve))
         {
             StatResolutionResult resolution;
             try
@@ -391,6 +413,36 @@ public sealed class RuntimeActorCombatProfileCompositionService :
             resolvedSkills.Add(skill);
         }
 
+        if (request.EquipmentGrantedSkillIds.Any(skillId => !skillId.IsValid) ||
+            request.EquipmentGrantedSkillIds.Distinct().Count() !=
+            request.EquipmentGrantedSkillIds.Count)
+        {
+            return Rejected(
+                before,
+                resolvedSource,
+                sourceActor.InstanceId,
+                RuntimeActorCombatProfileCompositionDiagnosticCode.InvalidSkillState,
+                "Equipment-granted skill IDs must be valid and unique.");
+        }
+
+        var resolvedEquipmentGrantedSkills =
+            new List<SkillDefinition>(request.EquipmentGrantedSkillIds.Count);
+        foreach (ContentId skillId in request.EquipmentGrantedSkillIds)
+        {
+            if (!_skills.TryGetSkill(skillId, out SkillDefinition? skill) || skill is null)
+            {
+                return Rejected(
+                    before,
+                    resolvedSource,
+                    sourceActor.InstanceId,
+                    RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMissing,
+                    $"Equipment profile references missing granted skill '{skillId}'.",
+                    skillId: skillId);
+            }
+
+            resolvedEquipmentGrantedSkills.Add(skill);
+        }
+
         RuntimeSkillStateSnapshot composedSkills = sourceActor.InstanceId == actor.InstanceId
             ? sourceSkills
             : new RuntimeSkillStateSnapshot(
@@ -407,7 +459,8 @@ public sealed class RuntimeActorCombatProfileCompositionService :
                 composedSkills,
                 resolvedSkills,
                 sourceActor.InstanceId,
-                sourceActor.EntityId);
+                sourceActor.EntityId,
+                resolvedEquipmentGrantedSkills);
         }
         catch (Exception exception) when (
             exception is ArgumentException or InvalidOperationException or OverflowException)

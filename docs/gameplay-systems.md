@@ -148,8 +148,12 @@ storage.
 
 Order 7 is open. O7-R2 now gives each equipment copy a unique runtime instance
 ID, permits separate copies of one definition, makes inventory the sole owner,
-and removes the former root save equipment authority. Equipment slots remain
-fixed, limited stock is not returned as durable runtime state, and
+and removes the former root save equipment authority. O7-R3 makes equipment
+slot identity authored and policy-validated. O7-R4 derives weapon attacks,
+accessory modifiers, granted skills, armor Defense, and armor/boots Evasion
+through one equipment profile; canonical action authorization and automated
+selection resolve that profile live, while actor composition and restoration
+consume its numeric contributions. Limited stock is not returned as durable runtime state, and
 wallet/recovery contracts remain single-currency and HP/SP-specific. The owner-approved
 [Order 7 roadmap](reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 defines the direct authority corrections and narrowly justified policy seams;

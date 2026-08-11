@@ -400,6 +400,88 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task Order7R4_EquipmentGrantedSkillIsLiveAndNeverEntersTheMoveList()
+    {
+        SkillDefinition grantedSkill = ActiveSkill(
+            "equipment_grant",
+            [],
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                7,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))]);
+        ContentId armorId = Id("granting_armor");
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("granting-armor-001");
+        var armor = new EquipmentDefinition(
+            armorId,
+            "Granting Armor",
+            "Grants a test skill while equipped.",
+            StandardEquipmentSlotIds.Armor,
+            10,
+            grantedSkillIds: [grantedSkill.Id],
+            armor: new EquipmentArmorProfileDefinition(2, 1));
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Armor,
+                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
+            ]);
+        var equipped = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Armor,
+                armorInstanceId)
+        ]);
+        var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
+            inventory,
+            new TestEquipmentRepository([armor]));
+        RuntimeActorState actor = Actor("actor", TeamA);
+        RuntimeActorState target = Actor("target", TeamB);
+        actor.ReplaceEquipment(equipped);
+        RuntimeSkillStateSnapshot moveListBefore = actor.Skills;
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([grantedSkill]),
+            new TestItemRepository([]),
+            NoBattleBasicAttackProfileSource.Instance,
+            equipmentProfiles);
+        BattleActionExecutor executor = Executor(authorization: authorization);
+        BattleActionExecutionRequest request = Request(
+            new SkillBattleActionCommand(grantedSkill, [target.InstanceId]),
+            actor,
+            [actor, target]);
+        BattleActionAssessment preparedWhileEquipped = executor.Assess(request);
+
+        actor.ReplaceEquipment(new RuntimeEquipmentSnapshot());
+        BattleActionExecutionResult rejectedAfterUnequip = await executor.ExecuteAsync(
+            request,
+            preparedWhileEquipped);
+
+        Assert.True(preparedWhileEquipped.CanExecute);
+        Assert.Equal(BattleActionExecutionStatus.Rejected, rejectedAfterUnequip.Status);
+        Assert.Equal(
+            BattleActionDiagnosticCode.ActionNotAuthorized,
+            Assert.Single(rejectedAfterUnequip.Diagnostics).Code);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(moveListBefore, actor.Skills);
+        Assert.Empty(actor.Skills.LearnedSkillIds);
+        Assert.Empty(actor.Skills.EquippedSkillIds);
+
+        actor.ReplaceEquipment(equipped);
+        BattleActionExecutionResult executedAfterReequip = await executor.ExecuteAsync(request);
+        actor.ReplaceEquipment(new RuntimeEquipmentSnapshot());
+        BattleActionAssessment rejectedAfterSecondUnequip = executor.Assess(request);
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, executedAfterReequip.Status);
+        Assert.Equal(90, target.GetRequiredResource(Hp).Current);
+        Assert.False(rejectedAfterSecondUnequip.CanExecute);
+        Assert.Equal(moveListBefore, actor.Skills);
+        Assert.Empty(actor.Skills.LearnedSkillIds);
+        Assert.Empty(actor.Skills.EquippedSkillIds);
+    }
+
+    [Fact]
     public async Task CatalogAuthorization_AllowsCanonicalOwnedItem()
     {
         ItemDefinition medicine = ConsumableItem(
@@ -2087,6 +2169,21 @@ public sealed class BattleActionExecutorTests
             _items.TryGetValue(id, out ItemDefinition? definition)
                 ? definition
                 : throw new KeyNotFoundException($"Item '{id}' was not found.");
+    }
+
+    private sealed class TestEquipmentRepository(IEnumerable<EquipmentDefinition> equipment)
+        : IEquipmentDefinitionRepository
+    {
+        private readonly IReadOnlyDictionary<ContentId, EquipmentDefinition> _equipment =
+            equipment.ToDictionary(definition => definition.Id);
+
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? definition) =>
+            _equipment.TryGetValue(id, out definition);
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) =>
+            _equipment.TryGetValue(id, out EquipmentDefinition? definition)
+                ? definition
+                : throw new KeyNotFoundException($"Equipment '{id}' was not found.");
     }
 
     private sealed class MutableItemRepository(ItemDefinition? item) : IItemDefinitionRepository

@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R3 complete; O7-R4 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R4 complete; O7-R5 through O7-R11 pending
 
 ## Purpose
 
@@ -182,8 +182,8 @@ gate are complete.
 | O7-G1 | Introduce a policy/default pair only for a real game-variable rule. Correct identity and data-shape errors directly. Do not add speculative policy surface. | Governing design rule | Approved |
 | O7-D1 | Every owned equipment copy has a unique runtime instance ID and references one equipment definition. Different actors may equip different instances of the same definition. | Direct data-model correction | Approved; implemented by O7-R2 |
 | O7-D2 | Equipment slot IDs are authored `ContentId` values. `IEquipmentSlotLayoutPolicy` owns valid layouts, and `StandardEquipmentSlotLayoutPolicy` supplies Weapon, Armor, Boots, and Accessory behavior. | Policy family | Approved; implemented by O7-R3 |
-| O7-D3 | Equipped granted skills are available only while the granting instance is equipped. They are not learned and consume no move-list slot. | Fixed runtime rule | Approved |
-| O7-D4 | Equipment Defense and Evasion are numeric contributions to the existing `ProductionCombatRuleset` inputs. Equipment does not own a parallel damage or hit formula. | Direct integration correction | Approved |
+| O7-D3 | Equipped granted skills are available only while the granting instance is equipped. They are not learned and consume no move-list slot. | Fixed runtime rule | Approved; implemented by O7-R4 |
+| O7-D4 | Equipment Defense and Evasion are numeric contributions to the existing `ProductionCombatRuleset` inputs. Equipment does not own a parallel damage or hit formula. | Direct integration correction | Approved; implemented by O7-R4 |
 | O7-D5 | Runtime shop stock is stateful. Buying decrements limited stock. Standard selling does not replenish stock; a supplied policy may choose otherwise. | Policy family plus runtime state | Approved |
 | O7-D6 | The standard pricing policy uses authored purchase price and configurable resale percentage. Luck-adjusted pricing remains available as an optional supplied policy, not hidden standard behavior. | Policy family | Approved |
 | O7-D7 | Recovery is generic and resource-ID driven. Supply exactly one `StandardHospitalRecoveryPolicy` for full configured HP/SP recovery, legal ailment cures, and configured temporary-state cleanup. | Policy family, narrowly scoped | Approved |
@@ -605,3 +605,89 @@ concrete consequences, reproducible evidence, and any trusted host boundaries.
    armor/boots contributions into combat, or alter pricing, shop stock,
    recovery, currency, or their policy surfaces. Those remain O7-R4 through
    O7-R8 work.
+
+### O7-R4: Complete Equipment Combat Contributions
+
+- **Baseline and commit:** `8dc47f8a..this checkpoint commit`; commit subject
+  `runtime: complete equipment combat contributions`.
+- **Actual destination:** `RuntimeEquipmentProfileResolver` resolves one
+  immutable profile from the actor's currently equipped instance IDs and the
+  inventory-owned definitions. `IRuntimeActorEquipmentProfileSource` exposes
+  that same live profile to basic attacks, canonical action authorization,
+  automated selection, actor/Vessel composition, save validation, and
+  aggregate restoration. Armor contributes Defense and Evasion, boots
+  contribute Evasion, active granted skills remain live authorization inputs,
+  and passive granted skills enter the existing passive lifecycle without
+  entering learned or equipped move-list state.
+- **Changed Framework files:** `Battle/ProductionCombatRuleset.cs`,
+  `Encounters/AutomatedBattleRunner.cs`,
+  `Encounters/CatalogBattleActorFactory.cs`,
+  `Execution/BattleActionAuthorization.cs`, `Execution/BattleRuntimeState.cs`,
+  `PublicAPI.Shipped.txt`, `Runtime/ProgressionPolicies.cs`,
+  `Runtime/RuntimeActorCombatProfileComposition.cs`,
+  `Runtime/RuntimeEquipmentProfiles.cs`,
+  `Runtime/RuntimePersistenceSnapshots.cs`,
+  `Runtime/RuntimeSessionRestoration.cs`, and
+  `Runtime/RuntimeSkillProgression.cs` under `src/Convergence.Framework`.
+- **Changed host files:** Training Annex play state, battle action adapter,
+  shared composition support, and persistence controller under
+  `samples/Convergence.DemoHost/Hosts/TrainingAnnex` now construct and reuse
+  the canonical live equipment-profile source. No presentation behavior or
+  Order 7 currency work was added.
+- **Changed tests and documentation:** focused Framework coverage in
+  `ProductionCombatRulesetTests`, `ProgressionPolicyTests`,
+  `ResourceManagementServiceTests`, `BattleActionExecutorTests`,
+  `CatalogBattleRuntimeTests`, and `PassiveSkillRuntimeTests`; DemoHost restore
+  coverage in `CleanTrainingAnnexPlayHostTests`; current capability and
+  documentation matrices; and the active architecture, content-contract,
+  ruleset, player-mechanics, developer, technical, and roadmap pages describing
+  equipment authority and combat contribution.
+- **Focused tests:** 7 Framework equipment-profile/combat/authorization tests
+  and 2 DemoHost equipment/restore tests passed: 9 total, 0 failed, 0 skipped.
+- **Full suite:** 1,725 Framework tests, 179 DemoHost tests, and 7
+  ContentValidator tests passed: 1,911 total, 0 failed, 0 skipped.
+- **Build and content integration:** the nonincremental .NET 8 solution build
+  passed with 0 warnings and 0 errors; formatting and `git diff --check`
+  passed. The authoring validator loaded 6 packs, 36 documents, and 98
+  qualified definitions under schema v9. All four noninteractive DemoHost
+  modes and scripted Training Annex exit passed.
+
+#### Explicit O7-R4 Parity-Hazard Evidence
+
+1. **No-equipment output is an exact no-op.** `ProductionCombatStats` defaults
+   Defense and Evasion to decimal zero. The existing damage denominator adds
+   that zero to Vitality; the hit path passes the original evasion-modifier
+   collection directly when Evasion is zero. A field-by-field regression proves
+   implicit-zero and explicit-zero damage/hit results are equal (50 damage and
+   80 final hit chance in the controlled fixture). The pre-change and
+   post-change clean battle demo also produced the same ordered damage values:
+   7.5, 13, 35.625, 35.625, 13, and 9.250.
+2. **Granted-skill availability is live and instance-scoped.** Both assessment
+   and execution resolve the actor's current equipment instance IDs through
+   `IRuntimeActorEquipmentProfileSource`. A command assessed while equipped is
+   rejected without mutation if the granting instance is unequipped before
+   execution; re-equipping authorizes it; a second unequip rejects it again.
+   Automated selection likewise changes from selected to pass immediately.
+3. **Granted skills never become learned skills or consume move-list slots.**
+   Active grants are authorization inputs only. Passive grants are tracked as
+   equipment provenance in `RuntimeActorState` and merged into the existing
+   passive collection, while `RuntimeSkillStateSnapshot.LearnedSkillIds` and
+   `.EquippedSkillIds` remain unchanged across equip, unequip, and rapid
+   re-equip. Focused tests assert both collections remain empty for the granted
+   active skill and exclude the restored granted passive.
+4. **Defense and Evasion are additive inputs to the existing formulas.** The
+   equipment resolver emits `defense` and `evasion` numeric stat contributions.
+   Actor composition adds them to the normal effective-stat block;
+   `ProductionCombatRuleset` reads those normal stats into its existing damage
+   denominator and hit-policy modifier pipeline. No equipment-specific combat
+   formula, threshold, policy, or special-case branch was introduced.
+5. **All lifecycle surfaces use the same equipment profile.** Actor creation
+   exposes its live profile through `CatalogBattleActor`; Vessel composition,
+   equipment changes, manual and automated assessment, execution, save
+   validation, and restoration consume the same resolver output. The Training
+   Annex save/restore regression proves one equipped armor instance resolves to
+   the same Defense (6), Evasion (1), and granted passive before and after
+   restoration, while the skill remains absent from the move list.
+6. **Scope guard held.** No granted-skill policy, equipment-specific combat
+   formula, currency ledger, pricing, shop-stock, or recovery work was added.
+   O7-R5 remains unstarted.

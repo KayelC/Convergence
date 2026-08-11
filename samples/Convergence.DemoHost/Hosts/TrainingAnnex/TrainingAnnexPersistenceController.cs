@@ -651,7 +651,8 @@ internal sealed class TrainingAnnexActorRestoreProfileResolver(
         return new RuntimeActorRestoreProfile(
             RuntimeStatSourceKind.ActiveHostedEntity,
             MissingHostedEntityBehavior.RejectStatResolution,
-            equipment.StatModifiers);
+            equipment.StatModifiers,
+            equipment.GrantedSkillIds);
     }
 }
 

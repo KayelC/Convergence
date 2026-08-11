@@ -1,5 +1,6 @@
 using Convergence.Content;
 using Convergence.Catalog;
+using Convergence.Execution;
 
 namespace Convergence.Runtime;
 
@@ -28,19 +29,24 @@ public sealed record RuntimeEquipmentProfile
     public RuntimeEquipmentProfile(
         IEnumerable<KeyValuePair<ContentId, EquipmentDefinition>>? equippedDefinitions = null,
         IEnumerable<KeyValuePair<ContentId, decimal>>? statModifiers = null,
+        IEnumerable<ContentId>? grantedSkillIds = null,
         RuntimeBasicAttackProfile? basicAttack = null,
         IEnumerable<RuntimeEquipmentProfileDiagnostic>? diagnostics = null)
     {
         EquippedDefinitions = RuntimeSnapshotCollections.Dictionary(equippedDefinitions);
         StatModifiers = RuntimeSnapshotCollections.Dictionary(statModifiers);
+        GrantedSkillIds = RuntimeSnapshotCollections.List(grantedSkillIds);
         BasicAttack = basicAttack;
         Diagnostics = RuntimeSnapshotCollections.List(diagnostics);
     }
 
     public IReadOnlyDictionary<ContentId, EquipmentDefinition> EquippedDefinitions { get; }
     public IReadOnlyDictionary<ContentId, decimal> StatModifiers { get; }
+    public IReadOnlyList<ContentId> GrantedSkillIds { get; }
     public RuntimeBasicAttackProfile? BasicAttack { get; }
     public IReadOnlyList<RuntimeEquipmentProfileDiagnostic> Diagnostics { get; }
+
+    public static RuntimeEquipmentProfile Empty { get; } = new();
 }
 
 public interface IRuntimeEquipmentProfileResolver
@@ -49,6 +55,54 @@ public interface IRuntimeEquipmentProfileResolver
         RuntimeInventorySnapshot inventory,
         RuntimeEquipmentSnapshot equipment,
         IEquipmentDefinitionRepository equipmentRepository);
+}
+
+/// <summary>Resolves the current equipment profile for a live runtime actor.</summary>
+public interface IRuntimeActorEquipmentProfileSource
+{
+    RuntimeEquipmentProfile Resolve(RuntimeActorState actor);
+}
+
+/// <summary>Supplies an empty equipment profile to games or actors that do not use equipment.</summary>
+public sealed class NoRuntimeActorEquipmentProfileSource : IRuntimeActorEquipmentProfileSource
+{
+    private NoRuntimeActorEquipmentProfileSource()
+    {
+    }
+
+    public static NoRuntimeActorEquipmentProfileSource Instance { get; } = new();
+
+    public RuntimeEquipmentProfile Resolve(RuntimeActorState actor)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        return RuntimeEquipmentProfile.Empty;
+    }
+}
+
+/// <summary>
+/// Resolves actor equipment against the inventory ownership snapshot and catalog supplied by a host session.
+/// </summary>
+public sealed class RuntimeActorEquipmentProfileSource : IRuntimeActorEquipmentProfileSource
+{
+    private readonly RuntimeInventorySnapshot _inventory;
+    private readonly IEquipmentDefinitionRepository _equipment;
+    private readonly IRuntimeEquipmentProfileResolver _profiles;
+
+    public RuntimeActorEquipmentProfileSource(
+        RuntimeInventorySnapshot inventory,
+        IEquipmentDefinitionRepository equipment,
+        IRuntimeEquipmentProfileResolver? profiles = null)
+    {
+        _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+        _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
+        _profiles = profiles ?? new RuntimeEquipmentProfileResolver();
+    }
+
+    public RuntimeEquipmentProfile Resolve(RuntimeActorState actor)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        return _profiles.Resolve(_inventory, actor.Equipment, _equipment);
+    }
 }
 
 public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileResolver
@@ -71,6 +125,8 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
 
         var definitions = new List<KeyValuePair<ContentId, EquipmentDefinition>>();
         var statModifiers = new Dictionary<ContentId, decimal>();
+        var grantedSkillIds = new List<ContentId>();
+        var grantedSkillSet = new HashSet<ContentId>();
         var diagnostics = new List<RuntimeEquipmentProfileDiagnostic>();
         RuntimeBasicAttackProfile? basicAttack = null;
 
@@ -148,6 +204,14 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
             }
 
             definitions.Add(new KeyValuePair<ContentId, EquipmentDefinition>(slotId, definition));
+            foreach (ContentId grantedSkillId in definition.GrantedSkillIds)
+            {
+                if (grantedSkillSet.Add(grantedSkillId))
+                {
+                    grantedSkillIds.Add(grantedSkillId);
+                }
+            }
+
             if (definition.Weapon is EquipmentWeaponProfileDefinition weapon)
             {
                 basicAttack = new RuntimeBasicAttackProfile(
@@ -156,12 +220,22 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
                     weapon.BasicAttack);
             }
 
+            if (definition.Armor is EquipmentArmorProfileDefinition armor)
+            {
+                AddModifier(statModifiers, StandardProgressionIds.Defense, armor.Defense);
+                AddModifier(statModifiers, StandardProgressionIds.Evasion, armor.Evasion);
+            }
+
+            if (definition.Boots is EquipmentBootsProfileDefinition boots)
+            {
+                AddModifier(statModifiers, StandardProgressionIds.Evasion, boots.Evasion);
+            }
+
             if (definition.Accessory is EquipmentAccessoryProfileDefinition accessory)
             {
                 foreach (StatModifierDefinition modifier in accessory.StatModifiers)
                 {
-                    statModifiers[modifier.StatId] =
-                        statModifiers.GetValueOrDefault(modifier.StatId) + modifier.Value;
+                    AddModifier(statModifiers, modifier.StatId, modifier.Value);
                 }
             }
         }
@@ -169,7 +243,26 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
         return new RuntimeEquipmentProfile(
             definitions,
             statModifiers,
+            grantedSkillIds,
             basicAttack,
             diagnostics);
+    }
+
+    private static void AddModifier(
+        IDictionary<ContentId, decimal> modifiers,
+        ContentId statId,
+        decimal value)
+    {
+        try
+        {
+            decimal current = modifiers.TryGetValue(statId, out decimal existing) ? existing : 0m;
+            modifiers[statId] = checked(current + value);
+        }
+        catch (OverflowException exception)
+        {
+            throw new InvalidOperationException(
+                $"Equipment contributions for stat '{statId}' exceed the supported numeric range.",
+                exception);
+        }
     }
 }

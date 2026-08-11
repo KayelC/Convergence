@@ -12,10 +12,10 @@ the external host boundary.
 | Layer | Responsibility | Deliberately does not own |
 |---|---|---|
 | `BattleActionExecutor` | command authorization, shared assessment/execution, item transaction coordination, roster commands, turn intent | presentation and external host work |
-| `CatalogBattleActionAuthorizationPolicy` | equipped canonical skill identity, canonical item identity, and resolved basic-attack identity | item inventory quantity and target legality |
+| `CatalogBattleActionAuthorizationPolicy` | equipped-or-equipment-granted canonical skill identity, canonical item identity, and resolved basic-attack identity | item inventory quantity and target legality |
 | `SkillExecutor` | active-skill availability, costs, targets, effects, skill turn outcome | actor loadout authority |
 | `ItemExecutor` | consumable usage, applicability, targets, effects, consumption decision | inventory ownership or quantity mutation |
-| `AutomatedBattleRunner` | exact selector/assessment identity, catalog-backed equipped skill authority, automated encounter execution | arbitrary skill grants or host-mediated actions |
+| `AutomatedBattleRunner` | exact selector/assessment identity, catalog-backed equipped-or-equipment-granted skill authority, automated encounter execution | arbitrary non-equipment grants or host-mediated actions |
 | `OrderedEffectExecutor` | authored order, conditions, failure policy, action-duration boundary | external callback rollback |
 | `RuntimeActorExecutionTransaction` | clone live actors and publish accepted staged state | inventory, scenes, files, network state |
 
@@ -26,7 +26,7 @@ they are not equivalent to the complete actor-owned battle action.
 `SkillExecutor`. A selector may use a prepared skill assessment for scoring,
 but the runner accepts it only when its skill, actor, participant references,
 encounter environment, and resolved targets describe the exact current action.
-It then applies the same shared equipped/canonical catalog check used by
+It then applies the same shared equipped-or-equipment-granted canonical catalog check used by
 `CatalogBattleActionAuthorizationPolicy` immediately before execution. Invalid
 selector output faults the encounter before command publication, costs, or
 effects.
@@ -49,17 +49,23 @@ assessments produce typed `AssessmentInvalid` diagnostics.
 `CatalogBattleActionAuthorizationPolicy` authorizes skills, items, and basic
 attacks:
 
-- equipped skill ID must exist on `RuntimeActorState`;
+- the skill ID must be equipped on `RuntimeActorState` or granted by the
+  actor's current resolved equipment profile;
 - the command skill must be the exact canonical repository object;
 - the command item must be the exact canonical repository object;
 - the resolved basic attack must exist and match action ID, damage definition,
   and targeting definition.
 
-The policy runs during assessment and again after the battle assessment token
-is consumed but before execution. This closes the stale-menu window: unequipping
-a skill, substituting an item definition, or changing equipment between
-assessment and execution rejects the command without cost, effect, inventory,
-or turn mutation.
+Equipment grants remain outside `RuntimeSkillStateSnapshot`; they neither
+become learned nor occupy move-list slots. This authorization path concerns
+active grants. Passive grants are loaded separately into the existing
+`BattlePassiveCollection` by combat-profile composition and restoration. The
+policy resolves the live actor equipment profile during assessment and again
+after the battle assessment token is consumed but before execution. This
+closes the stale-menu window: unequipping a skill-granting instance,
+unequipping a learned skill, substituting an item definition, or changing
+basic-attack equipment between assessment and execution rejects the command
+without cost, effect, inventory, or turn mutation.
 
 Other command kinds are authorized by their own assessment paths. Party/roster
 commands use `IPartyRosterTransitionService`; host-mediated commands explicitly
