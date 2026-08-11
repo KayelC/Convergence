@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R5 complete; O7-R6 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R5 complete; O7-R6 design recorded and implementation pending; O7-R7 through O7-R11 pending
 
 ## Purpose
 
@@ -328,6 +328,55 @@ This is a direct correction. No currency policy is introduced.
   parameters;
 - replace unsupported-policy rejection with typed factory resolution; and
 - preserve overflow, negative-input, affordability, and rollback guarantees.
+
+#### O7-R6 Approved Extraction Design
+
+The pricing boundary has two separate authored choices and must not collapse
+them into one hidden formula:
+
+1. every shop offer supplies one nonnegative whole authored purchase price;
+2. the economy ruleset explicitly selects the default pricing policy and its
+   configuration; and
+3. a policy-shaped offer may explicitly select a registered pricing factory
+   for that offer instead of the economy default.
+
+A fixed price is shorthand for applying the economy ruleset's selected default
+policy to the fixed authored purchase price. A policy-shaped price must carry
+`purchasePrice` in its parameter object; the remaining parameters configure the
+selected pricing factory. Missing, fractional, negative, overflowing, unknown,
+or rejected policy configuration produces a typed offer-resolution diagnostic.
+There is no fallback to the economy default after an explicit offer policy
+fails.
+
+The resolved runtime offer owns one immutable pricing profile containing the
+authored purchase price and the bound policy. Menu quotes, transaction
+assessment, and transaction execution all read that same profile. The host
+must not calculate or reconstruct a second display price from content or actor
+state.
+
+The supplied policies are:
+
+- `standard_shop_pricing`: purchase price is exactly the authored purchase
+  price. Resale is `authored purchase price * resalePercentage`, with the
+  nonnegative decimal result truncated toward zero before conversion to the
+  supported integer domain. The default resale percentage is `0.50`; authored
+  economy rulesets may configure it explicitly.
+- `luck_adjusted_shop_pricing`: preserves the current optional formula exactly.
+  Purchase uses `max(0.50, 1.00 - Luck * 0.01)` and resale uses
+  `0.50 + Luck * 0.01`; each nonnegative decimal result is truncated toward
+  zero. Negative Luck and integer overflow remain rejected.
+
+`standard_economy` requires an explicit `pricingPolicyId` and accepts an
+optional `pricingParameters` object. The active catalog-surface reference pack
+selects `standard_shop_pricing`; Training Annex selects
+`luck_adjusted_shop_pricing` so its existing Luck-sensitive prices and
+transactions remain unchanged. Hosts may register another typed pricing
+factory without replacing inventory, equipment, currency, shop-transaction,
+or recovery services.
+
+This checkpoint does not introduce stock mutation, stock identity, recovery
+policy work, a currency policy, presentation rules, or a second transaction
+path. O7-R7 remains the sole owner of durable stock changes.
 
 ### O7-R7: Make Shop Stock Stateful And Policy-Owned
 
