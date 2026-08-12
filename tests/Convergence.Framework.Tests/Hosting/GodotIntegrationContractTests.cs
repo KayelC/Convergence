@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Convergence.Battle;
 using Convergence.Content;
 using Convergence.Catalog;
 using Convergence.Validation;
@@ -21,6 +22,54 @@ public sealed class GodotIntegrationContractTests
     private static readonly ContentId EnemyTeam = Id("enemy_team");
     private static readonly ContentId Hp = Id("hp");
     private static readonly ContentId Sp = Id("sp");
+
+    [Fact]
+    public void GodotHostContract_BindsAndExecutesGenericRecoveryWithoutSceneStateEnteringFramework()
+    {
+        ContentId credits = Id("godot.sample:credits");
+        RuntimeActorState actor = new(
+            RuntimeInstanceId.Parse("godot_recovery_actor"),
+            Id("godot.sample:recovery_actor"),
+            PlayerTeam,
+            Hp,
+            CombatDefenseProfile.Empty,
+            [new BattleResourceState(Hp, 75m, 100m), new BattleResourceState(Sp, 20m, 20m)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: false),
+            new RuntimeActorAffiliationSnapshot(Id("godot_controller"), PlayerTeam));
+        var sceneRegistry = new GodotSceneInstanceRegistry();
+        var sceneHandle = new GodotSceneHandle(
+            "res://scenes/recovery_actor.tscn",
+            "/root/Recovery/Actor");
+        sceneRegistry.Attach(actor.InstanceId, sceneHandle);
+        RecoveryPolicyBindingResult binding = RecoveryPolicyFactoryRegistry.CreateStandard().Bind(
+            StandardRecoveryPolicyIds.Hospital,
+            new Dictionary<string, object?>
+            {
+                ["currencyId"] = credits.ToString(),
+                ["resourceCosts"] = new Dictionary<string, object?>
+                {
+                    [Hp.ToString()] = 1m,
+                    [Sp.ToString()] = 5m
+                },
+                ["removeAilments"] = true,
+                ["temporaryStateKinds"] = Array.Empty<object?>()
+            });
+        var service = new RecoveryService(binding.RequirePolicy());
+
+        RecoveryTransactionResult result = service.Recover(
+            actor,
+            RuntimeCurrencyLedgerSnapshot.Single(credits, 40));
+
+        Assert.True(result.Applied);
+        Assert.Equal(25, result.Cost);
+        Assert.Equal(100m, actor.GetRequiredResource(Hp).Current);
+        Assert.Equal(15, result.AfterCurrencyLedger.GetRequiredBalance(credits));
+        Assert.True(sceneRegistry.TryGet(actor.InstanceId, out GodotSceneHandle? mapped));
+        Assert.Same(sceneHandle, mapped);
+        Assert.DoesNotContain(
+            typeof(IRecoveryService).Assembly.GetReferencedAssemblies(),
+            assembly => assembly.Name?.Contains("Godot", StringComparison.OrdinalIgnoreCase) == true);
+    }
 
     [Fact]
     public async Task GodotResourceContentSource_PreservesLogicalPathsResourceSourcesAndCancellation()

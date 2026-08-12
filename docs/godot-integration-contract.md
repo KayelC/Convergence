@@ -28,6 +28,9 @@ A Godot host supplies adapters for these framework boundaries:
 - `IRandomSource`: provide deterministic or production randomness.
 - runtime instance mapping: associate `RuntimeInstanceId` values with host-owned node or scene handles.
 - persistence: serialize framework snapshots inside a Godot-owned save envelope.
+- recovery: bind an optional `IRecoveryService`, map its immutable actor result
+  back to scene/UI state by `RuntimeInstanceId`, and adopt its returned currency
+  ledger only after an applied execution.
 
 Await asynchronous framework operations. The framework has no engine-thread affinity, so adapters must marshal node and scene changes onto Godot's scheduler.
 
@@ -75,13 +78,15 @@ Two layers guard the integration boundary.
 - hydrate actors and run deterministic actions and encounters;
 - consume ordered events through host sinks;
 - map runtime IDs to host scene handles;
-- round-trip actor, field, currency, and shop-stock snapshots through host-owned storage.
+- round-trip actor, field, currency, and shop-stock snapshots through host-owned storage;
+- bind and execute generic recovery without passing a Node or scene handle into Framework.
 
 `samples/Convergence.GodotHost` is the real Godot 4.7.1 .NET reference
 consumer. Its noninteractive smoke scene reads the canonical Training Annex
 pack through `Godot.FileAccess`, maps framework runtime IDs to actual `Node`
 instances, selects and executes a typed action, consumes an ordered encounter
-stream, and decodes a host-owned JSON save before handing the complete
+stream, exercises the Training Annex recovery policy while scene ownership
+remains in Godot, and decodes a host-owned JSON save before handing the complete
 aggregate to `IRuntimeSessionRestoreService`. It proves source-first Active
 Hosted Entity restoration and proves a rejected aggregate exposes no actors.
 

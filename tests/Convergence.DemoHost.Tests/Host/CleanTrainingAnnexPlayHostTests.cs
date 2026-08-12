@@ -3127,7 +3127,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         TrainingAnnexHospitalRestorationEvidence restoration = Assert.Single(summary.HospitalRestorations);
         Assert.Equal(RuntimeInstanceId.Parse("echo_adept"), restoration.PatientId);
-        Assert.Equal(ResourceTransactionCode.Applied, restoration.Code);
+        Assert.Equal(RecoveryTransactionCode.Applied, restoration.Code);
         Assert.Equal(10, restoration.Cost);
         Assert.Equal(20, restoration.CurrencyLedgerBefore);
         Assert.Equal(10, restoration.CurrencyLedgerAfter);
@@ -3205,16 +3205,21 @@ public sealed class CleanTrainingAnnexPlayHostTests
             new TextWriterEventSink(output),
             new ConsoleHostCommandSource<CleanTrainingAnnexPlayCommand>(io),
             statModifiers);
+        IRecoveryService recovery = new RuntimeRulesetBindingResolver(
+                RuntimeRulesetPolicyFactoryRegistry.CreateStandard())
+            .BindResourceManagementServices(catalog, Qualified("standard_economy"))
+            .RequireService()
+            .Recovery!;
 
         TrainingAnnexRecoveryFacilityResult result = await controller.OpenAsync(
-            new HospitalRestorationService(),
+            recovery,
             player,
             TrainingAnnexHostSupport.CreateCreditsLedger(20),
             commands,
             CancellationToken.None);
 
         TrainingAnnexHospitalRestorationEvidence restoration = Assert.Single(result.Restorations);
-        Assert.Equal(ResourceTransactionCode.Applied, restoration.Code);
+        Assert.Equal(RecoveryTransactionCode.Applied, restoration.Code);
         Assert.True(restoration.HadAilmentBefore);
         Assert.False(restoration.HasAilmentAfter);
         Assert.True(restoration.HadEncounterPersistenceBefore);

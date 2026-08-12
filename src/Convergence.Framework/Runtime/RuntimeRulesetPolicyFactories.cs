@@ -114,20 +114,28 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
     public IReadOnlyCollection<ContentId> TurnEconomyPolicyIds => SnapshotIds(_turnEconomy);
 
     public static RuntimeRulesetPolicyFactoryRegistry CreateStandard() =>
-        CreateStandard(shopPricing: null, shopStock: null);
+        CreateStandard(shopPricing: null, shopStock: null, recovery: null);
 
     public static RuntimeRulesetPolicyFactoryRegistry CreateStandard(
         IEnumerable<IShopPricingPolicyFactory>? shopPricing) =>
-        CreateStandard(shopPricing, shopStock: null);
+        CreateStandard(shopPricing, shopStock: null, recovery: null);
 
     public static RuntimeRulesetPolicyFactoryRegistry CreateStandard(
         IEnumerable<IShopPricingPolicyFactory>? shopPricing,
-        IEnumerable<IShopStockPolicyFactory>? shopStock)
+        IEnumerable<IShopStockPolicyFactory>? shopStock) =>
+        CreateStandard(shopPricing, shopStock, recovery: null);
+
+    public static RuntimeRulesetPolicyFactoryRegistry CreateStandard(
+        IEnumerable<IShopPricingPolicyFactory>? shopPricing,
+        IEnumerable<IShopStockPolicyFactory>? shopStock,
+        IEnumerable<IRecoveryPolicyFactory>? recovery)
     {
         ShopPricingPolicyFactoryRegistry pricingFactories =
             ShopPricingPolicyFactoryRegistry.CreateStandard(shopPricing);
         ShopStockPolicyFactoryRegistry stockFactories =
             ShopStockPolicyFactoryRegistry.CreateStandard(shopStock);
+        RecoveryPolicyFactoryRegistry recoveryFactories =
+            RecoveryPolicyFactoryRegistry.CreateStandard(recovery);
         return new RuntimeRulesetPolicyFactoryRegistry(
             combat: [new StandardCombatRulesetPolicyFactory()],
             reward: [new StandardRewardRulesetPolicyFactory()],
@@ -140,7 +148,10 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
             ],
             growth: [new StandardGrowthRulesetPolicyFactory()],
             rosterCapacity: [new StandardRosterCapacityRulesetPolicyFactory()],
-            economy: [new StandardEconomyRulesetPolicyFactory(pricingFactories, stockFactories)],
+            economy: [new StandardEconomyRulesetPolicyFactory(
+                pricingFactories,
+                stockFactories,
+                recoveryFactories)],
             turnEconomy:
             [
                 new StandardActionRulesetPolicyFactory(),
@@ -965,12 +976,15 @@ internal sealed class StandardRosterCapacityRulesetPolicyFactory : IRuntimeRoste
 
 internal sealed class StandardEconomyRulesetPolicyFactory(
     ShopPricingPolicyFactoryRegistry pricingFactories,
-    ShopStockPolicyFactoryRegistry stockFactories) : IRuntimeEconomyRulesetPolicyFactory
+    ShopStockPolicyFactoryRegistry stockFactories,
+    RecoveryPolicyFactoryRegistry recoveryFactories) : IRuntimeEconomyRulesetPolicyFactory
 {
     private readonly ShopPricingPolicyFactoryRegistry _pricingFactories =
         pricingFactories ?? throw new ArgumentNullException(nameof(pricingFactories));
     private readonly ShopStockPolicyFactoryRegistry _stockFactories =
         stockFactories ?? throw new ArgumentNullException(nameof(stockFactories));
+    private readonly RecoveryPolicyFactoryRegistry _recoveryFactories =
+        recoveryFactories ?? throw new ArgumentNullException(nameof(recoveryFactories));
 
     public ContentId PolicyId => StandardRulesetPolicyIds.StandardEconomy;
 
@@ -980,6 +994,9 @@ internal sealed class StandardEconomyRulesetPolicyFactory(
         var diagnostics = new List<RulesetBindingDiagnostic>();
         ContentId pricingPolicyId = default;
         IReadOnlyDictionary<string, object?> pricingParameters =
+            new Dictionary<string, object?>(StringComparer.Ordinal);
+        ContentId? recoveryPolicyId = null;
+        IReadOnlyDictionary<string, object?> recoveryParameters =
             new Dictionary<string, object?>(StringComparer.Ordinal);
 
         foreach ((string key, object? value) in definition.Parameters)
@@ -1029,6 +1046,51 @@ internal sealed class StandardEconomyRulesetPolicyFactory(
                             diagnostics);
                     }
                     break;
+                case "recoveryPolicyId":
+                    if (value is not string recoveryText)
+                    {
+                        RulesetPolicyFactoryDiagnostics.InvalidType(
+                            definition,
+                            key,
+                            "a valid unqualified content ID string",
+                            diagnostics);
+                        break;
+                    }
+
+                    try
+                    {
+                        ContentId parsed = ContentId.Parse(recoveryText);
+                        if (parsed.IsQualified)
+                        {
+                            throw new ArgumentException("Recovery policy ID must be unqualified.");
+                        }
+
+                        recoveryPolicyId = parsed;
+                    }
+                    catch (ArgumentException)
+                    {
+                        diagnostics.Add(new RulesetBindingDiagnostic(
+                            RulesetBindingDiagnosticCode.InvalidIdentifier,
+                            definition.Id,
+                            $"Ruleset '{definition.Id}' parameter '{key}' must be a valid unqualified content ID.",
+                            key,
+                            PolicyId: definition.PolicyId));
+                    }
+                    break;
+                case "recoveryParameters":
+                    if (value is IReadOnlyDictionary<string, object?> recoveryObject)
+                    {
+                        recoveryParameters = recoveryObject;
+                    }
+                    else
+                    {
+                        RulesetPolicyFactoryDiagnostics.InvalidType(
+                            definition,
+                            key,
+                            "an object",
+                            diagnostics);
+                    }
+                    break;
                 default:
                     RulesetPolicyFactoryDiagnostics.UnknownParameter(definition, key, diagnostics);
                     break;
@@ -1040,6 +1102,22 @@ internal sealed class StandardEconomyRulesetPolicyFactory(
             RulesetPolicyFactoryDiagnostics.MissingParameter(
                 definition,
                 "pricingPolicyId",
+                diagnostics);
+        }
+        bool hasRecoveryPolicy = definition.Parameters.ContainsKey("recoveryPolicyId");
+        bool hasRecoveryParameters = definition.Parameters.ContainsKey("recoveryParameters");
+        if (hasRecoveryPolicy && !hasRecoveryParameters)
+        {
+            RulesetPolicyFactoryDiagnostics.MissingParameter(
+                definition,
+                "recoveryParameters",
+                diagnostics);
+        }
+        else if (!hasRecoveryPolicy && hasRecoveryParameters)
+        {
+            RulesetPolicyFactoryDiagnostics.MissingParameter(
+                definition,
+                "recoveryPolicyId",
                 diagnostics);
         }
 
@@ -1060,6 +1138,24 @@ internal sealed class StandardEconomyRulesetPolicyFactory(
             return new RulesetBindingResult<ResourceManagementRulesetServices>(null, diagnostics);
         }
 
+        BoundRecoveryPolicy? recoveryPolicy = null;
+        if (recoveryPolicyId is ContentId selectedRecoveryPolicyId)
+        {
+            RecoveryPolicyBindingResult recoveryBinding =
+                _recoveryFactories.Bind(selectedRecoveryPolicyId, recoveryParameters);
+            if (!recoveryBinding.IsSuccess || recoveryBinding.Policy is null)
+            {
+                foreach (RecoveryPolicyFactoryDiagnostic recoveryDiagnostic in recoveryBinding.Diagnostics)
+                {
+                    diagnostics.Add(MapRecoveryDiagnostic(definition, recoveryDiagnostic));
+                }
+
+                return new RulesetBindingResult<ResourceManagementRulesetServices>(null, diagnostics);
+            }
+
+            recoveryPolicy = recoveryBinding.Policy;
+        }
+
         var inventory = new InventoryTransitionService();
         var equipment = new EquipmentTransitionService();
         var economy = new EconomyTransactionService();
@@ -1073,7 +1169,7 @@ internal sealed class StandardEconomyRulesetPolicyFactory(
             economy,
             shopOffers,
             new ShopTransactionService(inventory, economy),
-            new HospitalRestorationService(economy)));
+            recoveryPolicy is null ? null : new RecoveryService(recoveryPolicy, economy)));
     }
 
     private static RulesetBindingDiagnostic MapPricingDiagnostic(
@@ -1095,6 +1191,29 @@ internal sealed class StandardEconomyRulesetPolicyFactory(
             diagnostic.ParameterName is null
                 ? "pricingPolicyId"
                 : $"pricingParameters.{diagnostic.ParameterName}",
+            ExpectedCategory: RulesetCategory.Economy,
+            ActualCategory: definition.Category,
+            PolicyId: diagnostic.PolicyId);
+
+    private static RulesetBindingDiagnostic MapRecoveryDiagnostic(
+        RulesetDefinition definition,
+        RecoveryPolicyFactoryDiagnostic diagnostic) =>
+        new(
+            diagnostic.Code switch
+            {
+                RecoveryPolicyFactoryDiagnosticCode.UnsupportedPolicy => RulesetBindingDiagnosticCode.UnsupportedPolicy,
+                RecoveryPolicyFactoryDiagnosticCode.MissingParameter => RulesetBindingDiagnosticCode.MissingParameter,
+                RecoveryPolicyFactoryDiagnosticCode.UnknownParameter => RulesetBindingDiagnosticCode.UnknownParameter,
+                RecoveryPolicyFactoryDiagnosticCode.InvalidParameterType => RulesetBindingDiagnosticCode.InvalidParameterType,
+                RecoveryPolicyFactoryDiagnosticCode.InvalidParameterValue => RulesetBindingDiagnosticCode.InvalidParameterValue,
+                RecoveryPolicyFactoryDiagnosticCode.PolicyFactoryFailure => RulesetBindingDiagnosticCode.PolicyFactoryFailure,
+                _ => RulesetBindingDiagnosticCode.PolicyFactoryFailure
+            },
+            definition.Id,
+            diagnostic.Message,
+            diagnostic.ParameterName is null
+                ? "recoveryPolicyId"
+                : $"recoveryParameters.{diagnostic.ParameterName}",
             ExpectedCategory: RulesetCategory.Economy,
             ActualCategory: definition.Category,
             PolicyId: diagnostic.PolicyId);

@@ -4745,18 +4745,6 @@ Convergence.Runtime.GrowthRulesetServices.ResourceGrowthPolicy.get -> Convergenc
 Convergence.Runtime.GrowthRulesetServices.ResourceGrowthPolicy.init -> void
 Convergence.Runtime.GrowthRulesetServices.StatAllocationService.get -> Convergence.Runtime.IStatAllocationService!
 Convergence.Runtime.GrowthRulesetServices.StatAllocationService.init -> void
-Convergence.Runtime.HospitalRestorationResult
-Convergence.Runtime.HospitalRestorationResult.<Clone>$() -> Convergence.Runtime.HospitalRestorationResult!
-Convergence.Runtime.HospitalRestorationResult.AfterPatient.get -> Convergence.Runtime.RuntimeHospitalPatientSnapshot!
-Convergence.Runtime.HospitalRestorationResult.Applied.get -> bool
-Convergence.Runtime.HospitalRestorationResult.BeforePatient.get -> Convergence.Runtime.RuntimeHospitalPatientSnapshot!
-Convergence.Runtime.HospitalRestorationResult.Code.get -> Convergence.Runtime.ResourceTransactionCode
-Convergence.Runtime.HospitalRestorationResult.Cost.get -> int
-Convergence.Runtime.HospitalRestorationResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.ResourceTransactionDiagnostic!>!
-Convergence.Runtime.HospitalRestorationResult.Equals(Convergence.Runtime.HospitalRestorationResult? other) -> bool
-Convergence.Runtime.HospitalRestorationService
-Convergence.Runtime.HospitalRestorationService.CalculateRestorationCost(Convergence.Runtime.RuntimeHospitalPatientSnapshot! patient) -> int
-Convergence.Runtime.HospitalRestorationService.HospitalRestorationService(Convergence.Runtime.IEconomyTransactionService? economy = null) -> void
 Convergence.Runtime.IEconomyTransactionService
 Convergence.Runtime.IEncounterPreparationService
 Convergence.Runtime.IEncounterPreparationService.Prepare(Convergence.Runtime.RuntimeEncounterTriggerRequest! request) -> Convergence.Runtime.EncounterPreparationResult!
@@ -4765,8 +4753,6 @@ Convergence.Runtime.IEncounterStartPlanner.Plan(Convergence.Runtime.EncounterSta
 Convergence.Runtime.IEquipmentTransitionService
 Convergence.Runtime.IExperienceCurve
 Convergence.Runtime.IExperienceCurve.GetRequiredExperience(int level) -> long
-Convergence.Runtime.IHospitalRestorationService
-Convergence.Runtime.IHospitalRestorationService.CalculateRestorationCost(Convergence.Runtime.RuntimeHospitalPatientSnapshot! patient) -> int
 Convergence.Runtime.IInventoryTransitionService
 Convergence.Runtime.IInventoryTransitionService.AddItem(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Content.ContentId itemId, int quantity, int? stackLimit = null) -> Convergence.Runtime.InventoryTransitionResult!
 Convergence.Runtime.IInventoryTransitionService.RemoveItem(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Content.ContentId itemId, int quantity) -> Convergence.Runtime.InventoryTransitionResult!
@@ -5071,8 +5057,6 @@ Convergence.Runtime.ResourceManagementRulesetServices.Economy.init -> void
 Convergence.Runtime.ResourceManagementRulesetServices.Equals(Convergence.Runtime.ResourceManagementRulesetServices? other) -> bool
 Convergence.Runtime.ResourceManagementRulesetServices.Equipment.get -> Convergence.Runtime.IEquipmentTransitionService!
 Convergence.Runtime.ResourceManagementRulesetServices.Equipment.init -> void
-Convergence.Runtime.ResourceManagementRulesetServices.Hospital.get -> Convergence.Runtime.IHospitalRestorationService!
-Convergence.Runtime.ResourceManagementRulesetServices.Hospital.init -> void
 Convergence.Runtime.ResourceManagementRulesetServices.Inventory.get -> Convergence.Runtime.IInventoryTransitionService!
 Convergence.Runtime.ResourceManagementRulesetServices.Inventory.init -> void
 Convergence.Runtime.ResourceManagementRulesetServices.Shop.get -> Convergence.Runtime.IShopTransactionService!
@@ -5579,19 +5563,6 @@ Convergence.Runtime.RuntimeFieldSnapshot.DungeonTraversal.get -> Convergence.Run
 Convergence.Runtime.RuntimeFieldSnapshot.Equals(Convergence.Runtime.RuntimeFieldSnapshot? other) -> bool
 Convergence.Runtime.RuntimeFieldSnapshot.Navigation.get -> Convergence.Runtime.RuntimeNavigationSnapshot!
 Convergence.Runtime.RuntimeFieldSnapshot.RuntimeFieldSnapshot(Convergence.Runtime.RuntimeNavigationSnapshot! navigation, Convergence.Runtime.RuntimeDungeonTraversalSnapshot? dungeonTraversal = null) -> void
-Convergence.Runtime.RuntimeHospitalPatientSnapshot
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeHospitalPatientSnapshot!
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.CurrentHp.get -> int
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.CurrentSp.get -> int
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.Equals(Convergence.Runtime.RuntimeHospitalPatientSnapshot? other) -> bool
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.HasAilment.get -> bool
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.HasEncounterPersistence.get -> bool
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.MaxHp.get -> int
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.MaxSp.get -> int
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.MissingHp.get -> int
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.MissingSp.get -> int
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.PatientId.get -> Convergence.Runtime.RuntimeInstanceId
-Convergence.Runtime.RuntimeHospitalPatientSnapshot.RuntimeHospitalPatientSnapshot(Convergence.Runtime.RuntimeInstanceId patientId, int currentHp, int maxHp, int currentSp, int maxSp, bool hasAilment, bool hasEncounterPersistence = false) -> void
 Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.RuntimeInstanceId.Equals(Convergence.Runtime.RuntimeInstanceId other) -> bool
 Convergence.Runtime.RuntimeInstanceId.IsEmpty.get -> bool
@@ -7901,9 +7872,6 @@ override Convergence.Runtime.ForgetPendingSkillCommand.ToString() -> string!
 override Convergence.Runtime.GrowthRulesetServices.Equals(object? obj) -> bool
 override Convergence.Runtime.GrowthRulesetServices.GetHashCode() -> int
 override Convergence.Runtime.GrowthRulesetServices.ToString() -> string!
-override Convergence.Runtime.HospitalRestorationResult.Equals(object? obj) -> bool
-override Convergence.Runtime.HospitalRestorationResult.GetHashCode() -> int
-override Convergence.Runtime.HospitalRestorationResult.ToString() -> string!
 override Convergence.Runtime.InventoryReservationResult.Equals(object? obj) -> bool
 override Convergence.Runtime.InventoryReservationResult.GetHashCode() -> int
 override Convergence.Runtime.InventoryReservationResult.ToString() -> string!
@@ -8074,9 +8042,6 @@ override Convergence.Runtime.RuntimeEquipmentSnapshot.ToString() -> string!
 override Convergence.Runtime.RuntimeFieldSnapshot.Equals(object? obj) -> bool
 override Convergence.Runtime.RuntimeFieldSnapshot.GetHashCode() -> int
 override Convergence.Runtime.RuntimeFieldSnapshot.ToString() -> string!
-override Convergence.Runtime.RuntimeHospitalPatientSnapshot.Equals(object? obj) -> bool
-override Convergence.Runtime.RuntimeHospitalPatientSnapshot.GetHashCode() -> int
-override Convergence.Runtime.RuntimeHospitalPatientSnapshot.ToString() -> string!
 override Convergence.Runtime.RuntimeInstanceId.GetHashCode() -> int
 override Convergence.Runtime.RuntimeInstanceId.ToString() -> string!
 override Convergence.Runtime.RuntimeInstantDeathResistanceKnowledgeSnapshot.Equals(object? obj) -> bool
@@ -9188,8 +9153,6 @@ static Convergence.Runtime.ForgetPendingSkillCommand.operator !=(Convergence.Run
 static Convergence.Runtime.ForgetPendingSkillCommand.operator ==(Convergence.Runtime.ForgetPendingSkillCommand? left, Convergence.Runtime.ForgetPendingSkillCommand? right) -> bool
 static Convergence.Runtime.GrowthRulesetServices.operator !=(Convergence.Runtime.GrowthRulesetServices? left, Convergence.Runtime.GrowthRulesetServices? right) -> bool
 static Convergence.Runtime.GrowthRulesetServices.operator ==(Convergence.Runtime.GrowthRulesetServices? left, Convergence.Runtime.GrowthRulesetServices? right) -> bool
-static Convergence.Runtime.HospitalRestorationResult.operator !=(Convergence.Runtime.HospitalRestorationResult? left, Convergence.Runtime.HospitalRestorationResult? right) -> bool
-static Convergence.Runtime.HospitalRestorationResult.operator ==(Convergence.Runtime.HospitalRestorationResult? left, Convergence.Runtime.HospitalRestorationResult? right) -> bool
 static Convergence.Runtime.InventoryReservationResult.operator !=(Convergence.Runtime.InventoryReservationResult? left, Convergence.Runtime.InventoryReservationResult? right) -> bool
 static Convergence.Runtime.InventoryReservationResult.operator ==(Convergence.Runtime.InventoryReservationResult? left, Convergence.Runtime.InventoryReservationResult? right) -> bool
 static Convergence.Runtime.InventoryTransitionResult.operator !=(Convergence.Runtime.InventoryTransitionResult? left, Convergence.Runtime.InventoryTransitionResult? right) -> bool
@@ -9304,8 +9267,6 @@ static Convergence.Runtime.RuntimeEquipmentSnapshot.operator !=(Convergence.Runt
 static Convergence.Runtime.RuntimeEquipmentSnapshot.operator ==(Convergence.Runtime.RuntimeEquipmentSnapshot? left, Convergence.Runtime.RuntimeEquipmentSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeFieldSnapshot.operator !=(Convergence.Runtime.RuntimeFieldSnapshot? left, Convergence.Runtime.RuntimeFieldSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeFieldSnapshot.operator ==(Convergence.Runtime.RuntimeFieldSnapshot? left, Convergence.Runtime.RuntimeFieldSnapshot? right) -> bool
-static Convergence.Runtime.RuntimeHospitalPatientSnapshot.operator !=(Convergence.Runtime.RuntimeHospitalPatientSnapshot? left, Convergence.Runtime.RuntimeHospitalPatientSnapshot? right) -> bool
-static Convergence.Runtime.RuntimeHospitalPatientSnapshot.operator ==(Convergence.Runtime.RuntimeHospitalPatientSnapshot? left, Convergence.Runtime.RuntimeHospitalPatientSnapshot? right) -> bool
 static Convergence.Runtime.RuntimeInstanceId.operator !=(Convergence.Runtime.RuntimeInstanceId left, Convergence.Runtime.RuntimeInstanceId right) -> bool
 static Convergence.Runtime.RuntimeInstanceId.operator ==(Convergence.Runtime.RuntimeInstanceId left, Convergence.Runtime.RuntimeInstanceId right) -> bool
 static Convergence.Runtime.RuntimeInstanceId.Parse(string! value) -> Convergence.Runtime.RuntimeInstanceId
@@ -11681,14 +11642,8 @@ Convergence.Runtime.CurrencyTransactionResult.CurrencyId.get -> Convergence.Cont
 Convergence.Runtime.CurrencyTransactionResult.CurrencyTransactionResult(Convergence.Runtime.ResourceTransactionCode code, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! before, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! after, Convergence.Content.ContentId currencyId, int amount, System.Collections.Generic.IEnumerable<Convergence.Runtime.ResourceTransactionDiagnostic!>? diagnostics = null) -> void
 Convergence.Runtime.EconomyTransactionService.Credit(Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! ledger, Convergence.Content.ContentId currencyId, int amount) -> Convergence.Runtime.CurrencyTransactionResult!
 Convergence.Runtime.EconomyTransactionService.Debit(Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! ledger, Convergence.Content.ContentId currencyId, int amount) -> Convergence.Runtime.CurrencyTransactionResult!
-Convergence.Runtime.HospitalRestorationResult.AfterCurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
-Convergence.Runtime.HospitalRestorationResult.BeforeCurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
-Convergence.Runtime.HospitalRestorationResult.CurrencyId.get -> Convergence.Content.ContentId
-Convergence.Runtime.HospitalRestorationResult.HospitalRestorationResult(Convergence.Runtime.ResourceTransactionCode code, Convergence.Runtime.RuntimeHospitalPatientSnapshot! beforePatient, Convergence.Runtime.RuntimeHospitalPatientSnapshot! afterPatient, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! beforeCurrencyLedger, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! afterCurrencyLedger, Convergence.Content.ContentId currencyId, int cost, System.Collections.Generic.IEnumerable<Convergence.Runtime.ResourceTransactionDiagnostic!>? diagnostics = null) -> void
-Convergence.Runtime.HospitalRestorationService.Restore(Convergence.Runtime.RuntimeHospitalPatientSnapshot! patient, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Content.ContentId currencyId) -> Convergence.Runtime.HospitalRestorationResult!
 Convergence.Runtime.IEconomyTransactionService.Credit(Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! ledger, Convergence.Content.ContentId currencyId, int amount) -> Convergence.Runtime.CurrencyTransactionResult!
 Convergence.Runtime.IEconomyTransactionService.Debit(Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! ledger, Convergence.Content.ContentId currencyId, int amount) -> Convergence.Runtime.CurrencyTransactionResult!
-Convergence.Runtime.IHospitalRestorationService.Restore(Convergence.Runtime.RuntimeHospitalPatientSnapshot! patient, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Content.ContentId currencyId) -> Convergence.Runtime.HospitalRestorationResult!
 Convergence.Runtime.ResourceTransactionCode.AmbiguousCurrencyLedger = 22 -> Convergence.Runtime.ResourceTransactionCode
 Convergence.Runtime.ResourceTransactionCode.CurrencyNotFound = 20 -> Convergence.Runtime.ResourceTransactionCode
 Convergence.Runtime.ResourceTransactionCode.DuplicateCurrencyId = 18 -> Convergence.Runtime.ResourceTransactionCode
@@ -11744,8 +11699,6 @@ Convergence.Runtime.IShopTransactionService.CalculateSellPrice(Convergence.Runti
 Convergence.Runtime.LuckAdjustedShopPricingPolicy
 Convergence.Runtime.LuckAdjustedShopPricingPolicy.Calculate(Convergence.Runtime.ShopPriceCalculationRequest! request) -> Convergence.Runtime.ShopPriceCalculationResult!
 Convergence.Runtime.LuckAdjustedShopPricingPolicy.LuckAdjustedShopPricingPolicy() -> void
-Convergence.Runtime.ResourceManagementRulesetServices.Deconstruct(out Convergence.Runtime.IInventoryTransitionService! Inventory, out Convergence.Runtime.IEquipmentTransitionService! Equipment, out Convergence.Runtime.IEconomyTransactionService! Economy, out Convergence.Runtime.IRuntimeShopOfferResolver! ShopOffers, out Convergence.Runtime.IShopTransactionService! Shop, out Convergence.Runtime.IHospitalRestorationService! Hospital) -> void
-Convergence.Runtime.ResourceManagementRulesetServices.ResourceManagementRulesetServices(Convergence.Runtime.IInventoryTransitionService! Inventory, Convergence.Runtime.IEquipmentTransitionService! Equipment, Convergence.Runtime.IEconomyTransactionService! Economy, Convergence.Runtime.IRuntimeShopOfferResolver! ShopOffers, Convergence.Runtime.IShopTransactionService! Shop, Convergence.Runtime.IHospitalRestorationService! Hospital) -> void
 Convergence.Runtime.ResourceManagementRulesetServices.ShopOffers.get -> Convergence.Runtime.IRuntimeShopOfferResolver!
 Convergence.Runtime.ResourceManagementRulesetServices.ShopOffers.init -> void
 Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidPricePolicyConfiguration = 5 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
@@ -12049,3 +12002,210 @@ static Convergence.Runtime.ShopStockTransitionResult.operator !=(Convergence.Run
 static Convergence.Runtime.ShopStockTransitionResult.operator ==(Convergence.Runtime.ShopStockTransitionResult? left, Convergence.Runtime.ShopStockTransitionResult? right) -> bool
 static Convergence.Runtime.ShopStockTransitionResult.Rejected(Convergence.Runtime.ShopStockTransitionCode code, int currentQuantity, string! message) -> Convergence.Runtime.ShopStockTransitionResult!
 static Convergence.Runtime.StandardShopStockPolicyIds.Standard.get -> Convergence.Content.ContentId
+Convergence.Runtime.BoundRecoveryPolicy
+override Convergence.Runtime.BoundRecoveryPolicy.ToString() -> string!
+static Convergence.Runtime.BoundRecoveryPolicy.operator !=(Convergence.Runtime.BoundRecoveryPolicy? left, Convergence.Runtime.BoundRecoveryPolicy? right) -> bool
+static Convergence.Runtime.BoundRecoveryPolicy.operator ==(Convergence.Runtime.BoundRecoveryPolicy? left, Convergence.Runtime.BoundRecoveryPolicy? right) -> bool
+override Convergence.Runtime.BoundRecoveryPolicy.GetHashCode() -> int
+override Convergence.Runtime.BoundRecoveryPolicy.Equals(object? obj) -> bool
+Convergence.Runtime.BoundRecoveryPolicy.Equals(Convergence.Runtime.BoundRecoveryPolicy? other) -> bool
+Convergence.Runtime.BoundRecoveryPolicy.<Clone>$() -> Convergence.Runtime.BoundRecoveryPolicy!
+Convergence.Runtime.IRecoveryPolicyFactory
+Convergence.Runtime.RecoveryPolicyBindingResult
+override Convergence.Runtime.RecoveryPolicyBindingResult.ToString() -> string!
+static Convergence.Runtime.RecoveryPolicyBindingResult.operator !=(Convergence.Runtime.RecoveryPolicyBindingResult? left, Convergence.Runtime.RecoveryPolicyBindingResult? right) -> bool
+static Convergence.Runtime.RecoveryPolicyBindingResult.operator ==(Convergence.Runtime.RecoveryPolicyBindingResult? left, Convergence.Runtime.RecoveryPolicyBindingResult? right) -> bool
+override Convergence.Runtime.RecoveryPolicyBindingResult.GetHashCode() -> int
+override Convergence.Runtime.RecoveryPolicyBindingResult.Equals(object? obj) -> bool
+Convergence.Runtime.RecoveryPolicyBindingResult.Equals(Convergence.Runtime.RecoveryPolicyBindingResult? other) -> bool
+Convergence.Runtime.RecoveryPolicyBindingResult.<Clone>$() -> Convergence.Runtime.RecoveryPolicyBindingResult!
+Convergence.Runtime.RecoveryOperation.Assessment = 0 -> Convergence.Runtime.RecoveryOperation
+Convergence.Runtime.RecoveryOperation.Execution = 1 -> Convergence.Runtime.RecoveryOperation
+Convergence.Runtime.RecoveryTransactionCode.NoRecoveryNeeded = 1 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.InsufficientCurrency = 2 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.Applied = 0 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.CurrencyNotFound = 3 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.PolicyRejected = 4 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.PolicyFaulted = 5 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.InvalidActorState = 7 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.MissingResource = 8 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.NumericOverflow = 9 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.MissingStatModifierPolicy = 10 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.StatModifierCleanupRejected = 11 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.StateMutationRejected = 12 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.CurrencyRejected = 13 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionCode.InvalidPolicyResult = 6 -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionDiagnostic.Code.get -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionDiagnostic.Code.init -> void
+Convergence.Runtime.RecoveryTransactionDiagnostic.Message.get -> string!
+Convergence.Runtime.RecoveryTransactionDiagnostic.Message.init -> void
+Convergence.Runtime.RecoveryTransactionDiagnostic.CurrencyId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.RecoveryTransactionDiagnostic.ResourceId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.RecoveryTransactionDiagnostic.CurrencyId.init -> void
+Convergence.Runtime.RecoveryTransactionDiagnostic.ResourceId.init -> void
+Convergence.Runtime.RecoveryOperation
+Convergence.Runtime.RecoveryTransactionDiagnostic.TemporaryStateKind.get -> Convergence.Runtime.RecoveryTemporaryStateKind?
+Convergence.Runtime.RecoveryTransactionDiagnostic.TemporaryStateKind.init -> void
+Convergence.Runtime.RecoveryPolicyFactoryRegistry
+Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTemporaryStateKind.Guard = 0 -> Convergence.Runtime.RecoveryTemporaryStateKind
+Convergence.Runtime.RecoveryTemporaryStateKind.Charges = 2 -> Convergence.Runtime.RecoveryTemporaryStateKind
+Convergence.Runtime.RecoveryTemporaryStateKind.StatModifiers = 1 -> Convergence.Runtime.RecoveryTemporaryStateKind
+Convergence.Runtime.RecoveryTemporaryStateKind.Shields = 3 -> Convergence.Runtime.RecoveryTemporaryStateKind
+Convergence.Runtime.RecoveryTemporaryStateKind.AffinityOverrides = 4 -> Convergence.Runtime.RecoveryTemporaryStateKind
+Convergence.Runtime.RecoveryTemporaryStateKind.OtherStatuses = 6 -> Convergence.Runtime.RecoveryTemporaryStateKind
+Convergence.Runtime.RecoveryTemporaryStateKind.AffinityBreaks = 5 -> Convergence.Runtime.RecoveryTemporaryStateKind
+Convergence.Runtime.RecoveryPolicyDiagnosticCode.MissingResource = 0 -> Convergence.Runtime.RecoveryPolicyDiagnosticCode
+Convergence.Runtime.RecoveryPolicyDiagnosticCode.InvalidActorState = 1 -> Convergence.Runtime.RecoveryPolicyDiagnosticCode
+Convergence.Runtime.RecoveryPolicyDiagnosticCode.NumericOverflow = 2 -> Convergence.Runtime.RecoveryPolicyDiagnosticCode
+Convergence.Runtime.RecoveryPolicyDiagnosticCode.PolicyRejected = 3 -> Convergence.Runtime.RecoveryPolicyDiagnosticCode
+Convergence.Runtime.RecoveryPolicyDiagnosticCode.PolicyFaulted = 4 -> Convergence.Runtime.RecoveryPolicyDiagnosticCode
+Convergence.Runtime.RecoveryPolicyDiagnosticCode.InvalidPolicyResult = 5 -> Convergence.Runtime.RecoveryPolicyDiagnosticCode
+Convergence.Runtime.StandardRecoveryPolicyIds
+Convergence.Runtime.RecoveryTransactionDiagnostic
+override Convergence.Runtime.RecoveryTransactionDiagnostic.ToString() -> string!
+static Convergence.Runtime.RecoveryTransactionDiagnostic.operator !=(Convergence.Runtime.RecoveryTransactionDiagnostic? left, Convergence.Runtime.RecoveryTransactionDiagnostic? right) -> bool
+static Convergence.Runtime.RecoveryTransactionDiagnostic.operator ==(Convergence.Runtime.RecoveryTransactionDiagnostic? left, Convergence.Runtime.RecoveryTransactionDiagnostic? right) -> bool
+override Convergence.Runtime.RecoveryTransactionDiagnostic.GetHashCode() -> int
+override Convergence.Runtime.RecoveryTransactionDiagnostic.Equals(object? obj) -> bool
+Convergence.Runtime.RecoveryTransactionDiagnostic.Equals(Convergence.Runtime.RecoveryTransactionDiagnostic? other) -> bool
+Convergence.Runtime.RecoveryTransactionDiagnostic.<Clone>$() -> Convergence.Runtime.RecoveryTransactionDiagnostic!
+Convergence.Runtime.RecoveryTransactionDiagnostic.Deconstruct(out Convergence.Runtime.RecoveryTransactionCode Code, out string! Message, out Convergence.Content.ContentId? ResourceId, out Convergence.Content.ContentId? CurrencyId, out Convergence.Runtime.RecoveryTemporaryStateKind? TemporaryStateKind) -> void
+Convergence.Runtime.RecoveryPolicyDiagnostic.Code.get -> Convergence.Runtime.RecoveryPolicyDiagnosticCode
+Convergence.Runtime.RecoveryPolicyDiagnostic.Code.init -> void
+Convergence.Runtime.RecoveryPolicyDiagnostic.Message.get -> string!
+Convergence.Runtime.RecoveryPolicyDiagnostic.Message.init -> void
+Convergence.Runtime.RecoveryPolicyDiagnostic.ResourceId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.RecoveryPolicyDiagnostic.ResourceId.init -> void
+Convergence.Runtime.RecoveryTransactionResult
+override Convergence.Runtime.RecoveryTransactionResult.ToString() -> string!
+static Convergence.Runtime.RecoveryTransactionResult.operator !=(Convergence.Runtime.RecoveryTransactionResult? left, Convergence.Runtime.RecoveryTransactionResult? right) -> bool
+static Convergence.Runtime.RecoveryTransactionResult.operator ==(Convergence.Runtime.RecoveryTransactionResult? left, Convergence.Runtime.RecoveryTransactionResult? right) -> bool
+override Convergence.Runtime.RecoveryTransactionResult.GetHashCode() -> int
+override Convergence.Runtime.RecoveryTransactionResult.Equals(object? obj) -> bool
+Convergence.Runtime.RecoveryTransactionResult.Equals(Convergence.Runtime.RecoveryTransactionResult? other) -> bool
+Convergence.Runtime.RecoveryTemporaryStateKind
+Convergence.Runtime.RecoveryTransactionResult.<Clone>$() -> Convergence.Runtime.RecoveryTransactionResult!
+Convergence.Runtime.RecoveryPolicyDiagnosticCode
+Convergence.Runtime.IRecoveryService
+Convergence.Runtime.RecoveryPolicyDiagnostic
+Convergence.Runtime.RecoveryPolicyRequest
+override Convergence.Runtime.RecoveryPolicyRequest.ToString() -> string!
+override Convergence.Runtime.RecoveryPolicyDiagnostic.ToString() -> string!
+static Convergence.Runtime.RecoveryPolicyRequest.operator !=(Convergence.Runtime.RecoveryPolicyRequest? left, Convergence.Runtime.RecoveryPolicyRequest? right) -> bool
+static Convergence.Runtime.RecoveryPolicyRequest.operator ==(Convergence.Runtime.RecoveryPolicyRequest? left, Convergence.Runtime.RecoveryPolicyRequest? right) -> bool
+override Convergence.Runtime.RecoveryPolicyRequest.GetHashCode() -> int
+override Convergence.Runtime.RecoveryPolicyRequest.Equals(object? obj) -> bool
+Convergence.Runtime.RecoveryPolicyRequest.Equals(Convergence.Runtime.RecoveryPolicyRequest? other) -> bool
+Convergence.Runtime.RecoveryPolicyRequest.<Clone>$() -> Convergence.Runtime.RecoveryPolicyRequest!
+static Convergence.Runtime.RecoveryPolicyDiagnostic.operator !=(Convergence.Runtime.RecoveryPolicyDiagnostic? left, Convergence.Runtime.RecoveryPolicyDiagnostic? right) -> bool
+static Convergence.Runtime.RecoveryPolicyDiagnostic.operator ==(Convergence.Runtime.RecoveryPolicyDiagnostic? left, Convergence.Runtime.RecoveryPolicyDiagnostic? right) -> bool
+override Convergence.Runtime.RecoveryPolicyDiagnostic.GetHashCode() -> int
+override Convergence.Runtime.RecoveryPolicyDiagnostic.Equals(object? obj) -> bool
+Convergence.Runtime.RecoveryPolicyDiagnostic.Equals(Convergence.Runtime.RecoveryPolicyDiagnostic? other) -> bool
+Convergence.Runtime.RecoveryPolicyDiagnostic.<Clone>$() -> Convergence.Runtime.RecoveryPolicyDiagnostic!
+Convergence.Runtime.RecoveryPolicyDiagnostic.Deconstruct(out Convergence.Runtime.RecoveryPolicyDiagnosticCode Code, out string! Message, out Convergence.Content.ContentId? ResourceId) -> void
+Convergence.Runtime.RecoveryTreatmentPlan
+override Convergence.Runtime.RecoveryTreatmentPlan.ToString() -> string!
+static Convergence.Runtime.RecoveryTreatmentPlan.operator !=(Convergence.Runtime.RecoveryTreatmentPlan? left, Convergence.Runtime.RecoveryTreatmentPlan? right) -> bool
+static Convergence.Runtime.RecoveryTreatmentPlan.operator ==(Convergence.Runtime.RecoveryTreatmentPlan? left, Convergence.Runtime.RecoveryTreatmentPlan? right) -> bool
+override Convergence.Runtime.RecoveryTreatmentPlan.GetHashCode() -> int
+override Convergence.Runtime.RecoveryTreatmentPlan.Equals(object? obj) -> bool
+Convergence.Runtime.RecoveryTreatmentPlan.Equals(Convergence.Runtime.RecoveryTreatmentPlan? other) -> bool
+Convergence.Runtime.RecoveryTreatmentPlan.<Clone>$() -> Convergence.Runtime.RecoveryTreatmentPlan!
+Convergence.Runtime.RecoveryService
+Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode.UnsupportedPolicy = 0 -> Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode
+Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode.MissingParameter = 1 -> Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode
+Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode.UnknownParameter = 2 -> Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode
+Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode.InvalidParameterType = 3 -> Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode
+Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode.InvalidParameterValue = 4 -> Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode
+Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode.PolicyFactoryFailure = 5 -> Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.Code.get -> Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.Message.get -> string!
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.Code.init -> void
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.Message.init -> void
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.PolicyId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.ParameterName.get -> string?
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.PolicyId.init -> void
+Convergence.Runtime.IRecoveryPolicy
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.ParameterName.init -> void
+Convergence.Runtime.RecoveryPolicyDecision
+override Convergence.Runtime.RecoveryPolicyDecision.ToString() -> string!
+static Convergence.Runtime.RecoveryPolicyDecision.operator !=(Convergence.Runtime.RecoveryPolicyDecision? left, Convergence.Runtime.RecoveryPolicyDecision? right) -> bool
+static Convergence.Runtime.RecoveryPolicyDecision.operator ==(Convergence.Runtime.RecoveryPolicyDecision? left, Convergence.Runtime.RecoveryPolicyDecision? right) -> bool
+override Convergence.Runtime.RecoveryPolicyDecision.GetHashCode() -> int
+override Convergence.Runtime.RecoveryPolicyDecision.Equals(object? obj) -> bool
+Convergence.Runtime.RecoveryPolicyDecision.Equals(Convergence.Runtime.RecoveryPolicyDecision? other) -> bool
+Convergence.Runtime.RecoveryPolicyDecision.<Clone>$() -> Convergence.Runtime.RecoveryPolicyDecision!
+Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode
+Convergence.Runtime.StandardHospitalRecoveryPolicy
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic
+override Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.ToString() -> string!
+static Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.operator !=(Convergence.Runtime.RecoveryPolicyFactoryDiagnostic? left, Convergence.Runtime.RecoveryPolicyFactoryDiagnostic? right) -> bool
+static Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.operator ==(Convergence.Runtime.RecoveryPolicyFactoryDiagnostic? left, Convergence.Runtime.RecoveryPolicyFactoryDiagnostic? right) -> bool
+override Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.GetHashCode() -> int
+override Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.Equals(object? obj) -> bool
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.Equals(Convergence.Runtime.RecoveryPolicyFactoryDiagnostic? other) -> bool
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.<Clone>$() -> Convergence.Runtime.RecoveryPolicyFactoryDiagnostic!
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.Deconstruct(out Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode Code, out string! Message, out string? ParameterName, out Convergence.Content.ContentId? PolicyId) -> void
+Convergence.Runtime.ResourceManagementRulesetServices.Recovery.get -> Convergence.Runtime.IRecoveryService?
+Convergence.Runtime.ResourceManagementRulesetServices.Recovery.init -> void
+Convergence.Runtime.ResourceManagementRulesetServices.Deconstruct(out Convergence.Runtime.IInventoryTransitionService! Inventory, out Convergence.Runtime.IEquipmentTransitionService! Equipment, out Convergence.Runtime.IEconomyTransactionService! Economy, out Convergence.Runtime.IRuntimeShopOfferResolver! ShopOffers, out Convergence.Runtime.IShopTransactionService! Shop, out Convergence.Runtime.IRecoveryService? Recovery) -> void
+Convergence.Runtime.StatModifierCleanupScope.RecoveryEvent = 4 -> Convergence.Runtime.StatModifierCleanupScope
+Convergence.Runtime.ResourceManagementRulesetServices.ResourceManagementRulesetServices(Convergence.Runtime.IInventoryTransitionService! Inventory, Convergence.Runtime.IEquipmentTransitionService! Equipment, Convergence.Runtime.IEconomyTransactionService! Economy, Convergence.Runtime.IRuntimeShopOfferResolver! ShopOffers, Convergence.Runtime.IShopTransactionService! Shop, Convergence.Runtime.IRecoveryService? Recovery) -> void
+static Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.CreateStandard(System.Collections.Generic.IEnumerable<Convergence.Runtime.IShopPricingPolicyFactory!>? shopPricing, System.Collections.Generic.IEnumerable<Convergence.Runtime.IShopStockPolicyFactory!>? shopStock, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRecoveryPolicyFactory!>? recovery) -> Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry!
+Convergence.Runtime.IRecoveryService.Assess(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.IStatModifierPolicyService? statModifiers = null) -> Convergence.Runtime.RecoveryTransactionResult!
+Convergence.Runtime.IRecoveryService.Recover(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.IStatModifierPolicyService? statModifiers = null) -> Convergence.Runtime.RecoveryTransactionResult!
+Convergence.Runtime.RecoveryService.RecoveryService(Convergence.Runtime.BoundRecoveryPolicy! policy, Convergence.Runtime.IEconomyTransactionService? economy = null) -> void
+Convergence.Runtime.RecoveryService.Assess(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.IStatModifierPolicyService? statModifiers = null) -> Convergence.Runtime.RecoveryTransactionResult!
+Convergence.Runtime.RecoveryService.Recover(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.IStatModifierPolicyService? statModifiers = null) -> Convergence.Runtime.RecoveryTransactionResult!
+Convergence.Runtime.RecoveryTransactionDiagnostic.RecoveryTransactionDiagnostic(Convergence.Runtime.RecoveryTransactionCode Code, string! Message, Convergence.Content.ContentId? ResourceId = null, Convergence.Content.ContentId? CurrencyId = null, Convergence.Runtime.RecoveryTemporaryStateKind? TemporaryStateKind = null) -> void
+Convergence.Runtime.IRecoveryPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.IRecoveryPolicyFactory.Create(System.Collections.Generic.IReadOnlyDictionary<string!, object?>! parameters) -> Convergence.Runtime.RecoveryPolicyBindingResult!
+Convergence.Runtime.RecoveryTransactionResult.RecoveryTransactionResult(Convergence.Runtime.RecoveryOperation operation, Convergence.Runtime.RecoveryTransactionCode code, Convergence.Runtime.RuntimeActorSnapshot! beforeActor, Convergence.Runtime.RuntimeActorSnapshot! afterActor, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! beforeCurrencyLedger, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! afterCurrencyLedger, Convergence.Content.ContentId? currencyId, int cost, System.Collections.Generic.IEnumerable<Convergence.Runtime.RecoveryTransactionDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.RecoveryTransactionResult.Operation.get -> Convergence.Runtime.RecoveryOperation
+Convergence.Runtime.RecoveryTransactionResult.Code.get -> Convergence.Runtime.RecoveryTransactionCode
+Convergence.Runtime.RecoveryTransactionResult.Applied.get -> bool
+Convergence.Runtime.RecoveryTransactionResult.BeforeActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RecoveryTransactionResult.AfterActor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RecoveryTransactionResult.BeforeCurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Runtime.RecoveryPolicyBindingResult.RecoveryPolicyBindingResult(Convergence.Runtime.BoundRecoveryPolicy? policy, System.Collections.Generic.IEnumerable<Convergence.Runtime.RecoveryPolicyFactoryDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.RecoveryTransactionResult.AfterCurrencyLedger.get -> Convergence.Runtime.RuntimeCurrencyLedgerSnapshot!
+Convergence.Runtime.RecoveryTransactionResult.CurrencyId.get -> Convergence.Content.ContentId?
+Convergence.Runtime.RecoveryTransactionResult.Cost.get -> int
+Convergence.Runtime.RecoveryTransactionResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RecoveryTransactionDiagnostic!>!
+Convergence.Runtime.BoundRecoveryPolicy.BoundRecoveryPolicy(Convergence.Content.ContentId policyId, Convergence.Runtime.IRecoveryPolicy! policy) -> void
+Convergence.Runtime.BoundRecoveryPolicy.PolicyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.BoundRecoveryPolicy.Policy.get -> Convergence.Runtime.IRecoveryPolicy!
+Convergence.Runtime.IRecoveryPolicy.Plan(Convergence.Runtime.RecoveryPolicyRequest! request) -> Convergence.Runtime.RecoveryPolicyDecision!
+Convergence.Runtime.RecoveryPolicyDiagnostic.RecoveryPolicyDiagnostic(Convergence.Runtime.RecoveryPolicyDiagnosticCode Code, string! Message, Convergence.Content.ContentId? ResourceId = null) -> void
+Convergence.Runtime.RecoveryPolicyRequest.RecoveryPolicyRequest(Convergence.Runtime.RuntimeActorSnapshot! actor) -> void
+Convergence.Runtime.RecoveryPolicyRequest.Actor.get -> Convergence.Runtime.RuntimeActorSnapshot!
+static Convergence.Runtime.StandardRecoveryPolicyIds.Hospital.get -> Convergence.Content.ContentId
+Convergence.Runtime.RecoveryPolicyDecision.RecoveryPolicyDecision(Convergence.Runtime.RecoveryTreatmentPlan? plan, System.Collections.Generic.IEnumerable<Convergence.Runtime.RecoveryPolicyDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.RecoveryPolicyDecision.Plan.get -> Convergence.Runtime.RecoveryTreatmentPlan?
+Convergence.Runtime.RecoveryPolicyDecision.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RecoveryPolicyDiagnostic!>!
+Convergence.Runtime.RecoveryPolicyBindingResult.Policy.get -> Convergence.Runtime.BoundRecoveryPolicy?
+Convergence.Runtime.RecoveryPolicyBindingResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RecoveryPolicyFactoryDiagnostic!>!
+Convergence.Runtime.RecoveryPolicyBindingResult.IsSuccess.get -> bool
+Convergence.Runtime.RecoveryPolicyFactoryRegistry.RecoveryPolicyFactoryRegistry(System.Collections.Generic.IEnumerable<Convergence.Runtime.IRecoveryPolicyFactory!>? factories = null) -> void
+Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.RecoveryPolicyFactoryDiagnostic(Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode Code, string! Message, string? ParameterName = null, Convergence.Content.ContentId? PolicyId = null) -> void
+Convergence.Runtime.RecoveryPolicyDecision.IsSuccess.get -> bool
+static Convergence.Runtime.RecoveryPolicyDecision.Planned(Convergence.Runtime.RecoveryTreatmentPlan! plan) -> Convergence.Runtime.RecoveryPolicyDecision!
+static Convergence.Runtime.RecoveryPolicyDecision.Rejected(Convergence.Runtime.RecoveryPolicyDiagnosticCode code, string! message, Convergence.Content.ContentId? resourceId = null) -> Convergence.Runtime.RecoveryPolicyDecision!
+Convergence.Runtime.StandardHospitalRecoveryPolicy.StandardHospitalRecoveryPolicy(Convergence.Content.ContentId currencyId, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>! resourceCosts, bool removeAilments, System.Collections.Generic.IEnumerable<Convergence.Runtime.RecoveryTemporaryStateKind>? temporaryStateKinds = null) -> void
+Convergence.Runtime.RecoveryPolicyFactoryRegistry.PolicyIds.get -> System.Collections.Generic.IReadOnlyCollection<Convergence.Content.ContentId>!
+Convergence.Runtime.StandardHospitalRecoveryPolicy.CurrencyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RecoveryPolicyBindingResult.RequirePolicy() -> Convergence.Runtime.BoundRecoveryPolicy!
+Convergence.Runtime.StandardHospitalRecoveryPolicy.ResourceCosts.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
+Convergence.Runtime.StandardHospitalRecoveryPolicy.RemoveAilments.get -> bool
+Convergence.Runtime.StandardHospitalRecoveryPolicy.TemporaryStateKinds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RecoveryTemporaryStateKind>!
+static Convergence.Runtime.RecoveryPolicyFactoryRegistry.CreateStandard(System.Collections.Generic.IEnumerable<Convergence.Runtime.IRecoveryPolicyFactory!>? additionalFactories = null) -> Convergence.Runtime.RecoveryPolicyFactoryRegistry!
+Convergence.Runtime.RecoveryTreatmentPlan.RecoveryTreatmentPlan(Convergence.Content.ContentId currencyId, int cost, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>! resourceIds, bool removeAilments, System.Collections.Generic.IEnumerable<Convergence.Runtime.RecoveryTemporaryStateKind>? temporaryStateKinds = null) -> void
+Convergence.Runtime.StandardHospitalRecoveryPolicy.Plan(Convergence.Runtime.RecoveryPolicyRequest! request) -> Convergence.Runtime.RecoveryPolicyDecision!
+Convergence.Runtime.RecoveryTreatmentPlan.CurrencyId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RecoveryTreatmentPlan.Cost.get -> int
+Convergence.Runtime.RecoveryTreatmentPlan.RemoveAilments.get -> bool
+Convergence.Runtime.RecoveryTreatmentPlan.ResourceIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+Convergence.Runtime.RecoveryTreatmentPlan.TemporaryStateKinds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RecoveryTemporaryStateKind>!
+Convergence.Runtime.RecoveryPolicyFactoryRegistry.Bind(Convergence.Content.ContentId policyId, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! parameters) -> Convergence.Runtime.RecoveryPolicyBindingResult!

@@ -171,7 +171,8 @@
       "frameworkTests": [
         "ResourceManagementServiceTests",
         "ShopPricingPolicyTests",
-        "ShopStockPolicyTests",
+          "ShopStockPolicyTests",
+          "RecoveryPolicyTests",
         "EquipmentInstanceOwnershipTests",
         "EquipmentSlotLayoutTests",
         "BattleActionExecutorTests",
@@ -185,7 +186,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Recovery is HP/SP-specific and has not yet been generalized through the approved recovery policy."
+          "Cross-system certification, complete three-audience documentation, and the independent Order 7 closure audit remain pending."
       ]
     },
     {

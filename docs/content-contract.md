@@ -21,7 +21,8 @@ explicit passive-targeting, status-lifetime, and authored equipment-slot
 migrations, plus stable shop-offer identity and tracked-stock authoring. The
 validator reports an unsupported-schema diagnostic instead of
 translating old documents. Active
-example packs are version `0.10.0`; exact dependency versions advance with the
+example packs are version `0.10.0`, while the independently authored Training
+Annex pack is version `0.10.1`; exact dependency versions advance with the
 contract.
 
 1. Draft 2020-12 schemas validate document structure independently of Framework code.

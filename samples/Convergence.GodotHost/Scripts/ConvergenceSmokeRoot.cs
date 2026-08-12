@@ -165,6 +165,32 @@ public partial class ConvergenceSmokeRoot : Node
         sceneInstances.Attach(hostedEntity.State.InstanceId, hostedEntityNode);
         GD.Print("GODOT_SCENE_MAP_OK count=3");
 
+        IRecoveryService recovery = resourceManagement.Recovery ??
+            throw new InvalidOperationException(
+                "The Training Annex economy ruleset did not bind its required recovery policy.");
+        RuntimeCurrencyLedgerSnapshot currencyLedger =
+            RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 250);
+        player.State.SetGuarding(true);
+        RecoveryTransactionResult recoveryResult = recovery.Recover(
+            player.State,
+            currencyLedger,
+            statModifiers);
+        int recoveryBalance = recoveryResult.AfterCurrencyLedger.GetRequiredBalance(CreditsCurrency);
+        if (!recoveryResult.Applied ||
+            player.State.IsGuarding ||
+            player.State.Resources.Any(resource => resource.Value.Current != resource.Value.Maximum) ||
+            recoveryBalance != checked(250 - recoveryResult.Cost))
+        {
+            throw new InvalidOperationException(
+                "The Godot recovery proof did not atomically restore configured resources, " +
+                "clear temporary state, and debit its typed cost.");
+        }
+
+        currencyLedger = recoveryResult.AfterCurrencyLedger;
+        GD.Print(
+            $"GODOT_RECOVERY_OK cost={recoveryResult.Cost} " +
+            $"credits={recoveryBalance} guard=false");
+
         BattleExecutionServices executionServices = new(
             catalog,
             combat.Damage,
@@ -303,9 +329,9 @@ public partial class ConvergenceSmokeRoot : Node
             [player, enemy, hostedEntity],
             partyRoster,
             new RuntimeInventorySnapshot(),
-            RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 250),
+            currencyLedger,
             shopStock,
-            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.10.0")),
+            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.10.1")),
             sceneInstances);
         ChargePolicyRegistry chargePolicies = ChargePolicyRegistry.CreateStandard();
         var restoreService = new RuntimeSessionRestoreService(
@@ -343,7 +369,7 @@ public partial class ConvergenceSmokeRoot : Node
             restoredPlayer.State.Stats[StandardProgressionIds.Strength] !=
             restoredHostedEntity.State.Stats[StandardProgressionIds.Strength] ||
             !EquivalentModifierState(savedModifierState, restoredModifierState) ||
-            session.CurrencyLedger.GetRequiredBalance(CreditsCurrency) != 250 ||
+            session.CurrencyLedger.GetRequiredBalance(CreditsCurrency) != recoveryBalance ||
             !session.ShopStock.Entries.SequenceEqual(shopStock.Entries) ||
             restored.SceneInstances.Count != 3)
         {
@@ -352,7 +378,7 @@ public partial class ConvergenceSmokeRoot : Node
 
         GD.Print(
             $"GODOT_SAVE_OK actors={session.Snapshot.Actors.Count} " +
-            $"contract={session.Snapshot.ContractVersion} credits=250 " +
+            $"contract={session.Snapshot.ContractVersion} credits={recoveryBalance} " +
             $"shop_stock={session.ShopStock.Entries.Count} aggregate_restore=true");
 
         JsonObject invalidDocument = JsonNode.Parse(saveJson)?.AsObject() ??

@@ -63,7 +63,8 @@ public enum StatModifierCleanupScope
     Swap,
     ActorDeparture,
     EncounterEnd,
-    FieldTransition
+    FieldTransition,
+    RecoveryEvent
 }
 
 public sealed class StatModifierDiagnostic

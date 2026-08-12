@@ -23,8 +23,10 @@ explicit currency selection for every transaction. O7-R6 binds exact-authored-pr
 pricing and optional Luck-adjusted pricing through typed factories selected by
 the economy ruleset or an explicit offer. O7-R7 gives offers stable identity,
 persists policy-owned stock under save contract v19, and threads that state
-through DemoHost and Godot-owned serialization. The capability remains `partial`
-until generic recovery, audience documentation, and an independent
+through DemoHost and Godot-owned serialization. O7-R8 supplies optional generic
+recovery with explicit resources, legal cleanup, cost, and currency authority;
+Training Annex and Godot evidence use the same bound service. The capability
+remains `partial` until cross-system certification, audience documentation, and an independent
 adversarial closure audit are complete.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved

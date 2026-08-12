@@ -218,9 +218,11 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Equal(12, stockPolicy.GetCapacity(RuntimeRosterKind.HostedEntity, 40));
         Assert.Equal(3, stockPolicy.GetCapacity(RuntimeRosterKind.Companion, 1));
         Assert.Equal(12, stockPolicy.GetCapacity(RuntimeRosterKind.Companion, 40));
-        Assert.NotNull(resolver.BindResourceManagementServices(
-            catalog,
-            Qualified("standard_economy")).RequireService().Inventory);
+        ResourceManagementRulesetServices resourceManagement = resolver
+            .BindResourceManagementServices(catalog, Qualified("standard_economy"))
+            .RequireService();
+        Assert.NotNull(resourceManagement.Inventory);
+        Assert.IsType<RecoveryService>(resourceManagement.Recovery);
         Assert.NotNull(resolver.BindTurnEconomy(
             catalog,
             Qualified("standard_action_token")).RequireService());

@@ -360,6 +360,13 @@ internal sealed class CleanTrainingAnnexPlayHost
         }
 
         ResourceManagementRulesetServices resourceManagement = resourceManagementBinding.RequireService();
+        if (resourceManagement.Recovery is null)
+        {
+            await _eventSink.PublishAsync(
+                "[economy:missing_recovery_policy] Training Annex requires an explicitly bound recovery policy.",
+                cancellationToken).ConfigureAwait(false);
+            return 4;
+        }
         BattleExecutionServices executionServices =
             TrainingAnnexHostSupport.CreateExecutionServices(catalog, combatPolicies, statModifiers);
         TrainingAnnexActorRosterResult rosterResult = TrainingAnnexHostSupport.CreateActorRoster(catalog);
@@ -1417,7 +1424,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                                     _commandSource,
                                     statModifiers)
                                 .OpenAsync(
-                                    resourceManagement.Hospital,
+                                    resourceManagement.Recovery,
                                     roster.Player,
                                     wallet,
                                     commands,

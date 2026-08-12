@@ -120,13 +120,7 @@ public sealed class RuntimeRulesetBindingTests
             RuntimeCurrencyLedgerSnapshot.Single(creditsCurrency, 10),
             creditsCurrency,
             5).Applied);
-        Assert.Equal(30, resources.Hospital.CalculateRestorationCost(new RuntimeHospitalPatientSnapshot(
-            RuntimeInstanceId.Parse("patient"),
-            currentHp: 5,
-            maxHp: 10,
-            currentSp: 5,
-            maxSp: 10,
-            hasAilment: false)));
+        Assert.Null(resources.Recovery);
 
         BattleTurnEconomyRuleset turnEconomyRuleset = resolver.BindTurnEconomy(
             catalog,
@@ -161,6 +155,132 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Contains(StandardRulesetPolicyIds.StandardActions, policyIds);
         Assert.Contains(StandardRulesetPolicyIds.StandardActionToken, policyIds);
         Assert.DoesNotContain(policyIds, id => id.Value.Contains("moon_phase", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void StandardEconomyBinding_RequiresPairedRecoveryConfiguration()
+    {
+        ContentId missingParametersId = Id("test.pack:missing_recovery_parameters");
+        ContentId orphanParametersId = Id("test.pack:orphan_recovery_parameters");
+        RuntimeRulesetBindingResolver resolver = CreateResolver();
+
+        RulesetBindingResult<ResourceManagementRulesetServices> missingParameters =
+            resolver.BindResourceManagementServices(
+                Catalog(new RulesetDefinition(
+                    missingParametersId,
+                    "Missing Recovery Parameters",
+                    "Recovery selection has no hidden configuration.",
+                    RulesetCategory.Economy,
+                    StandardRulesetPolicyIds.StandardEconomy,
+                    Parameters(
+                        ("pricingPolicyId", StandardShopPricingPolicyIds.Standard.ToString()),
+                        ("recoveryPolicyId", StandardRecoveryPolicyIds.Hospital.ToString())))),
+                missingParametersId);
+        RulesetBindingResult<ResourceManagementRulesetServices> orphanParameters =
+            resolver.BindResourceManagementServices(
+                Catalog(new RulesetDefinition(
+                    orphanParametersId,
+                    "Orphan Recovery Parameters",
+                    "Recovery parameters cannot select a policy implicitly.",
+                    RulesetCategory.Economy,
+                    StandardRulesetPolicyIds.StandardEconomy,
+                    Parameters(
+                        ("pricingPolicyId", StandardShopPricingPolicyIds.Standard.ToString()),
+                        ("recoveryParameters", new Dictionary<string, object?>())))),
+                orphanParametersId);
+
+        Assert.Equal(
+            "recoveryParameters",
+            Assert.Single(missingParameters.Diagnostics).ParameterName);
+        Assert.Equal(
+            "recoveryPolicyId",
+            Assert.Single(orphanParameters.Diagnostics).ParameterName);
+        Assert.All(
+            missingParameters.Diagnostics.Concat(orphanParameters.Diagnostics),
+            diagnostic => Assert.Equal(RulesetBindingDiagnosticCode.MissingParameter, diagnostic.Code));
+        Assert.Null(missingParameters.Service);
+        Assert.Null(orphanParameters.Service);
+    }
+
+    [Fact]
+    public void StandardEconomyBinding_MapsMalformedRecoveryParametersToPrecisePaths()
+    {
+        ContentId rulesetId = Id("test.pack:malformed_recovery");
+        RulesetBindingResult<ResourceManagementRulesetServices> result =
+            CreateResolver().BindResourceManagementServices(
+                Catalog(new RulesetDefinition(
+                    rulesetId,
+                    "Malformed Recovery",
+                    "Every malformed recovery operand is diagnosed before a service is exposed.",
+                    RulesetCategory.Economy,
+                    StandardRulesetPolicyIds.StandardEconomy,
+                    Parameters(
+                        ("pricingPolicyId", StandardShopPricingPolicyIds.Standard.ToString()),
+                        ("recoveryPolicyId", StandardRecoveryPolicyIds.Hospital.ToString()),
+                        ("recoveryParameters", new Dictionary<string, object?>
+                        {
+                            ["currencyId"] = "test.pack:credits",
+                            ["resourceCosts"] = new Dictionary<string, object?> { ["hp"] = -1m },
+                            ["removeAilments"] = "yes",
+                            ["temporaryStateKinds"] = new object?[] { "unknown_state" }
+                        })))),
+                rulesetId);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Service);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RulesetBindingDiagnosticCode.InvalidParameterValue &&
+            diagnostic.ParameterName == "recoveryParameters.resourceCosts.hp");
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RulesetBindingDiagnosticCode.InvalidParameterType &&
+            diagnostic.ParameterName == "recoveryParameters.removeAilments");
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RulesetBindingDiagnosticCode.InvalidParameterValue &&
+            diagnostic.ParameterName == "recoveryParameters.temporaryStateKinds[0]");
+    }
+
+    [Fact]
+    public void StandardEconomyBinding_UsesAHostRegisteredRecoveryFactory()
+    {
+        ContentId rulesetId = Id("test.pack:custom_recovery_economy");
+        ContentId policyId = Id("host_recovery");
+        ContentId currencyId = Id("test.pack:credits");
+        var registry = RuntimeRulesetPolicyFactoryRegistry.CreateStandard(
+            shopPricing: null,
+            shopStock: null,
+            recovery: [new FixedRecoveryPolicyFactory(policyId, new FixedRecoveryPolicy(currencyId))]);
+        var resolver = new RuntimeRulesetBindingResolver(registry);
+        GameDataCatalog catalog = Catalog(new RulesetDefinition(
+            rulesetId,
+            "Custom Recovery Economy",
+            "A host-supplied recovery policy is selected explicitly.",
+            RulesetCategory.Economy,
+            StandardRulesetPolicyIds.StandardEconomy,
+            Parameters(
+                ("pricingPolicyId", StandardShopPricingPolicyIds.Standard.ToString()),
+                ("recoveryPolicyId", policyId.ToString()),
+                ("recoveryParameters", new Dictionary<string, object?>()))));
+        RuntimeActorState actor = new(
+            RuntimeInstanceId.Parse("custom_recovery_actor"),
+            Id("test.pack:custom_recovery_actor"),
+            Id("player_team"),
+            Id("hp"),
+            CombatDefenseProfile.Empty,
+            [new BattleResourceState(Id("hp"), 5m, 10m)],
+            new RuntimeEncounterPresenceSnapshot(IsDeployed: false),
+            new RuntimeActorAffiliationSnapshot(Id("test_controller"), Id("player_team")));
+
+        IRecoveryService recovery = resolver
+            .BindResourceManagementServices(catalog, rulesetId)
+            .RequireService()
+            .Recovery ?? throw new InvalidOperationException("Custom recovery was not bound.");
+        RecoveryTransactionResult result = recovery.Recover(
+            actor,
+            RuntimeCurrencyLedgerSnapshot.Single(currencyId, 0));
+
+        Assert.True(result.Applied);
+        Assert.Equal(10m, actor.GetRequiredResource(Id("hp")).Current);
+        Assert.Equal(0, result.AfterCurrencyLedger.GetRequiredBalance(currencyId));
     }
 
     [Fact]
@@ -211,7 +331,7 @@ public sealed class RuntimeRulesetBindingTests
                 pricingFactories,
                 ShopStockPolicyFactoryRegistry.CreateStandard()),
             new ShopTransactionService(inventory, economyTransactions),
-            new HospitalRestorationService(economyTransactions));
+            Recovery: null);
         var turn = new BattleTurnEconomyRuleset(
             () => new Convergence.TurnEconomy.ActionTokenTurnEconomy(),
             new BattlePhaseProgressPolicy(20, 4));
@@ -1409,6 +1529,26 @@ public sealed class RuntimeRulesetBindingTests
 
         public RulesetBindingResult<BattleTurnEconomyRuleset> Create(RulesetDefinition definition) =>
             new(service);
+    }
+
+    private sealed class FixedRecoveryPolicy(ContentId currencyId) : IRecoveryPolicy
+    {
+        public RecoveryPolicyDecision Plan(RecoveryPolicyRequest request) =>
+            RecoveryPolicyDecision.Planned(new RecoveryTreatmentPlan(
+                currencyId,
+                0,
+                [request.Actor.VitalResourceId],
+                removeAilments: false));
+    }
+
+    private sealed class FixedRecoveryPolicyFactory(
+        ContentId policyId,
+        IRecoveryPolicy policy) : IRecoveryPolicyFactory
+    {
+        public ContentId PolicyId => policyId;
+
+        public RecoveryPolicyBindingResult Create(IReadOnlyDictionary<string, object?> parameters) =>
+            new(new BoundRecoveryPolicy(policyId, policy));
     }
 
     private sealed class SequenceRandomSource(

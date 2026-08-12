@@ -83,7 +83,7 @@ public sealed record ResourceManagementRulesetServices(
     IEconomyTransactionService Economy,
     IRuntimeShopOfferResolver ShopOffers,
     IShopTransactionService Shop,
-    IHospitalRestorationService Hospital);
+    IRecoveryService? Recovery);
 
 public sealed record BattleTurnEconomyRuleset
 {

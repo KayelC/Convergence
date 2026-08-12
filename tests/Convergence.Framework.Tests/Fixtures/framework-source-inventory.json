@@ -623,6 +623,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Runtime/RecoveryPolicies.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Runtime/ShopPricingPolicies.cs",
       "owner": "runtime_services",
       "publicSurface": "exported"

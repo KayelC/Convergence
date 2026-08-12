@@ -1,13 +1,12 @@
 using Convergence.Content;
 using Convergence.Hosting;
-using Convergence.Execution;
 using Convergence.Runtime;
 
 namespace Convergence.DemoHost.TrainingAnnex;
 
 internal sealed record TrainingAnnexHospitalRestorationEvidence(
     RuntimeInstanceId PatientId,
-    ResourceTransactionCode Code,
+    RecoveryTransactionCode Code,
     int Cost,
     int CurrencyLedgerBefore,
     int CurrencyLedgerAfter,
@@ -43,27 +42,26 @@ internal sealed class TrainingAnnexRecoveryFacilityController
     }
 
     public async ValueTask<TrainingAnnexRecoveryFacilityResult> OpenAsync(
-        IHospitalRestorationService hospital,
+        IRecoveryService recovery,
         TrainingAnnexRuntimeActor patient,
-        RuntimeCurrencyLedgerSnapshot wallet,
+        RuntimeCurrencyLedgerSnapshot currencyLedger,
         ICollection<CleanTrainingAnnexPlayCommand> commands,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(hospital);
+        ArgumentNullException.ThrowIfNull(recovery);
         ArgumentNullException.ThrowIfNull(patient);
-        ArgumentNullException.ThrowIfNull(wallet);
+        ArgumentNullException.ThrowIfNull(currencyLedger);
         ArgumentNullException.ThrowIfNull(commands);
 
-        RuntimeHospitalPatientSnapshot patientSnapshot = CapturePatient(patient.Actor.State);
-        HospitalRestorationResult assessment = hospital.Restore(
-            patientSnapshot,
-            wallet,
-            TrainingAnnexHostSupport.CreditsCurrency);
+        RecoveryTransactionResult assessment = recovery.Assess(
+            patient.Actor.State,
+            currencyLedger,
+            _statModifiers);
         var evidence = new List<TrainingAnnexHospitalRestorationEvidence>();
 
         await _eventSink.PublishAsync(
             $"Recovery facility opened: {patient.Actor.Entity.DisplayName}; wallet " +
-            $"{TrainingAnnexHostSupport.GetCreditsBalance(wallet)} C.",
+            $"{TrainingAnnexHostSupport.GetCreditsBalance(currencyLedger)} C.",
             cancellationToken).ConfigureAwait(false);
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> selection =
             await _commandSource.ReadAsync(
@@ -75,38 +73,42 @@ internal sealed class TrainingAnnexRecoveryFacilityController
             await _eventSink.PublishAsync(
                 "Recovery canceled; wallet and actor state are unchanged.",
                 cancellationToken).ConfigureAwait(false);
-            return new TrainingAnnexRecoveryFacilityResult(wallet, evidence);
+            return new TrainingAnnexRecoveryFacilityResult(currencyLedger, evidence);
         }
 
         commands.Add(selection.Command);
-        HospitalRestorationResult restoration = hospital.Restore(
-            CapturePatient(patient.Actor.State),
-            wallet,
-            TrainingAnnexHostSupport.CreditsCurrency);
+        RecoveryTransactionResult restoration = recovery.Recover(
+            patient.Actor.State,
+            currencyLedger,
+            _statModifiers);
         evidence.Add(ToEvidence(restoration));
         if (!restoration.Applied)
         {
             await PublishFailureAsync(patient.Actor.Entity.DisplayName, restoration, cancellationToken)
                 .ConfigureAwait(false);
-            return new TrainingAnnexRecoveryFacilityResult(wallet, evidence);
+            return new TrainingAnnexRecoveryFacilityResult(currencyLedger, evidence);
         }
 
-        ApplyRestoration(patient.Actor.State, restoration.AfterPatient, _statModifiers);
-        wallet = restoration.AfterCurrencyLedger;
+        currencyLedger = restoration.AfterCurrencyLedger;
+        RuntimeResourceSnapshot beforeHp = Resource(restoration.BeforeActor, StandardProgressionIds.Hp);
+        RuntimeResourceSnapshot afterHp = Resource(restoration.AfterActor, StandardProgressionIds.Hp);
+        RuntimeResourceSnapshot beforeSp = Resource(restoration.BeforeActor, StandardProgressionIds.Sp);
+        RuntimeResourceSnapshot afterSp = Resource(restoration.AfterActor, StandardProgressionIds.Sp);
         await _eventSink.PublishAsync(
             $"Recovery complete: {patient.Actor.Entity.DisplayName}; HP " +
-            $"{restoration.BeforePatient.CurrentHp}->{restoration.AfterPatient.CurrentHp}/" +
-            $"{restoration.AfterPatient.MaxHp}; SP {restoration.BeforePatient.CurrentSp}->" +
-            $"{restoration.AfterPatient.CurrentSp}/{restoration.AfterPatient.MaxSp}; wallet " +
+            $"{Whole(beforeHp.Current, "current HP")}->{Whole(afterHp.Current, "current HP")}/" +
+            $"{Whole(afterHp.Maximum, "maximum HP")}; SP " +
+            $"{Whole(beforeSp.Current, "current SP")}->{Whole(afterSp.Current, "current SP")}/" +
+            $"{Whole(afterSp.Maximum, "maximum SP")}; wallet " +
             $"{TrainingAnnexHostSupport.GetCreditsBalance(restoration.BeforeCurrencyLedger)}->" +
             $"{TrainingAnnexHostSupport.GetCreditsBalance(restoration.AfterCurrencyLedger)}.",
             cancellationToken).ConfigureAwait(false);
-        return new TrainingAnnexRecoveryFacilityResult(wallet, evidence);
+        return new TrainingAnnexRecoveryFacilityResult(currencyLedger, evidence);
     }
 
     private static HostCommandRequest<CleanTrainingAnnexPlayCommand> CreateRecoveryMenu(
         string displayName,
-        HospitalRestorationResult assessment)
+        RecoveryTransactionResult assessment)
     {
         string treatmentLabel =
             $"Treat {displayName} - {assessment.Cost} C{TreatmentLabel(assessment)}";
@@ -117,90 +119,73 @@ internal sealed class TrainingAnnexRecoveryFacilityController
                     CleanTrainingAnnexPlayCommand.RecoveryTreat,
                     treatmentLabel,
                     assessment.Applied,
-                    "Restore HP/SP, remove ailments, and clear encounter-persistent state."),
+                    "Restore configured resources and clear policy-selected recoverable state."),
                 new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.Back,
                     "Back")
             ]);
     }
 
-    private static string TreatmentLabel(HospitalRestorationResult result) =>
+    private static string TreatmentLabel(RecoveryTransactionResult result) =>
         result.Code switch
         {
-            ResourceTransactionCode.Applied => string.Empty,
-            ResourceTransactionCode.InsufficientCurrency => " [Not enough Credits]",
-            ResourceTransactionCode.NoRestorationNeeded => " [No restoration needed]",
+            RecoveryTransactionCode.Applied => string.Empty,
+            RecoveryTransactionCode.InsufficientCurrency => " [Not enough Credits]",
+            RecoveryTransactionCode.NoRecoveryNeeded => " [No restoration needed]",
             _ => $" [{result.Code}]"
         };
 
-    private static RuntimeHospitalPatientSnapshot CapturePatient(RuntimeActorState actor)
+    private static TrainingAnnexHospitalRestorationEvidence ToEvidence(
+        RecoveryTransactionResult result)
     {
-        BattleResourceState hp = actor.GetRequiredResource(StandardProgressionIds.Hp);
-        BattleResourceState sp = actor.GetRequiredResource(StandardProgressionIds.Sp);
-        return new RuntimeHospitalPatientSnapshot(
-            actor.InstanceId,
-            ToWholeResource(hp.Current, "current HP"),
-            ToWholeResource(hp.Maximum, "maximum HP"),
-            ToWholeResource(sp.Current, "current SP"),
-            ToWholeResource(sp.Maximum, "maximum SP"),
-            actor.Ailments.Count > 0,
-            HasEncounterPersistence(actor));
+        RuntimeResourceSnapshot beforeHp = Resource(result.BeforeActor, StandardProgressionIds.Hp);
+        RuntimeResourceSnapshot afterHp = Resource(result.AfterActor, StandardProgressionIds.Hp);
+        RuntimeResourceSnapshot beforeSp = Resource(result.BeforeActor, StandardProgressionIds.Sp);
+        RuntimeResourceSnapshot afterSp = Resource(result.AfterActor, StandardProgressionIds.Sp);
+        return new TrainingAnnexHospitalRestorationEvidence(
+            result.BeforeActor.Identity.InstanceId,
+            result.Code,
+            result.Cost,
+            TrainingAnnexHostSupport.GetCreditsBalance(result.BeforeCurrencyLedger),
+            TrainingAnnexHostSupport.GetCreditsBalance(result.AfterCurrencyLedger),
+            Whole(beforeHp.Current, "current HP"),
+            Whole(afterHp.Current, "current HP"),
+            Whole(afterHp.Maximum, "maximum HP"),
+            Whole(beforeSp.Current, "current SP"),
+            Whole(afterSp.Current, "current SP"),
+            Whole(afterSp.Maximum, "maximum SP"),
+            result.BeforeActor.BattleStatus.Ailments.Count > 0,
+            result.AfterActor.BattleStatus.Ailments.Count > 0,
+            HasEncounterPersistence(result.BeforeActor),
+            HasEncounterPersistence(result.AfterActor));
     }
 
-    private static bool HasEncounterPersistence(RuntimeActorState actor) =>
-        actor.IsGuarding ||
-        actor.StatStages.Count > 0 ||
-        actor.Charges.Count > 0 ||
-        actor.Shields.Count > 0 ||
-        actor.AffinityBreaks.Count > 0 ||
-        actor.AffinityOverrides.Count > 0 ||
-        actor.OtherStatuses.Count > 0;
+    private static RuntimeResourceSnapshot Resource(RuntimeActorSnapshot actor, ContentId resourceId) =>
+        actor.Resources.Single(resource => resource.ResourceId == resourceId);
 
-    private static int ToWholeResource(decimal value, string label)
+    private static bool HasEncounterPersistence(RuntimeActorSnapshot actor) =>
+        actor.BattleStatus.IsGuarding ||
+        actor.BattleStatus.StatModifiers?.Tracks.Count > 0 ||
+        actor.BattleStatus.Charges.Count > 0 ||
+        actor.BattleStatus.Shields.Count > 0 ||
+        actor.BattleStatus.AffinityBreaks.Count > 0 ||
+        actor.BattleStatus.AffinityOverrides.Count > 0 ||
+        actor.BattleStatus.Statuses.Count > 0;
+
+    private static int Whole(decimal value, string label)
     {
-        if (value < 0 || value > int.MaxValue || decimal.Truncate(value) != value)
+        if (value < 0m || value > int.MaxValue || decimal.Truncate(value) != value)
         {
             throw new InvalidOperationException(
                 $"Training Annex recovery requires whole-number {label}; found {value}.");
         }
 
-        return (int)value;
+        return decimal.ToInt32(value);
     }
-
-    private static void ApplyRestoration(
-        RuntimeActorState actor,
-        RuntimeHospitalPatientSnapshot after,
-        IStatModifierPolicyService statModifiers)
-    {
-        actor.SetResource(StandardProgressionIds.Hp, after.CurrentHp);
-        actor.SetResource(StandardProgressionIds.Sp, after.CurrentSp);
-        actor.RemoveAilments(StatusRemovalCause.CureEffect, _ => true);
-        new BattleStatusLifecycleService(new TrainingAnnexMinimumRandomSource()).Cleanup(
-            new BattleStatusCleanupRequest(actor, BattleStatusDepartureReason.FieldTransition),
-            statModifiers);
-    }
-
-    private static TrainingAnnexHospitalRestorationEvidence ToEvidence(HospitalRestorationResult result) =>
-        new(
-            result.BeforePatient.PatientId,
-            result.Code,
-            result.Cost,
-            TrainingAnnexHostSupport.GetCreditsBalance(result.BeforeCurrencyLedger),
-            TrainingAnnexHostSupport.GetCreditsBalance(result.AfterCurrencyLedger),
-            result.BeforePatient.CurrentHp,
-            result.AfterPatient.CurrentHp,
-            result.BeforePatient.MaxHp,
-            result.BeforePatient.CurrentSp,
-            result.AfterPatient.CurrentSp,
-            result.BeforePatient.MaxSp,
-            result.BeforePatient.HasAilment,
-            result.AfterPatient.HasAilment,
-            result.BeforePatient.HasEncounterPersistence,
-            result.AfterPatient.HasEncounterPersistence);
 
     private async ValueTask PublishFailureAsync(
         string displayName,
-        HospitalRestorationResult result,
+        RecoveryTransactionResult result,
         CancellationToken cancellationToken)
     {
         string diagnostics = string.Join(

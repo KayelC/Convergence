@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R7 complete; O7-R8 design recorded and implementation pending; O7-R9 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R8 complete; O7-R9 through O7-R11 pending
 
 ## Purpose
 
@@ -1151,3 +1151,95 @@ concrete consequences, reproducible evidence, and any trusted host boundaries.
    pricing formula, mutable shop repository, stock presentation framework, or
    second transaction path was introduced. Order 7 remains open for O7-R8
    through O7-R11.
+
+### O7-R8: Generalize Recovery Through One Supplied Policy
+
+- **Baseline and commit:** `bf30fb51..this checkpoint commit`; commit subject
+  `runtime: generalize recovery policy`.
+- **Actual destination:** the new `Runtime/RecoveryPolicies.cs` owns immutable
+  policy planning, typed factory binding, assessment, staged actor cleanup,
+  explicit named-currency debit, and atomic execution. The HP/SP-specific
+  patient DTO and hospital service were removed from
+  `Runtime/ResourceManagementServices.cs` rather than retained as a second
+  authority or compatibility path.
+- **Changed Framework files:** the new recovery contract and service, the
+  resource-management ruleset bundle and standard economy factory, the typed
+  `RecoveryEvent` stat-modifier cleanup scope, the public API baseline, and the
+  framework source inventory.
+- **Changed content and host files:** Training Annex explicitly configures the
+  supplied standard hospital policy, qualified Credits currency, HP/SP unit
+  costs, legal ailment treatment, and all supported temporary-state categories.
+  DemoHost consumes the bound generic service without reconstructing a patient
+  DTO or applying cleanup itself. The real Godot reference consumer executes
+  recovery, adopts its returned ledger, saves that ledger, and restores it.
+- **Changed tests and documentation:** the new `RecoveryPolicyTests`, expanded
+  stat-modifier, ruleset-binding, active-content, Godot-contract, and DemoHost
+  recovery coverage; capability/documentation/source inventories; and current
+  architecture, gameplay, economy, ruleset, content, Godot, and roadmap
+  guidance.
+- **Focused tests:** 185 Framework recovery/stat-modifier/ruleset/content/Godot
+  tests and 117 DemoHost Training Annex tests passed: 302 total, 0 failed, 0
+  skipped. The dedicated `RecoveryPolicyTests` class contributes 13 generic
+  planning, cleanup, rollback, factory, cancellation, and no-op-boundary tests.
+- **Full suite:** 1,786 Framework tests, 182 DemoHost tests, and 7
+  ContentValidator tests passed: 1,975 total, 0 failed, 0 skipped.
+- **Build and integration:** strict nonincremental Release Framework and
+  solution builds, the Debug Godot sample build, API/XML analysis, formatting,
+  and `git diff --check` passed with 0 warnings and 0 errors. The authoring
+  validator loaded 6 packs, 36 documents, and 98 qualified definitions. All
+  four noninteractive DemoHost modes and scripted Training Annex exit passed.
+  The real Godot 4.7.1 headless consumer emitted
+  `GODOT_RECOVERY_OK cost=45 credits=205 guard=false`, saved and restored the
+  adopted 205-Credit ledger, emitted `CONVERGENCE_GODOT_SMOKE_OK`, and exited
+  0. Godot's known Windows root-certificate-store warning remained nonfatal.
+- **Coverage:** the final Framework coverage gate passed at 90.19% lines and
+  76.67% branches against required minima of 90% and 70%.
+- **Contract versions:** recovery reuses existing typed actor resources,
+  battle-status state, currency ledger, and ruleset parameter objects. Runtime
+  save contract remains v19 and content schema remains v10. Training Annex
+  advances only its authored pack patch from `0.10.0` to `0.10.1`; all active
+  content still validates under schema v10.
+
+#### Explicit O7-R8 Authority And Safety Evidence
+
+1. **Recovery is generic, optional, and explicitly bound.** An economy ruleset
+   without recovery parameters exposes `Recovery = null`. Selecting recovery
+   requires paired `recoveryPolicyId` and `recoveryParameters`; missing,
+   unknown, malformed, throwing, mismatched, and silently rejecting factory
+   paths return typed diagnostics. A host-registered factory is accepted, while
+   only `StandardHospitalRecoveryPolicy` is supplied by Framework.
+2. **Configured resources and costs are authoritative.** The standard policy
+   accepts arbitrary resource `ContentId` values and calculates one checked
+   aggregate before truncation. Focused tests pin generic Stamina/Focus input,
+   fractional aggregation, the established `missing HP + missing SP * 5`
+   120-Credit quote, absent resources, duplicate normalized resource IDs, and
+   decimal/integer overflow. No Framework recovery path names HP, SP, or
+   Credits implicitly.
+3. **Canonical cleanup boundaries remain authoritative.** Ailments and
+   non-modifier temporary statuses are removed only when their authored
+   lifetime permits `StatusRemovalCause.RecoveryEvent`. Protected state remains.
+   Persistent staged, timed contribution, and timed exclusive modifier policies
+   each own `StatModifierCleanupScope.RecoveryEvent`; nonempty modifier state
+   requires its matching service, while an empty modifier snapshot is a true
+   no-op and does not create a false dependency.
+4. **Assessment, execution, and rollback are atomic.** Assessment operates on a
+   staged clone and cannot mutate the live actor or caller-owned immutable
+   ledger. Execution re-plans from current state, stages resource/status changes
+   and the named-currency debit, and commits the actor only after every step
+   accepts. Insufficient or missing currency, protected/no-op state, missing
+   resources, policy rejection/fault/null, modifier-policy mismatch, and staged
+   mutation failure all return equal before/after authorities. Cancellation is
+   rethrown rather than disguised as a gameplay rejection.
+5. **Active hosts consume one result authority.** Training Annex presents the
+   typed assessment, executes the same service, adopts currency only from an
+   applied result, and derives evidence from actual before/after actor snapshots.
+   Godot-shaped tests prove no scene/serializer type enters Framework. The real
+   Godot sample restores all configured resources, clears guard, checks the
+   returned cost instead of duplicating its formula, adopts the resulting
+   ledger, and round-trips that exact balance through host-owned JSON.
+6. **Retired and out-of-scope paths remain absent.** Active-source search finds
+   no `RuntimeHospitalPatientSnapshot`, `HospitalRestorationResult`,
+   `IHospitalRestorationService`, or `HospitalRestorationService`. No second
+   supplied recovery policy, treatment content family, presentation framework,
+   pricing/stock change, schema revision, save revision, or O7-R9 certification
+   work was introduced. Order 7 remains open for O7-R9 through O7-R11.

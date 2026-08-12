@@ -94,6 +94,14 @@ stock factory set without fallback. Shop transactions calculate candidate
 inventory, currency, and stock snapshots and expose them only as one atomic
 result. Unlimited offers contribute no stock entry.
 
+Recovery is an optional service selected by an economy ruleset. An
+`IRecoveryPolicy` plans from an immutable actor snapshot and names the exact
+currency, resources, ailment treatment, temporary-state cleanup, and cost. The
+generic `RecoveryService` stages canonical actor cleanup and the named-currency
+debit, then commits the actor only when every operation succeeds. Rulesets that
+do not select recovery expose no recovery service and receive no hidden HP/SP,
+cost, or cleanup behavior.
+
 Battle knowledge deliberately uses two snapshot authorities. Persistent facts
 are keyed by entity definition and belong to session persistence. Encounter
 facts are keyed by runtime target identity, take query precedence for that

@@ -155,6 +155,7 @@ public sealed class PersistentStagedStatModifierPolicyTests
     [InlineData(StatModifierCleanupScope.ActorDeparture, true)]
     [InlineData(StatModifierCleanupScope.EncounterEnd, true)]
     [InlineData(StatModifierCleanupScope.FieldTransition, true)]
+    [InlineData(StatModifierCleanupScope.RecoveryEvent, true)]
     public void Cleanup_PreservesSwapAndClearsDepartureOrEncounterState(
         StatModifierCleanupScope scope,
         bool expectedCleared)

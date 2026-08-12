@@ -412,7 +412,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             ashling.State.ToSnapshot()
         ];
         return new RuntimeSaveGameSnapshot(
-            SemanticVersion.Parse("0.10.0"),
+            SemanticVersion.Parse("0.10.1"),
             [TrainingAnnexHostSupport.PackIdentity],
             actorSnapshots,
             partyRoster,

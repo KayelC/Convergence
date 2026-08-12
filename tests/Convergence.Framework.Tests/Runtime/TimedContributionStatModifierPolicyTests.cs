@@ -283,6 +283,7 @@ public sealed class TimedContributionStatModifierPolicyTests
     [InlineData(StatModifierCleanupScope.ActorDeparture, true)]
     [InlineData(StatModifierCleanupScope.EncounterEnd, true)]
     [InlineData(StatModifierCleanupScope.FieldTransition, true)]
+    [InlineData(StatModifierCleanupScope.RecoveryEvent, true)]
     public void Cleanup_UsesSharedScopeRules(StatModifierCleanupScope scope, bool expectedCleared)
     {
         RuntimeStatModifierStateSnapshot state = State(Track(

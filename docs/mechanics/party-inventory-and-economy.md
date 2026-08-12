@@ -1,10 +1,10 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Order 7 status:** O7-R1 through O7-R7 establish the approved tracking,
+> **Order 7 status:** O7-R1 through O7-R8 establish the approved tracking,
 > equipment-instance ownership, authored slot-layout model, equipped-only skill
 > grants, Defense/Evasion combat contributions, and typed currency-ledger
-> authority, plus explicit pricing and durable policy-owned shop stock.
-> Generic recovery remains pending. This page remains
+> authority, plus explicit pricing, durable policy-owned shop stock, and generic
+> policy-bound recovery. This page remains
 > unreviewed until the complete
 > [Order 7 roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 > is implemented and independently closed.
@@ -174,9 +174,22 @@ quantity for every tracked offer.
 
 ## Recovery Facilities
 
-Hospital/restoration services assess a cost, payment, resource restoration, ailment removal, and encounter-persistence cleanup as one transaction. A host decides which actors can be selected and how the facility is presented.
+Recovery is optional. A selected `IRecoveryPolicy` plans from immutable actor
+state and explicitly names the currency, resources, cost, legal ailment
+treatment, and temporary-state categories. `IRecoveryService` assesses without
+mutation, re-evaluates at execution, stages the actor candidate and named
+currency debit, and returns equal before/after snapshots on rejection. A host
+adopts the returned currency ledger only from an applied execution result and
+decides which actors can be selected and how a facility is presented.
 
-An ailment-only treatment may be valid even when HP/SP are full if the selected policy permits it. A game should not duplicate eligibility logic in its UI; it should present the assessment result.
+The supplied `StandardHospitalRecoveryPolicy` fully restores each configured
+resource to its existing maximum. Its cost is the sum of each missing amount
+times its configured unit cost, truncated once after aggregation. It cures only
+ailments whose removal profile permits `RecoveryEvent` and clears only selected
+temporary categories. A zero-cost ailment-only or temporary-state-only
+treatment may therefore be valid even when all configured resources are full.
+A game should not duplicate eligibility logic in its UI; it should present the
+assessment result.
 
 ## Related Guidance
 

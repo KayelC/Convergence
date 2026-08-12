@@ -657,7 +657,10 @@ currency-ledger authority as a direct data correction. O7-R6 binds explicit
 standard and optional Luck-adjusted shop-pricing policies through the economy
 ruleset and typed offer factories. O7-R7 implements stable offer identity,
 durable policy-owned stock, and atomic inventory/currency/stock transactions.
-Later checkpoints add the remaining recovery policy seam.
+O7-R8 implements the remaining generic recovery policy seam and migrates the
+Training Annex and Godot contract evidence. Later checkpoints certify the
+combined wire/runtime surface, complete all three audience documents, and run
+the independent closure audit.
 
 The capability is `partial` while implementation remains open. Its mechanics and
 technical entries remain `existing_unreviewed`, and its developer guide remains

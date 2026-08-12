@@ -165,7 +165,13 @@ and execution. O7-R7 gives every offer a stable shop-local identity, persists
 limited quantities under the qualified shop/offer pair, decrements standard
 stock only on successful purchases, and permits explicit custom resale
 replenishment while committing inventory, currency, and stock atomically.
-Recovery remains HP/SP-specific. The owner-approved
+O7-R8 replaces the HP/SP patient boundary with an optional generic recovery
+policy. It plans from complete immutable actor state, restores explicitly
+configured resources, cures only ailments that permit recovery events, clears
+selected temporary categories through canonical authorities, and commits actor
+state only after the named-currency debit succeeds. Training Annex explicitly
+binds the supplied standard policy to preserve its established HP/SP quote.
+The owner-approved
 [Order 7 roadmap](reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 defines the direct authority corrections and narrowly justified policy seams;
 this section is not closure evidence for those pending changes.

@@ -369,7 +369,17 @@ through the registered `IShopPricingPolicyFactory` set. It accepts an optional
 `pricingParameters` object and rejects missing IDs, unsupported policies,
 unknown parameters, wrong types, and rejected factory configuration with typed
 binding diagnostics. It binds inventory, equipment, currency, offer resolution,
-shop transactions, and recovery as one resource-management service set.
+and shop transactions. Recovery is optional: `recoveryPolicyId` and
+`recoveryParameters` must either both be omitted or both be present. Explicit
+selection resolves a registered `IRecoveryPolicyFactory`; omission exposes a
+null recovery service and installs no hidden behavior.
+
+The supplied recovery factory is `standard_hospital_recovery`. Its required
+parameter object contains a valid `currencyId`, a nonempty `resourceCosts`
+object of resource IDs to nonnegative decimal unit costs, a Boolean
+`removeAilments`, and a distinct `temporaryStateKinds` array. Supported
+temporary values are `guard`, `stat_modifiers`, `charges`, `shields`,
+`affinity_overrides`, `affinity_breaks`, and `other_statuses`.
 
 The supplied pricing factories are:
 

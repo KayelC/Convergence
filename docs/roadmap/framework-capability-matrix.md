@@ -31,8 +31,11 @@ pricing factory through `standard_economy`, resolves offer-level policy
 overrides without fallback, and supplies exact-authored-price and optional
 Luck-adjusted policies. O7-R7 persists limited stock by stable shop/offer
 identity, binds fixed and custom stock policies explicitly, and commits stock
-with inventory and currency as one immutable transaction. Current source still
-does not generalize the HP/SP-specific recovery shape. The
+with inventory and currency as one immutable transaction. O7-R8 adds optional
+generic recovery planning from immutable actor state, canonical legal cleanup,
+and atomic named-currency execution while preserving Training Annex through an
+explicit standard policy. The capability remains partial pending cross-system
+certification, complete audience documentation, and independent closure. The
 owner-approved
 [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 governs the direct data corrections, genuine policy seams, three-audience

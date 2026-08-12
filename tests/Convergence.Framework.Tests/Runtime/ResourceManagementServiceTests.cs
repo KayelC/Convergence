@@ -778,67 +778,6 @@ public sealed class ResourceManagementServiceTests
             diagnostic.Code == RuntimeShopOfferResolutionCode.UnsupportedStockPolicy);
     }
 
-    [Fact]
-    public void HospitalService_RestoresResourcesAilmentsAndSpendsAtomically()
-    {
-        var service = new HospitalRestorationService();
-        var patient = new RuntimeHospitalPatientSnapshot(
-            RuntimeInstanceId.Parse("actor_1"),
-            currentHp: 30,
-            maxHp: 100,
-            currentSp: 10,
-            maxSp: 20,
-            hasAilment: true,
-            hasEncounterPersistence: true);
-        RuntimeCurrencyLedgerSnapshot wallet = Ledger(120);
-
-        HospitalRestorationResult restored = service.Restore(patient, wallet, CreditsCurrency);
-        HospitalRestorationResult fullHealth = service.Restore(
-            restored.AfterPatient,
-            restored.AfterCurrencyLedger,
-            CreditsCurrency);
-        HospitalRestorationResult insufficient = service.Restore(
-            patient,
-            Ledger(1),
-            CreditsCurrency);
-
-        Assert.True(restored.Applied);
-        Assert.Equal(120, restored.Cost);
-        Assert.Equal(0, Balance(restored.AfterCurrencyLedger));
-        Assert.Equal(restored.AfterPatient.MaxHp, restored.AfterPatient.CurrentHp);
-        Assert.Equal(restored.AfterPatient.MaxSp, restored.AfterPatient.CurrentSp);
-        Assert.False(restored.AfterPatient.HasAilment);
-        Assert.False(restored.AfterPatient.HasEncounterPersistence);
-        Assert.Equal(ResourceTransactionCode.NoRestorationNeeded, fullHealth.Code);
-        Assert.Equal(ResourceTransactionCode.InsufficientCurrency, insufficient.Code);
-        Assert.Equal(1, Balance(insufficient.AfterCurrencyLedger));
-    }
-
-    [Fact]
-    public void HospitalService_SaturatesExtremeCostWithoutArithmeticOverflow()
-    {
-        var service = new HospitalRestorationService();
-        var patient = new RuntimeHospitalPatientSnapshot(
-            RuntimeInstanceId.Parse("patient"),
-            currentHp: 0,
-            maxHp: int.MaxValue,
-            currentSp: 0,
-            maxSp: int.MaxValue,
-            hasAilment: false);
-        RuntimeCurrencyLedgerSnapshot wallet = Ledger(0);
-
-        int cost = service.CalculateRestorationCost(patient);
-        HospitalRestorationResult result = service.Restore(patient, wallet, CreditsCurrency);
-
-        Assert.Equal(int.MaxValue, cost);
-        Assert.False(result.Applied);
-        Assert.Equal(ResourceTransactionCode.InsufficientCurrency, result.Code);
-        Assert.Same(patient, result.BeforePatient);
-        Assert.Same(patient, result.AfterPatient);
-        Assert.Same(wallet, result.BeforeCurrencyLedger);
-        Assert.Same(wallet, result.AfterCurrencyLedger);
-    }
-
     private static ContentId Id(string value) => ContentId.Parse(value);
     private static RuntimeInstanceId Instance(string value) => RuntimeInstanceId.Parse(value);
     private static RuntimeCurrencyLedgerSnapshot Ledger(int balance) =>
