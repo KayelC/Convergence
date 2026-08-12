@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R7 complete; O7-R8 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R7 complete; O7-R8 design recorded and implementation pending; O7-R9 through O7-R11 pending
 
 ## Purpose
 
@@ -463,6 +463,98 @@ does not make a shop transaction service own mutable live state.
 - cure only ailments the canonical ailment-removal boundary permits;
 - stage actor and currency changes atomically; and
 - preserve current full-restore behavior under the standard configuration.
+
+#### O7-R8 Approved Extraction Design
+
+Recovery becomes an optional, generic service within the resource-management
+bundle. An economy ruleset that omits recovery configuration binds inventory,
+equipment, currency, pricing, and stock normally and exposes no recovery
+service. An economy ruleset that selects a recovery policy must provide its
+configuration explicitly; there is no hidden HP/SP, currency, cost, or cleanup
+fallback.
+
+`IRecoveryPolicy` receives one immutable `RuntimeActorSnapshot` and returns a
+typed treatment decision. A planned treatment names the actor resource IDs to
+restore to their existing maxima, whether removable ailments should be cured,
+the temporary-state categories to clear, and the nonnegative integer cost. The
+policy does not mutate an actor, debit currency, or publish presentation. A
+policy rejection, exception, null result, malformed plan, missing resource, or
+numeric overflow is contained as a typed diagnostic before any live state can
+change.
+
+`StandardHospitalRecoveryPolicy` is the only supplied implementation. Its
+factory accepts these explicit parameters:
+
+- `currencyId`: the exact currency-ledger `ContentId` to debit;
+- `resourceCosts`: a nonempty object mapping each resource `ContentId` to its
+  nonnegative decimal cost per missing unit;
+- `removeAilments`: whether the treatment requests legal ailment cures; and
+- `temporaryStateKinds`: the distinct typed categories the treatment requests
+  to clear: guard, stat modifiers, charges, shields, affinity overrides,
+  affinity Breaks, or other statuses.
+
+The standard cost is the sum of `missing amount * configured unit cost` for
+all configured resources, truncated once toward zero after aggregation. The
+calculation is checked and rejects a result outside the nonnegative integer
+currency domain. A configured resource that is absent from the actor is a
+typed rejection, not an ignored treatment component. Zero-cost ailment-only or
+temporary-state-only treatment remains valid and preserves the former facility
+behavior.
+
+`IRecoveryService` owns assessment and execution. Both paths create a staged
+actor candidate, apply the selected plan through canonical runtime operations,
+and stage the named currency debit. Assessment publishes no mutation.
+Execution re-evaluates from current actor and ledger state, then commits the
+live actor only after policy planning, resource restoration, status cleanup,
+and currency debit all succeed. Every rejection returns the original actor and
+currency snapshots. A host adopts the returned immutable currency ledger only
+from an applied execution result.
+
+Ailment treatment uses `StatusRemovalCause.RecoveryEvent`; therefore an
+ailment is removed only when its authored `StatusRemovalProfileDefinition`
+permits that cause. Selected non-modifier temporary states use the same
+removal cause and retain protected entries. Stat modifiers continue through
+their selected `IStatModifierPolicyService`; `StatModifierCleanupScope` gains a
+typed recovery-event boundary so the recovery layer does not rewrite policy
+state directly. Guard has no authored lifetime and is cleared only when the
+selected recovery policy explicitly requests the guard category.
+
+Training Annex explicitly binds the standard hospital policy to its qualified
+Credits currency, restores `hp` at one Credit per missing unit and `sp` at five
+Credits per missing unit, enables legal ailment cures, and selects every
+currently supported temporary category. This reproduces the former full
+HP/SP and `missing HP + missing SP * 5` behavior while replacing the lossy
+patient booleans with the canonical actor state. Its presentation continues to
+say Recovery Facility; that label is host-owned and does not rename the generic
+Framework contract.
+
+This checkpoint does not add another sample recovery policy, treatment-type
+content, new resource definitions, presentation rules, pricing or stock
+behavior, or a second formula for status removal. The runtime save contract
+remains v19 and content remains schema v10 because actor resources, battle
+status, and typed currency already have one durable shape. Training Annex may
+advance its pack patch version when its authored economy parameters change;
+that is content revision metadata, not a schema or save-contract change.
+
+#### O7-R8 Verification Contract
+
+Focused tests must prove generic non-HP/SP resource IDs, exact standard HP/SP
+cost parity, fractional aggregation and overflow handling, free ailment-only
+treatment, legal/protected ailment distinction, each temporary-state category,
+stat-modifier policy delegation, missing resource/currency handling, malformed
+and faulting custom policy containment, assessment purity, execution freshness,
+and actor/currency rollback on every rejection. Ruleset tests must prove
+optional omission, explicit standard binding, malformed parameter diagnostics,
+and custom factory registration without adding a second supplied policy.
+
+DemoHost tests must prove the Recovery Facility still displays the same quote,
+restores the same HP/SP values, spends the same Credits, and records the actual
+post-treatment ailment and temporary state rather than policy-intent booleans.
+Godot-contract evidence must bind or exercise the same generic recovery service
+without introducing Godot types into Framework. The full solution, active
+content validation, all DemoHost modes, real Godot headless smoke, public API
+baseline, formatting, coverage, forbidden-reference, and documentation-link
+gates remain mandatory before O7-R8 can be recorded complete.
 
 ### O7-R9: Certify Cross-System And Wire Integrity
 
