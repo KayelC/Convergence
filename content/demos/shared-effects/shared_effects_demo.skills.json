@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v9:skills",
-  "schemaVersion": 9,
+  "$schema": "urn:convergence:schema:content:v10:skills",
+  "schemaVersion": 10,
   "skills": [
     {
       "id": "field_recovery_demo",

@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v9:entities",
-  "schemaVersion": 9,
+  "$schema": "urn:convergence:schema:content:v10:entities",
+  "schemaVersion": 10,
   "entities": [
     {
       "id": "echo_adept",

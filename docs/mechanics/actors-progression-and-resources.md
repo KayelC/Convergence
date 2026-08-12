@@ -227,7 +227,7 @@ queue.
 
 ## Save And Restore
 
-**Framework rule:** save contract v18 persists complete source actor progression,
+**Framework rule:** save contract v19 persists complete source actor progression,
 move lists, pending choices, complete selected-policy stat-modifier state, the
 canonical party roster, and the other selected session modules.
 

@@ -254,7 +254,7 @@ public sealed class EquipmentInstanceOwnershipTests
     [Fact]
     public void SaveContract_HasNoSeparateRootEquipmentAuthority()
     {
-        Assert.Equal(18, RuntimeSaveGameSnapshot.CurrentContractVersion);
+        Assert.Equal(19, RuntimeSaveGameSnapshot.CurrentContractVersion);
         Assert.Null(typeof(RuntimeSaveGameSnapshot).GetProperty("Equipment"));
         Assert.DoesNotContain(
             typeof(RuntimeSaveGameSnapshot).GetConstructors()
@@ -310,6 +310,7 @@ public sealed class EquipmentInstanceOwnershipTests
             source.PartyRoster,
             inventory,
             source.CurrencyLedger,
+            source.ShopStock,
             source.Field,
             source.Compendium,
             source.Knowledge,

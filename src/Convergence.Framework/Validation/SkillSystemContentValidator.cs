@@ -6,7 +6,7 @@ namespace Convergence.Validation;
 
 public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
 {
-    private const int SupportedSchemaVersion = 9;
+    private const int SupportedSchemaVersion = 10;
     private readonly IEquipmentSlotLayoutPolicy _equipmentSlotLayout;
 
     public SkillSystemContentValidator(IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null)
@@ -794,10 +794,28 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     "Shop catalogs require at least one offer.");
             }
 
+            var offerIds = new HashSet<ContentId>();
+
             for (int index = 0; index < shop.Offers.Count; index++)
             {
                 ShopOfferDefinition offer = shop.Offers[index];
                 string path = source.Path + $".offers[{index}]";
+                if (!offer.Id.IsValid)
+                {
+                    Add(source, path + ".id", ContentValidationErrorCode.RecordIdInvalid,
+                        "Shop offer ID cannot be empty.");
+                }
+                else if (offer.Id.IsQualified)
+                {
+                    Add(source, path + ".id", ContentValidationErrorCode.RecordIdMustBeLocal,
+                        $"Shop offer ID '{offer.Id}' must be local and unqualified.");
+                }
+                else if (!offerIds.Add(offer.Id))
+                {
+                    Add(source, path + ".id", ContentValidationErrorCode.RecordDuplicateId,
+                        $"Shop offer ID '{offer.Id}' is declared more than once in shop '{shop.Id}'.");
+                }
+
                 if (offer.ContentKind == ShopContentKind.Item)
                 {
                     ValidateContentReference(source, offer.ContentId, path + ".contentId", _itemIndex, "item");
@@ -1187,6 +1205,7 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                     RequirePositive(source, limited.Quantity, path + ".quantity", "Limited shop stock");
                     break;
                 case PolicyShopStockDefinition policy:
+                    RequirePositive(source, policy.Quantity, path + ".quantity", "Policy shop stock");
                     RequireRegistration(source, policy.StockPolicyId, path + ".stockPolicyId",
                         _registrations.PolicyIds, "policy");
                     break;

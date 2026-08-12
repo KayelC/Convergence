@@ -41,12 +41,13 @@ Godot owns visible enemies, trigger volumes, patrols, spawn points, boss scenes,
 
 The framework exposes serializer-neutral runtime snapshots and restores them
 against a `GameDataCatalog` through `IRuntimeSessionRestoreService`. Runtime
-save contract v18 stores one canonical party roster, inventory-owned equipment
+save contract v19 stores one canonical party roster, inventory-owned equipment
 instances with actor loadout references, complete source actor
 progression and move-list state, complete selected-policy stat-modifier
 contributions, typed status lifetimes, and optional per-target passive
-activation keys, plus immutable currency balances keyed by qualified currency
-IDs. Analyze state is encounter-local knowledge and is not copied into actor
+activation keys, immutable currency balances keyed by qualified currency IDs,
+and remaining quantities for tracked shop offers keyed by qualified shop ID
+plus shop-local offer ID. Analyze state is encounter-local knowledge and is not copied into actor
 save DTOs.
 
 A Godot save may wrap those snapshots with scene paths, transforms, camera
@@ -74,7 +75,7 @@ Two layers guard the integration boundary.
 - hydrate actors and run deterministic actions and encounters;
 - consume ordered events through host sinks;
 - map runtime IDs to host scene handles;
-- round-trip actor and field snapshots through host-owned storage.
+- round-trip actor, field, currency, and shop-stock snapshots through host-owned storage.
 
 `samples/Convergence.GodotHost` is the real Godot 4.7.1 .NET reference
 consumer. Its noninteractive smoke scene reads the canonical Training Annex

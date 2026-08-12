@@ -111,7 +111,7 @@ public sealed class RuntimeRulesetBindingTests
             .RequireService();
         ShopCatalogDefinition shop = catalog.GetRequiredShop(Qualified("sample_outfitter"));
         RuntimeShopOfferSnapshot pricedOffer = resources.ShopOffers
-            .Resolve(shop.Offers[1], catalog, catalog)
+            .Resolve(shop.Id, shop.Offers[1], catalog, catalog)
             .RequireOffer();
         Assert.Equal(150, resources.Shop.CalculateBuyPrice(pricedOffer, luck: 10));
         Assert.Equal(75, resources.Shop.CalculateSellPrice(pricedOffer, luck: 10));
@@ -206,7 +206,10 @@ public sealed class RuntimeRulesetBindingTests
             inventory,
             equipment,
             economyTransactions,
-            new RuntimeShopOfferResolver(pricing, pricingFactories),
+            new RuntimeShopOfferResolver(
+                pricing,
+                pricingFactories,
+                ShopStockPolicyFactoryRegistry.CreateStandard()),
             new ShopTransactionService(inventory, economyTransactions),
             new HospitalRestorationService(economyTransactions));
         var turn = new BattleTurnEconomyRuleset(

@@ -201,10 +201,10 @@ internal sealed class CleanSaveDemoHost
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.9.0")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.9.0")),
-                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.9.0")),
-                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.9.0"))
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.10.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.10.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.10.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.10.0"))
             ],
             [frost, ember],
             new RuntimePartyRosterSnapshot(
@@ -225,6 +225,14 @@ internal sealed class CleanSaveDemoHost
                         ])
                 ]),
             RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 1234),
+            new RuntimeShopStockSnapshot(
+            [
+                new RuntimeShopStockEntrySnapshot(
+                    new RuntimeShopOfferIdentity(
+                        ContentId.Parse("convergence.catalog_surface_sample:sample_outfitter"),
+                        ContentId.Parse("medicine_offer")),
+                    8)
+            ]),
             new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(ContentId.Parse("convergence.catalog_surface_sample:sample_depths_floor_5")),
                 new RuntimeDungeonTraversalSnapshot(
@@ -432,6 +440,7 @@ internal static class CleanSaveJsonCodec
                     balance.Value))
                 .OrderBy(balance => balance.CurrencyId, StringComparer.Ordinal)
                 .ToArray(),
+            snapshot.ShopStock.Entries.Select(ToDto).ToArray(),
             ToDto(snapshot.Field),
             ToDto(snapshot.Compendium),
             ToDto(snapshot.Knowledge),
@@ -460,6 +469,7 @@ internal static class CleanSaveJsonCodec
                     new KeyValuePair<ContentId, int>(
                         Id(balance.CurrencyId),
                         balance.Balance))),
+            new RuntimeShopStockSnapshot(dto.ShopStock.Select(FromDto)),
             FromDto(dto.Field),
             FromDto(dto.Compendium),
             FromDto(dto.Knowledge),
@@ -737,6 +747,17 @@ internal static class CleanSaveJsonCodec
                     Instance(instance.InstanceId),
                     Id(instance.DefinitionId))))));
 
+    private static HostShopStockDto ToDto(RuntimeShopStockEntrySnapshot entry) =>
+        new(
+            entry.OfferIdentity.ShopId.ToString(),
+            entry.OfferIdentity.OfferId.ToString(),
+            entry.RemainingQuantity);
+
+    private static RuntimeShopStockEntrySnapshot FromDto(HostShopStockDto entry) =>
+        new(
+            new RuntimeShopOfferIdentity(Id(entry.ShopId), Id(entry.OfferId)),
+            entry.RemainingQuantity);
+
     private static HostFieldDto? ToDto(RuntimeFieldSnapshot? snapshot) =>
         snapshot is null
             ? null
@@ -854,6 +875,7 @@ internal static class CleanSaveJsonCodec
         HostPartyRosterDto PartyRoster,
         HostInventoryDto Inventory,
         HostCurrencyBalanceDto[] CurrencyBalances,
+        HostShopStockDto[] ShopStock,
         HostFieldDto? Field,
         HostCompendiumDto Compendium,
         HostKnowledgeDto Knowledge,
@@ -864,6 +886,10 @@ internal static class CleanSaveJsonCodec
     private sealed record HostContentPackDto(string Id, string Version);
 
     private sealed record HostCurrencyBalanceDto(string CurrencyId, int Balance);
+    private sealed record HostShopStockDto(
+        string ShopId,
+        string OfferId,
+        int RemainingQuantity);
 
     private sealed record HostActorDto(
         string InstanceId,

@@ -140,6 +140,11 @@ internal sealed record GodotSaveInventory(
 
 internal sealed record GodotSaveCurrencyBalance(string CurrencyId, int Balance);
 
+internal sealed record GodotSaveShopStock(
+    string ShopId,
+    string OfferId,
+    int RemainingQuantity);
+
 internal sealed record GodotSaveDocument(
     int SaveContractVersion,
     string FrameworkVersion,
@@ -149,6 +154,7 @@ internal sealed record GodotSaveDocument(
     GodotSavePartyRoster PartyRoster,
     GodotSaveInventory Inventory,
     IReadOnlyList<GodotSaveCurrencyBalance> CurrencyBalances,
+    IReadOnlyList<GodotSaveShopStock> ShopStock,
     IReadOnlyList<GodotSaveSceneInstance> SceneInstances);
 
 internal sealed record GodotSaveRestoreResult(
@@ -173,6 +179,7 @@ internal static class GodotSaveCodec
         RuntimePartyRosterSnapshot partyRoster,
         RuntimeInventorySnapshot inventory,
         RuntimeCurrencyLedgerSnapshot currencyLedger,
+        RuntimeShopStockSnapshot shopStock,
         ContentPackIdentity pack,
         GodotSceneInstanceRegistry sceneInstances)
     {
@@ -180,6 +187,7 @@ internal static class GodotSaveCodec
         ArgumentNullException.ThrowIfNull(partyRoster);
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(currencyLedger);
+        ArgumentNullException.ThrowIfNull(shopStock);
         ArgumentNullException.ThrowIfNull(pack);
         ArgumentNullException.ThrowIfNull(sceneInstances);
 
@@ -205,6 +213,10 @@ internal static class GodotSaveCodec
                     balance.Value))
                 .OrderBy(balance => balance.CurrencyId, StringComparer.Ordinal)
                 .ToArray(),
+            shopStock.Entries.Select(entry => new GodotSaveShopStock(
+                entry.OfferIdentity.ShopId.ToString(),
+                entry.OfferIdentity.OfferId.ToString(),
+                entry.RemainingQuantity)).ToArray(),
             sceneRecords);
         return JsonSerializer.Serialize(document, JsonOptions);
     }
@@ -247,6 +259,10 @@ internal static class GodotSaveCodec
                     new KeyValuePair<ContentId, int>(
                         Id(balance.CurrencyId),
                         balance.Balance))),
+            new RuntimeShopStockSnapshot(document.ShopStock.Select(entry =>
+                new RuntimeShopStockEntrySnapshot(
+                    new RuntimeShopOfferIdentity(Id(entry.ShopId), Id(entry.OfferId)),
+                    entry.RemainingQuantity))),
             field: null,
             new CompendiumStateSnapshot(),
             new RuntimeKnowledgeSnapshot(),

@@ -2896,7 +2896,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         TrainingAnnexShopTransactionEvidence transaction = Assert.Single(summary.ShopTransactions);
         Assert.True(transaction.IsPurchase);
         Assert.Equal(Qualified("training_supply"), transaction.ShopId);
-        Assert.Equal(Qualified("annex_tonic"), transaction.OfferId);
+        Assert.Equal(ContentId.Parse("annex_tonic_offer"), transaction.OfferId);
         Assert.Equal(ShopContentKind.Item, transaction.ContentKind);
         Assert.Equal(ResourceTransactionCode.Applied, transaction.Code);
         Assert.Equal(47, transaction.Price);
@@ -2938,7 +2938,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         TrainingAnnexShopTransactionEvidence transaction = Assert.Single(summary.ShopTransactions);
         TrainingAnnexEquipmentChangeEvidence equipment = Assert.Single(summary.ShopEquipmentChanges);
-        Assert.Equal(Qualified("padded_jacket"), transaction.OfferId);
+        Assert.Equal(ContentId.Parse("padded_jacket_offer"), transaction.OfferId);
         Assert.Equal(ShopContentKind.Equipment, transaction.ContentKind);
         Assert.Equal(84, transaction.Price);
         Assert.Equal(100, transaction.CurrencyLedgerBefore);
@@ -3085,7 +3085,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
         TrainingAnnexShopTransactionEvidence transaction = Assert.Single(summary.ShopTransactions);
         Assert.False(transaction.IsPurchase);
-        Assert.Equal(Qualified("annex_tonic"), transaction.OfferId);
+        Assert.Equal(ContentId.Parse("annex_tonic_offer"), transaction.OfferId);
         Assert.Equal(ResourceTransactionCode.Applied, transaction.Code);
         Assert.Equal(28, transaction.Price);
         Assert.Equal(0, transaction.CurrencyLedgerBefore);
@@ -3522,6 +3522,104 @@ public sealed class CleanTrainingAnnexPlayHostTests
         string text = output.ToString();
         Assert.Contains("Manual save created in field_menu (sequence 0).", text, StringComparison.Ordinal);
         Assert.Contains("Manual save restored from field_menu (sequence 0).", text, StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_LimitedShopStockPersistsAcrossRepeatedOpenings()
+    {
+        var io = new ScriptedGameIO().QueueMenu(11, 0, 1, 11, 0, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(2, summary.ShopTransactions.Count);
+        Assert.All(summary.ShopTransactions, transaction =>
+        {
+            Assert.True(transaction.IsPurchase);
+            Assert.Equal(ContentId.Parse("cleanse_drop_offer"), transaction.OfferId);
+            Assert.Equal(ResourceTransactionCode.Applied, transaction.Code);
+        });
+        Assert.Equal(2, summary.Inventory.GetQuantity(Qualified("cleanse_drop")));
+        Assert.Equal(26, summary.CurrencyLedger.GetSingleCurrency().Balance);
+        Assert.True(summary.ShopStock.TryGetRemainingQuantity(
+            new RuntimeShopOfferIdentity(
+                Qualified("training_supply"),
+                ContentId.Parse("cleanse_drop_offer")),
+            out int remaining));
+        Assert.Equal(3, remaining);
+
+        GameIoMenuCall[] buyMenus = io.Menus
+            .Where(menu => menu.Header == "Training Supply - Buy")
+            .ToArray();
+        Assert.Equal(2, buyMenus.Length);
+        Assert.Contains("Cleanse Drop - 37 C (stock 5)", buyMenus[0].Options);
+        Assert.Contains("Cleanse Drop - 37 C (stock 4)", buyMenus[1].Options);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ShopSelectionUsesOfferIdWhenContentIsOfferedTwice()
+    {
+        var io = new ScriptedGameIO().QueueMenu(11, 0, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            new DuplicateContentShopOfferSource(ContentRoot()),
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexShopTransactionEvidence transaction = Assert.Single(summary.ShopTransactions);
+        Assert.Equal(ContentId.Parse("discount_tonic_offer"), transaction.OfferId);
+        Assert.Equal(4, transaction.Price);
+        Assert.Equal(96, summary.CurrencyLedger.GetSingleCurrency().Balance);
+        Assert.Equal(2, summary.Inventory.GetQuantity(Qualified("annex_tonic")));
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ManualSaveLoadRestoresLimitedShopStock()
+    {
+        var io = new ScriptedGameIO().QueueMenu(
+            11, 0, 1,
+            10, 0,
+            11, 0, 1,
+            10, 1,
+            9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.Equal(1, summary.ManualLoadCount);
+        Assert.Equal(1, summary.Inventory.GetQuantity(Qualified("cleanse_drop")));
+        Assert.Equal(63, summary.CurrencyLedger.GetSingleCurrency().Balance);
+        Assert.True(summary.ShopStock.TryGetRemainingQuantity(
+            new RuntimeShopOfferIdentity(
+                Qualified("training_supply"),
+                ContentId.Parse("cleanse_drop_offer")),
+            out int remaining));
+        Assert.Equal(4, remaining);
+        Assert.Contains(
+            "Manual save restored from field_menu",
+            output.ToString(),
+            StringComparison.Ordinal);
         io.AssertConsumed();
     }
 
@@ -4105,6 +4203,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             new RuntimeKnowledgeSnapshot(),
             new RuntimeInventorySnapshot([new KeyValuePair<ContentId, int>(Qualified("annex_tonic"), 1)]),
             TrainingAnnexHostSupport.CreateCreditsLedger(50),
+            CreateInitialShopStock(catalog),
             new RuntimeSessionProgressSnapshot(),
             encounterTriggerConsumed: true,
             preparedBattleStarted: true,
@@ -4433,6 +4532,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(Qualified("annex_tonic"), 1)]),
             TrainingAnnexHostSupport.CreateCreditsLedger(0),
+            CreateInitialShopStock(catalog),
             new RuntimeSessionProgressSnapshot());
         return new RuntimeSaveRecord(
             RuntimeSaveKind.Manual,
@@ -4453,6 +4553,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
             partyRoster ?? snapshot.PartyRoster,
             snapshot.Inventory,
             snapshot.CurrencyLedger,
+            snapshot.ShopStock,
             field ?? snapshot.Field,
             snapshot.Compendium,
             snapshot.Knowledge,
@@ -4460,6 +4561,18 @@ public sealed class CleanTrainingAnnexPlayHostTests
             snapshot.Checkpoints,
             snapshot.HostContext,
             snapshot.ContractVersion);
+
+    private static RuntimeShopStockSnapshot CreateInitialShopStock(GameDataCatalog catalog)
+    {
+        var resolver = new RuntimeRulesetBindingResolver(
+            RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
+        ResourceManagementRulesetServices resources = resolver
+            .BindResourceManagementServices(
+                catalog,
+                TrainingAnnexHostSupport.Qualified("standard_economy"))
+            .RequireService();
+        return TrainingAnnexHostSupport.CreateInitialShopStock(catalog, resources.ShopOffers);
+    }
 
     private static RuntimeActorSnapshot CopyActor(
         RuntimeActorSnapshot actor,
@@ -4752,6 +4865,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
                 throw new InvalidOperationException("Training Annex shop offers were not found.");
             offers.Add(new JsonObject
             {
+                ["id"] = "unsupported_offer",
                 ["contentKind"] = "item",
                 ["contentId"] = "annex_tonic",
                 ["price"] = new JsonObject
@@ -4996,6 +5110,57 @@ public sealed class CleanTrainingAnnexPlayHostTests
             }
 
             return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+    }
+
+    private sealed class DuplicateContentShopOfferSource(string root) : IContentPackTextSource
+    {
+        public async ValueTask<ContentPackTextBundle> ReadAsync(
+            ContentPackTextRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            string manifest = await File.ReadAllTextAsync(
+                TestContentPath.ResolveManifest(root, request.ManifestPath),
+                cancellationToken);
+            var documents = new List<ContentDocumentText>();
+            foreach (string path in request.DocumentPaths)
+            {
+                string text = await File.ReadAllTextAsync(
+                    TestContentPath.ResolveDocument(root, request.ManifestPath, path),
+                    cancellationToken);
+                documents.Add(new ContentDocumentText(
+                    path,
+                    path,
+                    path == "training_annex_slice.shops.json"
+                        ? AddDiscountTonicOffer(text)
+                        : text));
+            }
+
+            return new ContentPackTextBundle(request.ManifestPath, manifest, documents);
+        }
+
+        private static string AddDiscountTonicOffer(string json)
+        {
+            JsonObject root = JsonNode.Parse(json)?.AsObject() ??
+                throw new InvalidOperationException("Training Annex shops JSON could not be parsed.");
+            JsonArray offers = root["shops"]?[0]?["offers"]?.AsArray() ??
+                throw new InvalidOperationException("Training Annex shop offers were not found.");
+            offers.Insert(1, new JsonObject
+            {
+                ["id"] = "discount_tonic_offer",
+                ["contentKind"] = "item",
+                ["contentId"] = "annex_tonic",
+                ["price"] = new JsonObject
+                {
+                    ["kind"] = "fixed",
+                    ["basePrice"] = 5
+                },
+                ["stock"] = new JsonObject
+                {
+                    ["kind"] = "unlimited"
+                }
+            });
+            return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
         }
     }
 

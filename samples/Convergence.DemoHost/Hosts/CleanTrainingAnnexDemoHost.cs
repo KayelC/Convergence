@@ -130,7 +130,12 @@ internal sealed class CleanTrainingAnnexDemoHost
         IRosterCapacityPolicy rosterCapacityPolicy = resolver
             .BindRosterCapacityPolicy(catalog, Qualified("standard_roster_capacity"))
             .RequireService();
-        resolver.BindResourceManagementServices(catalog, Qualified("standard_economy")).RequireService();
+        ResourceManagementRulesetServices resourceManagement = resolver
+            .BindResourceManagementServices(catalog, Qualified("standard_economy"))
+            .RequireService();
+        RuntimeShopStockSnapshot shopStock = TrainingAnnexHostSupport.CreateInitialShopStock(
+            catalog,
+            resourceManagement.ShopOffers);
         await PrintAsync(sequence++, "ruleset", "Bound standard Training Annex rulesets.", cancellationToken)
             .ConfigureAwait(false);
 
@@ -349,6 +354,7 @@ internal sealed class CleanTrainingAnnexDemoHost
             ashling,
             inventory,
             reward,
+            shopStock,
             new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(Qualified("training_annex_floor_2")),
                 new RuntimeDungeonTraversalSnapshot(
@@ -396,6 +402,7 @@ internal sealed class CleanTrainingAnnexDemoHost
         CatalogBattleActor ashling,
         IReadOnlyDictionary<ContentId, int> inventory,
         BattleRewardResult reward,
+        RuntimeShopStockSnapshot shopStock,
         RuntimeFieldSnapshot field)
     {
         RuntimeActorSnapshot echoSnapshot = roster.Player.Actor.State.ToSnapshot();
@@ -405,12 +412,13 @@ internal sealed class CleanTrainingAnnexDemoHost
             ashling.State.ToSnapshot()
         ];
         return new RuntimeSaveGameSnapshot(
-            SemanticVersion.Parse("0.9.0"),
+            SemanticVersion.Parse("0.10.0"),
             [TrainingAnnexHostSupport.PackIdentity],
             actorSnapshots,
             partyRoster,
             new RuntimeInventorySnapshot(inventory),
             TrainingAnnexHostSupport.CreateCreditsLedger(reward.TotalCurrency),
+            shopStock,
             field,
             new CompendiumStateSnapshot(),
             new RuntimeKnowledgeSnapshot(),

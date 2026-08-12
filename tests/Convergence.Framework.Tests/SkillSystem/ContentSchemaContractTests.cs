@@ -7,7 +7,7 @@ namespace Convergence.Framework.Tests.SkillSystem;
 
 public sealed class ContentSchemaContractTests
 {
-    private const string SchemaPrefix = "urn:convergence:schema:content:v9:";
+    private const string SchemaPrefix = "urn:convergence:schema:content:v10:";
 
     [Fact]
     public void ActiveContentDocuments_ValidateAgainstTheirDeclaredDraft202012Schemas()
@@ -88,6 +88,24 @@ public sealed class ContentSchemaContractTests
             document.RootElement);
 
         Assert.False(result.IsValid, $"{definition} accepted invalid numeric contract {json}.");
+    }
+
+    [Theory]
+    [InlineData("{\"kind\":\"limited\",\"quantity\":0}")]
+    [InlineData("{\"kind\":\"policy\",\"stockPolicyId\":\"progress_stock\"}")]
+    [InlineData("{\"kind\":\"policy\",\"stockPolicyId\":\"progress_stock\",\"quantity\":0}")]
+    [InlineData("{\"kind\":\"policy\",\"quantity\":3}")]
+    [InlineData("{\"kind\":\"unlimited\",\"quantity\":3}")]
+    [InlineData("{\"kind\":\"unlimited\",\"parameters\":{\"ignored\":true}}")]
+    [InlineData("{\"kind\":\"limited\",\"quantity\":3,\"parameters\":{\"ignored\":true}}")]
+    public void ShopStockContract_RejectsMalformedTrackedState(string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        EvaluationResults result = SchemaSet.Load().EvaluateReference(
+            SchemaPrefix + "shops#/$defs/stock",
+            document.RootElement);
+
+        Assert.False(result.IsValid, $"Shop stock accepted malformed contract {json}.");
     }
 
     [Theory]
@@ -383,7 +401,7 @@ public sealed class ContentSchemaContractTests
         Add(variants, SchemaPrefix + "shops#/$defs/stock",
             """{"kind":"unlimited"}""",
             """{"kind":"limited","quantity":3}""",
-            """{"kind":"policy","stockPolicyId":"progress_stock"}""");
+            """{"kind":"policy","stockPolicyId":"progress_stock","quantity":3}""");
         Add(variants, SchemaPrefix + "fusion#/$defs/result",
             """{"operation":"create_entity","resultEntityId":"result_entity"}""",
             """{"operation":"catalyst_rank_shift","rankShift":1}""",
@@ -420,7 +438,7 @@ public sealed class ContentSchemaContractTests
 
     private static string ContentRoot() => Path.Combine(AppContext.BaseDirectory, "Content");
 
-    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v9");
+    private static string SchemaRoot() => Path.Combine(AppContext.BaseDirectory, "Schemas", "content", "v10");
 
     private static string Describe(EvaluationResults result)
     {

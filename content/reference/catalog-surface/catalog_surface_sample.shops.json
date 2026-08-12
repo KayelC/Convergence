@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v9:shops",
-  "schemaVersion": 9,
+  "$schema": "urn:convergence:schema:content:v10:shops",
+  "schemaVersion": 10,
   "shops": [
     {
       "id": "sample_outfitter",
@@ -10,6 +10,7 @@
       "availabilityContexts": ["field"],
       "offers": [
         {
+          "id": "shortsword_offer",
           "contentKind": "equipment",
           "contentId": "shortsword_sample",
           "price": {
@@ -21,6 +22,7 @@
           }
         },
         {
+          "id": "medicine_offer",
           "contentKind": "item",
           "contentId": "convergence.shared_effects_demo:medicine_demo",
           "price": {

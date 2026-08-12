@@ -218,7 +218,7 @@ public sealed class CatalogLoaderTests
                 "[{\"id\":\"core.pack\",\"version\":\"1.0.0\"}]", documents:
                 "[{\"type\":\"entities\",\"path\":\"entities.json\"}]"),
             Document("entities.json", $$"""
-            { "schemaVersion": 9, "entities": [
+            { "schemaVersion": 10, "entities": [
               {{EntityRecord("wrong", "core.pack:not_a_race")}},
               {{EntityRecord("missing", "core.pack:missing_race")}}
             ] }
@@ -311,7 +311,7 @@ public sealed class CatalogLoaderTests
             Document("skills.json",
                 """
                 {
-                  "schemaVersion": 9,
+                  "schemaVersion": 10,
                   "skills": [{
                     "id": "fire_break",
                     "displayName": "Fire Break",
@@ -390,7 +390,7 @@ public sealed class CatalogLoaderTests
         ContentPackTextBundle validationFailure = Bundle(
             Manifest("validation.pack", documents: "[{\"type\":\"skills\",\"path\":\"skills.json\"}]"),
             Document("skills.json",
-                "{\"schemaVersion\":9,\"skills\":[{\"id\":\"empty_passive\",\"displayName\":\"Empty\",\"description\":\"Empty.\",\"activation\":\"passive\",\"inheritanceGroupId\":\"passive\",\"inheritance\":{\"isInheritable\":true}}]}"));
+                "{\"schemaVersion\":10,\"skills\":[{\"id\":\"empty_passive\",\"displayName\":\"Empty\",\"description\":\"Empty.\",\"activation\":\"passive\",\"inheritanceGroupId\":\"passive\",\"inheritance\":{\"isInheritable\":true}}]}"));
 
         Assert.Equal(CatalogLoadDiagnosticCode.ManifestDeserializationFailed,
             Assert.Single(manifestFailure.Diagnostics).Code);
@@ -461,7 +461,7 @@ public sealed class CatalogLoaderTests
         string dependencies = "[]",
         string documents = "[]") => $$"""
         {
-          "schemaVersion": 9,
+          "schemaVersion": 10,
           "id": "{{id}}",
           "version": "{{version}}",
           "displayName": "{{id}}",
@@ -471,12 +471,12 @@ public sealed class CatalogLoaderTests
         """;
 
     private static string RaceDocument(string id) => $$"""
-        { "schemaVersion": 9, "races": [{ "id": "{{id}}", "displayName": "{{id}}" }] }
+        { "schemaVersion": 10, "races": [{ "id": "{{id}}", "displayName": "{{id}}" }] }
         """;
 
     private static string SkillDocument(string id, bool isInheritable = true) => $$"""
         {
-          "schemaVersion": 9,
+          "schemaVersion": 10,
           "skills": [{
             "id": "{{id}}",
             "displayName": "{{id}}",
@@ -495,7 +495,7 @@ public sealed class CatalogLoaderTests
         string? baseSkillId = null,
         string? allowedSkillId = null,
         string? ailmentId = null) => $$"""
-        { "schemaVersion": 9, "entities": [
+        { "schemaVersion": 10, "entities": [
           {{EntityRecord(id, raceId, baseSkillId, allowedSkillId, ailmentId)}}
         ] }
         """;
@@ -527,7 +527,7 @@ public sealed class CatalogLoaderTests
 
     private static string AilmentDocument(string id) => $$"""
         {
-          "schemaVersion": 9,
+          "schemaVersion": 10,
           "ailments": [{
             "id": "{{id}}", "displayName": "{{id}}", "description": "Reference ailment.",
             "defaultLifetime": {
@@ -547,7 +547,7 @@ public sealed class CatalogLoaderTests
     private static string TriggerSkillDocument() =>
         """
         {
-          "schemaVersion": 9,
+          "schemaVersion": 10,
           "skills": [{
             "id": "skill", "displayName": "Skill", "description": "Reference trigger.",
             "activation": "passive", "inheritanceGroupId": "passive",

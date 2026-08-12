@@ -229,6 +229,7 @@ public sealed record RuntimeRestoredSession
     public RuntimePartyRosterSnapshot PartyRoster => Snapshot.PartyRoster;
     public RuntimeInventorySnapshot Inventory => Snapshot.Inventory;
     public RuntimeCurrencyLedgerSnapshot CurrencyLedger => Snapshot.CurrencyLedger;
+    public RuntimeShopStockSnapshot ShopStock => Snapshot.ShopStock;
     public RuntimeFieldSnapshot? Field => Snapshot.Field;
     public CompendiumStateSnapshot Compendium => Snapshot.Compendium;
     public RuntimeKnowledgeSnapshot Knowledge => Snapshot.Knowledge;
@@ -589,6 +590,7 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
             source.PartyRoster,
             source.Inventory,
             source.CurrencyLedger,
+            source.ShopStock,
             source.Field,
             source.Compendium,
             source.Knowledge,

@@ -129,6 +129,7 @@ internal static class DefinitionQualifier
             definition.CategoryId,
             definition.AvailabilityContextIds,
             definition.Offers.Select(offer => new ShopOfferDefinition(
+                offer.Id,
                 offer.ContentKind,
                 ContentReference(packId, offer.ContentId),
                 offer.Price,

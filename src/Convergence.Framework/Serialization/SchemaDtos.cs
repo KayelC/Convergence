@@ -208,6 +208,7 @@ internal sealed class ShopCatalogDto
 
 internal sealed class ShopOfferDto
 {
+    public required string Id { get; init; }
     public required ShopContentKind ContentKind { get; init; }
     public required string ContentId { get; init; }
     public required ShopPriceDto Price { get; init; }

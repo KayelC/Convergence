@@ -25,7 +25,7 @@ public sealed class BattleKnowledgeExecutionTransitionTests
         Assert.Null(typeof(RuntimeBattleStatusSnapshot).GetProperty("Analysis"));
         Assert.Null(typeof(RuntimeBattleStatusSnapshot).Assembly.GetType(
             "Convergence.Runtime.RuntimeAnalysisSnapshot"));
-        Assert.Equal(18, RuntimeSaveGameSnapshot.CurrentContractVersion);
+        Assert.Equal(19, RuntimeSaveGameSnapshot.CurrentContractVersion);
     }
 
     [Fact]

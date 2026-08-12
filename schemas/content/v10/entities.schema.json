@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v10:entities",
+  "type": "object", "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "entities"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v10:entities" },
+    "schemaVersion": { "const": 10 },
+    "entities": { "type": "array", "items": { "$ref": "#/$defs/entity" } }
+  },
+  "$defs": {
+    "entity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "displayName", "description", "entityKind", "raceId", "rank", "baseLevel", "capabilities", "inheritanceRules", "stats"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "entityKind": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/contentId" },
+        "raceId": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/contentId" },
+        "rank": { "type": "integer", "minimum": 1 },
+        "baseLevel": { "type": "integer", "minimum": 1 },
+        "capabilities": {
+          "type": "object", "additionalProperties": false,
+          "required": ["recruitable", "fusionEligible", "compendiumEligible"],
+          "properties": {
+            "recruitable": { "type": "boolean" },
+            "fusionEligible": { "type": "boolean" },
+            "compendiumEligible": { "type": "boolean" }
+          }
+        },
+        "inheritanceRules": {
+          "type": "object", "additionalProperties": false,
+          "required": ["groupPolicy"],
+          "properties": {
+            "groupPolicy": {
+              "type": "object", "additionalProperties": false,
+              "required": ["mode", "groupIds"],
+              "properties": {
+                "mode": { "enum": ["deny_list", "allow_list"] },
+                "groupIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/inheritanceGroup" } }
+              }
+            },
+            "blockedSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/contentId" } },
+            "allowedSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/contentId" } }
+          }
+        },
+        "stats": {
+          "type": "object",
+          "propertyNames": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/localId" },
+          "additionalProperties": { "type": "integer" }
+        },
+        "elementalAffinities": {
+          "type": "object",
+          "propertyNames": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/damageElement" },
+          "additionalProperties": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/elementalAffinity" }
+        },
+        "ailmentResistances": {
+          "type": "object",
+          "propertyNames": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/localId" },
+          "additionalProperties": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/resistanceLevel" }
+        },
+        "instantDeathResistances": {
+          "type": "object",
+          "propertyNames": { "enum": ["light", "dark"] },
+          "additionalProperties": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/resistanceLevel" }
+        },
+        "baseSkillIds": { "type": "array", "items": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/contentId" } },
+        "skillUnlocks": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["level", "skillId"],
+            "properties": {
+              "level": { "type": "integer", "minimum": 1 },
+              "skillId": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/contentId" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

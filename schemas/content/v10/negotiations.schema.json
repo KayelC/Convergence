@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v10:negotiations",
+  "title": "Convergence Content v10 Negotiation Document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "negotiations"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v10:negotiations" },
+    "schemaVersion": { "const": 10 },
+    "negotiations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/negotiation" }
+    }
+  },
+  "$defs": {
+    "negotiation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "description", "personalityId", "questions"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "personalityId": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/localId" },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/question" }
+        },
+        "familiarDialogueLines": {
+          "type": "array",
+          "items": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/nonEmptyString" }
+        },
+        "demands": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/demand" }
+        },
+        "defaultRaceIds": {
+          "type": "array",
+          "items": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/contentReference" }
+        },
+        "defaultEntityIds": {
+          "type": "array",
+          "items": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/contentReference" }
+        }
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "answers"],
+      "properties": {
+        "text": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/nonEmptyString" },
+        "answers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/answer" }
+        }
+      }
+    },
+    "answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "score"],
+      "properties": {
+        "text": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/nonEmptyString" },
+        "score": { "type": "integer" }
+      }
+    },
+    "demand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["demandId", "weight"],
+      "properties": {
+        "demandId": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/localId" },
+        "weight": { "type": "integer", "minimum": 1 },
+        "parameters": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/parameters" }
+      }
+    }
+  }
+}

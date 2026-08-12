@@ -152,7 +152,7 @@ of the supplied Order 2 probability or damage policies read it.
 
 ## Authored Numeric Safety Boundary
 
-Hit-count limits are applied at two layers. Schema v9 and semantic validation
+Hit-count limits are applied at two layers. Schema v10 and semantic validation
 accept only `1..1024` for one damage effect. The supplied standard policy then
 compares the authored maximum with its configured
 `MaximumHitsPerDamageEffect`, default `64`, before random selection, list

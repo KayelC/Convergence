@@ -23,7 +23,7 @@ A developer may use battle without fusion, navigation without dungeon traversal,
 
 Optionality describes service composition, not necessarily nullability inside a
 cross-module aggregate. A game that does not use Framework persistence creates
-no save snapshot at all. A game that adopts runtime save contract v18 supplies
+no save snapshot at all. A game that adopts runtime save contract v19 supplies
 the contract's required neutral component snapshots for modules it does not
 activate; doing so stores no gameplay state and does not instantiate or execute
 the corresponding services.

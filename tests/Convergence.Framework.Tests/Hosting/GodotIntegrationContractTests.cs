@@ -231,12 +231,21 @@ public sealed class GodotIntegrationContractTests
             new KeyValuePair<ContentId, int>(Id("credits"), 125),
             new KeyValuePair<ContentId, int>(Id("arena_tokens"), 4)
         ]);
+        var shopStock = new RuntimeShopStockSnapshot(
+        [
+            new RuntimeShopStockEntrySnapshot(
+                new RuntimeShopOfferIdentity(
+                    Id("convergence.godot_contract:sample_shop"),
+                    Id("sample_offer")),
+                3)
+        ]);
         var saveStore = new GodotSaveSnapshotStore();
         saveStore.Save(
             "slot_01",
             [actorSnapshot],
             inventorySnapshot,
             currencyLedger,
+            shopStock,
             fieldSnapshot,
             sceneRegistry.Snapshot());
 
@@ -255,6 +264,7 @@ public sealed class GodotIntegrationContractTests
         Assert.Equal(equipmentInstanceId, restoredEquipment.InstanceId);
         Assert.Equal(125, restored.CurrencyLedger.GetRequiredBalance(Id("credits")));
         Assert.Equal(4, restored.CurrencyLedger.GetRequiredBalance(Id("arena_tokens")));
+        Assert.Equal(shopStock.Entries, restored.ShopStock.Entries);
         Assert.Equal(
             fieldSnapshot.Navigation.CurrentLocationId,
             restored.Field.Navigation.CurrentLocationId);
@@ -516,6 +526,7 @@ public sealed class GodotIntegrationContractTests
         IReadOnlyList<RuntimeActorSnapshot> Actors,
         RuntimeInventorySnapshot Inventory,
         RuntimeCurrencyLedgerSnapshot CurrencyLedger,
+        RuntimeShopStockSnapshot ShopStock,
         RuntimeFieldSnapshot Field,
         IReadOnlyDictionary<RuntimeInstanceId, GodotSceneHandle> SceneHandles);
 
@@ -528,6 +539,7 @@ public sealed class GodotIntegrationContractTests
             IEnumerable<RuntimeActorSnapshot> actors,
             RuntimeInventorySnapshot inventory,
             RuntimeCurrencyLedgerSnapshot currencyLedger,
+            RuntimeShopStockSnapshot shopStock,
             RuntimeFieldSnapshot field,
             IReadOnlyDictionary<RuntimeInstanceId, GodotSceneHandle> sceneHandles)
         {
@@ -535,6 +547,7 @@ public sealed class GodotIntegrationContractTests
                 Array.AsReadOnly(actors.ToArray()),
                 inventory,
                 currencyLedger,
+                shopStock,
                 field,
                 new ReadOnlyDictionary<RuntimeInstanceId, GodotSceneHandle>(
                     new Dictionary<RuntimeInstanceId, GodotSceneHandle>(sceneHandles)));

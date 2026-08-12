@@ -28,7 +28,8 @@ public enum ResourceTransactionCode
     NegativeCurrencyBalance,
     CurrencyNotFound,
     EmptyCurrencyLedger,
-    AmbiguousCurrencyLedger
+    AmbiguousCurrencyLedger,
+    InvalidShopStock
 }
 
 public sealed record ResourceTransactionDiagnostic(
@@ -968,19 +969,24 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
 
 public sealed record RuntimeShopOfferSnapshot
 {
+    private readonly RuntimeShopOfferIdentity _identity;
     private readonly RuntimeShopPricingProfile _pricing;
+    private readonly RuntimeShopStockProfile _stock;
 
     public RuntimeShopOfferSnapshot(
+        RuntimeShopOfferIdentity Identity,
         ShopContentKind ContentKind,
         ContentId ContentId,
         RuntimeShopPricingProfile Pricing,
+        RuntimeShopStockProfile Stock,
         ContentId? EquipmentSlotId = null,
-        int? ItemStackLimit = null,
-        int? StockAvailable = null)
+        int? ItemStackLimit = null)
     {
+        _identity = Identity ?? throw new ArgumentNullException(nameof(Identity));
         this.ContentKind = ContentKind;
         this.ContentId = ContentId;
         _pricing = Pricing ?? throw new ArgumentNullException(nameof(Pricing));
+        _stock = Stock ?? throw new ArgumentNullException(nameof(Stock));
         if (EquipmentSlotId is ContentId slotId && !slotId.IsValid)
         {
             throw new ArgumentException(
@@ -990,9 +996,13 @@ public sealed record RuntimeShopOfferSnapshot
 
         this.EquipmentSlotId = EquipmentSlotId;
         this.ItemStackLimit = ItemStackLimit;
-        this.StockAvailable = StockAvailable;
     }
 
+    public RuntimeShopOfferIdentity Identity
+    {
+        get => _identity;
+        init => _identity = value ?? throw new ArgumentNullException(nameof(Identity));
+    }
     public ShopContentKind ContentKind { get; init; }
     public ContentId ContentId { get; init; }
     public RuntimeShopPricingProfile Pricing
@@ -1000,24 +1010,30 @@ public sealed record RuntimeShopOfferSnapshot
         get => _pricing;
         init => _pricing = value ?? throw new ArgumentNullException(nameof(Pricing));
     }
+    public RuntimeShopStockProfile Stock
+    {
+        get => _stock;
+        init => _stock = value ?? throw new ArgumentNullException(nameof(Stock));
+    }
     public ContentId? EquipmentSlotId { get; init; }
     public int? ItemStackLimit { get; init; }
-    public int? StockAvailable { get; init; }
 
     public void Deconstruct(
+        out RuntimeShopOfferIdentity Identity,
         out ShopContentKind ContentKind,
         out ContentId ContentId,
         out RuntimeShopPricingProfile Pricing,
+        out RuntimeShopStockProfile Stock,
         out ContentId? EquipmentSlotId,
-        out int? ItemStackLimit,
-        out int? StockAvailable)
+        out int? ItemStackLimit)
     {
+        Identity = this.Identity;
         ContentKind = this.ContentKind;
         ContentId = this.ContentId;
         Pricing = this.Pricing;
+        Stock = this.Stock;
         EquipmentSlotId = this.EquipmentSlotId;
         ItemStackLimit = this.ItemStackLimit;
-        StockAvailable = this.StockAvailable;
     }
 }
 
@@ -1030,6 +1046,8 @@ public enum RuntimeShopOfferResolutionCode
     InvalidFixedPrice,
     InvalidPricePolicyConfiguration,
     UnsupportedStockPolicy,
+    InvalidStockPolicyConfiguration,
+    InvalidOfferIdentity,
     EquipmentSlotProfileMismatch
 }
 
@@ -1037,7 +1055,8 @@ public sealed record RuntimeShopOfferResolutionDiagnostic(
     RuntimeShopOfferResolutionCode Code,
     ContentId ContentId,
     string Message,
-    ShopPricingPolicyDiagnostic? PricingDiagnostic = null);
+    ShopPricingPolicyDiagnostic? PricingDiagnostic = null,
+    ShopStockPolicyDiagnostic? StockDiagnostic = null);
 
 public sealed record RuntimeShopOfferResolutionResult
 {
@@ -1064,6 +1083,7 @@ public sealed record RuntimeShopOfferResolutionResult
 public interface IRuntimeShopOfferResolver
 {
     RuntimeShopOfferResolutionResult Resolve(
+        ContentId shopId,
         ShopOfferDefinition offer,
         IItemDefinitionRepository itemRepository,
         IEquipmentDefinitionRepository equipmentRepository);
@@ -1074,18 +1094,22 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
     private readonly IEquipmentSlotLayoutPolicy _slotLayout;
     private readonly BoundShopPricingPolicy _defaultPricing;
     private readonly ShopPricingPolicyFactoryRegistry _pricingFactories;
+    private readonly ShopStockPolicyFactoryRegistry _stockFactories;
 
     public RuntimeShopOfferResolver(
         BoundShopPricingPolicy defaultPricing,
         ShopPricingPolicyFactoryRegistry pricingFactories,
+        ShopStockPolicyFactoryRegistry stockFactories,
         IEquipmentSlotLayoutPolicy? slotLayout = null)
     {
         _defaultPricing = defaultPricing ?? throw new ArgumentNullException(nameof(defaultPricing));
         _pricingFactories = pricingFactories ?? throw new ArgumentNullException(nameof(pricingFactories));
+        _stockFactories = stockFactories ?? throw new ArgumentNullException(nameof(stockFactories));
         _slotLayout = slotLayout ?? StandardEquipmentSlotLayoutPolicy.Instance;
     }
 
     public RuntimeShopOfferResolutionResult Resolve(
+        ContentId shopId,
         ShopOfferDefinition offer,
         IItemDefinitionRepository itemRepository,
         IEquipmentDefinitionRepository equipmentRepository)
@@ -1095,8 +1119,9 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
         ArgumentNullException.ThrowIfNull(equipmentRepository);
 
         var diagnostics = new List<RuntimeShopOfferResolutionDiagnostic>();
+        RuntimeShopOfferIdentity? identity = ResolveIdentity(shopId, offer, diagnostics);
         RuntimeShopPricingProfile? pricing = ResolvePrice(offer, diagnostics);
-        int? stock = ResolveStock(offer, diagnostics);
+        RuntimeShopStockProfile? stock = ResolveStock(offer, diagnostics);
         ContentId? equipmentSlotId = null;
         int? itemStackLimit = null;
 
@@ -1143,19 +1168,39 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
             }
         }
 
-        if (diagnostics.Count > 0 || pricing is null)
+        if (diagnostics.Count > 0 || identity is null || pricing is null || stock is null)
         {
             return new RuntimeShopOfferResolutionResult(null, diagnostics);
         }
 
         return new RuntimeShopOfferResolutionResult(
             new RuntimeShopOfferSnapshot(
+                identity,
                 offer.ContentKind,
                 offer.ContentId,
                 pricing,
+                stock,
                 equipmentSlotId,
-                itemStackLimit,
-                stock));
+                itemStackLimit));
+    }
+
+    private static RuntimeShopOfferIdentity? ResolveIdentity(
+        ContentId shopId,
+        ShopOfferDefinition offer,
+        ICollection<RuntimeShopOfferResolutionDiagnostic> diagnostics)
+    {
+        try
+        {
+            return new RuntimeShopOfferIdentity(shopId, offer.Id);
+        }
+        catch (ArgumentException exception)
+        {
+            diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                RuntimeShopOfferResolutionCode.InvalidOfferIdentity,
+                offer.ContentId,
+                $"Shop offer identity '{shopId}/{offer.Id}' is invalid: {exception.Message}"));
+            return null;
+        }
     }
 
     private RuntimeShopPricingProfile? ResolvePrice(
@@ -1261,19 +1306,66 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
         return (int)value;
     }
 
-    private static int? ResolveStock(
+    private RuntimeShopStockProfile? ResolveStock(
         ShopOfferDefinition offer,
         ICollection<RuntimeShopOfferResolutionDiagnostic> diagnostics)
     {
         return offer.Stock switch
         {
-            UnlimitedShopStockDefinition => null,
-            LimitedShopStockDefinition limited => limited.Quantity,
+            UnlimitedShopStockDefinition => RuntimeShopStockProfile.Unlimited,
+            LimitedShopStockDefinition limited => BindStock(
+                offer,
+                limited.Quantity,
+                StandardShopStockPolicyIds.Standard,
+                new Dictionary<string, object?>(StringComparer.Ordinal),
+                diagnostics),
+            PolicyShopStockDefinition policy => BindStock(
+                offer,
+                policy.Quantity,
+                policy.StockPolicyId,
+                policy.Parameters,
+                diagnostics),
             _ => AddUnsupportedStock(offer, diagnostics)
         };
     }
 
-    private static int? AddUnsupportedStock(
+    private RuntimeShopStockProfile? BindStock(
+        ShopOfferDefinition offer,
+        int initialQuantity,
+        ContentId policyId,
+        IReadOnlyDictionary<string, object?> parameters,
+        ICollection<RuntimeShopOfferResolutionDiagnostic> diagnostics)
+    {
+        if (initialQuantity <= 0)
+        {
+            diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                RuntimeShopOfferResolutionCode.InvalidStockPolicyConfiguration,
+                offer.ContentId,
+                $"Shop offer '{offer.Id}' requires a positive initial stock quantity."));
+            return null;
+        }
+
+        ShopStockPolicyBindingResult binding = _stockFactories.Bind(policyId, parameters);
+        if (!binding.IsSuccess || binding.Policy is null)
+        {
+            foreach (ShopStockPolicyDiagnostic diagnostic in binding.Diagnostics)
+            {
+                diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                    diagnostic.Code == ShopStockPolicyDiagnosticCode.UnsupportedPolicy
+                        ? RuntimeShopOfferResolutionCode.UnsupportedStockPolicy
+                        : RuntimeShopOfferResolutionCode.InvalidStockPolicyConfiguration,
+                    offer.ContentId,
+                    $"Shop offer '{offer.Id}' stock policy rejected: {diagnostic.Message}",
+                    StockDiagnostic: diagnostic));
+            }
+
+            return null;
+        }
+
+        return new RuntimeShopStockProfile(initialQuantity, binding.Policy);
+    }
+
+    private static RuntimeShopStockProfile? AddUnsupportedStock(
         ShopOfferDefinition offer,
         ICollection<RuntimeShopOfferResolutionDiagnostic> diagnostics)
     {
@@ -1293,6 +1385,8 @@ public sealed record ShopTransactionResult
         RuntimeInventorySnapshot afterInventory,
         RuntimeCurrencyLedgerSnapshot beforeCurrencyLedger,
         RuntimeCurrencyLedgerSnapshot afterCurrencyLedger,
+        RuntimeShopStockSnapshot beforeStock,
+        RuntimeShopStockSnapshot afterStock,
         ContentId currencyId,
         int price,
         IEnumerable<ResourceTransactionDiagnostic>? diagnostics = null)
@@ -1304,6 +1398,8 @@ public sealed record ShopTransactionResult
             throw new ArgumentNullException(nameof(beforeCurrencyLedger));
         AfterCurrencyLedger = afterCurrencyLedger ??
             throw new ArgumentNullException(nameof(afterCurrencyLedger));
+        BeforeStock = beforeStock ?? throw new ArgumentNullException(nameof(beforeStock));
+        AfterStock = afterStock ?? throw new ArgumentNullException(nameof(afterStock));
         CurrencyId = currencyId;
         Price = price;
         Diagnostics = RuntimeSnapshotCollections.List(diagnostics);
@@ -1315,6 +1411,8 @@ public sealed record ShopTransactionResult
     public RuntimeInventorySnapshot AfterInventory { get; }
     public RuntimeCurrencyLedgerSnapshot BeforeCurrencyLedger { get; }
     public RuntimeCurrencyLedgerSnapshot AfterCurrencyLedger { get; }
+    public RuntimeShopStockSnapshot BeforeStock { get; }
+    public RuntimeShopStockSnapshot AfterStock { get; }
     public ContentId CurrencyId { get; }
     public int Price { get; }
     public IReadOnlyList<ResourceTransactionDiagnostic> Diagnostics { get; }
@@ -1327,6 +1425,7 @@ public interface IShopTransactionService
     ShopTransactionResult Buy(
         RuntimeInventorySnapshot inventory,
         RuntimeCurrencyLedgerSnapshot currencyLedger,
+        RuntimeShopStockSnapshot stock,
         ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         int buyerLuck,
@@ -1334,6 +1433,7 @@ public interface IShopTransactionService
     ShopTransactionResult Sell(
         RuntimeInventorySnapshot inventory,
         RuntimeCurrencyLedgerSnapshot currencyLedger,
+        RuntimeShopStockSnapshot stock,
         ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         int sellerLuck,
@@ -1375,6 +1475,7 @@ public sealed class ShopTransactionService : IShopTransactionService
     public ShopTransactionResult Buy(
         RuntimeInventorySnapshot inventory,
         RuntimeCurrencyLedgerSnapshot currencyLedger,
+        RuntimeShopStockSnapshot stock,
         ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         int buyerLuck,
@@ -1382,23 +1483,29 @@ public sealed class ShopTransactionService : IShopTransactionService
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(currencyLedger);
+        ArgumentNullException.ThrowIfNull(stock);
         ArgumentNullException.ThrowIfNull(offer);
         ShopPriceCalculationResult pricing =
             offer.Pricing.Calculate(ShopPriceOperation.Purchase, buyerLuck);
         if (!pricing.IsSuccess)
         {
-            return PricingRejected(inventory, currencyLedger, currencyId, offer, pricing);
+            return PricingRejected(inventory, currencyLedger, stock, currencyId, offer, pricing);
         }
 
-        if (offer.StockAvailable is <= 0)
+        StockTransitionCandidate stockResult = TransitionStock(
+            stock,
+            offer,
+            ShopStockOperation.Purchase);
+        if (!stockResult.Applied)
         {
             return Rejected(
-                ResourceTransactionCode.ShopStockUnavailable,
+                stockResult.Code,
                 inventory,
                 currencyLedger,
+                stock,
                 currencyId,
                 pricing.Price,
-                "Shop stock is unavailable.",
+                stockResult.Message,
                 offer.ContentId,
                 offer.EquipmentSlotId);
         }
@@ -1410,14 +1517,14 @@ public sealed class ShopTransactionService : IShopTransactionService
             purchasedEquipmentInstanceId);
         if (!inventoryResult.Applied)
         {
-            return FromInventory(inventoryResult, currencyLedger, currencyId, price);
+            return FromInventory(inventoryResult, currencyLedger, stock, currencyId, price);
         }
 
         CurrencyTransactionResult currencyResult =
             _economy.Debit(currencyLedger, currencyId, price);
         if (!currencyResult.Applied)
         {
-            return FromCurrency(currencyResult, inventory, price);
+            return FromCurrency(currencyResult, inventory, stock, price);
         }
 
         return new ShopTransactionResult(
@@ -1426,6 +1533,8 @@ public sealed class ShopTransactionService : IShopTransactionService
             inventoryResult.After,
             currencyLedger,
             currencyResult.After,
+            stock,
+            stockResult.After,
             currencyId,
             price);
     }
@@ -1433,6 +1542,7 @@ public sealed class ShopTransactionService : IShopTransactionService
     public ShopTransactionResult Sell(
         RuntimeInventorySnapshot inventory,
         RuntimeCurrencyLedgerSnapshot currencyLedger,
+        RuntimeShopStockSnapshot stock,
         ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         int sellerLuck,
@@ -1441,13 +1551,32 @@ public sealed class ShopTransactionService : IShopTransactionService
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(currencyLedger);
+        ArgumentNullException.ThrowIfNull(stock);
         ArgumentNullException.ThrowIfNull(actorEquipment);
         ArgumentNullException.ThrowIfNull(offer);
         ShopPriceCalculationResult pricing =
             offer.Pricing.Calculate(ShopPriceOperation.Resale, sellerLuck);
         if (!pricing.IsSuccess)
         {
-            return PricingRejected(inventory, currencyLedger, currencyId, offer, pricing);
+            return PricingRejected(inventory, currencyLedger, stock, currencyId, offer, pricing);
+        }
+
+        StockTransitionCandidate stockResult = TransitionStock(
+            stock,
+            offer,
+            ShopStockOperation.Resale);
+        if (!stockResult.Applied)
+        {
+            return Rejected(
+                stockResult.Code,
+                inventory,
+                currencyLedger,
+                stock,
+                currencyId,
+                pricing.Price,
+                stockResult.Message,
+                offer.ContentId,
+                offer.EquipmentSlotId);
         }
 
         int price = pricing.Price;
@@ -1466,14 +1595,14 @@ public sealed class ShopTransactionService : IShopTransactionService
 
         if (!inventoryResult.Applied)
         {
-            return FromInventory(inventoryResult, currencyLedger, currencyId, price);
+            return FromInventory(inventoryResult, currencyLedger, stock, currencyId, price);
         }
 
         CurrencyTransactionResult currencyResult =
             _economy.Credit(currencyLedger, currencyId, price);
         if (!currencyResult.Applied)
         {
-            return FromCurrency(currencyResult, inventory, price);
+            return FromCurrency(currencyResult, inventory, stock, price);
         }
 
         return new ShopTransactionResult(
@@ -1482,6 +1611,8 @@ public sealed class ShopTransactionService : IShopTransactionService
             inventoryResult.After,
             currencyLedger,
             currencyResult.After,
+            stock,
+            stockResult.After,
             currencyId,
             price);
     }
@@ -1560,17 +1691,90 @@ public sealed class ShopTransactionService : IShopTransactionService
             actorEquipment);
     }
 
+    private static StockTransitionCandidate TransitionStock(
+        RuntimeShopStockSnapshot stock,
+        RuntimeShopOfferSnapshot offer,
+        ShopStockOperation operation)
+    {
+        if (!offer.Stock.IsTracked)
+        {
+            if (stock.Entries.Any(entry => entry.OfferIdentity == offer.Identity))
+            {
+                return StockTransitionCandidate.Rejected(
+                    stock,
+                    ResourceTransactionCode.InvalidShopStock,
+                    $"Unlimited shop offer '{offer.Identity.ShopId}/{offer.Identity.OfferId}' must not have durable stock state.");
+            }
+
+            return StockTransitionCandidate.Success(stock);
+        }
+
+        RuntimeShopStockEntrySnapshot[] matches = stock.Entries
+            .Where(entry => entry.OfferIdentity == offer.Identity)
+            .Take(2)
+            .ToArray();
+        if (matches.Length != 1)
+        {
+            return StockTransitionCandidate.Rejected(
+                stock,
+                ResourceTransactionCode.InvalidShopStock,
+                $"Tracked shop offer '{offer.Identity.ShopId}/{offer.Identity.OfferId}' must have exactly one stock entry.");
+        }
+
+        int currentQuantity = matches[0].RemainingQuantity;
+        if (currentQuantity < 0)
+        {
+            return StockTransitionCandidate.Rejected(
+                stock,
+                ResourceTransactionCode.InvalidShopStock,
+                $"Tracked shop offer '{offer.Identity.ShopId}/{offer.Identity.OfferId}' has a negative stock quantity.");
+        }
+
+        ShopStockTransitionResult transition = offer.Stock.Apply(operation, currentQuantity);
+        if (!transition.IsSuccess)
+        {
+            return StockTransitionCandidate.Rejected(
+                stock,
+                transition.Code == ShopStockTransitionCode.Unavailable
+                    ? ResourceTransactionCode.ShopStockUnavailable
+                    : ResourceTransactionCode.InvalidShopStock,
+                transition.Message ?? "Shop stock policy rejected the transaction.");
+        }
+
+        return StockTransitionCandidate.Success(
+            stock.WithRemainingQuantity(offer.Identity, transition.RemainingQuantity));
+    }
+
+    private sealed record StockTransitionCandidate(
+        bool Applied,
+        ResourceTransactionCode Code,
+        RuntimeShopStockSnapshot After,
+        string Message)
+    {
+        public static StockTransitionCandidate Success(RuntimeShopStockSnapshot after) =>
+            new(true, ResourceTransactionCode.Applied, after, string.Empty);
+
+        public static StockTransitionCandidate Rejected(
+            RuntimeShopStockSnapshot before,
+            ResourceTransactionCode code,
+            string message) =>
+            new(false, code, before, message);
+    }
+
     private static ShopTransactionResult FromInventory(
         InventoryTransitionResult result,
         RuntimeCurrencyLedgerSnapshot currencyLedger,
+        RuntimeShopStockSnapshot stock,
         ContentId currencyId,
         int price) =>
         new(
             result.Code,
             result.Before,
-            result.After,
+            result.Before,
             currencyLedger,
             currencyLedger,
+            stock,
+            stock,
             currencyId,
             price,
             result.Diagnostics);
@@ -1578,13 +1782,16 @@ public sealed class ShopTransactionService : IShopTransactionService
     private static ShopTransactionResult FromCurrency(
         CurrencyTransactionResult result,
         RuntimeInventorySnapshot inventory,
+        RuntimeShopStockSnapshot stock,
         int price) =>
         new(
             result.Code,
             inventory,
             inventory,
             result.Before,
-            result.After,
+            result.Before,
+            stock,
+            stock,
             result.CurrencyId,
             price,
             result.Diagnostics);
@@ -1611,6 +1818,7 @@ public sealed class ShopTransactionService : IShopTransactionService
         ResourceTransactionCode code,
         RuntimeInventorySnapshot inventory,
         RuntimeCurrencyLedgerSnapshot currencyLedger,
+        RuntimeShopStockSnapshot stock,
         ContentId currencyId,
         int price,
         string message,
@@ -1622,6 +1830,8 @@ public sealed class ShopTransactionService : IShopTransactionService
             inventory,
             currencyLedger,
             currencyLedger,
+            stock,
+            stock,
             currencyId,
             price,
             [new ResourceTransactionDiagnostic(
@@ -1634,6 +1844,7 @@ public sealed class ShopTransactionService : IShopTransactionService
     private static ShopTransactionResult PricingRejected(
         RuntimeInventorySnapshot inventory,
         RuntimeCurrencyLedgerSnapshot currencyLedger,
+        RuntimeShopStockSnapshot stock,
         ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         ShopPriceCalculationResult pricing) =>
@@ -1641,6 +1852,7 @@ public sealed class ShopTransactionService : IShopTransactionService
             ResourceTransactionCode.InvalidShopPricing,
             inventory,
             currencyLedger,
+            stock,
             currencyId,
             price: 0,
             pricing.Message ?? "Shop pricing policy rejected the transaction.",

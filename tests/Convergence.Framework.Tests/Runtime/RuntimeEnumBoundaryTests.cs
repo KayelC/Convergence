@@ -269,6 +269,7 @@ public sealed class RuntimeEnumBoundaryTests
             source.PartyRoster,
             inventory ?? source.Inventory,
             source.CurrencyLedger,
+            source.ShopStock,
             source.Field,
             source.Compendium,
             knowledge ?? source.Knowledge,

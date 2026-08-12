@@ -130,14 +130,14 @@ public sealed class EquipmentSlotLayoutTests
     private static SkillSystemValidationRequest Request(EquipmentDefinition definition)
     {
         var manifest = new ContentPackManifest(
-            9,
+            10,
             "test.pack",
             SemanticVersion.Parse("1.0.0"),
             "Test Pack",
             null,
             null,
             [new ContentPackDocumentReference("equipment", "equipment.json")]);
-        var document = new DeserializedContentDocument<EquipmentDefinition>(9, [definition]);
+        var document = new DeserializedContentDocument<EquipmentDefinition>(10, [definition]);
         return new SkillSystemValidationRequest(
             manifest,
             "manifest.json",

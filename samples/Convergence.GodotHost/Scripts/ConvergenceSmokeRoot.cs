@@ -86,6 +86,16 @@ public partial class ConvergenceSmokeRoot : Node
         IRosterCapacityPolicy rosterCapacity = rulesets.BindRosterCapacityPolicy(
             catalog,
             Qualified("standard_roster_capacity")).RequireService();
+        ResourceManagementRulesetServices resourceManagement = rulesets
+            .BindResourceManagementServices(catalog, Qualified("standard_economy"))
+            .RequireService();
+        RuntimeShopOfferSnapshot[] shopOffers = catalog.Shops.Values
+            .OrderBy(shop => shop.Id.Value, StringComparer.Ordinal)
+            .SelectMany(shop => shop.Offers.Select(offer => resourceManagement.ShopOffers
+                .Resolve(shop.Id, offer, catalog, catalog)
+                .RequireOffer()))
+            .ToArray();
+        RuntimeShopStockSnapshot shopStock = RuntimeShopStockSnapshot.CreateInitial(shopOffers);
         var moveListCapacity = new SharedRuntimeMoveListCapacityPolicy();
         var composition = new RuntimeActorCombatProfileCompositionService(
             statServices.StatResolutionPolicy,
@@ -294,7 +304,8 @@ public partial class ConvergenceSmokeRoot : Node
             partyRoster,
             new RuntimeInventorySnapshot(),
             RuntimeCurrencyLedgerSnapshot.Single(CreditsCurrency, 250),
-            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.9.0")),
+            shopStock,
+            new ContentPackIdentity(PackId, SemanticVersion.Parse("0.10.0")),
             sceneInstances);
         ChargePolicyRegistry chargePolicies = ChargePolicyRegistry.CreateStandard();
         var restoreService = new RuntimeSessionRestoreService(
@@ -333,6 +344,7 @@ public partial class ConvergenceSmokeRoot : Node
             restoredHostedEntity.State.Stats[StandardProgressionIds.Strength] ||
             !EquivalentModifierState(savedModifierState, restoredModifierState) ||
             session.CurrencyLedger.GetRequiredBalance(CreditsCurrency) != 250 ||
+            !session.ShopStock.Entries.SequenceEqual(shopStock.Entries) ||
             restored.SceneInstances.Count != 3)
         {
             throw new InvalidOperationException("The Godot-owned save did not preserve runtime and scene state.");
@@ -340,7 +352,8 @@ public partial class ConvergenceSmokeRoot : Node
 
         GD.Print(
             $"GODOT_SAVE_OK actors={session.Snapshot.Actors.Count} " +
-            $"contract={session.Snapshot.ContractVersion} credits=250 aggregate_restore=true");
+            $"contract={session.Snapshot.ContractVersion} credits=250 " +
+            $"shop_stock={session.ShopStock.Entries.Count} aggregate_restore=true");
 
         JsonObject invalidDocument = JsonNode.Parse(saveJson)?.AsObject() ??
             throw new InvalidDataException("Godot save JSON could not be parsed for rejection proof.");

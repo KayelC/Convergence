@@ -75,7 +75,7 @@ internal static class TrainingAnnexHostSupport
 {
     public const string PackId = "convergence.training_annex_slice";
     public static readonly ContentPackIdentity PackIdentity =
-        new(PackId, SemanticVersion.Parse("0.9.0"));
+        new(PackId, SemanticVersion.Parse("0.10.0"));
 
     public static readonly ContentId Battle = ContentId.Parse("battle");
     public static readonly ContentId AshlingDrillClearedFlag = ContentId.Parse("ashling_drill_cleared");
@@ -469,6 +469,7 @@ internal static class TrainingAnnexHostSupport
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
         RuntimeCurrencyLedgerSnapshot? currencyLedger = null,
+        RuntimeShopStockSnapshot? shopStock = null,
         RuntimeSessionProgressSnapshot? session = null,
         IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
         CompendiumStateSnapshot? compendium = null) =>
@@ -479,6 +480,7 @@ internal static class TrainingAnnexHostSupport
             knowledge,
             inventory,
             currencyLedger,
+            shopStock,
             session,
             hostContext,
             compendium);
@@ -490,6 +492,7 @@ internal static class TrainingAnnexHostSupport
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
         RuntimeCurrencyLedgerSnapshot? currencyLedger = null,
+        RuntimeShopStockSnapshot? shopStock = null,
         RuntimeSessionProgressSnapshot? session = null,
         IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
         CompendiumStateSnapshot? compendium = null)
@@ -509,6 +512,7 @@ internal static class TrainingAnnexHostSupport
             knowledge,
             inventory,
             currencyLedger,
+            shopStock,
             session,
             hostContext,
             compendium);
@@ -520,6 +524,7 @@ internal static class TrainingAnnexHostSupport
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
         RuntimeCurrencyLedgerSnapshot? currencyLedger = null,
+        RuntimeShopStockSnapshot? shopStock = null,
         RuntimeSessionProgressSnapshot? session = null,
         IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
         CompendiumStateSnapshot? compendium = null)
@@ -537,6 +542,7 @@ internal static class TrainingAnnexHostSupport
             knowledge,
             inventory,
             currencyLedger,
+            shopStock,
             session,
             hostContext,
             compendium);
@@ -550,6 +556,7 @@ internal static class TrainingAnnexHostSupport
         RuntimeKnowledgeSnapshot? knowledge = null,
         RuntimeInventorySnapshot? inventory = null,
         RuntimeCurrencyLedgerSnapshot? currencyLedger = null,
+        RuntimeShopStockSnapshot? shopStock = null,
         RuntimeSessionProgressSnapshot? session = null,
         IEnumerable<KeyValuePair<ContentId, string>>? hostContext = null,
         CompendiumStateSnapshot? compendium = null)
@@ -566,7 +573,7 @@ internal static class TrainingAnnexHostSupport
         }
 
         return new RuntimeSaveGameSnapshot(
-            SemanticVersion.Parse("0.9.0"),
+            SemanticVersion.Parse("0.10.0"),
             [PackIdentity],
             actors,
             partyRoster ?? new RuntimePartyRosterSnapshot(
@@ -574,6 +581,7 @@ internal static class TrainingAnnexHostSupport
                 activeParty: [playerReference]),
             inventory ?? new RuntimeInventorySnapshot(),
             currencyLedger ?? CreateCreditsLedger(0),
+            shopStock ?? new RuntimeShopStockSnapshot(),
             field,
             compendium ?? new CompendiumStateSnapshot(),
             knowledge ?? new RuntimeKnowledgeSnapshot(),
@@ -599,6 +607,23 @@ internal static class TrainingAnnexHostSupport
     {
         ArgumentNullException.ThrowIfNull(currencyLedger);
         return currencyLedger.GetRequiredBalance(CreditsCurrency);
+    }
+
+    public static RuntimeShopStockSnapshot CreateInitialShopStock(
+        GameDataCatalog catalog,
+        IRuntimeShopOfferResolver resolver)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(resolver);
+
+        RuntimeShopOfferSnapshot[] offers = catalog.Shops.Values
+            .OrderBy(shop => shop.Id.Value, StringComparer.Ordinal)
+            .SelectMany(shop => shop.Offers.Select(offer =>
+                resolver.Resolve(shop.Id, offer, catalog, catalog)))
+            .Where(result => result.IsSuccess && result.Offer is not null)
+            .Select(result => result.Offer!)
+            .ToArray();
+        return RuntimeShopStockSnapshot.CreateInitial(offers);
     }
 
     public static RuntimeProgressionSnapshot InitialProgression(EntityDefinition entity, int level) =>

@@ -1,8 +1,8 @@
 {
-  "$schema": "urn:convergence:schema:content:v9:manifest",
-  "schemaVersion": 9,
+  "$schema": "urn:convergence:schema:content:v10:manifest",
+  "schemaVersion": 10,
   "id": "convergence.training_annex_slice",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "displayName": "Training Annex Slice",
   "documents": [
     {

@@ -114,13 +114,20 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
     public IReadOnlyCollection<ContentId> TurnEconomyPolicyIds => SnapshotIds(_turnEconomy);
 
     public static RuntimeRulesetPolicyFactoryRegistry CreateStandard() =>
-        CreateStandard(shopPricing: null);
+        CreateStandard(shopPricing: null, shopStock: null);
 
     public static RuntimeRulesetPolicyFactoryRegistry CreateStandard(
-        IEnumerable<IShopPricingPolicyFactory>? shopPricing)
+        IEnumerable<IShopPricingPolicyFactory>? shopPricing) =>
+        CreateStandard(shopPricing, shopStock: null);
+
+    public static RuntimeRulesetPolicyFactoryRegistry CreateStandard(
+        IEnumerable<IShopPricingPolicyFactory>? shopPricing,
+        IEnumerable<IShopStockPolicyFactory>? shopStock)
     {
         ShopPricingPolicyFactoryRegistry pricingFactories =
             ShopPricingPolicyFactoryRegistry.CreateStandard(shopPricing);
+        ShopStockPolicyFactoryRegistry stockFactories =
+            ShopStockPolicyFactoryRegistry.CreateStandard(shopStock);
         return new RuntimeRulesetPolicyFactoryRegistry(
             combat: [new StandardCombatRulesetPolicyFactory()],
             reward: [new StandardRewardRulesetPolicyFactory()],
@@ -133,7 +140,7 @@ public sealed class RuntimeRulesetPolicyFactoryRegistry
             ],
             growth: [new StandardGrowthRulesetPolicyFactory()],
             rosterCapacity: [new StandardRosterCapacityRulesetPolicyFactory()],
-            economy: [new StandardEconomyRulesetPolicyFactory(pricingFactories)],
+            economy: [new StandardEconomyRulesetPolicyFactory(pricingFactories, stockFactories)],
             turnEconomy:
             [
                 new StandardActionRulesetPolicyFactory(),
@@ -957,10 +964,13 @@ internal sealed class StandardRosterCapacityRulesetPolicyFactory : IRuntimeRoste
 }
 
 internal sealed class StandardEconomyRulesetPolicyFactory(
-    ShopPricingPolicyFactoryRegistry pricingFactories) : IRuntimeEconomyRulesetPolicyFactory
+    ShopPricingPolicyFactoryRegistry pricingFactories,
+    ShopStockPolicyFactoryRegistry stockFactories) : IRuntimeEconomyRulesetPolicyFactory
 {
     private readonly ShopPricingPolicyFactoryRegistry _pricingFactories =
         pricingFactories ?? throw new ArgumentNullException(nameof(pricingFactories));
+    private readonly ShopStockPolicyFactoryRegistry _stockFactories =
+        stockFactories ?? throw new ArgumentNullException(nameof(stockFactories));
 
     public ContentId PolicyId => StandardRulesetPolicyIds.StandardEconomy;
 
@@ -1055,7 +1065,8 @@ internal sealed class StandardEconomyRulesetPolicyFactory(
         var economy = new EconomyTransactionService();
         var shopOffers = new RuntimeShopOfferResolver(
             pricingBinding.Policy,
-            _pricingFactories);
+            _pricingFactories,
+            _stockFactories);
         return new RulesetBindingResult<ResourceManagementRulesetServices>(new ResourceManagementRulesetServices(
             inventory,
             equipment,

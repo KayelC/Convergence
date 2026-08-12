@@ -171,6 +171,7 @@
       "frameworkTests": [
         "ResourceManagementServiceTests",
         "ShopPricingPolicyTests",
+        "ShopStockPolicyTests",
         "EquipmentInstanceOwnershipTests",
         "EquipmentSlotLayoutTests",
         "BattleActionExecutorTests",
@@ -184,7 +185,6 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Limited shop stock is checked but not persisted or decremented, and authored stock policies are not yet bound by the standard economy ruleset.",
         "Recovery is HP/SP-specific and has not yet been generalized through the approved recovery policy."
       ]
     },

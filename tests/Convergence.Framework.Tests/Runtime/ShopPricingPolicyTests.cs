@@ -9,6 +9,7 @@ public sealed class ShopPricingPolicyTests
 {
     private static readonly ContentId Credits = Id("credits");
     private static readonly ContentId Medicine = Id("test.pack:medicine");
+    private static readonly ContentId TestShop = Id("test.pack:test_shop");
 
     [Fact]
     public void StandardPolicy_PreservesPurchaseAndTruncatesConfiguredResaleTowardZero()
@@ -148,14 +149,19 @@ public sealed class ShopPricingPolicyTests
         BoundShopPricingPolicy luckDefault = factories
             .Bind(StandardShopPricingPolicyIds.LuckAdjusted, EmptyParameters())
             .RequirePolicy();
-        var resolver = new RuntimeShopOfferResolver(luckDefault, factories);
+        var resolver = new RuntimeShopOfferResolver(
+            luckDefault,
+            factories,
+            ShopStockPolicyFactoryRegistry.CreateStandard());
         GameDataCatalog catalog = ItemCatalog();
         var fixedOffer = new ShopOfferDefinition(
+            Id("fixed_offer"),
             ShopContentKind.Item,
             Medicine,
             new FixedShopPriceDefinition(100),
             new UnlimitedShopStockDefinition());
         var explicitStandardOffer = new ShopOfferDefinition(
+            Id("explicit_standard_offer"),
             ShopContentKind.Item,
             Medicine,
             new PolicyShopPriceDefinition(
@@ -163,8 +169,8 @@ public sealed class ShopPricingPolicyTests
                 Parameters(("purchasePrice", 100), ("resalePercentage", 0.25m))),
             new UnlimitedShopStockDefinition());
 
-        RuntimeShopOfferSnapshot fixedRuntime = resolver.Resolve(fixedOffer, catalog, catalog).RequireOffer();
-        RuntimeShopOfferSnapshot explicitRuntime = resolver.Resolve(explicitStandardOffer, catalog, catalog).RequireOffer();
+        RuntimeShopOfferSnapshot fixedRuntime = resolver.Resolve(TestShop, fixedOffer, catalog, catalog).RequireOffer();
+        RuntimeShopOfferSnapshot explicitRuntime = resolver.Resolve(TestShop, explicitStandardOffer, catalog, catalog).RequireOffer();
         var shop = new ShopTransactionService();
 
         Assert.Equal(StandardShopPricingPolicyIds.LuckAdjusted, fixedRuntime.Pricing.Policy.PolicyId);
@@ -182,9 +188,13 @@ public sealed class ShopPricingPolicyTests
         BoundShopPricingPolicy defaultPolicy = factories
             .Bind(StandardShopPricingPolicyIds.Standard, EmptyParameters())
             .RequirePolicy();
-        var resolver = new RuntimeShopOfferResolver(defaultPolicy, factories);
+        var resolver = new RuntimeShopOfferResolver(
+            defaultPolicy,
+            factories,
+            ShopStockPolicyFactoryRegistry.CreateStandard());
         GameDataCatalog catalog = ItemCatalog();
         var definition = new ShopOfferDefinition(
+            Id("unsupported_offer"),
             ShopContentKind.Item,
             Medicine,
             new PolicyShopPriceDefinition(
@@ -192,7 +202,7 @@ public sealed class ShopPricingPolicyTests
                 Parameters(("purchasePrice", 100))),
             new UnlimitedShopStockDefinition());
 
-        RuntimeShopOfferResolutionResult result = resolver.Resolve(definition, catalog, catalog);
+        RuntimeShopOfferResolutionResult result = resolver.Resolve(TestShop, definition, catalog, catalog);
 
         Assert.False(result.IsSuccess);
         Assert.Null(result.Offer);
@@ -219,17 +229,25 @@ public sealed class ShopPricingPolicyTests
         BoundShopPricingPolicy defaultPolicy = factories
             .Bind(StandardShopPricingPolicyIds.Standard, EmptyParameters())
             .RequirePolicy();
-        var resolver = new RuntimeShopOfferResolver(defaultPolicy, factories);
+        var resolver = new RuntimeShopOfferResolver(
+            defaultPolicy,
+            factories,
+            ShopStockPolicyFactoryRegistry.CreateStandard());
         IEnumerable<KeyValuePair<string, object?>> parameters = purchasePrice is null
             ? []
             : Parameters(("purchasePrice", purchasePrice));
         var definition = new ShopOfferDefinition(
+            Id("invalid_price_offer"),
             ShopContentKind.Item,
             Medicine,
             new PolicyShopPriceDefinition(StandardShopPricingPolicyIds.Standard, parameters),
             new UnlimitedShopStockDefinition());
 
-        RuntimeShopOfferResolutionResult result = resolver.Resolve(definition, ItemCatalog(), ItemCatalog());
+        RuntimeShopOfferResolutionResult result = resolver.Resolve(
+            TestShop,
+            definition,
+            ItemCatalog(),
+            ItemCatalog());
 
         Assert.False(result.IsSuccess);
         Assert.Null(result.Offer);
@@ -250,6 +268,7 @@ public sealed class ShopPricingPolicyTests
         ShopTransactionResult throwing = shop.Buy(
             inventory,
             ledger,
+            new RuntimeShopStockSnapshot(),
             Credits,
             throwingOffer,
             buyerLuck: 0,
@@ -257,6 +276,7 @@ public sealed class ShopPricingPolicyTests
         ShopTransactionResult returnedNull = shop.Buy(
             inventory,
             ledger,
+            new RuntimeShopStockSnapshot(),
             Credits,
             nullOffer,
             buyerLuck: 0,
@@ -275,6 +295,7 @@ public sealed class ShopPricingPolicyTests
             new ShopTransactionService().Buy(
                 new RuntimeInventorySnapshot(),
                 RuntimeCurrencyLedgerSnapshot.Single(Credits, 100),
+                new RuntimeShopStockSnapshot(),
                 Credits,
                 offer,
                 buyerLuck: 0,
@@ -324,7 +345,9 @@ public sealed class ShopPricingPolicyTests
         GameDataCatalog itemCatalog = ItemCatalog();
         RuntimeShopOfferSnapshot offer = services.ShopOffers
             .Resolve(
+                TestShop,
                 new ShopOfferDefinition(
+                    Id("configured_offer"),
                     ShopContentKind.Item,
                     Medicine,
                     new FixedShopPriceDefinition(100),
@@ -370,7 +393,9 @@ public sealed class ShopPricingPolicyTests
         GameDataCatalog itemCatalog = ItemCatalog();
         RuntimeShopOfferSnapshot offer = services.ShopOffers
             .Resolve(
+                TestShop,
                 new ShopOfferDefinition(
+                    Id("host_priced_offer"),
                     ShopContentKind.Item,
                     Medicine,
                     new FixedShopPriceDefinition(100),
@@ -446,11 +471,13 @@ public sealed class ShopPricingPolicyTests
 
     private static RuntimeShopOfferSnapshot Offer(IShopPricingPolicy policy) =>
         new(
+            new RuntimeShopOfferIdentity(TestShop, Id("medicine_offer")),
             ShopContentKind.Item,
             Medicine,
             new RuntimeShopPricingProfile(
                 10,
-                new BoundShopPricingPolicy(Id("host_pricing"), policy)));
+                new BoundShopPricingPolicy(Id("host_pricing"), policy)),
+            RuntimeShopStockProfile.Unlimited);
 
     private static GameDataCatalog ItemCatalog() =>
         new(

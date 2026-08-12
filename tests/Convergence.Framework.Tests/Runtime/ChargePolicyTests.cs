@@ -222,7 +222,7 @@ public sealed class ChargePolicyTests
         const string json =
             """
             {
-              "schemaVersion": 9,
+              "schemaVersion": 10,
               "skills": [{
                 "id": "unified_focus",
                 "displayName": "Unified Focus",

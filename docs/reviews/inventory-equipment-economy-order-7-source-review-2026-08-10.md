@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R6 complete; O7-R7 design recorded and implementation pending; O7-R8 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R7 complete; O7-R8 through O7-R11 pending
 
 ## Purpose
 
@@ -184,7 +184,7 @@ gate are complete.
 | O7-D2 | Equipment slot IDs are authored `ContentId` values. `IEquipmentSlotLayoutPolicy` owns valid layouts, and `StandardEquipmentSlotLayoutPolicy` supplies Weapon, Armor, Boots, and Accessory behavior. | Policy family | Approved; implemented by O7-R3 |
 | O7-D3 | Equipped granted skills are available only while the granting instance is equipped. They are not learned and consume no move-list slot. | Fixed runtime rule | Approved; implemented by O7-R4 |
 | O7-D4 | Equipment Defense and Evasion are numeric contributions to the existing `ProductionCombatRuleset` inputs. Equipment does not own a parallel damage or hit formula. | Direct integration correction | Approved; implemented by O7-R4 |
-| O7-D5 | Runtime shop stock is stateful. Buying decrements limited stock. Standard selling does not replenish stock; a supplied policy may choose otherwise. | Policy family plus runtime state | Approved |
+| O7-D5 | Runtime shop stock is stateful. Buying decrements limited stock. Standard selling does not replenish stock; a supplied policy may choose otherwise. | Policy family plus runtime state | Approved; implemented by O7-R7 |
 | O7-D6 | The standard pricing policy uses authored purchase price and configurable resale percentage. Luck-adjusted pricing remains available as an optional supplied policy, not hidden standard behavior. | Policy family | Approved; implemented by O7-R6 |
 | O7-D7 | Recovery is generic and resource-ID driven. Supply exactly one `StandardHospitalRecoveryPolicy` for full configured HP/SP recovery, legal ailment cures, and configured temporary-state cleanup. | Policy family, narrowly scoped | Approved |
 | O7-D8 | Replace the unnamed wallet with a currency ledger keyed by currency `ContentId`. Supply a convenience accessor that succeeds only when exactly one currency exists. | Direct data-model correction | Approved; implemented by O7-R5 |
@@ -976,3 +976,86 @@ concrete consequences, reproducible evidence, and any trusted host boundaries.
    replenishment, recovery policy, currency policy, save shape, schema family,
    or presentation framework was introduced. O7-R7 remains the sole owner of
    stateful stock behavior, and O7-R8 remains the sole owner of recovery policy.
+
+### O7-R7: Make Shop Stock Stateful And Policy-Owned
+
+- **Baseline and commit:** `455f64b4..this checkpoint commit`; commit subject
+  `runtime: persist policy-owned shop stock`.
+- **Actual destination:** authored `ShopOfferDefinition.Id` values combine with
+  each qualified shop ID in `RuntimeShopOfferIdentity`; resolved offers carry
+  one immutable `RuntimeShopStockProfile`; `RuntimeShopStockSnapshot` is the
+  sole durable quantity authority; and `ShopTransactionService` returns one
+  atomic inventory/currency/stock result.
+- **Changed Framework files:** the new `Runtime/ShopStockPolicies.cs`, plus
+  content definitions and qualification, schema DTO/mapping/validation,
+  resource-management transactions, standard economy ruleset factories,
+  save validation and aggregate restore, and the deliberate public API
+  baseline update.
+- **Changed wire/content files:** strict Draft 2020-12 schemas under
+  `schemas/content/v10`; all 36 active documents now declare schema v10; all
+  6 active manifests use pack version `0.10.0` with exact revised dependencies;
+  every shop offer has a required local ID; policy stock has a positive
+  quantity; and active host registrations include `standard_shop_stock`.
+- **Changed host files:** Clean Save and the Godot reference codec serialize
+  composite offer identity plus remaining quantity. Training Annex creates one
+  session stock snapshot, selects by offer ID rather than offered content ID,
+  commits transaction stock results, displays remaining quantity, and restores
+  saved stock without rebuilding it from authored defaults.
+- **Changed tests and documentation:** the new `ShopStockPolicyTests`, expanded
+  resource, ruleset, persistence, schema, catalog, Godot-contract, Clean Save,
+  and Training Annex coverage; source/capability/documentation inventories;
+  and current architecture, gameplay, content-contract, ruleset, save, Godot,
+  mechanics, quality-gate, and roadmap guidance.
+- **Focused tests:** 336 Framework stock/resource/ruleset/persistence/schema/
+  catalog/Godot tests and 131 DemoHost save/Training Annex tests passed: 467
+  total, 0 failed, 0 skipped. The dedicated `ShopStockPolicyTests` class
+  contributes 9 policy, identity, transaction, binding, and save-boundary tests.
+- **Full suite:** 1,768 Framework tests, 182 DemoHost tests, and 7
+  ContentValidator tests passed: 1,957 total, 0 failed, 0 skipped.
+- **Build and integration:** strict nonincremental Release solution and
+  trim-aware Framework builds passed with 0 warnings and 0 errors; formatting
+  and `git diff --check` passed. The authoring validator loaded 6 packs, 36
+  documents, and 98 qualified definitions. All four noninteractive DemoHost
+  modes and scripted Training Annex exit passed. The real Godot 4.7.1 headless
+  consumer emitted `CONVERGENCE_GODOT_SMOKE_OK`, restored 3 actors, 250 Credits,
+  and one shop-stock entry under save contract v19, then exited 0.
+- **Contract versions:** this deliberate wire/state change advances content
+  schema v9 to v10, active packs `0.9.0` to `0.10.0`, and runtime save contract
+  v18 sequentially to v19. No compatibility alias, fallback, or version skip
+  preserves the retired copied-stock shape.
+- **Fresh review corrections before commit:** the source review removed ignored
+  `parameters` from unlimited/fixed v10 stock shapes, added mapper-level defense
+  for schema-bypassing callers, rejected forged durable entries for unlimited
+  runtime offers, and corrected the v10 shared-schema title. Focused regressions
+  reproduce each corrected path; no additional realistic R7 defect remained.
+
+#### Explicit O7-R7 Authority Evidence
+
+1. **Stable composite offer identity.** Stock is keyed by qualified `shopId`
+   plus required shop-local `offerId`; offered content ID and list position are
+   never stock identity. Tests prove the same local ID in different shops and
+   repeated offers of the same content do not collide, while a true duplicate
+   composite identity is rejected.
+2. **Purchase decrement and rejection behavior.** The standard policy decrements
+   one unit exactly once for each committed purchase and rejects zero stock.
+   Insufficient currency, full inventory, missing/duplicate/negative stock,
+   unexpected stock on an unlimited offer, and throwing/null policy results all
+   return the original inventory, currency ledger, and stock snapshot.
+3. **Resale behavior is explicitly policy-owned.** `StandardShopStockPolicy`
+   leaves remaining quantity unchanged on resale. The focused custom policy
+   proves a host-registered alternative can replenish one unit without changing
+   the transaction service or introducing a hidden resale rule.
+4. **Three-authority atomicity.** Pricing, stock, inventory, and currency each
+   produce immutable candidates. Only the applied `ShopTransactionResult`
+   exposes all three after-states; every rejection deliberately reports equal
+   before/after authorities, so a tentative candidate cannot leak as committed
+   state.
+5. **Save and restore use one stock authority.** Save contract v19 contains
+   `RuntimeShopStockSnapshot`; validation cross-checks every entry with catalog
+   shop/offer definitions and requires exactly one entry per tracked offer.
+   Framework aggregate restore, DemoHost JSON, the Godot-shaped contract test,
+   and the real Godot smoke path all preserve exact remaining quantities.
+6. **Scope guard held.** No recovery policy or O7-R8 behavior, currency policy,
+   pricing formula, mutable shop repository, stock presentation framework, or
+   second transaction path was introduced. Order 7 remains open for O7-R8
+   through O7-R11.

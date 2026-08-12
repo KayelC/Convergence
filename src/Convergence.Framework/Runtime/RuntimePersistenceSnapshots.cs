@@ -98,7 +98,13 @@ public enum RuntimeSaveValidationCode
     CombatProfileSourceEntityMismatch = 88,
     IntrinsicElementKnowledgeNotStorable = 89,
     DuplicateEquipmentInstanceId = 90,
-    EquipmentInstanceIdCollidesWithActor = 91
+    EquipmentInstanceIdCollidesWithActor = 91,
+    MissingCatalogShop = 92,
+    MissingShopOffer = 93,
+    DuplicateShopStockEntry = 94,
+    NegativeShopStockQuantity = 95,
+    MissingShopStockEntry = 96,
+    UnexpectedShopStockEntry = 97
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -333,7 +339,7 @@ public sealed record RuntimeCheckpointLogSnapshot
 
 public sealed record RuntimeSaveGameSnapshot
 {
-    public const int CurrentContractVersion = 18;
+    public const int CurrentContractVersion = 19;
 
     public RuntimeSaveGameSnapshot(
         SemanticVersion frameworkVersion,
@@ -342,6 +348,7 @@ public sealed record RuntimeSaveGameSnapshot
         RuntimePartyRosterSnapshot partyRoster,
         RuntimeInventorySnapshot inventory,
         RuntimeCurrencyLedgerSnapshot currencyLedger,
+        RuntimeShopStockSnapshot shopStock,
         RuntimeFieldSnapshot? field,
         CompendiumStateSnapshot compendium,
         RuntimeKnowledgeSnapshot knowledge,
@@ -362,6 +369,7 @@ public sealed record RuntimeSaveGameSnapshot
         PartyRoster = partyRoster ?? throw new ArgumentNullException(nameof(partyRoster));
         Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
         CurrencyLedger = currencyLedger ?? throw new ArgumentNullException(nameof(currencyLedger));
+        ShopStock = shopStock ?? throw new ArgumentNullException(nameof(shopStock));
         Field = field;
         Compendium = compendium ?? throw new ArgumentNullException(nameof(compendium));
         Knowledge = knowledge ?? throw new ArgumentNullException(nameof(knowledge));
@@ -377,6 +385,7 @@ public sealed record RuntimeSaveGameSnapshot
     public RuntimePartyRosterSnapshot PartyRoster { get; }
     public RuntimeInventorySnapshot Inventory { get; }
     public RuntimeCurrencyLedgerSnapshot CurrencyLedger { get; }
+    public RuntimeShopStockSnapshot ShopStock { get; }
     public RuntimeFieldSnapshot? Field { get; }
     public CompendiumStateSnapshot Compendium { get; }
     public RuntimeKnowledgeSnapshot Knowledge { get; }
@@ -471,6 +480,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         ValidatePassiveActivationReferences(snapshot.Actors, actors, diagnostics);
         ValidateInventory(snapshot.Inventory, actors.Keys, catalog, diagnostics);
         ValidateActorEquipment(snapshot.Actors, snapshot.Inventory, catalog, diagnostics);
+        ValidateShopStock(snapshot.ShopStock, catalog, diagnostics);
         if (snapshot.Field is not null)
         {
             ValidateField(snapshot.Field, catalog, diagnostics);
@@ -597,6 +607,23 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     $"$.actors[{actorIndex}].equipment.equippedInstanceIds.{SlotPath(slotId)}",
                     diagnostics);
             }
+        }
+
+        for (int stockIndex = 0; stockIndex < snapshot.ShopStock.Entries.Count; stockIndex++)
+        {
+            RuntimeShopStockEntrySnapshot entry = snapshot.ShopStock.Entries[stockIndex];
+            string root = $"$.shopStock.entries[{stockIndex}].offerIdentity";
+            if (entry.OfferIdentity is null)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.InvalidContentId,
+                    "Shop stock offer identity cannot be null.",
+                    Path: root));
+                continue;
+            }
+
+            ValidateContentId(entry.OfferIdentity.ShopId, root + ".shopId", diagnostics);
+            ValidateContentId(entry.OfferIdentity.OfferId, root + ".offerId", diagnostics);
         }
 
         if (snapshot.Field is not null)
@@ -1463,6 +1490,92 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                     }
                 }
             }
+        }
+    }
+
+    private static void ValidateShopStock(
+        RuntimeShopStockSnapshot stock,
+        GameDataCatalog catalog,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        var expected = new HashSet<RuntimeShopOfferIdentity>();
+        foreach (ShopCatalogDefinition shop in catalog.Shops.Values)
+        {
+            foreach (ShopOfferDefinition offer in shop.Offers)
+            {
+                if (offer.Stock is not UnlimitedShopStockDefinition)
+                {
+                    expected.Add(new RuntimeShopOfferIdentity(shop.Id, offer.Id));
+                }
+            }
+        }
+
+        var seen = new HashSet<RuntimeShopOfferIdentity>();
+        for (int index = 0; index < stock.Entries.Count; index++)
+        {
+            RuntimeShopStockEntrySnapshot entry = stock.Entries[index];
+            string root = $"$.shopStock.entries[{index}]";
+            if (entry.OfferIdentity is null)
+            {
+                continue;
+            }
+
+            RuntimeShopOfferIdentity identity = entry.OfferIdentity;
+            if (!seen.Add(identity))
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.DuplicateShopStockEntry,
+                    $"Shop stock identity '{identity.ShopId}/{identity.OfferId}' appears more than once.",
+                    ContentId: identity.ShopId,
+                    Path: root + ".offerIdentity"));
+            }
+            if (entry.RemainingQuantity < 0)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.NegativeShopStockQuantity,
+                    $"Shop stock identity '{identity.ShopId}/{identity.OfferId}' cannot have a negative quantity.",
+                    ContentId: identity.ShopId,
+                    Path: root + ".remainingQuantity"));
+            }
+
+            if (!catalog.Shops.TryGetValue(identity.ShopId, out ShopCatalogDefinition? shop))
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.MissingCatalogShop,
+                    $"Shop '{identity.ShopId}' is not present in the catalog.",
+                    ContentId: identity.ShopId,
+                    Path: root + ".offerIdentity.shopId"));
+                continue;
+            }
+
+            ShopOfferDefinition? offer = shop.Offers.FirstOrDefault(candidate =>
+                candidate.Id == identity.OfferId);
+            if (offer is null)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.MissingShopOffer,
+                    $"Shop offer '{identity.ShopId}/{identity.OfferId}' is not present in the catalog.",
+                    ContentId: identity.ShopId,
+                    Path: root + ".offerIdentity.offerId"));
+                continue;
+            }
+            if (offer.Stock is UnlimitedShopStockDefinition)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.UnexpectedShopStockEntry,
+                    $"Unlimited shop offer '{identity.ShopId}/{identity.OfferId}' must not have durable stock state.",
+                    ContentId: identity.ShopId,
+                    Path: root));
+            }
+        }
+
+        foreach (RuntimeShopOfferIdentity missing in expected.Except(seen))
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.MissingShopStockEntry,
+                $"Tracked shop offer '{missing.ShopId}/{missing.OfferId}' is missing durable stock state.",
+                ContentId: missing.ShopId,
+                Path: "$.shopStock.entries"));
         }
     }
 

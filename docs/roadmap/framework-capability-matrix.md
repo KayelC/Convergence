@@ -29,8 +29,10 @@ provides an immutable currency ledger keyed by `ContentId` and requires every
 transaction to select a currency explicitly. O7-R6 binds an explicit default
 pricing factory through `standard_economy`, resolves offer-level policy
 overrides without fallback, and supplies exact-authored-price and optional
-Luck-adjusted policies. Current source still does not persist decremented shop
-stock or generalize the HP/SP-specific recovery shape. The
+Luck-adjusted policies. O7-R7 persists limited stock by stable shop/offer
+identity, binds fixed and custom stock policies explicitly, and commits stock
+with inventory and currency as one immutable transaction. Current source still
+does not generalize the HP/SP-specific recovery shape. The
 owner-approved
 [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 governs the direct data corrections, genuine policy seams, three-audience
@@ -328,7 +330,7 @@ Charge state is policy-owned; supplied hit/evasion uses
 authored accuracy, explicit Agility coefficients, typed modifiers, exact
 probability bounds, and no hidden Luck. Critical eligibility and chance are
 separate replaceable policies. Instant defeat uses authored chance, explicit
-resistance multipliers, bypass semantics, and one roll. Schema v9 requires
+resistance multipliers, bypass semantics, and one roll. Schema v10 requires
 weapon basic attacks to declare critical behavior.
 
 Every attempted damage hit now carries immutable accuracy, critical, affinity,

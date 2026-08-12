@@ -16,6 +16,7 @@ internal static class CleanSaveTestFixture
         IEnumerable<RuntimeCheckpointEntrySnapshot>? checkpoints = null,
         RuntimePartyRosterSnapshot? partyRoster = null,
         RuntimeInventorySnapshot? inventory = null,
+        RuntimeShopStockSnapshot? shopStock = null,
         RuntimeFieldSnapshot? field = null,
         CompendiumStateSnapshot? compendium = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
@@ -53,10 +54,10 @@ internal static class CleanSaveTestFixture
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.9.0")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.9.0")),
-                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.9.0")),
-                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.9.0"))
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.10.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.10.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.10.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.10.0"))
             ],
             actors ?? [frost, ember],
             partyRoster ?? new RuntimePartyRosterSnapshot(
@@ -79,6 +80,14 @@ internal static class CleanSaveTestFixture
             RuntimeCurrencyLedgerSnapshot.Single(
                 Id("convergence.catalog_surface_sample:credits"),
                 1234),
+            shopStock ?? new RuntimeShopStockSnapshot(
+            [
+                new RuntimeShopStockEntrySnapshot(
+                    new RuntimeShopOfferIdentity(
+                        Id("convergence.catalog_surface_sample:sample_outfitter"),
+                        Id("medicine_offer")),
+                    8)
+            ]),
             field ?? (includeDefaultField
                 ? new RuntimeFieldSnapshot(
                     new RuntimeNavigationSnapshot(Id("convergence.catalog_surface_sample:sample_depths_floor_5")),

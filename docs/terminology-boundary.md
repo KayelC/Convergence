@@ -17,7 +17,7 @@ Ruleset categories stay generic. In particular, `turn_economy` identifies the po
 
 ## Version Boundary
 
-Active content uses schema version `9`, and active runtime snapshots use save contract version `18`. Schema v9 retains the earlier explicit passive-targeting and status-lifetime contracts while replacing the fixed equipment-slot enum with authored slot IDs. Save v18 retains v17's authored equipment-slot keys and replaces its unnamed balance with a typed currency ledger keyed by `ContentId`. Earlier pre-release shapes have no aliases or automatic translation; any non-current shape can be accepted only through an explicit host-supplied migration step. This is an intentional clean break made before a stable public release.
+Active content uses schema version `10`, and active runtime snapshots use save contract version `19`. Schema v10 retains authored equipment-slot IDs and gives every shop offer a stable shop-local ID while requiring a positive starting quantity for policy-owned stock. Save v19 retains v18's typed currency ledger and adds durable limited-offer quantities keyed by qualified shop ID plus local offer ID. Earlier pre-release shapes have no aliases or automatic translation; any non-current shape can be accepted only through an explicit host-supplied migration step. This is an intentional clean break made before a stable public release.
 
 ## Executable Guard
 

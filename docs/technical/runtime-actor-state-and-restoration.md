@@ -21,8 +21,9 @@ save v9, later lifecycle work advanced it through v13, and Battle Knowledge
 authority cleanup established save v14, and combat-profile identity established
 save v15. Equipment-instance ownership advances the current contract to save
 v16 and removes the duplicated root equipment authority. Authored equipment
-slot IDs advanced it to save v17. Typed currency-ledger authority advances the
-current contract to save v18.
+slot IDs advanced it to save v17. Typed currency-ledger authority advanced the
+contract to save v18, and durable policy-owned shop stock advances the current
+contract to save v19.
 
 The duplicated roster owner level was removed in the first correction. Live
 transitions now receive the current owner actor, and save validation derives

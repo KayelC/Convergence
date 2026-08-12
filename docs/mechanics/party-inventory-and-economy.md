@@ -1,10 +1,10 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Order 7 status:** O7-R1 through O7-R6 establish the approved tracking,
+> **Order 7 status:** O7-R1 through O7-R7 establish the approved tracking,
 > equipment-instance ownership, authored slot-layout model, equipped-only skill
 > grants, Defense/Evasion combat contributions, and typed currency-ledger
-> authority, plus explicit standard and optional Luck-adjusted shop pricing.
-> Stateful shop stock and generic recovery remain pending. This page remains
+> authority, plus explicit pricing and durable policy-owned shop stock.
+> Generic recovery remains pending. This page remains
 > unreviewed until the complete
 > [Order 7 roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 > is implemented and independently closed.
@@ -85,7 +85,7 @@ instance already assigned to another actor rejects with unchanged before/after
 equipment state. Selling a specific equipped instance is blocked by the
 transaction service.
 
-Save contract v18 stores owned instances only in inventory and actor loadout
+Save contract v19 stores owned instances only in inventory and actor loadout
 references only in actor snapshots, all under authored slot IDs. There is no
 separate root equipment snapshot.
 
@@ -128,13 +128,16 @@ game: it returns that one ID and balance, but explicitly rejects an empty or
 multi-currency ledger rather than choosing a default. DemoHost registers one
 `credits` ID; other games own both their currency IDs and player-facing names.
 
-Save contract v18 stores the complete typed ledger. Version 17's unnamed
-single balance is unsupported unless a host deliberately supplies a migration.
+Save contract v19 retains the complete typed ledger introduced by version 18.
+Version 17's unnamed single balance is unsupported unless a host deliberately
+supplies a migration.
 
 ## Shops
 
 Shop definitions identify offered items/equipment, categories, an authored
-purchase price, stock policy, and availability. Runtime transactions assess
+purchase price, stock policy, and availability. Every offer has a stable
+shop-local ID; durable stock keys are the qualified shop ID plus that offer ID,
+not content identity or menu position. Runtime transactions assess
 ownership, stock, stack limits, equipped-sale restrictions, pricing, and the
 explicitly selected currency balance before mutation. The host supplies a
 fresh runtime instance ID when purchasing equipment and identifies the exact
@@ -158,8 +161,16 @@ explicitly; it is not hidden standard behavior.
 One resolved pricing profile drives menu assessment and the committed
 transaction. Negative input, overflow, unavailable currency, unaffordability,
 and a failing custom policy reject before inventory or currency mutation.
-Limited stock is still only assessed in the current checkpoint; durable stock
-decrement and replenishment policy remain Order 7 work.
+
+Unlimited offers create no durable quantity. Fixed limited offers bind
+`standard_shop_stock`; policy-shaped offers carry a positive initial quantity
+and bind an explicitly registered `IShopStockPolicyFactory` without fallback.
+The standard policy decrements one unit per successful purchase, rejects at
+zero, and does not replenish on sale. A custom policy may replenish on sale.
+Inventory, currency, and the immutable `RuntimeShopStockSnapshot` are returned
+as one atomic result: all three advance on success, and all three remain the
+original snapshots on any rejection. Save contract v19 persists the remaining
+quantity for every tracked offer.
 
 ## Recovery Facilities
 

@@ -214,18 +214,22 @@ public sealed record PolicyShopStockDefinition : ShopStockDefinition
 {
     public PolicyShopStockDefinition(
         ContentId StockPolicyId,
+        int Quantity,
         IEnumerable<KeyValuePair<string, object?>>? parameters = null)
         : base(ShopStockKind.Policy)
     {
         this.StockPolicyId = StockPolicyId;
+        this.Quantity = Quantity;
         Parameters = DefinitionCollections.SnapshotParameters(parameters);
     }
 
     public ContentId StockPolicyId { get; }
+    public int Quantity { get; }
     public IReadOnlyDictionary<string, object?> Parameters { get; }
 }
 
 public sealed record ShopOfferDefinition(
+    ContentId Id,
     ShopContentKind ContentKind,
     ContentId ContentId,
     ShopPriceDefinition Price,

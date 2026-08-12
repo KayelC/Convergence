@@ -24,7 +24,7 @@ Session restore is aggregate and framework-owned. Hosts decode their save envelo
 ## Content Flow
 
 Host-supplied JSON is checked against the strict Draft 2020-12 contracts in
-`schemas/content/v9` before Framework deserialization and semantic catalog
+`schemas/content/v10` before Framework deserialization and semantic catalog
 validation. JSON Schema owns document shape; Framework validation owns graph,
 dependency-visibility, registration, and host-capability rules. This keeps the
 reusable assembly free of schema-evaluation and filesystem dependencies while
@@ -85,6 +85,14 @@ transactions consume that profile rather than rebuilding price logic in a
 presentation adapter. The supplied standard policy preserves authored purchase
 price and derives resale from a configured percentage; Luck adjustment is a
 separately selected optional policy.
+
+The same resolved offer carries a composite `(shopId, offerId)` identity and
+one immutable stock profile. `RuntimeShopStockSnapshot` is the sole durable
+quantity authority for tracked offers. Fixed limited stock binds the supplied
+standard policy; explicitly authored policies resolve through the registered
+stock factory set without fallback. Shop transactions calculate candidate
+inventory, currency, and stock snapshots and expose them only as one atomic
+result. Unlimited offers contribute no stock entry.
 
 Battle knowledge deliberately uses two snapshot authorities. Persistent facts
 are keyed by entity definition and belong to session persistence. Encounter
@@ -168,7 +176,7 @@ extension and can use only an opportunity already retained by the economy. See
 
 Navigation, dungeon traversal, Action Token, ailments/passives, party and rosters, economy, negotiation, fusion, Compendium, and persistence are independently composable. A developer does not need to register or instantiate a module that their game does not use.
 
-Runtime save contract v18 is a deliberately broad interoperability aggregate,
+Runtime save contract v19 is a deliberately broad interoperability aggregate,
 not the module activation mechanism. When a host chooses to use it, required
 but unused components are represented by neutral snapshots. The minimal party
 roster still identifies the session owner while its placement and ownership
@@ -183,7 +191,7 @@ The supported distribution is a Git checkout, submodule, subtree, or copied sour
 
 ## Pre-Release Contract Boundary
 
-The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `9` and runtime save contract version `18` are deliberate pre-release breaks with no compatibility aliases. Save v18 retains v17's authored equipment-slot keys and replaces its unnamed balance with an immutable currency ledger keyed by currency `ContentId`; every transaction names its currency. Actor loadouts still contain only inventory-owned instance references. Persistent knowledge remains in `RuntimeKnowledgeSnapshot`; current-target analysis remains in `RuntimeEncounterKnowledgeSnapshot` and is not part of an ordinary session save. Save validation rejects missing or contradictory combat-profile source references, missing or multiply assigned equipment instances, equipment/actor ID collisions, slot-layout incompatibility, a retained passive target that is absent from the aggregate actor set, missing enabled/disabled state for an equipped passive, and multiple active ailments in one exclusivity group. Save validation and aggregate restoration must bind retained stat-modifier and charge policies explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
+The active product uses the neutral contracts defined by the [Terminology Boundary](terminology-boundary.md). Content schema version `10` and runtime save contract version `19` are deliberate pre-release breaks with no compatibility aliases. Save v19 retains v18's typed currency ledger and adds immutable remaining stock keyed by the qualified shop ID plus its shop-local offer ID. Actor loadouts still contain only inventory-owned instance references. Persistent knowledge remains in `RuntimeKnowledgeSnapshot`; current-target analysis remains in `RuntimeEncounterKnowledgeSnapshot` and is not part of an ordinary session save. Save validation rejects missing or contradictory combat-profile source references, missing or multiply assigned equipment instances, equipment/actor ID collisions, slot-layout incompatibility, malformed shop-stock identities or quantities, a retained passive target that is absent from the aggregate actor set, missing enabled/disabled state for an equipped passive, and multiple active ailments in one exclusivity group. Save validation and aggregate restoration must bind retained stat-modifier and charge policies explicitly; no default policy is inferred. Any non-current save requires an explicit host-supplied migration step. A token-aware architecture test scans active source, tests, content, and documentation so archived vocabulary cannot re-enter the product unnoticed.
 
 Assembly version `0.1.0` is guarded by a checked-in textual API baseline. The
 [Public API Contract](public-api-contract.md) identifies the supported

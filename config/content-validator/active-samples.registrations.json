@@ -33,6 +33,7 @@
       "standard_economy",
       "standard_shop_pricing",
       "luck_adjusted_shop_pricing",
+      "standard_shop_stock",
       "return_to_lobby",
       "training_barrier",
       "standard_accident",

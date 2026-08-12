@@ -265,7 +265,7 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "Order 7 equipment-instance ownership, slot layouts, equipped skill grants, combat contributions, typed currency-ledger authority, and explicit pricing-policy binding are implemented, but the mechanics page remains existing-unreviewed until the remaining stock, recovery, and closure checkpoints are complete."
+        "reason": "Order 7 equipment-instance ownership, slot layouts, equipped skill grants, combat contributions, typed currency-ledger authority, explicit pricing, and durable policy-owned stock are implemented, but the mechanics page remains existing-unreviewed until recovery and closure checkpoints are complete."
       },
       "developerGuide": {
         "state": "missing",
@@ -275,7 +275,7 @@
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/gameplay-systems.md"],
-        "reason": "Order 7 is open; equipment-instance/save authority, slot layouts, combat contributions, typed currency-ledger authority, and pricing-policy binding are implemented, while atomic stock and recovery invariants still need a dedicated reviewed technical page."
+        "reason": "Order 7 is open; equipment-instance/save authority, slot layouts, combat contributions, typed currency-ledger authority, pricing, and atomic stock are implemented, while recovery and the complete economy surface still need a dedicated reviewed technical page."
       }
     },
     {
@@ -381,7 +381,7 @@
           "docs/developer-guide/actors-and-runtime-state.md",
           "docs/godot-integration-contract.md"
         ],
-        "reason": "The reviewed guides cover host-owned encoding, save v18 actor state, restore profiles, aggregate restore, and scene application."
+        "reason": "The reviewed guides cover host-owned encoding, save v19 actor state, restore profiles, aggregate restore, and scene application."
       },
       "technical": {
         "state": "reviewed",

@@ -132,7 +132,7 @@ Unknown parameters, nonnumeric values, and invalid combined configuration
 produce typed `RulesetBindingDiagnostic` values. The standard factory does not
 silently ignore them.
 
-Schema v9 and semantic validation impose the absolute `1..1024` authoring
+Schema v10 and semantic validation impose the absolute `1..1024` authoring
 range. The selected standard configuration imposes its own ceiling, default
 `64`, and rejects an effect whose authored maximum exceeds it before hit-count
 randomness, allocation, or mutation. A game may deliberately raise the
@@ -383,6 +383,16 @@ fixed-price offer uses the economy default. A policy-shaped offer requires
 `purchasePrice` in its own parameter object and passes its remaining parameters
 to the selected factory. Explicit offer-policy rejection never falls back to
 the economy default.
+
+Shop-stock policy factories are registered alongside pricing factories. Fixed
+limited stock binds `standard_shop_stock` automatically; policy-shaped stock
+binds its explicit `stockPolicyId` and parameter object with no fallback. The
+supplied standard policy accepts no parameters, decrements one unit on
+purchase, rejects purchase at zero, and leaves resale quantity unchanged.
+Custom policies may return another nonnegative quantity, including resale
+replenishment. Policies are deterministic, side-effect-free candidate
+calculators because inventory, currency, and stock commit only after every
+transition accepts.
 
 ## Fixed Growth Policy
 

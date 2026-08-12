@@ -628,6 +628,11 @@
       "publicSurface": "exported"
     },
     {
+      "path": "Runtime/ShopStockPolicies.cs",
+      "owner": "runtime_services",
+      "publicSurface": "exported"
+    },
+    {
       "path": "Runtime/RuntimeActorGrowthComposition.cs",
       "owner": "runtime_services",
       "publicSurface": "exported"

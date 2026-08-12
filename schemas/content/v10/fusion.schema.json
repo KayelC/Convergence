@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:convergence:schema:content:v10:fusion",
+  "title": "Convergence Content v10 Fusion Recipe Document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "fusionRecipes"],
+  "properties": {
+    "$schema": { "const": "urn:convergence:schema:content:v10:fusion" },
+    "schemaVersion": { "const": 10 },
+    "fusionRecipes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/recipe" }
+    }
+  },
+  "$defs": {
+    "recipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayName", "description", "parents", "result"],
+      "properties": {
+        "id": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/localId" },
+        "displayName": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "parents": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/parent" }
+        },
+        "result": { "$ref": "#/$defs/result" },
+        "accidentPolicyId": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/localId" },
+        "mutationPolicyId": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/localId" }
+      }
+    },
+    "parent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "role"],
+      "properties": {
+        "kind": { "enum": ["entity", "race"] },
+        "id": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/contentReference" },
+        "role": { "enum": ["participant", "catalyst", "rank_shift_target"] }
+      }
+    },
+    "result": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["operation", "resultEntityId"],
+          "properties": {
+            "operation": { "const": "create_entity" },
+            "resultEntityId": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/contentReference" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/parameters" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["operation", "rankShift"],
+          "properties": {
+            "operation": { "const": "catalyst_rank_shift" },
+            "rankShift": { "type": "integer", "not": { "const": 0 } },
+            "parameters": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/parameters" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["operation", "policyId"],
+          "properties": {
+            "operation": { "const": "stat_boost" },
+            "policyId": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/localId" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/parameters" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["operation", "policyId"],
+          "properties": {
+            "operation": { "const": "special" },
+            "policyId": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/localId" },
+            "parameters": { "$ref": "urn:convergence:schema:content:v10:shared#/$defs/parameters" }
+          }
+        }
+      ]
+    }
+  }
+}

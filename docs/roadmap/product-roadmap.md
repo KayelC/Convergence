@@ -18,12 +18,13 @@ O7-R3 replaces fixed slot enums with authored slot IDs governed by an explicit
 layout policy while preserving the standard four-slot behavior. O7-R4 routes
 equipped-only skill grants, armor Defense, and armor/boots Evasion through one
 canonical equipment profile and the existing action/damage/hit authorities.
-O7-R5 establishes an immutable currency ledger keyed by `ContentId`, explicit
-currency selection for every transaction, save contract v18, and host-owned
-serialization in DemoHost and Godot. O7-R6 binds exact-authored-price standard
+O7-R5 establishes an immutable currency ledger keyed by `ContentId` and
+explicit currency selection for every transaction. O7-R6 binds exact-authored-price standard
 pricing and optional Luck-adjusted pricing through typed factories selected by
-the economy ruleset or an explicit offer. The capability remains `partial`
-until stateful shop stock, generic recovery, audience documentation, and an independent
+the economy ruleset or an explicit offer. O7-R7 gives offers stable identity,
+persists policy-owned stock under save contract v19, and threads that state
+through DemoHost and Godot-owned serialization. The capability remains `partial`
+until generic recovery, audience documentation, and an independent
 adversarial closure audit are complete.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
@@ -205,7 +206,7 @@ stat-modifier family supplies persistent staged, timed exclusive, and
 independently timed contribution policies. The closure record is maintained
 under [Completed Order 1](documentation-completion-roadmap.md#completed-order-1).
 
-The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v9, and save-v14 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, aggregate restoration derives the Active Hosted Entity from the canonical party roster, and retained stat modifiers, charges, and per-target passive activation keys bind to their authored policies during validation and restore.
+The [Terminology Boundary](../terminology-boundary.md) checkpoint is complete. Active contracts use Action Token, Vessel, Hosted Entity, Companion, roster, schema-v10, and save-v19 vocabulary; an executable token-aware guard prevents retired names from returning outside the historical archive. Vessel combat profiles now come from an explicit source policy, aggregate restoration derives the Active Hosted Entity from the canonical party roster, and retained stat modifiers, charges, and per-target passive activation keys bind to their authored policies during validation and restore.
 
 ## Completed Actor Design Correction
 
@@ -245,7 +246,7 @@ Correct the completion-review findings in order:
 Catalyst rank shifting now uses explicit authored catalyst and target roles. It
 moves the target by an exact offset within that target's catalog race, rejects
 stale participant rank data, and returns a typed no-fusion result when an exact
-destination does not exist. Schema v9 retains the explicit catalyst/target
+destination does not exist. Schema v10 retains the explicit catalyst/target
 shape introduced by schema v3 and authored stat-modifier policy selection, and
 adds bounded damage hit counts.
 
@@ -257,7 +258,7 @@ factory. Moon phase remains absent from the standard composition.
 
 ## Completed Release Foundations
 
-The strict Draft 2020-12 schema-v9 set now covers every implemented content
+The strict Draft 2020-12 schema-v10 set now covers every implemented content
 family, the authoring validator CLI combines schema and semantic gates, the
 0.1 API has a textual baseline, and a real Godot 4.7.1 sample proves source
 integration. The consolidated quality gate and independent final review are

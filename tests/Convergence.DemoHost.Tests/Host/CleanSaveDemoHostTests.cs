@@ -52,6 +52,7 @@ public sealed class CleanSaveDemoHostTests
         Assert.Equal(
             snapshot.CurrencyLedger.GetSingleCurrency(),
             restored.CurrencyLedger.GetSingleCurrency());
+        Assert.Equal(snapshot.ShopStock.Entries, restored.ShopStock.Entries);
         Assert.Equal(
             snapshot.Field!.DungeonTraversal!.CurrentNodeId,
             restored.Field!.DungeonTraversal!.CurrentNodeId);

@@ -24,7 +24,7 @@ Framework coverage is collected independently with Coverlet's Cobertura output. 
 
 ## Content And Host Gate
 
-`Convergence.ContentValidator` validates every active JSON document against schema v9 and the Framework's deserialization, semantic, dependency, registration, and catalog rules. The gate then runs all four noninteractive DemoHost modes and a scripted `--clean-training-annex-play` session.
+`Convergence.ContentValidator` validates every active JSON document against schema v10 and the Framework's deserialization, semantic, dependency, registration, and catalog rules. The gate then runs all four noninteractive DemoHost modes and a scripted `--clean-training-annex-play` session.
 
 The Godot gate downloads the official Godot 4.7.1 .NET Linux artifact into the CI runner's temporary directory, verifies SHA-256 `6ca7ff0459f1b806900be683c1b0837c607a9c16834c530dc68c81b9fc3ae1f6`, and runs `samples/Convergence.GodotHost` headlessly. Success requires the marker `CONVERGENCE_GODOT_SMOKE_OK` and process exit code `0`.
 

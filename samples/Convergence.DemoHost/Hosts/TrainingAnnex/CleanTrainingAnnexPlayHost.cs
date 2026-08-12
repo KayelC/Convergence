@@ -154,6 +154,7 @@ internal sealed record CleanTrainingAnnexPlaySummary(
     IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> ShopOfferDiagnostics,
     IReadOnlyList<TrainingAnnexHospitalRestorationEvidence> HospitalRestorations,
     RuntimeCurrencyLedgerSnapshot CurrencyLedger,
+    RuntimeShopStockSnapshot ShopStock,
     RuntimeSessionProgressSnapshot SessionProgress,
     int ManualSaveCount,
     int ManualLoadCount,
@@ -479,6 +480,9 @@ internal sealed class CleanTrainingAnnexPlayHost
             rosterCapacityPolicy);
         RuntimeCurrencyLedgerSnapshot wallet =
             _initialCurrencyLedger ?? TrainingAnnexHostSupport.CreateCreditsLedger(0);
+        RuntimeShopStockSnapshot shopStock = TrainingAnnexHostSupport.CreateInitialShopStock(
+            catalog,
+            resourceManagement.ShopOffers);
         RuntimeSessionProgressSnapshot sessionProgress = new();
         RuntimeFieldSnapshot field = new(
             new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
@@ -606,6 +610,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                     shopOfferDiagnostics,
                     hospitalRestorations,
                     wallet,
+                    shopStock,
                     sessionProgress,
                     manualSaveCount,
                     manualLoadCount,
@@ -890,6 +895,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             playerBattleKnowledge.ToSnapshot(),
                             inventory.Snapshot,
                             wallet,
+                            shopStock,
                             sessionProgress,
                             encounterTriggerConsumed,
                             preparedBattleStarted,
@@ -958,6 +964,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                             shopOfferDiagnostics,
                             hospitalRestorations,
                             wallet,
+                            shopStock,
                             sessionProgress,
                             manualSaveCount,
                             manualLoadCount,
@@ -1295,6 +1302,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                                 playerBattleKnowledge.ToSnapshot(),
                                 inventory.Snapshot,
                                 wallet,
+                                shopStock,
                                 sessionProgress,
                                 encounterTriggerConsumed,
                                 preparedBattleStarted,
@@ -1343,6 +1351,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                                 field = restored.Field;
                                 inventory = new TrainingAnnexItemActionInventory(restored.Inventory, inventoryTransitions);
                                 wallet = restored.CurrencyLedger;
+                                shopStock = restored.ShopStock;
                                 sessionProgress = restored.SessionProgress;
                                 compendium = restored.Compendium;
                                 playerBattleKnowledge = restored.PlayerBattleKnowledge;
@@ -1390,9 +1399,11 @@ internal sealed class CleanTrainingAnnexPlayHost
                             roster.Player,
                             inventory,
                             wallet,
+                            shopStock,
                             commands,
                             cancellationToken).ConfigureAwait(false);
                         wallet = shopResult.CurrencyLedger;
+                        shopStock = shopResult.ShopStock;
                         shopTransactions.AddRange(shopResult.Transactions);
                         shopEquipmentChanges.AddRange(shopResult.EquipmentChanges);
                         shopOfferDiagnostics.AddRange(shopResult.OfferDiagnostics);
@@ -2085,6 +2096,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> shopOfferDiagnostics,
         IReadOnlyList<TrainingAnnexHospitalRestorationEvidence> hospitalRestorations,
         RuntimeCurrencyLedgerSnapshot wallet,
+        RuntimeShopStockSnapshot shopStock,
         RuntimeSessionProgressSnapshot sessionProgress,
         int manualSaveCount,
         int manualLoadCount,
@@ -2178,6 +2190,7 @@ internal sealed class CleanTrainingAnnexPlayHost
             shopOfferDiagnostics.ToArray(),
             hospitalRestorations.ToArray(),
             wallet,
+            shopStock,
             sessionProgress,
             manualSaveCount,
             manualLoadCount,

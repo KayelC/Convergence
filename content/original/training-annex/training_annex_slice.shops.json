@@ -1,6 +1,6 @@
 {
-  "$schema": "urn:convergence:schema:content:v9:shops",
-  "schemaVersion": 9,
+  "$schema": "urn:convergence:schema:content:v10:shops",
+  "schemaVersion": 10,
   "shops": [
     {
       "id": "training_supply",
@@ -10,6 +10,7 @@
       "availabilityContexts": ["field"],
       "offers": [
         {
+          "id": "annex_tonic_offer",
           "contentKind": "item",
           "contentId": "annex_tonic",
           "price": {
@@ -21,6 +22,7 @@
           }
         },
         {
+          "id": "cleanse_drop_offer",
           "contentKind": "item",
           "contentId": "cleanse_drop",
           "price": {
@@ -33,6 +35,7 @@
           }
         },
         {
+          "id": "practice_blade_offer",
           "contentKind": "equipment",
           "contentId": "practice_blade",
           "price": {
@@ -44,6 +47,7 @@
           }
         },
         {
+          "id": "padded_jacket_offer",
           "contentKind": "equipment",
           "contentId": "padded_jacket",
           "price": {

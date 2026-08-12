@@ -181,7 +181,7 @@ internal static class SkillSystemDtoMapper
             dto.Offers.Select((offer, index) => MapShopOffer(offer, $"{path}.offers[{index}]")));
 
     private static ShopOfferDefinition MapShopOffer(ShopOfferDto dto, string path) =>
-        new(dto.ContentKind, Id(dto.ContentId), MapShopPrice(dto.Price, path + ".price"),
+        new(Id(dto.Id), dto.ContentKind, Id(dto.ContentId), MapShopPrice(dto.Price, path + ".price"),
             MapShopStock(dto.Stock, path + ".stock"));
 
     private static ShopPriceDefinition MapShopPrice(ShopPriceDto dto, string path) => dto.Kind switch
@@ -199,18 +199,22 @@ internal static class SkillSystemDtoMapper
 
     private static ShopStockDefinition MapShopStock(ShopStockDto dto, string path) => dto.Kind switch
     {
-        ShopStockKind.Unlimited when dto.Quantity is null && dto.StockPolicyId is null =>
+        ShopStockKind.Unlimited when dto.Quantity is null &&
+                                           dto.StockPolicyId is null &&
+                                           (dto.Parameters?.Count ?? 0) == 0 =>
             new UnlimitedShopStockDefinition(),
-        ShopStockKind.Limited when dto.Quantity is int value && dto.StockPolicyId is null =>
+        ShopStockKind.Limited when dto.Quantity is int value &&
+                                         dto.StockPolicyId is null &&
+                                         (dto.Parameters?.Count ?? 0) == 0 =>
             new LimitedShopStockDefinition(value),
-        ShopStockKind.Policy when dto.StockPolicyId is not null && dto.Quantity is null =>
-            new PolicyShopStockDefinition(Id(dto.StockPolicyId), MapParameters(dto.Parameters)),
+        ShopStockKind.Policy when dto.StockPolicyId is not null && dto.Quantity is int value =>
+            new PolicyShopStockDefinition(Id(dto.StockPolicyId), value, MapParameters(dto.Parameters)),
         ShopStockKind.Unlimited => throw new SchemaMappingException(
-            path, "Unlimited shop stock must omit quantity and stockPolicyId."),
+            path, "Unlimited shop stock must omit quantity, stockPolicyId, and parameters."),
         ShopStockKind.Limited => throw new SchemaMappingException(
-            path, "Limited shop stock requires quantity and must omit stockPolicyId."),
+            path, "Limited shop stock requires quantity and must omit stockPolicyId and parameters."),
         ShopStockKind.Policy => throw new SchemaMappingException(
-            path, "Policy shop stock requires stockPolicyId and must omit quantity."),
+            path, "Policy shop stock requires stockPolicyId and quantity."),
         _ => throw new InvalidOperationException($"Unsupported shop stock kind '{dto.Kind}'.")
     };
 

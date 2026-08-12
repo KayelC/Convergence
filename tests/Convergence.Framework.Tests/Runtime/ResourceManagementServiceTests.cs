@@ -8,6 +8,7 @@ namespace Convergence.Framework.Tests.Runtime;
 public sealed class ResourceManagementServiceTests
 {
     private static readonly ContentId CreditsCurrency = Id("credits");
+    private static readonly ContentId TestShop = Q("test_shop");
 
     [Fact]
     public void InventoryService_AddsRemovesAndReservesItemsWithImmutableSnapshots()
@@ -464,6 +465,7 @@ public sealed class ResourceManagementServiceTests
         ShopTransactionResult bought = shop.Buy(
             inventory,
             wallet,
+            EmptyStock(),
             CreditsCurrency,
             medicine,
             buyerLuck: 10,
@@ -471,6 +473,7 @@ public sealed class ResourceManagementServiceTests
         ShopTransactionResult sold = shop.Sell(
             bought.AfterInventory,
             bought.AfterCurrencyLedger,
+            bought.AfterStock,
             CreditsCurrency,
             medicine,
             sellerLuck: 10,
@@ -501,13 +504,14 @@ public sealed class ResourceManagementServiceTests
         Assert.Equal("Pricing", cloning.ParamName);
         Assert.Equal(100, valid.Pricing.AuthoredPurchasePrice);
 
-        var (kind, contentId, pricing, slot, stackLimit, stock) = valid;
+        var (identity, kind, contentId, pricing, stock, slot, stackLimit) = valid;
+        Assert.Equal(TestShop, identity.ShopId);
         Assert.Equal(ShopContentKind.Item, kind);
         Assert.Equal(Id("medicine"), contentId);
         Assert.Same(valid.Pricing, pricing);
         Assert.Null(slot);
         Assert.Null(stackLimit);
-        Assert.Null(stock);
+        Assert.False(stock.IsTracked);
     }
 
     [Fact]
@@ -541,6 +545,7 @@ public sealed class ResourceManagementServiceTests
         ShopTransactionResult invalidBuy = shop.Buy(
             inventory,
             wallet,
+            EmptyStock(),
             CreditsCurrency,
             ordinaryOffer,
             buyerLuck: -1,
@@ -548,6 +553,7 @@ public sealed class ResourceManagementServiceTests
         ShopTransactionResult overflowingSell = shop.Sell(
             inventory,
             wallet,
+            EmptyStock(),
             CreditsCurrency,
             extremeOffer,
             sellerLuck: int.MaxValue,
@@ -578,12 +584,21 @@ public sealed class ResourceManagementServiceTests
             100,
             StandardPricing(),
             StandardEquipmentSlotIds.Weapon);
-        var emptyStock = swordOffer with { StockAvailable = 0 };
+        RuntimeShopOfferSnapshot trackedSwordOffer = Offer(
+            ShopContentKind.Equipment,
+            sword,
+            100,
+            StandardPricing(),
+            StandardEquipmentSlotIds.Weapon,
+            stockQuantity: 1);
+        var emptyStock = new RuntimeShopStockSnapshot(
+            [new RuntimeShopStockEntrySnapshot(trackedSwordOffer.Identity, 0)]);
         RuntimeShopOfferSnapshot priceyItem = Offer(ShopContentKind.Item, Id("bead"), 2_000);
 
         ShopTransactionResult anotherCopy = shop.Buy(
             ownedSword,
             wallet,
+            EmptyStock(),
             CreditsCurrency,
             swordOffer,
             buyerLuck: 0,
@@ -591,6 +606,7 @@ public sealed class ResourceManagementServiceTests
         ShopTransactionResult duplicate = shop.Buy(
             ownedSword,
             wallet,
+            EmptyStock(),
             CreditsCurrency,
             swordOffer,
             buyerLuck: 0,
@@ -598,13 +614,15 @@ public sealed class ResourceManagementServiceTests
         ShopTransactionResult stock = shop.Buy(
             new RuntimeInventorySnapshot(),
             wallet,
-            CreditsCurrency,
             emptyStock,
+            CreditsCurrency,
+            trackedSwordOffer,
             buyerLuck: 0,
             purchasedEquipmentInstanceId: Instance("sword-003"));
         ShopTransactionResult insufficient = shop.Buy(
             new RuntimeInventorySnapshot(),
             wallet,
+            EmptyStock(),
             CreditsCurrency,
             priceyItem,
             buyerLuck: 0,
@@ -660,18 +678,20 @@ public sealed class ResourceManagementServiceTests
                                 false))))
             ]);
         var itemOffer = new ShopOfferDefinition(
+            Id("medicine_offer"),
             ShopContentKind.Item,
             medicine,
             new FixedShopPriceDefinition(25),
             new LimitedShopStockDefinition(3));
         var equipmentOffer = new ShopOfferDefinition(
+            Id("blade_offer"),
             ShopContentKind.Equipment,
             blade,
             new FixedShopPriceDefinition(100),
             new UnlimitedShopStockDefinition());
 
-        RuntimeShopOfferResolutionResult item = resolver.Resolve(itemOffer, catalog, catalog);
-        RuntimeShopOfferResolutionResult equipment = resolver.Resolve(equipmentOffer, catalog, catalog);
+        RuntimeShopOfferResolutionResult item = resolver.Resolve(TestShop, itemOffer, catalog, catalog);
+        RuntimeShopOfferResolutionResult equipment = resolver.Resolve(TestShop, equipmentOffer, catalog, catalog);
 
         RuntimeShopOfferSnapshot itemSnapshot = item.RequireOffer();
         RuntimeShopOfferSnapshot equipmentSnapshot = equipment.RequireOffer();
@@ -679,14 +699,14 @@ public sealed class ResourceManagementServiceTests
         Assert.Equal(medicine, itemSnapshot.ContentId);
         Assert.Equal(25, itemSnapshot.Pricing.AuthoredPurchasePrice);
         Assert.Equal(10, itemSnapshot.ItemStackLimit);
-        Assert.Equal(3, itemSnapshot.StockAvailable);
+        Assert.Equal(3, itemSnapshot.Stock.InitialQuantity);
         Assert.Null(itemSnapshot.EquipmentSlotId);
         Assert.Equal(ShopContentKind.Equipment, equipmentSnapshot.ContentKind);
         Assert.Equal(blade, equipmentSnapshot.ContentId);
         Assert.Equal(100, equipmentSnapshot.Pricing.AuthoredPurchasePrice);
         Assert.Equal(StandardEquipmentSlotIds.Weapon, equipmentSnapshot.EquipmentSlotId);
         Assert.Null(equipmentSnapshot.ItemStackLimit);
-        Assert.Null(equipmentSnapshot.StockAvailable);
+        Assert.False(equipmentSnapshot.Stock.IsTracked);
     }
 
     [Fact]
@@ -713,11 +733,13 @@ public sealed class ResourceManagementServiceTests
                         baseValue: 50))
             ]);
         var missing = new ShopOfferDefinition(
+            Id("missing_offer"),
             ShopContentKind.Equipment,
             missingBlade,
             new FixedShopPriceDefinition(100),
             new UnlimitedShopStockDefinition());
         var policyPrice = new ShopOfferDefinition(
+            Id("policy_price_offer"),
             ShopContentKind.Item,
             medicine,
             new PolicyShopPriceDefinition(
@@ -725,20 +747,22 @@ public sealed class ResourceManagementServiceTests
                 [new KeyValuePair<string, object?>("purchasePrice", 100)]),
             new UnlimitedShopStockDefinition());
         var fractionalPrice = new ShopOfferDefinition(
+            Id("fractional_offer"),
             ShopContentKind.Item,
             medicine,
             new FixedShopPriceDefinition(12.5m),
             new UnlimitedShopStockDefinition());
         var policyStock = new ShopOfferDefinition(
+            Id("policy_stock_offer"),
             ShopContentKind.Item,
             medicine,
             new FixedShopPriceDefinition(12),
-            new PolicyShopStockDefinition(Id("dynamic_stock")));
+            new PolicyShopStockDefinition(Id("dynamic_stock"), 1));
 
-        RuntimeShopOfferResolutionResult missingResult = resolver.Resolve(missing, catalog, catalog);
-        RuntimeShopOfferResolutionResult policyPriceResult = resolver.Resolve(policyPrice, catalog, catalog);
-        RuntimeShopOfferResolutionResult fractionalPriceResult = resolver.Resolve(fractionalPrice, catalog, catalog);
-        RuntimeShopOfferResolutionResult policyStockResult = resolver.Resolve(policyStock, catalog, catalog);
+        RuntimeShopOfferResolutionResult missingResult = resolver.Resolve(TestShop, missing, catalog, catalog);
+        RuntimeShopOfferResolutionResult policyPriceResult = resolver.Resolve(TestShop, policyPrice, catalog, catalog);
+        RuntimeShopOfferResolutionResult fractionalPriceResult = resolver.Resolve(TestShop, fractionalPrice, catalog, catalog);
+        RuntimeShopOfferResolutionResult policyStockResult = resolver.Resolve(TestShop, policyStock, catalog, catalog);
 
         Assert.False(missingResult.IsSuccess);
         Assert.Contains(missingResult.Diagnostics, diagnostic =>
@@ -844,14 +868,23 @@ public sealed class ResourceManagementServiceTests
         BoundShopPricingPolicy? policy = null,
         ContentId? equipmentSlotId = null,
         int? itemStackLimit = null,
-        int? stockAvailable = null) =>
+        int? stockQuantity = null) =>
         new(
+            new RuntimeShopOfferIdentity(
+                TestShop,
+                Id($"{contentId.Value[(contentId.Value.LastIndexOf(':') + 1)..]}_offer")),
             contentKind,
             contentId,
             Pricing(purchasePrice, policy),
+            stockQuantity is int quantity
+                ? new RuntimeShopStockProfile(
+                    quantity,
+                    new BoundShopStockPolicy(
+                        StandardShopStockPolicyIds.Standard,
+                        new StandardShopStockPolicy()))
+                : RuntimeShopStockProfile.Unlimited,
             equipmentSlotId,
-            itemStackLimit,
-            stockAvailable);
+            itemStackLimit);
 
     private static RuntimeShopOfferResolver ShopOfferResolver(
         BoundShopPricingPolicy? defaultPricing = null)
@@ -860,8 +893,11 @@ public sealed class ResourceManagementServiceTests
             ShopPricingPolicyFactoryRegistry.CreateStandard();
         return new RuntimeShopOfferResolver(
             defaultPricing ?? StandardPricing(),
-            factories);
+            factories,
+            ShopStockPolicyFactoryRegistry.CreateStandard());
     }
+
+    private static RuntimeShopStockSnapshot EmptyStock() => new();
 
     private static void AssertPricingRejectedWithoutMutation(
         ShopTransactionResult result,

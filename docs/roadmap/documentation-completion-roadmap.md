@@ -86,7 +86,7 @@ social/fusion systems, authoring infrastructure, and host integration.
 | 15 | `portable_deserialization` | Host-supplied text, strict conversion, diagnostics, serializer boundary | Review developer guide; add technical reference |
 | 16 | `content_validation` | Structural versus semantic authority, registrations, dependency visibility | Review developer guide; add technical reference |
 | 17 | `catalog_loading` | Qualification, dependency order, repository lookup, collision handling | Review developer guide; add technical reference |
-| 18 | `authored_schema_contracts` | Schema v9 authoring workflow, discriminator coverage, semantic limits | Review developer guide; add technical reference |
+| 18 | `authored_schema_contracts` | Schema v10 authoring workflow, discriminator coverage, semantic limits | Review developer guide; add technical reference |
 | 19 | `host_contracts` | Commands, events, cancellation, content sources, randomness, application ownership | Review developer and technical references |
 | 20 | `godot_adapter` | `res://` loading, Node mapping, signals, save envelope, headless proof | Review developer and technical references |
 
@@ -655,8 +655,9 @@ equipped-only skill-grant and Defense/Evasion integration rules without adding
 policies or equipment-specific combat formulas, and O7-R5 implements typed
 currency-ledger authority as a direct data correction. O7-R6 binds explicit
 standard and optional Luck-adjusted shop-pricing policies through the economy
-ruleset and typed offer factories. Later checkpoints add policy seams only for
-shop stock and recovery.
+ruleset and typed offer factories. O7-R7 implements stable offer identity,
+durable policy-owned stock, and atomic inventory/currency/stock transactions.
+Later checkpoints add the remaining recovery policy seam.
 
 The capability is `partial` while implementation remains open. Its mechanics and
 technical entries remain `existing_unreviewed`, and its developer guide remains

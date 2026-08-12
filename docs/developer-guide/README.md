@@ -53,7 +53,7 @@ The turn-economy guide completed the Order 3 source and correction workflow for
 Action Token, neutral standard actions, custom snapshot authority, and finite
 phase liveness.
 The status-lifecycle guide records the implemented Order 4 composition and
-schema-v9 explicit lifetime authoring. Its mechanics, developer, and technical
+schema-v10 explicit lifetime authoring. Its mechanics, developer, and technical
 documents completed independent source reconciliation through O4-R11.
 The battle-knowledge guide records the owner-confirmed Order 5 distinction
 between durable entity facts and encounter-instance facts. It routes DemoHost

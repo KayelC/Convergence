@@ -72,7 +72,7 @@ public sealed class RuntimePersistenceSnapshotTests
     [Fact]
     public void PersistenceSnapshots_RejectInvalidPackIdentityAndNullDictionaryValues()
     {
-        SemanticVersion version = SemanticVersion.Parse("0.9.0");
+        SemanticVersion version = SemanticVersion.Parse("0.10.0");
         Assert.Throws<ArgumentException>(() => new ContentPackIdentity(null!, version));
         Assert.Throws<ArgumentException>(() => new ContentPackIdentity(" ", version));
 
@@ -87,6 +87,7 @@ public sealed class RuntimePersistenceSnapshotTests
             baseline.PartyRoster,
             baseline.Inventory,
             baseline.CurrencyLedger,
+            baseline.ShopStock,
             baseline.Field,
             baseline.Compendium,
             baseline.Knowledge,
@@ -207,6 +208,9 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.True(result.IsSuccess, string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
         Assert.Equal([ember.Identity.InstanceId, vessel.Identity.InstanceId], factory.RestoreOrder);
         RuntimeRestoredSession session = result.RequireSession();
+        Assert.Equal(
+            snapshot.ShopStock.Entries,
+            session.ShopStock.Entries);
         Assert.Equal(
             [vessel.Identity.InstanceId, ember.Identity.InstanceId],
             session.Actors.Select(actor => actor.State.InstanceId));
@@ -1873,6 +1877,7 @@ public sealed class RuntimePersistenceSnapshotTests
             new RuntimeInventorySnapshot(
                 [new KeyValuePair<ContentId, int>(default, 1)]),
             baseline.CurrencyLedger,
+            baseline.ShopStock,
             new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(default),
                 new RuntimeDungeonTraversalSnapshot(default, default)),
@@ -2531,10 +2536,10 @@ public sealed class RuntimePersistenceSnapshotTests
             CreateSaveSnapshot(),
             contentPacks:
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.9.0")),
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.10.0")),
                 new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("9.9.9")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.9.0")),
-                new ContentPackIdentity("missing.pack", SemanticVersion.Parse("0.9.0"))
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.10.0")),
+                new ContentPackIdentity("missing.pack", SemanticVersion.Parse("0.10.0"))
             ]);
 
         RuntimeSaveValidationResult result = new RuntimeSaveValidator().Validate(snapshot, catalog);
@@ -2566,6 +2571,7 @@ public sealed class RuntimePersistenceSnapshotTests
     [InlineData(15)]
     [InlineData(16)]
     [InlineData(17)]
+    [InlineData(18)]
     public void RuntimeSaveValidator_RejectsUnsupportedContractVersion(int unsupportedVersion)
     {
         RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot(
@@ -2746,6 +2752,7 @@ public sealed class RuntimePersistenceSnapshotTests
         IEnumerable<RuntimeCheckpointEntrySnapshot>? checkpoints = null,
         RuntimePartyRosterSnapshot? partyRoster = null,
         RuntimeInventorySnapshot? inventory = null,
+        RuntimeShopStockSnapshot? shopStock = null,
         RuntimeFieldSnapshot? field = null,
         CompendiumStateSnapshot? compendium = null,
         RuntimeKnowledgeSnapshot? knowledge = null,
@@ -2785,10 +2792,10 @@ public sealed class RuntimePersistenceSnapshotTests
         return new RuntimeSaveGameSnapshot(
             SemanticVersion.Parse("1.0.0"),
             [
-                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.9.0")),
-                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.9.0")),
-                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.9.0")),
-                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.9.0"))
+                new ContentPackIdentity("convergence.skill_system_redesign_sample", SemanticVersion.Parse("0.10.0")),
+                new ContentPackIdentity("convergence.clean_battle_demo", SemanticVersion.Parse("0.10.0")),
+                new ContentPackIdentity("convergence.shared_effects_demo", SemanticVersion.Parse("0.10.0")),
+                new ContentPackIdentity("convergence.catalog_surface_sample", SemanticVersion.Parse("0.10.0"))
             ],
             actors ?? [frost, ember],
             partyRoster ?? new RuntimePartyRosterSnapshot(
@@ -2811,6 +2818,14 @@ public sealed class RuntimePersistenceSnapshotTests
             RuntimeCurrencyLedgerSnapshot.Single(
                 Id("convergence.catalog_surface_sample:credits"),
                 1234),
+            shopStock ?? new RuntimeShopStockSnapshot(
+            [
+                new RuntimeShopStockEntrySnapshot(
+                    new RuntimeShopOfferIdentity(
+                        Id("convergence.catalog_surface_sample:sample_outfitter"),
+                        Id("medicine_offer")),
+                    8)
+            ]),
             field ?? (includeDefaultField
                 ? new RuntimeFieldSnapshot(
                     new RuntimeNavigationSnapshot(Id("convergence.catalog_surface_sample:sample_depths_floor_5")),
@@ -2886,6 +2901,7 @@ public sealed class RuntimePersistenceSnapshotTests
             partyRoster ?? snapshot.PartyRoster,
             inventory ?? snapshot.Inventory,
             snapshot.CurrencyLedger,
+            snapshot.ShopStock,
             snapshot.Field,
             snapshot.Compendium,
             snapshot.Knowledge,
