@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R9 complete; O7-R10 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R9 complete; O7-R10 documentation audit recorded; O7-R10 audience work and O7-R11 pending
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -21,6 +21,11 @@
 > [R9 post-correction review](inventory-equipment-economy-order-7-r9-post-correction-review-2026-08-13.md)
 > found no remaining actionable R9 defect and closes only R9. The capability
 > remains partial for R10 and R11.
+
+> **O7-R10 audit:** The source-traced audience audit and ordered documentation
+> checkpoints are recorded in
+> [inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md](inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md).
+> No audience is promoted by the audit alone.
 
 ## Purpose
 

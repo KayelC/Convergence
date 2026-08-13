@@ -98,6 +98,7 @@ or implementation authority.
 - [Inventory, Equipment, And Economy Order 7 Source Review And Approved Roadmap, 10 August 2026](inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 - [Inventory, Equipment, And Economy Order 7 R9 Wire-Integrity Audit, 13 August 2026](inventory-equipment-economy-order-7-r9-wire-integrity-audit-2026-08-13.md)
 - [Inventory, Equipment, And Economy Order 7 R9 Post-Correction Review, 13 August 2026](inventory-equipment-economy-order-7-r9-post-correction-review-2026-08-13.md)
+- [Inventory, Equipment, And Economy Order 7 R10 Documentation Audit, 13 August 2026](inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.
