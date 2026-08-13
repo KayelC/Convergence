@@ -1,0 +1,76 @@
+# Verification Evidence
+
+## Purpose
+
+Convergence keeps checkpoint conclusions in review documents, but a conclusion
+is not a replacement for raw evidence. A checkpoint that claims the complete
+local release gate must preserve its command lines, unedited combined console
+output, exit codes, source identity, coverage, and checksums in Git.
+
+The authoritative location is:
+
+```text
+artifacts/verification/<checkpoint>/<tested-commit>/
+```
+
+Ordinary scratch under `artifacts/`, operating-system logs, build output, and a
+local Godot engine remain ignored. Existing historical tracked artifacts are
+retained, but new complete-gate evidence uses only the directory above.
+
+## Capture A Checkpoint
+
+Begin from a clean commit. On Windows, provide the official Godot 4.7.1 .NET
+console executable and, when reviewing a bounded change, the exact diff range:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  .\eng\Invoke-VerificationEvidence.ps1 `
+  -Checkpoint order7-r10 `
+  -ReviewedBase 23cf50c1 `
+  -ReviewedHead 996cc120 `
+  -GodotExecutable .\tests\Godot_v4.7.1-stable_mono_win64\Godot_v4.7.1-stable_mono_win64_console.exe
+```
+
+The runner refuses a dirty worktree, an invalid checkpoint ID, an existing
+destination, an absent Godot executable, a failed command, or an omitted Godot
+run. It never overwrites prior evidence.
+
+## Bundle Contract
+
+Every successful bundle contains:
+
+- `manifest.json`: schema version, checkpoint, tested commit, reviewed range,
+  timestamps, each exact command, exit code, and coverage metrics;
+- `README.md`: a human-readable identity and result summary;
+- `git-status-before.txt` and `git-status-after.txt`;
+- `reviewed-range.diff` and `reviewed-range-commits.txt` when a range is given;
+- one portable `.cmd` wrapper and one unedited `.raw.txt` combined-output file
+  for every command;
+- `coverage/coverage.cobertura.xml.gz`, preserving the exact collected XML in
+  compressed form, plus its uncompressed SHA-256 in the manifest; and
+- `SHA256SUMS.txt`, covering every bundle file except the checksum file itself.
+
+The command set includes dependency restore/audit, focused Order 7 tests, strict
+builds, architecture and full tests, formatting, coverage and threshold checks,
+active-content validation, all DemoHost modes, scripted Training Annex play,
+the Debug Godot build and real headless smoke, trimming analysis, and
+`git diff --check`.
+
+`VerificationEvidenceContractTests` validates every committed bundle. It
+requires successful commands, the complete mandatory command set, no missing or
+extra checksum entries, matching SHA-256 values, and coverage above the release
+thresholds.
+
+## Commit Ordering
+
+The evidence directory is named after the clean commit that was actually
+tested. The following evidence-only commit does not change that tested source;
+it merely stores the results. A later source change requires a new bundle under
+its own commit ID. Never edit an existing successful bundle in place.
+
+## Limits
+
+Evidence proves what ran on one identified revision and environment. It does not
+prove that a review interpreted the mechanics correctly, replace independent
+source review, or make ignored local logs authoritative. Review records must
+continue to distinguish verified results from owner-approved game design.

@@ -77,3 +77,9 @@ git diff --check
 ```
 
 Run relevant DemoHost modes, content validation, Godot smoke coverage, documentation checks, and boundary searches when the changed area affects them. Keep commits narrow and independently green.
+
+When a checkpoint requires durable verification evidence, use
+`eng/Invoke-VerificationEvidence.ps1`. Do not rely on terminal history or
+`%TEMP%` as the only copy of raw output. Commit the resulting
+`artifacts/verification/<checkpoint>/<tested-commit>/` bundle only after its
+manifest and checksums pass the architecture evidence contract.

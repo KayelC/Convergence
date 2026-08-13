@@ -22,6 +22,13 @@ The architecture suite checks the product boundary, public API, terminology, doc
 
 Framework coverage is collected independently with Coverlet's Cobertura output. `eng/Assert-CoberturaCoverage.ps1` requires at least 90% line coverage and 70% branch coverage for the `Convergence.Framework` package. On Windows systems that prohibit unsigned local scripts, invoke it with `powershell.exe -ExecutionPolicy Bypass -File`.
 
+For a review checkpoint, run the tracked
+[`Invoke-VerificationEvidence.ps1`](../eng/Invoke-VerificationEvidence.ps1)
+wrapper instead of leaving raw output in terminal history or `%TEMP%`. Its
+[evidence contract](verification-evidence.md) stores the tested commit, exact
+commands, raw combined output, exit codes, compressed Cobertura data, and
+SHA-256 checksums under `artifacts/verification`.
+
 ## Content And Host Gate
 
 `Convergence.ContentValidator` validates every active JSON document against schema v10 and the Framework's deserialization, semantic, dependency, registration, and catalog rules. The gate then runs all four noninteractive DemoHost modes and a scripted `--clean-training-annex-play` session.

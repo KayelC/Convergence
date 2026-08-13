@@ -13,7 +13,12 @@
 # Build artifacts
 bin/
 obj/
-#artifacts/
+
+# Generated scratch is local. Auditable verification bundles are deliberately
+# committed under artifacts/verification.
+/artifacts/*
+!/artifacts/verification/
+!/artifacts/verification/**
 
 # Package directories
 packages/

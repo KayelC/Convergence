@@ -56,6 +56,7 @@ This directory is the active documentation authority for Convergence Framework.
 - [Public API Namespaces](public-api-namespaces.md)
 - [Framework Source Ownership](reference/framework-source-ownership.md)
 - [Release Quality Gate](release-quality-gate.md)
+- [Verification Evidence](verification-evidence.md)
 - [Licensing](licensing.md)
 - [Terminology Boundary](terminology-boundary.md)
 
