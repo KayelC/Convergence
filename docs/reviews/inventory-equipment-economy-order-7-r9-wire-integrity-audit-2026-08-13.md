@@ -173,11 +173,14 @@ work.
 - **C1 complete:** commit `4be530f9` removes public resolved-offer construction
   and mutation, validates internal offer shape, and returns a typed diagnostic
   for undefined content kinds.
-- **C2 implemented pending commit:** aggregate restore, rejection/cancellation
-  atomicity, all active content, DemoHost, Godot, coverage, and complete-solution
-  evidence are recorded in the Order 7 source review.
-- **C3 pending:** R9 is not closed until the resulting source and documentation
-  receive a fresh review independent of this audit's assumptions.
+- **C2 complete:** commit `c1eafb52` certifies aggregate restore,
+  rejection/cancellation atomicity, all active content, DemoHost, Godot,
+  coverage, and complete-solution evidence recorded in the Order 7 source
+  review.
+- **C3 complete:** the
+  [post-correction review](inventory-equipment-economy-order-7-r9-post-correction-review-2026-08-13.md)
+  rereads the resulting source and documentation independently, finds no
+  remaining actionable R9 defect, and closes R9 without starting R10.
 
 ## Scope Guard
 

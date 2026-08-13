@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R8 complete; O7-R9 certification implemented pending its fresh review; O7-R10 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R9 complete; O7-R10 through O7-R11 pending
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -16,6 +16,11 @@
 > It identifies one reachable resolved-offer authority defect, separates trusted
 > host responsibilities from Framework guarantees, and defines the isolated R9
 > correction and certification commits.
+>
+> The independent
+> [R9 post-correction review](inventory-equipment-economy-order-7-r9-post-correction-review-2026-08-13.md)
+> found no remaining actionable R9 defect and closes only R9. The capability
+> remains partial for R10 and R11.
 
 ## Purpose
 
@@ -1253,7 +1258,7 @@ concrete consequences, reproducible evidence, and any trusted host boundaries.
 
 ### O7-R9: Certify Cross-System And Wire Integrity
 
-- **Baseline and commits:** `a9e8eef9..this checkpoint commit`; audit commit
+- **Baseline and commits:** `a9e8eef9..c1eafb52`; audit commit
   `69dbb3d4` (`docs: define order 7 wire integrity certification`), authority
   correction commit `4be530f9` (`runtime: seal resolved shop offer authority`),
   and this cross-system certification commit.
@@ -1328,3 +1333,10 @@ concrete consequences, reproducible evidence, and any trusted host boundaries.
    transient offers after replacing a catalog. R9 does not add an authenticity
    token, mutable repository, hot-reload protocol, new gameplay policy, schema
    change, save change, or R10 audience-document promotion.
+
+#### Fresh R9 Review
+
+The post-correction review reread the current transaction, restore, host, API,
+and documentation paths without accepting the pre-implementation audit as
+proof. It found no remaining High, Medium, or Low actionable R9 defect. R9 is
+complete; O7-R10 and O7-R11 remain open, and the capability remains `partial`.
