@@ -171,6 +171,11 @@ configured resources, cures only ailments that permit recovery events, clears
 selected temporary categories through canonical authorities, and commits actor
 state only after the named-currency debit succeeds. Training Annex explicitly
 binds the supplied standard policy to preserve its established HP/SP quote.
+O7-R9 certifies these authorities together: aggregate restoration accepts one
+coherent equipment/slot/currency/stock graph and exposes no partial session on
+rejection; rejected and cancelled transactions preserve every supplied
+before-state; and resolved shop offers cannot be publicly constructed or
+rewritten after catalog-backed resolution.
 The owner-approved
 [Order 7 roadmap](reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 defines the direct authority corrections and narrowly justified policy seams;

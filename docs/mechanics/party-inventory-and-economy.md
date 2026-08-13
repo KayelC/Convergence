@@ -1,10 +1,10 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Order 7 status:** O7-R1 through O7-R8 establish the approved tracking,
+> **Order 7 status:** O7-R1 through O7-R9 establish the approved tracking,
 > equipment-instance ownership, authored slot-layout model, equipped-only skill
 > grants, Defense/Evasion combat contributions, and typed currency-ledger
 > authority, plus explicit pricing, durable policy-owned shop stock, and generic
-> policy-bound recovery. This page remains
+> policy-bound recovery, plus combined runtime/wire certification. This page remains
 > unreviewed until the complete
 > [Order 7 roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 > is implemented and independently closed.
@@ -161,6 +161,9 @@ explicitly; it is not hidden standard behavior.
 One resolved pricing profile drives menu assessment and the committed
 transaction. Negative input, overflow, unavailable currency, unaffordability,
 and a failing custom policy reject before inventory or currency mutation.
+The complete resolved offer is Framework-created and externally read-only, so
+presentation code cannot retain one offer's price or stock identity while
+substituting another content definition.
 
 Unlimited offers create no durable quantity. Fixed limited offers bind
 `standard_shop_stock`; policy-shaped offers carry a positive initial quantity

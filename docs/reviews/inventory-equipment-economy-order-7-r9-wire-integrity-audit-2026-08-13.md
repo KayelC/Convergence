@@ -166,6 +166,19 @@ work.
 - record any realistic reachable defect before R9 is marked complete; and
 - leave Order 7 open for O7-R10 and O7-R11.
 
+## Implementation Progress
+
+- **C0 complete:** commit `69dbb3d4` records this audit and the reproduced
+  1,975-test starting baseline without changing runtime behavior.
+- **C1 complete:** commit `4be530f9` removes public resolved-offer construction
+  and mutation, validates internal offer shape, and returns a typed diagnostic
+  for undefined content kinds.
+- **C2 implemented pending commit:** aggregate restore, rejection/cancellation
+  atomicity, all active content, DemoHost, Godot, coverage, and complete-solution
+  evidence are recorded in the Order 7 source review.
+- **C3 pending:** R9 is not closed until the resulting source and documentation
+  receive a fresh review independent of this audit's assumptions.
+
 ## Scope Guard
 
 R9 does not add a new gameplay policy, change prices, stock transitions,

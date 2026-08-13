@@ -80,7 +80,9 @@ The bound economy service owns one `IRuntimeShopOfferResolver`. Its selected
 default `IShopPricingPolicy` resolves fixed authored purchase prices, while an
 explicit policy-shaped offer may select another factory from the same
 `ShopPricingPolicyFactoryRegistry`. Resolution produces one transient immutable
-pricing profile carried by the runtime offer. Host quotes and atomic shop
+runtime offer through a non-public construction boundary; its identity,
+content, pricing, stock, slot, and stack-limit members are externally read-only.
+Host quotes and atomic shop
 transactions consume that profile rather than rebuilding price logic in a
 presentation adapter. The supplied standard policy preserves authored purchase
 price and derives resale from a configured percentage; Luck adjustment is a

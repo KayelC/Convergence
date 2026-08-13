@@ -271,14 +271,16 @@ public sealed class RecoveryPolicyTests
 
         RecoveryTransactionResult rejected = Service(new RejectingRecoveryPolicy())
             .Recover(actor, Ledger(100));
+        RuntimeCurrencyLedgerSnapshot cancellationLedger = Ledger(100);
 
         Assert.Equal(RecoveryTransactionCode.PolicyRejected, rejected.Code);
         Assert.Equal("recovery blocked", Assert.Single(rejected.Diagnostics).Message);
         AssertActorUnchanged(before, actor.ToSnapshot());
         Assert.Equal(100, rejected.AfterCurrencyLedger.GetRequiredBalance(Credits));
         Assert.Throws<OperationCanceledException>(() =>
-            Service(new CancelingRecoveryPolicy()).Recover(actor, Ledger(100)));
+            Service(new CancelingRecoveryPolicy()).Recover(actor, cancellationLedger));
         AssertActorUnchanged(before, actor.ToSnapshot());
+        Assert.Equal(100, cancellationLedger.GetRequiredBalance(Credits));
     }
 
     [Fact]

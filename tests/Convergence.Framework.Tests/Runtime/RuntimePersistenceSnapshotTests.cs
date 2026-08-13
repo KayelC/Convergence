@@ -211,6 +211,26 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Equal(
             snapshot.ShopStock.Entries,
             session.ShopStock.Entries);
+        RuntimeEquipmentInstanceSnapshot restoredEquipment = Assert.Single(
+            session.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Weapon));
+        Assert.Equal(RuntimeInstanceId.Parse("shortsword-001"), restoredEquipment.InstanceId);
+        Assert.Equal(
+            Id("convergence.catalog_surface_sample:shortsword_sample"),
+            restoredEquipment.DefinitionId);
+        Assert.Equal(
+            RuntimeInstanceId.Parse("shortsword-001"),
+            session.ActorsByInstanceId[vessel.Identity.InstanceId]
+                .State.ToSnapshot().Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Weapon]);
+        Assert.Equal(
+            1234,
+            session.CurrencyLedger.GetRequiredBalance(
+                Id("convergence.catalog_surface_sample:credits")));
+        Assert.True(session.ShopStock.TryGetRemainingQuantity(
+            new RuntimeShopOfferIdentity(
+                Id("convergence.catalog_surface_sample:sample_outfitter"),
+                Id("medicine_offer")),
+            out int remainingQuantity));
+        Assert.Equal(8, remainingQuantity);
         Assert.Equal(
             [vessel.Identity.InstanceId, ember.Identity.InstanceId],
             session.Actors.Select(actor => actor.State.InstanceId));
@@ -259,6 +279,51 @@ public sealed class RuntimePersistenceSnapshotTests
         Assert.Throws<NotSupportedException>(() =>
             ((IDictionary<RuntimeInstanceId, CatalogBattleActor>)session.ActorsByInstanceId)
             .Add(RuntimeInstanceId.Parse("late_actor"), session.Actors[0]));
+    }
+
+    [Fact]
+    public void RuntimeSessionRestoreService_RejectsEquipmentActorIdentityCollisionBeforeAnyActorRestore()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeInstanceId actorId = baseline.Actors[0].Identity.InstanceId;
+        var collidingInventory = new RuntimeInventorySnapshot(
+            baseline.Inventory.ItemQuantities,
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Weapon,
+                    [
+                        new RuntimeEquipmentInstanceSnapshot(
+                            RuntimeInstanceId.Parse("shortsword-001"),
+                            Id("convergence.catalog_surface_sample:shortsword_sample")),
+                        new RuntimeEquipmentInstanceSnapshot(
+                            actorId,
+                            Id("convergence.catalog_surface_sample:shortsword_sample"))
+                    ])
+            ]);
+        RuntimeSaveGameSnapshot invalid = Copy(baseline, inventory: collidingInventory);
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        var service = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(),
+            factory,
+            new DelegateActorRestoreProfileResolver(_ => ActorProfile()));
+
+        RuntimeSessionRestoreResult result = service.Restore(invalid, catalog);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Session);
+        Assert.Empty(factory.RestoreOrder);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.SaveValidationRejected &&
+            diagnostic.SaveValidationCode ==
+                RuntimeSaveValidationCode.EquipmentInstanceIdCollidesWithActor &&
+            diagnostic.ActorId == actorId);
+        Assert.Equal(baseline.CurrencyLedger.Balances, invalid.CurrencyLedger.Balances);
+        Assert.Equal(baseline.ShopStock.Entries, invalid.ShopStock.Entries);
     }
 
     [Fact]

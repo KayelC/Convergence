@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R8 complete; O7-R9 in progress; O7-R10 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R8 complete; O7-R9 certification implemented pending its fresh review; O7-R10 through O7-R11 pending
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -1250,3 +1250,81 @@ concrete consequences, reproducible evidence, and any trusted host boundaries.
    supplied recovery policy, treatment content family, presentation framework,
    pricing/stock change, schema revision, save revision, or O7-R9 certification
    work was introduced. Order 7 remains open for O7-R9 through O7-R11.
+
+### O7-R9: Certify Cross-System And Wire Integrity
+
+- **Baseline and commits:** `a9e8eef9..this checkpoint commit`; audit commit
+  `69dbb3d4` (`docs: define order 7 wire integrity certification`), authority
+  correction commit `4be530f9` (`runtime: seal resolved shop offer authority`),
+  and this cross-system certification commit.
+- **Actual destination:** `RuntimeShopOfferResolver` remains the only creator of
+  complete runtime offers; resolved offer members are externally read-only;
+  save validation and aggregate restoration certify equipment ownership,
+  authored slots, typed currencies, and tracked stock together; transaction
+  regressions certify equal immutable before-state on rejection or cancellation.
+- **Changed Framework files:** `Runtime/ShopPricingPolicies.cs`, its resource
+  resolver call site, and the deliberate public API baseline. The resolver now
+  returns a typed `UnsupportedContentKind` diagnostic and malformed item versus
+  equipment profiles cannot be constructed inside the Framework boundary.
+- **Changed tests:** resource-management offer-authority regressions, aggregate
+  persistence/restore certification, shop rejection and cancellation
+  certification, and recovery cancellation certification. Framework, DemoHost,
+  ContentValidator, and Godot integration surfaces were all exercised without
+  changing host presentation or wire formats.
+- **Focused tests:** 152 Framework equipment/slot/persistence/pricing/stock/
+  recovery/resource/Godot-contract tests and 133 DemoHost save/Training Annex
+  tests passed: 285 total, 0 failed, 0 skipped.
+- **Full suite:** 1,789 Framework tests, 182 DemoHost tests, and 7
+  ContentValidator tests passed: 1,978 total, 0 failed, 0 skipped.
+- **Build and integration:** strict nonincremental Release solution and Debug
+  Godot sample builds passed with 0 warnings and 0 errors; formatting and
+  `git diff --check` passed. The authoring validator loaded all 6 active packs,
+  36 documents, and 98 qualified definitions. All four noninteractive DemoHost
+  modes and scripted Training Annex exit passed. The official Godot 4.7.1
+  headless sample emitted `CONVERGENCE_GODOT_SMOKE_OK`, restored save v19 with
+  3 actors, 205 Credits, and one stock entry, and exited 0.
+- **Coverage:** Framework coverage passed at 90.19% lines and 76.71% branches
+  against required minima of 90% and 70%.
+- **Contract versions:** this checkpoint tightens transient runtime-offer API
+  authority and adds certification evidence only. Runtime save contract remains
+  v19, content schema remains v10, and active pack versions remain unchanged.
+
+#### Explicit O7-R9 Cross-System And Wire Evidence
+
+1. **Every active content pack is valid.** Independent schema, deserialization,
+   semantic, dependency, registration, and catalog construction checks passed
+   for all 6 active packs, 36 documents, and 98 qualified definitions under
+   schema v10.
+2. **The saved aggregate has one coherent authority graph.** Aggregate restore
+   preserves the exact immutable inventory, currency-ledger, and shop-stock
+   values; the restored actor references the inventory-owned equipment
+   instance under its authored slot; the expected Credits balance and tracked
+   offer quantity survive together. An equipment instance ID colliding with an
+   actor ID is rejected before any actor factory call or partial session is
+   exposed.
+3. **Rejected and cancelled operations preserve every before-state.** Shop
+   stock tests prove missing currency and policy cancellation leave inventory,
+   currency, and stock unchanged. Recovery cancellation leaves both the live
+   actor and supplied currency ledger unchanged. Cancellation remains an
+   `OperationCanceledException`, not a gameplay rejection.
+4. **Stale or forged references cannot commit.** Duplicate, missing, equipped,
+   multiply assigned, and actor-colliding equipment instance IDs are rejected
+   by transition or aggregate boundaries. A resolved shop offer has no public
+   constructor or writable authority member, undefined content kinds resolve to
+   a typed diagnostic, and contradictory item/equipment shapes reject before a
+   transaction can consume them. A transaction naming a currency absent from
+   the ledger returns typed `CurrencyNotFound` with equal before/after state.
+5. **All host surfaces consume the same contracts.** Clean Save, Training Annex
+   demo/play tests, the Godot-shaped contract tests, and the real Godot sample
+   all preserve instance-owned equipment, authored slots, named currency, and
+   tracked stock. Hosts serialize and adopt immutable results; no host-specific
+   economy authority enters Framework.
+6. **The public API change is deliberate and narrow.** Only resolved-offer
+   construction and `init` mutation are removed; the typed unsupported-kind
+   diagnostic is added. Pricing, stock, recovery, currency, save, content, and
+   host contracts otherwise retain their post-R8 shapes.
+7. **Trusted-host and scope boundaries remain explicit.** Hosts still allocate
+   globally fresh runtime IDs, adopt successful immutable results, and rebuild
+   transient offers after replacing a catalog. R9 does not add an authenticity
+   token, mutable repository, hot-reload protocol, new gameplay policy, schema
+   change, save change, or R10 audience-document promotion.

@@ -658,9 +658,11 @@ standard and optional Luck-adjusted shop-pricing policies through the economy
 ruleset and typed offer factories. O7-R7 implements stable offer identity,
 durable policy-owned stock, and atomic inventory/currency/stock transactions.
 O7-R8 implements the remaining generic recovery policy seam and migrates the
-Training Annex and Godot contract evidence. Later checkpoints certify the
-combined wire/runtime surface, complete all three audience documents, and run
-the independent closure audit.
+Training Annex and Godot contract evidence. O7-R9 certifies the combined
+wire/runtime surface, including aggregate restore, immutable rejected and
+cancelled operations, sealed resolved-offer authority, all active content,
+DemoHost, and the real Godot consumer. O7-R10 still owns all three audience
+documents, and O7-R11 still owns the independent closure audit.
 
 The capability is `partial` while implementation remains open. Its mechanics and
 technical entries remain `existing_unreviewed`, and its developer guide remains

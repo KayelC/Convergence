@@ -25,9 +25,11 @@ the economy ruleset or an explicit offer. O7-R7 gives offers stable identity,
 persists policy-owned stock under save contract v19, and threads that state
 through DemoHost and Godot-owned serialization. O7-R8 supplies optional generic
 recovery with explicit resources, legal cleanup, cost, and currency authority;
-Training Annex and Godot evidence use the same bound service. The capability
-remains `partial` until cross-system certification, audience documentation, and an independent
-adversarial closure audit are complete.
+Training Annex and Godot evidence use the same bound service. O7-R9 certifies
+the combined runtime and wire graph across save/restore, equipment, offers,
+currencies, stock, recovery, DemoHost, and Godot, and seals resolved offers
+against host-side reconstruction. The capability remains `partial` until
+audience documentation and an independent adversarial closure audit are complete.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).

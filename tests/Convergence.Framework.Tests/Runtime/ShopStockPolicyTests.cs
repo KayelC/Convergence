@@ -125,6 +125,17 @@ public sealed class ShopStockPolicyTests
             ordinary,
             buyerLuck: 0,
             purchasedEquipmentInstanceId: null);
+        RuntimeCurrencyLedgerSnapshot wrongCurrency = RuntimeCurrencyLedgerSnapshot.Single(
+            Id("tokens"),
+            100);
+        ShopTransactionResult missingCurrency = service.Buy(
+            emptyInventory,
+            wrongCurrency,
+            validStock,
+            Credits,
+            ordinary,
+            buyerLuck: 0,
+            purchasedEquipmentInstanceId: null);
         var fullInventory = new RuntimeInventorySnapshot(
             [new KeyValuePair<ContentId, int>(Medicine, 1)]);
         RuntimeShopOfferSnapshot stackLimited =
@@ -193,6 +204,8 @@ public sealed class ShopStockPolicyTests
 
         AssertAtomicRejection(insufficientCurrency, emptyInventory, insufficientCurrency.BeforeCurrencyLedger, validStock,
             ResourceTransactionCode.InsufficientCurrency);
+        AssertAtomicRejection(missingCurrency, emptyInventory, wrongCurrency, validStock,
+            ResourceTransactionCode.CurrencyNotFound);
         AssertAtomicRejection(fullStack, fullInventory, funded, validStock,
             ResourceTransactionCode.ItemStackExceeded);
         AssertAtomicRejection(missingStock, emptyInventory, funded, missingStock.BeforeStock,
@@ -272,6 +285,35 @@ public sealed class ShopStockPolicyTests
             1);
         Assert.Equal(ShopStockTransitionCode.PolicyRejected, rejected.Code);
         Assert.Equal(1, rejected.RemainingQuantity);
+    }
+
+    [Fact]
+    public void Buy_CancelledStockPolicyLeavesEverySuppliedAuthorityUnchanged()
+    {
+        var inventory = new RuntimeInventorySnapshot();
+        RuntimeCurrencyLedgerSnapshot currency = Ledger(100);
+        RuntimeShopOfferSnapshot offer = Offer(
+            ShopA,
+            Id("canceling_offer"),
+            Medicine,
+            quantity: 1,
+            policy: new CancelingStockPolicy());
+        RuntimeShopStockSnapshot stock = RuntimeShopStockSnapshot.CreateInitial([offer]);
+        var service = new ShopTransactionService();
+
+        Assert.Throws<OperationCanceledException>(() => service.Buy(
+            inventory,
+            currency,
+            stock,
+            Credits,
+            offer,
+            buyerLuck: 0,
+            purchasedEquipmentInstanceId: null));
+
+        Assert.Empty(inventory.ItemQuantities);
+        Assert.Empty(inventory.OwnedEquipmentInstances);
+        Assert.Equal(100, currency.GetRequiredBalance(Credits));
+        AssertQuantity(stock, offer.Identity, 1);
     }
 
     [Fact]

@@ -171,8 +171,8 @@
       "frameworkTests": [
         "ResourceManagementServiceTests",
         "ShopPricingPolicyTests",
-          "ShopStockPolicyTests",
-          "RecoveryPolicyTests",
+        "ShopStockPolicyTests",
+        "RecoveryPolicyTests",
         "EquipmentInstanceOwnershipTests",
         "EquipmentSlotLayoutTests",
         "BattleActionExecutorTests",
@@ -186,7 +186,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-          "Cross-system certification, complete three-audience documentation, and the independent Order 7 closure audit remain pending."
+        "Complete three-audience documentation and the independent Order 7 closure audit remain pending."
       ]
     },
     {
