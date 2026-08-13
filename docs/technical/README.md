@@ -43,6 +43,10 @@ Technical pages focus on:
   scheduler protocol, lifecycle transactions, fixed-point reconciliation,
   command/economy authority, structural event ordering, cancellation, and
   typed fault containment.
+- [Inventory, Equipment, And Economy Runtime](inventory-equipment-economy-runtime.md):
+  equipment-instance and loadout authority, slot validation, live profile
+  projection, typed currency, atomic shop/recovery transitions, and save v19
+  restoration.
 
 The actor and typed action/effect references have completed collaborative
 review. That Order 1 review includes stat-modifier runtime authority and its
