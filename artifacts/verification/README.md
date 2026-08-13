@@ -5,6 +5,13 @@ commit that was tested. See
 [`docs/verification-evidence.md`](../../docs/verification-evidence.md) for the
 capture and validation contract.
 
+## Evidence Retention Gate
+
+- [Successful complete retention gate](evidence-retention-20260813/1cb2478194a0d017b4fe5173fc5cbd0626d6cd8e/README.md):
+  verifies the clean commit that introduced the canonical O7-R10 bundle,
+  recovered every still-available historical artifact, and added executable
+  checksum/decompression guards. All 23 commands passed.
+
 ## Order 7 R10
 
 - [Successful complete gate](order7-r10/96f58e47a77e31878bf89452bf7cad91cca5db55/README.md):

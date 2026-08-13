@@ -1,0 +1,7 @@
+commit 1cb2478194a0d017b4fe5173fc5cbd0626d6cd8e
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Thu Aug 13 14:51:12 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Thu Aug 13 14:51:12 2026 +0200
+
+    test: retain raw verification evidence
