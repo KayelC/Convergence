@@ -93,6 +93,9 @@ O6-R46 reconciles the composition guidance and interface name. The
 [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
 independently traces the corrected host boundary. This guide is `reviewed`, and
 Order 6 is formally complete.
+The Order 7 inventory/economy guide is `reviewed` after O7-R10 traced its
+composition examples and host-adoption rules against current APIs and tests.
+O7-R11 remains the separate capability-closure audit.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).

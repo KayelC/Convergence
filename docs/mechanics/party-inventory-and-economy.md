@@ -1,9 +1,9 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Order 7 review state:** this player-facing page has been rewritten from the
-> implemented O7-R2 through O7-R9 behavior. It remains
-> `existing_unreviewed` until O7-R10 reconciles all three audiences against
-> current source and tests. O7-R11, not this page, owns capability closure.
+> **Order 7 review state:** `reviewed` after O7-R10 reconciled this page with
+> current source, tests, developer integration, and technical state machines.
+> The capability remains `partial` until the separate O7-R11 adversarial
+> closure audit.
 
 ## What This System Means To A Player
 

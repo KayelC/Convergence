@@ -414,5 +414,7 @@ typed factory.
 ## Related Guidance
 
 - [Actors And Runtime State](developer-guide/actors-and-runtime-state.md)
+- [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md)
+- [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md)
 - [Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md)
 - [Confirmed Actor Decision](decisions/actor-composition-progression-and-rosters.md)

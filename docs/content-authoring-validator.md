@@ -64,3 +64,9 @@ validation.
 
 The profile currently has schema version `1`. Unknown profile properties and
 unsupported profile versions are rejected rather than ignored.
+
+## Related Guidance
+
+- [Content Contract](content-contract.md)
+- [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md)
+- [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md)

@@ -104,6 +104,12 @@ debit, then commits the actor only when every operation succeeds. Rulesets that
 do not select recovery expose no recovery service and receive no hidden HP/SP,
 cost, or cleanup behavior.
 
+The supported host composition and adoption sequence is documented in
+[Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md).
+The ownership graph, atomic transaction order, and save v19 restore invariants
+are documented in
+[Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md).
+
 Battle knowledge deliberately uses two snapshot authorities. Persistent facts
 are keyed by entity definition and belong to session persistence. Encounter
 facts are keyed by runtime target identity, take query precedence for that

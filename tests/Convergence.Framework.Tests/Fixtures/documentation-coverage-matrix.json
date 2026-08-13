@@ -263,19 +263,19 @@
     {
       "id": "inventory_equipment_economy",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "Order 7 equipment-instance ownership, slot layouts, equipped skill grants, combat contributions, typed currency-ledger authority, explicit pricing, durable policy-owned stock, and generic recovery are implemented, but the mechanics page remains existing-unreviewed until source verification and owner review in O7-R10."
+        "reason": "O7-R10 reconciles the player-visible ownership, exact-copy equipment, temporary grants, prices, stock, atomic rejection, recovery, and save behavior with current source and tests."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "The approved equipment-instance, slot-policy, pricing, stock, recovery, and typed-currency integration still needs a post-implementation developer guide."
+        "state": "reviewed",
+        "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
+        "reason": "O7-R10 documents ruleset and slot-policy composition, instance IDs, one live equipment profile, atomic transaction adoption, recovery, saves, and Godot host responsibilities from current APIs."
       },
       "technical": {
-        "state": "existing_unreviewed",
-        "documents": ["docs/gameplay-systems.md"],
-        "reason": "Order 7 is open; equipment-instance/save authority, slot layouts, combat contributions, typed currency-ledger authority, pricing, atomic stock, and generic recovery are implemented, while the complete economy surface still needs a dedicated reviewed technical page."
+        "state": "reviewed",
+        "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
+        "reason": "O7-R10 defines the equipment, loadout, profile, currency, offer, stock, recovery, transaction, and save v19 authorities with source-traced state-machine diagrams."
       }
     },
     {

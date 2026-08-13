@@ -753,6 +753,79 @@ public sealed class DocumentationFoundationTests
     }
 
     [Fact]
+    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndOpenClosureGate()
+    {
+        string mechanics = File.ReadAllText(
+            RepositoryPath("docs", "mechanics", "party-inventory-and-economy.md"))
+            .ReplaceLineEndings(" ");
+        string developer = File.ReadAllText(
+            RepositoryPath("docs", "developer-guide", "inventory-equipment-and-economy.md"))
+            .ReplaceLineEndings(" ");
+        string technical = File.ReadAllText(
+            RepositoryPath("docs", "technical", "inventory-equipment-economy-runtime.md"))
+            .ReplaceLineEndings(" ");
+        string publicApi = File.ReadAllText(
+            RepositoryPath("docs", "public-api-contract.md"))
+            .ReplaceLineEndings(" ");
+
+        string[] mechanicsTokens =
+        [
+            "Every equipment copy has its own runtime identity.",
+            "Buying an equipment copy adds it to inventory; it does not silently equip it.",
+            "Equipment-granted skills are temporary availability, not learned skills.",
+            "A rejection updates none of them.",
+            "An actor at full configured resources may still have a valid zero-cost treatment",
+            "Current save contract v19 stores:"
+        ];
+        Assert.All(
+            mechanicsTokens,
+            token => Assert.Contains(token, mechanics, StringComparison.Ordinal));
+
+        string[] developerTokens =
+        [
+            "BindResourceManagementServices",
+            "IEquipmentSlotLayoutPolicy",
+            "RuntimeActorEquipmentProfileSource",
+            "Adopt all three after-snapshots together",
+            "Its after-ledger is hypothetical and must not be adopted",
+            "Reconnect Nodes by runtime ID only after aggregate restore succeeds"
+        ];
+        Assert.All(
+            developerTokens,
+            token => Assert.Contains(token, developer, StringComparison.Ordinal));
+
+        string[] technicalTokens =
+        [
+            "RuntimeInventorySnapshot` | item quantities and every owned equipment instance",
+            "There is no root equipment-owner collection besides inventory.",
+            "## Equip And Unequip Transition",
+            "## Shop Transaction State Machine",
+            "## Recovery Transaction State Machine",
+            "## Save V19 Validation And Restore",
+            "```mermaid"
+        ];
+        Assert.All(
+            technicalTokens,
+            token => Assert.Contains(token, technical, StringComparison.Ordinal));
+
+        Assert.Contains(
+            "Save contract v19 retains the canonical roster",
+            publicApi,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("Save contract v18", publicApi, StringComparison.Ordinal);
+
+        DocumentationCapability documentation = LoadDocumentationMatrix().Capabilities.Single(
+            capability => capability.Id == "inventory_equipment_economy");
+        Assert.Equal("reviewed", documentation.Mechanics.State);
+        Assert.Equal("reviewed", documentation.DeveloperGuide.State);
+        Assert.Equal("reviewed", documentation.Technical.State);
+
+        FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
+            candidate => candidate.Id == "inventory_equipment_economy");
+        Assert.Equal("partial", capability.ImplementationState);
+    }
+
+    [Fact]
     public void AudienceEvidenceAndRoadmapDirectories_AreIndexedAndDeclutterTheDocsRoot()
     {
         string docsRoot = RepositoryPath("docs");

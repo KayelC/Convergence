@@ -230,7 +230,7 @@ Battle Knowledge has two state authorities. Durable entity-defense facts use
 `RuntimeKnowledgeSnapshot`; current-target facts and Analyze disclosures use
 `RuntimeEncounterKnowledgeSnapshot`. Canonical Analyze returns
 `BattleAnalysisResult` and commits through the encounter transition. Save
-contract v18 contains only the durable knowledge snapshot and deliberately
+contract v19 contains only the durable knowledge snapshot and deliberately
 omits current encounter analysis.
 
 Every runtime actor exposes one immutable `RuntimeCombatProfileIdentitySnapshot`
@@ -272,17 +272,40 @@ application as an independently timed signed contribution, derives a bounded
 aggregate, refreshes the oldest same-sign contribution at a configured cap,
 and uses the same typed lifecycle-boundary contract per contribution.
 
-Save contract v18 retains the canonical roster and pending skill-choice
+Save contract v19 retains the canonical roster and pending skill-choice
 authorities established by v9 and stores complete stat-modifier policy state.
 It also stores and validates each actor's combat-profile source and revision,
 inventory-owned equipment instances, and actor loadout instance references.
 The aggregate exposes no second root equipment authority and carries an
-immutable currency ledger keyed by `ContentId` rather than an unnamed balance.
+immutable currency ledger keyed by `ContentId` rather than an unnamed balance,
+plus remaining quantities for policy-owned shop stock. Version 18 introduced
+the ledger; version 19 retained it and added durable shop stock.
 `RuntimeSessionRestoreService` binds retained modifier policies explicitly,
 derives the Active Hosted Entity dependency from `RuntimePartyRosterSnapshot`,
 restores owned actors first, and returns a normalized aggregate whose derived
 Vessel profile matches the restored source. Any non-current snapshot is
 rejected unless the host registers an explicit migration path.
+
+### Inventory, Equipment, And Economy Surface
+
+`RuntimeRulesetBindingResolver.BindResourceManagementServices` is the supported
+catalog-backed composition entry point. Its service bundle exposes immutable
+inventory, equipment, named-currency, resolved-offer, atomic shop, and optional
+recovery contracts. `RuntimeInventorySnapshot` is the sole equipment-instance
+owner; actor loadouts reference those instances under authored slot IDs.
+`RuntimeEquipmentProfileResolver` derives the current basic attack, numeric
+contributions, and equipped-only skill grants without copying grants into
+learned state.
+
+Hosts allocate globally fresh equipment instance IDs and adopt successful
+after-snapshots. `ShopTransactionResult` coordinates inventory, currency, and
+stock as one result. `RecoveryTransactionResult` coordinates staged actor state
+with an explicit currency ledger. Presentation code must not construct runtime
+shop offers, duplicate formulas, or infer authority from display text.
+
+See [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md),
+[Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md),
+and the [Content Contract](content-contract.md).
 
 ## Documentation And Build Tooling
 

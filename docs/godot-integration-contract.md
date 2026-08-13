@@ -104,7 +104,9 @@ Framework public APIs and source must not depend on Godot, console APIs, filesys
 ## Related Guidance
 
 - [Actors And Runtime State](developer-guide/actors-and-runtime-state.md)
+- [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md)
 - [Turn Economy Policies](developer-guide/turn-economy-policies.md)
+- [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md)
 - [Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md)
 - [Turn Economy Runtime](technical/turn-economy-runtime.md)
 - [Public API Contract](public-api-contract.md)

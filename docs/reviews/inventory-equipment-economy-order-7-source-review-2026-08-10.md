@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R9 complete; O7-R10 documentation audit recorded; O7-R10 audience work and O7-R11 pending
+**Implementation status:** O7-R1 through O7-R9 complete; O7-R10 audiences implemented and reconciled; O7-R10 final verification and O7-R11 pending
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -203,7 +203,7 @@ gate are complete.
 | O7-D4 | Equipment Defense and Evasion are numeric contributions to the existing `ProductionCombatRuleset` inputs. Equipment does not own a parallel damage or hit formula. | Direct integration correction | Approved; implemented by O7-R4 |
 | O7-D5 | Runtime shop stock is stateful. Buying decrements limited stock. Standard selling does not replenish stock; a supplied policy may choose otherwise. | Policy family plus runtime state | Approved; implemented by O7-R7 |
 | O7-D6 | The standard pricing policy uses authored purchase price and configurable resale percentage. Luck-adjusted pricing remains available as an optional supplied policy, not hidden standard behavior. | Policy family | Approved; implemented by O7-R6 |
-| O7-D7 | Recovery is generic and resource-ID driven. Supply exactly one `StandardHospitalRecoveryPolicy` for full configured HP/SP recovery, legal ailment cures, and configured temporary-state cleanup. | Policy family, narrowly scoped | Approved |
+| O7-D7 | Recovery is generic and resource-ID driven. Supply exactly one `StandardHospitalRecoveryPolicy` for full configured HP/SP recovery, legal ailment cures, and configured temporary-state cleanup. | Policy family, narrowly scoped | Approved; implemented by O7-R8 |
 | O7-D8 | Replace the unnamed wallet with a currency ledger keyed by currency `ContentId`. Supply a convenience accessor that succeeds only when exactly one currency exists. | Direct data-model correction | Approved; implemented by O7-R5 |
 
 ## Target Authority Model

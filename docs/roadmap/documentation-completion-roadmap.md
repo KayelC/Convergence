@@ -661,15 +661,15 @@ O7-R8 implements the remaining generic recovery policy seam and migrates the
 Training Annex and Godot contract evidence. O7-R9 certifies the combined
 wire/runtime surface, including aggregate restore, immutable rejected and
 cancelled operations, sealed resolved-offer authority, all active content,
-DemoHost, and the real Godot consumer. O7-R10 still owns all three audience
-documents, and O7-R11 still owns the independent closure audit.
+DemoHost, and the real Godot consumer. O7-R10 now supplies and reconciles the
+player mechanics, developer integration, and technical authority documents.
+O7-R11 still owns the independent closure audit.
 
-The capability is `partial` while implementation remains open. Its mechanics and
-technical entries remain `existing_unreviewed`, and its developer guide remains
-`missing`; those audience counts do not change merely because owner intent is
-now confirmed. Order 7 closes only after the ordered runtime checkpoints,
-three-audience documentation, complete verification, and an independent
-adversarial audit.
+The capability remains `partial` while independent closure is open. Its
+mechanics, developer, and technical entries are `reviewed` after O7-R10's
+source/test/diagram reconciliation. Documentation maturity does not bypass the
+remaining O7-R11 adversarial audit. Order 7 closes only after that audit finds
+no unresolved realistic reachable defect or documentation contradiction.
 
 ## Deferred Documentation
 

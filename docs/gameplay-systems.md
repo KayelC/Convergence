@@ -179,7 +179,12 @@ rewritten after catalog-backed resolution.
 The owner-approved
 [Order 7 roadmap](reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 defines the direct authority corrections and narrowly justified policy seams;
-this section is not closure evidence for those pending changes.
+O7-R10's reviewed
+[player mechanics](mechanics/party-inventory-and-economy.md),
+[developer integration](developer-guide/inventory-equipment-and-economy.md),
+and [technical authority](technical/inventory-equipment-economy-runtime.md)
+pages provide the detailed contracts. This overview is not O7-R11 independent
+closure evidence.
 
 ## Navigation, Traversal, And Encounter Preparation
 
@@ -201,3 +206,7 @@ Detailed actor integration is documented in
 [Actors And Runtime State](developer-guide/actors-and-runtime-state.md), with
 maintainer invariants in
 [Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md).
+Inventory/economy composition is documented in
+[Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md),
+with its authority and transaction state machines in
+[Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md).

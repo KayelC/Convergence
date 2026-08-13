@@ -9,8 +9,9 @@ equipment, currency, shops, and recovery.
 It does not define menu presentation, player input, scene ownership, save-file
 serialization, or game-specific currency names.
 
-> **Review state:** `existing_unreviewed` during O7-R10. Promotion requires a
-> final source/test/diagram reconciliation across all three Order 7 audiences.
+> **Review state:** `reviewed` after O7-R10 traced the authority graph,
+> transaction order, restore boundary, and diagrams against current source and
+> tests. O7-R11 remains the independent capability-closure audit.
 
 ## Authority Map
 

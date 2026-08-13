@@ -32,6 +32,12 @@ This directory is the active documentation authority for Convergence Framework.
     composing schedulers, commands, lifecycle, events, and completion.
 17. [Encounter Orchestration Runtime](technical/encounter-orchestration-runtime.md):
     state-machine, transaction, reconciliation, and fault invariants.
+18. [Party, Rosters, Inventory, Equipment, And Economy](mechanics/party-inventory-and-economy.md):
+    player-visible ownership, equipment, shops, stock, currency, and recovery.
+19. [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md):
+    composing policies, instance IDs, transactions, saves, and Godot adoption.
+20. [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md):
+    authority graphs, atomic state machines, and save v19 restoration.
 
 ## Documentation Audiences
 

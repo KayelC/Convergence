@@ -28,8 +28,9 @@ recovery with explicit resources, legal cleanup, cost, and currency authority;
 Training Annex and Godot evidence use the same bound service. O7-R9 certifies
 the combined runtime and wire graph across save/restore, equipment, offers,
 currencies, stock, recovery, DemoHost, and Godot, and seals resolved offers
-against host-side reconstruction. The capability remains `partial` until
-audience documentation and an independent adversarial closure audit are complete.
+against host-side reconstruction. O7-R10 completes and reconciles all three
+audience documents. The capability remains `partial` until O7-R11 completes
+the independent adversarial closure audit.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).

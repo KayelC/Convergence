@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 30 reviewed,
-24 existing_unreviewed, 14 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 33 reviewed,
+22 existing_unreviewed, 13 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -34,6 +34,12 @@ conservative contact discovery, policy-controlled Analyze, familiarity imports,
 combat-profile source/revision identity, profile-switch invalidation,
 intrinsic-Almighty enforcement, and save boundaries. Other subsystem entries
 remain unreviewed until they complete the same process.
+Order 7 now documents inventory-owned equipment instances, authored slot
+layouts, one live equipment profile, typed currencies, resolved pricing,
+policy-owned stock, atomic shops, recovery, and save v19 across player,
+developer, and maintainer audiences. O7-R10 promotes those three documents to
+`reviewed`; the capability itself remains `partial` until O7-R11 performs the
+separate independent adversarial closure audit.
 O3-R7 independently verified the source and audience documents at that
 revision. A later source-first recheck reopened the developer and technical
 entries while three command-boundary defects were corrected. O3-R8 through

@@ -7,9 +7,9 @@ adopts their immutable results. It covers equipment instance IDs, authored
 slots, live equipment profiles, currency ledgers, resolved shop offers,
 policy-owned stock, recovery, persistence, and Godot integration.
 
-> **Review state:** `existing_unreviewed` during O7-R10. The guide is promoted
-> only after the mechanics, developer, and technical documents are reconciled
-> together against current source and tests.
+> **Review state:** `reviewed` after O7-R10 reconciled the mechanics,
+> integration, and technical authorities with current source and tests. O7-R11
+> remains the independent capability-closure audit.
 
 ## Authority Split
 
@@ -278,6 +278,8 @@ RecoveryTransactionResult assessment =
 Use the assessment for eligibility and price presentation. Do not replace it
 with a host-side health check: an actor at full resources may still need a
 legal ailment or temporary-state cleanup.
+Its after-ledger is hypothetical and must not be adopted; assessment does not
+commit the staged actor either.
 
 After confirmation, execute against current state:
 

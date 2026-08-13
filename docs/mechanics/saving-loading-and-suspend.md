@@ -151,8 +151,15 @@ single-currency hosts may use the explicit convenience accessor only when the
 ledger contains exactly one entry. Convergence supplies no automatic
 v17-to-v18 migration for these unreleased formats.
 
+Version 19 adds remaining quantities for policy-owned shop stock, keyed by the
+qualified shop ID and shop-local offer ID. Unlimited offers have no durable
+stock entry. Convergence supplies no automatic v18-to-v19 migration for these
+unreleased formats.
+
 ## Related Guidance
 
 - [Actors And Runtime State](../developer-guide/actors-and-runtime-state.md)
 - [Runtime Actor State And Restoration](../technical/runtime-actor-state-and-restoration.md)
+- [Inventory, Equipment, And Economy Integration](../developer-guide/inventory-equipment-and-economy.md)
+- [Inventory, Equipment, And Economy Runtime](../technical/inventory-equipment-economy-runtime.md)
 - [Godot Integration Contract](../godot-integration-contract.md)

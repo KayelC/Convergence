@@ -201,3 +201,10 @@ is used.
 ## Generic Content Policy
 
 Checked-in active content must be generic, original, and small enough to review. It demonstrates contracts; it is not mandatory built-in game data. Historical prototype content is archived and never loaded by active projects.
+
+## Related Guidance
+
+- [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md)
+- [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md)
+- [Ruleset Policy Contracts](ruleset-policy-contracts.md)
+- [Content Authoring Validator](content-authoring-validator.md)

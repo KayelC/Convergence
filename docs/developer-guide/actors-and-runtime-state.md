@@ -327,10 +327,11 @@ for later loadout editing.
 ## Save And Restore
 
 The host serializes `RuntimeSaveGameSnapshot`; Framework does not own the file
-format. Save contract v18 includes actors, the canonical party roster, pending
+format. Save contract v19 includes actors, the canonical party roster, pending
 skill choices, complete selected-policy stat-modifier state, combat-profile
 source/revision identity, inventory-owned equipment instances with actor
-loadout references, and the remaining session modules.
+loadout references, typed currency balances, durable tracked shop stock, and
+the remaining session modules.
 
 Restore through `RuntimeSessionRestoreService`:
 

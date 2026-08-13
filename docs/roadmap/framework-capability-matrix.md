@@ -37,8 +37,9 @@ and atomic named-currency execution while preserving Training Annex through an
 explicit standard policy. O7-R9 now certifies the combined save/restore,
 equipment, offer, currency, stock,
 recovery, DemoHost, and Godot boundaries; it also makes resolved shop-offer
-authority externally read-only. The capability remains partial pending complete
-audience documentation and independent closure. The
+authority externally read-only. O7-R10 supplies reviewed player, developer, and
+technical documents. The capability remains partial pending independent O7-R11
+closure. The
 owner-approved
 [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 governs the direct data corrections, genuine policy seams, three-audience
