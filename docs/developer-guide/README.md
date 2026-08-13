@@ -42,6 +42,10 @@ Developer guides focus on:
   initiative, supplied and replacement schedulers, lifecycle, command,
   completion, cancellation, fault, event, automated-runner, and Godot
   composition.
+- [Inventory, Equipment, And Economy Integration](inventory-equipment-and-economy.md):
+  economy-ruleset binding, equipment instance IDs and live profiles, authored
+  slot policies, atomic shop and recovery results, save authority, and Godot
+  adoption.
 
 The actor and typed action/effect guides have completed collaborative review.
 That Order 1 review includes stat-modifier policy composition and integration.
