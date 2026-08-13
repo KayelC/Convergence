@@ -6130,12 +6130,9 @@ Convergence.Runtime.RuntimeShopOfferResolver
 Convergence.Runtime.RuntimeShopOfferSnapshot
 Convergence.Runtime.RuntimeShopOfferSnapshot.<Clone>$() -> Convergence.Runtime.RuntimeShopOfferSnapshot!
 Convergence.Runtime.RuntimeShopOfferSnapshot.ContentId.get -> Convergence.Content.ContentId
-Convergence.Runtime.RuntimeShopOfferSnapshot.ContentId.init -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.ContentKind.get -> Convergence.Content.ShopContentKind
-Convergence.Runtime.RuntimeShopOfferSnapshot.ContentKind.init -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.Equals(Convergence.Runtime.RuntimeShopOfferSnapshot? other) -> bool
 Convergence.Runtime.RuntimeShopOfferSnapshot.ItemStackLimit.get -> int?
-Convergence.Runtime.RuntimeShopOfferSnapshot.ItemStackLimit.init -> void
 Convergence.Runtime.RuntimeSkillChoiceCommand
 Convergence.Runtime.RuntimeSkillChoiceCommand.ExpectedSkillRevision.get -> long
 Convergence.Runtime.RuntimeSkillChoiceCommand.ExpectedSourceLevel.get -> int
@@ -11604,7 +11601,6 @@ Convergence.Runtime.RuntimeInventorySnapshot.RuntimeInventorySnapshot(System.Col
 Convergence.Runtime.RuntimeInventorySnapshot.TryGetEquipmentInstance(Convergence.Runtime.RuntimeInstanceId instanceId, out Convergence.Runtime.RuntimeEquipmentInstanceSnapshot? instance, out Convergence.Content.ContentId slotId) -> bool
 Convergence.Runtime.RuntimeSaveValidator.RuntimeSaveValidator(Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null, Convergence.Runtime.IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null) -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.EquipmentSlotId.get -> Convergence.Content.ContentId?
-Convergence.Runtime.RuntimeShopOfferSnapshot.EquipmentSlotId.init -> void
 Convergence.Runtime.StandardEquipmentSlotIds
 Convergence.Runtime.StandardEquipmentSlotLayoutPolicy
 Convergence.Runtime.StandardEquipmentSlotLayoutPolicy.SlotIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
@@ -11706,7 +11702,6 @@ Convergence.Runtime.RuntimeShopOfferResolutionCode.UnsupportedStockPolicy = 6 ->
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.PricingDiagnostic.get -> Convergence.Runtime.ShopPricingPolicyDiagnostic?
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.PricingDiagnostic.init -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.Pricing.get -> Convergence.Runtime.RuntimeShopPricingProfile!
-Convergence.Runtime.RuntimeShopOfferSnapshot.Pricing.init -> void
 Convergence.Runtime.RuntimeShopPricingProfile
 Convergence.Runtime.RuntimeShopPricingProfile.<Clone>$() -> Convergence.Runtime.RuntimeShopPricingProfile!
 Convergence.Runtime.RuntimeShopPricingProfile.AuthoredPurchasePrice.get -> int
@@ -11853,6 +11848,7 @@ Convergence.Runtime.RuntimeShopOfferIdentity.ShopId.get -> Convergence.Content.C
 Convergence.Runtime.RuntimeShopOfferResolutionCode.EquipmentSlotProfileMismatch = 9 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidOfferIdentity = 8 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidStockPolicyConfiguration = 7 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+Convergence.Runtime.RuntimeShopOfferResolutionCode.UnsupportedContentKind = 10 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeShopOfferResolutionCode Code, out Convergence.Content.ContentId ContentId, out string! Message, out Convergence.Runtime.ShopPricingPolicyDiagnostic? PricingDiagnostic, out Convergence.Runtime.ShopStockPolicyDiagnostic? StockDiagnostic) -> void
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.RuntimeShopOfferResolutionDiagnostic(Convergence.Runtime.RuntimeShopOfferResolutionCode Code, Convergence.Content.ContentId ContentId, string! Message, Convergence.Runtime.ShopPricingPolicyDiagnostic? PricingDiagnostic = null, Convergence.Runtime.ShopStockPolicyDiagnostic? StockDiagnostic = null) -> void
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.StockDiagnostic.get -> Convergence.Runtime.ShopStockPolicyDiagnostic?
@@ -11861,10 +11857,7 @@ Convergence.Runtime.RuntimeShopOfferResolver.Resolve(Convergence.Content.Content
 Convergence.Runtime.RuntimeShopOfferResolver.RuntimeShopOfferResolver(Convergence.Runtime.BoundShopPricingPolicy! defaultPricing, Convergence.Runtime.ShopPricingPolicyFactoryRegistry! pricingFactories, Convergence.Runtime.ShopStockPolicyFactoryRegistry! stockFactories, Convergence.Runtime.IEquipmentSlotLayoutPolicy? slotLayout = null) -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.Deconstruct(out Convergence.Runtime.RuntimeShopOfferIdentity! Identity, out Convergence.Content.ShopContentKind ContentKind, out Convergence.Content.ContentId ContentId, out Convergence.Runtime.RuntimeShopPricingProfile! Pricing, out Convergence.Runtime.RuntimeShopStockProfile! Stock, out Convergence.Content.ContentId? EquipmentSlotId, out int? ItemStackLimit) -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.Identity.get -> Convergence.Runtime.RuntimeShopOfferIdentity!
-Convergence.Runtime.RuntimeShopOfferSnapshot.Identity.init -> void
-Convergence.Runtime.RuntimeShopOfferSnapshot.RuntimeShopOfferSnapshot(Convergence.Runtime.RuntimeShopOfferIdentity! Identity, Convergence.Content.ShopContentKind ContentKind, Convergence.Content.ContentId ContentId, Convergence.Runtime.RuntimeShopPricingProfile! Pricing, Convergence.Runtime.RuntimeShopStockProfile! Stock, Convergence.Content.ContentId? EquipmentSlotId = null, int? ItemStackLimit = null) -> void
 Convergence.Runtime.RuntimeShopOfferSnapshot.Stock.get -> Convergence.Runtime.RuntimeShopStockProfile!
-Convergence.Runtime.RuntimeShopOfferSnapshot.Stock.init -> void
 Convergence.Runtime.RuntimeShopStockEntrySnapshot
 Convergence.Runtime.RuntimeShopStockEntrySnapshot.<Clone>$() -> Convergence.Runtime.RuntimeShopStockEntrySnapshot!
 Convergence.Runtime.RuntimeShopStockEntrySnapshot.Deconstruct(out Convergence.Runtime.RuntimeShopOfferIdentity! OfferIdentity, out int RemainingQuantity) -> void

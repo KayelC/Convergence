@@ -127,7 +127,8 @@ public sealed class ShopStockPolicyTests
             purchasedEquipmentInstanceId: null);
         var fullInventory = new RuntimeInventorySnapshot(
             [new KeyValuePair<ContentId, int>(Medicine, 1)]);
-        RuntimeShopOfferSnapshot stackLimited = ordinary with { ItemStackLimit = 1 };
+        RuntimeShopOfferSnapshot stackLimited =
+            Offer(ShopA, OfferA, Medicine, quantity: 2, itemStackLimit: 1);
         ShopTransactionResult fullStack = service.Buy(
             fullInventory,
             funded,
@@ -411,7 +412,8 @@ public sealed class ShopStockPolicyTests
         ContentId offerId,
         ContentId contentId,
         int? quantity,
-        IShopStockPolicy? policy = null) =>
+        IShopStockPolicy? policy = null,
+        int itemStackLimit = 99) =>
         new(
             new RuntimeShopOfferIdentity(shopId, offerId),
             ShopContentKind.Item,
@@ -430,7 +432,7 @@ public sealed class ShopStockPolicyTests
                             : Id("test_stock"),
                         policy ?? new StandardShopStockPolicy()))
                 : RuntimeShopStockProfile.Unlimited,
-            ItemStackLimit: 99);
+            itemStackLimit: itemStackLimit);
 
     private static RuntimeSaveGameSnapshot CopySave(
         RuntimeSaveGameSnapshot source,

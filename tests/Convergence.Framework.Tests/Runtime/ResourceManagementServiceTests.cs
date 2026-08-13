@@ -491,18 +491,18 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
-    public void RuntimeShopOfferSnapshot_RejectsInvalidPricingAtConstructionAndCloneBoundaries()
+    public void RuntimeShopOfferSnapshot_IsResolverOwnedAndReadOnlyAfterResolution()
     {
         ArgumentOutOfRangeException construction = Assert.Throws<ArgumentOutOfRangeException>(() =>
             new RuntimeShopPricingProfile(-1, StandardPricing()));
         RuntimeShopOfferSnapshot valid = Offer(ShopContentKind.Item, Id("medicine"), 100);
 
-        ArgumentNullException cloning = Assert.Throws<ArgumentNullException>(() =>
-            _ = valid with { Pricing = null! });
-
         Assert.Equal("authoredPurchasePrice", construction.ParamName);
-        Assert.Equal("Pricing", cloning.ParamName);
         Assert.Equal(100, valid.Pricing.AuthoredPurchasePrice);
+        Assert.Empty(typeof(RuntimeShopOfferSnapshot).GetConstructors());
+        Assert.All(
+            typeof(RuntimeShopOfferSnapshot).GetProperties(),
+            property => Assert.Null(property.SetMethod));
 
         var (identity, kind, contentId, pricing, stock, slot, stackLimit) = valid;
         Assert.Equal(TestShop, identity.ShopId);
@@ -512,6 +512,37 @@ public sealed class ResourceManagementServiceTests
         Assert.Null(slot);
         Assert.Null(stackLimit);
         Assert.False(stock.IsTracked);
+    }
+
+    [Fact]
+    public void RuntimeShopOfferSnapshot_RejectsContradictoryInternalShapes()
+    {
+        RuntimeShopOfferIdentity identity =
+            new(TestShop, Id("medicine_offer"));
+        RuntimeShopPricingProfile pricing = Pricing(100);
+
+        Assert.Throws<ArgumentException>(() => new RuntimeShopOfferSnapshot(
+            identity,
+            ShopContentKind.Item,
+            Id("medicine"),
+            pricing,
+            RuntimeShopStockProfile.Unlimited,
+            StandardEquipmentSlotIds.Weapon,
+            itemStackLimit: 10));
+        Assert.Throws<ArgumentException>(() => new RuntimeShopOfferSnapshot(
+            identity,
+            ShopContentKind.Equipment,
+            Id("blade"),
+            pricing,
+            RuntimeShopStockProfile.Unlimited));
+        Assert.Throws<ArgumentException>(() => new RuntimeShopOfferSnapshot(
+            identity,
+            ShopContentKind.Equipment,
+            Id("blade"),
+            pricing,
+            RuntimeShopStockProfile.Unlimited,
+            StandardEquipmentSlotIds.Weapon,
+            itemStackLimit: 10));
     }
 
     [Fact]
@@ -758,11 +789,19 @@ public sealed class ResourceManagementServiceTests
             medicine,
             new FixedShopPriceDefinition(12),
             new PolicyShopStockDefinition(Id("dynamic_stock"), 1));
+        var undefinedKind = new ShopOfferDefinition(
+            Id("undefined_kind_offer"),
+            (ShopContentKind)int.MaxValue,
+            medicine,
+            new FixedShopPriceDefinition(12),
+            new UnlimitedShopStockDefinition());
 
         RuntimeShopOfferResolutionResult missingResult = resolver.Resolve(TestShop, missing, catalog, catalog);
         RuntimeShopOfferResolutionResult policyPriceResult = resolver.Resolve(TestShop, policyPrice, catalog, catalog);
         RuntimeShopOfferResolutionResult fractionalPriceResult = resolver.Resolve(TestShop, fractionalPrice, catalog, catalog);
         RuntimeShopOfferResolutionResult policyStockResult = resolver.Resolve(TestShop, policyStock, catalog, catalog);
+        RuntimeShopOfferResolutionResult undefinedKindResult =
+            resolver.Resolve(TestShop, undefinedKind, catalog, catalog);
 
         Assert.False(missingResult.IsSuccess);
         Assert.Contains(missingResult.Diagnostics, diagnostic =>
@@ -776,6 +815,9 @@ public sealed class ResourceManagementServiceTests
         Assert.False(policyStockResult.IsSuccess);
         Assert.Contains(policyStockResult.Diagnostics, diagnostic =>
             diagnostic.Code == RuntimeShopOfferResolutionCode.UnsupportedStockPolicy);
+        Assert.False(undefinedKindResult.IsSuccess);
+        Assert.Contains(undefinedKindResult.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeShopOfferResolutionCode.UnsupportedContentKind);
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);

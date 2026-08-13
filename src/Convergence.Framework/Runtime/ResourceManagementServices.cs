@@ -968,54 +968,74 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
 
 public sealed record RuntimeShopOfferSnapshot
 {
-    private readonly RuntimeShopOfferIdentity _identity;
-    private readonly RuntimeShopPricingProfile _pricing;
-    private readonly RuntimeShopStockProfile _stock;
-
-    public RuntimeShopOfferSnapshot(
-        RuntimeShopOfferIdentity Identity,
-        ShopContentKind ContentKind,
-        ContentId ContentId,
-        RuntimeShopPricingProfile Pricing,
-        RuntimeShopStockProfile Stock,
-        ContentId? EquipmentSlotId = null,
-        int? ItemStackLimit = null)
+    internal RuntimeShopOfferSnapshot(
+        RuntimeShopOfferIdentity identity,
+        ShopContentKind contentKind,
+        ContentId contentId,
+        RuntimeShopPricingProfile pricing,
+        RuntimeShopStockProfile stock,
+        ContentId? equipmentSlotId = null,
+        int? itemStackLimit = null)
     {
-        _identity = Identity ?? throw new ArgumentNullException(nameof(Identity));
-        this.ContentKind = ContentKind;
-        this.ContentId = ContentId;
-        _pricing = Pricing ?? throw new ArgumentNullException(nameof(Pricing));
-        _stock = Stock ?? throw new ArgumentNullException(nameof(Stock));
-        if (EquipmentSlotId is ContentId slotId && !slotId.IsValid)
+        Identity = identity ?? throw new ArgumentNullException(nameof(identity));
+        if (!Enum.IsDefined(contentKind))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(contentKind),
+                contentKind,
+                "Shop content kind must be defined.");
+        }
+        if (!contentId.IsValid)
+        {
+            throw new ArgumentException("Shop content ID must be valid.", nameof(contentId));
+        }
+        if (equipmentSlotId is ContentId slotId && !slotId.IsValid)
         {
             throw new ArgumentException(
                 "Equipment slot ID must be valid when supplied.",
-                nameof(EquipmentSlotId));
+                nameof(equipmentSlotId));
+        }
+        if (itemStackLimit is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(itemStackLimit),
+                itemStackLimit,
+                "Item stack limit must be positive when supplied.");
+        }
+        if (contentKind == ShopContentKind.Item && equipmentSlotId is not null)
+        {
+            throw new ArgumentException(
+                "Item shop offers cannot carry an equipment slot.",
+                nameof(equipmentSlotId));
+        }
+        if (contentKind == ShopContentKind.Equipment && equipmentSlotId is null)
+        {
+            throw new ArgumentException(
+                "Equipment shop offers require an equipment slot.",
+                nameof(equipmentSlotId));
+        }
+        if (contentKind == ShopContentKind.Equipment && itemStackLimit is not null)
+        {
+            throw new ArgumentException(
+                "Equipment shop offers cannot carry an item stack limit.",
+                nameof(itemStackLimit));
         }
 
-        this.EquipmentSlotId = EquipmentSlotId;
-        this.ItemStackLimit = ItemStackLimit;
+        ContentKind = contentKind;
+        ContentId = contentId;
+        Pricing = pricing ?? throw new ArgumentNullException(nameof(pricing));
+        Stock = stock ?? throw new ArgumentNullException(nameof(stock));
+        EquipmentSlotId = equipmentSlotId;
+        ItemStackLimit = itemStackLimit;
     }
 
-    public RuntimeShopOfferIdentity Identity
-    {
-        get => _identity;
-        init => _identity = value ?? throw new ArgumentNullException(nameof(Identity));
-    }
-    public ShopContentKind ContentKind { get; init; }
-    public ContentId ContentId { get; init; }
-    public RuntimeShopPricingProfile Pricing
-    {
-        get => _pricing;
-        init => _pricing = value ?? throw new ArgumentNullException(nameof(Pricing));
-    }
-    public RuntimeShopStockProfile Stock
-    {
-        get => _stock;
-        init => _stock = value ?? throw new ArgumentNullException(nameof(Stock));
-    }
-    public ContentId? EquipmentSlotId { get; init; }
-    public int? ItemStackLimit { get; init; }
+    public RuntimeShopOfferIdentity Identity { get; }
+    public ShopContentKind ContentKind { get; }
+    public ContentId ContentId { get; }
+    public RuntimeShopPricingProfile Pricing { get; }
+    public RuntimeShopStockProfile Stock { get; }
+    public ContentId? EquipmentSlotId { get; }
+    public int? ItemStackLimit { get; }
 
     public void Deconstruct(
         out RuntimeShopOfferIdentity Identity,
@@ -1047,7 +1067,8 @@ public enum RuntimeShopOfferResolutionCode
     UnsupportedStockPolicy,
     InvalidStockPolicyConfiguration,
     InvalidOfferIdentity,
-    EquipmentSlotProfileMismatch
+    EquipmentSlotProfileMismatch,
+    UnsupportedContentKind
 }
 
 public sealed record RuntimeShopOfferResolutionDiagnostic(
@@ -1124,7 +1145,14 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
         ContentId? equipmentSlotId = null;
         int? itemStackLimit = null;
 
-        if (offer.ContentKind == ShopContentKind.Item)
+        if (!Enum.IsDefined(offer.ContentKind))
+        {
+            diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                RuntimeShopOfferResolutionCode.UnsupportedContentKind,
+                offer.ContentId,
+                $"Shop offer '{offer.Id}' uses unsupported content kind '{offer.ContentKind}'."));
+        }
+        else if (offer.ContentKind == ShopContentKind.Item)
         {
             if (!itemRepository.TryGetItem(offer.ContentId, out ItemDefinition? item) || item is null)
             {
