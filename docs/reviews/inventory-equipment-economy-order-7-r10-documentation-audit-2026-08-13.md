@@ -8,7 +8,7 @@
 
 **Checkpoint:** O7-R10, three-audience documentation
 
-**Review state:** implementation roadmap approved; audience work pending
+**Review state:** complete; source, tests, and all three audiences reconciled
 
 ## Purpose
 
@@ -134,14 +134,14 @@ so readers do not need to infer this boundary from unrelated pages.
 
 Each checkpoint receives its own green commit.
 
-| Checkpoint | Work | Promotion rule |
-|---|---|---|
-| O7-R10-D0 | Add and index this source-traced audit | No audience promotion |
-| O7-R10-D1 | Rewrite the player mechanics page around observable behavior and game-selected variation | Mechanics remains unreviewed until final reconciliation |
-| O7-R10-D2 | Add the developer integration guide with concrete composition and host-owned adoption examples | Developer guide remains unreviewed until final reconciliation |
-| O7-R10-D3 | Add the technical authority/state-machine reference and diagrams | Technical remains unreviewed until final reconciliation |
-| O7-R10-D4 | Correct stale version labels, add API/content/Godot cross-links, synchronize indexes, and promote all three matrix entries only after source/test/doc agreement | All three audiences may become `reviewed`; capability remains `partial` for O7-R11 |
-| O7-R10-D5 | Freshly reread source and all three documents, run the complete applicable gate, and append the R10 completion record | O7-R10 complete; O7-R11 remains open |
+| Checkpoint | State | Work | Promotion rule |
+|---|---|---|---|
+| O7-R10-D0 | complete | Add and index this source-traced audit | No audience promotion |
+| O7-R10-D1 | complete | Rewrite the player mechanics page around observable behavior and game-selected variation | Mechanics remained unreviewed until final reconciliation |
+| O7-R10-D2 | complete | Add the developer integration guide with concrete composition and host-owned adoption examples | Developer guide remained unreviewed until final reconciliation |
+| O7-R10-D3 | complete | Add the technical authority/state-machine reference and diagrams | Technical remained unreviewed until final reconciliation |
+| O7-R10-D4 | complete | Correct stale version labels, add API/content/Godot cross-links, synchronize indexes, and promote all three matrix entries only after source/test/doc agreement | All three audiences are `reviewed`; capability remains `partial` for O7-R11 |
+| O7-R10-D5 | complete | Freshly reread source and all three documents, run the complete applicable gate, and append the R10 completion record | O7-R10 complete; O7-R11 remains open |
 
 ## Verification Contract
 
@@ -165,3 +165,12 @@ O7-R10 does not change runtime behavior, add policy interfaces, revise active
 content or wire versions, add presentation UI, or mark
 `inventory_equipment_economy` complete. Only O7-R11 may perform the independent
 adversarial closure audit and return the capability to `complete`.
+
+## Completion Result
+
+The fresh
+[O7-R10 documentation review](inventory-equipment-economy-order-7-r10-documentation-review-2026-08-13.md)
+corrected three source-to-document precision issues, found no remaining
+actionable R10 contradiction, and passed the complete local gate. All three
+audience entries are now `reviewed`. The capability remains `partial` and Order
+7 remains open for O7-R11.

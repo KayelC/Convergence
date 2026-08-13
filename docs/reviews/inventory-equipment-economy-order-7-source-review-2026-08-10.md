@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R9 complete; O7-R10 audiences implemented and reconciled; O7-R10 final verification and O7-R11 pending
+**Implementation status:** O7-R1 through O7-R10 complete; O7-R11 pending
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -25,7 +25,10 @@
 > **O7-R10 audit:** The source-traced audience audit and ordered documentation
 > checkpoints are recorded in
 > [inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md](inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md).
-> No audience is promoted by the audit alone.
+> The subsequent
+> [fresh documentation review](inventory-equipment-economy-order-7-r10-documentation-review-2026-08-13.md)
+> corrected three precision issues and completed R10. All three audience entries
+> are `reviewed`; the capability remains `partial` for O7-R11.
 
 ## Purpose
 
@@ -1341,7 +1344,55 @@ concrete consequences, reproducible evidence, and any trusted host boundaries.
 
 #### Fresh R9 Review
 
-The post-correction review reread the current transaction, restore, host, API,
-and documentation paths without accepting the pre-implementation audit as
-proof. It found no remaining High, Medium, or Low actionable R9 defect. R9 is
-complete; O7-R10 and O7-R11 remain open, and the capability remains `partial`.
+The post-correction review reread the then-current transaction, restore, host,
+API, and documentation paths without accepting the pre-implementation audit as
+proof. It found no remaining High, Medium, or Low actionable R9 defect and
+completed R9. R10 and R11 were still open at that checkpoint.
+
+### O7-R10: Complete Three-Audience Documentation
+
+- **Baseline and commits:** `23cf50c1..this completion-record commit`; audit
+  `52e43a88`, player mechanics `0d93cb25`, developer integration `58ef84b9`,
+  technical authority `05a4ebc4`, reconciliation `a7385510`, and source-review
+  corrections `a08d216b`.
+- **Actual destination:**
+  `docs/mechanics/party-inventory-and-economy.md`,
+  `docs/developer-guide/inventory-equipment-and-economy.md`, and
+  `docs/technical/inventory-equipment-economy-runtime.md`, with current API,
+  content, Godot, roadmap, index, and executable documentation-matrix links.
+- **Runtime and wire scope:** no runtime behavior, active content, public API,
+  schema, save contract, or host presentation changed. Save v19 and schema v10
+  remain current.
+- **Fresh-review corrections:** recovery documentation now states that selected
+  resources are fully restored; economy documentation permits nonnegative
+  amounts; currency-domain construction is distinguished from aggregate save
+  validation; and custom slot-layout guidance includes content/save validators
+  plus the explicit multi-weapon resolver boundary.
+- **Focused tests:** 218 Framework equipment/currency/shop/recovery/persistence/
+  Godot/documentation tests and 133 DemoHost save/Training Annex tests passed:
+  351 total, 0 failed, 0 skipped.
+- **Full suite:** 1,790 Framework tests, 182 DemoHost tests, and 7
+  ContentValidator tests passed: 1,979 total, 0 failed, 0 skipped.
+- **Build and integration:** strict Framework and solution Release builds and
+  the Debug Godot sample build passed with 0 warnings and 0 errors. Formatting
+  changed 0 of 279 files; the 58-test Release architecture/boundary suite,
+  trimming analysis, and `git diff --check` passed. The authoring validator
+  loaded all 6 active packs, 36 documents, and 98 qualified definitions. All
+  four noninteractive DemoHost modes and scripted Training Annex exit passed.
+  The official Godot 4.7.1 headless sample emitted
+  `CONVERGENCE_GODOT_SMOKE_OK`, restored save v19 with 3 actors, 205 Credits,
+  and one stock entry, and exited 0.
+- **Coverage:** Framework coverage passed at 90.19% lines and 76.71% branches
+  against required minima of 90% and 70%.
+- **Documentation state:** player mechanics, developer guide, and technical
+  reference are all `reviewed`. The capability remains `partial`; O7-R11 is
+  still required before Order 7 can close.
+
+#### Fresh O7-R10 Review
+
+The source-first R10 review traced ownership, profile composition, combat
+inputs, authorization, currencies, shops, recovery, persistence, aggregate
+restore, DemoHost, and Godot integration without treating prior reports as
+proof. It found and corrected three documentation precision issues and found no
+remaining High, Medium, or Low actionable defect within R10's documentation
+scope. It does not replace the broader independent O7-R11 runtime audit.
