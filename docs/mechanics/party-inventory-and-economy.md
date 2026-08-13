@@ -1,201 +1,200 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Order 7 status:** O7-R1 through O7-R9 establish the approved tracking,
-> equipment-instance ownership, authored slot-layout model, equipped-only skill
-> grants, Defense/Evasion combat contributions, and typed currency-ledger
-> authority, plus explicit pricing, durable policy-owned shop stock, and generic
-> policy-bound recovery, plus combined runtime/wire certification. This page remains
-> unreviewed until the complete
-> [Order 7 roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
-> is implemented and independently closed.
+> **Order 7 review state:** this player-facing page has been rewritten from the
+> implemented O7-R2 through O7-R9 behavior. It remains
+> `existing_unreviewed` until O7-R10 reconciles all three audiences against
+> current source and tests. O7-R11, not this page, owns capability closure.
 
-## Party And Ownership Graph
+## What This System Means To A Player
 
-Framework party state distinguishes active party members, reserve members, an
-Active Hosted Entity, a Hosted Entity Roster, and a Companion Roster. These are
-generic runtime roles; a game may use only the roles it needs.
+Inventory and economy actions are exact and all-or-nothing. The game identifies
+the particular item, equipment copy, currency, shop offer, and actor involved.
+If the complete operation is legal, every affected state advances together. If
+anything rejects, the player's inventory, equipment, currency, and shop stock
+remain unchanged.
 
-**Framework rule:** `RuntimePartyRosterSnapshot` is the only ownership and party
-placement authority. Actor snapshots do not contain copies of these rosters.
+The framework fixes ownership and transaction safety. Each game chooses its
+slot layout, currencies, pricing rules, stock behavior, recovery rules, menu
+presentation, and names.
 
-An Active Hosted Entity remains present in the Hosted Entity Roster. A deployed
-Companion remains present in the Companion Roster while also occupying an
-active-party slot. This deliberate overlap prevents an active owned actor from
-falling outside the ownership graph during recall, replacement, consumption,
-fusion, or save restoration.
+## Party And Owned Actors
 
-One runtime instance ID cannot occupy incompatible roles or appear twice in the
-same collection. Active/reserve membership, Hosted Entity ownership, Companion
-ownership, allowed overlaps, reference identity, and capacity are validated on
-transitions and restore.
+A game can use active party members, reserve members, an Active Hosted Entity,
+a Hosted Entity Roster, and a Companion Roster. These are optional generic
+roles; games use only the roles they need.
+
+An Active Hosted Entity remains owned in its roster. A Companion deployed into
+the active party likewise remains owned in the Companion Roster. This overlap
+means an active owned actor does not disappear from ownership while it is being
+used. It can later be recalled, replaced, consumed by an approved mechanic, or
+restored from a save without inventing a temporary owner.
+
+One actor cannot occupy contradictory roles or appear twice in the same list.
+A rejected party or roster change leaves the previous arrangement intact.
+Party and roster capacities are game-configured rather than fixed by
+Convergence.
 
 ```mermaid
-flowchart LR
-    Owner["Party owner"] --> Party["Canonical party roster"]
-    Active["Active party"] --> Party
-    Reserve["Reserve party"] --> Party
-    Hosted["Hosted Entity Roster"] --> Party
-    Companion["Companion Roster"] --> Party
-    ActiveHosted["Active Hosted Entity"] --> Hosted
-    Deployed["Deployed Companion"] --> Active
-    Deployed --> Companion
+flowchart TB
+    Owner["Party owner"] --> Party["Party and roster authority"]
+    Party --> Active["Active party"]
+    Party --> Reserve["Reserve party"]
+    Party --> Hosted["Hosted Entity Roster"]
+    Party --> Companions["Companion Roster"]
+    Hosted --> ActiveHosted["Selected Active Hosted Entity"]
+    Companions --> Deployed["Companion may also occupy an active-party slot"]
 ```
 
-## Placement And Encounter Presence
+Being listed in the active party does not itself place an actor in a battle.
+The encounter system separately decides who is deployed for that encounter.
 
-**Framework rule:** active and reserve placement belongs only to the party
-aggregate. Encounter participation belongs only to
-`RuntimeEncounterPresenceSnapshot.IsDeployed`.
+## Items And Equipment Copies
 
-An actor may be configured in the active party before an encounter starts while
-still having `IsDeployed = false`. The host or encounter planner explicitly
-sets encounter presence when battle begins. Party menus and scene labels do not
-silently change lifecycle eligibility.
+Stackable items have quantities and may have authored stack limits. A use,
+purchase, or sale that asks for an unavailable quantity, exceeds a stack limit,
+or overflows the supported quantity range is rejected without changing the
+inventory.
 
-## Party And Roster Commands
+Every equipment copy has its own runtime identity. Two copies of the same sword
+are therefore two owned objects: two actors may equip one each, and selling one
+does not sell the other. Buying an equipment copy adds it to inventory; it does
+not silently equip it.
 
-Transition services support adding a party member; swapping active and reserve positions; deploying, swapping, recalling, dismissing, replacing, and consuming owned Companions; and swapping, consuming, or replacing an Active Hosted Entity.
+Equipping selects one exact owned copy and one compatible authored slot. That
+same copy cannot be equipped by two actors or assigned to two slots. An equipped
+copy cannot be removed or sold as though it were free. The player must first
+unequip the exact copy. Missing, stale, incompatible, or already-assigned copies
+reject atomically.
 
-Each request returns `Before`, `After`, a stable code, diagnostics, and ordered affected IDs. Rejection preserves `Before` exactly.
+Games may use the supplied weapon, armor, boots, and accessory layout or define
+a different slot layout. The selected game rule decides which equipment profile
+fits which slot; the framework does not force those four positions on every
+game.
 
-Selecting another Active Hosted Entity changes the canonical roster reference.
-A Vessel game then recomposes the owner through the actor combat-profile
-composition service before presenting the selection as complete.
+## What Equipped Gear Provides
 
-**Configured rule:** maximum party size and roster capacity come from policies. Capacity may be unlimited or tiered by level. Convergence does not require a particular number of party, Hosted Entity, or Companion slots.
+The currently equipped copies form one live equipment profile. Depending on
+their authored definitions, that profile can provide:
 
-## Inventory
-
-Items are stored as typed content IDs and integer quantities. Stack limits come from clean item definitions when provided. Negative quantities, missing ownership, overflow, and stack-limit violations are rejected.
-
-Every owned equipment copy is an immutable `RuntimeEquipmentInstanceSnapshot`
-containing a unique runtime instance ID and one equipment definition ID.
-Inventory is the sole ownership authority. Multiple instances may reference
-the same definition; repeating one instance ID is rejected.
-
-## Equipment
-
-Actor equipment maps authored slot `ContentId` values to inventory-owned
-equipment instance IDs. The selected `IEquipmentSlotLayoutPolicy` determines
-which definition profiles and assignments are compatible. The supplied
-standard policy retains weapon, armor, boots, and accessory positions; games
-may select a different layout. Equip and unequip transitions validate
-ownership, policy compatibility, and aggregate assignment evidence. A missing instance or an
-instance already assigned to another actor rejects with unchanged before/after
-equipment state. Selling a specific equipped instance is blocked by the
-transaction service.
-
-Save contract v19 stores owned instances only in inventory and actor loadout
-references only in actor snapshots, all under authored slot IDs. There is no
-separate root equipment snapshot.
-
-`RuntimeEquipmentProfileResolver` derives one immutable profile from the
-current actor equipment, inventory ownership, definitions, and selected slot
-layout. That profile supplies:
-
-- the equipped weapon's basic attack;
-- accessory stat modifiers;
+- a weapon basic attack;
+- stat modifiers;
 - armor Defense;
-- armor and boots Evasion; and
-- distinct skill IDs granted by currently equipped instances.
+- armor or boots Evasion; and
+- active or passive skills granted while equipped.
 
-Granted skills are derived availability, not learned state. Active grants enter
-canonical action authorization; passive grants enter the canonical passive
-collection and therefore use the existing modifier and lifecycle dispatch.
-Neither kind is copied into learned skills or occupies a move-list slot. Both
-disappear as soon as the granting instance is unequipped. Active authorization
-is repeated at execution, so an assessment prepared before unequip cannot spend
-resources or apply an effect afterward.
+Equipment-granted skills are temporary availability, not learned skills. They
+do not occupy move-list slots and are not written into the actor's learned-skill
+record. Unequipping the granting copy removes the skill immediately. Even an
+action selected before unequipping is checked again before execution, so it
+cannot spend resources or apply effects after its grant has vanished.
 
-Defense and Evasion are ordinary numeric inputs. Defense joins target Vitality
-inside the existing standard damage formula; Evasion joins the target's
-existing hit-resolution modifiers. Equipment does not own another combat
-formula. A missing contribution is exactly zero. Basic attacks may come from
-equipped weapon data, but a host can supply another clean basic-attack profile.
-Presentation metadata does not decide behavior.
+Defense and Evasion feed the same combat calculations as the actor's other
+stats. Equipment does not run a separate damage or hit formula. An absent
+equipment contribution is exactly zero, so an unequipped actor is not given a
+hidden bonus or penalty.
 
-## Currency Ledger And Economy
+## Currency
 
-Currency state is an immutable ledger keyed by qualified currency `ContentId`.
-Every credit and debit names the affected currency explicitly. Transactions are
-atomic, preserve every unrelated balance, use checked integer arithmetic, and
-return typed diagnostics for a missing currency, negative amount, insufficient
-funds, or overflow.
+A game may define one currency or several. Every balance is tied to a specific
+currency ID, and every purchase, sale, recovery payment, or other transaction
+names the currency it changes. Updating one balance preserves all unrelated
+balances.
 
-Ledger construction rejects invalid or duplicate currency IDs and negative
-balances. `GetSingleCurrency()` is a convenience for the common one-currency
-game: it returns that one ID and balance, but explicitly rejects an empty or
-multi-currency ledger rather than choosing a default. DemoHost registers one
-`credits` ID; other games own both their currency IDs and player-facing names.
+The common one-currency case remains simple. The game can ask for its single
+currency and balance, but that request explicitly rejects an empty or
+multi-currency ledger instead of guessing which currency was intended.
 
-Save contract v19 retains the complete typed ledger introduced by version 18.
-Version 17's unnamed single balance is unsupported unless a host deliberately
-supplies a migration.
+Balances cannot be negative. Missing currency, insufficient funds, invalid
+amounts, and arithmetic overflow reject without changing any balance.
 
-## Shops
+## Shop Prices
 
-Shop definitions identify offered items/equipment, categories, an authored
-purchase price, stock policy, and availability. Every offer has a stable
-shop-local ID; durable stock keys are the qualified shop ID plus that offer ID,
-not content identity or menu position. Runtime transactions assess
-ownership, stock, stack limits, equipped-sale restrictions, pricing, and the
-explicitly selected currency balance before mutation. The host supplies a
-fresh runtime instance ID when purchasing equipment and identifies the exact
-owned instance when selling it.
+Each shop offer has its own stable identity, authored content, purchase-price
+input, and stock behavior. The game resolves that offer before presenting or
+executing a transaction. Execution checks the current state again, so a stale
+menu quote cannot force a purchase after funds, ownership, or stock changed.
 
-The economy ruleset explicitly selects the default shop-pricing policy. A
-fixed-price offer applies that default to its authored purchase price. A
-policy-shaped offer supplies `purchasePrice`, selects one registered pricing
-factory, and may configure it for that offer. Invalid explicit configuration
-rejects that offer; it never silently falls back to the economy default.
+The supplied standard pricing rule charges the authored purchase price. Its
+resale price is a configurable percentage of that price, with a default of 50
+percent; fractional results are truncated toward zero. Convergence also
+supplies an optional Luck-adjusted rule for games that deliberately select it.
+Other games may register another pricing rule.
 
-The supplied `standard_shop_pricing` policy charges exactly the authored
-purchase price. Its resale price is the purchase price multiplied by a
-configurable nonnegative resale percentage, defaulting to `0.50`; fractional
-results truncate toward zero. The optional
-`luck_adjusted_shop_pricing` policy preserves the sample's Luck-sensitive
-rule: buying uses `max(0.50, 1.00 - Luck * 0.01)`, selling uses
-`0.50 + Luck * 0.01`, and both truncate toward zero. Games choose this policy
-explicitly; it is not hidden standard behavior.
+A custom or configured price is never a hidden fallback. Invalid pricing
+configuration rejects the offer rather than silently switching to the standard
+formula.
 
-One resolved pricing profile drives menu assessment and the committed
-transaction. Negative input, overflow, unavailable currency, unaffordability,
-and a failing custom policy reject before inventory or currency mutation.
-The complete resolved offer is Framework-created and externally read-only, so
-presentation code cannot retain one offer's price or stock identity while
-substituting another content definition.
+## Shop Stock And Transactions
 
-Unlimited offers create no durable quantity. Fixed limited offers bind
-`standard_shop_stock`; policy-shaped offers carry a positive initial quantity
-and bind an explicitly registered `IShopStockPolicyFactory` without fallback.
-The standard policy decrements one unit per successful purchase, rejects at
-zero, and does not replenish on sale. A custom policy may replenish on sale.
-Inventory, currency, and the immutable `RuntimeShopStockSnapshot` are returned
-as one atomic result: all three advance on success, and all three remain the
-original snapshots on any rejection. Save contract v19 persists the remaining
-quantity for every tracked offer.
+An offer may be unlimited or track a remaining quantity. A successful purchase
+of limited stock removes one offered unit and decrements its quantity together.
+At zero, another purchase is rejected. The supplied standard stock rule does not
+replenish stock when the player sells; a game may explicitly select a different
+stock rule that does.
 
-## Recovery Facilities
+Buying updates inventory, the named currency, and tracked stock as one
+transaction. Selling updates the exact owned item or equipment copy, the named
+currency, and any policy-selected stock change as one transaction. A rejection
+updates none of them.
 
-Recovery is optional. A selected `IRecoveryPolicy` plans from immutable actor
-state and explicitly names the currency, resources, cost, legal ailment
-treatment, and temporary-state categories. `IRecoveryService` assesses without
-mutation, re-evaluates at execution, stages the actor candidate and named
-currency debit, and returns equal before/after snapshots on rejection. A host
-adopts the returned currency ledger only from an applied execution result and
-decides which actors can be selected and how a facility is presented.
+This means a UI may safely show the rejection reason and redisplay current
+state. It must not manually apply the successful pieces of a failed operation.
 
-The supplied `StandardHospitalRecoveryPolicy` fully restores each configured
-resource to its existing maximum. Its cost is the sum of each missing amount
-times its configured unit cost, truncated once after aggregation. It cures only
-ailments whose removal profile permits `RecoveryEvent` and clears only selected
-temporary categories. A zero-cost ailment-only or temporary-state-only
-treatment may therefore be valid even when all configured resources are full.
-A game should not duplicate eligibility logic in its UI; it should present the
-assessment result.
+## Recovery
+
+Recovery is optional. The selected game rule decides:
+
+- which resources can be restored;
+- whether each resource is restored fully;
+- how missing amounts contribute to cost;
+- which currency pays that cost;
+- which ailments are legally removable there; and
+- which temporary states are cleared.
+
+The supplied standard hospital-style rule fully restores each configured
+resource to its current maximum. It totals the configured per-unit costs and
+truncates once after aggregation. It cures only ailments that explicitly allow
+recovery-facility removal and clears only the selected temporary-state
+categories.
+
+An actor at full configured resources may still have a valid zero-cost
+treatment if a removable ailment or selected temporary state remains. The game
+should present the framework's assessment instead of duplicating a simpler
+"missing health" eligibility check.
+
+Recovery first stages the complete actor cleanup and named-currency payment.
+Only a fully accepted treatment changes the live actor and balance. Protected
+ailments, missing resources, missing or insufficient currency, invalid policy
+output, cancellation, or another rejection leave both unchanged.
+
+## Saving This State
+
+Current save contract v19 stores:
+
+- every owned equipment copy once in inventory;
+- each actor's equipped-copy references under authored slot IDs;
+- every named currency balance; and
+- remaining quantities for tracked shop offers.
+
+It does not store a second list claiming to own the same equipment. Restore
+validates ownership, slot compatibility, assignments, currencies, and stock
+together before exposing a live session.
+
+## Fixed Rules And Game Choices
+
+| Fixed framework rule | Selected by the game |
+|---|---|
+| Each equipment copy has one identity and one inventory owner | Equipment slot vocabulary and compatibility |
+| Equipped grants are temporary and consume no move-list slot | Currency IDs and player-facing names |
+| Defense and Evasion use the canonical combat formulas | Pricing formula and resale percentage |
+| Every transaction names exact state and is all-or-nothing | Stock limits and sale replenishment |
+| Rejected operations preserve their complete before-state | Recovery resources, costs, legal cleanup, and availability |
+| Save/restore validates the combined authority graph | Menus, animations, sounds, scene objects, and input |
 
 ## Related Guidance
 
 - [Actors And Runtime State](../developer-guide/actors-and-runtime-state.md)
+- [Typed Actions And Effects](../developer-guide/typed-actions-and-effects.md)
 - [Runtime Actor State And Restoration](../technical/runtime-actor-state-and-restoration.md)
-- [Confirmed Actor Decision](../decisions/actor-composition-progression-and-rosters.md)
+- [Ruleset Policy Contracts](../ruleset-policy-contracts.md)
+- [Content Contract](../content-contract.md)
