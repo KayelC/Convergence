@@ -80,6 +80,10 @@ with custom authored slot IDs must inject the same
 ```csharp
 IEquipmentSlotLayoutPolicy layout = customLayout;
 
+var contentValidator = new SkillSystemContentValidator(layout);
+var catalogLoader = new SkillSystemCatalogLoader(
+    new SkillSystemJsonDeserializer(),
+    contentValidator);
 var equipmentTransitions = new EquipmentTransitionService(layout);
 var equipmentProfiles = new RuntimeEquipmentProfileResolver(layout);
 var shopOffers = new RuntimeShopOfferResolver(
@@ -87,12 +91,15 @@ var shopOffers = new RuntimeShopOfferResolver(
     pricingFactories,
     stockFactories,
     layout);
+var saveValidator = new RuntimeSaveValidator(equipmentSlotLayout: layout);
 ```
 
 Content semantic validation must use that layout as well. Mixing layouts can
-make content valid in one boundary and incompatible in another. The selected
-layout owns slot/profile compatibility; it does not own inventory identity,
-combat math, or granted-skill behavior.
+make content valid in one boundary and incompatible in another. Pass
+`saveValidator` to aggregate restoration and the same profile resolver to
+actor composition and live equipment sources. The selected layout owns
+slot/profile compatibility; it does not own inventory identity, combat math,
+or granted-skill behavior.
 
 ## Allocate Equipment Instance IDs In The Host
 
@@ -189,6 +196,12 @@ The profile supplies basic attack data, stat modifiers, and current grants.
 Canonical action execution rechecks authorization, so an action prepared while
 a grant existed rejects if the granting instance is unequipped before
 execution.
+
+The standard resolver models one current weapon basic attack, matching the
+standard four-slot layout. A custom layout that permits multiple simultaneous
+weapon profiles must supply an `IRuntimeEquipmentProfileResolver` with an
+explicit basic-attack selection rule rather than relying on slot iteration
+order.
 
 ## Initialize Currency And Shop State
 
@@ -311,9 +324,11 @@ authorities into independent save records.
 
 Validate and restore the complete aggregate through
 `IRuntimeSessionRestoreService`. Do not recreate actors first and attach
-equipment afterward. Aggregate validation checks instance uniqueness,
-ownership, slot compatibility, cross-actor assignment, currencies, and stock
-before any partial live session is exposed.
+equipment afterward. Host decoding constructs the immutable currency ledger,
+which rejects invalid IDs, duplicate IDs, and negative balances. Aggregate
+validation then checks instance uniqueness, ownership, slot compatibility,
+cross-actor assignment, stock, catalog references, and selected policies before
+any partial live session is exposed.
 
 A non-current contract version needs an explicit host-supplied migration.
 Convergence does not guess how an old wallet or equipment shape maps into v19.

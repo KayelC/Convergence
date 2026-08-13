@@ -172,7 +172,7 @@ old snapshot.
 - balances are nonnegative.
 
 `EconomyTransactionService.Credit` and `.Debit` require an explicit currency
-ID and positive amount, use checked integer arithmetic, and change only that
+ID and nonnegative amount, use checked integer arithmetic, and change only that
 entry. Missing currency, insufficient funds, invalid amounts, and overflow
 return typed rejection with equal before/after ledgers.
 
@@ -303,9 +303,11 @@ stock in the same aggregate. Validation occurs before actor factory calls:
 
 ```mermaid
 flowchart TB
-    Input["Host-decoded RuntimeSaveGameSnapshot"]
+    Input["Host-decoded save DTO"]
+    Ledger["Construct ledger: validate currency IDs, uniqueness, and balances"]
+    Snapshot["Construct RuntimeSaveGameSnapshot"]
     Migrate{"Current v19 or explicit migration succeeds?"}
-    Validate["Validate catalog, actors, inventory, loadouts, currency, stock, and policies"]
+    Validate["Validate catalog, actors, inventory, loadouts, stock, and policies"]
     Profiles["Resolve every actor restore profile"]
     Policies["Resolve retained charge/stat-modifier policy state"]
     Dependencies["Restore source actors before dependent Vessels"]
@@ -313,7 +315,9 @@ flowchart TB
     Success["Expose one RuntimeRestoredSession"]
     Reject["Return diagnostics and expose no partial session"]
 
-    Input --> Migrate
+    Input --> Ledger
+    Ledger -->|"invalid"| Reject
+    Ledger -->|"valid"| Snapshot --> Migrate
     Migrate -->|"no"| Reject
     Migrate -->|"yes"| Validate
     Validate -->|"diagnostics"| Reject
@@ -332,6 +336,11 @@ ownership, assignment compatibility, and cross-actor reuse. Stock validation
 requires exactly one nonnegative entry for every tracked current-catalog offer
 and none for unlimited offers. Currency construction has already enforced its
 ID/balance domain.
+
+Currency IDs, duplicate currency entries, and nonnegative balances are
+enforced by `RuntimeCurrencyLedgerSnapshot` construction. Aggregate validation
+receives an already-valid immutable ledger; it does not duplicate that
+constructor authority.
 
 `RuntimeSessionRestoreService` returns either one complete
 `RuntimeRestoredSession` or diagnostics. It never exposes the actors restored

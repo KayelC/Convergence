@@ -144,8 +144,7 @@ state. It must not manually apply the successful pieces of a failed operation.
 
 Recovery is optional. The selected game rule decides:
 
-- which resources can be restored;
-- whether each resource is restored fully;
+- which resources are fully restored;
 - how missing amounts contribute to cost;
 - which currency pays that cost;
 - which ailments are legally removable there; and
@@ -176,9 +175,10 @@ Current save contract v19 stores:
 - every named currency balance; and
 - remaining quantities for tracked shop offers.
 
-It does not store a second list claiming to own the same equipment. Restore
-validates ownership, slot compatibility, assignments, currencies, and stock
-together before exposing a live session.
+It does not store a second list claiming to own the same equipment. Loading
+first rejects malformed currency ledgers, then aggregate restore validates
+ownership, slot compatibility, assignments, and stock before exposing a live
+session.
 
 ## Fixed Rules And Game Choices
 

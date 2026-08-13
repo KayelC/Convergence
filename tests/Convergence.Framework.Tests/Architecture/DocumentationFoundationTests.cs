@@ -774,6 +774,7 @@ public sealed class DocumentationFoundationTests
             "Buying an equipment copy adds it to inventory; it does not silently equip it.",
             "Equipment-granted skills are temporary availability, not learned skills.",
             "A rejection updates none of them.",
+            "which resources are fully restored",
             "An actor at full configured resources may still have a valid zero-cost treatment",
             "Current save contract v19 stores:"
         ];
@@ -785,7 +786,9 @@ public sealed class DocumentationFoundationTests
         [
             "BindResourceManagementServices",
             "IEquipmentSlotLayoutPolicy",
+            "new RuntimeSaveValidator(equipmentSlotLayout: layout)",
             "RuntimeActorEquipmentProfileSource",
+            "custom layout that permits multiple simultaneous weapon profiles",
             "Adopt all three after-snapshots together",
             "Its after-ledger is hypothetical and must not be adopted",
             "Reconnect Nodes by runtime ID only after aggregate restore succeeds"
@@ -802,6 +805,8 @@ public sealed class DocumentationFoundationTests
             "## Shop Transaction State Machine",
             "## Recovery Transaction State Machine",
             "## Save V19 Validation And Restore",
+            "ID and nonnegative amount",
+            "enforced by `RuntimeCurrencyLedgerSnapshot` construction",
             "```mermaid"
         ];
         Assert.All(
