@@ -8,7 +8,14 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R8 complete; O7-R9 through O7-R11 pending
+**Implementation status:** O7-R1 through O7-R8 complete; O7-R9 in progress; O7-R10 through O7-R11 pending
+
+> **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
+> recorded in
+> [inventory-equipment-economy-order-7-r9-wire-integrity-audit-2026-08-13.md](inventory-equipment-economy-order-7-r9-wire-integrity-audit-2026-08-13.md).
+> It identifies one reachable resolved-offer authority defect, separates trusted
+> host responsibilities from Framework guarantees, and defines the isolated R9
+> correction and certification commits.
 
 ## Purpose
 
