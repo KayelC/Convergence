@@ -35,6 +35,12 @@ The runner refuses a dirty worktree, an invalid checkpoint ID, an existing
 destination, an absent Godot executable, a failed command, or an omitted Godot
 run. It never overwrites prior evidence.
 
+A failed command stops the gate. The runner still finalizes the partial raw
+bundle and moves it under
+`artifacts/verification/<checkpoint>-failed-<utc>/<tested-commit>/`, leaving the
+canonical destination free for a corrected retry. Failed evidence is retained
+as failure evidence; it is never presented as a successful gate.
+
 ## Bundle Contract
 
 Every successful bundle contains:
@@ -56,10 +62,11 @@ active-content validation, all DemoHost modes, scripted Training Annex play,
 the Debug Godot build and real headless smoke, trimming analysis, and
 `git diff --check`.
 
-`VerificationEvidenceContractTests` validates every committed bundle. It
-requires successful commands, the complete mandatory command set, no missing or
-extra checksum entries, matching SHA-256 values, and coverage above the release
-thresholds.
+`VerificationEvidenceContractTests` validates every committed bundle. A
+successful bundle requires successful commands, the complete mandatory command
+set, and coverage above the release thresholds. A failed bundle requires a
+typed failure message and at least one nonzero command. Both require no missing
+or extra checksum entries and matching SHA-256 values.
 
 ## Commit Ordering
 

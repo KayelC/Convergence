@@ -45,7 +45,7 @@ function Convert-ToRelativeEvidencePath {
 }
 
 $repositoryOutput = @(Invoke-GitText -Arguments @('rev-parse', '--show-toplevel'))
-$repositoryRoot = $repositoryOutput[0].Trim()
+$repositoryRoot = [IO.Path]::GetFullPath($repositoryOutput[0].Trim())
 Set-Location -LiteralPath $repositoryRoot
 
 $statusBefore = @(Invoke-GitText -Arguments @('status', '--porcelain=v1', '--untracked-files=all'))
@@ -148,7 +148,7 @@ function Invoke-RecordedCommand {
 
 try {
     Invoke-RecordedCommand -Name '00-dotnet-info' -CommandLine 'dotnet --info'
-    Invoke-RecordedCommand -Name '01-restore-audit' -CommandLine 'dotnet restore Convergence.sln --locked-mode -p:NuGetAudit=true -p:NuGetAuditMode=all "-p:WarningsAsErrors=NU1901;NU1902;NU1903;NU1904"'
+    Invoke-RecordedCommand -Name '01-restore-audit' -CommandLine 'dotnet restore Convergence.sln --locked-mode -p:NuGetAudit=true -p:NuGetAuditMode=all "-p:WarningsAsErrors=NU1901%%3BNU1902%%3BNU1903%%3BNU1904"'
     Invoke-RecordedCommand -Name '02-format' -CommandLine 'dotnet format Convergence.sln --no-restore --verify-no-changes --verbosity diagnostic'
     Invoke-RecordedCommand -Name '03-framework-build' -CommandLine 'dotnet build src/Convergence.Framework/Convergence.Framework.csproj --configuration Release --no-restore --no-incremental -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true /clp:Summary'
     Invoke-RecordedCommand -Name '04-solution-build' -CommandLine 'dotnet build Convergence.sln --configuration Release --no-restore --no-incremental -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true /clp:Summary'
@@ -300,6 +300,14 @@ finally {
         (Join-Path $evidenceRoot 'SHA256SUMS.txt'),
         $checksumLines,
         [Text.UTF8Encoding]::new($false))
+
+    if ($null -ne $runFailure) {
+        $failedCheckpoint = "$Checkpoint-failed-$($startedUtc.ToString('yyyyMMddTHHmmssZ'))"
+        $failedRoot = Join-Path $repositoryRoot "artifacts\verification\$failedCheckpoint\$testedCommit"
+        New-Item -ItemType Directory -Path (Split-Path -Parent $failedRoot) -Force | Out-Null
+        Move-Item -LiteralPath $evidenceRoot -Destination $failedRoot
+        $evidenceRoot = $failedRoot
+    }
 }
 
 if ($null -ne $runFailure) {

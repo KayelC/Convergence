@@ -108,30 +108,40 @@ public sealed class VerificationEvidenceContractTests
         JsonElement root = manifest.RootElement;
 
         Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
-        Assert.Equal("succeeded", root.GetProperty("status").GetString());
+        string status = root.GetProperty("status").GetString()!;
+        Assert.Contains(status, new[] { "succeeded", "failed" }, StringComparer.Ordinal);
         Assert.True(root.GetProperty("repositoryWasClean").GetBoolean());
-        Assert.Null(root.GetProperty("failure").GetString());
 
         JsonElement[] commands = root.GetProperty("commands").EnumerateArray().ToArray();
         string[] names = commands.Select(command => command.GetProperty("name").GetString()!).ToArray();
-        Assert.All(RequiredCommands, required => Assert.Contains(required, names, StringComparer.Ordinal));
         Assert.All(commands, command =>
         {
-            Assert.Equal(0, command.GetProperty("exitCode").GetInt32());
             Assert.True(File.Exists(BundlePath(bundleRoot, command.GetProperty("commandFile").GetString()!)));
             Assert.True(File.Exists(BundlePath(bundleRoot, command.GetProperty("outputFile").GetString()!)));
         });
 
-        JsonElement coverage = root.GetProperty("coverage");
-        Assert.True(coverage.GetProperty("lineRate").GetDecimal() >= 0.90m);
-        Assert.True(coverage.GetProperty("branchRate").GetDecimal() >= 0.70m);
-        string compressedCoverage = BundlePath(
-            bundleRoot,
-            coverage.GetProperty("compressedFile").GetString()!);
-        Assert.True(File.Exists(compressedCoverage));
-        Assert.Equal(
-            coverage.GetProperty("uncompressedSha256").GetString(),
-            HashDecompressedGzip(compressedCoverage));
+        if (status == "succeeded")
+        {
+            Assert.Null(root.GetProperty("failure").GetString());
+            Assert.All(RequiredCommands, required => Assert.Contains(required, names, StringComparer.Ordinal));
+            Assert.All(commands, command => Assert.Equal(0, command.GetProperty("exitCode").GetInt32()));
+
+            JsonElement coverage = root.GetProperty("coverage");
+            Assert.True(coverage.GetProperty("lineRate").GetDecimal() >= 0.90m);
+            Assert.True(coverage.GetProperty("branchRate").GetDecimal() >= 0.70m);
+            string compressedCoverage = BundlePath(
+                bundleRoot,
+                coverage.GetProperty("compressedFile").GetString()!);
+            Assert.True(File.Exists(compressedCoverage));
+            Assert.Equal(
+                coverage.GetProperty("uncompressedSha256").GetString(),
+                HashDecompressedGzip(compressedCoverage));
+        }
+        else
+        {
+            Assert.False(string.IsNullOrWhiteSpace(root.GetProperty("failure").GetString()));
+            Assert.Contains(commands, command => command.GetProperty("exitCode").GetInt32() != 0);
+        }
 
         string checksumPath = Path.Combine(bundleRoot, "SHA256SUMS.txt");
         Assert.True(File.Exists(checksumPath));

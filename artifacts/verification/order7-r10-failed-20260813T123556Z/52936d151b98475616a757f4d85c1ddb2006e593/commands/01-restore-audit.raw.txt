@@ -1,0 +1,4 @@
+MSBUILD : error MSB1006: Property is not valid.
+Switch: NU1902
+
+For switch syntax, type "MSBuild -help"
