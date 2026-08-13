@@ -33,7 +33,7 @@ public sealed class VerificationEvidenceContractTests
     ];
 
     [Fact]
-    public void EvidencePolicy_TracksOnlyCanonicalBundlesAndPreservesRawBytes()
+    public void EvidencePolicy_TracksCanonicalBundlesAndLabeledRecoveryWithoutNormalizingBytes()
     {
         string ignore = File.ReadAllText(RepositoryPath(".gitignore"));
         string attributes = File.ReadAllText(RepositoryPath(".gitattributes"));
@@ -42,7 +42,14 @@ public sealed class VerificationEvidenceContractTests
         Assert.Contains("/artifacts/*", ignore, StringComparison.Ordinal);
         Assert.Contains("!/artifacts/verification/", ignore, StringComparison.Ordinal);
         Assert.Contains("!/artifacts/verification/**", ignore, StringComparison.Ordinal);
-        Assert.Contains("/artifacts/verification/** -text", attributes, StringComparison.Ordinal);
+        Assert.Contains("!/artifacts/historical-verification-recovery/", ignore, StringComparison.Ordinal);
+        Assert.Contains("!/artifacts/historical-verification-recovery/**", ignore, StringComparison.Ordinal);
+        Assert.Contains("!/artifacts/historical-verification-recovery/**/*.log", ignore, StringComparison.Ordinal);
+        Assert.Contains("/artifacts/verification/** -text -whitespace", attributes, StringComparison.Ordinal);
+        Assert.Contains(
+            "/artifacts/historical-verification-recovery/** -text -whitespace",
+            attributes,
+            StringComparison.Ordinal);
         Assert.Contains(
             "artifacts/verification/<checkpoint>/<tested-commit>/",
             guide,
@@ -102,6 +109,52 @@ public sealed class VerificationEvidenceContractTests
         }
     }
 
+    [Fact]
+    public void RecoveredHistoricalEvidence_IsExplicitlyNonCanonicalAndChecksummed()
+    {
+        string recoveryRoot = RepositoryPath(
+            "artifacts",
+            "historical-verification-recovery",
+            "2026-08-13");
+        string readme = File.ReadAllText(Path.Combine(recoveryRoot, "README.md"));
+        string sourceInventory = Path.Combine(recoveryRoot, "RECOVERED-SOURCES.csv");
+        string checksumPath = Path.Combine(recoveryRoot, "SHA256SUMS.txt");
+
+        Assert.Contains("historical recovery, not canonical gate bundles", readme, StringComparison.Ordinal);
+        Assert.True(File.Exists(sourceInventory));
+        Assert.True(File.Exists(checksumPath));
+
+        string[] recoveredSources = File.ReadAllLines(sourceInventory).Skip(1).ToArray();
+        Assert.Equal(34, recoveredSources.Length);
+        foreach (string recoveredSource in recoveredSources)
+        {
+            string[] fields = recoveredSource.Trim('"').Split("\",\"");
+            Assert.Equal(6, fields.Length);
+            if (!fields[2].Equals("gzip-lossless", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            (long bytes, string hash) = InspectDecompressedGzip(
+                BundlePath(recoveryRoot, fields[1]));
+            Assert.Equal(long.Parse(fields[3], System.Globalization.CultureInfo.InvariantCulture), bytes);
+            Assert.Equal(fields[4], hash);
+        }
+
+        Dictionary<string, string> expected = File.ReadAllLines(checksumPath)
+            .Where(line => line.Length != 0)
+            .Select(ParseChecksum)
+            .ToDictionary(pair => pair.Path, pair => pair.Hash, StringComparer.Ordinal);
+        string[] actualFiles = Directory.EnumerateFiles(recoveryRoot, "*", SearchOption.AllDirectories)
+            .Where(path => !path.Equals(checksumPath, StringComparison.OrdinalIgnoreCase))
+            .Select(path => Normalize(Path.GetRelativePath(recoveryRoot, path)))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(actualFiles, expected.Keys.Order(StringComparer.Ordinal).ToArray());
+        Assert.All(expected, pair => Assert.Equal(pair.Value, HashFile(BundlePath(recoveryRoot, pair.Key))));
+    }
+
     private static void ValidateBundle(string bundleRoot, string manifestPath)
     {
         using JsonDocument manifest = JsonDocument.Parse(File.ReadAllText(manifestPath));
@@ -135,7 +188,7 @@ public sealed class VerificationEvidenceContractTests
             Assert.True(File.Exists(compressedCoverage));
             Assert.Equal(
                 coverage.GetProperty("uncompressedSha256").GetString(),
-                HashDecompressedGzip(compressedCoverage));
+                InspectDecompressedGzip(compressedCoverage).Hash);
         }
         else
         {
@@ -172,11 +225,21 @@ public sealed class VerificationEvidenceContractTests
         return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
     }
 
-    private static string HashDecompressedGzip(string path)
+    private static (long Bytes, string Hash) InspectDecompressedGzip(string path)
     {
         using FileStream file = File.OpenRead(path);
         using var gzip = new GZipStream(file, CompressionMode.Decompress);
-        return Convert.ToHexString(SHA256.HashData(gzip)).ToLowerInvariant();
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        byte[] buffer = new byte[81920];
+        long bytes = 0;
+        int read;
+        while ((read = gzip.Read(buffer, 0, buffer.Length)) != 0)
+        {
+            hash.AppendData(buffer, 0, read);
+            bytes += read;
+        }
+
+        return (bytes, Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant());
     }
 
     private static string BundlePath(string root, string relative) =>

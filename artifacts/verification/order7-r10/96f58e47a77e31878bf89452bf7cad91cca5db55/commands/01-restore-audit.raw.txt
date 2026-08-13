@@ -1,0 +1,8 @@
+  Determining projects to restore...
+  Restored C:\Users\kayel\Documents\GitHub\Convergence\samples\Convergence.DemoHost\Convergence.DemoHost.csproj (in 83 ms).
+  Restored C:\Users\kayel\Documents\GitHub\Convergence\src\Convergence.Framework\Convergence.Framework.csproj (in 484 ms).
+  Restored C:\Users\kayel\Documents\GitHub\Convergence\tools\Convergence.ContentValidator\Convergence.ContentValidator.csproj (in 484 ms).
+  Restored C:\Users\kayel\Documents\GitHub\Convergence\samples\Convergence.GodotHost\Convergence.GodotHost.csproj (in 484 ms).
+  Restored C:\Users\kayel\Documents\GitHub\Convergence\tests\Convergence.Framework.Tests\Convergence.Framework.Tests.csproj (in 489 ms).
+  Restored C:\Users\kayel\Documents\GitHub\Convergence\tests\Convergence.ContentValidator.Tests\Convergence.ContentValidator.Tests.csproj (in 489 ms).
+  Restored C:\Users\kayel\Documents\GitHub\Convergence\tests\Convergence.DemoHost.Tests\Convergence.DemoHost.Tests.csproj (in 489 ms).

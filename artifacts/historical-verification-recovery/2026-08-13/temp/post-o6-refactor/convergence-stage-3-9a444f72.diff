@@ -1,0 +1,367 @@
+diff --git a/docs/roadmap/post-O6-refactor-roadmap.md b/docs/roadmap/post-O6-refactor-roadmap.md
+index b2fc9584..e5317692 100644
+--- a/docs/roadmap/post-O6-refactor-roadmap.md
++++ b/docs/roadmap/post-O6-refactor-roadmap.md
+@@ -482,5 +482,70 @@ approval.
+   Stage 2 exposed no suspicious behavior.
+ - **Commit:** `refactor(encounter-runner): stage 2 - move shared run operations`.
+ 
++### Stage 3 - Complete On 8 August 2026
++
++- **Verified boundary:** before editing, baseline commit `0b174b23` lines
++  `1214-1327` were compared directly with post-Stage-2 lines 909-1022. Both
++  begin with duplicate-ID validation and end with schedule creation after the
++  initial terminal-completion branch; no boundary discrepancy was found.
++- **Baseline to destination:** baseline battle-start orchestration at
++  `BattleEncounterRunner.cs:1214-1327` moved to
++  `EncounterRunContext.RunBattleStartPhaseAsync` at post-stage lines
++  1715-1839. `RunCoreAsync` consumes its result at post-stage lines 909-916.
++  Private immutable `BattleStartPhaseResult` is at post-stage lines 2472-2489.
++- **Changed files:**
++  `src/Convergence.Framework/Encounters/BattleEncounterRunner.cs` and this
++  roadmap. No test, assertion, API baseline, external call site, notes file, or
++  other source file changed.
++- **Focused verification:** 168 passed, 0 failed, 0 skipped in the unchanged
++  `BattleEncounterRunnerTests` suite.
++- **Full verification:** 1,888 passed, 0 failed, 0 skipped: Framework 1,703,
++  DemoHost 178, ContentValidator 7.
++- **Additional gates:** strict nonincremental solution build succeeded with
++  0 warnings and 0 errors; `dotnet format --verify-no-changes` succeeded; all
++  6 public-API boundary tests passed; `git diff --check` succeeded.
++- **Hazard 1 - duplicate-ID rejection precedes every encounter port call:**
++  after context construction, `RunCoreAsync` immediately awaits
++  `RunBattleStartPhaseAsync`. Its first operation computes and rejects duplicate
++  participant IDs through pre-start finalization. The first ordinary port
++  invocation, initiative, remains after that branch; constructing the private
++  context and invoker performs no port call.
++- **Hazard 2 - initiative cancellation checks:** the explicit cancellation
++  check remains immediately before the initiative `PortInvoker.Invoke` call.
++  The invoker retains its unchanged before-operation, after-operation,
++  exception-filter, and general-catch cancellation checks from Stage 1.
++- **Hazard 3 - actor passive reset order:** the lifecycle transaction is still
++  created before enumerating its participant snapshot. For each participant,
++  cancellation is checked first, passive battle activations are reset second,
++  and the matching `ActorCreated` event is awaited third, in the same
++  transaction-participant order.
++- **Hazard 4 - exact `BattleStarted` assignment point:** the
++  `BattleStarted` event is still fully published and recorded first;
++  `_runState.BattleStarted = true` remains the next statement; the
++  `InitiativeRolled` event remains after the assignment.
++- **Hazard 5 - lifecycle transaction commit timing:** the battle-start
++  lifecycle still runs against staged participants, its returned events are
++  snapshotted and ownership-validated, cancellation is checked, and only then
++  is the transaction committed. The same filtered cancellation catch rethrows;
++  the same general catch finalizes a typed lifecycle fault without committing.
++- **Hazard 6 - initial completion before schedule creation:** committed
++  lifecycle events are still added before reconciliation. Reconciliation is
++  evaluated next; a complete result is finalized and returned through the
++  terminal carrier branch. `StartSchedule()` is called only in the final
++  nonterminal return expression, so no schedule is created for an initially
++  complete encounter.
++- **Event/fault/exception/cancellation evidence:** the extracted method retains
++  every event argument and order, fault code and message, lifecycle request,
++  catch type and filter, cancellation point, transaction scope and commit,
++  reconciliation call, finalization call, and schedule-start call. Captured
++  locals changed only to `EncounterRunContext` members. The private result
++  carrier has a private constructor and two factories that populate exactly
++  one result path; it adds no runtime guard or new fault. Existing duplicate,
++  initiative, actor-creation, lifecycle rollback, immediate completion,
++  event-publication, and cancellation tests passed unchanged.
++- **Deferred observations:** none. `POST-O6-NOTES.md` was not created because
++  Stage 3 exposed no suspicious behavior.
++- **Commit:** `refactor(encounter-runner): stage 3 - move battle start phase`.
++
+ Later completion entries will be appended below this one and will not rewrite
+-the Stage 0, Stage 1, or Stage 2 evidence.
++the Stage 0 through Stage 3 evidence.
+diff --git a/src/Convergence.Framework/Encounters/BattleEncounterRunner.cs b/src/Convergence.Framework/Encounters/BattleEncounterRunner.cs
+index 39a4c552..262e0c63 100644
+--- a/src/Convergence.Framework/Encounters/BattleEncounterRunner.cs
++++ b/src/Convergence.Framework/Encounters/BattleEncounterRunner.cs
+@@ -906,120 +906,14 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
+             runState);
+         EncounterPortInvoker portInvoker = runContext.PortInvoker;
+ 
+-        RuntimeInstanceId[] duplicateParticipantIds = request.Participants
+-            .GroupBy(participant => participant.InstanceId)
+-            .Where(group => group.Skip(1).Any())
+-            .Select(group => group.Key)
+-            .ToArray();
+-        if (duplicateParticipantIds.Length > 0)
+-        {
+-            string duplicates = string.Join(", ", duplicateParticipantIds.Select(id => id.ToString()));
+-            return await runContext.FailBeforeStartAsync(
+-                    $"Encounter participant runtime instance IDs must be unique. Duplicates: [{duplicates}].",
+-                    BattleEncounterFaultCode.DuplicateParticipantInstanceId)
+-                .ConfigureAwait(false);
+-        }
+-
+-        cancellationToken.ThrowIfCancellationRequested();
+-        IReadOnlyList<ContentId>? proposedTeamOrder = portInvoker.Invoke(
+-            BattleEncounterFaultCode.InitiativeExecutionFailed,
+-            "initiative",
+-            () =>
+-            {
+-                IReadOnlyList<ContentId>? proposed = services.Initiative.DetermineTeamOrder(
+-                    new BattleEncounterInitiativeRequest(
+-                        CaptureParticipantSnapshots(request.Participants)));
+-                return proposed is null
+-                    ? null
+-                    : Array.AsReadOnly(proposed.ToArray());
+-            });
+-        ContentId[] participatingTeams = request.Participants
+-            .Select(participant => participant.TeamId)
+-            .Distinct()
+-            .ToArray();
+-        if (!IsExactTeamPermutation(proposedTeamOrder, participatingTeams))
+-        {
+-            string expected = string.Join(", ", participatingTeams.Select(team => team.ToString()));
+-            string received = proposedTeamOrder is null
+-                ? "<null>"
+-                : string.Join(", ", proposedTeamOrder.Select(team => team.ToString()));
+-            return await runContext.FailBeforeStartAsync(
+-                    $"Initiative must return every participating team exactly once. Expected [{expected}]; received [{received}].",
+-                    BattleEncounterFaultCode.InitiativeExecutionFailed)
+-                .ConfigureAwait(false);
+-        }
+-
+-        runState.TeamOrder = Array.AsReadOnly(proposedTeamOrder!.ToArray());
+-        runContext.Synchronize();
+-        using var battleStartTransaction = new BattleEncounterLifecycleTransaction(
+-            request.Participants,
+-            services.Lifecycle);
+-        foreach (BattleEncounterParticipant participant in battleStartTransaction.Participants)
++        BattleStartPhaseResult battleStart =
++            await runContext.RunBattleStartPhaseAsync().ConfigureAwait(false);
++        if (battleStart.TerminalResult is BattleEncounterResult terminalResult)
+         {
+-            cancellationToken.ThrowIfCancellationRequested();
+-            participant.State.Passives.ResetBattleActivations();
+-            await runContext.AddAsync(
+-                    BattleEncounterEventKind.ActorCreated,
+-                    new BattleActorCreatedEventPayload(
+-                        participant.InstanceId,
+-                        participant.State.EntityId,
+-                        participant.TeamId),
+-                    $"Created {participant.DisplayName} as {participant.InstanceId} on {participant.TeamId}.")
+-                .ConfigureAwait(false);
++            return terminalResult;
+         }
+ 
+-        await runContext.AddAsync(
+-                BattleEncounterEventKind.BattleStarted,
+-                new BattleStartedEventPayload(
+-                    request.ContextId,
+-                    request.BattleKindId,
+-                    request.MoonPhaseId,
+-                    request.RoundLimit,
+-                    request.Participants.Select(participant => participant.InstanceId),
+-                    participatingTeams),
+-                "Battle started.")
+-            .ConfigureAwait(false);
+-        runState.BattleStarted = true;
+-        await runContext.AddAsync(
+-                BattleEncounterEventKind.InitiativeRolled,
+-                new BattleInitiativeRolledEventPayload(runState.TeamOrder),
+-                "Initiative order: " + string.Join(", ", runState.TeamOrder.Select(team => team.ToString())) + ".")
+-            .ConfigureAwait(false);
+-        cancellationToken.ThrowIfCancellationRequested();
+-        IReadOnlyList<BattleEncounterEvent> battleStartEvents;
+-        try
+-        {
+-            IReadOnlyList<BattleEncounterEvent> returnedEvents = await services.Lifecycle.ProcessBattleStartAsync(
+-                    new BattleEncounterLifecycleRequest(
+-                        battleStartTransaction.CreateEncounter(request),
+-                        battleStartTransaction.Participants,
+-                        runState.TeamOrder),
+-                    cancellationToken)
+-                .ConfigureAwait(false);
+-            battleStartEvents = runContext.SnapshotLifecycleEvents(returnedEvents, "battle-start");
+-            cancellationToken.ThrowIfCancellationRequested();
+-            battleStartTransaction.Commit();
+-        }
+-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+-        {
+-            throw;
+-        }
+-        catch (Exception exception)
+-        {
+-            return await runContext.FaultDuringBattleAsync(
+-                    EncounterRunContext.LifecycleFailureMessage("battle-start", exception),
+-                    faultCode: BattleEncounterFaultCode.LifecycleExecutionFailed)
+-                .ConfigureAwait(false);
+-        }
+-
+-        await runContext.AddRangeAsync(battleStartEvents).ConfigureAwait(false);
+-        BattleEncounterCompletion initial = await runContext.ReconcileAsync(null).ConfigureAwait(false);
+-        if (initial.IsComplete)
+-        {
+-            return await runContext.FinishAsync(initial.Outcome, initial.WinningTeamId, initial.Message).ConfigureAwait(false);
+-        }
+-
+-        BattleEncounterScheduleCursor schedule = runContext.StartSchedule();
++        BattleEncounterScheduleCursor schedule = battleStart.Schedule!;
+         while (!schedule.IsComplete)
+         {
+             cancellationToken.ThrowIfCancellationRequested();
+@@ -1818,6 +1712,133 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
+ 
+         public EncounterPortInvoker PortInvoker { get; }
+ 
++        public async ValueTask<BattleStartPhaseResult> RunBattleStartPhaseAsync()
++        {
++            RuntimeInstanceId[] duplicateParticipantIds = _request.Participants
++                .GroupBy(participant => participant.InstanceId)
++                .Where(group => group.Skip(1).Any())
++                .Select(group => group.Key)
++                .ToArray();
++            if (duplicateParticipantIds.Length > 0)
++            {
++                string duplicates = string.Join(", ", duplicateParticipantIds.Select(id => id.ToString()));
++                BattleEncounterResult terminalResult = await FailBeforeStartAsync(
++                        $"Encounter participant runtime instance IDs must be unique. Duplicates: [{duplicates}].",
++                        BattleEncounterFaultCode.DuplicateParticipantInstanceId)
++                    .ConfigureAwait(false);
++                return BattleStartPhaseResult.Finalized(terminalResult);
++            }
++
++            _cancellationToken.ThrowIfCancellationRequested();
++            IReadOnlyList<ContentId>? proposedTeamOrder = PortInvoker.Invoke(
++                BattleEncounterFaultCode.InitiativeExecutionFailed,
++                "initiative",
++                () =>
++                {
++                    IReadOnlyList<ContentId>? proposed = _services.Initiative.DetermineTeamOrder(
++                        new BattleEncounterInitiativeRequest(
++                            CaptureParticipantSnapshots(_request.Participants)));
++                    return proposed is null
++                        ? null
++                        : Array.AsReadOnly(proposed.ToArray());
++                });
++            ContentId[] participatingTeams = _request.Participants
++                .Select(participant => participant.TeamId)
++                .Distinct()
++                .ToArray();
++            if (!IsExactTeamPermutation(proposedTeamOrder, participatingTeams))
++            {
++                string expected = string.Join(", ", participatingTeams.Select(team => team.ToString()));
++                string received = proposedTeamOrder is null
++                    ? "<null>"
++                    : string.Join(", ", proposedTeamOrder.Select(team => team.ToString()));
++                BattleEncounterResult terminalResult = await FailBeforeStartAsync(
++                        $"Initiative must return every participating team exactly once. Expected [{expected}]; received [{received}].",
++                        BattleEncounterFaultCode.InitiativeExecutionFailed)
++                    .ConfigureAwait(false);
++                return BattleStartPhaseResult.Finalized(terminalResult);
++            }
++
++            _runState.TeamOrder = Array.AsReadOnly(proposedTeamOrder!.ToArray());
++            Synchronize();
++            using var battleStartTransaction = new BattleEncounterLifecycleTransaction(
++                _request.Participants,
++                _services.Lifecycle);
++            foreach (BattleEncounterParticipant participant in battleStartTransaction.Participants)
++            {
++                _cancellationToken.ThrowIfCancellationRequested();
++                participant.State.Passives.ResetBattleActivations();
++                await AddAsync(
++                        BattleEncounterEventKind.ActorCreated,
++                        new BattleActorCreatedEventPayload(
++                            participant.InstanceId,
++                            participant.State.EntityId,
++                            participant.TeamId),
++                        $"Created {participant.DisplayName} as {participant.InstanceId} on {participant.TeamId}.")
++                    .ConfigureAwait(false);
++            }
++
++            await AddAsync(
++                    BattleEncounterEventKind.BattleStarted,
++                    new BattleStartedEventPayload(
++                        _request.ContextId,
++                        _request.BattleKindId,
++                        _request.MoonPhaseId,
++                        _request.RoundLimit,
++                        _request.Participants.Select(participant => participant.InstanceId),
++                        participatingTeams),
++                    "Battle started.")
++                .ConfigureAwait(false);
++            _runState.BattleStarted = true;
++            await AddAsync(
++                    BattleEncounterEventKind.InitiativeRolled,
++                    new BattleInitiativeRolledEventPayload(_runState.TeamOrder),
++                    "Initiative order: " + string.Join(", ", _runState.TeamOrder.Select(team => team.ToString())) + ".")
++                .ConfigureAwait(false);
++            _cancellationToken.ThrowIfCancellationRequested();
++            IReadOnlyList<BattleEncounterEvent> battleStartEvents;
++            try
++            {
++                IReadOnlyList<BattleEncounterEvent> returnedEvents =
++                    await _services.Lifecycle.ProcessBattleStartAsync(
++                            new BattleEncounterLifecycleRequest(
++                                battleStartTransaction.CreateEncounter(_request),
++                                battleStartTransaction.Participants,
++                                _runState.TeamOrder),
++                            _cancellationToken)
++                        .ConfigureAwait(false);
++                battleStartEvents = SnapshotLifecycleEvents(returnedEvents, "battle-start");
++                _cancellationToken.ThrowIfCancellationRequested();
++                battleStartTransaction.Commit();
++            }
++            catch (OperationCanceledException) when (_cancellationToken.IsCancellationRequested)
++            {
++                throw;
++            }
++            catch (Exception exception)
++            {
++                BattleEncounterResult terminalResult = await FaultDuringBattleAsync(
++                        LifecycleFailureMessage("battle-start", exception),
++                        faultCode: BattleEncounterFaultCode.LifecycleExecutionFailed)
++                    .ConfigureAwait(false);
++                return BattleStartPhaseResult.Finalized(terminalResult);
++            }
++
++            await AddRangeAsync(battleStartEvents).ConfigureAwait(false);
++            BattleEncounterCompletion initial = await ReconcileAsync(null).ConfigureAwait(false);
++            if (initial.IsComplete)
++            {
++                BattleEncounterResult terminalResult = await FinishAsync(
++                        initial.Outcome,
++                        initial.WinningTeamId,
++                        initial.Message)
++                    .ConfigureAwait(false);
++                return BattleStartPhaseResult.Finalized(terminalResult);
++            }
++
++            return BattleStartPhaseResult.ScheduleReady(StartSchedule());
++        }
++
+         public async ValueTask AddAsync(
+             BattleEncounterEventKind kind,
+             BattleEncounterEventPayload payload,
+@@ -2448,6 +2469,26 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
+         }
+     }
+ 
++    private sealed class BattleStartPhaseResult
++    {
++        private BattleStartPhaseResult(
++            BattleEncounterScheduleCursor? schedule,
++            BattleEncounterResult? terminalResult)
++        {
++            Schedule = schedule;
++            TerminalResult = terminalResult;
++        }
++
++        public BattleEncounterScheduleCursor? Schedule { get; }
++        public BattleEncounterResult? TerminalResult { get; }
++
++        public static BattleStartPhaseResult ScheduleReady(BattleEncounterScheduleCursor schedule) =>
++            new(schedule, null);
++
++        public static BattleStartPhaseResult Finalized(BattleEncounterResult terminalResult) =>
++            new(null, terminalResult);
++    }
++
+     private sealed class EncounterPortInvoker
+     {
+         private readonly CancellationToken _cancellationToken;

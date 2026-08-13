@@ -17,6 +17,9 @@ Ordinary scratch under `artifacts/`, operating-system logs, build output, and a
 local Godot engine remain ignored. Existing historical tracked artifacts are
 retained, but new complete-gate evidence uses only the directory above.
 
+The current repository index is
+[`artifacts/verification/README.md`](../artifacts/verification/README.md).
+
 ## Capture A Checkpoint
 
 Begin from a clean commit. On Windows, provide the official Godot 4.7.1 .NET
@@ -81,3 +84,16 @@ Evidence proves what ran on one identified revision and environment. It does not
 prove that a review interpreted the mechanics correctly, replace independent
 source review, or make ignored local logs authoritative. Review records must
 continue to distinguish verified results from owner-approved game design.
+
+## Recovered Historical Evidence
+
+Files created before the canonical bundle contract sometimes survived only in
+ignored repository paths or the operating-system temporary directory. The
+surviving files recovered on 2026-08-13 are tracked under
+[`artifacts/historical-verification-recovery/2026-08-13`](../artifacts/historical-verification-recovery/2026-08-13/README.md).
+
+That collection preserves exact bytes, provenance, original hashes, and a
+checksum inventory. It is historical evidence, not a complete successful gate:
+some source commands, tested commits, or companion outputs were never recorded
+and cannot be reconstructed honestly. Losslessly compressed coverage files
+record the SHA-256 of their uncompressed original bytes.

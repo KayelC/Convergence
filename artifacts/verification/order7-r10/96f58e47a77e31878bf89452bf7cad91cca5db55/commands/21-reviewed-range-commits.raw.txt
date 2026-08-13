@@ -1,0 +1,55 @@
+commit 996cc120059a6cc85a8bb56289cdc9da4d48ddb8
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Thu Aug 13 14:02:57 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Thu Aug 13 14:02:57 2026 +0200
+
+    docs: verify order 7 audience completion
+
+commit a08d216b23801f1943ebab3500181cac69ea51a7
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Thu Aug 13 13:54:36 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Thu Aug 13 13:54:36 2026 +0200
+
+    docs: correct order 7 integration claims
+
+commit a738551011d65c6397ba670f3d3f38a6158a4d49
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Thu Aug 13 13:45:29 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Thu Aug 13 13:45:29 2026 +0200
+
+    docs: reconcile order 7 audience contracts
+
+commit 05a4ebc4a5f721b8236ba2da9f2a44d6ff600b98
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Thu Aug 13 13:37:27 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Thu Aug 13 13:37:27 2026 +0200
+
+    docs: define inventory economy runtime authority
+
+commit 58ef84b911c2c308b6945db8ddd4944783f650f7
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Thu Aug 13 13:33:00 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Thu Aug 13 13:33:00 2026 +0200
+
+    docs: guide inventory economy integration
+
+commit 0d93cb257c298eea644e177da64aa8c7d8bba3a4
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Thu Aug 13 13:29:52 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Thu Aug 13 13:29:52 2026 +0200
+
+    docs: explain inventory and economy mechanics
+
+commit 52e43a8802829f9ba34dca5c7710ab822ffcfbf8
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Thu Aug 13 13:28:31 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Thu Aug 13 13:28:31 2026 +0200
+
+    docs: define order 7 audience completion

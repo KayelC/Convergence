@@ -1,0 +1,5 @@
+001 [save] Created runtime save snapshot v19 with 2 actor(s).
+002 [serialize] Host-owned JSON round-trip completed with 8618 character(s).
+003 [validate] Restored snapshot validated with 0 diagnostic(s).
+004 [restore] Restored 2 actor(s), 1 item stack(s), dungeon node convergence.catalog_surface_sample:floor_5.
+005 [outcome] Clean save demo completed successfully.

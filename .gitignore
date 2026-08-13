@@ -14,11 +14,13 @@
 bin/
 obj/
 
-# Generated scratch is local. Auditable verification bundles are deliberately
-# committed under artifacts/verification.
+# Generated scratch is local. Auditable verification bundles and explicitly
+# labeled recovered historical evidence are deliberately committed.
 /artifacts/*
 !/artifacts/verification/
 !/artifacts/verification/**
+!/artifacts/historical-verification-recovery/
+!/artifacts/historical-verification-recovery/**
 
 # Package directories
 packages/
@@ -28,6 +30,7 @@ tests/Godot_v*-stable_mono_*/
 
 # Other common generated files
 *.log
+!/artifacts/historical-verification-recovery/**/*.log
 
 # Private local task continuity records
 /Chat Context History/

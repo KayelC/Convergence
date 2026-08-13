@@ -163,6 +163,30 @@ the source roadmap. R10 documentation maturity is not runtime closure proof.
 - Trimming analysis, `dotnet format --verify-no-changes`, architecture boundary
   tests, and `git diff --check` passed.
 
+## Durable Raw Evidence
+
+The complete reproducible gate was rerun against clean commit
+`96f58e47a77e31878bf89452bf7cad91cca5db55`, reviewing the exact Order 7 range
+`23cf50c14d52959a7d7bdfd4797cc4a249bef42a..996cc120059a6cc85a8bb56289cdc9da4d48ddb8`.
+Its [tracked evidence bundle](../../artifacts/verification/order7-r10/96f58e47a77e31878bf89452bf7cad91cca5db55/README.md)
+contains the unedited combined output and portable command wrapper for all 23
+commands, the reviewed-range diff and commit list, manifest exit codes, lossless
+coverage, Godot executable identity, and complete SHA-256 inventory.
+
+That rerun passed 218 focused Framework tests, 133 focused DemoHost tests, 61
+architecture tests, and the full 1,982-test suite (1,793 Framework, 182 DemoHost,
+and 7 ContentValidator tests), with no failures or skips. Coverage was 90.19%
+lines and 76.71% branches. The real Godot 4.7.1 headless output includes
+`CONVERGENCE_GODOT_SMOKE_OK`.
+
+The first evidence-run attempt failed during restore because its generated
+batch command did not escape the semicolon-separated warning property. Its
+[failed bundle](../../artifacts/verification/order7-r10-failed-20260813T123556Z/52936d151b98475616a757f4d85c1ddb2006e593/README.md)
+is retained with the real nonzero output rather than erased. Earlier surviving
+logs, diffs, and coverage that lacked complete bundle metadata are preserved as
+[recovered historical evidence](../../artifacts/historical-verification-recovery/2026-08-13/README.md)
+and are not represented as a successful gate.
+
 ## Conclusion
 
 The player, developer, and technical Order 7 documents now agree with current

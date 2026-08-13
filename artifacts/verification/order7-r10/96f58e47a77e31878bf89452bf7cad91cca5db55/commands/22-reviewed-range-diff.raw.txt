@@ -1,0 +1,2211 @@
+diff --git a/docs/README.md b/docs/README.md
+index 07608f05d2120642276bc1f60038230eb4ae338c..428353a1a59e5cb37dafcba0a760cdc5c1f2b643 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -32,6 +32,12 @@ This directory is the active documentation authority for Convergence Framework.
+     composing schedulers, commands, lifecycle, events, and completion.
+ 17. [Encounter Orchestration Runtime](technical/encounter-orchestration-runtime.md):
+     state-machine, transaction, reconciliation, and fault invariants.
++18. [Party, Rosters, Inventory, Equipment, And Economy](mechanics/party-inventory-and-economy.md):
++    player-visible ownership, equipment, shops, stock, currency, and recovery.
++19. [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md):
++    composing policies, instance IDs, transactions, saves, and Godot adoption.
++20. [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md):
++    authority graphs, atomic state machines, and save v19 restoration.
+ 
+ ## Documentation Audiences
+ 
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 410ddef7c236fbb07209e2f4a48366e7a7ba40a5..6290ebab6a3b706b3396a8abffd019491baad53f 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -104,6 +104,12 @@ debit, then commits the actor only when every operation succeeds. Rulesets that
+ do not select recovery expose no recovery service and receive no hidden HP/SP,
+ cost, or cleanup behavior.
+ 
++The supported host composition and adoption sequence is documented in
++[Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md).
++The ownership graph, atomic transaction order, and save v19 restore invariants
++are documented in
++[Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md).
++
+ Battle knowledge deliberately uses two snapshot authorities. Persistent facts
+ are keyed by entity definition and belong to session persistence. Encounter
+ facts are keyed by runtime target identity, take query precedence for that
+diff --git a/docs/content-authoring-validator.md b/docs/content-authoring-validator.md
+index 2fd96a21e0faef7077225306f67749fbda3243b0..42f06f57b69955529b1b1d595cf7104571222097 100644
+--- a/docs/content-authoring-validator.md
++++ b/docs/content-authoring-validator.md
+@@ -64,3 +64,9 @@ validation.
+ 
+ The profile currently has schema version `1`. Unknown profile properties and
+ unsupported profile versions are rejected rather than ignored.
++
++## Related Guidance
++
++- [Content Contract](content-contract.md)
++- [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md)
++- [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md)
+diff --git a/docs/content-contract.md b/docs/content-contract.md
+index a9f37e6f772c2931d0813d09a6ca7e41024b66b9..1f3875d963efcf9fb470da78852a75bc286ef542 100644
+--- a/docs/content-contract.md
++++ b/docs/content-contract.md
+@@ -201,3 +201,10 @@ is used.
+ ## Generic Content Policy
+ 
+ Checked-in active content must be generic, original, and small enough to review. It demonstrates contracts; it is not mandatory built-in game data. Historical prototype content is archived and never loaded by active projects.
++
++## Related Guidance
++
++- [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md)
++- [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md)
++- [Ruleset Policy Contracts](ruleset-policy-contracts.md)
++- [Content Authoring Validator](content-authoring-validator.md)
+diff --git a/docs/decisions/combat-resolution-policy-family.md b/docs/decisions/combat-resolution-policy-family.md
+index 4fcc27ab9fcf97901988aab8df323560efecee4a..e490fc362b877f939a89cabf2d1e23ffd3dc2118 100644
+--- a/docs/decisions/combat-resolution-policy-family.md
++++ b/docs/decisions/combat-resolution-policy-family.md
+@@ -315,7 +315,7 @@ basic attacks must declare critical behavior. One authored damage effect is
+ limited to `1..1024` hits; the supplied standard policy defaults to a stricter
+ `64`-hit execution ceiling. Authored probabilities are inclusive `0..100` and
+ are rejected before execution, while only policy-derived chances may clamp.
+-Save contract v18 retains charge policy identity and rejects restoration under
++Save contract v19 retains charge policy identity and rejects restoration under
+ incompatible charge semantics.
+ 
+ The final source-first review corrected active schema validation, normalized
+diff --git a/docs/developer-guide/README.md b/docs/developer-guide/README.md
+index 1f7064d51652a3da16ecf02469aedf808d25d18c..2d87e7a789f1c8288b66ef46a2f7551703d1d981 100644
+--- a/docs/developer-guide/README.md
++++ b/docs/developer-guide/README.md
+@@ -42,6 +42,10 @@ Developer guides focus on:
+   initiative, supplied and replacement schedulers, lifecycle, command,
+   completion, cancellation, fault, event, automated-runner, and Godot
+   composition.
++- [Inventory, Equipment, And Economy Integration](inventory-equipment-and-economy.md):
++  economy-ruleset binding, equipment instance IDs and live profiles, authored
++  slot policies, atomic shop and recovery results, save authority, and Godot
++  adoption.
+ 
+ The actor and typed action/effect guides have completed collaborative review.
+ That Order 1 review includes stat-modifier policy composition and integration.
+@@ -89,6 +93,9 @@ O6-R46 reconciles the composition guidance and interface name. The
+ [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+ independently traces the corrected host boundary. This guide is `reviewed`, and
+ Order 6 is formally complete.
++The Order 7 inventory/economy guide is `reviewed` after O7-R10 traced its
++composition examples and host-adoption rules against current APIs and tests.
++O7-R11 remains the separate capability-closure audit.
+ Other subsystem guides remain tracked as
+ `existing_unreviewed` or `missing` in
+ the [documentation coverage matrix](../reference/documentation-coverage.md).
+diff --git a/docs/developer-guide/actors-and-runtime-state.md b/docs/developer-guide/actors-and-runtime-state.md
+index b7fd66de015299f26621d961b9b8b38c706429be..46b082afb168e515cdc49e956bcd9177b74fe8ca 100644
+--- a/docs/developer-guide/actors-and-runtime-state.md
++++ b/docs/developer-guide/actors-and-runtime-state.md
+@@ -327,10 +327,11 @@ for later loadout editing.
+ ## Save And Restore
+ 
+ The host serializes `RuntimeSaveGameSnapshot`; Framework does not own the file
+-format. Save contract v18 includes actors, the canonical party roster, pending
++format. Save contract v19 includes actors, the canonical party roster, pending
+ skill choices, complete selected-policy stat-modifier state, combat-profile
+ source/revision identity, inventory-owned equipment instances with actor
+-loadout references, and the remaining session modules.
++loadout references, typed currency balances, durable tracked shop stock, and
++the remaining session modules.
+ 
+ Restore through `RuntimeSessionRestoreService`:
+ 
+diff --git a/docs/developer-guide/inventory-equipment-and-economy.md b/docs/developer-guide/inventory-equipment-and-economy.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..515e8f7eaf2f09c9af7f3995b8678c66d0133532
+--- /dev/null
++++ b/docs/developer-guide/inventory-equipment-and-economy.md
+@@ -0,0 +1,378 @@
++# Inventory, Equipment, And Economy Integration
++
++## Purpose
++
++This guide shows how a host composes Order 7 resource-management services and
++adopts their immutable results. It covers equipment instance IDs, authored
++slots, live equipment profiles, currency ledgers, resolved shop offers,
++policy-owned stock, recovery, persistence, and Godot integration.
++
++> **Review state:** `reviewed` after O7-R10 reconciled the mechanics,
++> integration, and technical authorities with current source and tests. O7-R11
++> remains the independent capability-closure audit.
++
++## Authority Split
++
++| Concern | Framework owns | Host owns |
++|---|---|---|
++| Inventory | quantities, equipment-instance ownership, immutable transitions | when to request a transition and which successful snapshot becomes session state |
++| Equipment | slot-policy validation, exact-instance assignment, derived profile | globally fresh instance IDs, selection UI, coordinating profile recomposition |
++| Currency | typed balances and checked credit/debit transitions | currency names, formatting, and adopting successful ledgers |
++| Shops | offer resolution, pricing/stock policies, atomic inventory/currency/stock results | menus, confirmations, fresh equipment IDs, and current state storage |
++| Recovery | policy planning, legal cleanup, staged actor/currency transaction | patient selection, presentation, and adopting the successful ledger |
++| Persistence | serializer-neutral save shape, validation, aggregate restoration | file format, slots, paths, encryption, migrations, scene reconstruction |
++
++Do not copy framework state into a second mutable shop, equipment, or wallet
++model. Keep the current immutable snapshots in the host session and replace
++them only from accepted results.
++
++## Bind The Economy Ruleset
++
++The standard composition path registers supplied policy factories and binds an
++authored economy ruleset from the catalog:
++
++```csharp
++RuntimeRulesetPolicyFactoryRegistry factories =
++    RuntimeRulesetPolicyFactoryRegistry.CreateStandard();
++
++var resolver = new RuntimeRulesetBindingResolver(factories);
++ResourceManagementRulesetServices resources = resolver
++    .BindResourceManagementServices(catalog, economyRulesetId)
++    .RequireService();
++```
++
++`ResourceManagementRulesetServices` contains:
++
++- `Inventory`: item and equipment ownership transitions;
++- `Equipment`: equip and unequip transitions;
++- `Economy`: named-currency credits and debits;
++- `ShopOffers`: authored-offer resolution;
++- `Shop`: atomic purchase and resale transitions; and
++- `Recovery`: the optional service selected by the ruleset.
++
++Binding failure is a startup/content diagnostic. Do not catch it and silently
++construct a different pricing, stock, or recovery rule.
++
++### Registering Real Replacement Policies
++
++Register additional `IShopPricingPolicyFactory`, `IShopStockPolicyFactory`, or
++`IRecoveryPolicyFactory` implementations when a game has a real alternate
++behavior:
++
++```csharp
++RuntimeRulesetPolicyFactoryRegistry factories =
++    RuntimeRulesetPolicyFactoryRegistry.CreateStandard(
++        shopPricing: [customPricingFactory],
++        shopStock: [customStockFactory],
++        recovery: [customRecoveryFactory]);
++```
++
++Authored policy IDs select those factories. Equipment ownership,
++equipment-granted skill behavior, and currency identity are fixed data-model
++rules, not policy extension points.
++
++## Use One Slot Layout Everywhere
++
++The standard ruleset bundle uses `StandardEquipmentSlotLayoutPolicy`. A game
++with custom authored slot IDs must inject the same
++`IEquipmentSlotLayoutPolicy` into every slot-sensitive service:
++
++```csharp
++IEquipmentSlotLayoutPolicy layout = customLayout;
++
++var contentValidator = new SkillSystemContentValidator(layout);
++var catalogLoader = new SkillSystemCatalogLoader(
++    new SkillSystemJsonDeserializer(),
++    contentValidator);
++var equipmentTransitions = new EquipmentTransitionService(layout);
++var equipmentProfiles = new RuntimeEquipmentProfileResolver(layout);
++var shopOffers = new RuntimeShopOfferResolver(
++    defaultPricing,
++    pricingFactories,
++    stockFactories,
++    layout);
++var saveValidator = new RuntimeSaveValidator(equipmentSlotLayout: layout);
++```
++
++Content semantic validation must use that layout as well. Mixing layouts can
++make content valid in one boundary and incompatible in another. Pass
++`saveValidator` to aggregate restoration and the same profile resolver to
++actor composition and live equipment sources. The selected layout owns
++slot/profile compatibility; it does not own inventory identity, combat math,
++or granted-skill behavior.
++
++## Allocate Equipment Instance IDs In The Host
++
++An equipment definition describes a kind of equipment. An equipment instance
++is one owned copy:
++
++```csharp
++var copy = new RuntimeEquipmentInstanceSnapshot(
++    hostAllocatedInstanceId,
++    equipmentDefinitionId);
++
++InventoryTransitionResult added = resources.Inventory.AddEquipment(
++    inventory,
++    copy,
++    authoredSlotId);
++
++if (added.Applied)
++{
++    inventory = added.After;
++}
++```
++
++The host must allocate IDs that are globally fresh across actors and equipment
++instances in the session. Framework transition and restore boundaries reject
++duplicate IDs, cross-actor assignments, missing ownership, and actor/equipment
++ID collisions; they do not provide a process-global ID generator.
++
++When purchasing equipment, pass the fresh ID to `Shop.Buy`. Item purchases pass
++`null`. When selling equipment, identify the exact owned instance rather than
++only its definition.
++
++## Equip One Exact Owned Copy
++
++An equip request needs inventory ownership, the actor's current loadout, the
++owned slot, the target slot, and every other actor's loadout:
++
++```csharp
++EquipmentTransitionResult result = resources.Equipment.Equip(
++    inventory,
++    actor.ToSnapshot().Equipment,
++    equipmentInstanceId,
++    ownedSlotId,
++    targetSlotId,
++    otherActors.Select(other => other.ToSnapshot().Equipment));
++
++if (!result.Applied)
++{
++    Present(result.Diagnostics);
++    return;
++}
++```
++
++Passing other loadouts is load-bearing: it prevents one instance from being
++equipped by two actors. The returned `After` is the candidate loadout; the
++service does not silently mutate the actor.
++
++Before presenting the change as complete, the host must resolve and apply the
++actor's canonical combat profile using the candidate loadout and current
++inventory. Vessel games pass the resolved `StatModifiers` and
++`GrantedSkillIds` into the same actor-composition service used at actor
++creation, growth, hosted-entity changes, and restore. Commit the candidate
++loadout and successful composition as one host-session operation.
++
++Do not manually copy grants into learned skills. Do not independently add
++armor Defense or boots Evasion in battle code.
++
++## Resolve One Live Equipment Profile
++
++Use one resolver for menus, composition, basic attacks, action authorization,
++passives, and battle execution:
++
++```csharp
++IRuntimeEquipmentProfileResolver profileResolver =
++    new RuntimeEquipmentProfileResolver(layout);
++
++RuntimeEquipmentProfile profile = profileResolver.Resolve(
++    inventory,
++    actor.ToSnapshot().Equipment,
++    catalog);
++
++if (profile.Diagnostics.Count != 0)
++{
++    Present(profile.Diagnostics);
++    return;
++}
++```
++
++For battle services that resolve by live actor, create
++`RuntimeActorEquipmentProfileSource` from the current inventory and catalog.
++Rebuild that source whenever the session adopts a new inventory snapshot. It is
++a projection over the supplied immutable inventory, not a mutable cache.
++
++The profile supplies basic attack data, stat modifiers, and current grants.
++Canonical action execution rechecks authorization, so an action prepared while
++a grant existed rejects if the granting instance is unequipped before
++execution.
++
++The standard resolver models one current weapon basic attack, matching the
++standard four-slot layout. A custom layout that permits multiple simultaneous
++weapon profiles must supply an `IRuntimeEquipmentProfileResolver` with an
++explicit basic-attack selection rule rather than relying on slot iteration
++order.
++
++## Initialize Currency And Shop State
++
++Create a typed ledger even for a one-currency game:
++
++```csharp
++RuntimeCurrencyLedgerSnapshot currencies =
++    RuntimeCurrencyLedgerSnapshot.Single(currencyId, initialBalance);
++
++RuntimeCurrencyBalanceSnapshot onlyCurrency = currencies.GetSingleCurrency();
++```
++
++`GetSingleCurrency()` is convenience, not an implicit transaction path. It
++throws a typed `RuntimeCurrencyLedgerException` for an empty or multi-currency
++ledger. Every credit, debit, shop transaction, and recovery plan still names a
++currency ID.
++
++Resolve authored offers through the bound resolver, then derive initial stock
++from those resolved offers:
++
++```csharp
++RuntimeShopOfferSnapshot offer = resources.ShopOffers
++    .Resolve(shop.Id, authoredOffer, catalog, catalog)
++    .RequireOffer();
++
++RuntimeShopStockSnapshot stock =
++    RuntimeShopStockSnapshot.CreateInitial([offer]);
++```
++
++Do not manufacture or alter a resolved offer in presentation code. Re-resolve
++offers after replacing the catalog. Durable stock identity is the qualified
++shop ID plus the offer's shop-local ID, not menu position or content ID.
++
++## Assess And Apply Shop Transactions
++
++Price helpers use the same resolved pricing profile as execution:
++
++```csharp
++int displayedPrice = resources.Shop.CalculateBuyPrice(offer, buyerLuck);
++
++ShopTransactionResult purchase = resources.Shop.Buy(
++    inventory,
++    currencies,
++    stock,
++    currencyId,
++    offer,
++    buyerLuck,
++    purchasedEquipmentInstanceId);
++```
++
++Adopt all three after-snapshots together:
++
++```csharp
++if (purchase.Applied)
++{
++    inventory = purchase.AfterInventory;
++    currencies = purchase.AfterCurrencyLedger;
++    stock = purchase.AfterStock;
++}
++else
++{
++    Present(purchase.Diagnostics);
++}
++```
++
++Never adopt only inventory, currency, or stock from a shop result. A rejected
++result returns the original three authorities. Execute against current state
++after confirmation; a price shown earlier is presentation evidence, not
++permission to bypass revalidation.
++
++For resale, pass every actor loadout so the exact instance cannot be sold while
++equipped. Item resale passes no equipment instance ID; equipment resale passes
++the exact instance ID.
++
++## Assess And Apply Recovery
++
++Recovery is absent when the economy ruleset does not select a policy:
++
++```csharp
++IRecoveryService recovery = resources.Recovery
++    ?? throw new InvalidOperationException("This game has no recovery service.");
++
++RecoveryTransactionResult assessment =
++    recovery.Assess(actor, currencies, statModifiers);
++```
++
++Use the assessment for eligibility and price presentation. Do not replace it
++with a host-side health check: an actor at full resources may still need a
++legal ailment or temporary-state cleanup.
++Its after-ledger is hypothetical and must not be adopted; assessment does not
++commit the staged actor either.
++
++After confirmation, execute against current state:
++
++```csharp
++RecoveryTransactionResult execution =
++    recovery.Recover(actor, currencies, statModifiers);
++
++if (execution.Applied)
++{
++    currencies = execution.AfterCurrencyLedger;
++}
++else
++{
++    Present(execution.Diagnostics);
++}
++```
++
++`Recover` commits the staged actor only after policy, cleanup, and debit all
++accept. The host must adopt the returned ledger from the same successful
++result. Rejection preserves both authorities. Cancellation remains an
++`OperationCanceledException`; do not display it as a gameplay refusal.
++
++## Save And Restore
++
++Save contract v19 stores the current inventory, currency ledger, shop stock,
++actors with equipment-instance references, and the rest of the session
++aggregate. The host serializes the snapshot but does not split those
++authorities into independent save records.
++
++Validate and restore the complete aggregate through
++`IRuntimeSessionRestoreService`. Do not recreate actors first and attach
++equipment afterward. Host decoding constructs the immutable currency ledger,
++which rejects invalid IDs, duplicate IDs, and negative balances. Aggregate
++validation then checks instance uniqueness, ownership, slot compatibility,
++cross-actor assignment, stock, catalog references, and selected policies before
++any partial live session is exposed.
++
++A non-current contract version needs an explicit host-supplied migration.
++Convergence does not guess how an old wallet or equipment shape maps into v19.
++
++## Godot Integration
++
++Godot code should keep framework state in a session/service object, not on
++individual UI controls:
++
++1. Map `RuntimeInstanceId` values to host-owned Nodes.
++2. Translate input and signals into typed transition requests.
++3. Present immutable assessments and diagnostics.
++4. Execute against current session snapshots after confirmation.
++5. Adopt every successful after-snapshot together.
++6. Re-resolve/recompose affected actor profiles before refreshing battle or
++   equipment UI.
++7. Serialize `RuntimeSaveGameSnapshot` inside the Godot-owned save format.
++8. Reconnect Nodes by runtime ID only after aggregate restore succeeds.
++
++No `Node`, `Resource`, `res://` path, serializer type, or scene handle enters
++`Convergence.Framework`.
++
++## Integration Checklist
++
++- One current inventory snapshot owns every equipment instance.
++- Equipment IDs are globally fresh and stable across save/restore.
++- One selected slot layout is used by validation, transitions, offers, and
++  profile resolution.
++- Other actor loadouts are supplied to equip and sale checks.
++- Equipment grants remain derived; learned skills are never edited for them.
++- Equipment profile sources are rebuilt after inventory replacement.
++- Every currency operation names its currency.
++- Resolved offers, not raw definitions or menu rows, reach shop transactions.
++- Inventory, currency, and stock after-snapshots are adopted together.
++- Recovery assessment and execution use the same bound service.
++- Save and restore treat the session as one authority graph.
++
++## Related Guidance
++
++- [Player Mechanics](../mechanics/party-inventory-and-economy.md)
++- [Typed Actions And Effects](typed-actions-and-effects.md)
++- [Actors And Runtime State](actors-and-runtime-state.md)
++- [Ruleset Policy Contracts](../ruleset-policy-contracts.md)
++- [Content Contract](../content-contract.md)
++- [Content Authoring Validator](../content-authoring-validator.md)
++- [Godot Integration Contract](../godot-integration-contract.md)
++- [Public API Contract](../public-api-contract.md)
+diff --git a/docs/developer-guide/stat-modifier-policies.md b/docs/developer-guide/stat-modifier-policies.md
+index 5ff5dbf4f16d12308928c99a85863edb56f984f2..fb4845d0dc3244244fd7a4c6f713b2b7358c5ff2 100644
+--- a/docs/developer-guide/stat-modifier-policies.md
++++ b/docs/developer-guide/stat-modifier-policies.md
+@@ -189,7 +189,7 @@ supplied policies preserve swap state and clear on the other terminal scopes.
+ 
+ ## Persistence And Restore
+ 
+-Save contract v18 stores canonical modifier state in
++Save contract v19 stores canonical modifier state in
+ `RuntimeBattleStatusSnapshot.StatModifiers`. Host JSON DTOs must preserve:
+ 
+ - the qualified policy ID;
+diff --git a/docs/developer-guide/status-passive-lifecycle.md b/docs/developer-guide/status-passive-lifecycle.md
+index b77a34f73892d48947ed09641415793f57ec7e60..ab6a4aff83e0dcabae4bb577847450159bbc313e 100644
+--- a/docs/developer-guide/status-passive-lifecycle.md
++++ b/docs/developer-guide/status-passive-lifecycle.md
+@@ -365,7 +365,7 @@ is published.
+ 
+ ## Persistence
+ 
+-Save contract v18 preserves:
++Save contract v19 preserves:
+ 
+ - active ailments and other timed state with expiration and removal profile;
+ - stat-modifier and charge-policy state;
+diff --git a/docs/gameplay-systems.md b/docs/gameplay-systems.md
+index 27acb45fcef8f882780cee35c1265b9b0f1e1924..abbf3cb84ca4a0d2ddc367baf835809f2e191866 100644
+--- a/docs/gameplay-systems.md
++++ b/docs/gameplay-systems.md
+@@ -179,7 +179,12 @@ rewritten after catalog-backed resolution.
+ The owner-approved
+ [Order 7 roadmap](reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+ defines the direct authority corrections and narrowly justified policy seams;
+-this section is not closure evidence for those pending changes.
++O7-R10's reviewed
++[player mechanics](mechanics/party-inventory-and-economy.md),
++[developer integration](developer-guide/inventory-equipment-and-economy.md),
++and [technical authority](technical/inventory-equipment-economy-runtime.md)
++pages provide the detailed contracts. This overview is not O7-R11 independent
++closure evidence.
+ 
+ ## Navigation, Traversal, And Encounter Preparation
+ 
+@@ -201,3 +206,7 @@ Detailed actor integration is documented in
+ [Actors And Runtime State](developer-guide/actors-and-runtime-state.md), with
+ maintainer invariants in
+ [Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md).
++Inventory/economy composition is documented in
++[Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md),
++with its authority and transaction state machines in
++[Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md).
+diff --git a/docs/godot-integration-contract.md b/docs/godot-integration-contract.md
+index 05e3ed132ae676e1559bcdca651f6efecf614f30..7ae3a6c9c406a5cff07d5d87492eba8af8bf1bee 100644
+--- a/docs/godot-integration-contract.md
++++ b/docs/godot-integration-contract.md
+@@ -104,7 +104,9 @@ Framework public APIs and source must not depend on Godot, console APIs, filesys
+ ## Related Guidance
+ 
+ - [Actors And Runtime State](developer-guide/actors-and-runtime-state.md)
++- [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md)
+ - [Turn Economy Policies](developer-guide/turn-economy-policies.md)
++- [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md)
+ - [Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md)
+ - [Turn Economy Runtime](technical/turn-economy-runtime.md)
+ - [Public API Contract](public-api-contract.md)
+diff --git a/docs/mechanics/README.md b/docs/mechanics/README.md
+index eade8ff22a6e67497ed1404e207324ef4045a1c0..1a29c86a62fc6172c7bcd17496333f191774502d 100644
+--- a/docs/mechanics/README.md
++++ b/docs/mechanics/README.md
+@@ -57,6 +57,10 @@ O6-R46 reconciles the rule text. The
+ [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+ independently traces the corrected implementation. This page is `reviewed`,
+ and Order 6 is formally complete.
++Order 7 now has a reviewed player-facing page for exact-copy equipment
++ownership, equipped-only grants, typed currencies, policy-shaped prices and
++stock, atomic transactions, recovery, and save v19. O7-R11 remains the separate
++capability-closure audit.
+ 
+ ## Rule Index
+ 
+diff --git a/docs/mechanics/party-inventory-and-economy.md b/docs/mechanics/party-inventory-and-economy.md
+index 324a93a2c116d1dbafa2e7c5ab8e0b0953ff13c3..8eb15696add7968fe89207e8f2b8b5e28f905373 100644
+--- a/docs/mechanics/party-inventory-and-economy.md
++++ b/docs/mechanics/party-inventory-and-economy.md
+@@ -1,201 +1,200 @@
+ # Party, Rosters, Inventory, Equipment, And Economy
+ 
+-> **Order 7 status:** O7-R1 through O7-R9 establish the approved tracking,
+-> equipment-instance ownership, authored slot-layout model, equipped-only skill
+-> grants, Defense/Evasion combat contributions, and typed currency-ledger
+-> authority, plus explicit pricing, durable policy-owned shop stock, and generic
+-> policy-bound recovery, plus combined runtime/wire certification. This page remains
+-> unreviewed until the complete
+-> [Order 7 roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+-> is implemented and independently closed.
+-
+-## Party And Ownership Graph
+-
+-Framework party state distinguishes active party members, reserve members, an
+-Active Hosted Entity, a Hosted Entity Roster, and a Companion Roster. These are
+-generic runtime roles; a game may use only the roles it needs.
+-
+-**Framework rule:** `RuntimePartyRosterSnapshot` is the only ownership and party
+-placement authority. Actor snapshots do not contain copies of these rosters.
+-
+-An Active Hosted Entity remains present in the Hosted Entity Roster. A deployed
+-Companion remains present in the Companion Roster while also occupying an
+-active-party slot. This deliberate overlap prevents an active owned actor from
+-falling outside the ownership graph during recall, replacement, consumption,
+-fusion, or save restoration.
+-
+-One runtime instance ID cannot occupy incompatible roles or appear twice in the
+-same collection. Active/reserve membership, Hosted Entity ownership, Companion
+-ownership, allowed overlaps, reference identity, and capacity are validated on
+-transitions and restore.
++> **Order 7 review state:** `reviewed` after O7-R10 reconciled this page with
++> current source, tests, developer integration, and technical state machines.
++> The capability remains `partial` until the separate O7-R11 adversarial
++> closure audit.
+ 
+-```mermaid
+-flowchart LR
+-    Owner["Party owner"] --> Party["Canonical party roster"]
+-    Active["Active party"] --> Party
+-    Reserve["Reserve party"] --> Party
+-    Hosted["Hosted Entity Roster"] --> Party
+-    Companion["Companion Roster"] --> Party
+-    ActiveHosted["Active Hosted Entity"] --> Hosted
+-    Deployed["Deployed Companion"] --> Active
+-    Deployed --> Companion
+-```
++## What This System Means To A Player
+ 
+-## Placement And Encounter Presence
++Inventory and economy actions are exact and all-or-nothing. The game identifies
++the particular item, equipment copy, currency, shop offer, and actor involved.
++If the complete operation is legal, every affected state advances together. If
++anything rejects, the player's inventory, equipment, currency, and shop stock
++remain unchanged.
+ 
+-**Framework rule:** active and reserve placement belongs only to the party
+-aggregate. Encounter participation belongs only to
+-`RuntimeEncounterPresenceSnapshot.IsDeployed`.
++The framework fixes ownership and transaction safety. Each game chooses its
++slot layout, currencies, pricing rules, stock behavior, recovery rules, menu
++presentation, and names.
+ 
+-An actor may be configured in the active party before an encounter starts while
+-still having `IsDeployed = false`. The host or encounter planner explicitly
+-sets encounter presence when battle begins. Party menus and scene labels do not
+-silently change lifecycle eligibility.
++## Party And Owned Actors
+ 
+-## Party And Roster Commands
++A game can use active party members, reserve members, an Active Hosted Entity,
++a Hosted Entity Roster, and a Companion Roster. These are optional generic
++roles; games use only the roles they need.
+ 
+-Transition services support adding a party member; swapping active and reserve positions; deploying, swapping, recalling, dismissing, replacing, and consuming owned Companions; and swapping, consuming, or replacing an Active Hosted Entity.
++An Active Hosted Entity remains owned in its roster. A Companion deployed into
++the active party likewise remains owned in the Companion Roster. This overlap
++means an active owned actor does not disappear from ownership while it is being
++used. It can later be recalled, replaced, consumed by an approved mechanic, or
++restored from a save without inventing a temporary owner.
+ 
+-Each request returns `Before`, `After`, a stable code, diagnostics, and ordered affected IDs. Rejection preserves `Before` exactly.
++One actor cannot occupy contradictory roles or appear twice in the same list.
++A rejected party or roster change leaves the previous arrangement intact.
++Party and roster capacities are game-configured rather than fixed by
++Convergence.
+ 
+-Selecting another Active Hosted Entity changes the canonical roster reference.
+-A Vessel game then recomposes the owner through the actor combat-profile
+-composition service before presenting the selection as complete.
++```mermaid
++flowchart TB
++    Owner["Party owner"] --> Party["Party and roster authority"]
++    Party --> Active["Active party"]
++    Party --> Reserve["Reserve party"]
++    Party --> Hosted["Hosted Entity Roster"]
++    Party --> Companions["Companion Roster"]
++    Hosted --> ActiveHosted["Selected Active Hosted Entity"]
++    Companions --> Deployed["Companion may also occupy an active-party slot"]
++```
+ 
+-**Configured rule:** maximum party size and roster capacity come from policies. Capacity may be unlimited or tiered by level. Convergence does not require a particular number of party, Hosted Entity, or Companion slots.
++Being listed in the active party does not itself place an actor in a battle.
++The encounter system separately decides who is deployed for that encounter.
+ 
+-## Inventory
++## Items And Equipment Copies
+ 
+-Items are stored as typed content IDs and integer quantities. Stack limits come from clean item definitions when provided. Negative quantities, missing ownership, overflow, and stack-limit violations are rejected.
++Stackable items have quantities and may have authored stack limits. A use,
++purchase, or sale that asks for an unavailable quantity, exceeds a stack limit,
++or overflows the supported quantity range is rejected without changing the
++inventory.
+ 
+-Every owned equipment copy is an immutable `RuntimeEquipmentInstanceSnapshot`
+-containing a unique runtime instance ID and one equipment definition ID.
+-Inventory is the sole ownership authority. Multiple instances may reference
+-the same definition; repeating one instance ID is rejected.
++Every equipment copy has its own runtime identity. Two copies of the same sword
++are therefore two owned objects: two actors may equip one each, and selling one
++does not sell the other. Buying an equipment copy adds it to inventory; it does
++not silently equip it.
+ 
+-## Equipment
++Equipping selects one exact owned copy and one compatible authored slot. That
++same copy cannot be equipped by two actors or assigned to two slots. An equipped
++copy cannot be removed or sold as though it were free. The player must first
++unequip the exact copy. Missing, stale, incompatible, or already-assigned copies
++reject atomically.
+ 
+-Actor equipment maps authored slot `ContentId` values to inventory-owned
+-equipment instance IDs. The selected `IEquipmentSlotLayoutPolicy` determines
+-which definition profiles and assignments are compatible. The supplied
+-standard policy retains weapon, armor, boots, and accessory positions; games
+-may select a different layout. Equip and unequip transitions validate
+-ownership, policy compatibility, and aggregate assignment evidence. A missing instance or an
+-instance already assigned to another actor rejects with unchanged before/after
+-equipment state. Selling a specific equipped instance is blocked by the
+-transaction service.
++Games may use the supplied weapon, armor, boots, and accessory layout or define
++a different slot layout. The selected game rule decides which equipment profile
++fits which slot; the framework does not force those four positions on every
++game.
+ 
+-Save contract v19 stores owned instances only in inventory and actor loadout
+-references only in actor snapshots, all under authored slot IDs. There is no
+-separate root equipment snapshot.
++## What Equipped Gear Provides
+ 
+-`RuntimeEquipmentProfileResolver` derives one immutable profile from the
+-current actor equipment, inventory ownership, definitions, and selected slot
+-layout. That profile supplies:
++The currently equipped copies form one live equipment profile. Depending on
++their authored definitions, that profile can provide:
+ 
+-- the equipped weapon's basic attack;
+-- accessory stat modifiers;
++- a weapon basic attack;
++- stat modifiers;
+ - armor Defense;
+-- armor and boots Evasion; and
+-- distinct skill IDs granted by currently equipped instances.
+-
+-Granted skills are derived availability, not learned state. Active grants enter
+-canonical action authorization; passive grants enter the canonical passive
+-collection and therefore use the existing modifier and lifecycle dispatch.
+-Neither kind is copied into learned skills or occupies a move-list slot. Both
+-disappear as soon as the granting instance is unequipped. Active authorization
+-is repeated at execution, so an assessment prepared before unequip cannot spend
+-resources or apply an effect afterward.
+-
+-Defense and Evasion are ordinary numeric inputs. Defense joins target Vitality
+-inside the existing standard damage formula; Evasion joins the target's
+-existing hit-resolution modifiers. Equipment does not own another combat
+-formula. A missing contribution is exactly zero. Basic attacks may come from
+-equipped weapon data, but a host can supply another clean basic-attack profile.
+-Presentation metadata does not decide behavior.
+-
+-## Currency Ledger And Economy
+-
+-Currency state is an immutable ledger keyed by qualified currency `ContentId`.
+-Every credit and debit names the affected currency explicitly. Transactions are
+-atomic, preserve every unrelated balance, use checked integer arithmetic, and
+-return typed diagnostics for a missing currency, negative amount, insufficient
+-funds, or overflow.
+-
+-Ledger construction rejects invalid or duplicate currency IDs and negative
+-balances. `GetSingleCurrency()` is a convenience for the common one-currency
+-game: it returns that one ID and balance, but explicitly rejects an empty or
+-multi-currency ledger rather than choosing a default. DemoHost registers one
+-`credits` ID; other games own both their currency IDs and player-facing names.
+-
+-Save contract v19 retains the complete typed ledger introduced by version 18.
+-Version 17's unnamed single balance is unsupported unless a host deliberately
+-supplies a migration.
+-
+-## Shops
+-
+-Shop definitions identify offered items/equipment, categories, an authored
+-purchase price, stock policy, and availability. Every offer has a stable
+-shop-local ID; durable stock keys are the qualified shop ID plus that offer ID,
+-not content identity or menu position. Runtime transactions assess
+-ownership, stock, stack limits, equipped-sale restrictions, pricing, and the
+-explicitly selected currency balance before mutation. The host supplies a
+-fresh runtime instance ID when purchasing equipment and identifies the exact
+-owned instance when selling it.
+-
+-The economy ruleset explicitly selects the default shop-pricing policy. A
+-fixed-price offer applies that default to its authored purchase price. A
+-policy-shaped offer supplies `purchasePrice`, selects one registered pricing
+-factory, and may configure it for that offer. Invalid explicit configuration
+-rejects that offer; it never silently falls back to the economy default.
+-
+-The supplied `standard_shop_pricing` policy charges exactly the authored
+-purchase price. Its resale price is the purchase price multiplied by a
+-configurable nonnegative resale percentage, defaulting to `0.50`; fractional
+-results truncate toward zero. The optional
+-`luck_adjusted_shop_pricing` policy preserves the sample's Luck-sensitive
+-rule: buying uses `max(0.50, 1.00 - Luck * 0.01)`, selling uses
+-`0.50 + Luck * 0.01`, and both truncate toward zero. Games choose this policy
+-explicitly; it is not hidden standard behavior.
+-
+-One resolved pricing profile drives menu assessment and the committed
+-transaction. Negative input, overflow, unavailable currency, unaffordability,
+-and a failing custom policy reject before inventory or currency mutation.
+-The complete resolved offer is Framework-created and externally read-only, so
+-presentation code cannot retain one offer's price or stock identity while
+-substituting another content definition.
+-
+-Unlimited offers create no durable quantity. Fixed limited offers bind
+-`standard_shop_stock`; policy-shaped offers carry a positive initial quantity
+-and bind an explicitly registered `IShopStockPolicyFactory` without fallback.
+-The standard policy decrements one unit per successful purchase, rejects at
+-zero, and does not replenish on sale. A custom policy may replenish on sale.
+-Inventory, currency, and the immutable `RuntimeShopStockSnapshot` are returned
+-as one atomic result: all three advance on success, and all three remain the
+-original snapshots on any rejection. Save contract v19 persists the remaining
+-quantity for every tracked offer.
+-
+-## Recovery Facilities
+-
+-Recovery is optional. A selected `IRecoveryPolicy` plans from immutable actor
+-state and explicitly names the currency, resources, cost, legal ailment
+-treatment, and temporary-state categories. `IRecoveryService` assesses without
+-mutation, re-evaluates at execution, stages the actor candidate and named
+-currency debit, and returns equal before/after snapshots on rejection. A host
+-adopts the returned currency ledger only from an applied execution result and
+-decides which actors can be selected and how a facility is presented.
+-
+-The supplied `StandardHospitalRecoveryPolicy` fully restores each configured
+-resource to its existing maximum. Its cost is the sum of each missing amount
+-times its configured unit cost, truncated once after aggregation. It cures only
+-ailments whose removal profile permits `RecoveryEvent` and clears only selected
+-temporary categories. A zero-cost ailment-only or temporary-state-only
+-treatment may therefore be valid even when all configured resources are full.
+-A game should not duplicate eligibility logic in its UI; it should present the
+-assessment result.
++- armor or boots Evasion; and
++- active or passive skills granted while equipped.
++
++Equipment-granted skills are temporary availability, not learned skills. They
++do not occupy move-list slots and are not written into the actor's learned-skill
++record. Unequipping the granting copy removes the skill immediately. Even an
++action selected before unequipping is checked again before execution, so it
++cannot spend resources or apply effects after its grant has vanished.
++
++Defense and Evasion feed the same combat calculations as the actor's other
++stats. Equipment does not run a separate damage or hit formula. An absent
++equipment contribution is exactly zero, so an unequipped actor is not given a
++hidden bonus or penalty.
++
++## Currency
++
++A game may define one currency or several. Every balance is tied to a specific
++currency ID, and every purchase, sale, recovery payment, or other transaction
++names the currency it changes. Updating one balance preserves all unrelated
++balances.
++
++The common one-currency case remains simple. The game can ask for its single
++currency and balance, but that request explicitly rejects an empty or
++multi-currency ledger instead of guessing which currency was intended.
++
++Balances cannot be negative. Missing currency, insufficient funds, invalid
++amounts, and arithmetic overflow reject without changing any balance.
++
++## Shop Prices
++
++Each shop offer has its own stable identity, authored content, purchase-price
++input, and stock behavior. The game resolves that offer before presenting or
++executing a transaction. Execution checks the current state again, so a stale
++menu quote cannot force a purchase after funds, ownership, or stock changed.
++
++The supplied standard pricing rule charges the authored purchase price. Its
++resale price is a configurable percentage of that price, with a default of 50
++percent; fractional results are truncated toward zero. Convergence also
++supplies an optional Luck-adjusted rule for games that deliberately select it.
++Other games may register another pricing rule.
++
++A custom or configured price is never a hidden fallback. Invalid pricing
++configuration rejects the offer rather than silently switching to the standard
++formula.
++
++## Shop Stock And Transactions
++
++An offer may be unlimited or track a remaining quantity. A successful purchase
++of limited stock removes one offered unit and decrements its quantity together.
++At zero, another purchase is rejected. The supplied standard stock rule does not
++replenish stock when the player sells; a game may explicitly select a different
++stock rule that does.
++
++Buying updates inventory, the named currency, and tracked stock as one
++transaction. Selling updates the exact owned item or equipment copy, the named
++currency, and any policy-selected stock change as one transaction. A rejection
++updates none of them.
++
++This means a UI may safely show the rejection reason and redisplay current
++state. It must not manually apply the successful pieces of a failed operation.
++
++## Recovery
++
++Recovery is optional. The selected game rule decides:
++
++- which resources are fully restored;
++- how missing amounts contribute to cost;
++- which currency pays that cost;
++- which ailments are legally removable there; and
++- which temporary states are cleared.
++
++The supplied standard hospital-style rule fully restores each configured
++resource to its current maximum. It totals the configured per-unit costs and
++truncates once after aggregation. It cures only ailments that explicitly allow
++recovery-facility removal and clears only the selected temporary-state
++categories.
++
++An actor at full configured resources may still have a valid zero-cost
++treatment if a removable ailment or selected temporary state remains. The game
++should present the framework's assessment instead of duplicating a simpler
++"missing health" eligibility check.
++
++Recovery first stages the complete actor cleanup and named-currency payment.
++Only a fully accepted treatment changes the live actor and balance. Protected
++ailments, missing resources, missing or insufficient currency, invalid policy
++output, cancellation, or another rejection leave both unchanged.
++
++## Saving This State
++
++Current save contract v19 stores:
++
++- every owned equipment copy once in inventory;
++- each actor's equipped-copy references under authored slot IDs;
++- every named currency balance; and
++- remaining quantities for tracked shop offers.
++
++It does not store a second list claiming to own the same equipment. Loading
++first rejects malformed currency ledgers, then aggregate restore validates
++ownership, slot compatibility, assignments, and stock before exposing a live
++session.
++
++## Fixed Rules And Game Choices
++
++| Fixed framework rule | Selected by the game |
++|---|---|
++| Each equipment copy has one identity and one inventory owner | Equipment slot vocabulary and compatibility |
++| Equipped grants are temporary and consume no move-list slot | Currency IDs and player-facing names |
++| Defense and Evasion use the canonical combat formulas | Pricing formula and resale percentage |
++| Every transaction names exact state and is all-or-nothing | Stock limits and sale replenishment |
++| Rejected operations preserve their complete before-state | Recovery resources, costs, legal cleanup, and availability |
++| Save/restore validates the combined authority graph | Menus, animations, sounds, scene objects, and input |
+ 
+ ## Related Guidance
+ 
+ - [Actors And Runtime State](../developer-guide/actors-and-runtime-state.md)
++- [Typed Actions And Effects](../developer-guide/typed-actions-and-effects.md)
+ - [Runtime Actor State And Restoration](../technical/runtime-actor-state-and-restoration.md)
+-- [Confirmed Actor Decision](../decisions/actor-composition-progression-and-rosters.md)
++- [Ruleset Policy Contracts](../ruleset-policy-contracts.md)
++- [Content Contract](../content-contract.md)
+diff --git a/docs/mechanics/saving-loading-and-suspend.md b/docs/mechanics/saving-loading-and-suspend.md
+index a85d8631585dcdc80a20fc3666b4710151715920..38decf48f5e7a0eb81320e398fb3abe6ae7045e7 100644
+--- a/docs/mechanics/saving-loading-and-suspend.md
++++ b/docs/mechanics/saving-loading-and-suspend.md
+@@ -151,8 +151,15 @@ single-currency hosts may use the explicit convenience accessor only when the
+ ledger contains exactly one entry. Convergence supplies no automatic
+ v17-to-v18 migration for these unreleased formats.
+ 
++Version 19 adds remaining quantities for policy-owned shop stock, keyed by the
++qualified shop ID and shop-local offer ID. Unlimited offers have no durable
++stock entry. Convergence supplies no automatic v18-to-v19 migration for these
++unreleased formats.
++
+ ## Related Guidance
+ 
+ - [Actors And Runtime State](../developer-guide/actors-and-runtime-state.md)
+ - [Runtime Actor State And Restoration](../technical/runtime-actor-state-and-restoration.md)
++- [Inventory, Equipment, And Economy Integration](../developer-guide/inventory-equipment-and-economy.md)
++- [Inventory, Equipment, And Economy Runtime](../technical/inventory-equipment-economy-runtime.md)
+ - [Godot Integration Contract](../godot-integration-contract.md)
+diff --git a/docs/public-api-contract.md b/docs/public-api-contract.md
+index 283f3909c95498fbcd0656487e20903ffcaf1636..0a985680b369cae529b7aa7ad3518b6cd95c9b02 100644
+--- a/docs/public-api-contract.md
++++ b/docs/public-api-contract.md
+@@ -230,7 +230,7 @@ Battle Knowledge has two state authorities. Durable entity-defense facts use
+ `RuntimeKnowledgeSnapshot`; current-target facts and Analyze disclosures use
+ `RuntimeEncounterKnowledgeSnapshot`. Canonical Analyze returns
+ `BattleAnalysisResult` and commits through the encounter transition. Save
+-contract v18 contains only the durable knowledge snapshot and deliberately
++contract v19 contains only the durable knowledge snapshot and deliberately
+ omits current encounter analysis.
+ 
+ Every runtime actor exposes one immutable `RuntimeCombatProfileIdentitySnapshot`
+@@ -272,18 +272,41 @@ application as an independently timed signed contribution, derives a bounded
+ aggregate, refreshes the oldest same-sign contribution at a configured cap,
+ and uses the same typed lifecycle-boundary contract per contribution.
+ 
+-Save contract v18 retains the canonical roster and pending skill-choice
++Save contract v19 retains the canonical roster and pending skill-choice
+ authorities established by v9 and stores complete stat-modifier policy state.
+ It also stores and validates each actor's combat-profile source and revision,
+ inventory-owned equipment instances, and actor loadout instance references.
+ The aggregate exposes no second root equipment authority and carries an
+-immutable currency ledger keyed by `ContentId` rather than an unnamed balance.
++immutable currency ledger keyed by `ContentId` rather than an unnamed balance,
++plus remaining quantities for policy-owned shop stock. Version 18 introduced
++the ledger; version 19 retained it and added durable shop stock.
+ `RuntimeSessionRestoreService` binds retained modifier policies explicitly,
+ derives the Active Hosted Entity dependency from `RuntimePartyRosterSnapshot`,
+ restores owned actors first, and returns a normalized aggregate whose derived
+ Vessel profile matches the restored source. Any non-current snapshot is
+ rejected unless the host registers an explicit migration path.
+ 
++### Inventory, Equipment, And Economy Surface
++
++`RuntimeRulesetBindingResolver.BindResourceManagementServices` is the supported
++catalog-backed composition entry point. Its service bundle exposes immutable
++inventory, equipment, named-currency, resolved-offer, atomic shop, and optional
++recovery contracts. `RuntimeInventorySnapshot` is the sole equipment-instance
++owner; actor loadouts reference those instances under authored slot IDs.
++`RuntimeEquipmentProfileResolver` derives the current basic attack, numeric
++contributions, and equipped-only skill grants without copying grants into
++learned state.
++
++Hosts allocate globally fresh equipment instance IDs and adopt successful
++after-snapshots. `ShopTransactionResult` coordinates inventory, currency, and
++stock as one result. `RecoveryTransactionResult` coordinates staged actor state
++with an explicit currency ledger. Presentation code must not construct runtime
++shop offers, duplicate formulas, or infer authority from display text.
++
++See [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md),
++[Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md),
++and the [Content Contract](content-contract.md).
++
+ ## Documentation And Build Tooling
+ 
+ Framework emits `Convergence.Framework.xml`. XML documentation is curated and intentionally incomplete; `CS1591` remains suppressed. Summaries cover selected
+diff --git a/docs/reference/documentation-coverage.md b/docs/reference/documentation-coverage.md
+index 7fe878694b8e57dc7ba0d06901727ab4859ec553..230656d6154e01bafec6ecc8a024d38c571c9857 100644
+--- a/docs/reference/documentation-coverage.md
++++ b/docs/reference/documentation-coverage.md
+@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
+ 
+ ## Current Reading
+ 
+-The documentation matrix currently records 75 audience entries: 30 reviewed,
+-24 existing_unreviewed, 14 missing, and 7 not_applicable.
++The documentation matrix currently records 75 audience entries: 33 reviewed,
++22 existing_unreviewed, 13 missing, and 7 not_applicable.
+ 
+ The actor composition, progression, party/roster, actor-restoration, and typed
+ action/effect documentation has completed the collaborative workflow. The
+@@ -34,6 +34,12 @@ conservative contact discovery, policy-controlled Analyze, familiarity imports,
+ combat-profile source/revision identity, profile-switch invalidation,
+ intrinsic-Almighty enforcement, and save boundaries. Other subsystem entries
+ remain unreviewed until they complete the same process.
++Order 7 now documents inventory-owned equipment instances, authored slot
++layouts, one live equipment profile, typed currencies, resolved pricing,
++policy-owned stock, atomic shops, recovery, and save v19 across player,
++developer, and maintainer audiences. O7-R10 promotes those three documents to
++`reviewed`; the capability itself remains `partial` until O7-R11 performs the
++separate independent adversarial closure audit.
+ O3-R7 independently verified the source and audience documents at that
+ revision. A later source-first recheck reopened the developer and technical
+ entries while three command-boundary defects were corrected. O3-R8 through
+diff --git a/docs/reviews/README.md b/docs/reviews/README.md
+index 2e7bd4f781b1fa9fafafa0bd8a4a0efa2d7e0688..5f78ee53052953ed3e4157ab0baca8040ec709e6 100644
+--- a/docs/reviews/README.md
++++ b/docs/reviews/README.md
+@@ -98,6 +98,8 @@ or implementation authority.
+ - [Inventory, Equipment, And Economy Order 7 Source Review And Approved Roadmap, 10 August 2026](inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+ - [Inventory, Equipment, And Economy Order 7 R9 Wire-Integrity Audit, 13 August 2026](inventory-equipment-economy-order-7-r9-wire-integrity-audit-2026-08-13.md)
+ - [Inventory, Equipment, And Economy Order 7 R9 Post-Correction Review, 13 August 2026](inventory-equipment-economy-order-7-r9-post-correction-review-2026-08-13.md)
++- [Inventory, Equipment, And Economy Order 7 R10 Documentation Audit, 13 August 2026](inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md)
++- [Inventory, Equipment, And Economy Order 7 R10 Documentation Review, 13 August 2026](inventory-equipment-economy-order-7-r10-documentation-review-2026-08-13.md)
+ - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
+ 
+ Current intended behavior belongs in confirmed mechanics and decision documents.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md b/docs/reviews/inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..96942615fefd0f1da4aa2f793d51ef9f0a914d3a
+--- /dev/null
++++ b/docs/reviews/inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md
+@@ -0,0 +1,176 @@
++# Inventory, Equipment, And Economy Order 7 R10 Documentation Audit
++
++**Date:** 13 August 2026
++
++**Capability:** `inventory_equipment_economy`
++
++**Source baseline:** `23cf50c1` (`docs: close order 7 wire integrity review`)
++
++**Checkpoint:** O7-R10, three-audience documentation
++
++**Review state:** complete; source, tests, and all three audiences reconciled
++
++## Purpose
++
++This audit translates the implemented Order 7 source into the three active
++documentation audiences without treating the earlier roadmap or R9 report as
++implementation proof. It rereads the current runtime, content, save, host, and
++test surfaces and records the exact documentation work needed before O7-R10 can
++promote any audience entry to `reviewed`.
++
++O7-R10 is a documentation checkpoint. It must not add presentation behavior,
++change runtime rules, alter schema v10 or save v19, or begin the independent
++O7-R11 closure audit.
++
++## Current Source Authority
++
++The source inspected for this audit establishes these authorities:
++
++| Concern | Current authority | Executable evidence |
++|---|---|---|
++| Owned equipment copies | `RuntimeInventorySnapshot` owns immutable `RuntimeEquipmentInstanceSnapshot` values keyed by unique `RuntimeInstanceId`; actor loadouts hold only instance references | `EquipmentInstanceOwnershipTests`, persistence tests |
++| Slot vocabulary and compatibility | `IEquipmentSlotLayoutPolicy`; `StandardEquipmentSlotLayoutPolicy` supplies the standard weapon, armor, boots, and accessory IDs | `EquipmentSlotLayoutTests`, content-validation tests |
++| Current equipment projection | `RuntimeEquipmentProfileResolver` resolves one profile from inventory ownership, actor references, catalog definitions, and the selected slot layout | resource-management, actor-composition, battle-action, and persistence tests |
++| Equipped skill grants | The resolved profile feeds canonical action authorization and passive composition; grants are not copied into learned or move-list state | equipment-combat and typed-action tests |
++| Combat contributions | Armor Defense and armor/boots Evasion become ordinary additive stat inputs before the existing damage and hit policies run | equipment-combat contribution tests |
++| Currency | `RuntimeCurrencyLedgerSnapshot` owns nonnegative balances keyed by currency `ContentId`; every transaction names its currency | currency-ledger, shop, recovery, persistence, and host tests |
++| Shop offers and prices | `IRuntimeShopOfferResolver` binds authored offers through selected pricing and stock policies; `ShopTransactionService` revalidates current immutable state | pricing, stock, resource-management, and wire-integrity tests |
++| Limited stock | `RuntimeShopStockSnapshot` owns remaining quantities by qualified shop ID plus shop-local offer ID | stock-policy, save/restore, DemoHost, and Godot-contract tests |
++| Recovery | `IRecoveryPolicy` plans treatment; `RecoveryService` stages actor cleanup and the named-currency debit and commits atomically | recovery-policy, lifecycle, persistence, DemoHost, and Godot tests |
++| Persistence | Save contract v19 stores inventory-owned equipment instances, actor loadout references, typed currency balances, and policy-owned shop stock | `RuntimePersistenceSnapshotTests` and aggregate-restore tests |
++
++The selected economy ruleset is bound once through
++`RuntimeRulesetBindingResolver.BindResourceManagementServices`. The returned
++`ResourceManagementRulesetServices` bundle exposes inventory, equipment,
++economy, offer resolution, shop transactions, and optional recovery. Hosts
++adopt only successful immutable result snapshots; they do not mutate framework
++snapshots in place.
++
++## Documentation Findings
++
++### O7-R10-F1: Player Mechanics Mix Observable Rules With Integration Detail
++
++**Severity:** documentation quality
++
++[`party-inventory-and-economy.md`](../mechanics/party-inventory-and-economy.md)
++contains substantially correct post-R9 facts, but much of the page is expressed
++in runtime type names and service choreography. A player-facing page should
++lead with what a player can observe:
++
++- separate copies of one item may be owned and equipped by different actors;
++- buying equipment does not silently equip it;
++- an equipped copy cannot be sold or removed as though it were free;
++- equipment-granted skills exist only while that exact copy is equipped;
++- armor and boots affect the same combat calculations as other stats;
++- displayed prices and stock can vary by the game's selected policies;
++- failed purchases, sales, and recovery attempts change nothing; and
++- recovery restores only the resources and removable state configured by the
++  game.
++
++Implementation names belong in the developer and technical pages. The revised
++mechanics page must also distinguish fixed framework rules from game-selected
++policy behavior.
++
++### O7-R10-F2: The Developer Integration Guide Is Missing
++
++**Severity:** missing audience
++
++The documentation coverage matrix correctly records no Order 7 developer
++guide. Existing guides mention isolated pieces, such as equipment-granted
++skills in `typed-actions-and-effects.md`, but no current page shows the complete
++composition path:
++
++1. bind `ResourceManagementRulesetServices`;
++2. retain globally unique equipment instance IDs;
++3. resolve one live equipment profile for menus, composition, authorization,
++   battle execution, and restore;
++4. resolve authored shop offers before a transaction;
++5. pass the explicit currency and current inventory/currency/stock snapshots;
++6. adopt all successful after-snapshots together and none on rejection;
++7. assess and execute optional recovery without duplicating its formula; and
++8. serialize save snapshots and reconnect Godot Nodes only in the host.
++
++A dedicated developer guide is required, including accepted and rejected code
++paths and explicit host responsibilities.
++
++### O7-R10-F3: The Dedicated Technical Authority Reference Is Missing
++
++**Severity:** missing audience
++
++The matrix points technical coverage at the broad gameplay overview. That page
++cannot replace a maintainer reference for Order 7's ownership graph and atomic
++transitions. The dedicated technical page must define:
++
++- inventory as sole equipment-instance owner;
++- actor loadouts as non-owning instance references;
++- unique-instance, slot-layout, cross-actor assignment, and save invariants;
++- the one equipment-profile derivation path;
++- immutable inventory/currency/stock transaction boundaries;
++- pricing and stock policy authority;
++- recovery planning, staged cleanup, debit, and rollback;
++- save v19 validation and dependency-ordered aggregate restoration; and
++- the trusted-host boundary for fresh IDs and after-snapshot adoption.
++
++It must include readable diagrams for equipment equip/unequip, shop
++assessment/execution, recovery, and save/restore authority.
++
++### O7-R10-F4: Active API And Technical References Contain Stale Current-Version Labels
++
++**Severity:** factual documentation defect
++
++The current wire contract is save v19, but active text still describes the
++current aggregate as v18 in parts of `public-api-contract.md`,
++`technical/battle-knowledge-runtime.md`, and
++`technical/stat-modifier-policy-runtime.md`. Version 18 introduced the typed
++currency ledger; version 19 retained it and added durable shop stock. Historical
++statements about what v18 introduced are valid, but current-contract statements
++must name v19 and distinguish that history explicitly.
++
++The new audience pages must cross-link the current public API, content contract,
++ruleset policy, persistence, content-validator, and Godot integration guidance
++so readers do not need to infer this boundary from unrelated pages.
++
++## Ordered O7-R10 Documentation Checkpoints
++
++Each checkpoint receives its own green commit.
++
++| Checkpoint | State | Work | Promotion rule |
++|---|---|---|---|
++| O7-R10-D0 | complete | Add and index this source-traced audit | No audience promotion |
++| O7-R10-D1 | complete | Rewrite the player mechanics page around observable behavior and game-selected variation | Mechanics remained unreviewed until final reconciliation |
++| O7-R10-D2 | complete | Add the developer integration guide with concrete composition and host-owned adoption examples | Developer guide remained unreviewed until final reconciliation |
++| O7-R10-D3 | complete | Add the technical authority/state-machine reference and diagrams | Technical remained unreviewed until final reconciliation |
++| O7-R10-D4 | complete | Correct stale version labels, add API/content/Godot cross-links, synchronize indexes, and promote all three matrix entries only after source/test/doc agreement | All three audiences are `reviewed`; capability remains `partial` for O7-R11 |
++| O7-R10-D5 | complete | Freshly reread source and all three documents, run the complete applicable gate, and append the R10 completion record | O7-R10 complete; O7-R11 remains open |
++
++## Verification Contract
++
++Every documentation commit must pass the focused documentation/architecture
++tests, Markdown link and terminology gates, formatting checks, and
++`git diff --check`. The final R10 checkpoint additionally runs:
++
++- the complete `dotnet test Convergence.sln --no-restore` suite;
++- strict nonincremental Framework and solution builds;
++- all active content through schema, semantic, dependency, registration, and
++  catalog construction validation;
++- all DemoHost modes plus scripted Training Annex play;
++- the real Godot 4.7.1 headless smoke path;
++- API-baseline, XML-documentation, forbidden-reference, and coverage gates; and
++- a fresh source-to-document reconciliation that does not treat this audit as
++  proof.
++
++## Scope Guard
++
++O7-R10 does not change runtime behavior, add policy interfaces, revise active
++content or wire versions, add presentation UI, or mark
++`inventory_equipment_economy` complete. Only O7-R11 may perform the independent
++adversarial closure audit and return the capability to `complete`.
++
++## Completion Result
++
++The fresh
++[O7-R10 documentation review](inventory-equipment-economy-order-7-r10-documentation-review-2026-08-13.md)
++corrected three source-to-document precision issues, found no remaining
++actionable R10 contradiction, and passed the complete local gate. All three
++audience entries are now `reviewed`. The capability remains `partial` and Order
++7 remains open for O7-R11.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-r10-documentation-review-2026-08-13.md b/docs/reviews/inventory-equipment-economy-order-7-r10-documentation-review-2026-08-13.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..97a4449ae03e2d821488365615c9a18265ff90bb
+--- /dev/null
++++ b/docs/reviews/inventory-equipment-economy-order-7-r10-documentation-review-2026-08-13.md
+@@ -0,0 +1,172 @@
++# Inventory, Equipment, And Economy Order 7 R10 Documentation Review
++
++**Date:** 13 August 2026
++
++**Reviewed baseline:** `a08d216b` (`docs: correct order 7 integration claims`)
++
++**Capability:** `inventory_equipment_economy`
++
++**Checkpoint result:** O7-R10 complete; O7-R11 and Order 7 remain open
++
++## Review Method
++
++This review reread the current source, tests, host integrations, and all three
++Order 7 audience documents. Earlier reports were used only to identify the
++approved scope; they were not accepted as evidence that the implementation or
++documentation was correct.
++
++The source pass traced:
++
++- inventory, equipment-instance, currency, shop, and transaction authority in
++  `Runtime/ResourceManagementServices.cs`;
++- profile derivation in `Runtime/RuntimeEquipmentProfiles.cs` and slot
++  compatibility in `Runtime/EquipmentSlotLayouts.cs`;
++- pricing, stock, and recovery in `Runtime/ShopPricingPolicies.cs`,
++  `Runtime/ShopStockPolicies.cs`, and `Runtime/RecoveryPolicies.cs`;
++- composition and combat consumption in
++  `Runtime/RuntimeActorCombatProfileComposition.cs`,
++  `Battle/ProductionCombatRuleset.cs`, and
++  `Execution/BattleActionAuthorization.cs`;
++- save validation and aggregate restoration in
++  `Runtime/RuntimePersistenceSnapshots.cs` and
++  `Runtime/RuntimeSessionRestoration.cs`;
++- actor creation and execution synchronization in
++  `Encounters/CatalogBattleActorFactory.cs` and
++  `Execution/RuntimeActorExecutionTransaction.cs`;
++- Training Annex shop/recovery adoption and the Godot save/smoke integration;
++  and
++- the mechanics, developer, and technical Order 7 documents.
++
++## Findings
++
++No unresolved High, Medium, or Low defect was found within O7-R10's
++documentation scope. The fresh pass did find three factual/integration issues
++before certification; all were corrected in `a08d216b` and guarded by
++`DocumentationFoundationTests`.
++
++### R10-C1: Recovery Policy Authority Was Described Too Broadly
++
++The player page implied that a recovery policy could choose whether a selected
++resource was restored fully. The actual `RecoveryTreatmentPlan` selects
++resource IDs, while `RecoveryService` always restores each selected resource to
++its current maximum. The page now says that the policy chooses *which resources
++are fully restored*.
++
++### R10-C2: Currency And Restore Validation Boundaries Were Imprecise
++
++The technical page called transaction amounts positive even though zero is a
++valid nonnegative amount and is required by zero-cost recovery. It also placed
++currency-domain validation inside aggregate save validation. The immutable
++`RuntimeCurrencyLedgerSnapshot` constructor actually rejects invalid IDs,
++duplicates, and negative balances before an aggregate snapshot reaches restore.
++The mechanics, developer, technical, and diagram wording now preserve that
++ordering.
++
++### R10-C3: Custom Slot Integration Omitted Two Required Boundaries
++
++The developer guide showed one layout shared by transitions, profile
++resolution, and shop offers, but omitted semantic content validation and save
++validation. It now demonstrates the same layout in
++`SkillSystemContentValidator` and `RuntimeSaveValidator` as well.
++
++The standard resolver exposes one current basic attack because the standard
++layout has one weapon slot. A custom layout supporting simultaneous weapon
++profiles must provide an `IRuntimeEquipmentProfileResolver` with an explicit
++selection rule. The guide now states that boundary instead of allowing slot
++iteration order to become accidental game design.
++
++## Source-To-Document Reconciliation
++
++### Equipment Authority
++
++`RuntimeInventorySnapshot` is the only owner of
++`RuntimeEquipmentInstanceSnapshot` copies. Actor equipment stores non-owning
++slot-to-instance references. Equip, sale, save validation, and aggregate restore
++reject missing ownership, duplicate instance identity, incompatible slots,
++cross-actor assignment, and actor/equipment ID collisions at their respective
++boundaries. The three audience documents describe that same graph and do not
++reinstate a second root equipment collection.
++
++`RuntimeEquipmentProfileResolver` derives definitions, grants, one basic
++attack, and plain stat contributions from the current inventory and loadout.
++Granted skills are not written into learned or move-list state. Armor Defense
++and armor/boots Evasion enter actor composition as ordinary values consumed by
++the existing production damage and hit policies; no equipment-specific combat
++formula exists.
++
++### Economy And Shop Authority
++
++Every currency transaction names a `ContentId`. The immutable ledger owns
++nonnegative balances and provides a strict one-entry convenience accessor that
++rejects empty and multi-currency ledgers. Shop offers are resolved through the
++selected pricing, stock, and slot-layout policies before execution.
++
++Purchase and sale return one immutable result covering inventory, currency, and
++stock. The host adopts all three after-snapshots only when `Applied` is true.
++Later rejection reconstructs equal before-state rather than leaking an earlier
++candidate transition. The mechanics page explains the observable outcome; the
++developer guide explains adoption; the technical page records the authority
++and operation order.
++
++### Recovery And Restore Authority
++
++Recovery policy output names currency, cost, fully restored resources, ailment
++cleanup, and temporary-state cleanup. Execution stages changes on a detached
++actor, performs canonical removal checks, calculates the named-currency debit,
++and commits the actor only after every step succeeds. Assessment exposes a
++hypothetical after-ledger that must not be adopted. Cancellation remains an
++`OperationCanceledException`.
++
++Save contract v19 stores inventory-owned equipment copies, actor references,
++the typed currency ledger, and durable shop stock in one aggregate. Aggregate
++restoration validates before actor creation and exposes either one complete
++session or diagnostics, never a partial session. Host save serialization and
++Godot Node mapping remain outside Framework.
++
++## Trusted Host And Extension Boundaries
++
++These are documented integration obligations, not hidden Framework claims:
++
++- the host allocates runtime IDs fresh across actors and equipment instances;
++- the host adopts complete successful immutable results rather than individual
++  candidate snapshots;
++- replacing an inventory snapshot requires rebuilding any
++  `RuntimeActorEquipmentProfileSource` that captured the old snapshot; and
++- a game with multiple simultaneous weapon profiles supplies an explicit
++  custom equipment-profile resolver.
++
++O7-R11 must still adversarially test these and the runtime invariants defined in
++the source roadmap. R10 documentation maturity is not runtime closure proof.
++
++## Verification
++
++- Focused Order 7/documentation coverage: 218 Framework tests and 133 DemoHost
++  tests passed; 351 total, 0 failed, 0 skipped.
++- Full suite: 1,790 Framework tests, 182 DemoHost tests, and 7 ContentValidator
++  tests passed; 1,979 total, 0 failed, 0 skipped.
++- Framework and complete solution Release builds passed with 0 warnings and
++  0 errors. The Debug Godot sample build also passed with 0 warnings and
++  0 errors.
++- Formatting changed 0 of 279 files. The 58-test Release architecture,
++  documentation-link, API, terminology, and boundary suite passed.
++- The active-content validator accepted 6 packs, 36 documents, and 98 qualified
++  definitions under schema v10.
++- All four noninteractive DemoHost modes and scripted Training Annex exit
++  succeeded.
++- The official local Godot 4.7.1 headless consumer emitted
++  `CONVERGENCE_GODOT_SMOKE_OK`, restored save v19 with 3 actors, 205 Credits,
++  and one stock entry, and exited 0. The sandboxed first launch could not create
++  Godot's user log; the identical invocation succeeded once normal user-directory
++  access was permitted.
++- Framework coverage passed at 90.19% lines and 76.71% branches, above the
++  required 90% and 70% thresholds.
++- Trimming analysis, `dotnet format --verify-no-changes`, architecture boundary
++  tests, and `git diff --check` passed.
++
++## Conclusion
++
++The player, developer, and technical Order 7 documents now agree with current
++source and executable evidence. O7-R10 is complete. The capability correctly
++remains `partial`: O7-R11 is the separate independent adversarial audit that may
++close Order 7 only if it finds no realistic reachable runtime defect or
++documentation contradiction.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+index 66c5e62776ecf0a46d0522e8682aabff6fb420f0..5c59173cf824bb68155b640e1667c55c7a442a8f 100644
+--- a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
++++ b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+@@ -8,7 +8,7 @@
+ 
+ **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
+ 
+-**Implementation status:** O7-R1 through O7-R9 complete; O7-R10 through O7-R11 pending
++**Implementation status:** O7-R1 through O7-R10 complete; O7-R11 pending
+ 
+ > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
+ > recorded in
+@@ -22,6 +22,14 @@
+ > found no remaining actionable R9 defect and closes only R9. The capability
+ > remains partial for R10 and R11.
+ 
++> **O7-R10 audit:** The source-traced audience audit and ordered documentation
++> checkpoints are recorded in
++> [inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md](inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md).
++> The subsequent
++> [fresh documentation review](inventory-equipment-economy-order-7-r10-documentation-review-2026-08-13.md)
++> corrected three precision issues and completed R10. All three audience entries
++> are `reviewed`; the capability remains `partial` for O7-R11.
++
+ ## Purpose
+ 
+ This record is the active source of truth for Documentation Order 7. It
+@@ -198,7 +206,7 @@ gate are complete.
+ | O7-D4 | Equipment Defense and Evasion are numeric contributions to the existing `ProductionCombatRuleset` inputs. Equipment does not own a parallel damage or hit formula. | Direct integration correction | Approved; implemented by O7-R4 |
+ | O7-D5 | Runtime shop stock is stateful. Buying decrements limited stock. Standard selling does not replenish stock; a supplied policy may choose otherwise. | Policy family plus runtime state | Approved; implemented by O7-R7 |
+ | O7-D6 | The standard pricing policy uses authored purchase price and configurable resale percentage. Luck-adjusted pricing remains available as an optional supplied policy, not hidden standard behavior. | Policy family | Approved; implemented by O7-R6 |
+-| O7-D7 | Recovery is generic and resource-ID driven. Supply exactly one `StandardHospitalRecoveryPolicy` for full configured HP/SP recovery, legal ailment cures, and configured temporary-state cleanup. | Policy family, narrowly scoped | Approved |
++| O7-D7 | Recovery is generic and resource-ID driven. Supply exactly one `StandardHospitalRecoveryPolicy` for full configured HP/SP recovery, legal ailment cures, and configured temporary-state cleanup. | Policy family, narrowly scoped | Approved; implemented by O7-R8 |
+ | O7-D8 | Replace the unnamed wallet with a currency ledger keyed by currency `ContentId`. Supply a convenience accessor that succeeds only when exactly one currency exists. | Direct data-model correction | Approved; implemented by O7-R5 |
+ 
+ ## Target Authority Model
+@@ -1336,7 +1344,55 @@ concrete consequences, reproducible evidence, and any trusted host boundaries.
+ 
+ #### Fresh R9 Review
+ 
+-The post-correction review reread the current transaction, restore, host, API,
+-and documentation paths without accepting the pre-implementation audit as
+-proof. It found no remaining High, Medium, or Low actionable R9 defect. R9 is
+-complete; O7-R10 and O7-R11 remain open, and the capability remains `partial`.
++The post-correction review reread the then-current transaction, restore, host,
++API, and documentation paths without accepting the pre-implementation audit as
++proof. It found no remaining High, Medium, or Low actionable R9 defect and
++completed R9. R10 and R11 were still open at that checkpoint.
++
++### O7-R10: Complete Three-Audience Documentation
++
++- **Baseline and commits:** `23cf50c1..this completion-record commit`; audit
++  `52e43a88`, player mechanics `0d93cb25`, developer integration `58ef84b9`,
++  technical authority `05a4ebc4`, reconciliation `a7385510`, and source-review
++  corrections `a08d216b`.
++- **Actual destination:**
++  `docs/mechanics/party-inventory-and-economy.md`,
++  `docs/developer-guide/inventory-equipment-and-economy.md`, and
++  `docs/technical/inventory-equipment-economy-runtime.md`, with current API,
++  content, Godot, roadmap, index, and executable documentation-matrix links.
++- **Runtime and wire scope:** no runtime behavior, active content, public API,
++  schema, save contract, or host presentation changed. Save v19 and schema v10
++  remain current.
++- **Fresh-review corrections:** recovery documentation now states that selected
++  resources are fully restored; economy documentation permits nonnegative
++  amounts; currency-domain construction is distinguished from aggregate save
++  validation; and custom slot-layout guidance includes content/save validators
++  plus the explicit multi-weapon resolver boundary.
++- **Focused tests:** 218 Framework equipment/currency/shop/recovery/persistence/
++  Godot/documentation tests and 133 DemoHost save/Training Annex tests passed:
++  351 total, 0 failed, 0 skipped.
++- **Full suite:** 1,790 Framework tests, 182 DemoHost tests, and 7
++  ContentValidator tests passed: 1,979 total, 0 failed, 0 skipped.
++- **Build and integration:** strict Framework and solution Release builds and
++  the Debug Godot sample build passed with 0 warnings and 0 errors. Formatting
++  changed 0 of 279 files; the 58-test Release architecture/boundary suite,
++  trimming analysis, and `git diff --check` passed. The authoring validator
++  loaded all 6 active packs, 36 documents, and 98 qualified definitions. All
++  four noninteractive DemoHost modes and scripted Training Annex exit passed.
++  The official Godot 4.7.1 headless sample emitted
++  `CONVERGENCE_GODOT_SMOKE_OK`, restored save v19 with 3 actors, 205 Credits,
++  and one stock entry, and exited 0.
++- **Coverage:** Framework coverage passed at 90.19% lines and 76.71% branches
++  against required minima of 90% and 70%.
++- **Documentation state:** player mechanics, developer guide, and technical
++  reference are all `reviewed`. The capability remains `partial`; O7-R11 is
++  still required before Order 7 can close.
++
++#### Fresh O7-R10 Review
++
++The source-first R10 review traced ownership, profile composition, combat
++inputs, authorization, currencies, shops, recovery, persistence, aggregate
++restore, DemoHost, and Godot integration without treating prior reports as
++proof. It found and corrected three documentation precision issues and found no
++remaining High, Medium, or Low actionable defect within R10's documentation
++scope. It does not replace the broader independent O7-R11 runtime audit.
+diff --git a/docs/roadmap/documentation-completion-roadmap.md b/docs/roadmap/documentation-completion-roadmap.md
+index 607ced81207fcd54dce7d8ecdc8251d87c59df35..db42537c9ed5288b25a36fe7cc72f6e90375f1b4 100644
+--- a/docs/roadmap/documentation-completion-roadmap.md
++++ b/docs/roadmap/documentation-completion-roadmap.md
+@@ -661,15 +661,15 @@ O7-R8 implements the remaining generic recovery policy seam and migrates the
+ Training Annex and Godot contract evidence. O7-R9 certifies the combined
+ wire/runtime surface, including aggregate restore, immutable rejected and
+ cancelled operations, sealed resolved-offer authority, all active content,
+-DemoHost, and the real Godot consumer. O7-R10 still owns all three audience
+-documents, and O7-R11 still owns the independent closure audit.
+-
+-The capability is `partial` while implementation remains open. Its mechanics and
+-technical entries remain `existing_unreviewed`, and its developer guide remains
+-`missing`; those audience counts do not change merely because owner intent is
+-now confirmed. Order 7 closes only after the ordered runtime checkpoints,
+-three-audience documentation, complete verification, and an independent
+-adversarial audit.
++DemoHost, and the real Godot consumer. O7-R10 now supplies and reconciles the
++player mechanics, developer integration, and technical authority documents.
++O7-R11 still owns the independent closure audit.
++
++The capability remains `partial` while independent closure is open. Its
++mechanics, developer, and technical entries are `reviewed` after O7-R10's
++source/test/diagram reconciliation. Documentation maturity does not bypass the
++remaining O7-R11 adversarial audit. Order 7 closes only after that audit finds
++no unresolved realistic reachable defect or documentation contradiction.
+ 
+ ## Deferred Documentation
+ 
+diff --git a/docs/roadmap/framework-capability-matrix.md b/docs/roadmap/framework-capability-matrix.md
+index 9eee7d41483e48516445d1ebee24274d77b06d9d..e0565d8e023be21149824bbc88a2b43f0771192c 100644
+--- a/docs/roadmap/framework-capability-matrix.md
++++ b/docs/roadmap/framework-capability-matrix.md
+@@ -37,8 +37,9 @@ and atomic named-currency execution while preserving Training Annex through an
+ explicit standard policy. O7-R9 now certifies the combined save/restore,
+ equipment, offer, currency, stock,
+ recovery, DemoHost, and Godot boundaries; it also makes resolved shop-offer
+-authority externally read-only. The capability remains partial pending complete
+-audience documentation and independent closure. The
++authority externally read-only. O7-R10 supplies reviewed player, developer, and
++technical documents. The capability remains partial pending independent O7-R11
++closure. The
+ owner-approved
+ [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+ governs the direct data corrections, genuine policy seams, three-audience
+diff --git a/docs/roadmap/product-roadmap.md b/docs/roadmap/product-roadmap.md
+index f8e34572bd6cd7222df62d6c2d12fcbf9ef08778..ad5c4df820d9f85ada6c6238976b019dd5fe9c47 100644
+--- a/docs/roadmap/product-roadmap.md
++++ b/docs/roadmap/product-roadmap.md
+@@ -28,8 +28,9 @@ recovery with explicit resources, legal cleanup, cost, and currency authority;
+ Training Annex and Godot evidence use the same bound service. O7-R9 certifies
+ the combined runtime and wire graph across save/restore, equipment, offers,
+ currencies, stock, recovery, DemoHost, and Godot, and seals resolved offers
+-against host-side reconstruction. The capability remains `partial` until
+-audience documentation and an independent adversarial closure audit are complete.
++against host-side reconstruction. O7-R10 completes and reconciles all three
++audience documents. The capability remains `partial` until O7-R11 completes
++the independent adversarial closure audit.
+ 
+ `encounter_orchestration` has a substantial implemented foundation under the owner-approved
+ [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
+diff --git a/docs/ruleset-policy-contracts.md b/docs/ruleset-policy-contracts.md
+index 8ee11bd3dd81e1b7aa671e13389136c9a95b8c91..d784f71a5a279a7de9cf899cd06f2c65b7fc93cc 100644
+--- a/docs/ruleset-policy-contracts.md
++++ b/docs/ruleset-policy-contracts.md
+@@ -414,5 +414,7 @@ typed factory.
+ ## Related Guidance
+ 
+ - [Actors And Runtime State](developer-guide/actors-and-runtime-state.md)
++- [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md)
++- [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md)
+ - [Runtime Actor State And Restoration](technical/runtime-actor-state-and-restoration.md)
+ - [Confirmed Actor Decision](decisions/actor-composition-progression-and-rosters.md)
+diff --git a/docs/technical/README.md b/docs/technical/README.md
+index ead98de92875a14e0b6c0e2bffc3fc7c26a7208b..94e7c577dd79d8031ccf25cfff318e339edb39df 100644
+--- a/docs/technical/README.md
++++ b/docs/technical/README.md
+@@ -43,6 +43,10 @@ Technical pages focus on:
+   scheduler protocol, lifecycle transactions, fixed-point reconciliation,
+   command/economy authority, structural event ordering, cancellation, and
+   typed fault containment.
++- [Inventory, Equipment, And Economy Runtime](inventory-equipment-economy-runtime.md):
++  equipment-instance and loadout authority, slot validation, live profile
++  projection, typed currency, atomic shop/recovery transitions, and save v19
++  restoration.
+ 
+ The actor and typed action/effect references have completed collaborative
+ review. That Order 1 review includes stat-modifier runtime authority and its
+@@ -88,6 +92,9 @@ O6-R46 reconciles the runtime contract. The
+ [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+ independently traces the corrected source. This reference is `reviewed`, and
+ Order 6 is formally complete.
++The Order 7 inventory/economy reference is `reviewed` after O7-R10 traced its
++authority graph, transaction ordering, and save v19 diagrams against current
++source and tests. O7-R11 remains the separate capability-closure audit.
+ Other subsystem references
+ remain tracked as `existing_unreviewed` or `missing` in the
+ [documentation coverage matrix](../reference/documentation-coverage.md).
+diff --git a/docs/technical/battle-knowledge-runtime.md b/docs/technical/battle-knowledge-runtime.md
+index 9bdd2f0cf99f1f8143a6bd890d33140c4413f403..c186fcdf5fe793ed8b78f34c82b9d89316a68e0e 100644
+--- a/docs/technical/battle-knowledge-runtime.md
++++ b/docs/technical/battle-knowledge-runtime.md
+@@ -238,7 +238,7 @@ call sites; the service does not observe ownership transactions implicitly.
+ - catalog existence for every referenced ailment; and
+ - valid enum and content-ID domains.
+ 
+-Save v18 contains no actor-local Analyze field. Persistent defense disclosure
++Save v19 contains no actor-local Analyze field. Persistent defense disclosure
+ belongs only in `RuntimeSaveGameSnapshot.Knowledge`; current-target analysis
+ belongs only in `RuntimeEncounterKnowledgeSnapshot` and ends with its
+ encounter. Actor snapshots retain the exact combat-profile identity used to
+diff --git a/docs/technical/inventory-equipment-economy-runtime.md b/docs/technical/inventory-equipment-economy-runtime.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..e03def3b75e86e24382307f9da42497fe0785231
+--- /dev/null
++++ b/docs/technical/inventory-equipment-economy-runtime.md
+@@ -0,0 +1,412 @@
++# Inventory, Equipment, And Economy Runtime
++
++## Scope
++
++This document defines the internal authority graph, invariants, policy
++boundaries, transaction ordering, and restore dependencies for inventory,
++equipment, currency, shops, and recovery.
++
++It does not define menu presentation, player input, scene ownership, save-file
++serialization, or game-specific currency names.
++
++> **Review state:** `reviewed` after O7-R10 traced the authority graph,
++> transaction order, restore boundary, and diagrams against current source and
++> tests. O7-R11 remains the independent capability-closure audit.
++
++## Authority Map
++
++| Authority | Owns | Must not own |
++|---|---|---|
++| `RuntimeInventorySnapshot` | item quantities and every owned equipment instance | actor assignment, pricing, shop stock |
++| `RuntimeEquipmentSnapshot` | one actor's slot-to-instance references | equipment ownership or definitions |
++| `IEquipmentSlotLayoutPolicy` | slot vocabulary and profile/assignment compatibility | ownership, combat formulas, grants |
++| `RuntimeEquipmentProfileResolver` | current projection of equipped definitions, basic attack, modifiers, and grants | learned skills, durable ownership, combat math |
++| `RuntimeCurrencyLedgerSnapshot` | nonnegative balances keyed by currency ID | pricing formulas or presentation names |
++| `RuntimeShopOfferSnapshot` | resolver-created immutable offer identity, content, pricing, and stock profile | durable stock quantity or host presentation |
++| `RuntimeShopStockSnapshot` | remaining quantities for tracked offer identities | offered content or pricing |
++| Pricing policy | purchase/resale calculation from typed inputs | currency mutation, stock mutation, inventory mutation |
++| Stock policy | one tracked offer's candidate quantity transition | durable commit or other transaction state |
++| `ShopTransactionService` | coordinated inventory/currency/stock result | host state adoption or UI |
++| Recovery policy | immutable treatment plan | live actor or currency mutation |
++| `RecoveryService` | staged actor cleanup and named-currency debit | patient selection or presentation |
++| `RuntimeSaveGameSnapshot` v19 | one serializer-neutral aggregate authority graph | file format or scene objects |
++
++## Aggregate Ownership Graph
++
++```mermaid
++flowchart TB
++    Save["RuntimeSaveGameSnapshot v19"]
++    Inventory["Inventory: sole owner of equipment instances"]
++    Actors["Actors: non-owning slot-to-instance references"]
++    Currency["Currency ledger: balances by ContentId"]
++    Stock["Shop stock: quantities by shop ID + offer ID"]
++    Catalog["Catalog: equipment and shop definitions"]
++    Layout["Selected slot-layout policy"]
++    Profile["One derived runtime equipment profile"]
++    Runtime["Composed actor and battle services"]
++
++    Save --> Inventory
++    Save --> Actors
++    Save --> Currency
++    Save --> Stock
++    Inventory --> Profile
++    Actors --> Profile
++    Catalog --> Profile
++    Layout --> Profile
++    Profile --> Runtime
++```
++
++There is no root equipment-owner collection besides inventory. A loadout is a
++reference set, not ownership. The same equipment instance may not be referenced
++by two slots or two actors.
++
++## Equipment Instance Invariants
++
++`RuntimeEquipmentInstanceSnapshot` contains:
++
++- a valid `RuntimeInstanceId`; and
++- a valid equipment-definition `ContentId`.
++
++`RuntimeInventorySnapshot` enforces unique equipment instance IDs across every
++owned slot collection while allowing multiple distinct instances to reference
++the same definition. Aggregate save validation additionally rejects an
++equipment instance ID that collides with any actor instance ID.
++
++Actor loadouts map authored slot IDs to instance IDs. A valid aggregate
++requires:
++
++1. every referenced instance is inventory-owned;
++2. the inventory slot, actor slot, and definition profile are compatible under
++   the selected layout;
++3. no instance is assigned more than once across all actors and slots; and
++4. every definition is present in the active catalog.
++
++### Where Slot Validation Occurs
++
++The boundaries have different available evidence and therefore perform
++different parts of the check:
++
++| Boundary | Validation |
++|---|---|
++| Content semantic validation | authored definition profile against the selected layout |
++| `EquipmentTransitionService.Equip` | inventory ownership and owned-slot to target-slot assignment, including cross-actor collision evidence |
++| `RuntimeEquipmentProfileResolver` | inventory ownership, definition lookup, definition profile, inventory assignment, and actor assignment |
++| Save validation/restore | the complete definition, inventory, actor, and cross-actor graph |
++
++The equip transition cannot validate a definition profile because its public
++request deliberately contains no catalog repository. A host must not treat an
++accepted assignment as a substitute for resolving the resulting equipment
++profile before committing actor composition.
++
++## Equip And Unequip Transition
++
++```mermaid
++flowchart TB
++    Request["Equip exact instance into target slot"]
++    ValidateArgs{"Public arguments structurally valid?"}
++    Owned{"Instance owned in supplied owned slot?"}
++    Assignment{"Layout accepts owned slot -> target slot?"}
++    Collision{"Already in this or another actor loadout?"}
++    Candidate["Create immutable candidate loadout"]
++    Resolve["Resolve profile against inventory + catalog + layout"]
++    Compose{"Canonical actor composition accepts?"}
++    Commit["Host commits loadout and composed actor together"]
++    Reject["Return unchanged loadout + typed diagnostic"]
++    ContractFault["Throw argument exception; caller violated contract"]
++
++    Request --> ValidateArgs
++    ValidateArgs -->|"no"| ContractFault
++    ValidateArgs -->|"yes"| Owned
++    Owned -->|"no"| Reject
++    Owned -->|"yes"| Assignment
++    Assignment -->|"no"| Reject
++    Assignment -->|"yes"| Collision
++    Collision -->|"yes"| Reject
++    Collision -->|"no"| Candidate
++    Candidate --> Resolve
++    Resolve -->|"diagnostics"| Reject
++    Resolve -->|"valid"| Compose
++    Compose -->|"no"| Reject
++    Compose -->|"yes"| Commit
++```
++
++`Unequip` validates the target slot and returns a candidate loadout with that
++slot removed. Profile resolution then removes grants and numeric contributions.
++The host session must not publish success between loadout replacement and
++canonical actor recomposition.
++
++## One Equipment Profile
++
++`RuntimeEquipmentProfileResolver` iterates equipped slot references in stable
++slot-ID order and derives:
++
++- compatible equipped definitions by slot;
++- one weapon basic-attack profile;
++- additive stat modifiers;
++- distinct granted skill IDs; and
++- ordered diagnostics.
++
++Armor contributes Defense and Evasion; boots contribute Evasion; accessories
++contribute their authored stat modifiers. Values are combined with checked
++decimal arithmetic. The profile layer does not interpret Defense or Evasion:
++actor composition feeds them into the existing production damage and hit
++policies. No contribution means no modifier entry, which is an exact zero
++input.
++
++Granted skill IDs remain outside learned and move-list state. Active action
++authorization and passive collection use the current profile. Execution-time
++authorization resolves it again, closing a stale assessment window after
++unequip.
++
++`RuntimeActorEquipmentProfileSource` captures an immutable inventory snapshot.
++A host that adopts a new inventory must replace the source; mutating a stale
++source is impossible and reusing it would deliberately continue projecting the
++old snapshot.
++
++## Currency Ledger
++
++`RuntimeCurrencyLedgerSnapshot` validates at construction:
++
++- every currency ID is valid;
++- IDs are unique; and
++- balances are nonnegative.
++
++`EconomyTransactionService.Credit` and `.Debit` require an explicit currency
++ID and nonnegative amount, use checked integer arithmetic, and change only that
++entry. Missing currency, insufficient funds, invalid amounts, and overflow
++return typed rejection with equal before/after ledgers.
++
++`GetSingleCurrency()` is a read convenience. It rejects zero or multiple
++entries through `RuntimeCurrencyLedgerException`; it does not create an
++implicit transaction currency.
++
++## Runtime Shop Offer Authority
++
++An authored `ShopOfferDefinition` is not executable transaction authority.
++`RuntimeShopOfferResolver` combines it with:
++
++- the qualified containing shop ID;
++- item/equipment catalog lookup;
++- the selected equipment slot layout;
++- the economy ruleset's bound default pricing policy;
++- an explicitly selected per-offer pricing policy where authored; and
++- unlimited, standard limited, or explicitly selected stock behavior.
++
++Only successful resolution produces a complete `RuntimeShopOfferSnapshot`.
++Its construction and members are not public mutation boundaries. Invalid
++content kind, missing definitions, incompatible slots, malformed pricing, or
++unsupported stock policy returns typed diagnostics without a fallback.
++
++Tracked stock identity is `RuntimeShopOfferIdentity(qualifiedShopId,
++localOfferId)`. Content ID and menu index are not durable stock keys.
++`RuntimeShopStockSnapshot.CreateInitial` creates one entry for each tracked
++offer and none for unlimited offers.
++
++## Shop Transaction State Machine
++
++Both purchase and resale calculate detached candidates. No supplied snapshot is
++mutated during assessment.
++
++```mermaid
++sequenceDiagram
++    participant H as Host
++    participant T as ShopTransactionService
++    participant P as Pricing profile
++    participant S as Stock policy
++    participant I as Inventory service
++    participant C as Economy service
++
++    H->>T: Buy/Sell(current inventory, currency, stock, offer)
++    T->>P: Calculate operation price
++    P-->>T: Price or typed rejection
++    T->>S: Calculate candidate stock transition
++    S-->>T: Candidate quantity or typed rejection
++    T->>I: Calculate candidate add/remove
++    I-->>T: Candidate inventory or typed rejection
++    T->>C: Calculate named-currency debit/credit
++    C-->>T: Candidate ledger or typed rejection
++    T-->>H: One result with all before/after authorities
++    alt Applied
++        H->>H: Adopt inventory + currency + stock together
++    else Rejected
++        H->>H: Retain all three before snapshots
++    end
++```
++
++The code order is pricing, stock candidate, inventory candidate, then currency
++candidate. Stock and inventory candidates remain detached until the returned
++result is adopted. Any later rejection rebuilds the result with all three
++original before-snapshots, not the earlier candidates.
++
++Equipment purchase requires a valid host-supplied instance ID. Equipment sale
++requires the exact owned instance, matching offer definition and slot, plus all
++actor loadouts so an equipped instance cannot be removed.
++
++The standard pricing policy preserves authored purchase price and calculates
++resale by configurable nonnegative percentage. The standard stock policy
++decrements purchase, rejects zero, and leaves resale quantity unchanged.
++Policies are deterministic, side-effect-free candidate calculators; the shop
++service owns cross-authority coordination.
++
++## Recovery Transaction State Machine
++
++Recovery separates immutable policy planning from live execution:
++
++```mermaid
++flowchart TB
++    Begin["Assess or execute with actor + currency ledger"]
++    Snapshot["Capture immutable actor before-snapshot"]
++    Plan{"Bound policy returns valid treatment plan?"}
++    Stage["Clone actor into RuntimeActorExecutionTransaction"]
++    Apply["Restore resources; apply legal ailment and temporary-state cleanup"]
++    Changed{"Any legal state change?"}
++    Debit{"Named-currency debit accepts?"}
++    Mode{"Assessment or execution?"}
++    Assess["Return hypothetical actor + ledger after-snapshots; live actor unchanged"]
++    Commit{"Commit staged actor transaction"}
++    Execute["Return committed actor + candidate ledger"]
++    Reject["Return original actor + original ledger + typed diagnostic"]
++
++    Begin --> Snapshot --> Plan
++    Plan -->|"no, null, or fault"| Reject
++    Plan -->|"yes"| Stage --> Apply
++    Apply -->|"failure"| Reject
++    Apply --> Changed
++    Changed -->|"no"| Reject
++    Changed -->|"yes"| Debit
++    Debit -->|"no"| Reject
++    Debit -->|"yes"| Mode
++    Mode -->|"assessment"| Assess
++    Mode -->|"execution"| Commit
++    Commit -->|"failure"| Reject
++    Commit -->|"success"| Execute
++```
++
++The plan names currency, cost, resource IDs, ailment removal, and temporary
++categories. Resource restoration uses each current maximum. Ailment and status
++removal still pass through canonical `RecoveryEvent` legality. Stat-modifier
++cleanup requires the matching policy service only when retained modifier state
++is nonempty.
++
++Assessment performs the complete staging and debit calculation but does not
++commit the live actor. Its after-ledger is hypothetical and must not be adopted.
++Execution commits the actor transaction and returns the corresponding ledger;
++the host adopts that ledger only when `Applied` is true.
++
++`OperationCanceledException` is rethrown. Other policy failures become typed
++fault/rejection results with original before-state.
++
++## Save V19 Validation And Restore
++
++Save contract v19 contains inventory, actor loadouts, currency ledger, and shop
++stock in the same aggregate. Validation occurs before actor factory calls:
++
++```mermaid
++flowchart TB
++    Input["Host-decoded save DTO"]
++    Ledger["Construct ledger: validate currency IDs, uniqueness, and balances"]
++    Snapshot["Construct RuntimeSaveGameSnapshot"]
++    Migrate{"Current v19 or explicit migration succeeds?"}
++    Validate["Validate catalog, actors, inventory, loadouts, stock, and policies"]
++    Profiles["Resolve every actor restore profile"]
++    Policies["Resolve retained charge/stat-modifier policy state"]
++    Dependencies["Restore source actors before dependent Vessels"]
++    Normalize["Normalize restored actor snapshots in saved order"]
++    Success["Expose one RuntimeRestoredSession"]
++    Reject["Return diagnostics and expose no partial session"]
++
++    Input --> Ledger
++    Ledger -->|"invalid"| Reject
++    Ledger -->|"valid"| Snapshot --> Migrate
++    Migrate -->|"no"| Reject
++    Migrate -->|"yes"| Validate
++    Validate -->|"diagnostics"| Reject
++    Validate -->|"valid"| Profiles
++    Profiles -->|"failure"| Reject
++    Profiles -->|"valid"| Policies
++    Policies -->|"failure"| Reject
++    Policies -->|"valid"| Dependencies
++    Dependencies -->|"failure or cycle"| Reject
++    Dependencies -->|"complete"| Normalize --> Success
++```
++
++Inventory validation checks definition existence, layout compatibility,
++instance uniqueness, and actor-ID collisions. Actor equipment validation checks
++ownership, assignment compatibility, and cross-actor reuse. Stock validation
++requires exactly one nonnegative entry for every tracked current-catalog offer
++and none for unlimited offers. Currency construction has already enforced its
++ID/balance domain.
++
++Currency IDs, duplicate currency entries, and nonnegative balances are
++enforced by `RuntimeCurrencyLedgerSnapshot` construction. Aggregate validation
++receives an already-valid immutable ledger; it does not duplicate that
++constructor authority.
++
++`RuntimeSessionRestoreService` returns either one complete
++`RuntimeRestoredSession` or diagnostics. It never exposes the actors restored
++before a later dependency failed.
++
++## Atomicity Boundaries
++
++| Operation | Framework atomic boundary | Host adoption requirement |
++|---|---|---|
++| Item/equipment inventory transition | one immutable inventory result | replace inventory only when applied |
++| Equip/unequip | one immutable loadout result | coordinate accepted loadout with successful actor recomposition |
++| Currency credit/debit | one immutable ledger result | replace ledger only when applied |
++| Shop transaction | inventory + currency + stock result | adopt all three after-snapshots together |
++| Recovery assessment | staged actor + hypothetical ledger | present only; adopt neither |
++| Recovery execution | committed actor + returned ledger | adopt ledger only from the same applied result |
++| Aggregate restore | entire live session | rebuild scene mappings only after success |
++
++Framework result records defensively copy exposed collections. A host must not
++infer success from messages or compare display names; it uses typed codes,
++`Applied`, and exact runtime/content IDs.
++
++## Policy Boundaries
++
++Order 7 provides policies only where games have known legitimate alternatives:
++
++- equipment slot layout;
++- shop pricing;
++- shop stock; and
++- recovery planning.
++
++Equipment instance ownership, equipped-only grants, Defense/Evasion entering
++canonical combat inputs, and typed currency identity are fixed rules. Adding a
++policy around those would create competing authorities without a supported
++second behavior.
++
++## Failure And Cancellation Rules
++
++- Constructor misuse of validated identity/value objects throws argument
++  exceptions.
++- Expected gameplay rejection returns a typed immutable result.
++- Host policy cancellation is propagated as `OperationCanceledException`.
++- Non-cancellation custom-policy faults are contained as typed diagnostics at
++  their binding or execution boundary.
++- Rejected shop and recovery operations preserve every supplied before-state.
++- Presentation messages are never authoritative transaction or restore input.
++
++## Source And Test Map
++
++| Concern | Source | Primary tests |
++|---|---|---|
++| Inventory, currency, equipment, shops | `Runtime/ResourceManagementServices.cs` | `ResourceManagementServiceTests`, `EquipmentInstanceOwnershipTests` |
++| Slot layout | `Runtime/EquipmentSlotLayouts.cs` | `EquipmentSlotLayoutTests` |
++| Equipment projection | `Runtime/RuntimeEquipmentProfiles.cs` | resource-management and equipment-combat tests |
++| Pricing | `Runtime/ShopPricingPolicies.cs` | `ShopPricingPolicyTests` |
++| Stock | `Runtime/ShopStockPolicies.cs` | `ShopStockPolicyTests` |
++| Recovery | `Runtime/RecoveryPolicies.cs` | `RecoveryPolicyTests` |
++| Save validation | `Runtime/RuntimePersistenceSnapshots.cs` | `RuntimePersistenceSnapshotTests` |
++| Aggregate restore | `Runtime/RuntimeSessionRestoration.cs` | `RuntimePersistenceSnapshotTests` |
++| Godot-shaped boundary | host-neutral runtime contracts | `GodotIntegrationContractTests` |
++
++## Related Guidance
++
++- [Player Mechanics](../mechanics/party-inventory-and-economy.md)
++- [Developer Integration](../developer-guide/inventory-equipment-and-economy.md)
++- [Runtime Actor State And Restoration](runtime-actor-state-and-restoration.md)
++- [Stat Modifier Policy Runtime](stat-modifier-policy-runtime.md)
++- [Public API Contract](../public-api-contract.md)
++- [Content Contract](../content-contract.md)
++- [Godot Integration Contract](../godot-integration-contract.md)
+diff --git a/docs/technical/stat-modifier-policy-runtime.md b/docs/technical/stat-modifier-policy-runtime.md
+index 94da983d93046002b8029e73d27385d701bd37f0..99bf24ca9ef78325d8eb42268f3c1e2dc10bdc32 100644
+--- a/docs/technical/stat-modifier-policy-runtime.md
++++ b/docs/technical/stat-modifier-policy-runtime.md
+@@ -321,14 +321,14 @@ domain. `StandardStatStageScalingPolicy` remains table-defined for `-4..+4`.
+ 
+ ## Save And Aggregate Restore
+ 
+-Save contract v18 serializes canonical state under
++Save contract v19 serializes canonical state under
+ `RuntimeBattleStatusSnapshot.StatModifiers`. Validation performs neutral checks,
+ catalog lookup of the saved qualified policy ID, authored factory binding, and
+ selected-policy compatibility validation.
+ 
+ ```mermaid
+ flowchart TD
+-    S["RuntimeSaveGameSnapshot v18"] --> N["Neutral save validation"]
++    S["RuntimeSaveGameSnapshot v19"] --> N["Neutral save validation"]
+     N --> C{"Policy ruleset exists in catalog?"}
+     C -->|"no"| R["Reject aggregate restore"]
+     C -->|"yes"| B["Bind authored stat-modifier policy"]
+diff --git a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+index a5d3215b942cdacc1eab2d424c3671e8815a3e38..cebcee443e6ad74b20e73a1f7bfe91a3cab50f15 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+@@ -752,6 +752,84 @@ public sealed class DocumentationFoundationTests
+         Assert.Empty(encounterCapability.KnownGaps);
+     }
+ 
++    [Fact]
++    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndOpenClosureGate()
++    {
++        string mechanics = File.ReadAllText(
++            RepositoryPath("docs", "mechanics", "party-inventory-and-economy.md"))
++            .ReplaceLineEndings(" ");
++        string developer = File.ReadAllText(
++            RepositoryPath("docs", "developer-guide", "inventory-equipment-and-economy.md"))
++            .ReplaceLineEndings(" ");
++        string technical = File.ReadAllText(
++            RepositoryPath("docs", "technical", "inventory-equipment-economy-runtime.md"))
++            .ReplaceLineEndings(" ");
++        string publicApi = File.ReadAllText(
++            RepositoryPath("docs", "public-api-contract.md"))
++            .ReplaceLineEndings(" ");
++
++        string[] mechanicsTokens =
++        [
++            "Every equipment copy has its own runtime identity.",
++            "Buying an equipment copy adds it to inventory; it does not silently equip it.",
++            "Equipment-granted skills are temporary availability, not learned skills.",
++            "A rejection updates none of them.",
++            "which resources are fully restored",
++            "An actor at full configured resources may still have a valid zero-cost treatment",
++            "Current save contract v19 stores:"
++        ];
++        Assert.All(
++            mechanicsTokens,
++            token => Assert.Contains(token, mechanics, StringComparison.Ordinal));
++
++        string[] developerTokens =
++        [
++            "BindResourceManagementServices",
++            "IEquipmentSlotLayoutPolicy",
++            "new RuntimeSaveValidator(equipmentSlotLayout: layout)",
++            "RuntimeActorEquipmentProfileSource",
++            "custom layout that permits multiple simultaneous weapon profiles",
++            "Adopt all three after-snapshots together",
++            "Its after-ledger is hypothetical and must not be adopted",
++            "Reconnect Nodes by runtime ID only after aggregate restore succeeds"
++        ];
++        Assert.All(
++            developerTokens,
++            token => Assert.Contains(token, developer, StringComparison.Ordinal));
++
++        string[] technicalTokens =
++        [
++            "RuntimeInventorySnapshot` | item quantities and every owned equipment instance",
++            "There is no root equipment-owner collection besides inventory.",
++            "## Equip And Unequip Transition",
++            "## Shop Transaction State Machine",
++            "## Recovery Transaction State Machine",
++            "## Save V19 Validation And Restore",
++            "ID and nonnegative amount",
++            "enforced by `RuntimeCurrencyLedgerSnapshot` construction",
++            "```mermaid"
++        ];
++        Assert.All(
++            technicalTokens,
++            token => Assert.Contains(token, technical, StringComparison.Ordinal));
++
++        Assert.Contains(
++            "Save contract v19 retains the canonical roster",
++            publicApi,
++            StringComparison.Ordinal);
++        Assert.DoesNotContain("Save contract v18", publicApi, StringComparison.Ordinal);
++
++        DocumentationCapability documentation = LoadDocumentationMatrix().Capabilities.Single(
++            capability => capability.Id == "inventory_equipment_economy");
++        Assert.Equal("reviewed", documentation.Mechanics.State);
++        Assert.Equal("reviewed", documentation.DeveloperGuide.State);
++        Assert.Equal("reviewed", documentation.Technical.State);
++
++        FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
++            candidate => candidate.Id == "inventory_equipment_economy");
++        Assert.Equal("partial", capability.ImplementationState);
++    }
++
+     [Fact]
+     public void AudienceEvidenceAndRoadmapDirectories_AreIndexedAndDeclutterTheDocsRoot()
+     {
+diff --git a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+index 99141e9683bed74f8b42b31f50e86427490fc7aa..7fbfc54b08fac6d661236795c6873c20724c1c22 100644
+--- a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
++++ b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+@@ -263,19 +263,19 @@
+     {
+       "id": "inventory_equipment_economy",
+       "mechanics": {
+-        "state": "existing_unreviewed",
++        "state": "reviewed",
+         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
+-        "reason": "Order 7 equipment-instance ownership, slot layouts, equipped skill grants, combat contributions, typed currency-ledger authority, explicit pricing, durable policy-owned stock, and generic recovery are implemented, but the mechanics page remains existing-unreviewed until source verification and owner review in O7-R10."
++        "reason": "O7-R10 reconciles the player-visible ownership, exact-copy equipment, temporary grants, prices, stock, atomic rejection, recovery, and save behavior with current source and tests."
+       },
+       "developerGuide": {
+-        "state": "missing",
+-        "documents": [],
+-        "reason": "The approved equipment-instance, slot-policy, pricing, stock, recovery, and typed-currency integration still needs a post-implementation developer guide."
++        "state": "reviewed",
++        "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
++        "reason": "O7-R10 documents ruleset and slot-policy composition, instance IDs, one live equipment profile, atomic transaction adoption, recovery, saves, and Godot host responsibilities from current APIs."
+       },
+       "technical": {
+-        "state": "existing_unreviewed",
+-        "documents": ["docs/gameplay-systems.md"],
+-        "reason": "Order 7 is open; equipment-instance/save authority, slot layouts, combat contributions, typed currency-ledger authority, pricing, atomic stock, and generic recovery are implemented, while the complete economy surface still needs a dedicated reviewed technical page."
++        "state": "reviewed",
++        "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
++        "reason": "O7-R10 defines the equipment, loadout, profile, currency, offer, stock, recovery, transaction, and save v19 authorities with source-traced state-machine diagrams."
+       }
+     },
+     {

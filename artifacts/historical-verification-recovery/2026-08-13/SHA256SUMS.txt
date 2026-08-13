@@ -1,0 +1,36 @@
+bc0813a332979a01b011f936bd3e58b2f66d880c2b1c02859a843cf73fe8c83e  README.md
+16020113423ae1c8930b504f26efb77b31fafcf83690d3f2eb357854170e61ae  RECOVERED-SOURCES.csv
+c014ce59f161b75095f7e20f68b7866e647c5b51a3f7b107b3f5cf612de186b9  repo-local/api-r2.log
+8ed596a5c671c054cc87600ef3effbf30fd31657092c4208110da1753e0faa3a  repo-local/checkpoint6-api-build.log
+821cf993c51566fcc728220bc1e5f17d743693b914a4208e768987250960020c  repo-local/checkpoint7-api-build.log
+5cd5e575212453b50d3f7d80857d7136d653b4593f63c67f199647c021711ddf  repo-local/Godot/app_userdata/Convergence Godot Host/logs/godot.log
+94b37390db6100f053b1c10231126070794b0431275cb8d143d7ec0c5c7b0dbb  repo-local/Godot/app_userdata/Convergence Godot Host/logs/godot2026-08-11T16.11.56.log
+c11d265992f3305ded6dd6d9934ca291fab78ea84934b687ca6f65fb378dcff2  repo-local/Godot/app_userdata/Godot Startup Probe/logs/godot.log
+30ef34fd8d0bfe33627bcc2ed4eb19cdd2a51334775ff6ca896bb3fbe72dde80  repo-local/godot-appdata/Godot/app_userdata/Convergence Godot Host/logs/godot.log
+4fb85a37cb2b6aae0f29f141ddb111b4dcc07ed05b9e889c0abd9e457013d722  repo-local/godot-local/godot-smoke.log
+4fb85a37cb2b6aae0f29f141ddb111b4dcc07ed05b9e889c0abd9e457013d722  repo-local/godot-local-repeat/godot-smoke.log
+30ef34fd8d0bfe33627bcc2ed4eb19cdd2a51334775ff6ca896bb3fbe72dde80  repo-local/godot-order6-appdata/Godot/app_userdata/Convergence Godot Host/logs/godot.log
+d4a260553c39885dcb979597740b3f3a3fdc6945b32e7a834ca7da38b1954c54  repo-local/godot-r42/appdata/Godot/app_userdata/Convergence Godot Host/logs/godot.log
+a4b1bc57eac1435b6d0124f2524f26e5ae371b19a77f72e17ef3c82ecf80993f  repo-local/godot-user/Godot/app_userdata/Convergence Godot Host/logs/godot.log
+30ef34fd8d0bfe33627bcc2ed4eb19cdd2a51334775ff6ca896bb3fbe72dde80  repo-local/godot-userdata-order6-r27/Godot/app_userdata/Convergence Godot Host/logs/godot.log
+6bd40138daa114b92d1633f27543a69b8310424c48056f69f80b485f691abaa1  repo-local/godot-user-order5-r20/Godot/app_userdata/Convergence Godot Host/logs/godot.log
+40804e3fd9ac96e47b83467bdb87ff69c0ffcf47545341e005368b1482d1c4f2  repo-local/local-godot-appdata/Godot/app_userdata/Convergence Godot Host/logs/godot.log
+9c42be6a077762e57361b7b19819962d6ee61d44e21528faa544bab8989e04a9  repo-local/local-godot-appdata/Godot/app_userdata/Convergence Godot Host/logs/godot2026-07-17T00.22.29.log
+417d2a24ed2be03ebb0156c62cd9be93f061efdbb29f751b69cdd03c011e0de8  repo-local/local-godot-appdata/Godot/app_userdata/Convergence Godot Host/logs/godot2026-07-17T00.23.50.log
+80049b769040613efb914555a73b7f330f57f56dabf07cfb8c55ca06960bd864  repo-local/local-godot-appdata/Godot/app_userdata/Convergence Godot Host/logs/godot2026-07-17T00.26.20.log
+40804e3fd9ac96e47b83467bdb87ff69c0ffcf47545341e005368b1482d1c4f2  repo-local/local-godot-appdata/Godot/app_userdata/Convergence Godot Host/logs/godot2026-07-17T00.31.53.log
+9f0789414a4601d6ef76ff0b1a98d2ef20d1af8b7c8e49564c44bad13158a072  repo-local/m1-5-public-api.log
+c215c1a8e4f9b1ed4a2bdc8777f4cccb3b23b6e0cbf60ec3dc9926582797214e  repo-local/o7-r8-api-build.log
+8ab244adf4630646cbc9dc3dc2e460d0882b2e47b995b4384e8b248c6da179e3  repo-local/order7-r2-godot-user/appdata/Godot/app_userdata/Convergence Godot Host/logs/godot.log
+a0953abbeebc02d2db20f3f1a488ace16f8fa2e7fed95f1634f777db1da219a8  temp/Convergence-O7-R3/o7-r3-active-content-validation.txt
+aa55c4ce5934854b51381bce52729a1b23ad876e4c153f7be927efdcd7dafa27  temp/Convergence-O7-R3/o7-r3-focused-tests.txt
+3605fa3bb5d48867b2261a3ed942c344d07e511f73176133269d008ff93f138c  temp/Convergence-O7-R3/o7-r3-full-commit.diff
+5b510e6a386147321eae007a7d15ea8e42b46d2332f9254f7945e09d47423684  temp/Convergence-O7-R3/o7-r3-full-tests.txt
+daee23798ed9bd7dbf0b1f840c4e892c87302b9ac1321f171207d9066f9625b7  temp/order7-r10-precanonical-coverage/coverage.cobertura.xml.gz
+1292d58c1f386b7d293c4bddb3a4f84058e6dae2ccaa30870869086d9fee029a  temp/order7-r9-coverage/coverage.cobertura.xml.gz
+d13482b0f09d2623d26e514d00aefd563131b0e0438baa5d8e5ed191161f821b  temp/post-o6-refactor/convergence-stage-2-462b52d2.diff
+c75639a94ec5b5f81750e5782cffef73734c6da4406c24a576f0a28e50fc8507  temp/post-o6-refactor/convergence-stage-3-9a444f72.diff
+dfc955369d1c9c105cfe96b83aba78dd422223329a82ddd118012ae41b050faf  temp/post-o6-refactor/convergence-stage-4-1aa1c6cb.diff
+2310378b1e950f5d022b6258588c6631e344f4fe511ea4c42726bf901da6f4d5  temp/post-o6-refactor/convergence-stage-5-e5e1fb2d.diff
+3f591030c79b2e439f7ec38ae50ab0989c7182326a18cbe8ea7c32b674f50766  temp/post-o6-refactor/convergence-stage-6-9322df47.diff
+c0045d40172aaf4b3d304f3f8d7e8afd12bdbe1c10a69868bff4c2809e945924  temp/post-o6-refactor/convergence-stage-7-21b0a016.diff

@@ -1,0 +1,48 @@
+  The dotnet runtime version is '10.0.9'.
+  The dotnet CLI version is '8.0.422'.
+  Using MSBuild.exe located in 'C:\Program Files\dotnet\sdk\8.0.422\'.
+  Formatting code files in workspace 'C:\Users\kayel\Documents\GitHub\Convergence\Convergence.sln'.
+  Loading workspace.
+  Project Convergence.Framework is using configuration from 'C:\Users\kayel\Documents\GitHub\Convergence\src\Convergence.Framework\obj\Debug\net8.0\Convergence.Framework.GeneratedMSBuildEditorConfig.editorconfig'.
+  Project Convergence.Framework is using configuration from 'C:\Program Files\dotnet\sdk\8.0.422\Sdks\Microsoft.NET.Sdk\analyzers\build\config\analysislevel_8_default_warnaserror.globalconfig'.
+  Project Convergence.DemoHost is using configuration from 'C:\Users\kayel\Documents\GitHub\Convergence\samples\Convergence.DemoHost\obj\Debug\net8.0\Convergence.DemoHost.GeneratedMSBuildEditorConfig.editorconfig'.
+  Project Convergence.DemoHost is using configuration from 'C:\Program Files\dotnet\sdk\8.0.422\Sdks\Microsoft.NET.Sdk\analyzers\build\config\analysislevel_8_default.globalconfig'.
+  Project Convergence.Framework.Tests is using configuration from 'C:\Users\kayel\Documents\GitHub\Convergence\tests\Convergence.Framework.Tests\obj\Debug\net8.0\Convergence.Framework.Tests.GeneratedMSBuildEditorConfig.editorconfig'.
+  Project Convergence.Framework.Tests is using configuration from 'C:\Program Files\dotnet\sdk\8.0.422\Sdks\Microsoft.NET.Sdk\analyzers\build\config\analysislevel_8_default.globalconfig'.
+  Project Convergence.DemoHost.Tests is using configuration from 'C:\Users\kayel\Documents\GitHub\Convergence\tests\Convergence.DemoHost.Tests\obj\Debug\net8.0\Convergence.DemoHost.Tests.GeneratedMSBuildEditorConfig.editorconfig'.
+  Project Convergence.DemoHost.Tests is using configuration from 'C:\Program Files\dotnet\sdk\8.0.422\Sdks\Microsoft.NET.Sdk\analyzers\build\config\analysislevel_8_default.globalconfig'.
+  Project Convergence.ContentValidator is using configuration from 'C:\Users\kayel\Documents\GitHub\Convergence\tools\Convergence.ContentValidator\obj\Debug\net8.0\Convergence.ContentValidator.GeneratedMSBuildEditorConfig.editorconfig'.
+  Project Convergence.ContentValidator is using configuration from 'C:\Program Files\dotnet\sdk\8.0.422\Sdks\Microsoft.NET.Sdk\analyzers\build\config\analysislevel_8_default.globalconfig'.
+  Project Convergence.ContentValidator.Tests is using configuration from 'C:\Users\kayel\Documents\GitHub\Convergence\tests\Convergence.ContentValidator.Tests\obj\Debug\net8.0\Convergence.ContentValidator.Tests.GeneratedMSBuildEditorConfig.editorconfig'.
+  Project Convergence.ContentValidator.Tests is using configuration from 'C:\Program Files\dotnet\sdk\8.0.422\Sdks\Microsoft.NET.Sdk\analyzers\build\config\analysislevel_8_default.globalconfig'.
+  Project Convergence.GodotHost is using configuration from 'C:\Users\kayel\Documents\GitHub\Convergence\samples\Convergence.GodotHost\.godot\mono\temp\obj\Debug\Convergence.GodotHost.GeneratedMSBuildEditorConfig.editorconfig'.
+  Project Convergence.GodotHost is using configuration from 'C:\Program Files\dotnet\sdk\8.0.422\Sdks\Microsoft.NET.Sdk\analyzers\build\config\analysislevel_8_default.globalconfig'.
+  Complete in 2586ms.
+  Determining formattable files.
+  Complete in 1104ms.
+  Running formatters.
+  Running Code Style analysis.
+  Determining diagnostics...
+  Running 3 analyzers on Convergence.Framework.
+  Running 3 analyzers on Convergence.DemoHost.
+  Running 3 analyzers on Convergence.Framework.Tests.
+  Running 3 analyzers on Convergence.DemoHost.Tests.
+  Running 3 analyzers on Convergence.ContentValidator.
+  Running 3 analyzers on Convergence.ContentValidator.Tests.
+  Running 3 analyzers on Convergence.GodotHost.
+  Complete in 7067ms.
+  Analysis complete in 7067ms.
+  Running Analyzer Reference analysis.
+  Determining diagnostics...
+  Running 151 analyzers on Convergence.Framework.
+  Running 146 analyzers on Convergence.DemoHost.
+  Running 199 analyzers on Convergence.Framework.Tests.
+  Running 199 analyzers on Convergence.DemoHost.Tests.
+  Running 146 analyzers on Convergence.ContentValidator.
+  Running 199 analyzers on Convergence.ContentValidator.Tests.
+  Running 149 analyzers on Convergence.GodotHost.
+  Complete in 7511ms.
+  Analysis complete in 7511ms.
+  Complete in 16310ms.
+  Formatted 0 of 280 files.
+  Format complete in 20001ms.

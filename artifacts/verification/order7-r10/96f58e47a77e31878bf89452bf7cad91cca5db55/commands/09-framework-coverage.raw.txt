@@ -1,0 +1,10 @@
+Test run for C:\Users\kayel\Documents\GitHub\Convergence\tests\Convergence.Framework.Tests\bin\Release\net8.0\Convergence.Framework.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:  1793, Skipped:     0, Total:  1793, Duration: 3 s - Convergence.Framework.Tests.dll (net8.0)
+
+Attachments:
+  C:\Users\kayel\Documents\GitHub\Convergence\artifacts\verification\order7-r10\96f58e47a77e31878bf89452bf7cad91cca5db55\coverage-work\170d3261-ba42-4a5a-8306-3dd939e0987c\coverage.cobertura.xml

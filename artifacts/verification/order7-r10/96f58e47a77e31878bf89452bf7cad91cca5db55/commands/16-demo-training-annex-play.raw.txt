@@ -1,0 +1,30 @@
+Clean Training Annex session booted.
+Loaded convergence.training_annex_slice through the clean catalog pipeline.
+Hydrated Echo Adept at level 3.
+Hydrated clean actor roster with 10 actor(s): 3 enemy model(s).
+Party setup: 1 active, 1 reserve.
+Roster setup: active hosted entity 1, Hosted Entity roster 2, Companion roster 2.
+Field location: Staging Area.
+Training Annex Clean Session - Staging Area
+1. Inspect Session
+2. Inspect Actors
+3. Resolve Stats
+4. Recalculate Resources
+5. Apply Victory EXP
+6. Validate Startup Snapshot
+7. Enter Training Annex
+8. Inventory
+9. Field Skills
+10. Exit
+11. Save / Load
+12. Training Supply
+13. Recovery Facility
+14. Inspect Party
+15. Inspect Roster
+16. Party / Roster Operations
+17. Negotiate / Recruit
+18. Calculate Fusion Results
+19. Preview Fusion Result
+20. Commit Fusion Transaction
+21. Compendium
+> Clean Training Annex session exited.

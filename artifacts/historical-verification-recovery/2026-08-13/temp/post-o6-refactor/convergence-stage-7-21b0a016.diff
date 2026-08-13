@@ -1,0 +1,151 @@
+diff --git a/docs/roadmap/post-O6-refactor-roadmap.md b/docs/roadmap/post-O6-refactor-roadmap.md
+index b484910b..a17c0223 100644
+--- a/docs/roadmap/post-O6-refactor-roadmap.md
++++ b/docs/roadmap/post-O6-refactor-roadmap.md
+@@ -87,7 +87,7 @@ extracted operation that owns them.
+ | 1352-2025 | One team phase, including its command-window loop | `RunPhaseAsync` |
+ | 1399-1934 | One scheduled command window | `RunCommandWindowAsync` |
+ | 2098-2528 | Reconciliation, synchronization, economy capture, port-fault and ordinary-fault finalization, cleanup, successful finalization, lifecycle failure formatting, completion validation, and lifecycle-event snapshotting | `EncounterRunContext` shared and finalization methods |
+-| 1328, 2090-2096 | Repeated-round control and draw completion | `RunScheduledRoundsAsync` |
++| 1328, 2090-2096 | Repeated-round control and draw completion | `RunScheduledRoundsAsync` (post-Stage-7 lines 1071-1091) |
+ 
+ The line ranges overlap where a later stage extracts code from a method created
+ by an earlier stage. The final completion record will add actual destination
+@@ -798,3 +798,77 @@ the Stage 0 through Stage 5 evidence.
+ 
+ Later completion entries will be appended below this one and will not rewrite
+ the Stage 0 through Stage 6 evidence.
++
++### Stage 7 - Complete On 8 August 2026
++
++- **Verified boundary:** before editing, baseline commit `0b174b23` line
++  `1328`, closing line `2090`, and final draw lines `2092-2096` were traced to
++  the post-Stage-6 `RunCoreAsync` schedule initialization, delegated round
++  loop, and draw completion at lines `914-931`. The remaining method shape
++  exactly matched the roadmap: validation, state/context construction,
++  battle-start delegation and terminal short-circuit, followed only by this
++  repeated-round control. `RunRoundAsync` and `FinishAsync` were already
++  `EncounterRunContext` members; no local-helper declaration or closure sat
++  outside the approved boundary.
++- **Baseline to destination:** baseline repeated-round control and draw
++  completion at `BattleEncounterRunner.cs:1328,2090-2096` moved to
++  `EncounterRunContext.RunScheduledRoundsAsync` at post-stage lines
++  `1071-1091`. The initialized schedule is now the method parameter.
++  `RunCoreAsync` delegates to it at post-stage lines `914-915`.
++- **Final orchestrator shape:** `RunCoreAsync` occupies 27 source lines from
++  declaration through closing brace (`890-916`), with a 21-line interior
++  (`895-915`). It contains one cancellation check, argument validation,
++  `EncounterRunState` and `EncounterRunContext` construction, battle-start
++  invocation, the terminal startup return, and one scheduled-round invocation.
++  It contains no loop, local function, closure, or reassigned local. Its three
++  named locals (`runState`, `runContext`, and `battleStart`) are each assigned
++  exactly once; the terminal pattern variable is not reassigned.
++- **Changed files:**
++  `src/Convergence.Framework/Encounters/BattleEncounterRunner.cs` and this
++  roadmap. No test, assertion, API baseline, external call site, notes file, or
++  other source file changed.
++- **Focused verification:** 168 passed, 0 failed, 0 skipped in the unchanged
++  `BattleEncounterRunnerTests` suite.
++- **Full verification:** 1,888 passed, 0 failed, 0 skipped: Framework 1,703,
++  DemoHost 178, ContentValidator 7.
++- **Additional gates:** strict nonincremental solution build succeeded with
++  0 warnings and 0 errors; `dotnet format --verify-no-changes` succeeded; all
++  6 public-API boundary tests passed; `git diff --check` succeeded.
++- **Round-loop and draw parity:** the loop still runs while the schedule is not
++  complete, awaits exactly one `RunRoundAsync` call per iteration, returns the
++  same terminal round result immediately, and otherwise replaces the schedule
++  with the returned cursor. Exhausting the schedule still calls `FinishAsync`
++  with `Draw`, no winning team, and the same round-limit message. Moving the
++  initialized cursor to the method parameter adds no validation or transition.
++- **Event and fault parity:** the extracted statements construct no encounter
++  event and select no fault code; all round events, reconciliation, scheduler
++  faults, lifecycle faults, and terminal event publication remain in the
++  already-verified context methods. The draw still uses the same successful
++  finalization path, so cleanup and final-event ordering are untouched.
++- **Exception and cancellation parity:** no try/catch, filter, or exception
++  conversion moved or changed. The repeated-round shell contained no explicit
++  cancellation check after Stages 3-6; each `RunRoundAsync` invocation still
++  begins with its existing cancellation check. `RunCoreAsync` retains its
++  original pre-validation cancellation check at the same first-statement
++  position.
++- **Mechanical mapping evidence:** a direct comparison against parent commit
++  `9322df47` matched all 17 moved loop/draw body lines after only four-space
++  indentation and the required context qualification changes
++  (`runContext.RunRoundAsync` to `RunRoundAsync`, `runContext.FinishAsync` to
++  `FinishAsync`, and `request.RoundLimit` to `_request.RoundLimit`). The prior
++  schedule initialization became the method parameter. No condition, return,
++  await, message, outcome, or cursor assignment changed.
++- **Final nested-type audit:** `EncounterRunState` is constructed by
++  `RunCoreAsync` and consumed by `EncounterRunContext`; `EncounterPortInvoker`
++  is constructed and exposed by that context; `EncounterPhaseRunState` is
++  created by `RunPhaseAsync`, consumed by `RunCommandWindowAsync`, and returned
++  by `CommandWindowRunResult`. `BattleStartPhaseResult`, `RoundRunResult`,
++  `PhaseRunResult`, and `CommandWindowRunResult` each have active producer and
++  consumer paths with their terminal and continuation factories in use. No
++  extracted type, factory, property, or half-migrated local is orphaned.
++- **Deferred observations:** none. `POST-O6-NOTES.md` was not created because
++  the completed extraction exposed no suspicious behavior to defer.
++- **Commit:** `refactor(encounter-runner): stage 7 - move scheduled round loop`.
++
++Stages 0 through 7 are complete. This record closes the approved mechanical
++refactor and does not authorize further cleanup or behavioral change.
+diff --git a/src/Convergence.Framework/Encounters/BattleEncounterRunner.cs b/src/Convergence.Framework/Encounters/BattleEncounterRunner.cs
+index 3323d7d4..961a7798 100644
+--- a/src/Convergence.Framework/Encounters/BattleEncounterRunner.cs
++++ b/src/Convergence.Framework/Encounters/BattleEncounterRunner.cs
+@@ -911,25 +911,8 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
+             return terminalResult;
+         }
+ 
+-        BattleEncounterScheduleCursor schedule = battleStart.Schedule!;
+-        while (!schedule.IsComplete)
+-        {
+-            RoundRunResult roundRun =
+-                await runContext.RunRoundAsync(schedule).ConfigureAwait(false);
+-            if (roundRun.TerminalResult is BattleEncounterResult roundTerminalResult)
+-            {
+-                return roundTerminalResult;
+-            }
+-
+-            schedule = roundRun.Schedule!;
+-        }
+-
+-        return await runContext.FinishAsync(
+-                BattleEncounterOutcome.Draw,
+-                null,
+-                $"Battle ended in a draw after {request.RoundLimit} round(s).")
++        return await runContext.RunScheduledRoundsAsync(battleStart.Schedule!)
+             .ConfigureAwait(false);
+-
+     }
+ 
+     private sealed class EncounterRunContext
+@@ -1085,6 +1068,28 @@ public sealed class BattleEncounterRunner : IBattleEncounterRunner
+             return BattleStartPhaseResult.ScheduleReady(StartSchedule());
+         }
+ 
++        public async ValueTask<BattleEncounterResult> RunScheduledRoundsAsync(
++            BattleEncounterScheduleCursor schedule)
++        {
++            while (!schedule.IsComplete)
++            {
++                RoundRunResult roundRun =
++                    await RunRoundAsync(schedule).ConfigureAwait(false);
++                if (roundRun.TerminalResult is BattleEncounterResult roundTerminalResult)
++                {
++                    return roundTerminalResult;
++                }
++
++                schedule = roundRun.Schedule!;
++            }
++
++            return await FinishAsync(
++                    BattleEncounterOutcome.Draw,
++                    null,
++                    $"Battle ended in a draw after {_request.RoundLimit} round(s).")
++                .ConfigureAwait(false);
++        }
++
+         public async ValueTask<RoundRunResult> RunRoundAsync(
+             BattleEncounterScheduleCursor schedule)
+         {

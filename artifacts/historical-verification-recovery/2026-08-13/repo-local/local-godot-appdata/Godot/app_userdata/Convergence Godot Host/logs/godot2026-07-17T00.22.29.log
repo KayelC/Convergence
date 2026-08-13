@@ -1,0 +1,9 @@
+Godot Engine v4.7.1.stable.mono.official.a13da4feb - https://godotengine.org
+
+CONVERGENCE_GODOT_SMOKE_BEGIN
+GODOT_CONTENT_OK packs=1 entities=7
+GODOT_SCENE_MAP_OK count=2
+GODOT_ACTION_OK kind=Skill effects=1
+GODOT_ENCOUNTER_OK outcome=Draw events=18
+GODOT_SAVE_OK actors=2 contract=8
+CONVERGENCE_GODOT_SMOKE_OK
