@@ -12202,3 +12202,63 @@ Convergence.Runtime.RecoveryTreatmentPlan.RemoveAilments.get -> bool
 Convergence.Runtime.RecoveryTreatmentPlan.ResourceIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
 Convergence.Runtime.RecoveryTreatmentPlan.TemporaryStateKinds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RecoveryTemporaryStateKind>!
 Convergence.Runtime.RecoveryPolicyFactoryRegistry.Bind(Convergence.Content.ContentId policyId, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! parameters) -> Convergence.Runtime.RecoveryPolicyBindingResult!
+Convergence.Runtime.IRuntimeActorEquipmentApplicationService
+Convergence.Runtime.IRuntimeActorEquipmentApplicationService.Apply(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest! request) -> Convergence.Runtime.RuntimeActorEquipmentApplicationResult!
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic!
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Code.get -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Code.init -> void
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.CompositionCode.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode?
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.CompositionCode.init -> void
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode Code, out string! Message, out Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileCode, out Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode) -> void
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Equals(Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? other) -> bool
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentProfileCode.get -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode?
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentProfileCode.init -> void
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Message.get -> string!
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Message.init -> void
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.RuntimeActorEquipmentApplicationDiagnostic(Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode Code, string! Message, Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileCode = null, Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode = null) -> void
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected = 2 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.CommitFailed = 3 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileRejected = 1 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileResolutionFailed = 0 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorEquipmentApplicationRequest!
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Equals(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? other) -> bool
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Equipment.get -> Convergence.Runtime.RuntimeEquipmentSnapshot!
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.EquipmentRepository.get -> Convergence.Catalog.IEquipmentDefinitionRepository!
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Inventory.get -> Convergence.Runtime.RuntimeInventorySnapshot!
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.RuntimeActorEquipmentApplicationRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null) -> void
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.RuntimeActors.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.SourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
+Convergence.Runtime.RuntimeActorEquipmentApplicationResult
+Convergence.Runtime.RuntimeActorEquipmentApplicationResult.<Clone>$() -> Convergence.Runtime.RuntimeActorEquipmentApplicationResult!
+Convergence.Runtime.RuntimeActorEquipmentApplicationResult.After.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Applied.get -> bool
+Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Before.get -> Convergence.Runtime.RuntimeActorSnapshot!
+Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Composition.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionResult?
+Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic!>!
+Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Equals(Convergence.Runtime.RuntimeActorEquipmentApplicationResult? other) -> bool
+Convergence.Runtime.RuntimeActorEquipmentApplicationResult.EquipmentProfile.get -> Convergence.Runtime.RuntimeEquipmentProfile!
+Convergence.Runtime.RuntimeActorEquipmentApplicationResult.RuntimeActorEquipmentApplicationResult(Convergence.Runtime.RuntimeActorSnapshot! before, Convergence.Runtime.RuntimeActorSnapshot! after, Convergence.Runtime.RuntimeEquipmentProfile! equipmentProfile, Convergence.Runtime.RuntimeActorCombatProfileCompositionResult? composition, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic!>? diagnostics = null) -> void
+Convergence.Runtime.RuntimeActorEquipmentApplicationService
+Convergence.Runtime.RuntimeActorEquipmentApplicationService.Apply(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest! request) -> Convergence.Runtime.RuntimeActorEquipmentApplicationResult!
+Convergence.Runtime.RuntimeActorEquipmentApplicationService.RuntimeActorEquipmentApplicationService(Convergence.Runtime.IRuntimeActorCombatProfileCompositionService! composition, Convergence.Runtime.IRuntimeEquipmentProfileResolver? equipmentProfiles = null) -> void
+override Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.GetHashCode() -> int
+override Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.ToString() -> string!
+override Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.GetHashCode() -> int
+override Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.ToString() -> string!
+override Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Equals(object? obj) -> bool
+override Convergence.Runtime.RuntimeActorEquipmentApplicationResult.GetHashCode() -> int
+override Convergence.Runtime.RuntimeActorEquipmentApplicationResult.ToString() -> string!
+static Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.operator !=(Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? left, Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? right) -> bool
+static Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.operator ==(Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? left, Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? right) -> bool
+static Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.operator !=(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? left, Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? right) -> bool
+static Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.operator ==(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? left, Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? right) -> bool
+static Convergence.Runtime.RuntimeActorEquipmentApplicationResult.operator !=(Convergence.Runtime.RuntimeActorEquipmentApplicationResult? left, Convergence.Runtime.RuntimeActorEquipmentApplicationResult? right) -> bool
+static Convergence.Runtime.RuntimeActorEquipmentApplicationResult.operator ==(Convergence.Runtime.RuntimeActorEquipmentApplicationResult? left, Convergence.Runtime.RuntimeActorEquipmentApplicationResult? right) -> bool

@@ -127,6 +127,236 @@ public interface IRuntimeActorCombatProfileCompositionService
         RuntimeActorCombatProfileCompositionRequest request);
 }
 
+public enum RuntimeActorEquipmentApplicationDiagnosticCode
+{
+    EquipmentProfileResolutionFailed,
+    EquipmentProfileRejected,
+    CombatProfileCompositionRejected,
+    CommitFailed
+}
+
+public sealed record RuntimeActorEquipmentApplicationDiagnostic(
+    RuntimeActorEquipmentApplicationDiagnosticCode Code,
+    string Message,
+    RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileCode = null,
+    RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode = null);
+
+public sealed record RuntimeActorEquipmentApplicationRequest
+{
+    public RuntimeActorEquipmentApplicationRequest(
+        RuntimeActorState actor,
+        RuntimeInventorySnapshot inventory,
+        RuntimeEquipmentSnapshot equipment,
+        IEquipmentDefinitionRepository equipmentRepository,
+        RuntimeStatSourceKind sourceKind,
+        MissingHostedEntityBehavior missingHostedEntityBehavior,
+        RuntimePartyRosterSnapshot? partyRoster = null,
+        IEnumerable<RuntimeActorState>? runtimeActors = null)
+    {
+        if (!Enum.IsDefined(sourceKind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(sourceKind), "Stat source kind is not supported.");
+        }
+        if (!Enum.IsDefined(missingHostedEntityBehavior))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(missingHostedEntityBehavior),
+                "Missing hosted-entity behavior is not supported.");
+        }
+
+        Actor = actor ?? throw new ArgumentNullException(nameof(actor));
+        Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+        Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
+        EquipmentRepository = equipmentRepository ??
+            throw new ArgumentNullException(nameof(equipmentRepository));
+        SourceKind = sourceKind;
+        MissingHostedEntityBehavior = missingHostedEntityBehavior;
+        PartyRoster = partyRoster;
+        RuntimeActors = Array.AsReadOnly(
+            (runtimeActors ?? []).Select(runtimeActor =>
+                runtimeActor ?? throw new ArgumentException(
+                    "Runtime actor maps cannot contain null entries.",
+                    nameof(runtimeActors)))
+            .ToArray());
+    }
+
+    public RuntimeActorState Actor { get; }
+    public RuntimeInventorySnapshot Inventory { get; }
+    public RuntimeEquipmentSnapshot Equipment { get; }
+    public IEquipmentDefinitionRepository EquipmentRepository { get; }
+    public RuntimeStatSourceKind SourceKind { get; }
+    public MissingHostedEntityBehavior MissingHostedEntityBehavior { get; }
+    public RuntimePartyRosterSnapshot? PartyRoster { get; }
+    public IReadOnlyList<RuntimeActorState> RuntimeActors { get; }
+}
+
+public sealed record RuntimeActorEquipmentApplicationResult
+{
+    public RuntimeActorEquipmentApplicationResult(
+        RuntimeActorSnapshot before,
+        RuntimeActorSnapshot after,
+        RuntimeEquipmentProfile equipmentProfile,
+        RuntimeActorCombatProfileCompositionResult? composition,
+        IEnumerable<RuntimeActorEquipmentApplicationDiagnostic>? diagnostics = null)
+    {
+        Before = before ?? throw new ArgumentNullException(nameof(before));
+        After = after ?? throw new ArgumentNullException(nameof(after));
+        EquipmentProfile = equipmentProfile ?? throw new ArgumentNullException(nameof(equipmentProfile));
+        Composition = composition;
+        Diagnostics = RuntimeSnapshotCollections.List(diagnostics);
+    }
+
+    public bool Applied => Composition?.Applied == true && Diagnostics.Count == 0;
+    public RuntimeActorSnapshot Before { get; }
+    public RuntimeActorSnapshot After { get; }
+    public RuntimeEquipmentProfile EquipmentProfile { get; }
+    public RuntimeActorCombatProfileCompositionResult? Composition { get; }
+    public IReadOnlyList<RuntimeActorEquipmentApplicationDiagnostic> Diagnostics { get; }
+}
+
+public interface IRuntimeActorEquipmentApplicationService
+{
+    RuntimeActorEquipmentApplicationResult Apply(
+        RuntimeActorEquipmentApplicationRequest request);
+}
+
+/// <summary>
+/// Atomically applies one candidate loadout and its canonically derived actor combat profile.
+/// </summary>
+public sealed class RuntimeActorEquipmentApplicationService :
+    IRuntimeActorEquipmentApplicationService
+{
+    private readonly IRuntimeEquipmentProfileResolver _equipmentProfiles;
+    private readonly IRuntimeActorCombatProfileCompositionService _composition;
+
+    public RuntimeActorEquipmentApplicationService(
+        IRuntimeActorCombatProfileCompositionService composition,
+        IRuntimeEquipmentProfileResolver? equipmentProfiles = null)
+    {
+        _composition = composition ?? throw new ArgumentNullException(nameof(composition));
+        _equipmentProfiles = equipmentProfiles ?? new RuntimeEquipmentProfileResolver();
+    }
+
+    public RuntimeActorEquipmentApplicationResult Apply(
+        RuntimeActorEquipmentApplicationRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        RuntimeActorSnapshot before = request.Actor.ToSnapshot();
+
+        RuntimeEquipmentProfile equipmentProfile;
+        try
+        {
+            equipmentProfile = _equipmentProfiles.Resolve(
+                request.Inventory,
+                request.Equipment,
+                request.EquipmentRepository) ??
+                throw new InvalidOperationException(
+                    "The equipment-profile resolver returned no profile.");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return Rejected(
+                before,
+                RuntimeEquipmentProfile.Empty,
+                RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileResolutionFailed,
+                $"Equipment profile resolution failed: {exception.Message}");
+        }
+
+        if (equipmentProfile.Diagnostics.Count > 0)
+        {
+            return new RuntimeActorEquipmentApplicationResult(
+                before,
+                before,
+                equipmentProfile,
+                composition: null,
+                equipmentProfile.Diagnostics.Select(diagnostic =>
+                    new RuntimeActorEquipmentApplicationDiagnostic(
+                        RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileRejected,
+                        diagnostic.Message,
+                        EquipmentProfileCode: diagnostic.Code)));
+        }
+
+        RuntimeActorState stagedActor = request.Actor.CreateExecutionClone();
+        stagedActor.ReplaceEquipment(request.Equipment);
+        RuntimeActorState[] stagedRuntimeActors = request.RuntimeActors
+            .Select(runtimeActor => ReferenceEquals(runtimeActor, request.Actor)
+                ? stagedActor
+                : runtimeActor)
+            .ToArray();
+
+        RuntimeActorCombatProfileCompositionResult composition;
+        try
+        {
+            composition = _composition.Compose(
+                new RuntimeActorCombatProfileCompositionRequest(
+                    stagedActor,
+                    request.SourceKind,
+                    request.MissingHostedEntityBehavior,
+                    request.PartyRoster,
+                    stagedRuntimeActors,
+                    equipmentProfile.StatModifiers,
+                    equipmentProfile.GrantedSkillIds)) ??
+                throw new InvalidOperationException(
+                    "The actor-composition service returned no result.");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return Rejected(
+                before,
+                equipmentProfile,
+                RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected,
+                $"Actor combat-profile composition failed: {exception.Message}");
+        }
+
+        if (!composition.Applied)
+        {
+            return new RuntimeActorEquipmentApplicationResult(
+                before,
+                before,
+                equipmentProfile,
+                composition,
+                composition.Diagnostics.Select(diagnostic =>
+                    new RuntimeActorEquipmentApplicationDiagnostic(
+                        RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected,
+                        diagnostic.Message,
+                        CompositionCode: diagnostic.Code)));
+        }
+
+        try
+        {
+            request.Actor.ApplyExecutionStateFrom(stagedActor);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return Rejected(
+                before,
+                equipmentProfile,
+                RuntimeActorEquipmentApplicationDiagnosticCode.CommitFailed,
+                $"Composed equipment state could not be committed: {exception.Message}",
+                composition);
+        }
+
+        return new RuntimeActorEquipmentApplicationResult(
+            before,
+            request.Actor.ToSnapshot(),
+            equipmentProfile,
+            composition);
+    }
+
+    private static RuntimeActorEquipmentApplicationResult Rejected(
+        RuntimeActorSnapshot before,
+        RuntimeEquipmentProfile equipmentProfile,
+        RuntimeActorEquipmentApplicationDiagnosticCode code,
+        string message,
+        RuntimeActorCombatProfileCompositionResult? composition = null) =>
+        new(
+            before,
+            before,
+            equipmentProfile,
+            composition,
+            [new RuntimeActorEquipmentApplicationDiagnostic(code, message)]);
+}
+
 public sealed class RuntimeActorCombatProfileCompositionService :
     IRuntimeActorCombatProfileCompositionService
 {

@@ -62,8 +62,9 @@ internal sealed class TrainingAnnexShopController
         IRuntimeShopOfferResolver shopOffers,
         IShopTransactionService shopTransactions,
         IEquipmentTransitionService equipmentTransitions,
-        IRuntimeEquipmentProfileResolver equipmentProfileResolver,
-        TrainingAnnexRuntimeActor player,
+        IRuntimeActorEquipmentApplicationService equipmentApplication,
+        TrainingAnnexActorRoster roster,
+        RuntimePartyRosterSnapshot partyRoster,
         TrainingAnnexItemActionInventory inventory,
         RuntimeCurrencyLedgerSnapshot wallet,
         RuntimeShopStockSnapshot shopStock,
@@ -71,6 +72,7 @@ internal sealed class TrainingAnnexShopController
         CancellationToken cancellationToken)
     {
         ShopCatalogDefinition shop = catalog.GetRequiredShop(TrainingAnnexHostSupport.TrainingSupply);
+        TrainingAnnexRuntimeActor player = roster.Player;
         RuntimeActorSnapshot playerSnapshot = player.Actor.State.ToSnapshot();
         int luck = StatAsInt(playerSnapshot, StandardProgressionIds.Luck);
         TrainingAnnexShopOfferResolutionResult offerResolution =
@@ -117,8 +119,9 @@ internal sealed class TrainingAnnexShopController
                 offers,
                 shopTransactions,
                 equipmentTransitions,
-                equipmentProfileResolver,
-                player,
+                equipmentApplication,
+                roster,
+                partyRoster,
                 inventory,
                 wallet,
                 shopStock,
@@ -162,8 +165,9 @@ internal sealed class TrainingAnnexShopController
         IReadOnlyList<TrainingAnnexResolvedShopOffer> offers,
         IShopTransactionService shopTransactions,
         IEquipmentTransitionService equipmentTransitions,
-        IRuntimeEquipmentProfileResolver equipmentProfileResolver,
-        TrainingAnnexRuntimeActor player,
+        IRuntimeActorEquipmentApplicationService equipmentApplication,
+        TrainingAnnexActorRoster roster,
+        RuntimePartyRosterSnapshot partyRoster,
         TrainingAnnexItemActionInventory inventory,
         RuntimeCurrencyLedgerSnapshot wallet,
         RuntimeShopStockSnapshot shopStock,
@@ -254,8 +258,9 @@ internal sealed class TrainingAnnexShopController
             await PromptEquipPurchasedEquipmentAsync(
                 catalog,
                 equipmentTransitions,
-                equipmentProfileResolver,
-                player,
+                equipmentApplication,
+                roster,
+                partyRoster,
                 inventory,
                 offer,
                 purchasedEquipmentInstanceId!.Value,
@@ -376,8 +381,9 @@ internal sealed class TrainingAnnexShopController
     private async ValueTask PromptEquipPurchasedEquipmentAsync(
         GameDataCatalog catalog,
         IEquipmentTransitionService equipmentTransitions,
-        IRuntimeEquipmentProfileResolver equipmentProfileResolver,
-        TrainingAnnexRuntimeActor player,
+        IRuntimeActorEquipmentApplicationService equipmentApplication,
+        TrainingAnnexActorRoster roster,
+        RuntimePartyRosterSnapshot partyRoster,
         TrainingAnnexItemActionInventory inventory,
         TrainingAnnexResolvedShopOffer offer,
         RuntimeInstanceId equipmentInstanceId,
@@ -400,26 +406,46 @@ internal sealed class TrainingAnnexShopController
         }
 
         commands.Add(equipSelection.Command);
+        TrainingAnnexRuntimeActor player = roster.Player;
         EquipmentTransitionResult equipResult = equipmentTransitions.Equip(
             inventory.Snapshot,
             player.Actor.State.ToSnapshot().Equipment,
             equipmentInstanceId,
             slot,
             slot,
-            []);
-        equipmentEvidence.Add(new TrainingAnnexEquipmentChangeEvidence(
-            equipmentInstanceId,
-            offer.Runtime.ContentId,
-            slot,
-            equipResult.Code,
-            equipResult.Applied));
+            roster.AllActors
+                .Where(actor => !ReferenceEquals(actor, player))
+                .Select(actor => actor.Actor.State.ToSnapshot().Equipment));
         if (equipResult.Applied)
         {
-            player.Actor.State.ReplaceEquipment(equipResult.After);
-            RuntimeEquipmentProfile profile = equipmentProfileResolver.Resolve(
-                inventory.Snapshot,
-                equipResult.After,
-                catalog);
+            RuntimeActorEquipmentApplicationResult application = equipmentApplication.Apply(
+                new RuntimeActorEquipmentApplicationRequest(
+                    player.Actor.State,
+                    inventory.Snapshot,
+                    equipResult.After,
+                    catalog,
+                    RuntimeStatSourceKind.ActiveHostedEntity,
+                    MissingHostedEntityBehavior.RejectStatResolution,
+                    partyRoster,
+                    roster.AllActors.Select(actor => actor.Actor.State)));
+            equipmentEvidence.Add(new TrainingAnnexEquipmentChangeEvidence(
+                equipmentInstanceId,
+                offer.Runtime.ContentId,
+                slot,
+                equipResult.Code,
+                application.Applied));
+            if (!application.Applied)
+            {
+                string applicationDiagnostics = string.Join(
+                    "; ",
+                    application.Diagnostics.Select(diagnostic => diagnostic.Message));
+                await _eventSink.PublishAsync(
+                    $"Equipment equip rejected: {offer.DisplayName}; {applicationDiagnostics}",
+                    cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            RuntimeEquipmentProfile profile = application.EquipmentProfile;
             string slots = string.Join(
                 ", ",
                 profile.EquippedDefinitions
@@ -431,6 +457,12 @@ internal sealed class TrainingAnnexShopController
             return;
         }
 
+        equipmentEvidence.Add(new TrainingAnnexEquipmentChangeEvidence(
+            equipmentInstanceId,
+            offer.Runtime.ContentId,
+            slot,
+            equipResult.Code,
+            Applied: false));
         string diagnostics = string.Join(
             "; ",
             equipResult.Diagnostics.Select(diagnostic => diagnostic.Message));

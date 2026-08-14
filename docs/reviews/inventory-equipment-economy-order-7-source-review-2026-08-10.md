@@ -1405,3 +1405,55 @@ restore, DemoHost, and Godot integration without treating prior reports as
 proof. It found and corrected three documentation precision issues and found no
 remaining High, Medium, or Low actionable defect within R10's documentation
 scope. It does not replace the broader independent O7-R11 runtime audit.
+
+### O7-R11-C1: Apply Live Equipment Profiles Atomically
+
+- **Baseline and commit:** `49d88a2d..this correction commit`.
+- **Finding corrected:** an accepted equipment transition produced a candidate
+  loadout, but the active Training Annex host replaced the live loadout before
+  canonical composition had accepted. A later composition rejection could
+  therefore leave the live actor with the new instance reference but without
+  its Defense, Evasion, or equipped-only passive contribution.
+- **Actual destination:** `RuntimeActorEquipmentApplicationService` resolves the
+  candidate equipment profile, replaces the loadout on an execution clone,
+  runs the existing `RuntimeActorCombatProfileCompositionService`, and commits
+  the complete clone only after every step accepts. It adds no equipment policy
+  and no equipment-specific combat formula.
+- **Changed Framework/API files:**
+  `Runtime/RuntimeActorCombatProfileComposition.cs`,
+  `PublicAPI.Shipped.txt`, and the deliberately empty
+  `PublicAPI.Unshipped.txt` release gate.
+- **Changed host files:** `TrainingAnnexShopController.cs` and
+  `CleanTrainingAnnexPlayHost.cs`. Equip success is now presented only after
+  atomic application accepts, and complete roster loadouts are supplied to the
+  existing cross-actor collision check.
+- **Changed tests:** `ProgressionPolicyTests.cs` proves successful equip and
+  unequip commit loadout, Defense/Evasion, and equipped-only passive state
+  together; a composition rejection preserves the complete live actor.
+  `CleanTrainingAnnexPlayHostTests.cs` proves the catalog equipment path changes
+  effective combat values and a host-level composition rejection retains the
+  purchased inventory copy without equipping it or publishing success.
+- **Focused tests:** 2 Framework equipment-application tests and 2 DemoHost shop
+  integration tests passed: 4 total, 0 failed, 0 skipped.
+- **Full suite:** 1,796 Framework tests, 183 DemoHost tests, and 7
+  ContentValidator tests passed: 1,986 total, 0 failed, 0 skipped.
+- **Contract versions:** no wire shape changed. Runtime save contract remains
+  v19, content schema remains v10, and active pack versions remain unchanged.
+
+#### Explicit O7-R11-C1 Evidence
+
+1. **The live actor commit is atomic.** Profile resolution and composition act
+   on immutable inputs plus an execution clone. The live actor receives one
+   complete execution-state commit only after both operations accept.
+2. **Rejection preserves authority.** Profile faults, profile diagnostics,
+   composition faults, and composition diagnostics return typed application
+   diagnostics with equal before/after live actor snapshots. Cancellation is
+   not converted into a gameplay rejection.
+3. **Equipment effects share canonical composition.** Defense, Evasion, and
+   granted passives still enter through `RuntimeEquipmentProfileResolver` and
+   `RuntimeActorCombatProfileCompositionService`; this correction introduces no
+   second formula or granted-skill policy.
+4. **Presentation follows commit.** Training Annex emits equipped-success only
+   after application succeeds. A rejected composition leaves the purchased
+   equipment instance in inventory, leaves the prior actor loadout/profile
+   intact, and emits a rejection instead.

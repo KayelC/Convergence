@@ -295,7 +295,10 @@ recovery contracts. `RuntimeInventorySnapshot` is the sole equipment-instance
 owner; actor loadouts reference those instances under authored slot IDs.
 `RuntimeEquipmentProfileResolver` derives the current basic attack, numeric
 contributions, and equipped-only skill grants without copying grants into
-learned state.
+learned state. `RuntimeActorEquipmentApplicationService` stages a candidate
+loadout and that derived profile on an actor clone, runs canonical combat-profile
+composition, and commits the complete actor only after every step accepts.
+Rejected application results expose equal before/after actor snapshots.
 
 Hosts allocate globally fresh equipment instance IDs and adopt successful
 after-snapshots. `ShopTransactionResult` coordinates inventory, currency, and

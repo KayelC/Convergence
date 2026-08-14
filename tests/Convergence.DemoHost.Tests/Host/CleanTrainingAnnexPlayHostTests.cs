@@ -2959,6 +2959,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(paddedJacket.InstanceId, transaction.EquipmentInstanceId);
         Assert.Equal(paddedJacket.InstanceId, equipment.EquipmentInstanceId);
         Assert.Contains(StandardEquipmentSlotIds.Armor, summary.EquipmentProfile.EquippedDefinitions.Keys);
+        Assert.Equal(6m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Defense]);
+        Assert.Equal(1m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Evasion]);
         Assert.Equal(
             [
                 CleanTrainingAnnexPlayCommand.OpenShop,
@@ -2988,6 +2990,45 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Contains(
             "Equipped Padded Jacket in Armor; equipment profile now",
             text,
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_EquipmentCompositionRejectionKeepsPurchasedCopyButNotLoadout()
+    {
+        var io = new ScriptedGameIO().QueueMenu(11, 0, 3, 0, 9);
+        using var output = new StringWriter();
+        var composition = new RejectNthPlayerCompositionService(rejectCall: 2);
+        var host = CreateHost(
+            io,
+            output,
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100),
+            combatProfileCompositionFactory: (skills, stats, resources, _) =>
+                composition.Initialize(skills, stats, resources));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        TrainingAnnexEquipmentChangeEvidence equipment = Assert.Single(summary.ShopEquipmentChanges);
+        RuntimeEquipmentInstanceSnapshot paddedJacket = Assert.Single(
+            summary.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Armor),
+            instance => instance.DefinitionId == Qualified("padded_jacket"));
+        Assert.False(equipment.Applied);
+        Assert.Equal(ResourceTransactionCode.Applied, equipment.Code);
+        Assert.DoesNotContain(
+            paddedJacket.InstanceId,
+            summary.Equipment.EquippedInstanceIds.Values);
+        Assert.DoesNotContain(StandardProgressionIds.Defense, summary.PlayerStats.EffectiveStats.Keys);
+        Assert.DoesNotContain(StandardProgressionIds.Evasion, summary.PlayerStats.EffectiveStats.Keys);
+        Assert.DoesNotContain(
+            "Equipped Padded Jacket in Armor",
+            output.ToString(),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Equipment equip rejected: Padded Jacket; Rejected by the restore composition test.",
+            output.ToString(),
             StringComparison.Ordinal);
         io.AssertConsumed();
     }

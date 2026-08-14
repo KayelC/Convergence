@@ -21,6 +21,7 @@ serialization, or game-specific currency names.
 | `RuntimeEquipmentSnapshot` | one actor's slot-to-instance references | equipment ownership or definitions |
 | `IEquipmentSlotLayoutPolicy` | slot vocabulary and profile/assignment compatibility | ownership, combat formulas, grants |
 | `RuntimeEquipmentProfileResolver` | current projection of equipped definitions, basic attack, modifiers, and grants | learned skills, durable ownership, combat math |
+| `RuntimeActorEquipmentApplicationService` | atomic staging and commit of one candidate loadout plus canonical actor composition | slot policy, equipment formula, presentation |
 | `RuntimeCurrencyLedgerSnapshot` | nonnegative balances keyed by currency ID | pricing formulas or presentation names |
 | `RuntimeShopOfferSnapshot` | resolver-created immutable offer identity, content, pricing, and stock profile | durable stock quantity or host presentation |
 | `RuntimeShopStockSnapshot` | remaining quantities for tracked offer identities | offered content or pricing |
@@ -109,8 +110,9 @@ flowchart TB
     Collision{"Already in this or another actor loadout?"}
     Candidate["Create immutable candidate loadout"]
     Resolve["Resolve profile against inventory + catalog + layout"]
+    Apply["RuntimeActorEquipmentApplicationService stages profile + actor"]
     Compose{"Canonical actor composition accepts?"}
-    Commit["Host commits loadout and composed actor together"]
+    Commit["Framework commits complete staged actor"]
     Reject["Return unchanged loadout + typed diagnostic"]
     ContractFault["Throw argument exception; caller violated contract"]
 
@@ -123,7 +125,8 @@ flowchart TB
     Assignment -->|"yes"| Collision
     Collision -->|"yes"| Reject
     Collision -->|"no"| Candidate
-    Candidate --> Resolve
+    Candidate --> Apply
+    Apply --> Resolve
     Resolve -->|"diagnostics"| Reject
     Resolve -->|"valid"| Compose
     Compose -->|"no"| Reject
@@ -131,9 +134,15 @@ flowchart TB
 ```
 
 `Unequip` validates the target slot and returns a candidate loadout with that
-slot removed. Profile resolution then removes grants and numeric contributions.
-The host session must not publish success between loadout replacement and
-canonical actor recomposition.
+slot removed. The application service resolves that candidate on an execution
+clone, removes grants and numeric contributions during canonical composition,
+and commits the complete staged actor only after acceptance. A rejected profile
+or composition leaves the live actor unchanged, so the host cannot publish a
+success between loadout replacement and recomposition.
+
+The application service is a fixed atomic orchestration boundary, not a policy:
+slot compatibility and stat/resource behavior remain delegated to their
+existing selected policies. It does not invent a second equipment formula.
 
 ## One Equipment Profile
 

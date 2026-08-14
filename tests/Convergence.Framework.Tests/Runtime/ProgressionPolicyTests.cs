@@ -217,6 +217,138 @@ public sealed class ProgressionPolicyTests
     }
 
     [Fact]
+    public void Order7R11_EquipmentApplicationCommitsLoadoutStatsAndPassiveAsOneActorState()
+    {
+        RuntimeActorState hostedEntity = CreateActor("application_hosted", 20m);
+        RuntimeActorState vessel = CreateActor("application_vessel", 5m, hpCurrent: 90m);
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
+        ContentId armorId = ContentId.Parse("test.pack:application_armor");
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("application-armor-001");
+        SkillDefinition equipmentPassive = PassiveSkill(
+            "test.pack:application_passive",
+            ContentId.Parse("owner_turn_end"),
+            5m);
+        var armor = new EquipmentDefinition(
+            armorId,
+            "Application Armor",
+            "Exercises atomic live equipment application.",
+            StandardEquipmentSlotIds.Armor,
+            10,
+            grantedSkillIds: [equipmentPassive.Id],
+            armor: new EquipmentArmorProfileDefinition(6, 2));
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Armor,
+                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
+            ]);
+        var candidate = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Armor,
+                armorInstanceId)
+        ]);
+        var application = new RuntimeActorEquipmentApplicationService(
+            new RuntimeActorCombatProfileCompositionService(
+                _stats,
+                _resources,
+                new SkillRepository(equipmentPassive)));
+
+        RuntimeActorEquipmentApplicationResult equipped = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                vessel,
+                inventory,
+                candidate,
+                new EquipmentRepository(armor),
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                partyRoster,
+                [hostedEntity]));
+
+        Assert.True(equipped.Applied);
+        Assert.Equal(armorInstanceId, vessel.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Armor]);
+        Assert.Equal(6m, vessel.Stats[StandardProgressionIds.Defense]);
+        Assert.Equal(2m, vessel.Stats[StandardProgressionIds.Evasion]);
+        Assert.Equal(equipmentPassive.Id, Assert.Single(vessel.Passives.Entries).Skill.Id);
+        Assert.DoesNotContain(equipmentPassive.Id, vessel.Skills.LearnedSkillIds);
+        Assert.DoesNotContain(equipmentPassive.Id, vessel.Skills.EquippedSkillIds);
+        Assert.Equal(
+            equipped.After.Equipment.EquippedInstanceIds.ToArray(),
+            vessel.ToSnapshot().Equipment.EquippedInstanceIds.ToArray());
+
+        RuntimeActorEquipmentApplicationResult unequipped = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                vessel,
+                inventory,
+                new RuntimeEquipmentSnapshot(),
+                new EquipmentRepository(armor),
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                partyRoster,
+                [hostedEntity]));
+
+        Assert.True(unequipped.Applied);
+        Assert.Empty(vessel.Equipment.EquippedInstanceIds);
+        Assert.DoesNotContain(StandardProgressionIds.Defense, vessel.Stats.Keys);
+        Assert.DoesNotContain(StandardProgressionIds.Evasion, vessel.Stats.Keys);
+        Assert.Empty(vessel.Passives.Entries);
+    }
+
+    [Fact]
+    public void Order7R11_EquipmentApplicationRejectionLeavesTheCompleteLiveActorUnchanged()
+    {
+        RuntimeActorState actor = CreateActor("rejected_application_actor", 5m);
+        RuntimeActorSnapshot before = actor.ToSnapshot();
+        ContentId armorId = ContentId.Parse("test.pack:rejected_application_armor");
+        ContentId missingSkillId = ContentId.Parse("test.pack:missing_equipment_skill");
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("rejected-application-armor-001");
+        var armor = new EquipmentDefinition(
+            armorId,
+            "Rejected Application Armor",
+            "References an unavailable granted skill.",
+            StandardEquipmentSlotIds.Armor,
+            10,
+            grantedSkillIds: [missingSkillId],
+            armor: new EquipmentArmorProfileDefinition(6, 2));
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Armor,
+                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
+            ]);
+        var candidate = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Armor,
+                armorInstanceId)
+        ]);
+        var application = new RuntimeActorEquipmentApplicationService(
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository()));
+
+        RuntimeActorEquipmentApplicationResult result = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                actor,
+                inventory,
+                candidate,
+                new EquipmentRepository(armor),
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats));
+
+        Assert.False(result.Applied);
+        Assert.Equal(
+            RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected,
+            Assert.Single(result.Diagnostics).Code);
+        Assert.Equal(
+            RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMissing,
+            result.Diagnostics[0].CompositionCode);
+        AssertCompositionStateUnchanged(before, actor.ToSnapshot());
+        AssertCompositionStateUnchanged(before, result.Before);
+        AssertCompositionStateUnchanged(before, result.After);
+    }
+
+    [Fact]
     public void ActorComposition_MissingHostedEntityPolicyEitherRejectsOrUsesActorStats()
     {
         RuntimeActorState rejectedActor = CreateActor("rejected_vessel", 7m);

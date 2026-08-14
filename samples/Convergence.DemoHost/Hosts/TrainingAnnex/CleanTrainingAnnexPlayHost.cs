@@ -413,6 +413,9 @@ internal sealed class CleanTrainingAnnexPlayHost
         IEquipmentTransitionService equipmentTransitions = resourceManagement.Equipment;
         IEconomyTransactionService economy = resourceManagement.Economy;
         var equipmentProfileResolver = new RuntimeEquipmentProfileResolver();
+        var equipmentApplication = new RuntimeActorEquipmentApplicationService(
+            combatProfileCompositionService,
+            equipmentProfileResolver);
         IPartyRosterTransitionService partyRosterTransitions = new PartyRosterTransitionService(
             rosterCapacityPolicy);
         IFusionTransactionService fusionTransactionService = new FusionTransactionService(
@@ -1402,8 +1405,9 @@ internal sealed class CleanTrainingAnnexPlayHost
                             resourceManagement.ShopOffers,
                             resourceManagement.Shop,
                             equipmentTransitions,
-                            equipmentProfileResolver,
-                            roster.Player,
+                            equipmentApplication,
+                            roster,
+                            partyRoster,
                             inventory,
                             wallet,
                             shopStock,
@@ -1414,6 +1418,7 @@ internal sealed class CleanTrainingAnnexPlayHost
                         shopTransactions.AddRange(shopResult.Transactions);
                         shopEquipmentChanges.AddRange(shopResult.EquipmentChanges);
                         shopOfferDiagnostics.AddRange(shopResult.OfferDiagnostics);
+                        composeAfterCommand = false;
                         break;
                     }
                 case CleanTrainingAnnexPlayCommand.OpenRecoveryFacility:

@@ -156,12 +156,37 @@ Passing other loadouts is load-bearing: it prevents one instance from being
 equipped by two actors. The returned `After` is the candidate loadout; the
 service does not silently mutate the actor.
 
-Before presenting the change as complete, the host must resolve and apply the
-actor's canonical combat profile using the candidate loadout and current
-inventory. Vessel games pass the resolved `StatModifiers` and
-`GrantedSkillIds` into the same actor-composition service used at actor
-creation, growth, hosted-entity changes, and restore. Commit the candidate
-loadout and successful composition as one host-session operation.
+Before presenting the change as complete, pass the candidate loadout to
+`RuntimeActorEquipmentApplicationService`. It resolves the canonical equipment
+profile, composes the complete actor on an execution clone, and commits the
+loadout plus composed actor state only when both operations accept:
+
+```csharp
+var equipmentApplication = new RuntimeActorEquipmentApplicationService(
+    actorComposition,
+    profileResolver);
+
+RuntimeActorEquipmentApplicationResult applied = equipmentApplication.Apply(
+    new RuntimeActorEquipmentApplicationRequest(
+        actor,
+        inventory,
+        result.After,
+        catalog,
+        RuntimeStatSourceKind.ActiveHostedEntity,
+        MissingHostedEntityBehavior.RejectStatResolution,
+        partyRoster,
+        runtimeActors));
+
+if (!applied.Applied)
+{
+    Present(applied.Diagnostics);
+    return;
+}
+```
+
+On rejection, `Before` and `After` both describe the unchanged live actor. The
+equipment transition remains a pure candidate operation; the application
+service is the live actor commit boundary.
 
 Do not manually copy grants into learned skills. Do not independently add
 armor Defense or boots Evasion in battle code.

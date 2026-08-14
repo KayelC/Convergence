@@ -200,14 +200,14 @@ host. Aggregate save validation independently rechecks the whole graph.
 
 ## Correction Order
 
-| Checkpoint | Work | Commit boundary |
-|---|---|---|
-| O7-R11-A | Preserve this audit and correction roadmap | documentation only |
-| O7-R11-C1 | Add atomic canonical live equipment application and migrate DemoHost | runtime + focused tests + affected docs/API evidence |
-| O7-R11-C2 | Make aggregate restore derive equipment contributions | runtime + host/Godot/persistence tests + API evidence |
-| O7-R11-C3 | Contain custom slot-policy faults at every Framework boundary | runtime + validation/transition/profile/save tests + API evidence |
-| O7-R11-C4 | Correct recovery wording and document trusted host concurrency/collision boundaries | three-audience docs + executable documentation/boundary tests |
-| O7-R11-C5 | Freshly re-read post-correction source/docs and run the durable release gate | closure report + tracking/evidence only |
+| Checkpoint | State | Work | Commit boundary |
+|---|---|---|---|
+| O7-R11-A | complete | Preserve this audit and correction roadmap | documentation only |
+| O7-R11-C1 | complete | Add atomic canonical live equipment application and migrate DemoHost | runtime + focused tests + affected docs/API evidence |
+| O7-R11-C2 | open | Make aggregate restore derive equipment contributions | runtime + host/Godot/persistence tests + API evidence |
+| O7-R11-C3 | open | Contain custom slot-policy faults at every Framework boundary | runtime + validation/transition/profile/save tests + API evidence |
+| O7-R11-C4 | open | Correct recovery wording and document trusted host concurrency/collision boundaries | three-audience docs + executable documentation/boundary tests |
+| O7-R11-C5 | open | Freshly re-read post-correction source/docs and run the durable release gate | closure report + tracking/evidence only |
 
 Each correction receives its own green commit. Order 7 remains `partial` until
 O7-R11-C5 finds no remaining realistic reachable defect or documentation
