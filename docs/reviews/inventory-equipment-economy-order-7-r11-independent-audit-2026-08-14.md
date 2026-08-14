@@ -172,6 +172,41 @@ changes. A protected-only actor with no other change receives
 the related developer/technical explanation where the R11 API corrections
 change responsibilities.
 
+### O7-R11-M3: Live item transitions accept an empty content identity
+
+**Intended invariant:** a successful live inventory transition must contain
+only items identified by valid `ContentId` values. Invalid host command input
+must return a typed rejection with the exact supplied inventory as both before
+and after. This is distinct from decoded save snapshots, which deliberately may
+represent malformed item keys long enough for aggregate save validation to
+report their paths.
+
+**Reachable path:** `InventoryTransitionService.AddItem` validates quantity and
+stack arithmetic but never validates `itemId`. A host can therefore call
+`AddItem(snapshot, default, 1)`, receive `Applied`, and store the empty ID as an
+inventory key. `RemoveItem` and `ReserveItem` likewise treat an empty ID as an
+ordinary lookup rather than invalid command input.
+
+**Consequence:** a public gameplay transition can create live inventory that
+the save validator later rejects as `InvalidContentId` and that no catalog item
+can resolve. The failure is delayed beyond the command that introduced it, so
+the host receives false success instead of a local typed diagnostic.
+
+**Evidence:**
+
+- `RuntimeInventorySnapshot` intentionally permits an empty item key so
+  `RuntimeSaveValidator_AggregatesDefaultIdentifiersBeforeRestoreOrLookup` can
+  aggregate a path-specific malformed-save diagnostic;
+- `InventoryTransitionService.AddItem`, `.RemoveItem`, and `.ReserveItem` have
+  no `itemId.IsValid` boundary check; and
+- currency and equipment command boundaries already reject their corresponding
+  invalid identities before producing accepted state.
+
+**Correction checkpoint O7-R11-C5:** add a distinct
+`ResourceTransactionCode.InvalidItemId`, reject empty IDs atomically in all
+three live item operations, retain permissive malformed-snapshot construction
+for aggregate validation, and document/test the boundary distinction.
+
 ## Trusted Host Boundary: Concurrent Candidate Adoption
 
 `ShopTransactionService` is deliberately stateless. It calculates an immutable
@@ -207,10 +242,11 @@ host. Aggregate save validation independently rechecks the whole graph.
 | O7-R11-C2 | complete | Make aggregate restore derive equipment contributions | runtime + host/Godot/persistence tests + API evidence |
 | O7-R11-C3 | complete | Contain custom slot-policy faults at every Framework boundary | runtime + validation/transition/profile/save tests + API evidence |
 | O7-R11-C4 | complete | Correct recovery wording and document trusted host concurrency/collision boundaries | three-audience docs + executable documentation/boundary tests |
-| O7-R11-C5 | open | Freshly re-read post-correction source/docs and run the durable release gate | closure report + tracking/evidence only |
+| O7-R11-C5 | open | Reject invalid IDs at live item-transition boundaries while preserving malformed-save diagnostics | runtime + focused tests + affected docs/API evidence |
+| O7-R11-C6 | open | Freshly re-read post-correction source/docs and run the durable release gate | closure report + tracking/evidence only |
 
 Each correction receives its own green commit. Order 7 remains `partial` until
-O7-R11-C5 finds no remaining realistic reachable defect or documentation
+O7-R11-C6 finds no remaining realistic reachable defect or documentation
 contradiction and the complete release gate passes.
 
 ## Scope Guard

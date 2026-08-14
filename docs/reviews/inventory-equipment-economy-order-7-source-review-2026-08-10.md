@@ -612,9 +612,9 @@ gates remain mandatory before O7-R8 can be recorded complete.
 
 The fresh source-first audit is recorded in
 [the O7-R11 independent audit](inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md).
-It found three reachable authority/fault-boundary defects, one documentation
+It found four reachable authority/fault-boundary defects, one documentation
 contradiction, and one trusted host concurrency boundary that requires explicit
-guidance and evidence. O7-R11-A through O7-R11-C5 in that record are the active
+guidance and evidence. O7-R11-A through O7-R11-C6 in that record are the active
 correction order. This capability remains `partial` until the post-correction
 audit and complete release gate pass.
 
