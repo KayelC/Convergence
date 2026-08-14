@@ -8,7 +8,8 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R10 complete; O7-R11 pending
+**Implementation status:** O7-R1 through O7-R10 complete; O7-R11 corrective
+audit in progress
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -608,6 +609,14 @@ gates remain mandatory before O7-R8 can be recorded complete.
 - run the complete local release gate; and
 - return the capability to `complete` only if no realistic reachable defect or
   documentation contradiction remains.
+
+The fresh source-first audit is recorded in
+[the O7-R11 independent audit](inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md).
+It found three reachable authority/fault-boundary defects, one documentation
+contradiction, and one trusted host concurrency boundary that requires explicit
+guidance and evidence. O7-R11-A through O7-R11-C5 in that record are the active
+correction order. This capability remains `partial` until the post-correction
+audit and complete release gate pass.
 
 ## Per-Checkpoint Verification
 
