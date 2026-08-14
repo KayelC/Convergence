@@ -10429,6 +10429,7 @@ Convergence.Execution.DamageHitExecutionEvidence.ContactSourceEffectId.get -> Co
 Convergence.Execution.DamageHitExecutionEvidence.ContactSourceEffectIndex.get -> int?
 Convergence.Execution.DamageHitExecutionEvidence.DamageHitExecutionEvidence(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, int effectIndex, Convergence.Execution.DamageHitResolution! resolution, Convergence.Content.ElementalAffinity resolvedAffinity, Convergence.Runtime.RuntimeInstanceId? affectedActorId, Convergence.Content.ContentId? affectedResourceId, decimal appliedResourceDelta, Convergence.Content.DamageContactMode contactMode, Convergence.Content.EffectLocalId? contactSourceEffectId, int? contactSourceEffectIndex) -> void
 Convergence.Validation.ContentValidationErrorCode.SharedContactDependencyInvalid = 44 -> Convergence.Validation.ContentValidationErrorCode
+Convergence.Validation.ContentValidationErrorCode.PolicyRejected = 45 -> Convergence.Validation.ContentValidationErrorCode
 Convergence.Content.EquipmentBasicAttackDefinition.PrimaryEffectId.get -> Convergence.Content.EffectLocalId?
 Convergence.Content.EquipmentBasicAttackDefinition.PrimaryEffectId.init -> void
 Convergence.Content.EquipmentBasicAttackDefinition.SecondaryEffects.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.EffectDefinition!>!
@@ -11544,6 +11545,7 @@ Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.EquipmentInstanceId.init -
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.InvalidIdentifier = 2 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.MissingEquipmentDefinition = 0 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.MissingEquipmentInstance = 3 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
+Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.PolicyRejected = 4 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch = 1 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileResolver.Resolve(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository) -> Convergence.Runtime.RuntimeEquipmentProfile!
 Convergence.Runtime.RuntimeSaveValidationCode.DuplicateEquipmentInstanceId = 90 -> Convergence.Runtime.RuntimeSaveValidationCode
@@ -11557,6 +11559,7 @@ Convergence.Content.EquipmentDefinition.EquipmentDefinition(Convergence.Content.
 Convergence.Content.EquipmentDefinition.SlotId.get -> Convergence.Content.ContentId
 Convergence.Runtime.EquipmentSlotLayoutCode
 Convergence.Runtime.EquipmentSlotLayoutCode.AssignmentMismatch = 3 -> Convergence.Runtime.EquipmentSlotLayoutCode
+Convergence.Runtime.EquipmentSlotLayoutCode.PolicyRejected = 4 -> Convergence.Runtime.EquipmentSlotLayoutCode
 Convergence.Runtime.EquipmentSlotLayoutCode.Compatible = 0 -> Convergence.Runtime.EquipmentSlotLayoutCode
 Convergence.Runtime.EquipmentSlotLayoutCode.ProfileMismatch = 2 -> Convergence.Runtime.EquipmentSlotLayoutCode
 Convergence.Runtime.EquipmentSlotLayoutCode.UnsupportedSlot = 1 -> Convergence.Runtime.EquipmentSlotLayoutCode
@@ -11831,6 +11834,7 @@ Convergence.Runtime.IShopStockPolicyFactory.PolicyId.get -> Convergence.Content.
 Convergence.Runtime.IShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! stock, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId) -> Convergence.Runtime.ShopTransactionResult!
 Convergence.Runtime.IShopTransactionService.Sell(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! stock, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int sellerLuck, Convergence.Runtime.RuntimeInstanceId? soldEquipmentInstanceId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.ShopTransactionResult!
 Convergence.Runtime.ResourceTransactionCode.InvalidShopStock = 23 -> Convergence.Runtime.ResourceTransactionCode
+Convergence.Runtime.ResourceTransactionCode.EquipmentSlotPolicyRejected = 24 -> Convergence.Runtime.ResourceTransactionCode
 Convergence.Runtime.RuntimeRestoredSession.ShopStock.get -> Convergence.Runtime.RuntimeShopStockSnapshot!
 Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! shopStock, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 19) -> void
 Convergence.Runtime.RuntimeSaveGameSnapshot.ShopStock.get -> Convergence.Runtime.RuntimeShopStockSnapshot!
@@ -11840,6 +11844,7 @@ Convergence.Runtime.RuntimeSaveValidationCode.MissingShopOffer = 93 -> Convergen
 Convergence.Runtime.RuntimeSaveValidationCode.MissingShopStockEntry = 96 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.NegativeShopStockQuantity = 95 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.UnexpectedShopStockEntry = 97 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.EquipmentSlotPolicyRejected = 98 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeShopOfferIdentity
 Convergence.Runtime.RuntimeShopOfferIdentity.<Clone>$() -> Convergence.Runtime.RuntimeShopOfferIdentity!
 Convergence.Runtime.RuntimeShopOfferIdentity.Equals(Convergence.Runtime.RuntimeShopOfferIdentity? other) -> bool
@@ -11850,6 +11855,7 @@ Convergence.Runtime.RuntimeShopOfferResolutionCode.EquipmentSlotProfileMismatch 
 Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidOfferIdentity = 8 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidStockPolicyConfiguration = 7 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.UnsupportedContentKind = 10 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+Convergence.Runtime.RuntimeShopOfferResolutionCode.EquipmentSlotPolicyRejected = 11 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeShopOfferResolutionCode Code, out Convergence.Content.ContentId ContentId, out string! Message, out Convergence.Runtime.ShopPricingPolicyDiagnostic? PricingDiagnostic, out Convergence.Runtime.ShopStockPolicyDiagnostic? StockDiagnostic) -> void
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.RuntimeShopOfferResolutionDiagnostic(Convergence.Runtime.RuntimeShopOfferResolutionCode Code, Convergence.Content.ContentId ContentId, string! Message, Convergence.Runtime.ShopPricingPolicyDiagnostic? PricingDiagnostic = null, Convergence.Runtime.ShopStockPolicyDiagnostic? StockDiagnostic = null) -> void
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.StockDiagnostic.get -> Convergence.Runtime.ShopStockPolicyDiagnostic?

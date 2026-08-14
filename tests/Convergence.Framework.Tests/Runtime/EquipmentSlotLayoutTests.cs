@@ -1,4 +1,5 @@
 using Convergence.Content;
+using Convergence.Catalog;
 using Convergence.Runtime;
 using Convergence.Validation;
 using Xunit;
@@ -127,6 +128,115 @@ public sealed class EquipmentSlotLayoutTests
             string.Join(Environment.NewLine, custom.Errors.Select(error => error.Message)));
     }
 
+    [Theory]
+    [InlineData(BrokenPolicyBehavior.ReturnNull)]
+    [InlineData(BrokenPolicyBehavior.ReturnUndefined)]
+    [InlineData(BrokenPolicyBehavior.Throw)]
+    public void Order7R11_BrokenSlotPolicyIsTypedAcrossContentAndRuntimeBoundaries(
+        BrokenPolicyBehavior behavior)
+    {
+        EquipmentDefinition definition = Definition(
+            StandardEquipmentSlotIds.Weapon,
+            EquipmentProfileKind.Weapon);
+        var policy = new BrokenEquipmentSlotLayoutPolicy(behavior);
+        RuntimeInstanceId instanceId = RuntimeInstanceId.Parse("policy-equipment-001");
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Weapon,
+                    [new RuntimeEquipmentInstanceSnapshot(instanceId, definition.Id)])
+            ]);
+        var loadout = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Weapon,
+                instanceId)
+        ]);
+        var definitions = new EquipmentOnlyRepository(definition);
+
+        ContentValidationResult content =
+            new SkillSystemContentValidator(policy).Validate(Request(definition));
+        EquipmentTransitionResult equip = new EquipmentTransitionService(policy).Equip(
+            inventory,
+            new RuntimeEquipmentSnapshot(),
+            instanceId,
+            StandardEquipmentSlotIds.Weapon,
+            StandardEquipmentSlotIds.Weapon,
+            []);
+        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver(policy).Resolve(
+            inventory,
+            loadout,
+            definitions);
+        RuntimeShopOfferResolutionResult offer = ShopResolver(policy).Resolve(
+            ContentId.Parse("test.pack:policy_shop"),
+            new ShopOfferDefinition(
+                ContentId.Parse("policy_offer"),
+                ShopContentKind.Equipment,
+                definition.Id,
+                new FixedShopPriceDefinition(10),
+                new UnlimitedShopStockDefinition()),
+            definitions,
+            definitions);
+
+        Assert.Contains(content.Errors, error =>
+            error.Code == ContentValidationErrorCode.PolicyRejected);
+        Assert.Equal(ResourceTransactionCode.EquipmentSlotPolicyRejected, equip.Code);
+        Assert.Same(equip.Before, equip.After);
+        Assert.Contains(profile.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeEquipmentProfileDiagnosticCode.PolicyRejected);
+        Assert.Contains(offer.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeShopOfferResolutionCode.EquipmentSlotPolicyRejected);
+    }
+
+    [Fact]
+    public void Order7R11_SlotPolicyCancellationPropagatesAcrossPublicBoundaries()
+    {
+        EquipmentDefinition definition = Definition(
+            StandardEquipmentSlotIds.Weapon,
+            EquipmentProfileKind.Weapon);
+        var policy = new BrokenEquipmentSlotLayoutPolicy(BrokenPolicyBehavior.Cancel);
+        RuntimeInstanceId instanceId = RuntimeInstanceId.Parse("cancel-equipment-001");
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Weapon,
+                    [new RuntimeEquipmentInstanceSnapshot(instanceId, definition.Id)])
+            ]);
+        var loadout = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Weapon,
+                instanceId)
+        ]);
+        var definitions = new EquipmentOnlyRepository(definition);
+        var offer = new ShopOfferDefinition(
+            ContentId.Parse("cancel_offer"),
+            ShopContentKind.Equipment,
+            definition.Id,
+            new FixedShopPriceDefinition(10),
+            new UnlimitedShopStockDefinition());
+
+        Assert.Throws<OperationCanceledException>(() =>
+            new SkillSystemContentValidator(policy).Validate(Request(definition)));
+        Assert.Throws<OperationCanceledException>(() =>
+            new EquipmentTransitionService(policy).Equip(
+                inventory,
+                new RuntimeEquipmentSnapshot(),
+                instanceId,
+                StandardEquipmentSlotIds.Weapon,
+                StandardEquipmentSlotIds.Weapon,
+                []));
+        Assert.Throws<OperationCanceledException>(() =>
+            new RuntimeEquipmentProfileResolver(policy).Resolve(inventory, loadout, definitions));
+        Assert.Throws<OperationCanceledException>(() => ShopResolver(policy).Resolve(
+            ContentId.Parse("test.pack:cancel_shop"),
+            offer,
+            definitions,
+            definitions));
+    }
+
     private static SkillSystemValidationRequest Request(EquipmentDefinition definition)
     {
         var manifest = new ContentPackManifest(
@@ -179,6 +289,15 @@ public sealed class EquipmentSlotLayoutTests
             new NeverCriticalDefinition(),
             IsLongRange: false));
 
+    private static RuntimeShopOfferResolver ShopResolver(IEquipmentSlotLayoutPolicy policy) =>
+        new(
+            new BoundShopPricingPolicy(
+                StandardShopPricingPolicyIds.Standard,
+                new StandardShopPricingPolicy()),
+            ShopPricingPolicyFactoryRegistry.CreateStandard(),
+            ShopStockPolicyFactoryRegistry.CreateStandard(),
+            policy);
+
     private static ContentId SlotFor(EquipmentProfileKind profileKind) => profileKind switch
     {
         EquipmentProfileKind.Weapon => StandardEquipmentSlotIds.Weapon,
@@ -194,6 +313,65 @@ public sealed class EquipmentSlotLayoutTests
         Armor,
         Boots,
         Accessory
+    }
+
+    public enum BrokenPolicyBehavior
+    {
+        ReturnNull,
+        ReturnUndefined,
+        Throw,
+        Cancel
+    }
+
+    private sealed class BrokenEquipmentSlotLayoutPolicy(BrokenPolicyBehavior behavior)
+        : IEquipmentSlotLayoutPolicy
+    {
+        public IReadOnlyList<ContentId> SlotIds => StandardEquipmentSlotIds.All;
+
+        public EquipmentSlotLayoutResult ValidateDefinition(EquipmentDefinition definition) =>
+            Result();
+
+        public EquipmentSlotLayoutResult ValidateAssignment(
+            ContentId authoredSlotId,
+            ContentId targetSlotId) =>
+            Result();
+
+        private EquipmentSlotLayoutResult Result() => behavior switch
+        {
+            BrokenPolicyBehavior.ReturnNull => null!,
+            BrokenPolicyBehavior.ReturnUndefined => new EquipmentSlotLayoutResult(
+                (EquipmentSlotLayoutCode)int.MaxValue),
+            BrokenPolicyBehavior.Throw => throw new InvalidOperationException(
+                "Deliberate slot-policy failure."),
+            BrokenPolicyBehavior.Cancel => throw new OperationCanceledException(
+                "Deliberate slot-policy cancellation."),
+            _ => throw new ArgumentOutOfRangeException(nameof(behavior))
+        };
+    }
+
+    private sealed class EquipmentOnlyRepository(EquipmentDefinition definition) :
+        IEquipmentDefinitionRepository,
+        IItemDefinitionRepository
+    {
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? resolved)
+        {
+            resolved = id == definition.Id ? definition : null;
+            return resolved is not null;
+        }
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) =>
+            TryGetEquipment(id, out EquipmentDefinition? resolved) && resolved is not null
+                ? resolved
+                : throw new KeyNotFoundException($"Equipment '{id}' was not found.");
+
+        public bool TryGetItem(ContentId id, out ItemDefinition? resolved)
+        {
+            resolved = null;
+            return false;
+        }
+
+        public ItemDefinition GetRequiredItem(ContentId id) =>
+            throw new KeyNotFoundException($"Item '{id}' was not found.");
     }
 
     private sealed class RelicEquipmentSlotLayoutPolicy(ContentId relicSlot)

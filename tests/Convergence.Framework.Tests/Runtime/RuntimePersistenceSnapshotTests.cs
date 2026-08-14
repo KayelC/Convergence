@@ -435,6 +435,29 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void Order7R11_SaveValidationContainsSlotPolicyFailureAsTypedDiagnostic()
+    {
+        RuntimeSaveValidationResult result = new RuntimeSaveValidator(
+            equipmentSlotLayout: new FaultingEquipmentSlotLayoutPolicy()).Validate(
+                CreateSaveSnapshot(),
+                LoadCatalog());
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSaveValidationCode.EquipmentSlotPolicyRejected);
+    }
+
+    [Fact]
+    public void Order7R11_SaveValidationPropagatesSlotPolicyCancellation()
+    {
+        var validator = new RuntimeSaveValidator(
+            equipmentSlotLayout: new FaultingEquipmentSlotLayoutPolicy(cancel: true));
+
+        Assert.Throws<OperationCanceledException>(() =>
+            validator.Validate(CreateSaveSnapshot(), LoadCatalog()));
+    }
+
+    [Fact]
     public void RuntimeSaveValidator_RejectsMissingAndMismatchedCombatProfileSources()
     {
         GameDataCatalog catalog = LoadCatalog();
@@ -3547,6 +3570,24 @@ public sealed class RuntimePersistenceSnapshotTests
                         Id("convergence.catalog_surface_sample:shortsword_sample"),
                         "Deliberate aggregate equipment-profile rejection.")
                 ]);
+    }
+
+    private sealed class FaultingEquipmentSlotLayoutPolicy(bool cancel = false) :
+        IEquipmentSlotLayoutPolicy
+    {
+        public IReadOnlyList<ContentId> SlotIds => StandardEquipmentSlotIds.All;
+
+        public EquipmentSlotLayoutResult ValidateDefinition(EquipmentDefinition definition) =>
+            Fail();
+
+        public EquipmentSlotLayoutResult ValidateAssignment(
+            ContentId authoredSlotId,
+            ContentId targetSlotId) =>
+            Fail();
+
+        private EquipmentSlotLayoutResult Fail() => cancel
+            ? throw new OperationCanceledException("Deliberate save slot-policy cancellation.")
+            : throw new InvalidOperationException("Deliberate save slot-policy failure.");
     }
 
     private sealed class RecordingActorFactory(

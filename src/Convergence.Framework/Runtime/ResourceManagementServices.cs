@@ -29,7 +29,8 @@ public enum ResourceTransactionCode
     CurrencyNotFound,
     EmptyCurrencyLedger,
     AmbiguousCurrencyLedger,
-    InvalidShopStock
+    InvalidShopStock,
+    EquipmentSlotPolicyRejected
 }
 
 public sealed record ResourceTransactionDiagnostic(
@@ -877,12 +878,17 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
         }
 
         EquipmentSlotLayoutResult assignment =
-            _slotLayout.ValidateAssignment(ownedSlotId, targetSlotId);
+            EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
+                _slotLayout,
+                ownedSlotId,
+                targetSlotId);
         if (!assignment.IsCompatible)
         {
             return Rejected(
                 equipment,
-                ResourceTransactionCode.EquipmentSlotMismatch,
+                assignment.Code == EquipmentSlotLayoutCode.PolicyRejected
+                    ? ResourceTransactionCode.EquipmentSlotPolicyRejected
+                    : ResourceTransactionCode.EquipmentSlotMismatch,
                 assignment.Message ??
                 $"Equipment instance '{equipmentInstanceId}' cannot be equipped in slot '{targetSlotId}'.",
                 owned?.DefinitionId,
@@ -928,12 +934,15 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
             throw new ArgumentException("Equipment slot ID must be valid.", nameof(slotId));
         }
 
-        EquipmentSlotLayoutResult assignment = _slotLayout.ValidateAssignment(slotId, slotId);
+        EquipmentSlotLayoutResult assignment =
+            EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(_slotLayout, slotId, slotId);
         if (!assignment.IsCompatible)
         {
             return Rejected(
                 equipment,
-                ResourceTransactionCode.EquipmentSlotMismatch,
+                assignment.Code == EquipmentSlotLayoutCode.PolicyRejected
+                    ? ResourceTransactionCode.EquipmentSlotPolicyRejected
+                    : ResourceTransactionCode.EquipmentSlotMismatch,
                 assignment.Message ?? $"Equipment slot '{slotId}' is not supported.",
                 slotId: slotId);
         }
@@ -1068,7 +1077,8 @@ public enum RuntimeShopOfferResolutionCode
     InvalidStockPolicyConfiguration,
     InvalidOfferIdentity,
     EquipmentSlotProfileMismatch,
-    UnsupportedContentKind
+    UnsupportedContentKind,
+    EquipmentSlotPolicyRejected
 }
 
 public sealed record RuntimeShopOfferResolutionDiagnostic(
@@ -1179,11 +1189,15 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
             else
             {
                 EquipmentSlotLayoutResult layout =
-                    _slotLayout.ValidateDefinition(equipment);
+                    EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(
+                        _slotLayout,
+                        equipment);
                 if (!layout.IsCompatible)
                 {
                     diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
-                        RuntimeShopOfferResolutionCode.EquipmentSlotProfileMismatch,
+                        layout.Code == EquipmentSlotLayoutCode.PolicyRejected
+                            ? RuntimeShopOfferResolutionCode.EquipmentSlotPolicyRejected
+                            : RuntimeShopOfferResolutionCode.EquipmentSlotProfileMismatch,
                         offer.ContentId,
                         layout.Message ??
                         $"Shop equipment offer '{offer.ContentId}' has an incompatible slot profile."));

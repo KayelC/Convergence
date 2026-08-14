@@ -300,6 +300,9 @@ learned state. `RuntimeActorEquipmentApplicationService` stages a candidate
 loadout and that derived profile on an actor clone, runs canonical combat-profile
 composition, and commits the complete actor only after every step accepts.
 Rejected application results expose equal before/after actor snapshots.
+Slot-layout policy invocation is fault-contained consistently: malformed policy
+results and non-cancellation faults surface through explicit typed policy
+rejection codes, while cancellation propagates.
 
 Hosts allocate globally fresh equipment instance IDs and adopt successful
 after-snapshots. `ShopTransactionResult` coordinates inventory, currency, and

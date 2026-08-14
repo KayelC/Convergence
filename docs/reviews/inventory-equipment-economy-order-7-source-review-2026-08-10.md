@@ -1514,3 +1514,56 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
 5. **All integration surfaces moved together.** Framework persistence tests,
    DemoHost save/load, the Godot-shaped contract set, and the real Godot 4.7.1
    consumer all exercised the new aggregate derivation path.
+
+### O7-R11-C3: Contain Equipment Slot-Policy Faults
+
+- **Baseline and commit:** `33a248c9..this correction commit`.
+- **Finding corrected:** content validation, equipment transitions, profile
+  resolution, shop-offer resolution, and save validation invoked custom
+  `IEquipmentSlotLayoutPolicy` methods directly. A null result, undefined code,
+  or exception could therefore escape the boundary inconsistently.
+- **Actual destination:** internal `EquipmentSlotLayoutPolicyEvaluator` is the
+  sole Framework caller of custom slot-policy validation methods. It preserves
+  valid compatible/incompatible results, normalizes null/undefined/faulting
+  results to `EquipmentSlotLayoutCode.PolicyRejected`, and rethrows
+  `OperationCanceledException` unchanged.
+- **Changed Framework/API files:** `Runtime/EquipmentSlotLayouts.cs`,
+  `Runtime/ResourceManagementServices.cs`,
+  `Runtime/RuntimeEquipmentProfiles.cs`,
+  `Runtime/RuntimePersistenceSnapshots.cs`,
+  `Validation/SkillSystemContentValidator.cs`,
+  `Validation/ValidationContracts.cs`, and `PublicAPI.Shipped.txt`.
+- **Typed boundary mapping:** content uses
+  `ContentValidationErrorCode.PolicyRejected`; equip/unequip use
+  `ResourceTransactionCode.EquipmentSlotPolicyRejected`; equipment profiles use
+  `RuntimeEquipmentProfileDiagnosticCode.PolicyRejected`; shop offers use
+  `RuntimeShopOfferResolutionCode.EquipmentSlotPolicyRejected`; saves use
+  `RuntimeSaveValidationCode.EquipmentSlotPolicyRejected`.
+- **Changed tests:** `EquipmentSlotLayoutTests.cs` covers throwing, null,
+  undefined-code, and cancellation behavior across content, equip, profile, and
+  shop boundaries. `RuntimePersistenceSnapshotTests.cs` covers typed save
+  rejection and cancellation propagation.
+- **Focused tests:** 6 slot-layout and save-policy boundary cases passed: 6
+  total, 0 failed, 0 skipped.
+- **Full suite:** 1,804 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 1,995 total, 0 failed, 0 skipped.
+- **Contract versions:** only runtime/API diagnostics changed. Runtime save
+  contract remains v19, content schema remains v10, and active pack versions
+  remain unchanged.
+
+#### Explicit O7-R11-C3 Evidence
+
+1. **There is one invocation boundary.** Active Framework source contains no
+   direct `_slotLayout` or `_equipmentSlotLayout` validation call outside the
+   evaluator and the standard policy implementation itself.
+2. **Ordinary incompatibility is unchanged.** Existing `UnsupportedSlot`,
+   `ProfileMismatch`, and `AssignmentMismatch` results retain their prior typed
+   mappings and messages.
+3. **Malformed custom behavior is distinguishable.** Null, undefined-code, and
+   non-cancellation exceptions produce explicit policy-rejection diagnostics,
+   rather than masquerading as gameplay incompatibility or escaping untyped.
+4. **State remains atomic.** A transition policy rejection returns the exact
+   supplied before loadout as both before and after; content/profile/shop/save
+   boundaries expose diagnostics and no accepted authority.
+5. **Cancellation remains cancellation.** Every tested public boundary rethrows
+   `OperationCanceledException`; it is never converted into a policy rejection.

@@ -731,13 +731,17 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             }
 
             EquipmentSlotLayoutResult layout =
-                _equipmentSlotLayout.ValidateDefinition(equipment);
+                EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(
+                    _equipmentSlotLayout,
+                    equipment);
             if (!layout.IsCompatible)
             {
                 Add(
                     source,
                     source.Path + ".slotId",
-                    ContentValidationErrorCode.ShapeInvalid,
+                    layout.Code == EquipmentSlotLayoutCode.PolicyRejected
+                        ? ContentValidationErrorCode.PolicyRejected
+                        : ContentValidationErrorCode.ShapeInvalid,
                     layout.Message ?? "Equipment slot layout is incompatible.");
             }
 

@@ -104,7 +104,8 @@ public enum RuntimeSaveValidationCode
     DuplicateShopStockEntry = 94,
     NegativeShopStockQuantity = 95,
     MissingShopStockEntry = 96,
-    UnexpectedShopStockEntry = 97
+    UnexpectedShopStockEntry = 97,
+    EquipmentSlotPolicyRejected = 98
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -1475,13 +1476,21 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
                 else
                 {
                     EquipmentSlotLayoutResult definitionLayout =
-                        _equipmentSlotLayout.ValidateDefinition(definition);
+                        EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(
+                            _equipmentSlotLayout,
+                            definition);
                     EquipmentSlotLayoutResult assignment =
-                        _equipmentSlotLayout.ValidateAssignment(definition.SlotId, slotId);
+                        EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
+                            _equipmentSlotLayout,
+                            definition.SlotId,
+                            slotId);
                     if (!definitionLayout.IsCompatible || !assignment.IsCompatible)
                     {
                         diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                            RuntimeSaveValidationCode.EquipmentSlotMismatch,
+                            definitionLayout.Code == EquipmentSlotLayoutCode.PolicyRejected ||
+                            assignment.Code == EquipmentSlotLayoutCode.PolicyRejected
+                                ? RuntimeSaveValidationCode.EquipmentSlotPolicyRejected
+                                : RuntimeSaveValidationCode.EquipmentSlotMismatch,
                             definitionLayout.Message ??
                             assignment.Message ??
                             $"Equipment '{equipmentId}' is not compatible with inventory slot '{slotId}'.",
@@ -1623,17 +1632,29 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
             else
             {
                 EquipmentSlotLayoutResult definitionLayout =
-                    _equipmentSlotLayout.ValidateDefinition(definition);
+                    EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(
+                        _equipmentSlotLayout,
+                        definition);
                 EquipmentSlotLayoutResult inventoryAssignment =
-                    _equipmentSlotLayout.ValidateAssignment(definition.SlotId, ownedSlotId);
+                    EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
+                        _equipmentSlotLayout,
+                        definition.SlotId,
+                        ownedSlotId);
                 EquipmentSlotLayoutResult actorAssignment =
-                    _equipmentSlotLayout.ValidateAssignment(ownedSlotId, slotId);
+                    EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
+                        _equipmentSlotLayout,
+                        ownedSlotId,
+                        slotId);
                 if (!definitionLayout.IsCompatible ||
                     !inventoryAssignment.IsCompatible ||
                     !actorAssignment.IsCompatible)
                 {
                     diagnostics.Add(new RuntimeSaveValidationDiagnostic(
-                        RuntimeSaveValidationCode.EquipmentSlotMismatch,
+                        definitionLayout.Code == EquipmentSlotLayoutCode.PolicyRejected ||
+                        inventoryAssignment.Code == EquipmentSlotLayoutCode.PolicyRejected ||
+                        actorAssignment.Code == EquipmentSlotLayoutCode.PolicyRejected
+                            ? RuntimeSaveValidationCode.EquipmentSlotPolicyRejected
+                            : RuntimeSaveValidationCode.EquipmentSlotMismatch,
                         definitionLayout.Message ??
                         inventoryAssignment.Message ??
                         actorAssignment.Message ??

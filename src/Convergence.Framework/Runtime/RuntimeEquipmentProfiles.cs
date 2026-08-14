@@ -9,7 +9,8 @@ public enum RuntimeEquipmentProfileDiagnosticCode
     MissingEquipmentDefinition,
     SlotProfileMismatch,
     InvalidIdentifier,
-    MissingEquipmentInstance
+    MissingEquipmentInstance,
+    PolicyRejected
 }
 
 public sealed record RuntimeEquipmentProfileDiagnostic(
@@ -160,11 +161,16 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
             }
 
             EquipmentSlotLayoutResult inventoryAssignment =
-                _slotLayout.ValidateAssignment(ownedSlotId, slotId);
+                EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
+                    _slotLayout,
+                    ownedSlotId,
+                    slotId);
             if (!inventoryAssignment.IsCompatible)
             {
                 diagnostics.Add(new RuntimeEquipmentProfileDiagnostic(
-                    RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
+                    inventoryAssignment.Code == EquipmentSlotLayoutCode.PolicyRejected
+                        ? RuntimeEquipmentProfileDiagnosticCode.PolicyRejected
+                        : RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
                     slotId,
                     equipmentInstanceId,
                     instance.DefinitionId,
@@ -187,13 +193,19 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
             }
 
             EquipmentSlotLayoutResult definitionLayout =
-                _slotLayout.ValidateDefinition(definition);
+                EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(_slotLayout, definition);
             EquipmentSlotLayoutResult definitionAssignment =
-                _slotLayout.ValidateAssignment(definition.SlotId, slotId);
+                EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
+                    _slotLayout,
+                    definition.SlotId,
+                    slotId);
             if (!definitionLayout.IsCompatible || !definitionAssignment.IsCompatible)
             {
                 diagnostics.Add(new RuntimeEquipmentProfileDiagnostic(
-                    RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
+                    definitionLayout.Code == EquipmentSlotLayoutCode.PolicyRejected ||
+                    definitionAssignment.Code == EquipmentSlotLayoutCode.PolicyRejected
+                        ? RuntimeEquipmentProfileDiagnosticCode.PolicyRejected
+                        : RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
                     slotId,
                     equipmentInstanceId,
                     equipmentId,

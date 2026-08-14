@@ -101,6 +101,14 @@ actor composition and live equipment sources. The selected layout owns
 slot/profile compatibility; it does not own inventory identity, combat math,
 or granted-skill behavior.
 
+Every framework slot-sensitive boundary invokes the policy through the same
+fault evaluator. A null result, undefined result code, or non-cancellation
+exception becomes a typed `PolicyRejected`/`EquipmentSlotPolicyRejected`
+diagnostic appropriate to that boundary. `OperationCanceledException` is
+propagated. Hosts should present the typed diagnostic and keep the prior
+immutable state; they should not catch the policy failure and retry with the
+standard layout.
+
 ## Allocate Equipment Instance IDs In The Host
 
 An equipment definition describes a kind of equipment. An equipment instance

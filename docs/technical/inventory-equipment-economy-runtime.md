@@ -94,6 +94,13 @@ different parts of the check:
 | `RuntimeEquipmentProfileResolver` | inventory ownership, definition lookup, definition profile, inventory assignment, and actor assignment |
 | Save validation/restore | the complete definition, inventory, actor, and cross-actor graph |
 
+All five boundaries route policy calls through
+`EquipmentSlotLayoutPolicyEvaluator`. Compatible and ordinary incompatible
+results retain their authored meaning. Null results, undefined enum values, and
+non-cancellation exceptions normalize to `EquipmentSlotLayoutCode.PolicyRejected`
+and are mapped to a boundary-specific typed diagnostic. Cancellation is
+re-thrown unchanged. No boundary silently substitutes the standard layout.
+
 The equip transition cannot validate a definition profile because its public
 request deliberately contains no catalog repository. A host must not treat an
 accepted assignment as a substitute for resolving the resulting equipment
@@ -399,6 +406,9 @@ second behavior.
 - Host policy cancellation is propagated as `OperationCanceledException`.
 - Non-cancellation custom-policy faults are contained as typed diagnostics at
   their binding or execution boundary.
+- Slot-layout policy nulls, undefined codes, and faults use explicit
+  `PolicyRejected` diagnostics across content, transition, profile, shop, and
+  save boundaries; cancellation is never normalized.
 - Rejected shop and recovery operations preserve every supplied before-state.
 - Presentation messages are never authoritative transaction or restore input.
 

@@ -24,7 +24,8 @@ public enum EquipmentSlotLayoutCode
     Compatible,
     UnsupportedSlot,
     ProfileMismatch,
-    AssignmentMismatch
+    AssignmentMismatch,
+    PolicyRejected
 }
 
 public sealed record EquipmentSlotLayoutResult(
@@ -47,6 +48,65 @@ public interface IEquipmentSlotLayoutPolicy
     EquipmentSlotLayoutResult ValidateAssignment(
         ContentId authoredSlotId,
         ContentId targetSlotId);
+}
+
+internal static class EquipmentSlotLayoutPolicyEvaluator
+{
+    public static EquipmentSlotLayoutResult ValidateDefinition(
+        IEquipmentSlotLayoutPolicy policy,
+        EquipmentDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(definition);
+        return Evaluate(
+            () => policy.ValidateDefinition(definition),
+            $"definition '{definition.Id}'");
+    }
+
+    public static EquipmentSlotLayoutResult ValidateAssignment(
+        IEquipmentSlotLayoutPolicy policy,
+        ContentId authoredSlotId,
+        ContentId targetSlotId)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        return Evaluate(
+            () => policy.ValidateAssignment(authoredSlotId, targetSlotId),
+            $"assignment '{authoredSlotId}' -> '{targetSlotId}'");
+    }
+
+    private static EquipmentSlotLayoutResult Evaluate(
+        Func<EquipmentSlotLayoutResult> invoke,
+        string operation)
+    {
+        try
+        {
+            EquipmentSlotLayoutResult? result = invoke();
+            if (result is null)
+            {
+                return Rejected($"Equipment slot-layout policy returned no result for {operation}.");
+            }
+            if (!Enum.IsDefined(result.Code))
+            {
+                return Rejected(
+                    $"Equipment slot-layout policy returned unsupported code " +
+                    $"'{(int)result.Code}' for {operation}.");
+            }
+
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Rejected(
+                $"Equipment slot-layout policy failed for {operation}: {exception.Message}");
+        }
+    }
+
+    private static EquipmentSlotLayoutResult Rejected(string message) =>
+        new(EquipmentSlotLayoutCode.PolicyRejected, message);
 }
 
 /// <summary>Supplies the conventional Weapon, Armor, Boots, and Accessory layout.</summary>

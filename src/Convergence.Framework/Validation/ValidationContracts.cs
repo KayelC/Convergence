@@ -48,7 +48,8 @@ public enum ContentValidationErrorCode
     EffectDependencySourceMissing,
     EffectDependencyOrderInvalid,
     EffectDependencySourceIncompatible,
-    SharedContactDependencyInvalid
+    SharedContactDependencyInvalid,
+    PolicyRejected
 }
 
 public sealed record ContentValidationError(
