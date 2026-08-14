@@ -47,7 +47,7 @@ These strengths do not cancel the reachable authority defects below.
 
 ## Findings
 
-### O7-R11-H1: Live equipment changes can leave the actor's composed combat state stale
+### O7-R11-M1: Live equipment application is not atomic with actor composition
 
 **Intended invariant:** one equipped-state change must atomically update the
 actor's loadout and the derived Defense, Evasion, resources, combat-profile
@@ -55,22 +55,28 @@ identity, and equipment-granted passives. The same equipment state must mean
 the same thing whether reached during creation, restore, or live play.
 
 **Reachable path:** the Training Annex shop buys a catalog armor instance,
-accepts `EquipmentTransitionService.Equip`, calls
-`RuntimeActorState.ReplaceEquipment`, then resolves the resulting profile only
-to print its slots. It never sends that profile through canonical actor
-composition. Initial setup and restoration do compose, so this is a distinct
-live path rather than an unavailable API misuse.
+accepts `EquipmentTransitionService.Equip`, immediately calls
+`RuntimeActorState.ReplaceEquipment`, and publishes an equipped-success event.
+After the shop switch completes, the outer command loop does invoke canonical
+composition. If profile resolution or composition rejects, however, that loop
+returns a failure exit code without rolling the already-replaced loadout back.
+The public composition service mutates the supplied actor and Framework exposes
+no staged operation that can commit the loadout and composition together.
 
-**Consequence:** the actor can reference the newly equipped armor while its
-effective Defense/Evasion and passive collection still describe the previous
-loadout. Active granted-skill authorization sees the fresh projection, which
-means different combat subsystems can observe different meanings for the same
-equipment snapshot.
+**Consequence:** the valid standard-content path eventually reaches a coherent
+composition, but a rejected composition leaves the actor referencing the new
+loadout while its effective Defense/Evasion and passive collection still
+describe the previous one. The host has already announced success. Active
+granted-skill authorization sees the fresh projection, so different combat
+subsystems can observe different meanings for the same equipment snapshot on
+that failure path.
 
 **Evidence:**
 
 - `samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexShopController.cs`
-  commits `ReplaceEquipment` and only formats the resolved profile;
+  commits `ReplaceEquipment` and publishes success before composition;
+- `samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs`
+  composes only after the shop controller returns and has no rollback path;
 - `src/Convergence.Framework/Execution/BattleRuntimeState.cs`
   `ReplaceEquipment` removes prior equipment passives but does not compose new
   numeric contributions or passives;
