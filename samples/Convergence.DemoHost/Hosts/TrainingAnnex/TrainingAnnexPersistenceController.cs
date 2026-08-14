@@ -297,9 +297,7 @@ internal sealed class TrainingAnnexPersistenceController
         }
 
         var profileResolver = new TrainingAnnexActorRestoreProfileResolver(
-            currentRoster.Player.Actor.State.InstanceId,
-            snapshot.Inventory,
-            equipmentProfileResolver);
+            currentRoster.Player.Actor.State.InstanceId);
         RuntimeSessionRestoreResult aggregate = new RuntimeSessionRestoreService(
                 new RuntimeSaveValidator(
                     _rosterCapacityPolicy,
@@ -308,7 +306,8 @@ internal sealed class TrainingAnnexPersistenceController
                 actorFactory,
                 profileResolver,
                 rulesetBindings: _rulesetBindings,
-                chargePolicies: ChargePolicyRegistry.CreateStandard())
+                chargePolicies: ChargePolicyRegistry.CreateStandard(),
+                equipmentProfiles: equipmentProfileResolver)
             .Restore(snapshot, catalog);
         if (!aggregate.IsSuccess)
         {
@@ -629,9 +628,7 @@ internal sealed record TrainingAnnexSaveActionResult(
     int DiagnosticCount);
 
 internal sealed class TrainingAnnexActorRestoreProfileResolver(
-    RuntimeInstanceId playerInstanceId,
-    RuntimeInventorySnapshot inventory,
-    IRuntimeEquipmentProfileResolver equipmentProfileResolver) : IRuntimeActorRestoreProfileResolver
+    RuntimeInstanceId playerInstanceId) : IRuntimeActorRestoreProfileResolver
 {
     public RuntimeActorRestoreProfile Resolve(RuntimeActorRestoreProfileRequest request)
     {
@@ -642,22 +639,9 @@ internal sealed class TrainingAnnexActorRestoreProfileResolver(
                 MissingHostedEntityBehavior.UseActorBaseStats);
         }
 
-        RuntimeEquipmentProfile equipment = equipmentProfileResolver.Resolve(
-            inventory,
-            request.Actor.Equipment,
-            request.Catalog);
-        if (equipment.Diagnostics.Count > 0)
-        {
-            throw new InvalidOperationException(string.Join(
-                "; ",
-                equipment.Diagnostics.Select(diagnostic => $"[{diagnostic.Code}] {diagnostic.Message}")));
-        }
-
         return new RuntimeActorRestoreProfile(
             RuntimeStatSourceKind.ActiveHostedEntity,
-            MissingHostedEntityBehavior.RejectStatResolution,
-            equipment.StatModifiers,
-            equipment.GrantedSkillIds);
+            MissingHostedEntityBehavior.RejectStatResolution);
     }
 }
 

@@ -3034,6 +3034,39 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task Order7R11_ManualSaveLoadReDerivesEquippedCombatProfile()
+    {
+        var io = new ScriptedGameIO().QueueMenu(11, 0, 3, 0, 10, 0, 10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(
+            io,
+            output,
+            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(
+            host.LastSummary);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.Equal(1, summary.ManualLoadCount);
+        Assert.Equal(0, summary.SaveDiagnosticCount);
+        RuntimeEquipmentInstanceSnapshot paddedJacket = Assert.Single(
+            summary.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Armor),
+            instance => instance.DefinitionId == Qualified("padded_jacket"));
+        Assert.Equal(
+            paddedJacket.InstanceId,
+            summary.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Armor]);
+        Assert.Equal(6m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Defense]);
+        Assert.Equal(1m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Evasion]);
+        Assert.Contains(
+            "Manual save restored from field_menu",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_ShopInsufficientFundsAreDisabledWithoutMutation()
     {
         var io = new ScriptedGameIO().QueueMenu(11, 0, 4, 9);

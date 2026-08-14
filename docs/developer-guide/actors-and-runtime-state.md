@@ -348,32 +348,35 @@ if (!restored.IsSuccess)
 RuntimeRestoredSession session = restored.RequireSession();
 ```
 
-The host supplies `IRuntimeActorRestoreProfileResolver` to state whether each
-actor uses its own profile or the Active Hosted Entity profile, plus the
-current equipment profile's stat modifiers and granted skill IDs.
+The host supplies `IRuntimeActorRestoreProfileResolver` only to state whether
+each actor uses its own profile or the Active Hosted Entity profile. It cannot
+declare equipment modifiers or grants. Aggregate restoration derives those
+values from the saved inventory, each actor's saved loadout, and the catalog
+through its selected `IRuntimeEquipmentProfileResolver` before constructing any
+actor.
 
-Resolve those modifiers through the same `RuntimeEquipmentProfileResolver`
-used after creation and after equipment changes. For a restored actor, pass its
-saved `RuntimeEquipmentSnapshot` together with the restored aggregate inventory
-and catalog. This rebuilds Defense, Evasion, and accessory contributions from
-the same source that supplies weapon attacks and equipped-only skill grants;
-do not serialize a second derived equipment profile. Active grants are checked
-live during command authorization, while restored passive grants are loaded
-into the actor's passive collection without entering its learned or equipped
-move-list IDs.
+Supply the same equipment resolver used after creation and equipment changes
+when a game uses a custom slot layout. The standard resolver is selected by
+default. This rebuilds Defense, Evasion, accessory contributions, weapon data,
+and equipped-only grants from one authority graph; do not serialize or pass a
+second derived equipment profile. Active grants are checked live during command
+authorization, while restored passive grants are loaded into the actor's
+passive collection without entering learned or equipped move-list IDs.
 
 ```mermaid
 flowchart TD
     Save["Host-deserialized save v19"] --> Validate["Validate complete aggregate"]
-    Validate --> Modifiers["Bind retained modifier policies"]
-    Modifiers --> Profiles["Resolve actor restore profiles"]
-    Profiles --> Sources["Restore owned source actors"]
+    Validate --> Profiles["Resolve stat-source profiles"]
+    Profiles --> Equipment["Derive equipment profiles from aggregate"]
+    Equipment --> Modifiers["Bind retained modifier policies"]
+    Modifiers --> Sources["Restore owned source actors"]
     Sources --> Vessels["Restore and recompose dependent Vessels"]
     Vessels --> Normalize["Normalize restored actor snapshots"]
     Normalize --> Session["Return complete RuntimeRestoredSession"]
     Validate -->|Failure| Reject["Return diagnostics only"]
-    Modifiers -->|Failure| Reject
     Profiles -->|Failure| Reject
+    Equipment -->|Failure| Reject
+    Modifiers -->|Failure| Reject
     Sources -->|Failure| Reject
     Vessels -->|Failure| Reject
 ```

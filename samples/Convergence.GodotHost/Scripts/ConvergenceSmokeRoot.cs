@@ -343,7 +343,8 @@ public partial class ConvergenceSmokeRoot : Node
             actorFactory,
             GodotActorRestoreProfileResolver.Instance,
             rulesetBindings: rulesets,
-            chargePolicies: chargePolicies);
+            chargePolicies: chargePolicies,
+            equipmentProfiles: new RuntimeEquipmentProfileResolver());
         GodotSaveRestoreResult restored = GodotSaveCodec.DeserializeAndRestore(
             saveJson,
             catalog,

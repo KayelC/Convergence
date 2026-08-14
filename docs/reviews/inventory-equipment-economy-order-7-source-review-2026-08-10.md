@@ -1457,3 +1457,60 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
    after application succeeds. A rejected composition leaves the purchased
    equipment instance in inventory, leaves the prior actor loadout/profile
    intact, and emits a rejection instead.
+
+### O7-R11-C2: Derive Equipment During Aggregate Restore
+
+- **Baseline and commit:** `4a7acb3d..this correction commit`.
+- **Finding corrected:** `RuntimeActorRestoreProfile` allowed a host to supply
+  arbitrary equipment stat modifiers and granted skill IDs independently of
+  the validated saved inventory, actor loadout, and catalog.
+- **Actual destination:** actor restore profiles now carry only stat-source and
+  missing-Hosted-Entity choices. `RuntimeSessionRestoreService` derives one
+  `RuntimeEquipmentProfile` per saved actor from aggregate inventory, loadout,
+  catalog, and the selected equipment resolver before any actor factory call.
+  Derived modifiers and grants are then passed to the existing catalog actor
+  restore/composition path.
+- **Changed Framework/API files:** `Runtime/RuntimeSessionRestoration.cs` and
+  `PublicAPI.Shipped.txt`. A typed
+  `EquipmentProfileResolutionFailed` aggregate diagnostic preserves the
+  underlying equipment-profile code when available.
+- **Changed hosts:** Training Annex no longer resolves or copies equipment
+  values into its actor restore-profile resolver. It injects the same equipment
+  resolver used by its live session. The Godot reference consumer explicitly
+  supplies its standard resolver at aggregate restore.
+- **Changed tests:** `RuntimePersistenceSnapshotTests.cs` proves standard
+  aggregate restore derives authored Defense 12, Evasion 2, and one
+  equipped-only passive without adding it to learned/equipped moves. It also
+  proves an equipment-profile diagnostic prevents every actor factory call.
+  `CleanTrainingAnnexPlayHostTests.cs` buys and equips the authored jacket, then
+  saves and loads while retaining the derived Defense/Evasion profile.
+- **Focused tests:** 15 Framework aggregate-restore/Godot-contract tests and 19
+  DemoHost clean-save/Training-Annex persistence tests passed: 34 total, 0
+  failed, 0 skipped.
+- **Full suite:** 1,798 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 1,989 total, 0 failed, 0 skipped.
+- **Godot integration:** the official repository-local Godot 4.7.1 .NET engine
+  emitted `CONVERGENCE_GODOT_SMOKE_OK`, restored 3 actors through aggregate
+  save v19 with 205 Credits and one shop-stock entry, and exited 0.
+- **Contract versions:** derived restore authority changed, but no serialized
+  wire shape changed. Runtime save contract remains v19, content schema remains
+  v10, and active pack versions remain unchanged.
+
+#### Explicit O7-R11-C2 Evidence
+
+1. **The host cannot re-declare fixed equipment effects.** The public
+   `RuntimeActorRestoreProfile` constructor and properties expose no equipment
+   modifier or granted-skill inputs.
+2. **The aggregate is the authority.** Every equipment profile receives the
+   migrated, validated aggregate inventory, that actor's saved loadout, and the
+   current catalog. A custom-layout game can inject the matching resolver, but
+   cannot bypass aggregate inputs through the stat-source profile.
+3. **Failure is all-or-nothing.** Equipment profiles for all actors resolve
+   before actor construction. A fault, null profile, or profile diagnostic
+   returns typed diagnostics and exposes no `RuntimeRestoredSession`.
+4. **Derived grants retain their fixed semantics.** The equipped passive is
+   restored into the passive collection while remaining absent from learned and
+   equipped move-list IDs.
+5. **All integration surfaces moved together.** Framework persistence tests,
+   DemoHost save/load, the Godot-shaped contract set, and the real Godot 4.7.1
+   consumer all exercised the new aggregate derivation path.

@@ -350,12 +350,14 @@ revision. Roster ownership is not copied into actor snapshots.
 1. migrate to the current contract through an explicit host-supplied migration
    chain when necessary;
 2. validate the complete save;
-3. bind and validate every retained stat-modifier policy;
-4. resolve one `RuntimeActorRestoreProfile` per actor;
-5. restore source actors before dependent Vessels;
-6. restore Vessels through `CatalogBattleActorFactory.Restore`;
-7. normalize actor snapshots from restored live state;
-8. return one `RuntimeRestoredSession`.
+3. resolve one stat-source `RuntimeActorRestoreProfile` per actor;
+4. derive one equipment profile per actor from aggregate inventory, saved
+   loadout, catalog, and the selected equipment resolver;
+5. bind and validate every retained charge/stat-modifier policy;
+6. restore source actors before dependent Vessels;
+7. restore Vessels through `CatalogBattleActorFactory.Restore`;
+8. normalize actor snapshots from restored live state;
+9. return one `RuntimeRestoredSession`.
 
 The Active Hosted Entity dependency comes from
 `RuntimePartyRosterSnapshot.ActiveHostedEntity`, not from stale derived Vessel
@@ -365,25 +367,28 @@ data.
 flowchart TD
     Input["Save snapshot"] --> Migration["Explicit migration chain"]
     Migration --> Validation["Aggregate validation"]
-    Validation --> Modifiers["Bind retained modifier policies"]
-    Modifiers --> Profiles["Resolve actor profiles"]
-    Profiles --> Graph["Build source dependencies"]
+    Validation --> Profiles["Resolve stat-source profiles"]
+    Profiles --> Equipment["Derive aggregate equipment profiles"]
+    Equipment --> Modifiers["Bind retained modifier policies"]
+    Modifiers --> Graph["Build source dependencies"]
     Graph --> RestoreSources["Restore source actors"]
     RestoreSources --> RestoreVessels["Restore dependent Vessels"]
     RestoreVessels --> Normalize["Normalize snapshots"]
     Normalize --> Success["Complete restored session"]
     Migration -->|Rejected| Failure["Diagnostics, no session"]
     Validation -->|Rejected| Failure
-    Modifiers -->|Rejected| Failure
     Profiles -->|Rejected| Failure
+    Equipment -->|Rejected| Failure
+    Modifiers -->|Rejected| Failure
     Graph -->|Rejected| Failure
     RestoreSources -->|Rejected| Failure
     RestoreVessels -->|Rejected| Failure
 ```
 
-Cycles, missing dependencies, profile resolver exceptions, actor factory
-exceptions, and actor diagnostics all reject the aggregate. No partial actor
-dictionary is exposed.
+Cycles, missing dependencies, stat-source or equipment-profile resolution
+failures, actor factory exceptions, and actor diagnostics all reject the
+aggregate. Equipment derivation completes for every saved actor before actor
+construction begins, and no partial actor dictionary is exposed.
 
 The host applies scene metadata and `HostContext` only after restoration
 succeeds.

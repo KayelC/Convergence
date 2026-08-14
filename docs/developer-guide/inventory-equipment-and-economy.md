@@ -353,7 +353,10 @@ equipment afterward. Host decoding constructs the immutable currency ledger,
 which rejects invalid IDs, duplicate IDs, and negative balances. Aggregate
 validation then checks instance uniqueness, ownership, slot compatibility,
 cross-actor assignment, stock, catalog references, and selected policies before
-any partial live session is exposed.
+any partial live session is exposed. Aggregate restore derives each actor's
+equipment profile from that validated inventory/loadout/catalog graph; the
+host's actor restore-profile resolver selects stat sourcing only and cannot
+re-declare equipment modifiers or grants.
 
 A non-current contract version needs an explicit host-supplied migration.
 Convergence does not guess how an old wallet or equipment shape maps into v19.

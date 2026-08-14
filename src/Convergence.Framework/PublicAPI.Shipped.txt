@@ -5284,10 +5284,8 @@ Convergence.Runtime.RuntimeActorReferenceSnapshot.RuntimeActorReferenceSnapshot(
 Convergence.Runtime.RuntimeActorRestoreProfile
 Convergence.Runtime.RuntimeActorRestoreProfile.<Clone>$() -> Convergence.Runtime.RuntimeActorRestoreProfile!
 Convergence.Runtime.RuntimeActorRestoreProfile.Equals(Convergence.Runtime.RuntimeActorRestoreProfile? other) -> bool
-Convergence.Runtime.RuntimeActorRestoreProfile.EquipmentGrantedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
-Convergence.Runtime.RuntimeActorRestoreProfile.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
 Convergence.Runtime.RuntimeActorRestoreProfile.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
-Convergence.Runtime.RuntimeActorRestoreProfile.RuntimeActorRestoreProfile(Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? equipmentGrantedSkillIds = null) -> void
+Convergence.Runtime.RuntimeActorRestoreProfile.RuntimeActorRestoreProfile(Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior) -> void
 Convergence.Runtime.RuntimeActorRestoreProfile.StatSourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
 Convergence.Runtime.RuntimeActorRestoreProfileRequest
 Convergence.Runtime.RuntimeActorRestoreProfileRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorRestoreProfileRequest!
@@ -6072,13 +6070,15 @@ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.ActorId.get -> Convergence.R
 Convergence.Runtime.RuntimeSessionRestoreDiagnostic.ActorId.init -> void
 Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Code.get -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
 Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Code.init -> void
-Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode Code, out string! Message, out Convergence.Runtime.RuntimeInstanceId? ActorId, out string? Path, out Convergence.Runtime.RuntimeSaveValidationCode? SaveValidationCode, out Convergence.Encounters.CatalogBattleActorDiagnosticCode? ActorDiagnosticCode) -> void
+Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode Code, out string! Message, out Convergence.Runtime.RuntimeInstanceId? ActorId, out string? Path, out Convergence.Runtime.RuntimeSaveValidationCode? SaveValidationCode, out Convergence.Encounters.CatalogBattleActorDiagnosticCode? ActorDiagnosticCode, out Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileDiagnosticCode) -> void
 Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Equals(Convergence.Runtime.RuntimeSessionRestoreDiagnostic? other) -> bool
 Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Message.get -> string!
 Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Message.init -> void
+Convergence.Runtime.RuntimeSessionRestoreDiagnostic.EquipmentProfileDiagnosticCode.get -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode?
+Convergence.Runtime.RuntimeSessionRestoreDiagnostic.EquipmentProfileDiagnosticCode.init -> void
 Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Path.get -> string?
 Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Path.init -> void
-Convergence.Runtime.RuntimeSessionRestoreDiagnostic.RuntimeSessionRestoreDiagnostic(Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode Code, string! Message, Convergence.Runtime.RuntimeInstanceId? ActorId = null, string? Path = null, Convergence.Runtime.RuntimeSaveValidationCode? SaveValidationCode = null, Convergence.Encounters.CatalogBattleActorDiagnosticCode? ActorDiagnosticCode = null) -> void
+Convergence.Runtime.RuntimeSessionRestoreDiagnostic.RuntimeSessionRestoreDiagnostic(Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode Code, string! Message, Convergence.Runtime.RuntimeInstanceId? ActorId = null, string? Path = null, Convergence.Runtime.RuntimeSaveValidationCode? SaveValidationCode = null, Convergence.Encounters.CatalogBattleActorDiagnosticCode? ActorDiagnosticCode = null, Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileDiagnosticCode = null) -> void
 Convergence.Runtime.RuntimeSessionRestoreDiagnostic.SaveValidationCode.get -> Convergence.Runtime.RuntimeSaveValidationCode?
 Convergence.Runtime.RuntimeSessionRestoreDiagnostic.SaveValidationCode.init -> void
 Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
@@ -6089,6 +6089,7 @@ Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.HostedEntityDependencyMi
 Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.MigrationRejected = 0 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
 Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.SaveValidationRejected = 1 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
 Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.StatModifierPolicyResolutionFailed = 6 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
+Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.EquipmentProfileResolutionFailed = 8 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
 Convergence.Runtime.RuntimeSessionRestoreResult
 Convergence.Runtime.RuntimeSessionRestoreResult.<Clone>$() -> Convergence.Runtime.RuntimeSessionRestoreResult!
 Convergence.Runtime.RuntimeSessionRestoreResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeSessionRestoreDiagnostic!>!
@@ -9819,7 +9820,7 @@ Convergence.Runtime.RuntimeSaveValidationDiagnostic.ChargePolicyCode.init -> voi
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSaveValidationCode Code, out string! Message, out Convergence.Runtime.RuntimeInstanceId? InstanceId, out Convergence.Content.ContentId? ContentId, out string? Path, out Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode, out Convergence.Execution.ChargePolicyDiagnosticCode? ChargePolicyCode) -> void
 Convergence.Runtime.RuntimeSaveValidationDiagnostic.RuntimeSaveValidationDiagnostic(Convergence.Runtime.RuntimeSaveValidationCode Code, string! Message, Convergence.Runtime.RuntimeInstanceId? InstanceId = null, Convergence.Content.ContentId? ContentId = null, string? Path = null, Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode = null, Convergence.Execution.ChargePolicyDiagnosticCode? ChargePolicyCode = null) -> void
 Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.ChargePolicyResolutionFailed = 7 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
-Convergence.Runtime.RuntimeSessionRestoreService.RuntimeSessionRestoreService(Convergence.Runtime.IRuntimeSaveValidator! validator, Convergence.Encounters.ICatalogBattleActorFactory! actorFactory, Convergence.Runtime.IRuntimeActorRestoreProfileResolver! profileResolver, Convergence.Runtime.IRuntimeSaveMigrationService? migration = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null) -> void
+Convergence.Runtime.RuntimeSessionRestoreService.RuntimeSessionRestoreService(Convergence.Runtime.IRuntimeSaveValidator! validator, Convergence.Encounters.ICatalogBattleActorFactory! actorFactory, Convergence.Runtime.IRuntimeActorRestoreProfileResolver! profileResolver, Convergence.Runtime.IRuntimeSaveMigrationService? migration = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null, Convergence.Runtime.IRuntimeEquipmentProfileResolver? equipmentProfiles = null) -> void
 override Convergence.Execution.ChargeApplicationAssessment.Equals(object? obj) -> bool
 override Convergence.Execution.ChargeApplicationAssessment.GetHashCode() -> int
 override Convergence.Execution.ChargeApplicationAssessment.ToString() -> string!

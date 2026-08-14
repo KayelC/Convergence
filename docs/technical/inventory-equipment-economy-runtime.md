@@ -317,7 +317,8 @@ flowchart TB
     Snapshot["Construct RuntimeSaveGameSnapshot"]
     Migrate{"Current v19 or explicit migration succeeds?"}
     Validate["Validate catalog, actors, inventory, loadouts, stock, and policies"]
-    Profiles["Resolve every actor restore profile"]
+    Profiles["Resolve every actor stat-source profile"]
+    Equipment["Derive every equipment profile from aggregate state"]
     Policies["Resolve retained charge/stat-modifier policy state"]
     Dependencies["Restore source actors before dependent Vessels"]
     Normalize["Normalize restored actor snapshots in saved order"]
@@ -332,7 +333,9 @@ flowchart TB
     Validate -->|"diagnostics"| Reject
     Validate -->|"valid"| Profiles
     Profiles -->|"failure"| Reject
-    Profiles -->|"valid"| Policies
+    Profiles -->|"valid"| Equipment
+    Equipment -->|"failure"| Reject
+    Equipment -->|"valid"| Policies
     Policies -->|"failure"| Reject
     Policies -->|"valid"| Dependencies
     Dependencies -->|"failure or cycle"| Reject
@@ -353,14 +356,17 @@ constructor authority.
 
 `RuntimeSessionRestoreService` returns either one complete
 `RuntimeRestoredSession` or diagnostics. It never exposes the actors restored
-before a later dependency failed.
+before a later dependency failed. `RuntimeActorRestoreProfile` carries only
+stat-source choices; equipment modifiers and grants are derived from the
+aggregate inventory/loadout/catalog graph through the selected equipment
+resolver before actor construction.
 
 ## Atomicity Boundaries
 
 | Operation | Framework atomic boundary | Host adoption requirement |
 |---|---|---|
 | Item/equipment inventory transition | one immutable inventory result | replace inventory only when applied |
-| Equip/unequip | one immutable loadout result | coordinate accepted loadout with successful actor recomposition |
+| Equip/unequip | candidate loadout plus atomic equipment application | present success only after `RuntimeActorEquipmentApplicationService` accepts |
 | Currency credit/debit | one immutable ledger result | replace ledger only when applied |
 | Shop transaction | inventory + currency + stock result | adopt all three after-snapshots together |
 | Recovery assessment | staged actor + hypothetical ledger | present only; adopt neither |

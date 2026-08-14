@@ -74,10 +74,11 @@ resolver and checks the complete state against its authored policy.
 An invalid snapshot cannot produce a valid restore token.
 `IRuntimeSessionRestoreService` first runs an explicit migration service,
 validates the complete aggregate, resolves each retained stat-modifier policy
-from the supplied catalog, resolves a host-supplied restore profile for
-every actor, restores the Active Hosted Entity selected by the canonical party
-roster before its Vessel, recomposes the Vessel, and returns either one
-complete `RuntimeRestoredSession` or typed diagnostics with no partial session.
+from the supplied catalog, resolves a host-supplied stat-source profile for
+every actor, derives equipment effects from saved ownership/loadouts and the
+catalog, restores the Active Hosted Entity selected by the canonical party
+roster before its Vessel, recomposes the Vessel, and returns either one complete
+`RuntimeRestoredSession` or typed diagnostics with no partial session.
 The normalized restored snapshot replaces stale derived Vessel combat-profile
 data with the profile produced from restored source state.
 

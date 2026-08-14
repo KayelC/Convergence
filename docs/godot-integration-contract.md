@@ -88,7 +88,10 @@ instances, selects and executes a typed action, consumes an ordered encounter
 stream, exercises the Training Annex recovery policy while scene ownership
 remains in Godot, and decodes a host-owned JSON save before handing the complete
 aggregate to `IRuntimeSessionRestoreService`. It proves source-first Active
-Hosted Entity restoration and proves a rejected aggregate exposes no actors.
+Hosted Entity restoration, uses the aggregate equipment-profile derivation
+boundary, and proves a rejected aggregate exposes no actors. A Godot game with
+a custom equipment slot layout supplies the matching equipment resolver to the
+restore service; Nodes never participate in that derivation.
 
 ```powershell
 dotnet build samples/Convergence.GodotHost/Convergence.GodotHost.csproj

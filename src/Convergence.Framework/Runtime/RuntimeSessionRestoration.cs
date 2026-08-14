@@ -155,9 +155,7 @@ public sealed record RuntimeActorRestoreProfile
 {
     public RuntimeActorRestoreProfile(
         RuntimeStatSourceKind statSourceKind,
-        MissingHostedEntityBehavior missingHostedEntityBehavior,
-        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
-        IEnumerable<ContentId>? equipmentGrantedSkillIds = null)
+        MissingHostedEntityBehavior missingHostedEntityBehavior)
     {
         if (!Enum.IsDefined(statSourceKind))
         {
@@ -169,14 +167,10 @@ public sealed record RuntimeActorRestoreProfile
         }
         StatSourceKind = statSourceKind;
         MissingHostedEntityBehavior = missingHostedEntityBehavior;
-        EquipmentStatModifiers = RuntimePersistenceCollections.Dictionary(equipmentStatModifiers);
-        EquipmentGrantedSkillIds = RuntimePersistenceCollections.List(equipmentGrantedSkillIds);
     }
 
     public RuntimeStatSourceKind StatSourceKind { get; }
     public MissingHostedEntityBehavior MissingHostedEntityBehavior { get; }
-    public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
-    public IReadOnlyList<ContentId> EquipmentGrantedSkillIds { get; }
 }
 
 public sealed record RuntimeActorRestoreProfileRequest(
@@ -198,7 +192,8 @@ public enum RuntimeSessionRestoreDiagnosticCode
     HostedEntityDependencyCycle,
     ActorRestoreFailed,
     StatModifierPolicyResolutionFailed,
-    ChargePolicyResolutionFailed
+    ChargePolicyResolutionFailed,
+    EquipmentProfileResolutionFailed
 }
 
 public sealed record RuntimeSessionRestoreDiagnostic(
@@ -207,7 +202,8 @@ public sealed record RuntimeSessionRestoreDiagnostic(
     RuntimeInstanceId? ActorId = null,
     string? Path = null,
     RuntimeSaveValidationCode? SaveValidationCode = null,
-    CatalogBattleActorDiagnosticCode? ActorDiagnosticCode = null);
+    CatalogBattleActorDiagnosticCode? ActorDiagnosticCode = null,
+    RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileDiagnosticCode = null);
 
 public sealed record RuntimeRestoredSession
 {
@@ -275,6 +271,7 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
     private readonly IRuntimeSaveMigrationService _migration;
     private readonly IRuntimeRulesetBindingResolver? _rulesetBindings;
     private readonly IChargePolicyResolver? _chargePolicies;
+    private readonly IRuntimeEquipmentProfileResolver _equipmentProfiles;
 
     public RuntimeSessionRestoreService(
         IRuntimeSaveValidator validator,
@@ -282,7 +279,8 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
         IRuntimeActorRestoreProfileResolver profileResolver,
         IRuntimeSaveMigrationService? migration = null,
         IRuntimeRulesetBindingResolver? rulesetBindings = null,
-        IChargePolicyResolver? chargePolicies = null)
+        IChargePolicyResolver? chargePolicies = null,
+        IRuntimeEquipmentProfileResolver? equipmentProfiles = null)
     {
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
         _actorFactory = actorFactory ?? throw new ArgumentNullException(nameof(actorFactory));
@@ -290,6 +288,7 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
         _migration = migration ?? new RuntimeSaveMigrationService();
         _rulesetBindings = rulesetBindings;
         _chargePolicies = chargePolicies;
+        _equipmentProfiles = equipmentProfiles ?? new RuntimeEquipmentProfileResolver();
     }
 
     public RuntimeSessionRestoreResult Restore(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
@@ -336,6 +335,50 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
                     $"Restore profile for actor '{actor.Identity.InstanceId}' failed: {exception.Message}",
                     actor.Identity.InstanceId));
             }
+        }
+
+        if (diagnostics.Count > 0)
+        {
+            return Rejected(diagnostics);
+        }
+
+        var equipmentProfiles = new Dictionary<RuntimeInstanceId, RuntimeEquipmentProfile>();
+        foreach (RuntimeActorSnapshot actor in current.Actors)
+        {
+            RuntimeEquipmentProfile equipmentProfile;
+            try
+            {
+                equipmentProfile = _equipmentProfiles.Resolve(
+                    current.Inventory,
+                    actor.Equipment,
+                    catalog) ??
+                    throw new InvalidOperationException(
+                        "The equipment-profile resolver returned no profile.");
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                diagnostics.Add(new RuntimeSessionRestoreDiagnostic(
+                    RuntimeSessionRestoreDiagnosticCode.EquipmentProfileResolutionFailed,
+                    $"Equipment profile for actor '{actor.Identity.InstanceId}' failed: " +
+                    exception.Message,
+                    actor.Identity.InstanceId,
+                    "$.actors.equipment"));
+                continue;
+            }
+
+            if (equipmentProfile.Diagnostics.Count > 0)
+            {
+                diagnostics.AddRange(equipmentProfile.Diagnostics.Select(diagnostic =>
+                    new RuntimeSessionRestoreDiagnostic(
+                        RuntimeSessionRestoreDiagnosticCode.EquipmentProfileResolutionFailed,
+                        diagnostic.Message,
+                        actor.Identity.InstanceId,
+                        "$.actors.equipment",
+                        EquipmentProfileDiagnosticCode: diagnostic.Code)));
+                continue;
+            }
+
+            equipmentProfiles.Add(actor.Identity.InstanceId, equipmentProfile);
         }
 
         if (diagnostics.Count > 0)
@@ -476,6 +519,7 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
 
             RuntimeActorSnapshot actor = snapshots[actorId];
             RuntimeActorRestoreProfile profile = profiles[actorId];
+            RuntimeEquipmentProfile equipmentProfile = equipmentProfiles[actorId];
             RuntimeActorState? activeHostedEntity = null;
             if (profile.StatSourceKind == RuntimeStatSourceKind.ActiveHostedEntity)
             {
@@ -542,10 +586,10 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
                     profile.MissingHostedEntityBehavior,
                     current.PartyRoster,
                     activeHostedEntity is null ? [] : [activeHostedEntity],
-                    profile.EquipmentStatModifiers,
+                    equipmentProfile.StatModifiers,
                     statModifierPolicies.GetValueOrDefault(actorId),
                     chargePolicies.GetValueOrDefault(actorId),
-                    profile.EquipmentGrantedSkillIds));
+                    equipmentProfile.GrantedSkillIds));
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

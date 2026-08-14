@@ -281,6 +281,7 @@ immutable currency ledger keyed by `ContentId` rather than an unnamed balance,
 plus remaining quantities for policy-owned shop stock. Version 18 introduced
 the ledger; version 19 retained it and added durable shop stock.
 `RuntimeSessionRestoreService` binds retained modifier policies explicitly,
+derives equipment contributions from aggregate inventory/loadout/catalog state,
 derives the Active Hosted Entity dependency from `RuntimePartyRosterSnapshot`,
 restores owned actors first, and returns a normalized aggregate whose derived
 Vessel profile matches the restored source. Any non-current snapshot is

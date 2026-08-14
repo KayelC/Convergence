@@ -282,6 +282,114 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void Order7R11_AggregateRestoreDerivesEquipmentContributionsFromSavedAuthorities()
+    {
+        ContentId armorId = Id("convergence.catalog_surface_sample:training_coat_sample");
+        ContentId grantedPassiveId = Id("convergence.clean_battle_demo:regenerate_demo");
+        GameDataCatalog catalog = WithEquipmentDefinition(
+            LoadCatalog(),
+            new EquipmentDefinition(
+                armorId,
+                "Training Coat",
+                "Restore-derived equipment profile test.",
+                StandardEquipmentSlotIds.Armor,
+                500,
+                grantedSkillIds: [grantedPassiveId],
+                armor: new EquipmentArmorProfileDefinition(12, 2)));
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot savedActor = baseline.Actors[0];
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("training-coat-001");
+        RuntimeActorSnapshot equippedActor = CopyActor(
+            savedActor,
+            equipment: new RuntimeEquipmentSnapshot(
+                savedActor.Equipment.EquippedInstanceIds.Concat(
+                [
+                    new KeyValuePair<ContentId, RuntimeInstanceId>(
+                        StandardEquipmentSlotIds.Armor,
+                        armorInstanceId)
+                ])),
+            battleActivations: new RuntimeBattleActivationSnapshot(
+                savedActor.BattleActivations.PassiveActivations,
+                savedActor.BattleActivations.PassiveSkillStates.Concat(
+                [new RuntimePassiveSkillStateSnapshot(grantedPassiveId, IsEnabled: true)])));
+        var inventory = new RuntimeInventorySnapshot(
+            baseline.Inventory.ItemQuantities,
+            baseline.Inventory.OwnedEquipmentInstances.Select(pair =>
+                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                        pair.Key,
+                        pair.Value))
+                .Concat(
+                [
+                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                        StandardEquipmentSlotIds.Armor,
+                        [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
+                ]));
+        RuntimeSaveGameSnapshot snapshot = Copy(
+            baseline,
+            actors: [equippedActor, baseline.Actors[1]],
+            inventory: inventory);
+        var factory = new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog);
+        var service = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(),
+            factory,
+            new DelegateActorRestoreProfileResolver(_ => ActorProfile()));
+
+        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
+
+        Assert.True(
+            result.IsSuccess,
+            string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
+        RuntimeActorState restored = result.RequireSession()
+            .ActorsByInstanceId[equippedActor.Identity.InstanceId]
+            .State;
+        RuntimeActorSnapshot restoredSnapshot = restored.ToSnapshot();
+        Assert.Equal(12m, restoredSnapshot.Stats.EffectiveStats[StandardProgressionIds.Defense]);
+        Assert.Equal(2m, restoredSnapshot.Stats.EffectiveStats[StandardProgressionIds.Evasion]);
+        Assert.DoesNotContain(grantedPassiveId, restoredSnapshot.Skills.LearnedSkillIds);
+        Assert.DoesNotContain(grantedPassiveId, restoredSnapshot.Skills.EquippedSkillIds);
+        Assert.Contains(restored.Passives.Entries, entry => entry.Skill.Id == grantedPassiveId);
+        Assert.Null(typeof(RuntimeActorRestoreProfile).GetProperty("EquipmentStatModifiers"));
+        Assert.Null(typeof(RuntimeActorRestoreProfile).GetProperty("EquipmentGrantedSkillIds"));
+    }
+
+    [Fact]
+    public void Order7R11_AggregateRestoreRejectsEquipmentProfileBeforeAnyActorConstruction()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot();
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        var service = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(),
+            factory,
+            new DelegateActorRestoreProfileResolver(_ => ActorProfile()),
+            equipmentProfiles: new RejectingEquipmentProfileResolver());
+
+        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Session);
+        Assert.Empty(factory.RestoreOrder);
+        Assert.All(result.Diagnostics, diagnostic =>
+        {
+            Assert.Equal(
+                RuntimeSessionRestoreDiagnosticCode.EquipmentProfileResolutionFailed,
+                diagnostic.Code);
+            Assert.Equal(
+                RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
+                diagnostic.EquipmentProfileDiagnosticCode);
+            Assert.Equal("$.actors.equipment", diagnostic.Path);
+        });
+    }
+
+    [Fact]
     public void RuntimeSessionRestoreService_RejectsEquipmentActorIdentityCollisionBeforeAnyActorRestore()
     {
         GameDataCatalog catalog = LoadCatalog();
@@ -3063,6 +3171,27 @@ public sealed class RuntimePersistenceSnapshotTests
             Registrations());
     }
 
+    private static GameDataCatalog WithEquipmentDefinition(
+        GameDataCatalog catalog,
+        EquipmentDefinition replacement) =>
+        new(
+            catalog.ContentPacks,
+            catalog.Skills,
+            catalog.Entities,
+            catalog.Races,
+            catalog.Ailments,
+            catalog.Items,
+            catalog.Equipment.Select(pair => pair.Key == replacement.Id
+                ? new KeyValuePair<ContentId, EquipmentDefinition>(pair.Key, replacement)
+                : pair),
+            catalog.Shops,
+            catalog.Negotiations,
+            catalog.Encounters,
+            catalog.Dungeons,
+            catalog.FusionRecipes,
+            catalog.Rulesets,
+            Registrations());
+
     private static GameDataCatalog WithAilments(
         GameDataCatalog catalog,
         params AilmentDefinition[] ailments) =>
@@ -3400,6 +3529,24 @@ public sealed class RuntimePersistenceSnapshotTests
         : IRuntimeActorRestoreProfileResolver
     {
         public RuntimeActorRestoreProfile Resolve(RuntimeActorRestoreProfileRequest request) => resolve(request);
+    }
+
+    private sealed class RejectingEquipmentProfileResolver : IRuntimeEquipmentProfileResolver
+    {
+        public RuntimeEquipmentProfile Resolve(
+            RuntimeInventorySnapshot inventory,
+            RuntimeEquipmentSnapshot equipment,
+            IEquipmentDefinitionRepository equipmentRepository) =>
+            new(
+                diagnostics:
+                [
+                    new RuntimeEquipmentProfileDiagnostic(
+                        RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
+                        StandardEquipmentSlotIds.Weapon,
+                        RuntimeInstanceId.Parse("rejected-equipment-001"),
+                        Id("convergence.catalog_surface_sample:shortsword_sample"),
+                        "Deliberate aggregate equipment-profile rejection.")
+                ]);
     }
 
     private sealed class RecordingActorFactory(
