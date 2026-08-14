@@ -61,6 +61,13 @@ There is no root equipment-owner collection besides inventory. A loadout is a
 reference set, not ownership. The same equipment instance may not be referenced
 by two slots or two actors.
 
+Live `AddItem`, `RemoveItem`, and `ReserveItem` commands reject an empty item
+`ContentId` as `InvalidItemId` before quantity lookup or mutation. The snapshot
+constructor deliberately remains capable of representing an empty decoded item
+key so aggregate save validation can report `$.inventory.itemQuantities` rather
+than losing the malformed-save diagnostic at deserialization. That diagnostic
+representation is not accepted live transition input.
+
 ## Equipment Instance Invariants
 
 `RuntimeEquipmentInstanceSnapshot` contains:
@@ -418,6 +425,8 @@ second behavior.
 - Constructor misuse of validated identity/value objects throws argument
   exceptions.
 - Expected gameplay rejection returns a typed immutable result.
+- Invalid live item identity returns `InvalidItemId` with unchanged inventory;
+  malformed decoded snapshots remain available only for aggregate validation.
 - Host policy cancellation is propagated as `OperationCanceledException`.
 - Non-cancellation custom-policy faults are contained as typed diagnostics at
   their binding or execution boundary.

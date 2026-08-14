@@ -111,6 +111,13 @@ standard layout.
 
 ## Allocate Equipment Instance IDs In The Host
 
+Live item additions, removals, and reservations likewise require a valid item
+`ContentId`. An empty ID returns `InvalidItemId` with the supplied inventory
+unchanged. Do not infer from the snapshot constructor's ability to represent a
+malformed decoded key that such a key is valid gameplay input; aggregate save
+validation retains that representation only to report its exact diagnostic
+path.
+
 An equipment definition describes a kind of equipment. An equipment instance
 is one owned copy:
 
@@ -404,6 +411,7 @@ No `Node`, `Resource`, `res://` path, serializer type, or scene handle enters
 ## Integration Checklist
 
 - One current inventory snapshot owns every equipment instance.
+- Every live item transition supplies a valid item `ContentId`.
 - Equipment IDs are globally fresh and stable across save/restore.
 - One selected slot layout is used by validation, transitions, offers, and
   profile resolution.

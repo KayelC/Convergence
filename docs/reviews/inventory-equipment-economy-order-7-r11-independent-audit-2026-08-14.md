@@ -242,7 +242,7 @@ host. Aggregate save validation independently rechecks the whole graph.
 | O7-R11-C2 | complete | Make aggregate restore derive equipment contributions | runtime + host/Godot/persistence tests + API evidence |
 | O7-R11-C3 | complete | Contain custom slot-policy faults at every Framework boundary | runtime + validation/transition/profile/save tests + API evidence |
 | O7-R11-C4 | complete | Correct recovery wording and document trusted host concurrency/collision boundaries | three-audience docs + executable documentation/boundary tests |
-| O7-R11-C5 | open | Reject invalid IDs at live item-transition boundaries while preserving malformed-save diagnostics | runtime + focused tests + affected docs/API evidence |
+| O7-R11-C5 | complete | Reject invalid IDs at live item-transition boundaries while preserving malformed-save diagnostics | runtime + focused tests + affected docs/API evidence |
 | O7-R11-C6 | open | Freshly re-read post-correction source/docs and run the durable release gate | closure report + tracking/evidence only |
 
 Each correction receives its own green commit. Order 7 remains `partial` until

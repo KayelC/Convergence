@@ -30,7 +30,8 @@ public enum ResourceTransactionCode
     EmptyCurrencyLedger,
     AmbiguousCurrencyLedger,
     InvalidShopStock,
-    EquipmentSlotPolicyRejected
+    EquipmentSlotPolicyRejected,
+    InvalidItemId
 }
 
 public sealed record ResourceTransactionDiagnostic(
@@ -479,6 +480,14 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
     public InventoryTransitionResult AddItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity, int? stackLimit = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
+        if (!itemId.IsValid)
+        {
+            return Rejected(
+                snapshot,
+                ResourceTransactionCode.InvalidItemId,
+                "Item ID cannot be empty.",
+                itemId);
+        }
         if (quantity <= 0)
         {
             return Rejected(snapshot, ResourceTransactionCode.InvalidQuantity, "Item quantity must be positive.", itemId);
@@ -512,6 +521,14 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
     public InventoryTransitionResult RemoveItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
+        if (!itemId.IsValid)
+        {
+            return Rejected(
+                snapshot,
+                ResourceTransactionCode.InvalidItemId,
+                "Item ID cannot be empty.",
+                itemId);
+        }
         if (quantity <= 0)
         {
             return Rejected(snapshot, ResourceTransactionCode.InvalidQuantity, "Item quantity must be positive.", itemId);
@@ -540,6 +557,14 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
     public InventoryReservationResult ReserveItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
+        if (!itemId.IsValid)
+        {
+            return ReservationRejected(
+                snapshot,
+                ResourceTransactionCode.InvalidItemId,
+                "Item ID cannot be empty.",
+                itemId);
+        }
         if (quantity <= 0)
         {
             return ReservationRejected(snapshot, ResourceTransactionCode.InvalidQuantity, "Item quantity must be positive.", itemId);

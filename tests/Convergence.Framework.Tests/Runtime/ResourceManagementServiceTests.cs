@@ -59,6 +59,51 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
+    public void InventoryService_RejectsInvalidItemIdsWithoutMutatingLiveInventory()
+    {
+        var service = new InventoryTransitionService();
+        var empty = new RuntimeInventorySnapshot();
+        var malformedDecodedSnapshot = new RuntimeInventorySnapshot(
+            [new KeyValuePair<ContentId, int>(default, 2)]);
+
+        InventoryTransitionResult added = service.AddItem(empty, default, 1);
+        InventoryTransitionResult removed = service.RemoveItem(
+            malformedDecodedSnapshot,
+            default,
+            1);
+        InventoryReservationResult reserved = service.ReserveItem(
+            malformedDecodedSnapshot,
+            default,
+            1);
+
+        Assert.False(added.Applied);
+        Assert.Equal(ResourceTransactionCode.InvalidItemId, added.Code);
+        Assert.Same(empty, added.Before);
+        Assert.Same(empty, added.After);
+        ResourceTransactionDiagnostic addDiagnostic = Assert.Single(added.Diagnostics);
+        Assert.Equal(ResourceTransactionCode.InvalidItemId, addDiagnostic.Code);
+        Assert.False(addDiagnostic.ContentId!.Value.IsValid);
+
+        Assert.False(removed.Applied);
+        Assert.Equal(ResourceTransactionCode.InvalidItemId, removed.Code);
+        Assert.Same(malformedDecodedSnapshot, removed.Before);
+        Assert.Same(malformedDecodedSnapshot, removed.After);
+        ResourceTransactionDiagnostic removeDiagnostic = Assert.Single(removed.Diagnostics);
+        Assert.Equal(ResourceTransactionCode.InvalidItemId, removeDiagnostic.Code);
+        Assert.False(removeDiagnostic.ContentId!.Value.IsValid);
+
+        Assert.False(reserved.Reserved);
+        Assert.Equal(ResourceTransactionCode.InvalidItemId, reserved.Code);
+        Assert.Same(malformedDecodedSnapshot, reserved.Snapshot);
+        Assert.Null(reserved.Reservation);
+        ResourceTransactionDiagnostic reservationDiagnostic =
+            Assert.Single(reserved.Diagnostics);
+        Assert.Equal(ResourceTransactionCode.InvalidItemId, reservationDiagnostic.Code);
+        Assert.False(reservationDiagnostic.ContentId!.Value.IsValid);
+        Assert.Equal(2, malformedDecodedSnapshot.GetQuantity(default));
+    }
+
+    [Fact]
     public void InventoryService_AllowsDuplicateDefinitionsButRejectsDuplicateInstancesAndEquippedRemoval()
     {
         var service = new InventoryTransitionService();

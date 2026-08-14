@@ -1616,3 +1616,56 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
 5. **Collision evidence must be complete.** Equip and resale checks rely on the
    complete current actor-loadout collection supplied by the host. Aggregate
    save validation independently rechecks the whole persisted ownership graph.
+
+### O7-R11-C5: Reject Invalid Live Item Identities
+
+- **Baseline and commit:** `fbced4ce..this correction commit`.
+- **Finding corrected:** public live item additions, removals, and reservations
+  accepted an empty `ContentId` as an ordinary inventory key or lookup. An
+  addition could therefore report `Applied` while creating inventory that later
+  failed aggregate save validation.
+- **Actual destination:** `InventoryTransitionService.AddItem`, `.RemoveItem`,
+  and `.ReserveItem` reject an empty item ID before quantity lookup or mutation
+  with the distinct `ResourceTransactionCode.InvalidItemId` diagnostic.
+- **Malformed-save boundary:** `RuntimeInventorySnapshot` remains capable of
+  representing an empty decoded item key. This is deliberate so
+  `RuntimeSaveValidator` can aggregate the precise
+  `$.inventory.itemQuantities.keys[index]` diagnostic before restoration.
+  Permissive diagnostic representation is not accepted as live command input.
+- **Changed Framework/API files:** `Runtime/ResourceManagementServices.cs` and
+  `PublicAPI.Shipped.txt`.
+- **Changed documentation:** the developer and technical Order 7 guides now
+  distinguish valid live item commands from malformed decoded snapshots.
+- **Changed tests:** `ResourceManagementServiceTests.cs` exercises all three
+  live operations, typed diagnostics, unchanged before/after state, absent
+  reservation authority, and retained malformed-snapshot evidence. The existing
+  aggregate-validator regression remains green.
+- **Focused tests:** 23 resource-management cases plus the aggregate default-ID
+  validator regression passed: 24 total, 0 failed, 0 skipped.
+- **Full suite:** 1,807 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 1,998 total, 0 failed, 0 skipped.
+- **Strict build and format:** Framework and solution Release builds completed
+  with 0 warnings and 0 errors; `dotnet format --verify-no-changes` and
+  `git diff --check` passed.
+- **Contract versions:** the public diagnostic enum gained one member, but no
+  serialized shape changed. Runtime save contract remains v19, content schema
+  remains v10, and active pack versions remain unchanged.
+
+#### Explicit O7-R11-C5 Evidence
+
+1. **Invalid identity is rejected locally.** Each live item operation checks
+   `itemId.IsValid` before quantity, stack, availability, or reservation work.
+2. **Rejection is typed and atomic.** Addition and removal return the exact
+   supplied inventory as both before and after; reservation returns the exact
+   snapshot with no `RuntimeItemReservation`. Every path reports
+   `InvalidItemId`.
+3. **Malformed-save diagnostics are preserved.** The focused test constructs an
+   empty decoded key, proves live removal/reservation reject it unchanged, and
+   the persistence regression still reports `InvalidContentId` at the inventory
+   key path before restore.
+4. **Valid item behavior is unchanged.** Existing add, stack-limit, removal,
+   reservation commit/rollback, shop purchase/resale, DemoHost, and content
+   validation tests remain green.
+5. **No new policy or authority was introduced.** The correction is a fixed
+   command-boundary invariant. Inventory remains the sole item/equipment owner,
+   and save/schema versions do not advance.
