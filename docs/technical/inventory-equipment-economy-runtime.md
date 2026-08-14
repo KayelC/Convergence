@@ -384,6 +384,21 @@ Framework result records defensively copy exposed collections. A host must not
 infer success from messages or compare display names; it uses typed codes,
 `Applied`, and exact runtime/content IDs.
 
+These services calculate candidates from immutable authorities; they do not own
+the host's live-session lock. In particular, two shop calls supplied the same
+inventory, currency, and stock before-snapshots may both return accepted
+candidates. The host must serialize adoption or atomically compare all three
+current authorities with the result's three before-snapshots. Adopting one
+candidate makes every other same-before candidate stale. Re-executing against
+the first result's after-snapshots performs the current stock and balance checks
+again.
+
+Cross-actor equipment collision checks have the same explicit evidence
+boundary. Equip and resale operations can inspect only the complete current
+loadout collection supplied by the host. Aggregate save validation rechecks the
+whole actor/inventory graph, but it is not a substitute for supplying complete
+live evidence during a transition.
+
 ## Policy Boundaries
 
 Order 7 provides policies only where games have known legitimate alternatives:
@@ -410,6 +425,8 @@ second behavior.
   `PolicyRejected` diagnostics across content, transition, profile, shop, and
   save boundaries; cancellation is never normalized.
 - Rejected shop and recovery operations preserve every supplied before-state.
+- Protected ailments remain while other legal recovery changes may commit; a
+  protected-only state produces `NoRecoveryNeeded` without a debit.
 - Presentation messages are never authoritative transaction or restore input.
 
 ## Source And Test Map

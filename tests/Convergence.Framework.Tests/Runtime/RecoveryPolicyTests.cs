@@ -191,6 +191,27 @@ public sealed class RecoveryPolicyTests
     }
 
     [Fact]
+    public void Recover_ProtectedAilmentAloneReportsNoRecoveryNeededWithoutDebit()
+    {
+        RuntimeActorState actor = Actor(new BattleResourceState(Hp, 100m, 100m));
+        AilmentDefinition protectedAilment = Ailment(
+            "protected",
+            StatusRemovalProfiles.Protected);
+        actor.ApplyAilment(protectedAilment, protectedAilment.DefaultLifetime);
+        var policy = new StandardHospitalRecoveryPolicy(
+            Credits,
+            [Pair(Hp, 1m)],
+            removeAilments: true);
+
+        RecoveryTransactionResult result = Service(policy).Recover(actor, Ledger(50));
+
+        Assert.Equal(RecoveryTransactionCode.NoRecoveryNeeded, result.Code);
+        Assert.True(actor.HasAilment(protectedAilment.Id));
+        Assert.Same(result.BeforeCurrencyLedger, result.AfterCurrencyLedger);
+        Assert.Equal(50, result.AfterCurrencyLedger.GetRequiredBalance(Credits));
+    }
+
+    [Fact]
     public void Recover_RejectsMissingOrMismatchedStatModifierAuthorityAtomically()
     {
         RuntimeActorState actor = Actor(new BattleResourceState(Hp, 90m, 100m));

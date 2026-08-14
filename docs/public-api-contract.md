@@ -310,6 +310,11 @@ stock as one result. `RecoveryTransactionResult` coordinates staged actor state
 with an explicit currency ledger. Presentation code must not construct runtime
 shop offers, duplicate formulas, or infer authority from display text.
 
+Transition services do not own concurrent host session state. Hosts serialize
+shop adoption or compare all supplied before-authorities atomically, and they
+supply complete current actor-loadout evidence for cross-actor equipment
+collision checks.
+
 See [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md),
 [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md),
 and the [Content Contract](content-contract.md).

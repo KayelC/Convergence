@@ -1567,3 +1567,52 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
    boundaries expose diagnostics and no accepted authority.
 5. **Cancellation remains cancellation.** Every tested public boundary rethrows
    `OperationCanceledException`; it is never converted into a policy rejection.
+
+### O7-R11-C4: Clarify Recovery And Trusted Host Adoption Boundaries
+
+- **Baseline and commit:** `acd42c40..this correction commit`.
+- **Finding corrected:** player documentation incorrectly described an
+  individually protected ailment as rejecting an otherwise useful recovery.
+  Integration documentation also did not state strongly enough that shop and
+  cross-actor equipment results are candidates calculated from the complete
+  immutable evidence supplied by the host.
+- **Runtime behavior:** no production runtime code changed. The correction pins
+  and documents behavior already implemented by `RecoveryService`,
+  `ShopTransactionService`, and `EquipmentTransitionService`.
+- **Changed documentation:** player mechanics now distinguishes retained
+  protected state from whole-treatment rejection. Developer, technical, and
+  public API guides define serialization/compare-and-swap requirements for shop
+  adoption and complete-loadout requirements for collision checks.
+- **Changed tests:** `RecoveryPolicyTests.cs` proves a protected-only ailment
+  returns `NoRecoveryNeeded` without debit; `ShopStockPolicyTests.cs` proves two
+  same-before calls are independently acceptable candidates while re-execution
+  after one adoption rejects depleted stock; `DocumentationFoundationTests.cs`
+  guards the corrected three-audience wording.
+- **Focused tests:** 3 recovery, shop-adoption, and documentation boundary tests
+  passed: 3 total, 0 failed, 0 skipped.
+- **Full suite:** 1,806 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 1,997 total, 0 failed, 0 skipped.
+- **Contract versions:** documentation and executable boundary evidence changed
+  only. Runtime save contract remains v19, content schema remains v10, and active
+  pack versions remain unchanged.
+
+#### Explicit O7-R11-C4 Evidence
+
+1. **Protected state is not blanket rejection.** A protected ailment remains,
+   while legal restoration, removable ailments, and configured temporary-state
+   cleanup may still commit. Protected-only state produces `NoRecoveryNeeded`
+   and preserves the exact currency ledger.
+2. **One result remains internally atomic.** Each accepted shop candidate still
+   carries inventory, named-currency, and stock after-snapshots together; each
+   rejected result returns its supplied authorities unchanged.
+3. **Cross-request authority remains host-owned.** Two calls using identical
+   before-snapshots can both calculate accepted candidates. Documentation now
+   requires per-session serialization or one compare-and-swap over all three
+   before-authorities before adoption.
+4. **Current-state re-execution is authoritative.** Running the second purchase
+   against the first result's after-snapshots returns
+   `ShopStockUnavailable`; stale same-before candidates are never described as
+   independently committable.
+5. **Collision evidence must be complete.** Equip and resale checks rely on the
+   complete current actor-loadout collection supplied by the host. Aggregate
+   save validation independently rechecks the whole persisted ownership graph.

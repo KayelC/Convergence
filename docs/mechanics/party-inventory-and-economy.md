@@ -161,10 +161,14 @@ treatment if a removable ailment or selected temporary state remains. The game
 should present the framework's assessment instead of duplicating a simpler
 "missing health" eligibility check.
 
-Recovery first stages the complete actor cleanup and named-currency payment.
-Only a fully accepted treatment changes the live actor and balance. Protected
-ailments, missing resources, missing or insufficient currency, invalid policy
-output, cancellation, or another rejection leave both unchanged.
+Recovery first stages every legal actor change and the named-currency payment.
+Only a fully accepted treatment changes the live actor and balance. An
+individually protected ailment remains on the actor, but it does not block an
+otherwise legal resource restoration, ailment cure, or temporary-state cleanup.
+If protected state is the only condition left, the result is `NoRecoveryNeeded`
+and no currency is spent. Missing configured resources, missing or insufficient
+currency, invalid policy output, cancellation, or another whole-treatment
+rejection leave both actor and balance unchanged.
 
 ## Saving This State
 

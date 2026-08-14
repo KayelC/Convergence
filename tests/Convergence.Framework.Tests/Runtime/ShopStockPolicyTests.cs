@@ -109,6 +109,59 @@ public sealed class ShopStockPolicyTests
     }
 
     [Fact]
+    public void HostAdoption_MustSerializeOrCompareAndSwapSameBeforePurchaseCandidates()
+    {
+        var service = new ShopTransactionService();
+        RuntimeShopOfferSnapshot offer = Offer(ShopA, OfferA, Medicine, quantity: 1);
+        RuntimeShopStockSnapshot stock = RuntimeShopStockSnapshot.CreateInitial([offer]);
+        var inventory = new RuntimeInventorySnapshot();
+        RuntimeCurrencyLedgerSnapshot currency = Ledger(30);
+
+        ShopTransactionResult firstCandidate = service.Buy(
+            inventory,
+            currency,
+            stock,
+            Credits,
+            offer,
+            buyerLuck: 0,
+            purchasedEquipmentInstanceId: null);
+        ShopTransactionResult staleSameBeforeCandidate = service.Buy(
+            inventory,
+            currency,
+            stock,
+            Credits,
+            offer,
+            buyerLuck: 0,
+            purchasedEquipmentInstanceId: null);
+        ShopTransactionResult recalculatedAfterAdoption = service.Buy(
+            firstCandidate.AfterInventory,
+            firstCandidate.AfterCurrencyLedger,
+            firstCandidate.AfterStock,
+            Credits,
+            offer,
+            buyerLuck: 0,
+            purchasedEquipmentInstanceId: null);
+
+        Assert.True(firstCandidate.Applied);
+        Assert.True(staleSameBeforeCandidate.Applied);
+        Assert.Same(firstCandidate.BeforeInventory, staleSameBeforeCandidate.BeforeInventory);
+        Assert.Same(
+            firstCandidate.BeforeCurrencyLedger,
+            staleSameBeforeCandidate.BeforeCurrencyLedger);
+        Assert.Same(firstCandidate.BeforeStock, staleSameBeforeCandidate.BeforeStock);
+        Assert.Equal(1, firstCandidate.AfterInventory.GetQuantity(Medicine));
+        Assert.Equal(20, Balance(firstCandidate.AfterCurrencyLedger));
+        AssertQuantity(firstCandidate.AfterStock, offer.Identity, 0);
+
+        AssertAtomicRejection(
+            recalculatedAfterAdoption,
+            firstCandidate.AfterInventory,
+            firstCandidate.AfterCurrencyLedger,
+            firstCandidate.AfterStock,
+            ResourceTransactionCode.ShopStockUnavailable);
+    }
+
+    [Fact]
     public void Buy_RejectionsPreserveAllThreeAuthoritiesAtomically()
     {
         var service = new ShopTransactionService();

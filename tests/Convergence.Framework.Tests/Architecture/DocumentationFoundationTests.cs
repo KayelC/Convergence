@@ -776,6 +776,7 @@ public sealed class DocumentationFoundationTests
             "A rejection updates none of them.",
             "which resources are fully restored",
             "An actor at full configured resources may still have a valid zero-cost treatment",
+            "An individually protected ailment remains on the actor",
             "Current save contract v19 stores:"
         ];
         Assert.All(
@@ -790,6 +791,8 @@ public sealed class DocumentationFoundationTests
             "RuntimeActorEquipmentProfileSource",
             "custom layout that permits multiple simultaneous weapon profiles",
             "Adopt all three after-snapshots together",
+            "Serialize shop mutations per game session",
+            "complete current collection of other actor loadouts",
             "Its after-ledger is hypothetical and must not be adopted",
             "Reconnect Nodes by runtime ID only after aggregate restore succeeds"
         ];
@@ -807,6 +810,8 @@ public sealed class DocumentationFoundationTests
             "## Save V19 Validation And Restore",
             "ID and nonnegative amount",
             "enforced by `RuntimeCurrencyLedgerSnapshot` construction",
+            "Adopting one candidate makes every other same-before candidate stale.",
+            "complete current loadout collection supplied by the host",
             "```mermaid"
         ];
         Assert.All(

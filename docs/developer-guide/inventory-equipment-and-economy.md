@@ -160,9 +160,12 @@ if (!result.Applied)
 }
 ```
 
-Passing other loadouts is load-bearing: it prevents one instance from being
-equipped by two actors. The returned `After` is the candidate loadout; the
-service does not silently mutate the actor.
+Passing the complete current collection of other actor loadouts is
+load-bearing: it prevents one instance from being equipped by two actors. An
+omitted or stale loadout cannot be inferred by this stateless transition
+service. Aggregate save validation independently checks the complete ownership
+graph. The returned `After` is the candidate loadout; the service does not
+silently mutate the actor.
 
 Before presenting the change as complete, pass the candidate loadout to
 `RuntimeActorEquipmentApplicationService`. It resolves the canonical equipment
@@ -305,6 +308,14 @@ result returns the original three authorities. Execute against current state
 after confirmation; a price shown earlier is presentation evidence, not
 permission to bypass revalidation.
 
+`ShopTransactionService` is a stateless candidate calculator, not a lockable
+session repository. Serialize shop mutations per game session, or compare and
+swap all three current authorities against `BeforeInventory`,
+`BeforeCurrencyLedger`, and `BeforeStock` before adoption. Two requests assessed
+from the same before-snapshots can both be acceptable candidates; after one is
+adopted, the other is stale and must be rejected or recalculated. Never adopt
+both same-before candidates.
+
 For resale, pass every actor loadout so the exact instance cannot be sold while
 equipped. Item resale passes no equipment instance ID; equipment resale passes
 the exact instance ID.
@@ -347,6 +358,9 @@ else
 accept. The host must adopt the returned ledger from the same successful
 result. Rejection preserves both authorities. Cancellation remains an
 `OperationCanceledException`; do not display it as a gameplay refusal.
+An individually protected ailment is retained without rejecting other legal
+recovery changes. If no legal change remains, the typed result is
+`NoRecoveryNeeded` and no currency is debited.
 
 ## Save And Restore
 
