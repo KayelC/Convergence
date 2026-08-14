@@ -1,0 +1,8 @@
+  Convergence.Framework -> C:\Users\kayel\Documents\GitHub\Convergence\src\Convergence.Framework\bin\Debug\net8.0\Convergence.Framework.dll
+  Convergence.GodotHost -> C:\Users\kayel\Documents\GitHub\Convergence\samples\Convergence.GodotHost\.godot\mono\temp\bin\Debug\Convergence.GodotHost.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:04.18

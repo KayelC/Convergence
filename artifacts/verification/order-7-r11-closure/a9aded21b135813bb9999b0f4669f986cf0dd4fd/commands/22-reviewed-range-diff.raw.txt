@@ -1,0 +1,3100 @@
+diff --git a/docs/developer-guide/actors-and-runtime-state.md b/docs/developer-guide/actors-and-runtime-state.md
+index 46b082afb168e515cdc49e956bcd9177b74fe8ca..7feff584afd02e0408fb21c010941fd040d52567 100644
+--- a/docs/developer-guide/actors-and-runtime-state.md
++++ b/docs/developer-guide/actors-and-runtime-state.md
+@@ -348,32 +348,35 @@ if (!restored.IsSuccess)
+ RuntimeRestoredSession session = restored.RequireSession();
+ ```
+ 
+-The host supplies `IRuntimeActorRestoreProfileResolver` to state whether each
+-actor uses its own profile or the Active Hosted Entity profile, plus the
+-current equipment profile's stat modifiers and granted skill IDs.
+-
+-Resolve those modifiers through the same `RuntimeEquipmentProfileResolver`
+-used after creation and after equipment changes. For a restored actor, pass its
+-saved `RuntimeEquipmentSnapshot` together with the restored aggregate inventory
+-and catalog. This rebuilds Defense, Evasion, and accessory contributions from
+-the same source that supplies weapon attacks and equipped-only skill grants;
+-do not serialize a second derived equipment profile. Active grants are checked
+-live during command authorization, while restored passive grants are loaded
+-into the actor's passive collection without entering its learned or equipped
+-move-list IDs.
++The host supplies `IRuntimeActorRestoreProfileResolver` only to state whether
++each actor uses its own profile or the Active Hosted Entity profile. It cannot
++declare equipment modifiers or grants. Aggregate restoration derives those
++values from the saved inventory, each actor's saved loadout, and the catalog
++through its selected `IRuntimeEquipmentProfileResolver` before constructing any
++actor.
++
++Supply the same equipment resolver used after creation and equipment changes
++when a game uses a custom slot layout. The standard resolver is selected by
++default. This rebuilds Defense, Evasion, accessory contributions, weapon data,
++and equipped-only grants from one authority graph; do not serialize or pass a
++second derived equipment profile. Active grants are checked live during command
++authorization, while restored passive grants are loaded into the actor's
++passive collection without entering learned or equipped move-list IDs.
+ 
+ ```mermaid
+ flowchart TD
+     Save["Host-deserialized save v19"] --> Validate["Validate complete aggregate"]
+-    Validate --> Modifiers["Bind retained modifier policies"]
+-    Modifiers --> Profiles["Resolve actor restore profiles"]
+-    Profiles --> Sources["Restore owned source actors"]
++    Validate --> Profiles["Resolve stat-source profiles"]
++    Profiles --> Equipment["Derive equipment profiles from aggregate"]
++    Equipment --> Modifiers["Bind retained modifier policies"]
++    Modifiers --> Sources["Restore owned source actors"]
+     Sources --> Vessels["Restore and recompose dependent Vessels"]
+     Vessels --> Normalize["Normalize restored actor snapshots"]
+     Normalize --> Session["Return complete RuntimeRestoredSession"]
+     Validate -->|Failure| Reject["Return diagnostics only"]
+-    Modifiers -->|Failure| Reject
+     Profiles -->|Failure| Reject
++    Equipment -->|Failure| Reject
++    Modifiers -->|Failure| Reject
+     Sources -->|Failure| Reject
+     Vessels -->|Failure| Reject
+ ```
+diff --git a/docs/developer-guide/inventory-equipment-and-economy.md b/docs/developer-guide/inventory-equipment-and-economy.md
+index 515e8f7eaf2f09c9af7f3995b8678c66d0133532..dc1eb00deb0e914f23e70dbd5ef88f39ee50a193 100644
+--- a/docs/developer-guide/inventory-equipment-and-economy.md
++++ b/docs/developer-guide/inventory-equipment-and-economy.md
+@@ -101,8 +101,23 @@ actor composition and live equipment sources. The selected layout owns
+ slot/profile compatibility; it does not own inventory identity, combat math,
+ or granted-skill behavior.
+ 
++Every framework slot-sensitive boundary invokes the policy through the same
++fault evaluator. A null result, undefined result code, or non-cancellation
++exception becomes a typed `PolicyRejected`/`EquipmentSlotPolicyRejected`
++diagnostic appropriate to that boundary. `OperationCanceledException` is
++propagated. Hosts should present the typed diagnostic and keep the prior
++immutable state; they should not catch the policy failure and retry with the
++standard layout.
++
+ ## Allocate Equipment Instance IDs In The Host
+ 
++Live item additions, removals, and reservations likewise require a valid item
++`ContentId`. An empty ID returns `InvalidItemId` with the supplied inventory
++unchanged. Do not infer from the snapshot constructor's ability to represent a
++malformed decoded key that such a key is valid gameplay input; aggregate save
++validation retains that representation only to report its exact diagnostic
++path.
++
+ An equipment definition describes a kind of equipment. An equipment instance
+ is one owned copy:
+ 
+@@ -152,16 +167,44 @@ if (!result.Applied)
+ }
+ ```
+ 
+-Passing other loadouts is load-bearing: it prevents one instance from being
+-equipped by two actors. The returned `After` is the candidate loadout; the
+-service does not silently mutate the actor.
++Passing the complete current collection of other actor loadouts is
++load-bearing: it prevents one instance from being equipped by two actors. An
++omitted or stale loadout cannot be inferred by this stateless transition
++service. Aggregate save validation independently checks the complete ownership
++graph. The returned `After` is the candidate loadout; the service does not
++silently mutate the actor.
++
++Before presenting the change as complete, pass the candidate loadout to
++`RuntimeActorEquipmentApplicationService`. It resolves the canonical equipment
++profile, composes the complete actor on an execution clone, and commits the
++loadout plus composed actor state only when both operations accept:
++
++```csharp
++var equipmentApplication = new RuntimeActorEquipmentApplicationService(
++    actorComposition,
++    profileResolver);
++
++RuntimeActorEquipmentApplicationResult applied = equipmentApplication.Apply(
++    new RuntimeActorEquipmentApplicationRequest(
++        actor,
++        inventory,
++        result.After,
++        catalog,
++        RuntimeStatSourceKind.ActiveHostedEntity,
++        MissingHostedEntityBehavior.RejectStatResolution,
++        partyRoster,
++        runtimeActors));
++
++if (!applied.Applied)
++{
++    Present(applied.Diagnostics);
++    return;
++}
++```
+ 
+-Before presenting the change as complete, the host must resolve and apply the
+-actor's canonical combat profile using the candidate loadout and current
+-inventory. Vessel games pass the resolved `StatModifiers` and
+-`GrantedSkillIds` into the same actor-composition service used at actor
+-creation, growth, hosted-entity changes, and restore. Commit the candidate
+-loadout and successful composition as one host-session operation.
++On rejection, `Before` and `After` both describe the unchanged live actor. The
++equipment transition remains a pure candidate operation; the application
++service is the live actor commit boundary.
+ 
+ Do not manually copy grants into learned skills. Do not independently add
+ armor Defense or boots Evasion in battle code.
+@@ -272,6 +315,14 @@ result returns the original three authorities. Execute against current state
+ after confirmation; a price shown earlier is presentation evidence, not
+ permission to bypass revalidation.
+ 
++`ShopTransactionService` is a stateless candidate calculator, not a lockable
++session repository. Serialize shop mutations per game session, or compare and
++swap all three current authorities against `BeforeInventory`,
++`BeforeCurrencyLedger`, and `BeforeStock` before adoption. Two requests assessed
++from the same before-snapshots can both be acceptable candidates; after one is
++adopted, the other is stale and must be rejected or recalculated. Never adopt
++both same-before candidates.
++
+ For resale, pass every actor loadout so the exact instance cannot be sold while
+ equipped. Item resale passes no equipment instance ID; equipment resale passes
+ the exact instance ID.
+@@ -314,6 +365,9 @@ else
+ accept. The host must adopt the returned ledger from the same successful
+ result. Rejection preserves both authorities. Cancellation remains an
+ `OperationCanceledException`; do not display it as a gameplay refusal.
++An individually protected ailment is retained without rejecting other legal
++recovery changes. If no legal change remains, the typed result is
++`NoRecoveryNeeded` and no currency is debited.
+ 
+ ## Save And Restore
+ 
+@@ -328,7 +382,10 @@ equipment afterward. Host decoding constructs the immutable currency ledger,
+ which rejects invalid IDs, duplicate IDs, and negative balances. Aggregate
+ validation then checks instance uniqueness, ownership, slot compatibility,
+ cross-actor assignment, stock, catalog references, and selected policies before
+-any partial live session is exposed.
++any partial live session is exposed. Aggregate restore derives each actor's
++equipment profile from that validated inventory/loadout/catalog graph; the
++host's actor restore-profile resolver selects stat sourcing only and cannot
++re-declare equipment modifiers or grants.
+ 
+ A non-current contract version needs an explicit host-supplied migration.
+ Convergence does not guess how an old wallet or equipment shape maps into v19.
+@@ -354,6 +411,7 @@ No `Node`, `Resource`, `res://` path, serializer type, or scene handle enters
+ ## Integration Checklist
+ 
+ - One current inventory snapshot owns every equipment instance.
++- Every live item transition supplies a valid item `ContentId`.
+ - Equipment IDs are globally fresh and stable across save/restore.
+ - One selected slot layout is used by validation, transitions, offers, and
+   profile resolution.
+diff --git a/docs/godot-integration-contract.md b/docs/godot-integration-contract.md
+index 7ae3a6c9c406a5cff07d5d87492eba8af8bf1bee..1382fc8a0ccbdfa1418b0db7e3b7ce3ace545c09 100644
+--- a/docs/godot-integration-contract.md
++++ b/docs/godot-integration-contract.md
+@@ -88,7 +88,10 @@ instances, selects and executes a typed action, consumes an ordered encounter
+ stream, exercises the Training Annex recovery policy while scene ownership
+ remains in Godot, and decodes a host-owned JSON save before handing the complete
+ aggregate to `IRuntimeSessionRestoreService`. It proves source-first Active
+-Hosted Entity restoration and proves a rejected aggregate exposes no actors.
++Hosted Entity restoration, uses the aggregate equipment-profile derivation
++boundary, and proves a rejected aggregate exposes no actors. A Godot game with
++a custom equipment slot layout supplies the matching equipment resolver to the
++restore service; Nodes never participate in that derivation.
+ 
+ ```powershell
+ dotnet build samples/Convergence.GodotHost/Convergence.GodotHost.csproj
+diff --git a/docs/mechanics/party-inventory-and-economy.md b/docs/mechanics/party-inventory-and-economy.md
+index 8eb15696add7968fe89207e8f2b8b5e28f905373..2d009226df76987f251dca4f4c8edc974902f0f2 100644
+--- a/docs/mechanics/party-inventory-and-economy.md
++++ b/docs/mechanics/party-inventory-and-economy.md
+@@ -161,10 +161,14 @@ treatment if a removable ailment or selected temporary state remains. The game
+ should present the framework's assessment instead of duplicating a simpler
+ "missing health" eligibility check.
+ 
+-Recovery first stages the complete actor cleanup and named-currency payment.
+-Only a fully accepted treatment changes the live actor and balance. Protected
+-ailments, missing resources, missing or insufficient currency, invalid policy
+-output, cancellation, or another rejection leave both unchanged.
++Recovery first stages every legal actor change and the named-currency payment.
++Only a fully accepted treatment changes the live actor and balance. An
++individually protected ailment remains on the actor, but it does not block an
++otherwise legal resource restoration, ailment cure, or temporary-state cleanup.
++If protected state is the only condition left, the result is `NoRecoveryNeeded`
++and no currency is spent. Missing configured resources, missing or insufficient
++currency, invalid policy output, cancellation, or another whole-treatment
++rejection leave both actor and balance unchanged.
+ 
+ ## Saving This State
+ 
+diff --git a/docs/mechanics/saving-loading-and-suspend.md b/docs/mechanics/saving-loading-and-suspend.md
+index 38decf48f5e7a0eb81320e398fb3abe6ae7045e7..2fe5cee384dbb19ca9d44de3e5851759b8433dc3 100644
+--- a/docs/mechanics/saving-loading-and-suspend.md
++++ b/docs/mechanics/saving-loading-and-suspend.md
+@@ -74,10 +74,11 @@ resolver and checks the complete state against its authored policy.
+ An invalid snapshot cannot produce a valid restore token.
+ `IRuntimeSessionRestoreService` first runs an explicit migration service,
+ validates the complete aggregate, resolves each retained stat-modifier policy
+-from the supplied catalog, resolves a host-supplied restore profile for
+-every actor, restores the Active Hosted Entity selected by the canonical party
+-roster before its Vessel, recomposes the Vessel, and returns either one
+-complete `RuntimeRestoredSession` or typed diagnostics with no partial session.
++from the supplied catalog, resolves a host-supplied stat-source profile for
++every actor, derives equipment effects from saved ownership/loadouts and the
++catalog, restores the Active Hosted Entity selected by the canonical party
++roster before its Vessel, recomposes the Vessel, and returns either one complete
++`RuntimeRestoredSession` or typed diagnostics with no partial session.
+ The normalized restored snapshot replaces stale derived Vessel combat-profile
+ data with the profile produced from restored source state.
+ 
+diff --git a/docs/public-api-contract.md b/docs/public-api-contract.md
+index 0a985680b369cae529b7aa7ad3518b6cd95c9b02..eb032e52eef432f31724326c598d65053b81804b 100644
+--- a/docs/public-api-contract.md
++++ b/docs/public-api-contract.md
+@@ -281,6 +281,7 @@ immutable currency ledger keyed by `ContentId` rather than an unnamed balance,
+ plus remaining quantities for policy-owned shop stock. Version 18 introduced
+ the ledger; version 19 retained it and added durable shop stock.
+ `RuntimeSessionRestoreService` binds retained modifier policies explicitly,
++derives equipment contributions from aggregate inventory/loadout/catalog state,
+ derives the Active Hosted Entity dependency from `RuntimePartyRosterSnapshot`,
+ restores owned actors first, and returns a normalized aggregate whose derived
+ Vessel profile matches the restored source. Any non-current snapshot is
+@@ -295,7 +296,13 @@ recovery contracts. `RuntimeInventorySnapshot` is the sole equipment-instance
+ owner; actor loadouts reference those instances under authored slot IDs.
+ `RuntimeEquipmentProfileResolver` derives the current basic attack, numeric
+ contributions, and equipped-only skill grants without copying grants into
+-learned state.
++learned state. `RuntimeActorEquipmentApplicationService` stages a candidate
++loadout and that derived profile on an actor clone, runs canonical combat-profile
++composition, and commits the complete actor only after every step accepts.
++Rejected application results expose equal before/after actor snapshots.
++Slot-layout policy invocation is fault-contained consistently: malformed policy
++results and non-cancellation faults surface through explicit typed policy
++rejection codes, while cancellation propagates.
+ 
+ Hosts allocate globally fresh equipment instance IDs and adopt successful
+ after-snapshots. `ShopTransactionResult` coordinates inventory, currency, and
+@@ -303,6 +310,11 @@ stock as one result. `RecoveryTransactionResult` coordinates staged actor state
+ with an explicit currency ledger. Presentation code must not construct runtime
+ shop offers, duplicate formulas, or infer authority from display text.
+ 
++Transition services do not own concurrent host session state. Hosts serialize
++shop adoption or compare all supplied before-authorities atomically, and they
++supply complete current actor-loadout evidence for cross-actor equipment
++collision checks.
++
+ See [Inventory, Equipment, And Economy Integration](developer-guide/inventory-equipment-and-economy.md),
+ [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md),
+ and the [Content Contract](content-contract.md).
+diff --git a/docs/reviews/README.md b/docs/reviews/README.md
+index 5f78ee53052953ed3e4157ab0baca8040ec709e6..4851afa9db59b50a6a745824bc695e71e5eb1184 100644
+--- a/docs/reviews/README.md
++++ b/docs/reviews/README.md
+@@ -100,6 +100,7 @@ or implementation authority.
+ - [Inventory, Equipment, And Economy Order 7 R9 Post-Correction Review, 13 August 2026](inventory-equipment-economy-order-7-r9-post-correction-review-2026-08-13.md)
+ - [Inventory, Equipment, And Economy Order 7 R10 Documentation Audit, 13 August 2026](inventory-equipment-economy-order-7-r10-documentation-audit-2026-08-13.md)
+ - [Inventory, Equipment, And Economy Order 7 R10 Documentation Review, 13 August 2026](inventory-equipment-economy-order-7-r10-documentation-review-2026-08-13.md)
++- [Inventory, Equipment, And Economy Order 7 R11 Independent Audit, 14 August 2026](inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md)
+ - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
+ 
+ Current intended behavior belongs in confirmed mechanics and decision documents.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md b/docs/reviews/inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..dbe349df13bb53e21751666a8e512537e99d452a
+--- /dev/null
++++ b/docs/reviews/inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md
+@@ -0,0 +1,258 @@
++# Inventory, Equipment, And Economy Order 7 R11 Independent Audit
++
++**Date:** 14 August 2026  
++**Capability:** `inventory_equipment_economy`  
++**Baseline:** `25c0a78a`  
++**Result:** corrections required before Order 7 can close
++
++## Review Method
++
++This audit reread the current Framework, DemoHost, Godot sample, tests, strict
++schemas, and all three Order 7 audience documents. Earlier reports were not
++used as implementation proof. Each finding below identifies the intended
++invariant, a reachable path, its concrete consequence, and reproducible source
++or test evidence.
++
++The clean baseline reproduced before any correction:
++
++```text
++Convergence.Framework.Tests: 1,794 passed, 0 failed, 0 skipped
++Convergence.DemoHost.Tests: 182 passed, 0 failed, 0 skipped
++Convergence.ContentValidator.Tests: 7 passed, 0 failed, 0 skipped
++Total: 1,983 passed, 0 failed, 0 skipped
++```
++
++## Verified Healthy Areas
++
++The audit found the following implemented invariants to be coherent:
++
++- inventory owns exact immutable equipment instances and permits separate
++  copies of one definition;
++- equip, removal, sale, and save validation reject missing, duplicate,
++  multiply assigned, equipped, and actor-colliding instance IDs;
++- standard and custom authored slots retain instance-ownership checks;
++- active equipment-granted skill authorization is resolved from the current
++  loadout at assessment and execution, so stale prepared actions reject;
++- shop results carry coordinated inventory, named-currency, and stock
++  candidates, and every rejection preserves all three supplied before-states;
++- currency ledgers reject duplicate IDs, negative balances, overflow, and
++  missing named currencies through typed diagnostics;
++- recovery stages actor cleanup and named-currency debit, removes only legally
++  removable ailments, preserves protected state, and commits no partial live
++  actor on rejection; and
++- save v19 has one equipment ownership authority and validates the complete
++  inventory/loadout graph before aggregate actor construction.
++
++These strengths do not cancel the reachable authority defects below.
++
++## Findings
++
++### O7-R11-M1: Live equipment application is not atomic with actor composition
++
++**Intended invariant:** one equipped-state change must atomically update the
++actor's loadout and the derived Defense, Evasion, resources, combat-profile
++identity, and equipment-granted passives. The same equipment state must mean
++the same thing whether reached during creation, restore, or live play.
++
++**Reachable path:** the Training Annex shop buys a catalog armor instance,
++accepts `EquipmentTransitionService.Equip`, immediately calls
++`RuntimeActorState.ReplaceEquipment`, and publishes an equipped-success event.
++After the shop switch completes, the outer command loop does invoke canonical
++composition. If profile resolution or composition rejects, however, that loop
++returns a failure exit code without rolling the already-replaced loadout back.
++The public composition service mutates the supplied actor and Framework exposes
++no staged operation that can commit the loadout and composition together.
++
++**Consequence:** the valid standard-content path eventually reaches a coherent
++composition, but a rejected composition leaves the actor referencing the new
++loadout while its effective Defense/Evasion and passive collection still
++describe the previous one. The host has already announced success. Active
++granted-skill authorization sees the fresh projection, so different combat
++subsystems can observe different meanings for the same equipment snapshot on
++that failure path.
++
++**Evidence:**
++
++- `samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexShopController.cs`
++  commits `ReplaceEquipment` and publishes success before composition;
++- `samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs`
++  composes only after the shop controller returns and has no rollback path;
++- `src/Convergence.Framework/Execution/BattleRuntimeState.cs`
++  `ReplaceEquipment` removes prior equipment passives but does not compose new
++  numeric contributions or passives;
++- `src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs`
++  is the only canonical path that applies those derived values; and
++- `CleanTrainingAnnexPlay_ShopBuysAndEquipsCatalogEquipment` asserts ownership
++  and profile projection but not the live actor's composed stats/passives.
++
++**Correction checkpoint O7-R11-C1:** add one fixed, non-policy Framework
++operation that resolves an equipment profile and applies the candidate loadout
++plus canonical actor composition through a staged actor transaction. Rejection
++must leave the live actor unchanged. Route the Training Annex live equip path
++through it and prove equip, unequip, rejection, Vessel composition, and passive
++provenance.
++
++### O7-R11-M1: Aggregate restore lets a host re-declare fixed equipment-derived state
++
++**Intended invariant:** inventory instances, actor loadouts, and catalog
++definitions are the sole authorities for equipment-derived modifiers and
++granted skills. Hosts choose actor stat-source behavior; they do not decide
++what an equipped definition contributes.
++
++**Reachable path:** `RuntimeActorRestoreProfile` publicly accepts
++`EquipmentStatModifiers` and `EquipmentGrantedSkillIds`.
++`RuntimeSessionRestoreService` forwards those host values to the actor factory
++even though the aggregate already contains inventory, loadouts, and catalog.
++The Clean Save and Godot sample profile resolvers return empty equipment data;
++the Training Annex resolver independently rebuilds it.
++
++**Consequence:** the same valid save can restore different effective stats or
++passive grants according to host resolver behavior. Omitting or forging these
++values does not change the saved equipment graph and can pass aggregate
++validation, so restore is not authoritative over fixed equipment behavior.
++
++**Evidence:**
++
++- `src/Convergence.Framework/Runtime/RuntimeSessionRestoration.cs` defines and
++  consumes the host-supplied equipment fields;
++- `samples/Convergence.DemoHost/Hosts/CleanSaveDemoHost.cs` and
++  `samples/Convergence.GodotHost/Scripts/ConvergenceSmokeRoot.cs` omit them;
++- the Training Annex persistence resolver derives them independently; and
++- save validation already constructs `RuntimeEquipmentProfileResolver`, proving
++  the aggregate has sufficient canonical evidence.
++
++**Correction checkpoint O7-R11-C2:** remove equipment-derived values from the
++aggregate restore-profile contract. Make aggregate restoration resolve each
++actor's equipment profile from current inventory, loadout, catalog, and the
++explicitly selected equipment-profile resolver. Reject profile diagnostics or
++faults before exposing a session. Keep the lower-level actor factory contract
++available for callers that deliberately restore one actor without an aggregate.
++
++### O7-R11-M2: Custom slot-policy faults escape typed Framework boundaries
++
++**Intended invariant:** `IEquipmentSlotLayoutPolicy` is a supported extension
++boundary. Cancellation propagates, while null, faulting, or malformed policy
++results become typed diagnostics without partially changing state.
++
++**Reachable path:** content validation, equip/unequip, profile resolution, shop
++offer resolution, and save validation call `ValidateDefinition` or
++`ValidateAssignment` directly. A developer-authored policy may throw or return
++null, as other policy families explicitly defend against.
++
++**Consequence:** a policy implementation defect can escape as an untyped
++exception from catalog loading, a live equipment transition, shop startup, or
++save validation. This contradicts the active technical documentation's stated
++fault-containment rule.
++
++**Evidence:** direct policy calls exist in
++`SkillSystemContentValidator.cs`, `ResourceManagementServices.cs`,
++`RuntimeEquipmentProfiles.cs`, and `RuntimePersistenceSnapshots.cs`; the slot
++tests currently cover compatible/incompatible results but not null, fault, or
++cancellation behavior.
++
++**Correction checkpoint O7-R11-C3:** centralize slot-policy invocation in one
++internal evaluator, preserve `OperationCanceledException`, normalize null or
++undefined results, and convert other faults to an explicit `PolicyRejected`
++result. Route every Framework slot-policy consumer through that evaluator and
++add focused boundary tests.
++
++### O7-R11-L1: Player recovery wording overstates atomic ailment rejection
++
++**Intended invariant:** recovery applies every legal selected change while
++leaving individually protected ailments untouched. A protected ailment does
++not reject an otherwise useful resource restore or legal ailment cure.
++
++**Contradiction:** `docs/mechanics/party-inventory-and-economy.md` currently
++groups “protected ailments” with whole-transaction rejection. The standard
++policy and tests instead preserve protected ailments while applying other legal
++changes. A protected-only actor with no other change receives
++`NoRecoveryNeeded`.
++
++**Correction checkpoint O7-R11-C4:** correct the player wording and synchronize
++the related developer/technical explanation where the R11 API corrections
++change responsibilities.
++
++### O7-R11-M3: Live item transitions accept an empty content identity
++
++**Intended invariant:** a successful live inventory transition must contain
++only items identified by valid `ContentId` values. Invalid host command input
++must return a typed rejection with the exact supplied inventory as both before
++and after. This is distinct from decoded save snapshots, which deliberately may
++represent malformed item keys long enough for aggregate save validation to
++report their paths.
++
++**Reachable path:** `InventoryTransitionService.AddItem` validates quantity and
++stack arithmetic but never validates `itemId`. A host can therefore call
++`AddItem(snapshot, default, 1)`, receive `Applied`, and store the empty ID as an
++inventory key. `RemoveItem` and `ReserveItem` likewise treat an empty ID as an
++ordinary lookup rather than invalid command input.
++
++**Consequence:** a public gameplay transition can create live inventory that
++the save validator later rejects as `InvalidContentId` and that no catalog item
++can resolve. The failure is delayed beyond the command that introduced it, so
++the host receives false success instead of a local typed diagnostic.
++
++**Evidence:**
++
++- `RuntimeInventorySnapshot` intentionally permits an empty item key so
++  `RuntimeSaveValidator_AggregatesDefaultIdentifiersBeforeRestoreOrLookup` can
++  aggregate a path-specific malformed-save diagnostic;
++- `InventoryTransitionService.AddItem`, `.RemoveItem`, and `.ReserveItem` have
++  no `itemId.IsValid` boundary check; and
++- currency and equipment command boundaries already reject their corresponding
++  invalid identities before producing accepted state.
++
++**Correction checkpoint O7-R11-C5:** add a distinct
++`ResourceTransactionCode.InvalidItemId`, reject empty IDs atomically in all
++three live item operations, retain permissive malformed-snapshot construction
++for aggregate validation, and document/test the boundary distinction.
++
++## Trusted Host Boundary: Concurrent Candidate Adoption
++
++`ShopTransactionService` is deliberately stateless. It calculates an immutable
++candidate from the exact inventory, currency, and stock snapshots supplied by
++the host; it does not own a lockable live session. Two concurrent requests
++using the same before-snapshots can therefore both calculate acceptable
++candidates. The Framework guarantee is atomicity *within one result*, not
++automatic compare-and-swap across host session storage.
++
++The supported boundary is:
++
++1. serialize shop mutations per session, or compare-and-swap all three current
++   authorities against the result's before-snapshots;
++2. adopt inventory, currency, and stock from one accepted result together; and
++3. reject/retry a candidate whose before-snapshots are no longer current.
++
++This is not converted into a mutable Framework repository or a speculative
++policy. O7-R11-C4 will make the boundary explicit in developer and technical
++documentation and add executable evidence for sequential depletion and stale
++same-before candidates.
++
++The same trusted-host principle applies to complete collision evidence:
++`EquipmentTransitionService.Equip` and equipment resale can reject
++cross-actor use only from the complete actor-loadout collection supplied by the
++host. Aggregate save validation independently rechecks the whole graph.
++
++## Correction Order
++
++| Checkpoint | State | Work | Commit boundary |
++|---|---|---|---|
++| O7-R11-A | complete | Preserve this audit and correction roadmap | documentation only |
++| O7-R11-C1 | complete | Add atomic canonical live equipment application and migrate DemoHost | runtime + focused tests + affected docs/API evidence |
++| O7-R11-C2 | complete | Make aggregate restore derive equipment contributions | runtime + host/Godot/persistence tests + API evidence |
++| O7-R11-C3 | complete | Contain custom slot-policy faults at every Framework boundary | runtime + validation/transition/profile/save tests + API evidence |
++| O7-R11-C4 | complete | Correct recovery wording and document trusted host concurrency/collision boundaries | three-audience docs + executable documentation/boundary tests |
++| O7-R11-C5 | complete | Reject invalid IDs at live item-transition boundaries while preserving malformed-save diagnostics | runtime + focused tests + affected docs/API evidence |
++| O7-R11-C6 | open | Freshly re-read post-correction source/docs and run the durable release gate | closure report + tracking/evidence only |
++
++Each correction receives its own green commit. Order 7 remains `partial` until
++O7-R11-C6 finds no remaining realistic reachable defect or documentation
++contradiction and the complete release gate passes.
++
++## Scope Guard
++
++These corrections add no presentation UI, proprietary content, new combat
++formula, granted-skill policy, currency policy, mutable shop repository, or
++Order 8 work. Equipment ownership, profile derivation, and currency identity
++remain fixed rules. Custom slot layout remains the only equipment policy
++surface changed by this audit.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+index 5c59173cf824bb68155b640e1667c55c7a442a8f..7b6795bb204b56e87cdcd9f9ed8710a670f7b2a5 100644
+--- a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
++++ b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+@@ -8,7 +8,8 @@
+ 
+ **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
+ 
+-**Implementation status:** O7-R1 through O7-R10 complete; O7-R11 pending
++**Implementation status:** O7-R1 through O7-R10 complete; O7-R11 corrective
++audit in progress
+ 
+ > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
+ > recorded in
+@@ -609,6 +610,14 @@ gates remain mandatory before O7-R8 can be recorded complete.
+ - return the capability to `complete` only if no realistic reachable defect or
+   documentation contradiction remains.
+ 
++The fresh source-first audit is recorded in
++[the O7-R11 independent audit](inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md).
++It found four reachable authority/fault-boundary defects, one documentation
++contradiction, and one trusted host concurrency boundary that requires explicit
++guidance and evidence. O7-R11-A through O7-R11-C6 in that record are the active
++correction order. This capability remains `partial` until the post-correction
++audit and complete release gate pass.
++
+ ## Per-Checkpoint Verification
+ 
+ Every implementation checkpoint requires, as applicable:
+@@ -1396,3 +1405,267 @@ restore, DemoHost, and Godot integration without treating prior reports as
+ proof. It found and corrected three documentation precision issues and found no
+ remaining High, Medium, or Low actionable defect within R10's documentation
+ scope. It does not replace the broader independent O7-R11 runtime audit.
++
++### O7-R11-C1: Apply Live Equipment Profiles Atomically
++
++- **Baseline and commit:** `49d88a2d..this correction commit`.
++- **Finding corrected:** an accepted equipment transition produced a candidate
++  loadout, but the active Training Annex host replaced the live loadout before
++  canonical composition had accepted. A later composition rejection could
++  therefore leave the live actor with the new instance reference but without
++  its Defense, Evasion, or equipped-only passive contribution.
++- **Actual destination:** `RuntimeActorEquipmentApplicationService` resolves the
++  candidate equipment profile, replaces the loadout on an execution clone,
++  runs the existing `RuntimeActorCombatProfileCompositionService`, and commits
++  the complete clone only after every step accepts. It adds no equipment policy
++  and no equipment-specific combat formula.
++- **Changed Framework/API files:**
++  `Runtime/RuntimeActorCombatProfileComposition.cs`,
++  `PublicAPI.Shipped.txt`, and the deliberately empty
++  `PublicAPI.Unshipped.txt` release gate.
++- **Changed host files:** `TrainingAnnexShopController.cs` and
++  `CleanTrainingAnnexPlayHost.cs`. Equip success is now presented only after
++  atomic application accepts, and complete roster loadouts are supplied to the
++  existing cross-actor collision check.
++- **Changed tests:** `ProgressionPolicyTests.cs` proves successful equip and
++  unequip commit loadout, Defense/Evasion, and equipped-only passive state
++  together; a composition rejection preserves the complete live actor.
++  `CleanTrainingAnnexPlayHostTests.cs` proves the catalog equipment path changes
++  effective combat values and a host-level composition rejection retains the
++  purchased inventory copy without equipping it or publishing success.
++- **Focused tests:** 2 Framework equipment-application tests and 2 DemoHost shop
++  integration tests passed: 4 total, 0 failed, 0 skipped.
++- **Full suite:** 1,796 Framework tests, 183 DemoHost tests, and 7
++  ContentValidator tests passed: 1,986 total, 0 failed, 0 skipped.
++- **Contract versions:** no wire shape changed. Runtime save contract remains
++  v19, content schema remains v10, and active pack versions remain unchanged.
++
++#### Explicit O7-R11-C1 Evidence
++
++1. **The live actor commit is atomic.** Profile resolution and composition act
++   on immutable inputs plus an execution clone. The live actor receives one
++   complete execution-state commit only after both operations accept.
++2. **Rejection preserves authority.** Profile faults, profile diagnostics,
++   composition faults, and composition diagnostics return typed application
++   diagnostics with equal before/after live actor snapshots. Cancellation is
++   not converted into a gameplay rejection.
++3. **Equipment effects share canonical composition.** Defense, Evasion, and
++   granted passives still enter through `RuntimeEquipmentProfileResolver` and
++   `RuntimeActorCombatProfileCompositionService`; this correction introduces no
++   second formula or granted-skill policy.
++4. **Presentation follows commit.** Training Annex emits equipped-success only
++   after application succeeds. A rejected composition leaves the purchased
++   equipment instance in inventory, leaves the prior actor loadout/profile
++   intact, and emits a rejection instead.
++
++### O7-R11-C2: Derive Equipment During Aggregate Restore
++
++- **Baseline and commit:** `4a7acb3d..this correction commit`.
++- **Finding corrected:** `RuntimeActorRestoreProfile` allowed a host to supply
++  arbitrary equipment stat modifiers and granted skill IDs independently of
++  the validated saved inventory, actor loadout, and catalog.
++- **Actual destination:** actor restore profiles now carry only stat-source and
++  missing-Hosted-Entity choices. `RuntimeSessionRestoreService` derives one
++  `RuntimeEquipmentProfile` per saved actor from aggregate inventory, loadout,
++  catalog, and the selected equipment resolver before any actor factory call.
++  Derived modifiers and grants are then passed to the existing catalog actor
++  restore/composition path.
++- **Changed Framework/API files:** `Runtime/RuntimeSessionRestoration.cs` and
++  `PublicAPI.Shipped.txt`. A typed
++  `EquipmentProfileResolutionFailed` aggregate diagnostic preserves the
++  underlying equipment-profile code when available.
++- **Changed hosts:** Training Annex no longer resolves or copies equipment
++  values into its actor restore-profile resolver. It injects the same equipment
++  resolver used by its live session. The Godot reference consumer explicitly
++  supplies its standard resolver at aggregate restore.
++- **Changed tests:** `RuntimePersistenceSnapshotTests.cs` proves standard
++  aggregate restore derives authored Defense 12, Evasion 2, and one
++  equipped-only passive without adding it to learned/equipped moves. It also
++  proves an equipment-profile diagnostic prevents every actor factory call.
++  `CleanTrainingAnnexPlayHostTests.cs` buys and equips the authored jacket, then
++  saves and loads while retaining the derived Defense/Evasion profile.
++- **Focused tests:** 15 Framework aggregate-restore/Godot-contract tests and 19
++  DemoHost clean-save/Training-Annex persistence tests passed: 34 total, 0
++  failed, 0 skipped.
++- **Full suite:** 1,798 Framework tests, 184 DemoHost tests, and 7
++  ContentValidator tests passed: 1,989 total, 0 failed, 0 skipped.
++- **Godot integration:** the official repository-local Godot 4.7.1 .NET engine
++  emitted `CONVERGENCE_GODOT_SMOKE_OK`, restored 3 actors through aggregate
++  save v19 with 205 Credits and one shop-stock entry, and exited 0.
++- **Contract versions:** derived restore authority changed, but no serialized
++  wire shape changed. Runtime save contract remains v19, content schema remains
++  v10, and active pack versions remain unchanged.
++
++#### Explicit O7-R11-C2 Evidence
++
++1. **The host cannot re-declare fixed equipment effects.** The public
++   `RuntimeActorRestoreProfile` constructor and properties expose no equipment
++   modifier or granted-skill inputs.
++2. **The aggregate is the authority.** Every equipment profile receives the
++   migrated, validated aggregate inventory, that actor's saved loadout, and the
++   current catalog. A custom-layout game can inject the matching resolver, but
++   cannot bypass aggregate inputs through the stat-source profile.
++3. **Failure is all-or-nothing.** Equipment profiles for all actors resolve
++   before actor construction. A fault, null profile, or profile diagnostic
++   returns typed diagnostics and exposes no `RuntimeRestoredSession`.
++4. **Derived grants retain their fixed semantics.** The equipped passive is
++   restored into the passive collection while remaining absent from learned and
++   equipped move-list IDs.
++5. **All integration surfaces moved together.** Framework persistence tests,
++   DemoHost save/load, the Godot-shaped contract set, and the real Godot 4.7.1
++   consumer all exercised the new aggregate derivation path.
++
++### O7-R11-C3: Contain Equipment Slot-Policy Faults
++
++- **Baseline and commit:** `33a248c9..this correction commit`.
++- **Finding corrected:** content validation, equipment transitions, profile
++  resolution, shop-offer resolution, and save validation invoked custom
++  `IEquipmentSlotLayoutPolicy` methods directly. A null result, undefined code,
++  or exception could therefore escape the boundary inconsistently.
++- **Actual destination:** internal `EquipmentSlotLayoutPolicyEvaluator` is the
++  sole Framework caller of custom slot-policy validation methods. It preserves
++  valid compatible/incompatible results, normalizes null/undefined/faulting
++  results to `EquipmentSlotLayoutCode.PolicyRejected`, and rethrows
++  `OperationCanceledException` unchanged.
++- **Changed Framework/API files:** `Runtime/EquipmentSlotLayouts.cs`,
++  `Runtime/ResourceManagementServices.cs`,
++  `Runtime/RuntimeEquipmentProfiles.cs`,
++  `Runtime/RuntimePersistenceSnapshots.cs`,
++  `Validation/SkillSystemContentValidator.cs`,
++  `Validation/ValidationContracts.cs`, and `PublicAPI.Shipped.txt`.
++- **Typed boundary mapping:** content uses
++  `ContentValidationErrorCode.PolicyRejected`; equip/unequip use
++  `ResourceTransactionCode.EquipmentSlotPolicyRejected`; equipment profiles use
++  `RuntimeEquipmentProfileDiagnosticCode.PolicyRejected`; shop offers use
++  `RuntimeShopOfferResolutionCode.EquipmentSlotPolicyRejected`; saves use
++  `RuntimeSaveValidationCode.EquipmentSlotPolicyRejected`.
++- **Changed tests:** `EquipmentSlotLayoutTests.cs` covers throwing, null,
++  undefined-code, and cancellation behavior across content, equip, profile, and
++  shop boundaries. `RuntimePersistenceSnapshotTests.cs` covers typed save
++  rejection and cancellation propagation.
++- **Focused tests:** 6 slot-layout and save-policy boundary cases passed: 6
++  total, 0 failed, 0 skipped.
++- **Full suite:** 1,804 Framework tests, 184 DemoHost tests, and 7
++  ContentValidator tests passed: 1,995 total, 0 failed, 0 skipped.
++- **Contract versions:** only runtime/API diagnostics changed. Runtime save
++  contract remains v19, content schema remains v10, and active pack versions
++  remain unchanged.
++
++#### Explicit O7-R11-C3 Evidence
++
++1. **There is one invocation boundary.** Active Framework source contains no
++   direct `_slotLayout` or `_equipmentSlotLayout` validation call outside the
++   evaluator and the standard policy implementation itself.
++2. **Ordinary incompatibility is unchanged.** Existing `UnsupportedSlot`,
++   `ProfileMismatch`, and `AssignmentMismatch` results retain their prior typed
++   mappings and messages.
++3. **Malformed custom behavior is distinguishable.** Null, undefined-code, and
++   non-cancellation exceptions produce explicit policy-rejection diagnostics,
++   rather than masquerading as gameplay incompatibility or escaping untyped.
++4. **State remains atomic.** A transition policy rejection returns the exact
++   supplied before loadout as both before and after; content/profile/shop/save
++   boundaries expose diagnostics and no accepted authority.
++5. **Cancellation remains cancellation.** Every tested public boundary rethrows
++   `OperationCanceledException`; it is never converted into a policy rejection.
++
++### O7-R11-C4: Clarify Recovery And Trusted Host Adoption Boundaries
++
++- **Baseline and commit:** `acd42c40..this correction commit`.
++- **Finding corrected:** player documentation incorrectly described an
++  individually protected ailment as rejecting an otherwise useful recovery.
++  Integration documentation also did not state strongly enough that shop and
++  cross-actor equipment results are candidates calculated from the complete
++  immutable evidence supplied by the host.
++- **Runtime behavior:** no production runtime code changed. The correction pins
++  and documents behavior already implemented by `RecoveryService`,
++  `ShopTransactionService`, and `EquipmentTransitionService`.
++- **Changed documentation:** player mechanics now distinguishes retained
++  protected state from whole-treatment rejection. Developer, technical, and
++  public API guides define serialization/compare-and-swap requirements for shop
++  adoption and complete-loadout requirements for collision checks.
++- **Changed tests:** `RecoveryPolicyTests.cs` proves a protected-only ailment
++  returns `NoRecoveryNeeded` without debit; `ShopStockPolicyTests.cs` proves two
++  same-before calls are independently acceptable candidates while re-execution
++  after one adoption rejects depleted stock; `DocumentationFoundationTests.cs`
++  guards the corrected three-audience wording.
++- **Focused tests:** 3 recovery, shop-adoption, and documentation boundary tests
++  passed: 3 total, 0 failed, 0 skipped.
++- **Full suite:** 1,806 Framework tests, 184 DemoHost tests, and 7
++  ContentValidator tests passed: 1,997 total, 0 failed, 0 skipped.
++- **Contract versions:** documentation and executable boundary evidence changed
++  only. Runtime save contract remains v19, content schema remains v10, and active
++  pack versions remain unchanged.
++
++#### Explicit O7-R11-C4 Evidence
++
++1. **Protected state is not blanket rejection.** A protected ailment remains,
++   while legal restoration, removable ailments, and configured temporary-state
++   cleanup may still commit. Protected-only state produces `NoRecoveryNeeded`
++   and preserves the exact currency ledger.
++2. **One result remains internally atomic.** Each accepted shop candidate still
++   carries inventory, named-currency, and stock after-snapshots together; each
++   rejected result returns its supplied authorities unchanged.
++3. **Cross-request authority remains host-owned.** Two calls using identical
++   before-snapshots can both calculate accepted candidates. Documentation now
++   requires per-session serialization or one compare-and-swap over all three
++   before-authorities before adoption.
++4. **Current-state re-execution is authoritative.** Running the second purchase
++   against the first result's after-snapshots returns
++   `ShopStockUnavailable`; stale same-before candidates are never described as
++   independently committable.
++5. **Collision evidence must be complete.** Equip and resale checks rely on the
++   complete current actor-loadout collection supplied by the host. Aggregate
++   save validation independently rechecks the whole persisted ownership graph.
++
++### O7-R11-C5: Reject Invalid Live Item Identities
++
++- **Baseline and commit:** `fbced4ce..this correction commit`.
++- **Finding corrected:** public live item additions, removals, and reservations
++  accepted an empty `ContentId` as an ordinary inventory key or lookup. An
++  addition could therefore report `Applied` while creating inventory that later
++  failed aggregate save validation.
++- **Actual destination:** `InventoryTransitionService.AddItem`, `.RemoveItem`,
++  and `.ReserveItem` reject an empty item ID before quantity lookup or mutation
++  with the distinct `ResourceTransactionCode.InvalidItemId` diagnostic.
++- **Malformed-save boundary:** `RuntimeInventorySnapshot` remains capable of
++  representing an empty decoded item key. This is deliberate so
++  `RuntimeSaveValidator` can aggregate the precise
++  `$.inventory.itemQuantities.keys[index]` diagnostic before restoration.
++  Permissive diagnostic representation is not accepted as live command input.
++- **Changed Framework/API files:** `Runtime/ResourceManagementServices.cs` and
++  `PublicAPI.Shipped.txt`.
++- **Changed documentation:** the developer and technical Order 7 guides now
++  distinguish valid live item commands from malformed decoded snapshots.
++- **Changed tests:** `ResourceManagementServiceTests.cs` exercises all three
++  live operations, typed diagnostics, unchanged before/after state, absent
++  reservation authority, and retained malformed-snapshot evidence. The existing
++  aggregate-validator regression remains green.
++- **Focused tests:** 23 resource-management cases plus the aggregate default-ID
++  validator regression passed: 24 total, 0 failed, 0 skipped.
++- **Full suite:** 1,807 Framework tests, 184 DemoHost tests, and 7
++  ContentValidator tests passed: 1,998 total, 0 failed, 0 skipped.
++- **Strict build and format:** Framework and solution Release builds completed
++  with 0 warnings and 0 errors; `dotnet format --verify-no-changes` and
++  `git diff --check` passed.
++- **Contract versions:** the public diagnostic enum gained one member, but no
++  serialized shape changed. Runtime save contract remains v19, content schema
++  remains v10, and active pack versions remain unchanged.
++
++#### Explicit O7-R11-C5 Evidence
++
++1. **Invalid identity is rejected locally.** Each live item operation checks
++   `itemId.IsValid` before quantity, stack, availability, or reservation work.
++2. **Rejection is typed and atomic.** Addition and removal return the exact
++   supplied inventory as both before and after; reservation returns the exact
++   snapshot with no `RuntimeItemReservation`. Every path reports
++   `InvalidItemId`.
++3. **Malformed-save diagnostics are preserved.** The focused test constructs an
++   empty decoded key, proves live removal/reservation reject it unchanged, and
++   the persistence regression still reports `InvalidContentId` at the inventory
++   key path before restore.
++4. **Valid item behavior is unchanged.** Existing add, stack-limit, removal,
++   reservation commit/rollback, shop purchase/resale, DemoHost, and content
++   validation tests remain green.
++5. **No new policy or authority was introduced.** The correction is a fixed
++   command-boundary invariant. Inventory remains the sole item/equipment owner,
++   and save/schema versions do not advance.
+diff --git a/docs/technical/inventory-equipment-economy-runtime.md b/docs/technical/inventory-equipment-economy-runtime.md
+index e03def3b75e86e24382307f9da42497fe0785231..d71c467fe922386664e25f88d418f164bc39df9d 100644
+--- a/docs/technical/inventory-equipment-economy-runtime.md
++++ b/docs/technical/inventory-equipment-economy-runtime.md
+@@ -21,6 +21,7 @@ serialization, or game-specific currency names.
+ | `RuntimeEquipmentSnapshot` | one actor's slot-to-instance references | equipment ownership or definitions |
+ | `IEquipmentSlotLayoutPolicy` | slot vocabulary and profile/assignment compatibility | ownership, combat formulas, grants |
+ | `RuntimeEquipmentProfileResolver` | current projection of equipped definitions, basic attack, modifiers, and grants | learned skills, durable ownership, combat math |
++| `RuntimeActorEquipmentApplicationService` | atomic staging and commit of one candidate loadout plus canonical actor composition | slot policy, equipment formula, presentation |
+ | `RuntimeCurrencyLedgerSnapshot` | nonnegative balances keyed by currency ID | pricing formulas or presentation names |
+ | `RuntimeShopOfferSnapshot` | resolver-created immutable offer identity, content, pricing, and stock profile | durable stock quantity or host presentation |
+ | `RuntimeShopStockSnapshot` | remaining quantities for tracked offer identities | offered content or pricing |
+@@ -60,6 +61,13 @@ There is no root equipment-owner collection besides inventory. A loadout is a
+ reference set, not ownership. The same equipment instance may not be referenced
+ by two slots or two actors.
+ 
++Live `AddItem`, `RemoveItem`, and `ReserveItem` commands reject an empty item
++`ContentId` as `InvalidItemId` before quantity lookup or mutation. The snapshot
++constructor deliberately remains capable of representing an empty decoded item
++key so aggregate save validation can report `$.inventory.itemQuantities` rather
++than losing the malformed-save diagnostic at deserialization. That diagnostic
++representation is not accepted live transition input.
++
+ ## Equipment Instance Invariants
+ 
+ `RuntimeEquipmentInstanceSnapshot` contains:
+@@ -93,6 +101,13 @@ different parts of the check:
+ | `RuntimeEquipmentProfileResolver` | inventory ownership, definition lookup, definition profile, inventory assignment, and actor assignment |
+ | Save validation/restore | the complete definition, inventory, actor, and cross-actor graph |
+ 
++All five boundaries route policy calls through
++`EquipmentSlotLayoutPolicyEvaluator`. Compatible and ordinary incompatible
++results retain their authored meaning. Null results, undefined enum values, and
++non-cancellation exceptions normalize to `EquipmentSlotLayoutCode.PolicyRejected`
++and are mapped to a boundary-specific typed diagnostic. Cancellation is
++re-thrown unchanged. No boundary silently substitutes the standard layout.
++
+ The equip transition cannot validate a definition profile because its public
+ request deliberately contains no catalog repository. A host must not treat an
+ accepted assignment as a substitute for resolving the resulting equipment
+@@ -109,8 +124,9 @@ flowchart TB
+     Collision{"Already in this or another actor loadout?"}
+     Candidate["Create immutable candidate loadout"]
+     Resolve["Resolve profile against inventory + catalog + layout"]
++    Apply["RuntimeActorEquipmentApplicationService stages profile + actor"]
+     Compose{"Canonical actor composition accepts?"}
+-    Commit["Host commits loadout and composed actor together"]
++    Commit["Framework commits complete staged actor"]
+     Reject["Return unchanged loadout + typed diagnostic"]
+     ContractFault["Throw argument exception; caller violated contract"]
+ 
+@@ -123,7 +139,8 @@ flowchart TB
+     Assignment -->|"yes"| Collision
+     Collision -->|"yes"| Reject
+     Collision -->|"no"| Candidate
+-    Candidate --> Resolve
++    Candidate --> Apply
++    Apply --> Resolve
+     Resolve -->|"diagnostics"| Reject
+     Resolve -->|"valid"| Compose
+     Compose -->|"no"| Reject
+@@ -131,9 +148,15 @@ flowchart TB
+ ```
+ 
+ `Unequip` validates the target slot and returns a candidate loadout with that
+-slot removed. Profile resolution then removes grants and numeric contributions.
+-The host session must not publish success between loadout replacement and
+-canonical actor recomposition.
++slot removed. The application service resolves that candidate on an execution
++clone, removes grants and numeric contributions during canonical composition,
++and commits the complete staged actor only after acceptance. A rejected profile
++or composition leaves the live actor unchanged, so the host cannot publish a
++success between loadout replacement and recomposition.
++
++The application service is a fixed atomic orchestration boundary, not a policy:
++slot compatibility and stat/resource behavior remain delegated to their
++existing selected policies. It does not invent a second equipment formula.
+ 
+ ## One Equipment Profile
+ 
+@@ -308,7 +331,8 @@ flowchart TB
+     Snapshot["Construct RuntimeSaveGameSnapshot"]
+     Migrate{"Current v19 or explicit migration succeeds?"}
+     Validate["Validate catalog, actors, inventory, loadouts, stock, and policies"]
+-    Profiles["Resolve every actor restore profile"]
++    Profiles["Resolve every actor stat-source profile"]
++    Equipment["Derive every equipment profile from aggregate state"]
+     Policies["Resolve retained charge/stat-modifier policy state"]
+     Dependencies["Restore source actors before dependent Vessels"]
+     Normalize["Normalize restored actor snapshots in saved order"]
+@@ -323,7 +347,9 @@ flowchart TB
+     Validate -->|"diagnostics"| Reject
+     Validate -->|"valid"| Profiles
+     Profiles -->|"failure"| Reject
+-    Profiles -->|"valid"| Policies
++    Profiles -->|"valid"| Equipment
++    Equipment -->|"failure"| Reject
++    Equipment -->|"valid"| Policies
+     Policies -->|"failure"| Reject
+     Policies -->|"valid"| Dependencies
+     Dependencies -->|"failure or cycle"| Reject
+@@ -344,14 +370,17 @@ constructor authority.
+ 
+ `RuntimeSessionRestoreService` returns either one complete
+ `RuntimeRestoredSession` or diagnostics. It never exposes the actors restored
+-before a later dependency failed.
++before a later dependency failed. `RuntimeActorRestoreProfile` carries only
++stat-source choices; equipment modifiers and grants are derived from the
++aggregate inventory/loadout/catalog graph through the selected equipment
++resolver before actor construction.
+ 
+ ## Atomicity Boundaries
+ 
+ | Operation | Framework atomic boundary | Host adoption requirement |
+ |---|---|---|
+ | Item/equipment inventory transition | one immutable inventory result | replace inventory only when applied |
+-| Equip/unequip | one immutable loadout result | coordinate accepted loadout with successful actor recomposition |
++| Equip/unequip | candidate loadout plus atomic equipment application | present success only after `RuntimeActorEquipmentApplicationService` accepts |
+ | Currency credit/debit | one immutable ledger result | replace ledger only when applied |
+ | Shop transaction | inventory + currency + stock result | adopt all three after-snapshots together |
+ | Recovery assessment | staged actor + hypothetical ledger | present only; adopt neither |
+@@ -362,6 +391,21 @@ Framework result records defensively copy exposed collections. A host must not
+ infer success from messages or compare display names; it uses typed codes,
+ `Applied`, and exact runtime/content IDs.
+ 
++These services calculate candidates from immutable authorities; they do not own
++the host's live-session lock. In particular, two shop calls supplied the same
++inventory, currency, and stock before-snapshots may both return accepted
++candidates. The host must serialize adoption or atomically compare all three
++current authorities with the result's three before-snapshots. Adopting one
++candidate makes every other same-before candidate stale. Re-executing against
++the first result's after-snapshots performs the current stock and balance checks
++again.
++
++Cross-actor equipment collision checks have the same explicit evidence
++boundary. Equip and resale operations can inspect only the complete current
++loadout collection supplied by the host. Aggregate save validation rechecks the
++whole actor/inventory graph, but it is not a substitute for supplying complete
++live evidence during a transition.
++
+ ## Policy Boundaries
+ 
+ Order 7 provides policies only where games have known legitimate alternatives:
+@@ -381,10 +425,17 @@ second behavior.
+ - Constructor misuse of validated identity/value objects throws argument
+   exceptions.
+ - Expected gameplay rejection returns a typed immutable result.
++- Invalid live item identity returns `InvalidItemId` with unchanged inventory;
++  malformed decoded snapshots remain available only for aggregate validation.
+ - Host policy cancellation is propagated as `OperationCanceledException`.
+ - Non-cancellation custom-policy faults are contained as typed diagnostics at
+   their binding or execution boundary.
++- Slot-layout policy nulls, undefined codes, and faults use explicit
++  `PolicyRejected` diagnostics across content, transition, profile, shop, and
++  save boundaries; cancellation is never normalized.
+ - Rejected shop and recovery operations preserve every supplied before-state.
++- Protected ailments remain while other legal recovery changes may commit; a
++  protected-only state produces `NoRecoveryNeeded` without a debit.
+ - Presentation messages are never authoritative transaction or restore input.
+ 
+ ## Source And Test Map
+diff --git a/docs/technical/runtime-actor-state-and-restoration.md b/docs/technical/runtime-actor-state-and-restoration.md
+index 1f5c15995f0b3bb00cf3fb012c863dc3a44758f8..4c62df9ad22e3d2f986b12a587db8faba2adeb93 100644
+--- a/docs/technical/runtime-actor-state-and-restoration.md
++++ b/docs/technical/runtime-actor-state-and-restoration.md
+@@ -350,12 +350,14 @@ revision. Roster ownership is not copied into actor snapshots.
+ 1. migrate to the current contract through an explicit host-supplied migration
+    chain when necessary;
+ 2. validate the complete save;
+-3. bind and validate every retained stat-modifier policy;
+-4. resolve one `RuntimeActorRestoreProfile` per actor;
+-5. restore source actors before dependent Vessels;
+-6. restore Vessels through `CatalogBattleActorFactory.Restore`;
+-7. normalize actor snapshots from restored live state;
+-8. return one `RuntimeRestoredSession`.
++3. resolve one stat-source `RuntimeActorRestoreProfile` per actor;
++4. derive one equipment profile per actor from aggregate inventory, saved
++   loadout, catalog, and the selected equipment resolver;
++5. bind and validate every retained charge/stat-modifier policy;
++6. restore source actors before dependent Vessels;
++7. restore Vessels through `CatalogBattleActorFactory.Restore`;
++8. normalize actor snapshots from restored live state;
++9. return one `RuntimeRestoredSession`.
+ 
+ The Active Hosted Entity dependency comes from
+ `RuntimePartyRosterSnapshot.ActiveHostedEntity`, not from stale derived Vessel
+@@ -365,25 +367,28 @@ data.
+ flowchart TD
+     Input["Save snapshot"] --> Migration["Explicit migration chain"]
+     Migration --> Validation["Aggregate validation"]
+-    Validation --> Modifiers["Bind retained modifier policies"]
+-    Modifiers --> Profiles["Resolve actor profiles"]
+-    Profiles --> Graph["Build source dependencies"]
++    Validation --> Profiles["Resolve stat-source profiles"]
++    Profiles --> Equipment["Derive aggregate equipment profiles"]
++    Equipment --> Modifiers["Bind retained modifier policies"]
++    Modifiers --> Graph["Build source dependencies"]
+     Graph --> RestoreSources["Restore source actors"]
+     RestoreSources --> RestoreVessels["Restore dependent Vessels"]
+     RestoreVessels --> Normalize["Normalize snapshots"]
+     Normalize --> Success["Complete restored session"]
+     Migration -->|Rejected| Failure["Diagnostics, no session"]
+     Validation -->|Rejected| Failure
+-    Modifiers -->|Rejected| Failure
+     Profiles -->|Rejected| Failure
++    Equipment -->|Rejected| Failure
++    Modifiers -->|Rejected| Failure
+     Graph -->|Rejected| Failure
+     RestoreSources -->|Rejected| Failure
+     RestoreVessels -->|Rejected| Failure
+ ```
+ 
+-Cycles, missing dependencies, profile resolver exceptions, actor factory
+-exceptions, and actor diagnostics all reject the aggregate. No partial actor
+-dictionary is exposed.
++Cycles, missing dependencies, stat-source or equipment-profile resolution
++failures, actor factory exceptions, and actor diagnostics all reject the
++aggregate. Equipment derivation completes for every saved actor before actor
++construction begins, and no partial actor dictionary is exposed.
+ 
+ The host applies scene metadata and `HostContext` only after restoration
+ succeeds.
+diff --git a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs
+index c8c5925e33857f5e1cadbc142deda6ce8d895c47..b373f884a18bdae0630ecd4fc404537e1527aa92 100644
+--- a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs
++++ b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs
+@@ -413,6 +413,9 @@ internal sealed class CleanTrainingAnnexPlayHost
+         IEquipmentTransitionService equipmentTransitions = resourceManagement.Equipment;
+         IEconomyTransactionService economy = resourceManagement.Economy;
+         var equipmentProfileResolver = new RuntimeEquipmentProfileResolver();
++        var equipmentApplication = new RuntimeActorEquipmentApplicationService(
++            combatProfileCompositionService,
++            equipmentProfileResolver);
+         IPartyRosterTransitionService partyRosterTransitions = new PartyRosterTransitionService(
+             rosterCapacityPolicy);
+         IFusionTransactionService fusionTransactionService = new FusionTransactionService(
+@@ -1402,8 +1405,9 @@ internal sealed class CleanTrainingAnnexPlayHost
+                             resourceManagement.ShopOffers,
+                             resourceManagement.Shop,
+                             equipmentTransitions,
+-                            equipmentProfileResolver,
+-                            roster.Player,
++                            equipmentApplication,
++                            roster,
++                            partyRoster,
+                             inventory,
+                             wallet,
+                             shopStock,
+@@ -1414,6 +1418,7 @@ internal sealed class CleanTrainingAnnexPlayHost
+                         shopTransactions.AddRange(shopResult.Transactions);
+                         shopEquipmentChanges.AddRange(shopResult.EquipmentChanges);
+                         shopOfferDiagnostics.AddRange(shopResult.OfferDiagnostics);
++                        composeAfterCommand = false;
+                         break;
+                     }
+                 case CleanTrainingAnnexPlayCommand.OpenRecoveryFacility:
+diff --git a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexPersistenceController.cs b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexPersistenceController.cs
+index 6b7e6c4e33b9d3a663758b21703f425daf57c2ae..a0e59093852232977b6f16cc9ef4b0d643242d40 100644
+--- a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexPersistenceController.cs
++++ b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexPersistenceController.cs
+@@ -297,9 +297,7 @@ internal sealed class TrainingAnnexPersistenceController
+         }
+ 
+         var profileResolver = new TrainingAnnexActorRestoreProfileResolver(
+-            currentRoster.Player.Actor.State.InstanceId,
+-            snapshot.Inventory,
+-            equipmentProfileResolver);
++            currentRoster.Player.Actor.State.InstanceId);
+         RuntimeSessionRestoreResult aggregate = new RuntimeSessionRestoreService(
+                 new RuntimeSaveValidator(
+                     _rosterCapacityPolicy,
+@@ -308,7 +306,8 @@ internal sealed class TrainingAnnexPersistenceController
+                 actorFactory,
+                 profileResolver,
+                 rulesetBindings: _rulesetBindings,
+-                chargePolicies: ChargePolicyRegistry.CreateStandard())
++                chargePolicies: ChargePolicyRegistry.CreateStandard(),
++                equipmentProfiles: equipmentProfileResolver)
+             .Restore(snapshot, catalog);
+         if (!aggregate.IsSuccess)
+         {
+@@ -629,9 +628,7 @@ internal sealed record TrainingAnnexSaveActionResult(
+     int DiagnosticCount);
+ 
+ internal sealed class TrainingAnnexActorRestoreProfileResolver(
+-    RuntimeInstanceId playerInstanceId,
+-    RuntimeInventorySnapshot inventory,
+-    IRuntimeEquipmentProfileResolver equipmentProfileResolver) : IRuntimeActorRestoreProfileResolver
++    RuntimeInstanceId playerInstanceId) : IRuntimeActorRestoreProfileResolver
+ {
+     public RuntimeActorRestoreProfile Resolve(RuntimeActorRestoreProfileRequest request)
+     {
+@@ -642,22 +639,9 @@ internal sealed class TrainingAnnexActorRestoreProfileResolver(
+                 MissingHostedEntityBehavior.UseActorBaseStats);
+         }
+ 
+-        RuntimeEquipmentProfile equipment = equipmentProfileResolver.Resolve(
+-            inventory,
+-            request.Actor.Equipment,
+-            request.Catalog);
+-        if (equipment.Diagnostics.Count > 0)
+-        {
+-            throw new InvalidOperationException(string.Join(
+-                "; ",
+-                equipment.Diagnostics.Select(diagnostic => $"[{diagnostic.Code}] {diagnostic.Message}")));
+-        }
+-
+         return new RuntimeActorRestoreProfile(
+             RuntimeStatSourceKind.ActiveHostedEntity,
+-            MissingHostedEntityBehavior.RejectStatResolution,
+-            equipment.StatModifiers,
+-            equipment.GrantedSkillIds);
++            MissingHostedEntityBehavior.RejectStatResolution);
+     }
+ }
+ 
+diff --git a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexShopController.cs b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexShopController.cs
+index 11e7fd4bdcd7102940af433cc243fb5de44ef023..450130246a179de1a93c482a20ae3a8ff53da088 100644
+--- a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexShopController.cs
++++ b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexShopController.cs
+@@ -62,8 +62,9 @@ internal sealed class TrainingAnnexShopController
+         IRuntimeShopOfferResolver shopOffers,
+         IShopTransactionService shopTransactions,
+         IEquipmentTransitionService equipmentTransitions,
+-        IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+-        TrainingAnnexRuntimeActor player,
++        IRuntimeActorEquipmentApplicationService equipmentApplication,
++        TrainingAnnexActorRoster roster,
++        RuntimePartyRosterSnapshot partyRoster,
+         TrainingAnnexItemActionInventory inventory,
+         RuntimeCurrencyLedgerSnapshot wallet,
+         RuntimeShopStockSnapshot shopStock,
+@@ -71,6 +72,7 @@ internal sealed class TrainingAnnexShopController
+         CancellationToken cancellationToken)
+     {
+         ShopCatalogDefinition shop = catalog.GetRequiredShop(TrainingAnnexHostSupport.TrainingSupply);
++        TrainingAnnexRuntimeActor player = roster.Player;
+         RuntimeActorSnapshot playerSnapshot = player.Actor.State.ToSnapshot();
+         int luck = StatAsInt(playerSnapshot, StandardProgressionIds.Luck);
+         TrainingAnnexShopOfferResolutionResult offerResolution =
+@@ -117,8 +119,9 @@ internal sealed class TrainingAnnexShopController
+                 offers,
+                 shopTransactions,
+                 equipmentTransitions,
+-                equipmentProfileResolver,
+-                player,
++                equipmentApplication,
++                roster,
++                partyRoster,
+                 inventory,
+                 wallet,
+                 shopStock,
+@@ -162,8 +165,9 @@ internal sealed class TrainingAnnexShopController
+         IReadOnlyList<TrainingAnnexResolvedShopOffer> offers,
+         IShopTransactionService shopTransactions,
+         IEquipmentTransitionService equipmentTransitions,
+-        IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+-        TrainingAnnexRuntimeActor player,
++        IRuntimeActorEquipmentApplicationService equipmentApplication,
++        TrainingAnnexActorRoster roster,
++        RuntimePartyRosterSnapshot partyRoster,
+         TrainingAnnexItemActionInventory inventory,
+         RuntimeCurrencyLedgerSnapshot wallet,
+         RuntimeShopStockSnapshot shopStock,
+@@ -254,8 +258,9 @@ internal sealed class TrainingAnnexShopController
+             await PromptEquipPurchasedEquipmentAsync(
+                 catalog,
+                 equipmentTransitions,
+-                equipmentProfileResolver,
+-                player,
++                equipmentApplication,
++                roster,
++                partyRoster,
+                 inventory,
+                 offer,
+                 purchasedEquipmentInstanceId!.Value,
+@@ -376,8 +381,9 @@ internal sealed class TrainingAnnexShopController
+     private async ValueTask PromptEquipPurchasedEquipmentAsync(
+         GameDataCatalog catalog,
+         IEquipmentTransitionService equipmentTransitions,
+-        IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+-        TrainingAnnexRuntimeActor player,
++        IRuntimeActorEquipmentApplicationService equipmentApplication,
++        TrainingAnnexActorRoster roster,
++        RuntimePartyRosterSnapshot partyRoster,
+         TrainingAnnexItemActionInventory inventory,
+         TrainingAnnexResolvedShopOffer offer,
+         RuntimeInstanceId equipmentInstanceId,
+@@ -400,26 +406,46 @@ internal sealed class TrainingAnnexShopController
+         }
+ 
+         commands.Add(equipSelection.Command);
++        TrainingAnnexRuntimeActor player = roster.Player;
+         EquipmentTransitionResult equipResult = equipmentTransitions.Equip(
+             inventory.Snapshot,
+             player.Actor.State.ToSnapshot().Equipment,
+             equipmentInstanceId,
+             slot,
+             slot,
+-            []);
+-        equipmentEvidence.Add(new TrainingAnnexEquipmentChangeEvidence(
+-            equipmentInstanceId,
+-            offer.Runtime.ContentId,
+-            slot,
+-            equipResult.Code,
+-            equipResult.Applied));
++            roster.AllActors
++                .Where(actor => !ReferenceEquals(actor, player))
++                .Select(actor => actor.Actor.State.ToSnapshot().Equipment));
+         if (equipResult.Applied)
+         {
+-            player.Actor.State.ReplaceEquipment(equipResult.After);
+-            RuntimeEquipmentProfile profile = equipmentProfileResolver.Resolve(
+-                inventory.Snapshot,
+-                equipResult.After,
+-                catalog);
++            RuntimeActorEquipmentApplicationResult application = equipmentApplication.Apply(
++                new RuntimeActorEquipmentApplicationRequest(
++                    player.Actor.State,
++                    inventory.Snapshot,
++                    equipResult.After,
++                    catalog,
++                    RuntimeStatSourceKind.ActiveHostedEntity,
++                    MissingHostedEntityBehavior.RejectStatResolution,
++                    partyRoster,
++                    roster.AllActors.Select(actor => actor.Actor.State)));
++            equipmentEvidence.Add(new TrainingAnnexEquipmentChangeEvidence(
++                equipmentInstanceId,
++                offer.Runtime.ContentId,
++                slot,
++                equipResult.Code,
++                application.Applied));
++            if (!application.Applied)
++            {
++                string applicationDiagnostics = string.Join(
++                    "; ",
++                    application.Diagnostics.Select(diagnostic => diagnostic.Message));
++                await _eventSink.PublishAsync(
++                    $"Equipment equip rejected: {offer.DisplayName}; {applicationDiagnostics}",
++                    cancellationToken).ConfigureAwait(false);
++                return;
++            }
++
++            RuntimeEquipmentProfile profile = application.EquipmentProfile;
+             string slots = string.Join(
+                 ", ",
+                 profile.EquippedDefinitions
+@@ -431,6 +457,12 @@ internal sealed class TrainingAnnexShopController
+             return;
+         }
+ 
++        equipmentEvidence.Add(new TrainingAnnexEquipmentChangeEvidence(
++            equipmentInstanceId,
++            offer.Runtime.ContentId,
++            slot,
++            equipResult.Code,
++            Applied: false));
+         string diagnostics = string.Join(
+             "; ",
+             equipResult.Diagnostics.Select(diagnostic => diagnostic.Message));
+diff --git a/samples/Convergence.GodotHost/Scripts/ConvergenceSmokeRoot.cs b/samples/Convergence.GodotHost/Scripts/ConvergenceSmokeRoot.cs
+index ec07c36d6dba7430a793d6c67f10353d90405d46..348c03ef60af74c3b797644fdc2c1fa1ff73fa12 100644
+--- a/samples/Convergence.GodotHost/Scripts/ConvergenceSmokeRoot.cs
++++ b/samples/Convergence.GodotHost/Scripts/ConvergenceSmokeRoot.cs
+@@ -343,7 +343,8 @@ public partial class ConvergenceSmokeRoot : Node
+             actorFactory,
+             GodotActorRestoreProfileResolver.Instance,
+             rulesetBindings: rulesets,
+-            chargePolicies: chargePolicies);
++            chargePolicies: chargePolicies,
++            equipmentProfiles: new RuntimeEquipmentProfileResolver());
+         GodotSaveRestoreResult restored = GodotSaveCodec.DeserializeAndRestore(
+             saveJson,
+             catalog,
+diff --git a/src/Convergence.Framework/PublicAPI.Shipped.txt b/src/Convergence.Framework/PublicAPI.Shipped.txt
+index 18ed0dcc3d2c872f54af71524939e968012ec373..99a515c588f06f9c58b231226e827251a6fab072 100644
+--- a/src/Convergence.Framework/PublicAPI.Shipped.txt
++++ b/src/Convergence.Framework/PublicAPI.Shipped.txt
+@@ -5284,10 +5284,8 @@ Convergence.Runtime.RuntimeActorReferenceSnapshot.RuntimeActorReferenceSnapshot(
+ Convergence.Runtime.RuntimeActorRestoreProfile
+ Convergence.Runtime.RuntimeActorRestoreProfile.<Clone>$() -> Convergence.Runtime.RuntimeActorRestoreProfile!
+ Convergence.Runtime.RuntimeActorRestoreProfile.Equals(Convergence.Runtime.RuntimeActorRestoreProfile? other) -> bool
+-Convergence.Runtime.RuntimeActorRestoreProfile.EquipmentGrantedSkillIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+-Convergence.Runtime.RuntimeActorRestoreProfile.EquipmentStatModifiers.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, decimal>!
+ Convergence.Runtime.RuntimeActorRestoreProfile.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
+-Convergence.Runtime.RuntimeActorRestoreProfile.RuntimeActorRestoreProfile(Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? equipmentStatModifiers = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? equipmentGrantedSkillIds = null) -> void
++Convergence.Runtime.RuntimeActorRestoreProfile.RuntimeActorRestoreProfile(Convergence.Runtime.RuntimeStatSourceKind statSourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior) -> void
+ Convergence.Runtime.RuntimeActorRestoreProfile.StatSourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
+ Convergence.Runtime.RuntimeActorRestoreProfileRequest
+ Convergence.Runtime.RuntimeActorRestoreProfileRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorRestoreProfileRequest!
+@@ -6072,13 +6070,15 @@ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.ActorId.get -> Convergence.R
+ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.ActorId.init -> void
+ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Code.get -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
+ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Code.init -> void
+-Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode Code, out string! Message, out Convergence.Runtime.RuntimeInstanceId? ActorId, out string? Path, out Convergence.Runtime.RuntimeSaveValidationCode? SaveValidationCode, out Convergence.Encounters.CatalogBattleActorDiagnosticCode? ActorDiagnosticCode) -> void
++Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode Code, out string! Message, out Convergence.Runtime.RuntimeInstanceId? ActorId, out string? Path, out Convergence.Runtime.RuntimeSaveValidationCode? SaveValidationCode, out Convergence.Encounters.CatalogBattleActorDiagnosticCode? ActorDiagnosticCode, out Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileDiagnosticCode) -> void
+ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Equals(Convergence.Runtime.RuntimeSessionRestoreDiagnostic? other) -> bool
+ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Message.get -> string!
+ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Message.init -> void
++Convergence.Runtime.RuntimeSessionRestoreDiagnostic.EquipmentProfileDiagnosticCode.get -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode?
++Convergence.Runtime.RuntimeSessionRestoreDiagnostic.EquipmentProfileDiagnosticCode.init -> void
+ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Path.get -> string?
+ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.Path.init -> void
+-Convergence.Runtime.RuntimeSessionRestoreDiagnostic.RuntimeSessionRestoreDiagnostic(Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode Code, string! Message, Convergence.Runtime.RuntimeInstanceId? ActorId = null, string? Path = null, Convergence.Runtime.RuntimeSaveValidationCode? SaveValidationCode = null, Convergence.Encounters.CatalogBattleActorDiagnosticCode? ActorDiagnosticCode = null) -> void
++Convergence.Runtime.RuntimeSessionRestoreDiagnostic.RuntimeSessionRestoreDiagnostic(Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode Code, string! Message, Convergence.Runtime.RuntimeInstanceId? ActorId = null, string? Path = null, Convergence.Runtime.RuntimeSaveValidationCode? SaveValidationCode = null, Convergence.Encounters.CatalogBattleActorDiagnosticCode? ActorDiagnosticCode = null, Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileDiagnosticCode = null) -> void
+ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.SaveValidationCode.get -> Convergence.Runtime.RuntimeSaveValidationCode?
+ Convergence.Runtime.RuntimeSessionRestoreDiagnostic.SaveValidationCode.init -> void
+ Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
+@@ -6089,6 +6089,7 @@ Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.HostedEntityDependencyMi
+ Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.MigrationRejected = 0 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
+ Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.SaveValidationRejected = 1 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
+ Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.StatModifierPolicyResolutionFailed = 6 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
++Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.EquipmentProfileResolutionFailed = 8 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
+ Convergence.Runtime.RuntimeSessionRestoreResult
+ Convergence.Runtime.RuntimeSessionRestoreResult.<Clone>$() -> Convergence.Runtime.RuntimeSessionRestoreResult!
+ Convergence.Runtime.RuntimeSessionRestoreResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeSessionRestoreDiagnostic!>!
+@@ -9819,7 +9820,7 @@ Convergence.Runtime.RuntimeSaveValidationDiagnostic.ChargePolicyCode.init -> voi
+ Convergence.Runtime.RuntimeSaveValidationDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeSaveValidationCode Code, out string! Message, out Convergence.Runtime.RuntimeInstanceId? InstanceId, out Convergence.Content.ContentId? ContentId, out string? Path, out Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode, out Convergence.Execution.ChargePolicyDiagnosticCode? ChargePolicyCode) -> void
+ Convergence.Runtime.RuntimeSaveValidationDiagnostic.RuntimeSaveValidationDiagnostic(Convergence.Runtime.RuntimeSaveValidationCode Code, string! Message, Convergence.Runtime.RuntimeInstanceId? InstanceId = null, Convergence.Content.ContentId? ContentId = null, string? Path = null, Convergence.Runtime.StatModifierDiagnosticCode? StatModifierCode = null, Convergence.Execution.ChargePolicyDiagnosticCode? ChargePolicyCode = null) -> void
+ Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode.ChargePolicyResolutionFailed = 7 -> Convergence.Runtime.RuntimeSessionRestoreDiagnosticCode
+-Convergence.Runtime.RuntimeSessionRestoreService.RuntimeSessionRestoreService(Convergence.Runtime.IRuntimeSaveValidator! validator, Convergence.Encounters.ICatalogBattleActorFactory! actorFactory, Convergence.Runtime.IRuntimeActorRestoreProfileResolver! profileResolver, Convergence.Runtime.IRuntimeSaveMigrationService? migration = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null) -> void
++Convergence.Runtime.RuntimeSessionRestoreService.RuntimeSessionRestoreService(Convergence.Runtime.IRuntimeSaveValidator! validator, Convergence.Encounters.ICatalogBattleActorFactory! actorFactory, Convergence.Runtime.IRuntimeActorRestoreProfileResolver! profileResolver, Convergence.Runtime.IRuntimeSaveMigrationService? migration = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null, Convergence.Runtime.IRuntimeEquipmentProfileResolver? equipmentProfiles = null) -> void
+ override Convergence.Execution.ChargeApplicationAssessment.Equals(object? obj) -> bool
+ override Convergence.Execution.ChargeApplicationAssessment.GetHashCode() -> int
+ override Convergence.Execution.ChargeApplicationAssessment.ToString() -> string!
+@@ -10428,6 +10429,7 @@ Convergence.Execution.DamageHitExecutionEvidence.ContactSourceEffectId.get -> Co
+ Convergence.Execution.DamageHitExecutionEvidence.ContactSourceEffectIndex.get -> int?
+ Convergence.Execution.DamageHitExecutionEvidence.DamageHitExecutionEvidence(Convergence.Content.ContentId sourceActionId, Convergence.Runtime.RuntimeInstanceId actorId, Convergence.Runtime.RuntimeInstanceId targetId, int effectIndex, Convergence.Execution.DamageHitResolution! resolution, Convergence.Content.ElementalAffinity resolvedAffinity, Convergence.Runtime.RuntimeInstanceId? affectedActorId, Convergence.Content.ContentId? affectedResourceId, decimal appliedResourceDelta, Convergence.Content.DamageContactMode contactMode, Convergence.Content.EffectLocalId? contactSourceEffectId, int? contactSourceEffectIndex) -> void
+ Convergence.Validation.ContentValidationErrorCode.SharedContactDependencyInvalid = 44 -> Convergence.Validation.ContentValidationErrorCode
++Convergence.Validation.ContentValidationErrorCode.PolicyRejected = 45 -> Convergence.Validation.ContentValidationErrorCode
+ Convergence.Content.EquipmentBasicAttackDefinition.PrimaryEffectId.get -> Convergence.Content.EffectLocalId?
+ Convergence.Content.EquipmentBasicAttackDefinition.PrimaryEffectId.init -> void
+ Convergence.Content.EquipmentBasicAttackDefinition.SecondaryEffects.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.EffectDefinition!>!
+@@ -11543,6 +11545,7 @@ Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.EquipmentInstanceId.init -
+ Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.InvalidIdentifier = 2 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
+ Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.MissingEquipmentDefinition = 0 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
+ Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.MissingEquipmentInstance = 3 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
++Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.PolicyRejected = 4 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
+ Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch = 1 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
+ Convergence.Runtime.RuntimeEquipmentProfileResolver.Resolve(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository) -> Convergence.Runtime.RuntimeEquipmentProfile!
+ Convergence.Runtime.RuntimeSaveValidationCode.DuplicateEquipmentInstanceId = 90 -> Convergence.Runtime.RuntimeSaveValidationCode
+@@ -11556,6 +11559,7 @@ Convergence.Content.EquipmentDefinition.EquipmentDefinition(Convergence.Content.
+ Convergence.Content.EquipmentDefinition.SlotId.get -> Convergence.Content.ContentId
+ Convergence.Runtime.EquipmentSlotLayoutCode
+ Convergence.Runtime.EquipmentSlotLayoutCode.AssignmentMismatch = 3 -> Convergence.Runtime.EquipmentSlotLayoutCode
++Convergence.Runtime.EquipmentSlotLayoutCode.PolicyRejected = 4 -> Convergence.Runtime.EquipmentSlotLayoutCode
+ Convergence.Runtime.EquipmentSlotLayoutCode.Compatible = 0 -> Convergence.Runtime.EquipmentSlotLayoutCode
+ Convergence.Runtime.EquipmentSlotLayoutCode.ProfileMismatch = 2 -> Convergence.Runtime.EquipmentSlotLayoutCode
+ Convergence.Runtime.EquipmentSlotLayoutCode.UnsupportedSlot = 1 -> Convergence.Runtime.EquipmentSlotLayoutCode
+@@ -11830,6 +11834,8 @@ Convergence.Runtime.IShopStockPolicyFactory.PolicyId.get -> Convergence.Content.
+ Convergence.Runtime.IShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! stock, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId) -> Convergence.Runtime.ShopTransactionResult!
+ Convergence.Runtime.IShopTransactionService.Sell(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! stock, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int sellerLuck, Convergence.Runtime.RuntimeInstanceId? soldEquipmentInstanceId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.ShopTransactionResult!
+ Convergence.Runtime.ResourceTransactionCode.InvalidShopStock = 23 -> Convergence.Runtime.ResourceTransactionCode
++Convergence.Runtime.ResourceTransactionCode.EquipmentSlotPolicyRejected = 24 -> Convergence.Runtime.ResourceTransactionCode
++Convergence.Runtime.ResourceTransactionCode.InvalidItemId = 25 -> Convergence.Runtime.ResourceTransactionCode
+ Convergence.Runtime.RuntimeRestoredSession.ShopStock.get -> Convergence.Runtime.RuntimeShopStockSnapshot!
+ Convergence.Runtime.RuntimeSaveGameSnapshot.RuntimeSaveGameSnapshot(Convergence.Content.SemanticVersion frameworkVersion, System.Collections.Generic.IEnumerable<Convergence.Content.ContentPackIdentity!>! contentPacks, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorSnapshot!>! actors, Convergence.Runtime.RuntimePartyRosterSnapshot! partyRoster, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! shopStock, Convergence.Runtime.RuntimeFieldSnapshot? field, Convergence.Fusion.CompendiumStateSnapshot! compendium, Convergence.Runtime.RuntimeKnowledgeSnapshot! knowledge, Convergence.Runtime.RuntimeSessionProgressSnapshot! session, Convergence.Runtime.RuntimeCheckpointLogSnapshot? checkpoints = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, string!>>? hostContext = null, int contractVersion = 19) -> void
+ Convergence.Runtime.RuntimeSaveGameSnapshot.ShopStock.get -> Convergence.Runtime.RuntimeShopStockSnapshot!
+@@ -11839,6 +11845,7 @@ Convergence.Runtime.RuntimeSaveValidationCode.MissingShopOffer = 93 -> Convergen
+ Convergence.Runtime.RuntimeSaveValidationCode.MissingShopStockEntry = 96 -> Convergence.Runtime.RuntimeSaveValidationCode
+ Convergence.Runtime.RuntimeSaveValidationCode.NegativeShopStockQuantity = 95 -> Convergence.Runtime.RuntimeSaveValidationCode
+ Convergence.Runtime.RuntimeSaveValidationCode.UnexpectedShopStockEntry = 97 -> Convergence.Runtime.RuntimeSaveValidationCode
++Convergence.Runtime.RuntimeSaveValidationCode.EquipmentSlotPolicyRejected = 98 -> Convergence.Runtime.RuntimeSaveValidationCode
+ Convergence.Runtime.RuntimeShopOfferIdentity
+ Convergence.Runtime.RuntimeShopOfferIdentity.<Clone>$() -> Convergence.Runtime.RuntimeShopOfferIdentity!
+ Convergence.Runtime.RuntimeShopOfferIdentity.Equals(Convergence.Runtime.RuntimeShopOfferIdentity? other) -> bool
+@@ -11849,6 +11856,7 @@ Convergence.Runtime.RuntimeShopOfferResolutionCode.EquipmentSlotProfileMismatch
+ Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidOfferIdentity = 8 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+ Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidStockPolicyConfiguration = 7 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+ Convergence.Runtime.RuntimeShopOfferResolutionCode.UnsupportedContentKind = 10 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
++Convergence.Runtime.RuntimeShopOfferResolutionCode.EquipmentSlotPolicyRejected = 11 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+ Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeShopOfferResolutionCode Code, out Convergence.Content.ContentId ContentId, out string! Message, out Convergence.Runtime.ShopPricingPolicyDiagnostic? PricingDiagnostic, out Convergence.Runtime.ShopStockPolicyDiagnostic? StockDiagnostic) -> void
+ Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.RuntimeShopOfferResolutionDiagnostic(Convergence.Runtime.RuntimeShopOfferResolutionCode Code, Convergence.Content.ContentId ContentId, string! Message, Convergence.Runtime.ShopPricingPolicyDiagnostic? PricingDiagnostic = null, Convergence.Runtime.ShopStockPolicyDiagnostic? StockDiagnostic = null) -> void
+ Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.StockDiagnostic.get -> Convergence.Runtime.ShopStockPolicyDiagnostic?
+@@ -12202,3 +12210,63 @@ Convergence.Runtime.RecoveryTreatmentPlan.RemoveAilments.get -> bool
+ Convergence.Runtime.RecoveryTreatmentPlan.ResourceIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+ Convergence.Runtime.RecoveryTreatmentPlan.TemporaryStateKinds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RecoveryTemporaryStateKind>!
+ Convergence.Runtime.RecoveryPolicyFactoryRegistry.Bind(Convergence.Content.ContentId policyId, System.Collections.Generic.IReadOnlyDictionary<string!, object?>! parameters) -> Convergence.Runtime.RecoveryPolicyBindingResult!
++Convergence.Runtime.IRuntimeActorEquipmentApplicationService
++Convergence.Runtime.IRuntimeActorEquipmentApplicationService.Apply(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest! request) -> Convergence.Runtime.RuntimeActorEquipmentApplicationResult!
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic!
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Code.get -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Code.init -> void
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.CompositionCode.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode?
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.CompositionCode.init -> void
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode Code, out string! Message, out Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileCode, out Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode) -> void
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Equals(Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? other) -> bool
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentProfileCode.get -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode?
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentProfileCode.init -> void
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Message.get -> string!
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Message.init -> void
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.RuntimeActorEquipmentApplicationDiagnostic(Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode Code, string! Message, Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileCode = null, Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode = null) -> void
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected = 2 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.CommitFailed = 3 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileRejected = 1 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileResolutionFailed = 0 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorEquipmentApplicationRequest!
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Equals(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? other) -> bool
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Equipment.get -> Convergence.Runtime.RuntimeEquipmentSnapshot!
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.EquipmentRepository.get -> Convergence.Catalog.IEquipmentDefinitionRepository!
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Inventory.get -> Convergence.Runtime.RuntimeInventorySnapshot!
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.RuntimeActorEquipmentApplicationRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null) -> void
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.RuntimeActors.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.SourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
++Convergence.Runtime.RuntimeActorEquipmentApplicationResult
++Convergence.Runtime.RuntimeActorEquipmentApplicationResult.<Clone>$() -> Convergence.Runtime.RuntimeActorEquipmentApplicationResult!
++Convergence.Runtime.RuntimeActorEquipmentApplicationResult.After.get -> Convergence.Runtime.RuntimeActorSnapshot!
++Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Applied.get -> bool
++Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Before.get -> Convergence.Runtime.RuntimeActorSnapshot!
++Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Composition.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionResult?
++Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic!>!
++Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Equals(Convergence.Runtime.RuntimeActorEquipmentApplicationResult? other) -> bool
++Convergence.Runtime.RuntimeActorEquipmentApplicationResult.EquipmentProfile.get -> Convergence.Runtime.RuntimeEquipmentProfile!
++Convergence.Runtime.RuntimeActorEquipmentApplicationResult.RuntimeActorEquipmentApplicationResult(Convergence.Runtime.RuntimeActorSnapshot! before, Convergence.Runtime.RuntimeActorSnapshot! after, Convergence.Runtime.RuntimeEquipmentProfile! equipmentProfile, Convergence.Runtime.RuntimeActorCombatProfileCompositionResult? composition, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic!>? diagnostics = null) -> void
++Convergence.Runtime.RuntimeActorEquipmentApplicationService
++Convergence.Runtime.RuntimeActorEquipmentApplicationService.Apply(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest! request) -> Convergence.Runtime.RuntimeActorEquipmentApplicationResult!
++Convergence.Runtime.RuntimeActorEquipmentApplicationService.RuntimeActorEquipmentApplicationService(Convergence.Runtime.IRuntimeActorCombatProfileCompositionService! composition, Convergence.Runtime.IRuntimeEquipmentProfileResolver? equipmentProfiles = null) -> void
++override Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Equals(object? obj) -> bool
++override Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.GetHashCode() -> int
++override Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.ToString() -> string!
++override Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Equals(object? obj) -> bool
++override Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.GetHashCode() -> int
++override Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.ToString() -> string!
++override Convergence.Runtime.RuntimeActorEquipmentApplicationResult.Equals(object? obj) -> bool
++override Convergence.Runtime.RuntimeActorEquipmentApplicationResult.GetHashCode() -> int
++override Convergence.Runtime.RuntimeActorEquipmentApplicationResult.ToString() -> string!
++static Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.operator !=(Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? left, Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? right) -> bool
++static Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.operator ==(Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? left, Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? right) -> bool
++static Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.operator !=(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? left, Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? right) -> bool
++static Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.operator ==(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? left, Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? right) -> bool
++static Convergence.Runtime.RuntimeActorEquipmentApplicationResult.operator !=(Convergence.Runtime.RuntimeActorEquipmentApplicationResult? left, Convergence.Runtime.RuntimeActorEquipmentApplicationResult? right) -> bool
++static Convergence.Runtime.RuntimeActorEquipmentApplicationResult.operator ==(Convergence.Runtime.RuntimeActorEquipmentApplicationResult? left, Convergence.Runtime.RuntimeActorEquipmentApplicationResult? right) -> bool
+diff --git a/src/Convergence.Framework/Runtime/EquipmentSlotLayouts.cs b/src/Convergence.Framework/Runtime/EquipmentSlotLayouts.cs
+index d1cc112f6abc20c2eb3a3a0c4e637e854d28bd74..6e323ae009e1f00c058da91aa2226fc52d3879c0 100644
+--- a/src/Convergence.Framework/Runtime/EquipmentSlotLayouts.cs
++++ b/src/Convergence.Framework/Runtime/EquipmentSlotLayouts.cs
+@@ -24,7 +24,8 @@ public enum EquipmentSlotLayoutCode
+     Compatible,
+     UnsupportedSlot,
+     ProfileMismatch,
+-    AssignmentMismatch
++    AssignmentMismatch,
++    PolicyRejected
+ }
+ 
+ public sealed record EquipmentSlotLayoutResult(
+@@ -49,6 +50,65 @@ public interface IEquipmentSlotLayoutPolicy
+         ContentId targetSlotId);
+ }
+ 
++internal static class EquipmentSlotLayoutPolicyEvaluator
++{
++    public static EquipmentSlotLayoutResult ValidateDefinition(
++        IEquipmentSlotLayoutPolicy policy,
++        EquipmentDefinition definition)
++    {
++        ArgumentNullException.ThrowIfNull(policy);
++        ArgumentNullException.ThrowIfNull(definition);
++        return Evaluate(
++            () => policy.ValidateDefinition(definition),
++            $"definition '{definition.Id}'");
++    }
++
++    public static EquipmentSlotLayoutResult ValidateAssignment(
++        IEquipmentSlotLayoutPolicy policy,
++        ContentId authoredSlotId,
++        ContentId targetSlotId)
++    {
++        ArgumentNullException.ThrowIfNull(policy);
++        return Evaluate(
++            () => policy.ValidateAssignment(authoredSlotId, targetSlotId),
++            $"assignment '{authoredSlotId}' -> '{targetSlotId}'");
++    }
++
++    private static EquipmentSlotLayoutResult Evaluate(
++        Func<EquipmentSlotLayoutResult> invoke,
++        string operation)
++    {
++        try
++        {
++            EquipmentSlotLayoutResult? result = invoke();
++            if (result is null)
++            {
++                return Rejected($"Equipment slot-layout policy returned no result for {operation}.");
++            }
++            if (!Enum.IsDefined(result.Code))
++            {
++                return Rejected(
++                    $"Equipment slot-layout policy returned unsupported code " +
++                    $"'{(int)result.Code}' for {operation}.");
++            }
++
++            return result;
++        }
++        catch (OperationCanceledException)
++        {
++            throw;
++        }
++        catch (Exception exception)
++        {
++            return Rejected(
++                $"Equipment slot-layout policy failed for {operation}: {exception.Message}");
++        }
++    }
++
++    private static EquipmentSlotLayoutResult Rejected(string message) =>
++        new(EquipmentSlotLayoutCode.PolicyRejected, message);
++}
++
+ /// <summary>Supplies the conventional Weapon, Armor, Boots, and Accessory layout.</summary>
+ public sealed class StandardEquipmentSlotLayoutPolicy : IEquipmentSlotLayoutPolicy
+ {
+diff --git a/src/Convergence.Framework/Runtime/ResourceManagementServices.cs b/src/Convergence.Framework/Runtime/ResourceManagementServices.cs
+index cfc18293fbcfcab5a57cd513b5c24bd12ebd6efc..d806b1c0c1c015c19d5fd08dd8e0995e159125da 100644
+--- a/src/Convergence.Framework/Runtime/ResourceManagementServices.cs
++++ b/src/Convergence.Framework/Runtime/ResourceManagementServices.cs
+@@ -29,7 +29,9 @@ public enum ResourceTransactionCode
+     CurrencyNotFound,
+     EmptyCurrencyLedger,
+     AmbiguousCurrencyLedger,
+-    InvalidShopStock
++    InvalidShopStock,
++    EquipmentSlotPolicyRejected,
++    InvalidItemId
+ }
+ 
+ public sealed record ResourceTransactionDiagnostic(
+@@ -478,6 +480,14 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
+     public InventoryTransitionResult AddItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity, int? stackLimit = null)
+     {
+         ArgumentNullException.ThrowIfNull(snapshot);
++        if (!itemId.IsValid)
++        {
++            return Rejected(
++                snapshot,
++                ResourceTransactionCode.InvalidItemId,
++                "Item ID cannot be empty.",
++                itemId);
++        }
+         if (quantity <= 0)
+         {
+             return Rejected(snapshot, ResourceTransactionCode.InvalidQuantity, "Item quantity must be positive.", itemId);
+@@ -511,6 +521,14 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
+     public InventoryTransitionResult RemoveItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity)
+     {
+         ArgumentNullException.ThrowIfNull(snapshot);
++        if (!itemId.IsValid)
++        {
++            return Rejected(
++                snapshot,
++                ResourceTransactionCode.InvalidItemId,
++                "Item ID cannot be empty.",
++                itemId);
++        }
+         if (quantity <= 0)
+         {
+             return Rejected(snapshot, ResourceTransactionCode.InvalidQuantity, "Item quantity must be positive.", itemId);
+@@ -539,6 +557,14 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
+     public InventoryReservationResult ReserveItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity)
+     {
+         ArgumentNullException.ThrowIfNull(snapshot);
++        if (!itemId.IsValid)
++        {
++            return ReservationRejected(
++                snapshot,
++                ResourceTransactionCode.InvalidItemId,
++                "Item ID cannot be empty.",
++                itemId);
++        }
+         if (quantity <= 0)
+         {
+             return ReservationRejected(snapshot, ResourceTransactionCode.InvalidQuantity, "Item quantity must be positive.", itemId);
+@@ -877,12 +903,17 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
+         }
+ 
+         EquipmentSlotLayoutResult assignment =
+-            _slotLayout.ValidateAssignment(ownedSlotId, targetSlotId);
++            EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
++                _slotLayout,
++                ownedSlotId,
++                targetSlotId);
+         if (!assignment.IsCompatible)
+         {
+             return Rejected(
+                 equipment,
+-                ResourceTransactionCode.EquipmentSlotMismatch,
++                assignment.Code == EquipmentSlotLayoutCode.PolicyRejected
++                    ? ResourceTransactionCode.EquipmentSlotPolicyRejected
++                    : ResourceTransactionCode.EquipmentSlotMismatch,
+                 assignment.Message ??
+                 $"Equipment instance '{equipmentInstanceId}' cannot be equipped in slot '{targetSlotId}'.",
+                 owned?.DefinitionId,
+@@ -928,12 +959,15 @@ public sealed class EquipmentTransitionService : IEquipmentTransitionService
+             throw new ArgumentException("Equipment slot ID must be valid.", nameof(slotId));
+         }
+ 
+-        EquipmentSlotLayoutResult assignment = _slotLayout.ValidateAssignment(slotId, slotId);
++        EquipmentSlotLayoutResult assignment =
++            EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(_slotLayout, slotId, slotId);
+         if (!assignment.IsCompatible)
+         {
+             return Rejected(
+                 equipment,
+-                ResourceTransactionCode.EquipmentSlotMismatch,
++                assignment.Code == EquipmentSlotLayoutCode.PolicyRejected
++                    ? ResourceTransactionCode.EquipmentSlotPolicyRejected
++                    : ResourceTransactionCode.EquipmentSlotMismatch,
+                 assignment.Message ?? $"Equipment slot '{slotId}' is not supported.",
+                 slotId: slotId);
+         }
+@@ -1068,7 +1102,8 @@ public enum RuntimeShopOfferResolutionCode
+     InvalidStockPolicyConfiguration,
+     InvalidOfferIdentity,
+     EquipmentSlotProfileMismatch,
+-    UnsupportedContentKind
++    UnsupportedContentKind,
++    EquipmentSlotPolicyRejected
+ }
+ 
+ public sealed record RuntimeShopOfferResolutionDiagnostic(
+@@ -1179,11 +1214,15 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
+             else
+             {
+                 EquipmentSlotLayoutResult layout =
+-                    _slotLayout.ValidateDefinition(equipment);
++                    EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(
++                        _slotLayout,
++                        equipment);
+                 if (!layout.IsCompatible)
+                 {
+                     diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+-                        RuntimeShopOfferResolutionCode.EquipmentSlotProfileMismatch,
++                        layout.Code == EquipmentSlotLayoutCode.PolicyRejected
++                            ? RuntimeShopOfferResolutionCode.EquipmentSlotPolicyRejected
++                            : RuntimeShopOfferResolutionCode.EquipmentSlotProfileMismatch,
+                         offer.ContentId,
+                         layout.Message ??
+                         $"Shop equipment offer '{offer.ContentId}' has an incompatible slot profile."));
+diff --git a/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs b/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs
+index 2ba287090ac724cd4f8e68c3f6c2fbd6e4e4acba..7aeb3df56211e29a2a2f55770efe7b018ff96778 100644
+--- a/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs
++++ b/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs
+@@ -127,6 +127,236 @@ public interface IRuntimeActorCombatProfileCompositionService
+         RuntimeActorCombatProfileCompositionRequest request);
+ }
+ 
++public enum RuntimeActorEquipmentApplicationDiagnosticCode
++{
++    EquipmentProfileResolutionFailed,
++    EquipmentProfileRejected,
++    CombatProfileCompositionRejected,
++    CommitFailed
++}
++
++public sealed record RuntimeActorEquipmentApplicationDiagnostic(
++    RuntimeActorEquipmentApplicationDiagnosticCode Code,
++    string Message,
++    RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileCode = null,
++    RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode = null);
++
++public sealed record RuntimeActorEquipmentApplicationRequest
++{
++    public RuntimeActorEquipmentApplicationRequest(
++        RuntimeActorState actor,
++        RuntimeInventorySnapshot inventory,
++        RuntimeEquipmentSnapshot equipment,
++        IEquipmentDefinitionRepository equipmentRepository,
++        RuntimeStatSourceKind sourceKind,
++        MissingHostedEntityBehavior missingHostedEntityBehavior,
++        RuntimePartyRosterSnapshot? partyRoster = null,
++        IEnumerable<RuntimeActorState>? runtimeActors = null)
++    {
++        if (!Enum.IsDefined(sourceKind))
++        {
++            throw new ArgumentOutOfRangeException(nameof(sourceKind), "Stat source kind is not supported.");
++        }
++        if (!Enum.IsDefined(missingHostedEntityBehavior))
++        {
++            throw new ArgumentOutOfRangeException(
++                nameof(missingHostedEntityBehavior),
++                "Missing hosted-entity behavior is not supported.");
++        }
++
++        Actor = actor ?? throw new ArgumentNullException(nameof(actor));
++        Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
++        Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
++        EquipmentRepository = equipmentRepository ??
++            throw new ArgumentNullException(nameof(equipmentRepository));
++        SourceKind = sourceKind;
++        MissingHostedEntityBehavior = missingHostedEntityBehavior;
++        PartyRoster = partyRoster;
++        RuntimeActors = Array.AsReadOnly(
++            (runtimeActors ?? []).Select(runtimeActor =>
++                runtimeActor ?? throw new ArgumentException(
++                    "Runtime actor maps cannot contain null entries.",
++                    nameof(runtimeActors)))
++            .ToArray());
++    }
++
++    public RuntimeActorState Actor { get; }
++    public RuntimeInventorySnapshot Inventory { get; }
++    public RuntimeEquipmentSnapshot Equipment { get; }
++    public IEquipmentDefinitionRepository EquipmentRepository { get; }
++    public RuntimeStatSourceKind SourceKind { get; }
++    public MissingHostedEntityBehavior MissingHostedEntityBehavior { get; }
++    public RuntimePartyRosterSnapshot? PartyRoster { get; }
++    public IReadOnlyList<RuntimeActorState> RuntimeActors { get; }
++}
++
++public sealed record RuntimeActorEquipmentApplicationResult
++{
++    public RuntimeActorEquipmentApplicationResult(
++        RuntimeActorSnapshot before,
++        RuntimeActorSnapshot after,
++        RuntimeEquipmentProfile equipmentProfile,
++        RuntimeActorCombatProfileCompositionResult? composition,
++        IEnumerable<RuntimeActorEquipmentApplicationDiagnostic>? diagnostics = null)
++    {
++        Before = before ?? throw new ArgumentNullException(nameof(before));
++        After = after ?? throw new ArgumentNullException(nameof(after));
++        EquipmentProfile = equipmentProfile ?? throw new ArgumentNullException(nameof(equipmentProfile));
++        Composition = composition;
++        Diagnostics = RuntimeSnapshotCollections.List(diagnostics);
++    }
++
++    public bool Applied => Composition?.Applied == true && Diagnostics.Count == 0;
++    public RuntimeActorSnapshot Before { get; }
++    public RuntimeActorSnapshot After { get; }
++    public RuntimeEquipmentProfile EquipmentProfile { get; }
++    public RuntimeActorCombatProfileCompositionResult? Composition { get; }
++    public IReadOnlyList<RuntimeActorEquipmentApplicationDiagnostic> Diagnostics { get; }
++}
++
++public interface IRuntimeActorEquipmentApplicationService
++{
++    RuntimeActorEquipmentApplicationResult Apply(
++        RuntimeActorEquipmentApplicationRequest request);
++}
++
++/// <summary>
++/// Atomically applies one candidate loadout and its canonically derived actor combat profile.
++/// </summary>
++public sealed class RuntimeActorEquipmentApplicationService :
++    IRuntimeActorEquipmentApplicationService
++{
++    private readonly IRuntimeEquipmentProfileResolver _equipmentProfiles;
++    private readonly IRuntimeActorCombatProfileCompositionService _composition;
++
++    public RuntimeActorEquipmentApplicationService(
++        IRuntimeActorCombatProfileCompositionService composition,
++        IRuntimeEquipmentProfileResolver? equipmentProfiles = null)
++    {
++        _composition = composition ?? throw new ArgumentNullException(nameof(composition));
++        _equipmentProfiles = equipmentProfiles ?? new RuntimeEquipmentProfileResolver();
++    }
++
++    public RuntimeActorEquipmentApplicationResult Apply(
++        RuntimeActorEquipmentApplicationRequest request)
++    {
++        ArgumentNullException.ThrowIfNull(request);
++        RuntimeActorSnapshot before = request.Actor.ToSnapshot();
++
++        RuntimeEquipmentProfile equipmentProfile;
++        try
++        {
++            equipmentProfile = _equipmentProfiles.Resolve(
++                request.Inventory,
++                request.Equipment,
++                request.EquipmentRepository) ??
++                throw new InvalidOperationException(
++                    "The equipment-profile resolver returned no profile.");
++        }
++        catch (Exception exception) when (exception is not OperationCanceledException)
++        {
++            return Rejected(
++                before,
++                RuntimeEquipmentProfile.Empty,
++                RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileResolutionFailed,
++                $"Equipment profile resolution failed: {exception.Message}");
++        }
++
++        if (equipmentProfile.Diagnostics.Count > 0)
++        {
++            return new RuntimeActorEquipmentApplicationResult(
++                before,
++                before,
++                equipmentProfile,
++                composition: null,
++                equipmentProfile.Diagnostics.Select(diagnostic =>
++                    new RuntimeActorEquipmentApplicationDiagnostic(
++                        RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileRejected,
++                        diagnostic.Message,
++                        EquipmentProfileCode: diagnostic.Code)));
++        }
++
++        RuntimeActorState stagedActor = request.Actor.CreateExecutionClone();
++        stagedActor.ReplaceEquipment(request.Equipment);
++        RuntimeActorState[] stagedRuntimeActors = request.RuntimeActors
++            .Select(runtimeActor => ReferenceEquals(runtimeActor, request.Actor)
++                ? stagedActor
++                : runtimeActor)
++            .ToArray();
++
++        RuntimeActorCombatProfileCompositionResult composition;
++        try
++        {
++            composition = _composition.Compose(
++                new RuntimeActorCombatProfileCompositionRequest(
++                    stagedActor,
++                    request.SourceKind,
++                    request.MissingHostedEntityBehavior,
++                    request.PartyRoster,
++                    stagedRuntimeActors,
++                    equipmentProfile.StatModifiers,
++                    equipmentProfile.GrantedSkillIds)) ??
++                throw new InvalidOperationException(
++                    "The actor-composition service returned no result.");
++        }
++        catch (Exception exception) when (exception is not OperationCanceledException)
++        {
++            return Rejected(
++                before,
++                equipmentProfile,
++                RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected,
++                $"Actor combat-profile composition failed: {exception.Message}");
++        }
++
++        if (!composition.Applied)
++        {
++            return new RuntimeActorEquipmentApplicationResult(
++                before,
++                before,
++                equipmentProfile,
++                composition,
++                composition.Diagnostics.Select(diagnostic =>
++                    new RuntimeActorEquipmentApplicationDiagnostic(
++                        RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected,
++                        diagnostic.Message,
++                        CompositionCode: diagnostic.Code)));
++        }
++
++        try
++        {
++            request.Actor.ApplyExecutionStateFrom(stagedActor);
++        }
++        catch (Exception exception) when (exception is not OperationCanceledException)
++        {
++            return Rejected(
++                before,
++                equipmentProfile,
++                RuntimeActorEquipmentApplicationDiagnosticCode.CommitFailed,
++                $"Composed equipment state could not be committed: {exception.Message}",
++                composition);
++        }
++
++        return new RuntimeActorEquipmentApplicationResult(
++            before,
++            request.Actor.ToSnapshot(),
++            equipmentProfile,
++            composition);
++    }
++
++    private static RuntimeActorEquipmentApplicationResult Rejected(
++        RuntimeActorSnapshot before,
++        RuntimeEquipmentProfile equipmentProfile,
++        RuntimeActorEquipmentApplicationDiagnosticCode code,
++        string message,
++        RuntimeActorCombatProfileCompositionResult? composition = null) =>
++        new(
++            before,
++            before,
++            equipmentProfile,
++            composition,
++            [new RuntimeActorEquipmentApplicationDiagnostic(code, message)]);
++}
++
+ public sealed class RuntimeActorCombatProfileCompositionService :
+     IRuntimeActorCombatProfileCompositionService
+ {
+diff --git a/src/Convergence.Framework/Runtime/RuntimeEquipmentProfiles.cs b/src/Convergence.Framework/Runtime/RuntimeEquipmentProfiles.cs
+index 6cd56418338d130c92bdb3e87bd579b2dd41f50e..019a0a5143e773411f7e1788cb3f2e4666d52ea4 100644
+--- a/src/Convergence.Framework/Runtime/RuntimeEquipmentProfiles.cs
++++ b/src/Convergence.Framework/Runtime/RuntimeEquipmentProfiles.cs
+@@ -9,7 +9,8 @@ public enum RuntimeEquipmentProfileDiagnosticCode
+     MissingEquipmentDefinition,
+     SlotProfileMismatch,
+     InvalidIdentifier,
+-    MissingEquipmentInstance
++    MissingEquipmentInstance,
++    PolicyRejected
+ }
+ 
+ public sealed record RuntimeEquipmentProfileDiagnostic(
+@@ -160,11 +161,16 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
+             }
+ 
+             EquipmentSlotLayoutResult inventoryAssignment =
+-                _slotLayout.ValidateAssignment(ownedSlotId, slotId);
++                EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
++                    _slotLayout,
++                    ownedSlotId,
++                    slotId);
+             if (!inventoryAssignment.IsCompatible)
+             {
+                 diagnostics.Add(new RuntimeEquipmentProfileDiagnostic(
+-                    RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
++                    inventoryAssignment.Code == EquipmentSlotLayoutCode.PolicyRejected
++                        ? RuntimeEquipmentProfileDiagnosticCode.PolicyRejected
++                        : RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
+                     slotId,
+                     equipmentInstanceId,
+                     instance.DefinitionId,
+@@ -187,13 +193,19 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
+             }
+ 
+             EquipmentSlotLayoutResult definitionLayout =
+-                _slotLayout.ValidateDefinition(definition);
++                EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(_slotLayout, definition);
+             EquipmentSlotLayoutResult definitionAssignment =
+-                _slotLayout.ValidateAssignment(definition.SlotId, slotId);
++                EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
++                    _slotLayout,
++                    definition.SlotId,
++                    slotId);
+             if (!definitionLayout.IsCompatible || !definitionAssignment.IsCompatible)
+             {
+                 diagnostics.Add(new RuntimeEquipmentProfileDiagnostic(
+-                    RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
++                    definitionLayout.Code == EquipmentSlotLayoutCode.PolicyRejected ||
++                    definitionAssignment.Code == EquipmentSlotLayoutCode.PolicyRejected
++                        ? RuntimeEquipmentProfileDiagnosticCode.PolicyRejected
++                        : RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
+                     slotId,
+                     equipmentInstanceId,
+                     equipmentId,
+diff --git a/src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs b/src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs
+index 43f92bdfd42d00886c701c2e8f1d83ee29a16ee2..553a3bb4968997444655ff610cf8b36a781a21d2 100644
+--- a/src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs
++++ b/src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs
+@@ -104,7 +104,8 @@ public enum RuntimeSaveValidationCode
+     DuplicateShopStockEntry = 94,
+     NegativeShopStockQuantity = 95,
+     MissingShopStockEntry = 96,
+-    UnexpectedShopStockEntry = 97
++    UnexpectedShopStockEntry = 97,
++    EquipmentSlotPolicyRejected = 98
+ }
+ 
+ public sealed record RuntimeSaveValidationDiagnostic(
+@@ -1475,13 +1476,21 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
+                 else
+                 {
+                     EquipmentSlotLayoutResult definitionLayout =
+-                        _equipmentSlotLayout.ValidateDefinition(definition);
++                        EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(
++                            _equipmentSlotLayout,
++                            definition);
+                     EquipmentSlotLayoutResult assignment =
+-                        _equipmentSlotLayout.ValidateAssignment(definition.SlotId, slotId);
++                        EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
++                            _equipmentSlotLayout,
++                            definition.SlotId,
++                            slotId);
+                     if (!definitionLayout.IsCompatible || !assignment.IsCompatible)
+                     {
+                         diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+-                            RuntimeSaveValidationCode.EquipmentSlotMismatch,
++                            definitionLayout.Code == EquipmentSlotLayoutCode.PolicyRejected ||
++                            assignment.Code == EquipmentSlotLayoutCode.PolicyRejected
++                                ? RuntimeSaveValidationCode.EquipmentSlotPolicyRejected
++                                : RuntimeSaveValidationCode.EquipmentSlotMismatch,
+                             definitionLayout.Message ??
+                             assignment.Message ??
+                             $"Equipment '{equipmentId}' is not compatible with inventory slot '{slotId}'.",
+@@ -1623,17 +1632,29 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
+             else
+             {
+                 EquipmentSlotLayoutResult definitionLayout =
+-                    _equipmentSlotLayout.ValidateDefinition(definition);
++                    EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(
++                        _equipmentSlotLayout,
++                        definition);
+                 EquipmentSlotLayoutResult inventoryAssignment =
+-                    _equipmentSlotLayout.ValidateAssignment(definition.SlotId, ownedSlotId);
++                    EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
++                        _equipmentSlotLayout,
++                        definition.SlotId,
++                        ownedSlotId);
+                 EquipmentSlotLayoutResult actorAssignment =
+-                    _equipmentSlotLayout.ValidateAssignment(ownedSlotId, slotId);
++                    EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
++                        _equipmentSlotLayout,
++                        ownedSlotId,
++                        slotId);
+                 if (!definitionLayout.IsCompatible ||
+                     !inventoryAssignment.IsCompatible ||
+                     !actorAssignment.IsCompatible)
+                 {
+                     diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+-                        RuntimeSaveValidationCode.EquipmentSlotMismatch,
++                        definitionLayout.Code == EquipmentSlotLayoutCode.PolicyRejected ||
++                        inventoryAssignment.Code == EquipmentSlotLayoutCode.PolicyRejected ||
++                        actorAssignment.Code == EquipmentSlotLayoutCode.PolicyRejected
++                            ? RuntimeSaveValidationCode.EquipmentSlotPolicyRejected
++                            : RuntimeSaveValidationCode.EquipmentSlotMismatch,
+                         definitionLayout.Message ??
+                         inventoryAssignment.Message ??
+                         actorAssignment.Message ??
+diff --git a/src/Convergence.Framework/Runtime/RuntimeSessionRestoration.cs b/src/Convergence.Framework/Runtime/RuntimeSessionRestoration.cs
+index c6eaf5f3e0541eb36332e21f9803d4fda8e39ac1..02957fee0e5d9d746de33b92f8fceb49a4de6e08 100644
+--- a/src/Convergence.Framework/Runtime/RuntimeSessionRestoration.cs
++++ b/src/Convergence.Framework/Runtime/RuntimeSessionRestoration.cs
+@@ -155,9 +155,7 @@ public sealed record RuntimeActorRestoreProfile
+ {
+     public RuntimeActorRestoreProfile(
+         RuntimeStatSourceKind statSourceKind,
+-        MissingHostedEntityBehavior missingHostedEntityBehavior,
+-        IEnumerable<KeyValuePair<ContentId, decimal>>? equipmentStatModifiers = null,
+-        IEnumerable<ContentId>? equipmentGrantedSkillIds = null)
++        MissingHostedEntityBehavior missingHostedEntityBehavior)
+     {
+         if (!Enum.IsDefined(statSourceKind))
+         {
+@@ -169,14 +167,10 @@ public sealed record RuntimeActorRestoreProfile
+         }
+         StatSourceKind = statSourceKind;
+         MissingHostedEntityBehavior = missingHostedEntityBehavior;
+-        EquipmentStatModifiers = RuntimePersistenceCollections.Dictionary(equipmentStatModifiers);
+-        EquipmentGrantedSkillIds = RuntimePersistenceCollections.List(equipmentGrantedSkillIds);
+     }
+ 
+     public RuntimeStatSourceKind StatSourceKind { get; }
+     public MissingHostedEntityBehavior MissingHostedEntityBehavior { get; }
+-    public IReadOnlyDictionary<ContentId, decimal> EquipmentStatModifiers { get; }
+-    public IReadOnlyList<ContentId> EquipmentGrantedSkillIds { get; }
+ }
+ 
+ public sealed record RuntimeActorRestoreProfileRequest(
+@@ -198,7 +192,8 @@ public enum RuntimeSessionRestoreDiagnosticCode
+     HostedEntityDependencyCycle,
+     ActorRestoreFailed,
+     StatModifierPolicyResolutionFailed,
+-    ChargePolicyResolutionFailed
++    ChargePolicyResolutionFailed,
++    EquipmentProfileResolutionFailed
+ }
+ 
+ public sealed record RuntimeSessionRestoreDiagnostic(
+@@ -207,7 +202,8 @@ public sealed record RuntimeSessionRestoreDiagnostic(
+     RuntimeInstanceId? ActorId = null,
+     string? Path = null,
+     RuntimeSaveValidationCode? SaveValidationCode = null,
+-    CatalogBattleActorDiagnosticCode? ActorDiagnosticCode = null);
++    CatalogBattleActorDiagnosticCode? ActorDiagnosticCode = null,
++    RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileDiagnosticCode = null);
+ 
+ public sealed record RuntimeRestoredSession
+ {
+@@ -275,6 +271,7 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
+     private readonly IRuntimeSaveMigrationService _migration;
+     private readonly IRuntimeRulesetBindingResolver? _rulesetBindings;
+     private readonly IChargePolicyResolver? _chargePolicies;
++    private readonly IRuntimeEquipmentProfileResolver _equipmentProfiles;
+ 
+     public RuntimeSessionRestoreService(
+         IRuntimeSaveValidator validator,
+@@ -282,7 +279,8 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
+         IRuntimeActorRestoreProfileResolver profileResolver,
+         IRuntimeSaveMigrationService? migration = null,
+         IRuntimeRulesetBindingResolver? rulesetBindings = null,
+-        IChargePolicyResolver? chargePolicies = null)
++        IChargePolicyResolver? chargePolicies = null,
++        IRuntimeEquipmentProfileResolver? equipmentProfiles = null)
+     {
+         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
+         _actorFactory = actorFactory ?? throw new ArgumentNullException(nameof(actorFactory));
+@@ -290,6 +288,7 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
+         _migration = migration ?? new RuntimeSaveMigrationService();
+         _rulesetBindings = rulesetBindings;
+         _chargePolicies = chargePolicies;
++        _equipmentProfiles = equipmentProfiles ?? new RuntimeEquipmentProfileResolver();
+     }
+ 
+     public RuntimeSessionRestoreResult Restore(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
+@@ -343,6 +342,50 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
+             return Rejected(diagnostics);
+         }
+ 
++        var equipmentProfiles = new Dictionary<RuntimeInstanceId, RuntimeEquipmentProfile>();
++        foreach (RuntimeActorSnapshot actor in current.Actors)
++        {
++            RuntimeEquipmentProfile equipmentProfile;
++            try
++            {
++                equipmentProfile = _equipmentProfiles.Resolve(
++                    current.Inventory,
++                    actor.Equipment,
++                    catalog) ??
++                    throw new InvalidOperationException(
++                        "The equipment-profile resolver returned no profile.");
++            }
++            catch (Exception exception) when (exception is not OperationCanceledException)
++            {
++                diagnostics.Add(new RuntimeSessionRestoreDiagnostic(
++                    RuntimeSessionRestoreDiagnosticCode.EquipmentProfileResolutionFailed,
++                    $"Equipment profile for actor '{actor.Identity.InstanceId}' failed: " +
++                    exception.Message,
++                    actor.Identity.InstanceId,
++                    "$.actors.equipment"));
++                continue;
++            }
++
++            if (equipmentProfile.Diagnostics.Count > 0)
++            {
++                diagnostics.AddRange(equipmentProfile.Diagnostics.Select(diagnostic =>
++                    new RuntimeSessionRestoreDiagnostic(
++                        RuntimeSessionRestoreDiagnosticCode.EquipmentProfileResolutionFailed,
++                        diagnostic.Message,
++                        actor.Identity.InstanceId,
++                        "$.actors.equipment",
++                        EquipmentProfileDiagnosticCode: diagnostic.Code)));
++                continue;
++            }
++
++            equipmentProfiles.Add(actor.Identity.InstanceId, equipmentProfile);
++        }
++
++        if (diagnostics.Count > 0)
++        {
++            return Rejected(diagnostics);
++        }
++
+         var chargePolicies = new Dictionary<RuntimeInstanceId, IChargePolicyService>();
+         foreach (RuntimeActorSnapshot actor in current.Actors)
+         {
+@@ -476,6 +519,7 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
+ 
+             RuntimeActorSnapshot actor = snapshots[actorId];
+             RuntimeActorRestoreProfile profile = profiles[actorId];
++            RuntimeEquipmentProfile equipmentProfile = equipmentProfiles[actorId];
+             RuntimeActorState? activeHostedEntity = null;
+             if (profile.StatSourceKind == RuntimeStatSourceKind.ActiveHostedEntity)
+             {
+@@ -542,10 +586,10 @@ public sealed class RuntimeSessionRestoreService : IRuntimeSessionRestoreService
+                     profile.MissingHostedEntityBehavior,
+                     current.PartyRoster,
+                     activeHostedEntity is null ? [] : [activeHostedEntity],
+-                    profile.EquipmentStatModifiers,
++                    equipmentProfile.StatModifiers,
+                     statModifierPolicies.GetValueOrDefault(actorId),
+                     chargePolicies.GetValueOrDefault(actorId),
+-                    profile.EquipmentGrantedSkillIds));
++                    equipmentProfile.GrantedSkillIds));
+             }
+             catch (Exception exception) when (exception is not OperationCanceledException)
+             {
+diff --git a/src/Convergence.Framework/Validation/SkillSystemContentValidator.cs b/src/Convergence.Framework/Validation/SkillSystemContentValidator.cs
+index 3537356af55b405ffa672b57d9aff3726885ba0b..7dcf784f244c21b20fe550a2550dc94c4d993cab 100644
+--- a/src/Convergence.Framework/Validation/SkillSystemContentValidator.cs
++++ b/src/Convergence.Framework/Validation/SkillSystemContentValidator.cs
+@@ -731,13 +731,17 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
+             }
+ 
+             EquipmentSlotLayoutResult layout =
+-                _equipmentSlotLayout.ValidateDefinition(equipment);
++                EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(
++                    _equipmentSlotLayout,
++                    equipment);
+             if (!layout.IsCompatible)
+             {
+                 Add(
+                     source,
+                     source.Path + ".slotId",
+-                    ContentValidationErrorCode.ShapeInvalid,
++                    layout.Code == EquipmentSlotLayoutCode.PolicyRejected
++                        ? ContentValidationErrorCode.PolicyRejected
++                        : ContentValidationErrorCode.ShapeInvalid,
+                     layout.Message ?? "Equipment slot layout is incompatible.");
+             }
+ 
+diff --git a/src/Convergence.Framework/Validation/ValidationContracts.cs b/src/Convergence.Framework/Validation/ValidationContracts.cs
+index 5cfe1f95c60bf7d6aaa3f259060b68fc1b88cf1f..39ec2cc67532da580319019bb07fc26e6e4a729f 100644
+--- a/src/Convergence.Framework/Validation/ValidationContracts.cs
++++ b/src/Convergence.Framework/Validation/ValidationContracts.cs
+@@ -48,7 +48,8 @@ public enum ContentValidationErrorCode
+     EffectDependencySourceMissing,
+     EffectDependencyOrderInvalid,
+     EffectDependencySourceIncompatible,
+-    SharedContactDependencyInvalid
++    SharedContactDependencyInvalid,
++    PolicyRejected
+ }
+ 
+ public sealed record ContentValidationError(
+diff --git a/tests/Convergence.DemoHost.Tests/Host/CleanTrainingAnnexPlayHostTests.cs b/tests/Convergence.DemoHost.Tests/Host/CleanTrainingAnnexPlayHostTests.cs
+index c56f6cc5922ad7f43f17b3993893b66b832b3b18..13f97c5776844330a49632e0ba8f5555b068e80b 100644
+--- a/tests/Convergence.DemoHost.Tests/Host/CleanTrainingAnnexPlayHostTests.cs
++++ b/tests/Convergence.DemoHost.Tests/Host/CleanTrainingAnnexPlayHostTests.cs
+@@ -2959,6 +2959,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
+         Assert.Equal(paddedJacket.InstanceId, transaction.EquipmentInstanceId);
+         Assert.Equal(paddedJacket.InstanceId, equipment.EquipmentInstanceId);
+         Assert.Contains(StandardEquipmentSlotIds.Armor, summary.EquipmentProfile.EquippedDefinitions.Keys);
++        Assert.Equal(6m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Defense]);
++        Assert.Equal(1m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Evasion]);
+         Assert.Equal(
+             [
+                 CleanTrainingAnnexPlayCommand.OpenShop,
+@@ -2992,6 +2994,78 @@ public sealed class CleanTrainingAnnexPlayHostTests
+         io.AssertConsumed();
+     }
+ 
++    [Fact]
++    public async Task CleanTrainingAnnexPlay_EquipmentCompositionRejectionKeepsPurchasedCopyButNotLoadout()
++    {
++        var io = new ScriptedGameIO().QueueMenu(11, 0, 3, 0, 9);
++        using var output = new StringWriter();
++        var composition = new RejectNthPlayerCompositionService(rejectCall: 2);
++        var host = CreateHost(
++            io,
++            output,
++            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100),
++            combatProfileCompositionFactory: (skills, stats, resources, _) =>
++                composition.Initialize(skills, stats, resources));
++
++        int exitCode = await host.RunAsync();
++
++        Assert.Equal(0, exitCode);
++        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
++        TrainingAnnexEquipmentChangeEvidence equipment = Assert.Single(summary.ShopEquipmentChanges);
++        RuntimeEquipmentInstanceSnapshot paddedJacket = Assert.Single(
++            summary.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Armor),
++            instance => instance.DefinitionId == Qualified("padded_jacket"));
++        Assert.False(equipment.Applied);
++        Assert.Equal(ResourceTransactionCode.Applied, equipment.Code);
++        Assert.DoesNotContain(
++            paddedJacket.InstanceId,
++            summary.Equipment.EquippedInstanceIds.Values);
++        Assert.DoesNotContain(StandardProgressionIds.Defense, summary.PlayerStats.EffectiveStats.Keys);
++        Assert.DoesNotContain(StandardProgressionIds.Evasion, summary.PlayerStats.EffectiveStats.Keys);
++        Assert.DoesNotContain(
++            "Equipped Padded Jacket in Armor",
++            output.ToString(),
++            StringComparison.Ordinal);
++        Assert.Contains(
++            "Equipment equip rejected: Padded Jacket; Rejected by the restore composition test.",
++            output.ToString(),
++            StringComparison.Ordinal);
++        io.AssertConsumed();
++    }
++
++    [Fact]
++    public async Task Order7R11_ManualSaveLoadReDerivesEquippedCombatProfile()
++    {
++        var io = new ScriptedGameIO().QueueMenu(11, 0, 3, 0, 10, 0, 10, 1, 9);
++        using var output = new StringWriter();
++        var host = CreateHost(
++            io,
++            output,
++            initialCurrencyLedger: TrainingAnnexHostSupport.CreateCreditsLedger(100));
++
++        int exitCode = await host.RunAsync();
++
++        Assert.Equal(0, exitCode);
++        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(
++            host.LastSummary);
++        Assert.Equal(1, summary.ManualSaveCount);
++        Assert.Equal(1, summary.ManualLoadCount);
++        Assert.Equal(0, summary.SaveDiagnosticCount);
++        RuntimeEquipmentInstanceSnapshot paddedJacket = Assert.Single(
++            summary.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Armor),
++            instance => instance.DefinitionId == Qualified("padded_jacket"));
++        Assert.Equal(
++            paddedJacket.InstanceId,
++            summary.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Armor]);
++        Assert.Equal(6m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Defense]);
++        Assert.Equal(1m, summary.PlayerStats.EffectiveStats[StandardProgressionIds.Evasion]);
++        Assert.Contains(
++            "Manual save restored from field_menu",
++            output.ToString(),
++            StringComparison.Ordinal);
++        io.AssertConsumed();
++    }
++
+     [Fact]
+     public async Task CleanTrainingAnnexPlay_ShopInsufficientFundsAreDisabledWithoutMutation()
+     {
+diff --git a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+index cebcee443e6ad74b20e73a1f7bfe91a3cab50f15..05d8ac2532dd57a02f0f2fb2718d972108144994 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+@@ -776,6 +776,7 @@ public sealed class DocumentationFoundationTests
+             "A rejection updates none of them.",
+             "which resources are fully restored",
+             "An actor at full configured resources may still have a valid zero-cost treatment",
++            "An individually protected ailment remains on the actor",
+             "Current save contract v19 stores:"
+         ];
+         Assert.All(
+@@ -790,6 +791,8 @@ public sealed class DocumentationFoundationTests
+             "RuntimeActorEquipmentProfileSource",
+             "custom layout that permits multiple simultaneous weapon profiles",
+             "Adopt all three after-snapshots together",
++            "Serialize shop mutations per game session",
++            "complete current collection of other actor loadouts",
+             "Its after-ledger is hypothetical and must not be adopted",
+             "Reconnect Nodes by runtime ID only after aggregate restore succeeds"
+         ];
+@@ -807,6 +810,8 @@ public sealed class DocumentationFoundationTests
+             "## Save V19 Validation And Restore",
+             "ID and nonnegative amount",
+             "enforced by `RuntimeCurrencyLedgerSnapshot` construction",
++            "Adopting one candidate makes every other same-before candidate stale.",
++            "complete current loadout collection supplied by the host",
+             "```mermaid"
+         ];
+         Assert.All(
+diff --git a/tests/Convergence.Framework.Tests/Runtime/EquipmentSlotLayoutTests.cs b/tests/Convergence.Framework.Tests/Runtime/EquipmentSlotLayoutTests.cs
+index 1efd72db0c4ca97565260a6535d0edd33949b907..39d3487bf15327ea6b1d9dfb18741ec404353757 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/EquipmentSlotLayoutTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/EquipmentSlotLayoutTests.cs
+@@ -1,4 +1,5 @@
+ using Convergence.Content;
++using Convergence.Catalog;
+ using Convergence.Runtime;
+ using Convergence.Validation;
+ using Xunit;
+@@ -127,6 +128,115 @@ public sealed class EquipmentSlotLayoutTests
+             string.Join(Environment.NewLine, custom.Errors.Select(error => error.Message)));
+     }
+ 
++    [Theory]
++    [InlineData(BrokenPolicyBehavior.ReturnNull)]
++    [InlineData(BrokenPolicyBehavior.ReturnUndefined)]
++    [InlineData(BrokenPolicyBehavior.Throw)]
++    public void Order7R11_BrokenSlotPolicyIsTypedAcrossContentAndRuntimeBoundaries(
++        BrokenPolicyBehavior behavior)
++    {
++        EquipmentDefinition definition = Definition(
++            StandardEquipmentSlotIds.Weapon,
++            EquipmentProfileKind.Weapon);
++        var policy = new BrokenEquipmentSlotLayoutPolicy(behavior);
++        RuntimeInstanceId instanceId = RuntimeInstanceId.Parse("policy-equipment-001");
++        var inventory = new RuntimeInventorySnapshot(
++            ownedEquipmentInstances:
++            [
++                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
++                    StandardEquipmentSlotIds.Weapon,
++                    [new RuntimeEquipmentInstanceSnapshot(instanceId, definition.Id)])
++            ]);
++        var loadout = new RuntimeEquipmentSnapshot(
++        [
++            new KeyValuePair<ContentId, RuntimeInstanceId>(
++                StandardEquipmentSlotIds.Weapon,
++                instanceId)
++        ]);
++        var definitions = new EquipmentOnlyRepository(definition);
++
++        ContentValidationResult content =
++            new SkillSystemContentValidator(policy).Validate(Request(definition));
++        EquipmentTransitionResult equip = new EquipmentTransitionService(policy).Equip(
++            inventory,
++            new RuntimeEquipmentSnapshot(),
++            instanceId,
++            StandardEquipmentSlotIds.Weapon,
++            StandardEquipmentSlotIds.Weapon,
++            []);
++        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver(policy).Resolve(
++            inventory,
++            loadout,
++            definitions);
++        RuntimeShopOfferResolutionResult offer = ShopResolver(policy).Resolve(
++            ContentId.Parse("test.pack:policy_shop"),
++            new ShopOfferDefinition(
++                ContentId.Parse("policy_offer"),
++                ShopContentKind.Equipment,
++                definition.Id,
++                new FixedShopPriceDefinition(10),
++                new UnlimitedShopStockDefinition()),
++            definitions,
++            definitions);
++
++        Assert.Contains(content.Errors, error =>
++            error.Code == ContentValidationErrorCode.PolicyRejected);
++        Assert.Equal(ResourceTransactionCode.EquipmentSlotPolicyRejected, equip.Code);
++        Assert.Same(equip.Before, equip.After);
++        Assert.Contains(profile.Diagnostics, diagnostic =>
++            diagnostic.Code == RuntimeEquipmentProfileDiagnosticCode.PolicyRejected);
++        Assert.Contains(offer.Diagnostics, diagnostic =>
++            diagnostic.Code == RuntimeShopOfferResolutionCode.EquipmentSlotPolicyRejected);
++    }
++
++    [Fact]
++    public void Order7R11_SlotPolicyCancellationPropagatesAcrossPublicBoundaries()
++    {
++        EquipmentDefinition definition = Definition(
++            StandardEquipmentSlotIds.Weapon,
++            EquipmentProfileKind.Weapon);
++        var policy = new BrokenEquipmentSlotLayoutPolicy(BrokenPolicyBehavior.Cancel);
++        RuntimeInstanceId instanceId = RuntimeInstanceId.Parse("cancel-equipment-001");
++        var inventory = new RuntimeInventorySnapshot(
++            ownedEquipmentInstances:
++            [
++                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
++                    StandardEquipmentSlotIds.Weapon,
++                    [new RuntimeEquipmentInstanceSnapshot(instanceId, definition.Id)])
++            ]);
++        var loadout = new RuntimeEquipmentSnapshot(
++        [
++            new KeyValuePair<ContentId, RuntimeInstanceId>(
++                StandardEquipmentSlotIds.Weapon,
++                instanceId)
++        ]);
++        var definitions = new EquipmentOnlyRepository(definition);
++        var offer = new ShopOfferDefinition(
++            ContentId.Parse("cancel_offer"),
++            ShopContentKind.Equipment,
++            definition.Id,
++            new FixedShopPriceDefinition(10),
++            new UnlimitedShopStockDefinition());
++
++        Assert.Throws<OperationCanceledException>(() =>
++            new SkillSystemContentValidator(policy).Validate(Request(definition)));
++        Assert.Throws<OperationCanceledException>(() =>
++            new EquipmentTransitionService(policy).Equip(
++                inventory,
++                new RuntimeEquipmentSnapshot(),
++                instanceId,
++                StandardEquipmentSlotIds.Weapon,
++                StandardEquipmentSlotIds.Weapon,
++                []));
++        Assert.Throws<OperationCanceledException>(() =>
++            new RuntimeEquipmentProfileResolver(policy).Resolve(inventory, loadout, definitions));
++        Assert.Throws<OperationCanceledException>(() => ShopResolver(policy).Resolve(
++            ContentId.Parse("test.pack:cancel_shop"),
++            offer,
++            definitions,
++            definitions));
++    }
++
+     private static SkillSystemValidationRequest Request(EquipmentDefinition definition)
+     {
+         var manifest = new ContentPackManifest(
+@@ -179,6 +289,15 @@ public sealed class EquipmentSlotLayoutTests
+             new NeverCriticalDefinition(),
+             IsLongRange: false));
+ 
++    private static RuntimeShopOfferResolver ShopResolver(IEquipmentSlotLayoutPolicy policy) =>
++        new(
++            new BoundShopPricingPolicy(
++                StandardShopPricingPolicyIds.Standard,
++                new StandardShopPricingPolicy()),
++            ShopPricingPolicyFactoryRegistry.CreateStandard(),
++            ShopStockPolicyFactoryRegistry.CreateStandard(),
++            policy);
++
+     private static ContentId SlotFor(EquipmentProfileKind profileKind) => profileKind switch
+     {
+         EquipmentProfileKind.Weapon => StandardEquipmentSlotIds.Weapon,
+@@ -196,6 +315,65 @@ public sealed class EquipmentSlotLayoutTests
+         Accessory
+     }
+ 
++    public enum BrokenPolicyBehavior
++    {
++        ReturnNull,
++        ReturnUndefined,
++        Throw,
++        Cancel
++    }
++
++    private sealed class BrokenEquipmentSlotLayoutPolicy(BrokenPolicyBehavior behavior)
++        : IEquipmentSlotLayoutPolicy
++    {
++        public IReadOnlyList<ContentId> SlotIds => StandardEquipmentSlotIds.All;
++
++        public EquipmentSlotLayoutResult ValidateDefinition(EquipmentDefinition definition) =>
++            Result();
++
++        public EquipmentSlotLayoutResult ValidateAssignment(
++            ContentId authoredSlotId,
++            ContentId targetSlotId) =>
++            Result();
++
++        private EquipmentSlotLayoutResult Result() => behavior switch
++        {
++            BrokenPolicyBehavior.ReturnNull => null!,
++            BrokenPolicyBehavior.ReturnUndefined => new EquipmentSlotLayoutResult(
++                (EquipmentSlotLayoutCode)int.MaxValue),
++            BrokenPolicyBehavior.Throw => throw new InvalidOperationException(
++                "Deliberate slot-policy failure."),
++            BrokenPolicyBehavior.Cancel => throw new OperationCanceledException(
++                "Deliberate slot-policy cancellation."),
++            _ => throw new ArgumentOutOfRangeException(nameof(behavior))
++        };
++    }
++
++    private sealed class EquipmentOnlyRepository(EquipmentDefinition definition) :
++        IEquipmentDefinitionRepository,
++        IItemDefinitionRepository
++    {
++        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? resolved)
++        {
++            resolved = id == definition.Id ? definition : null;
++            return resolved is not null;
++        }
++
++        public EquipmentDefinition GetRequiredEquipment(ContentId id) =>
++            TryGetEquipment(id, out EquipmentDefinition? resolved) && resolved is not null
++                ? resolved
++                : throw new KeyNotFoundException($"Equipment '{id}' was not found.");
++
++        public bool TryGetItem(ContentId id, out ItemDefinition? resolved)
++        {
++            resolved = null;
++            return false;
++        }
++
++        public ItemDefinition GetRequiredItem(ContentId id) =>
++            throw new KeyNotFoundException($"Item '{id}' was not found.");
++    }
++
+     private sealed class RelicEquipmentSlotLayoutPolicy(ContentId relicSlot)
+         : IEquipmentSlotLayoutPolicy
+     {
+diff --git a/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs b/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs
+index d7500abcc092a2cfc23f85954946dcef7620d86e..ade4b1c9f356565351e12ed50a397f9b58a2c2c4 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs
+@@ -216,6 +216,138 @@ public sealed class ProgressionPolicyTests
+         Assert.Empty(unequippedProfile.StatModifiers);
+     }
+ 
++    [Fact]
++    public void Order7R11_EquipmentApplicationCommitsLoadoutStatsAndPassiveAsOneActorState()
++    {
++        RuntimeActorState hostedEntity = CreateActor("application_hosted", 20m);
++        RuntimeActorState vessel = CreateActor("application_vessel", 5m, hpCurrent: 90m);
++        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
++        ContentId armorId = ContentId.Parse("test.pack:application_armor");
++        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("application-armor-001");
++        SkillDefinition equipmentPassive = PassiveSkill(
++            "test.pack:application_passive",
++            ContentId.Parse("owner_turn_end"),
++            5m);
++        var armor = new EquipmentDefinition(
++            armorId,
++            "Application Armor",
++            "Exercises atomic live equipment application.",
++            StandardEquipmentSlotIds.Armor,
++            10,
++            grantedSkillIds: [equipmentPassive.Id],
++            armor: new EquipmentArmorProfileDefinition(6, 2));
++        var inventory = new RuntimeInventorySnapshot(
++            ownedEquipmentInstances:
++            [
++                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
++                    StandardEquipmentSlotIds.Armor,
++                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
++            ]);
++        var candidate = new RuntimeEquipmentSnapshot(
++        [
++            new KeyValuePair<ContentId, RuntimeInstanceId>(
++                StandardEquipmentSlotIds.Armor,
++                armorInstanceId)
++        ]);
++        var application = new RuntimeActorEquipmentApplicationService(
++            new RuntimeActorCombatProfileCompositionService(
++                _stats,
++                _resources,
++                new SkillRepository(equipmentPassive)));
++
++        RuntimeActorEquipmentApplicationResult equipped = application.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
++                vessel,
++                inventory,
++                candidate,
++                new EquipmentRepository(armor),
++                RuntimeStatSourceKind.ActiveHostedEntity,
++                MissingHostedEntityBehavior.RejectStatResolution,
++                partyRoster,
++                [hostedEntity]));
++
++        Assert.True(equipped.Applied);
++        Assert.Equal(armorInstanceId, vessel.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Armor]);
++        Assert.Equal(6m, vessel.Stats[StandardProgressionIds.Defense]);
++        Assert.Equal(2m, vessel.Stats[StandardProgressionIds.Evasion]);
++        Assert.Equal(equipmentPassive.Id, Assert.Single(vessel.Passives.Entries).Skill.Id);
++        Assert.DoesNotContain(equipmentPassive.Id, vessel.Skills.LearnedSkillIds);
++        Assert.DoesNotContain(equipmentPassive.Id, vessel.Skills.EquippedSkillIds);
++        Assert.Equal(
++            equipped.After.Equipment.EquippedInstanceIds.ToArray(),
++            vessel.ToSnapshot().Equipment.EquippedInstanceIds.ToArray());
++
++        RuntimeActorEquipmentApplicationResult unequipped = application.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
++                vessel,
++                inventory,
++                new RuntimeEquipmentSnapshot(),
++                new EquipmentRepository(armor),
++                RuntimeStatSourceKind.ActiveHostedEntity,
++                MissingHostedEntityBehavior.RejectStatResolution,
++                partyRoster,
++                [hostedEntity]));
++
++        Assert.True(unequipped.Applied);
++        Assert.Empty(vessel.Equipment.EquippedInstanceIds);
++        Assert.DoesNotContain(StandardProgressionIds.Defense, vessel.Stats.Keys);
++        Assert.DoesNotContain(StandardProgressionIds.Evasion, vessel.Stats.Keys);
++        Assert.Empty(vessel.Passives.Entries);
++    }
++
++    [Fact]
++    public void Order7R11_EquipmentApplicationRejectionLeavesTheCompleteLiveActorUnchanged()
++    {
++        RuntimeActorState actor = CreateActor("rejected_application_actor", 5m);
++        RuntimeActorSnapshot before = actor.ToSnapshot();
++        ContentId armorId = ContentId.Parse("test.pack:rejected_application_armor");
++        ContentId missingSkillId = ContentId.Parse("test.pack:missing_equipment_skill");
++        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("rejected-application-armor-001");
++        var armor = new EquipmentDefinition(
++            armorId,
++            "Rejected Application Armor",
++            "References an unavailable granted skill.",
++            StandardEquipmentSlotIds.Armor,
++            10,
++            grantedSkillIds: [missingSkillId],
++            armor: new EquipmentArmorProfileDefinition(6, 2));
++        var inventory = new RuntimeInventorySnapshot(
++            ownedEquipmentInstances:
++            [
++                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
++                    StandardEquipmentSlotIds.Armor,
++                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
++            ]);
++        var candidate = new RuntimeEquipmentSnapshot(
++        [
++            new KeyValuePair<ContentId, RuntimeInstanceId>(
++                StandardEquipmentSlotIds.Armor,
++                armorInstanceId)
++        ]);
++        var application = new RuntimeActorEquipmentApplicationService(
++            new RuntimeActorCombatProfileCompositionService(new SkillRepository()));
++
++        RuntimeActorEquipmentApplicationResult result = application.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
++                actor,
++                inventory,
++                candidate,
++                new EquipmentRepository(armor),
++                RuntimeStatSourceKind.Actor,
++                MissingHostedEntityBehavior.UseActorBaseStats));
++
++        Assert.False(result.Applied);
++        Assert.Equal(
++            RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected,
++            Assert.Single(result.Diagnostics).Code);
++        Assert.Equal(
++            RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMissing,
++            result.Diagnostics[0].CompositionCode);
++        AssertCompositionStateUnchanged(before, actor.ToSnapshot());
++        AssertCompositionStateUnchanged(before, result.Before);
++        AssertCompositionStateUnchanged(before, result.After);
++    }
++
+     [Fact]
+     public void ActorComposition_MissingHostedEntityPolicyEitherRejectsOrUsesActorStats()
+     {
+diff --git a/tests/Convergence.Framework.Tests/Runtime/RecoveryPolicyTests.cs b/tests/Convergence.Framework.Tests/Runtime/RecoveryPolicyTests.cs
+index 1efd6e2cfbccfd4ddf495682359a0af0878115e5..efc4e3a3b8f8f9232ddc14de7df5925916bb17b8 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/RecoveryPolicyTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/RecoveryPolicyTests.cs
+@@ -190,6 +190,27 @@ public sealed class RecoveryPolicyTests
+         Assert.Equal(50, result.AfterCurrencyLedger.GetRequiredBalance(Credits));
+     }
+ 
++    [Fact]
++    public void Recover_ProtectedAilmentAloneReportsNoRecoveryNeededWithoutDebit()
++    {
++        RuntimeActorState actor = Actor(new BattleResourceState(Hp, 100m, 100m));
++        AilmentDefinition protectedAilment = Ailment(
++            "protected",
++            StatusRemovalProfiles.Protected);
++        actor.ApplyAilment(protectedAilment, protectedAilment.DefaultLifetime);
++        var policy = new StandardHospitalRecoveryPolicy(
++            Credits,
++            [Pair(Hp, 1m)],
++            removeAilments: true);
++
++        RecoveryTransactionResult result = Service(policy).Recover(actor, Ledger(50));
++
++        Assert.Equal(RecoveryTransactionCode.NoRecoveryNeeded, result.Code);
++        Assert.True(actor.HasAilment(protectedAilment.Id));
++        Assert.Same(result.BeforeCurrencyLedger, result.AfterCurrencyLedger);
++        Assert.Equal(50, result.AfterCurrencyLedger.GetRequiredBalance(Credits));
++    }
++
+     [Fact]
+     public void Recover_RejectsMissingOrMismatchedStatModifierAuthorityAtomically()
+     {
+diff --git a/tests/Convergence.Framework.Tests/Runtime/ResourceManagementServiceTests.cs b/tests/Convergence.Framework.Tests/Runtime/ResourceManagementServiceTests.cs
+index e399c9e62955c2057f69102ac7746f3470b3dff1..07124a1fce87213669b316b89791e76ed028f228 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/ResourceManagementServiceTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/ResourceManagementServiceTests.cs
+@@ -58,6 +58,51 @@ public sealed class ResourceManagementServiceTests
+         Assert.Equal(int.MaxValue, result.After.GetQuantity(medicine));
+     }
+ 
++    [Fact]
++    public void InventoryService_RejectsInvalidItemIdsWithoutMutatingLiveInventory()
++    {
++        var service = new InventoryTransitionService();
++        var empty = new RuntimeInventorySnapshot();
++        var malformedDecodedSnapshot = new RuntimeInventorySnapshot(
++            [new KeyValuePair<ContentId, int>(default, 2)]);
++
++        InventoryTransitionResult added = service.AddItem(empty, default, 1);
++        InventoryTransitionResult removed = service.RemoveItem(
++            malformedDecodedSnapshot,
++            default,
++            1);
++        InventoryReservationResult reserved = service.ReserveItem(
++            malformedDecodedSnapshot,
++            default,
++            1);
++
++        Assert.False(added.Applied);
++        Assert.Equal(ResourceTransactionCode.InvalidItemId, added.Code);
++        Assert.Same(empty, added.Before);
++        Assert.Same(empty, added.After);
++        ResourceTransactionDiagnostic addDiagnostic = Assert.Single(added.Diagnostics);
++        Assert.Equal(ResourceTransactionCode.InvalidItemId, addDiagnostic.Code);
++        Assert.False(addDiagnostic.ContentId!.Value.IsValid);
++
++        Assert.False(removed.Applied);
++        Assert.Equal(ResourceTransactionCode.InvalidItemId, removed.Code);
++        Assert.Same(malformedDecodedSnapshot, removed.Before);
++        Assert.Same(malformedDecodedSnapshot, removed.After);
++        ResourceTransactionDiagnostic removeDiagnostic = Assert.Single(removed.Diagnostics);
++        Assert.Equal(ResourceTransactionCode.InvalidItemId, removeDiagnostic.Code);
++        Assert.False(removeDiagnostic.ContentId!.Value.IsValid);
++
++        Assert.False(reserved.Reserved);
++        Assert.Equal(ResourceTransactionCode.InvalidItemId, reserved.Code);
++        Assert.Same(malformedDecodedSnapshot, reserved.Snapshot);
++        Assert.Null(reserved.Reservation);
++        ResourceTransactionDiagnostic reservationDiagnostic =
++            Assert.Single(reserved.Diagnostics);
++        Assert.Equal(ResourceTransactionCode.InvalidItemId, reservationDiagnostic.Code);
++        Assert.False(reservationDiagnostic.ContentId!.Value.IsValid);
++        Assert.Equal(2, malformedDecodedSnapshot.GetQuantity(default));
++    }
++
+     [Fact]
+     public void InventoryService_AllowsDuplicateDefinitionsButRejectsDuplicateInstancesAndEquippedRemoval()
+     {
+diff --git a/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs b/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
+index 559234440fdd4e3814baeab1ea199f4490dbd304..abea977fb2406fe337e5d133907dcd0fa3c9e6a1 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
+@@ -281,6 +281,114 @@ public sealed class RuntimePersistenceSnapshotTests
+             .Add(RuntimeInstanceId.Parse("late_actor"), session.Actors[0]));
+     }
+ 
++    [Fact]
++    public void Order7R11_AggregateRestoreDerivesEquipmentContributionsFromSavedAuthorities()
++    {
++        ContentId armorId = Id("convergence.catalog_surface_sample:training_coat_sample");
++        ContentId grantedPassiveId = Id("convergence.clean_battle_demo:regenerate_demo");
++        GameDataCatalog catalog = WithEquipmentDefinition(
++            LoadCatalog(),
++            new EquipmentDefinition(
++                armorId,
++                "Training Coat",
++                "Restore-derived equipment profile test.",
++                StandardEquipmentSlotIds.Armor,
++                500,
++                grantedSkillIds: [grantedPassiveId],
++                armor: new EquipmentArmorProfileDefinition(12, 2)));
++        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
++        RuntimeActorSnapshot savedActor = baseline.Actors[0];
++        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("training-coat-001");
++        RuntimeActorSnapshot equippedActor = CopyActor(
++            savedActor,
++            equipment: new RuntimeEquipmentSnapshot(
++                savedActor.Equipment.EquippedInstanceIds.Concat(
++                [
++                    new KeyValuePair<ContentId, RuntimeInstanceId>(
++                        StandardEquipmentSlotIds.Armor,
++                        armorInstanceId)
++                ])),
++            battleActivations: new RuntimeBattleActivationSnapshot(
++                savedActor.BattleActivations.PassiveActivations,
++                savedActor.BattleActivations.PassiveSkillStates.Concat(
++                [new RuntimePassiveSkillStateSnapshot(grantedPassiveId, IsEnabled: true)])));
++        var inventory = new RuntimeInventorySnapshot(
++            baseline.Inventory.ItemQuantities,
++            baseline.Inventory.OwnedEquipmentInstances.Select(pair =>
++                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
++                        pair.Key,
++                        pair.Value))
++                .Concat(
++                [
++                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
++                        StandardEquipmentSlotIds.Armor,
++                        [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
++                ]));
++        RuntimeSaveGameSnapshot snapshot = Copy(
++            baseline,
++            actors: [equippedActor, baseline.Actors[1]],
++            inventory: inventory);
++        var factory = new CatalogBattleActorFactory(
++            catalog,
++            catalog,
++            new RestoreOnlyInitializationPolicy(),
++            catalog);
++        var service = new RuntimeSessionRestoreService(
++            new RuntimeSaveValidator(),
++            factory,
++            new DelegateActorRestoreProfileResolver(_ => ActorProfile()));
++
++        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
++
++        Assert.True(
++            result.IsSuccess,
++            string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
++        RuntimeActorState restored = result.RequireSession()
++            .ActorsByInstanceId[equippedActor.Identity.InstanceId]
++            .State;
++        RuntimeActorSnapshot restoredSnapshot = restored.ToSnapshot();
++        Assert.Equal(12m, restoredSnapshot.Stats.EffectiveStats[StandardProgressionIds.Defense]);
++        Assert.Equal(2m, restoredSnapshot.Stats.EffectiveStats[StandardProgressionIds.Evasion]);
++        Assert.DoesNotContain(grantedPassiveId, restoredSnapshot.Skills.LearnedSkillIds);
++        Assert.DoesNotContain(grantedPassiveId, restoredSnapshot.Skills.EquippedSkillIds);
++        Assert.Contains(restored.Passives.Entries, entry => entry.Skill.Id == grantedPassiveId);
++        Assert.Null(typeof(RuntimeActorRestoreProfile).GetProperty("EquipmentStatModifiers"));
++        Assert.Null(typeof(RuntimeActorRestoreProfile).GetProperty("EquipmentGrantedSkillIds"));
++    }
++
++    [Fact]
++    public void Order7R11_AggregateRestoreRejectsEquipmentProfileBeforeAnyActorConstruction()
++    {
++        GameDataCatalog catalog = LoadCatalog();
++        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot();
++        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
++            catalog,
++            catalog,
++            new RestoreOnlyInitializationPolicy(),
++            catalog));
++        var service = new RuntimeSessionRestoreService(
++            new RuntimeSaveValidator(),
++            factory,
++            new DelegateActorRestoreProfileResolver(_ => ActorProfile()),
++            equipmentProfiles: new RejectingEquipmentProfileResolver());
++
++        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
++
++        Assert.False(result.IsSuccess);
++        Assert.Null(result.Session);
++        Assert.Empty(factory.RestoreOrder);
++        Assert.All(result.Diagnostics, diagnostic =>
++        {
++            Assert.Equal(
++                RuntimeSessionRestoreDiagnosticCode.EquipmentProfileResolutionFailed,
++                diagnostic.Code);
++            Assert.Equal(
++                RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
++                diagnostic.EquipmentProfileDiagnosticCode);
++            Assert.Equal("$.actors.equipment", diagnostic.Path);
++        });
++    }
++
+     [Fact]
+     public void RuntimeSessionRestoreService_RejectsEquipmentActorIdentityCollisionBeforeAnyActorRestore()
+     {
+@@ -326,6 +434,29 @@ public sealed class RuntimePersistenceSnapshotTests
+         Assert.Equal(baseline.ShopStock.Entries, invalid.ShopStock.Entries);
+     }
+ 
++    [Fact]
++    public void Order7R11_SaveValidationContainsSlotPolicyFailureAsTypedDiagnostic()
++    {
++        RuntimeSaveValidationResult result = new RuntimeSaveValidator(
++            equipmentSlotLayout: new FaultingEquipmentSlotLayoutPolicy()).Validate(
++                CreateSaveSnapshot(),
++                LoadCatalog());
++
++        Assert.False(result.IsValid);
++        Assert.Contains(result.Diagnostics, diagnostic =>
++            diagnostic.Code == RuntimeSaveValidationCode.EquipmentSlotPolicyRejected);
++    }
++
++    [Fact]
++    public void Order7R11_SaveValidationPropagatesSlotPolicyCancellation()
++    {
++        var validator = new RuntimeSaveValidator(
++            equipmentSlotLayout: new FaultingEquipmentSlotLayoutPolicy(cancel: true));
++
++        Assert.Throws<OperationCanceledException>(() =>
++            validator.Validate(CreateSaveSnapshot(), LoadCatalog()));
++    }
++
+     [Fact]
+     public void RuntimeSaveValidator_RejectsMissingAndMismatchedCombatProfileSources()
+     {
+@@ -3063,6 +3194,27 @@ public sealed class RuntimePersistenceSnapshotTests
+             Registrations());
+     }
+ 
++    private static GameDataCatalog WithEquipmentDefinition(
++        GameDataCatalog catalog,
++        EquipmentDefinition replacement) =>
++        new(
++            catalog.ContentPacks,
++            catalog.Skills,
++            catalog.Entities,
++            catalog.Races,
++            catalog.Ailments,
++            catalog.Items,
++            catalog.Equipment.Select(pair => pair.Key == replacement.Id
++                ? new KeyValuePair<ContentId, EquipmentDefinition>(pair.Key, replacement)
++                : pair),
++            catalog.Shops,
++            catalog.Negotiations,
++            catalog.Encounters,
++            catalog.Dungeons,
++            catalog.FusionRecipes,
++            catalog.Rulesets,
++            Registrations());
++
+     private static GameDataCatalog WithAilments(
+         GameDataCatalog catalog,
+         params AilmentDefinition[] ailments) =>
+@@ -3402,6 +3554,42 @@ public sealed class RuntimePersistenceSnapshotTests
+         public RuntimeActorRestoreProfile Resolve(RuntimeActorRestoreProfileRequest request) => resolve(request);
+     }
+ 
++    private sealed class RejectingEquipmentProfileResolver : IRuntimeEquipmentProfileResolver
++    {
++        public RuntimeEquipmentProfile Resolve(
++            RuntimeInventorySnapshot inventory,
++            RuntimeEquipmentSnapshot equipment,
++            IEquipmentDefinitionRepository equipmentRepository) =>
++            new(
++                diagnostics:
++                [
++                    new RuntimeEquipmentProfileDiagnostic(
++                        RuntimeEquipmentProfileDiagnosticCode.SlotProfileMismatch,
++                        StandardEquipmentSlotIds.Weapon,
++                        RuntimeInstanceId.Parse("rejected-equipment-001"),
++                        Id("convergence.catalog_surface_sample:shortsword_sample"),
++                        "Deliberate aggregate equipment-profile rejection.")
++                ]);
++    }
++
++    private sealed class FaultingEquipmentSlotLayoutPolicy(bool cancel = false) :
++        IEquipmentSlotLayoutPolicy
++    {
++        public IReadOnlyList<ContentId> SlotIds => StandardEquipmentSlotIds.All;
++
++        public EquipmentSlotLayoutResult ValidateDefinition(EquipmentDefinition definition) =>
++            Fail();
++
++        public EquipmentSlotLayoutResult ValidateAssignment(
++            ContentId authoredSlotId,
++            ContentId targetSlotId) =>
++            Fail();
++
++        private EquipmentSlotLayoutResult Fail() => cancel
++            ? throw new OperationCanceledException("Deliberate save slot-policy cancellation.")
++            : throw new InvalidOperationException("Deliberate save slot-policy failure.");
++    }
++
+     private sealed class RecordingActorFactory(
+         ICatalogBattleActorFactory inner,
+         RuntimeInstanceId? throwingActorId = null) : ICatalogBattleActorFactory
+diff --git a/tests/Convergence.Framework.Tests/Runtime/ShopStockPolicyTests.cs b/tests/Convergence.Framework.Tests/Runtime/ShopStockPolicyTests.cs
+index e1b9efe6fd12bceded19ae3784e2afb089fd578d..fcf9972293e6b9f3b66409cbbf4de8bc41f12a32 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/ShopStockPolicyTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/ShopStockPolicyTests.cs
+@@ -108,6 +108,59 @@ public sealed class ShopStockPolicyTests
+         Assert.Same(second.AfterStock, third.AfterStock);
+     }
+ 
++    [Fact]
++    public void HostAdoption_MustSerializeOrCompareAndSwapSameBeforePurchaseCandidates()
++    {
++        var service = new ShopTransactionService();
++        RuntimeShopOfferSnapshot offer = Offer(ShopA, OfferA, Medicine, quantity: 1);
++        RuntimeShopStockSnapshot stock = RuntimeShopStockSnapshot.CreateInitial([offer]);
++        var inventory = new RuntimeInventorySnapshot();
++        RuntimeCurrencyLedgerSnapshot currency = Ledger(30);
++
++        ShopTransactionResult firstCandidate = service.Buy(
++            inventory,
++            currency,
++            stock,
++            Credits,
++            offer,
++            buyerLuck: 0,
++            purchasedEquipmentInstanceId: null);
++        ShopTransactionResult staleSameBeforeCandidate = service.Buy(
++            inventory,
++            currency,
++            stock,
++            Credits,
++            offer,
++            buyerLuck: 0,
++            purchasedEquipmentInstanceId: null);
++        ShopTransactionResult recalculatedAfterAdoption = service.Buy(
++            firstCandidate.AfterInventory,
++            firstCandidate.AfterCurrencyLedger,
++            firstCandidate.AfterStock,
++            Credits,
++            offer,
++            buyerLuck: 0,
++            purchasedEquipmentInstanceId: null);
++
++        Assert.True(firstCandidate.Applied);
++        Assert.True(staleSameBeforeCandidate.Applied);
++        Assert.Same(firstCandidate.BeforeInventory, staleSameBeforeCandidate.BeforeInventory);
++        Assert.Same(
++            firstCandidate.BeforeCurrencyLedger,
++            staleSameBeforeCandidate.BeforeCurrencyLedger);
++        Assert.Same(firstCandidate.BeforeStock, staleSameBeforeCandidate.BeforeStock);
++        Assert.Equal(1, firstCandidate.AfterInventory.GetQuantity(Medicine));
++        Assert.Equal(20, Balance(firstCandidate.AfterCurrencyLedger));
++        AssertQuantity(firstCandidate.AfterStock, offer.Identity, 0);
++
++        AssertAtomicRejection(
++            recalculatedAfterAdoption,
++            firstCandidate.AfterInventory,
++            firstCandidate.AfterCurrencyLedger,
++            firstCandidate.AfterStock,
++            ResourceTransactionCode.ShopStockUnavailable);
++    }
++
+     [Fact]
+     public void Buy_RejectionsPreserveAllThreeAuthoritiesAtomically()
+     {

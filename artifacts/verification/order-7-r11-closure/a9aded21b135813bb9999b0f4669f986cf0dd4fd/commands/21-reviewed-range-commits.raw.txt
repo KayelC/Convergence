@@ -1,0 +1,63 @@
+commit a9aded21b135813bb9999b0f4669f986cf0dd4fd
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Aug 14 10:09:07 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Aug 14 10:09:07 2026 +0200
+
+    runtime: reject invalid live item identities
+
+commit fbced4ce3531650ed0cfcc48ab1321c7f054d002
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Aug 14 10:05:06 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Aug 14 10:05:06 2026 +0200
+
+    docs: extend order 7 closure audit
+
+commit 3e778e06937e1d2751cec3841057e85dd8b28ba9
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Aug 14 09:54:28 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Aug 14 09:54:28 2026 +0200
+
+    docs: clarify equipment economy host boundaries
+
+commit acd42c40505a9ce97e4bab1c489fedd38943e30d
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Aug 14 09:49:14 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Aug 14 09:49:14 2026 +0200
+
+    runtime: contain equipment slot policy faults
+
+commit 33a248c981e9590e1f7f47df52aea177955d123b
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Aug 14 09:39:27 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Aug 14 09:39:27 2026 +0200
+
+    runtime: derive equipment during session restore
+
+commit 4a7acb3d1e4649a5b7a105a7b980b9f527fdf7b5
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Aug 14 09:28:14 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Aug 14 09:28:14 2026 +0200
+
+    runtime: apply equipment profiles atomically
+
+commit 49d88a2df52c6ba7dd0404cdca2f9fa77212206e
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Aug 14 09:14:15 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Aug 14 09:14:15 2026 +0200
+
+    docs: correct order 7 live equipment finding
+
+commit ac717a140f84e0700eb88f3b1c116586d908217a
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Aug 14 09:12:44 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Aug 14 09:12:44 2026 +0200
+
+    docs: audit order 7 closure readiness

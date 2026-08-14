@@ -25,3 +25,10 @@ capture and validation contract.
 - [Recovered earlier local artifacts](../historical-verification-recovery/2026-08-13/README.md):
   surviving pre-contract outputs retained with provenance and hashes, without
   claiming missing context.
+
+## Order 7 R11 Closure
+
+- [Successful complete closure gate](order-7-r11-closure/a9aded21b135813bb9999b0f4669f986cf0dd4fd/README.md):
+  23 commands passed against commit
+  `a9aded21b135813bb9999b0f4669f986cf0dd4fd`, reviewing
+  `25c0a78a23df1526ad53fbdbf151afd2efd693ad..a9aded21b135813bb9999b0f4669f986cf0dd4fd`.
