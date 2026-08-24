@@ -300,16 +300,26 @@ Key invariants:
 Transition services do not mutate `RuntimeActorState.IsDeployed`. Encounter
 orchestration owns presence changes.
 
-## Save Contract V15
+## Save Contract V19
 
-`RuntimeSaveGameSnapshot.CurrentContractVersion` is `15`. Version 15 retains
-the canonical roster, complete move-list state, policy-owned stat modifiers,
-charge-policy identity, and typed status lifetimes established by earlier
-pre-release contracts, including the optional target runtime ID used when a
-passive event counts activations per target. It also retains each actor's
-combat-profile source actor, source entity, and revision. Version 14 removed
-actor-local Analyze state because persistent knowledge and encounter analysis
-already have separate canonical snapshots.
+`RuntimeSaveGameSnapshot.CurrentContractVersion` is `19`. The current aggregate
+retains the canonical roster, complete move-list state, policy-owned stat
+modifiers, charge-policy identity, typed status lifetimes, per-target passive
+activation keys, and each actor's combat-profile source actor, source entity,
+and revision established through save v15. The subsequent Order 7 contracts
+changed one authority at a time:
+
+- v16 made inventory the sole owner of immutable equipment instances and left
+  actor loadouts with instance references only;
+- v17 replaced fixed equipment-slot values with authored `ContentId` keys;
+- v18 replaced the unnamed wallet with balances keyed by currency `ContentId`;
+  and
+- v19 added durable remaining stock keyed by qualified shop ID plus shop-local
+  offer ID.
+
+Version 14 removed actor-local Analyze state because persistent knowledge and
+encounter analysis already have separate canonical snapshots. These earlier
+versions are historical pre-release shapes, not alternate current contracts.
 
 The save aggregate contains:
 
@@ -317,8 +327,8 @@ The save aggregate contains:
 - selected stat-modifier policy IDs, ordered contributions, durations, and
   lifecycle boundaries;
 - one canonical party roster;
-- inventory-owned equipment instances, actor loadout instance references, and
-  currency balances keyed by qualified content ID;
+- inventory-owned equipment instances, actor loadout instance references,
+  currency balances keyed by qualified content ID, and durable shop stock;
 - optional field and dungeon state;
 - Compendium and battle knowledge;
 - session progress;
@@ -340,8 +350,8 @@ revision. Roster ownership is not copied into actor snapshots.
 - combat-profile source existence and source-entity agreement;
 - pending skill tokens, IDs, levels, and revisions;
 - passive activation target references when per-target counting is retained;
-- inventory equipment-instance ownership, actor loadout references, field,
-  Compendium, and knowledge references.
+- inventory equipment-instance ownership, actor loadout references, shop-stock
+  identity and quantities, field, Compendium, and knowledge references.
 
 ## Aggregate Restoration
 

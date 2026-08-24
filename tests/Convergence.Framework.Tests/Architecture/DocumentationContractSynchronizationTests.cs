@@ -137,6 +137,14 @@ public sealed class DocumentationContractSynchronizationTests
             @"current runtime save contract is version `(?<version>\d+)`",
             expectedVersion,
             "save mechanics");
+        AssertSingleCurrentVersionClaim(
+            File.ReadAllText(RepositoryPath(
+                "docs",
+                "technical",
+                "runtime-actor-state-and-restoration.md")),
+            @"`RuntimeSaveGameSnapshot\.CurrentContractVersion` is `(?<version>\d+)`",
+            expectedVersion,
+            "runtime actor and restoration technical guide");
 
         using JsonDocument matrix = JsonDocument.Parse(File.ReadAllText(RepositoryPath(
             "tests",
