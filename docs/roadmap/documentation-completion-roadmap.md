@@ -644,7 +644,7 @@ outer action-end before a save is captured. The
 [final certification record](../reviews/status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
 is the formal Order 4 closure authority.
 
-## Open Order 7
+## Completed Order 7
 
 The owner-approved
 [Inventory, Equipment, And Economy Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
@@ -663,13 +663,13 @@ wire/runtime surface, including aggregate restore, immutable rejected and
 cancelled operations, sealed resolved-offer authority, all active content,
 DemoHost, and the real Godot consumer. O7-R10 now supplies and reconciles the
 player mechanics, developer integration, and technical authority documents.
-O7-R11 still owns the independent closure audit.
-
-The capability remains `partial` while independent closure is open. Its
-mechanics, developer, and technical entries are `reviewed` after O7-R10's
-source/test/diagram reconciliation. Documentation maturity does not bypass the
-remaining O7-R11 adversarial audit. Order 7 closes only after that audit finds
-no unresolved realistic reachable defect or documentation contradiction.
+O7-R11 corrected the remaining live-equipment, acquisition,
+extension-boundary, and save-guidance findings in isolated commits. Its
+[post-correction closure review](../reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+then re-read current source and all three audiences, found no unresolved
+realistic reachable defect or documentation contradiction, and passed the
+complete release gate. The capability is `complete`; its mechanics, developer,
+and technical entries remain `reviewed`.
 
 ## Deferred Documentation
 

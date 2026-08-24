@@ -167,7 +167,7 @@
     },
     {
       "id": "inventory_equipment_economy",
-      "implementationState": "partial",
+      "implementationState": "complete",
       "frameworkTests": [
         "ResourceManagementServiceTests",
         "ShopPricingPolicyTests",
@@ -185,9 +185,7 @@
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": [
-        "Complete three-audience documentation and the independent Order 7 closure audit remain pending."
-      ]
+      "knownGaps": []
     },
     {
       "id": "navigation",

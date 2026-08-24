@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`inventory_equipment_economy` is `partial`. Its immutable transaction and
+`inventory_equipment_economy` is `complete`. Its immutable transaction and
 validation foundation is usable. O7-R2 gives each equipment copy a unique
 runtime instance ID, makes inventory its sole owner, permits separate copies of
 one definition, and removes the former root save equipment authority. O7-R3
@@ -38,8 +38,12 @@ explicit standard policy. O7-R9 now certifies the combined save/restore,
 equipment, offer, currency, stock,
 recovery, DemoHost, and Godot boundaries; it also makes resolved shop-offer
 authority externally read-only. O7-R10 supplies reviewed player, developer, and
-technical documents. The capability remains partial pending independent O7-R11
-closure. The
+technical documents. O7-R11 then corrected live equipment authority,
+acquisition validation, policy-factory fault containment, and stale save
+guidance in isolated commits. The
+[post-correction closure review](../reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+found no unresolved realistic reachable defect or documentation contradiction
+and passed the complete release gate. The
 owner-approved
 [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 governs the direct data corrections, genuine policy seams, three-audience

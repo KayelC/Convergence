@@ -753,7 +753,7 @@ public sealed class DocumentationFoundationTests
     }
 
     [Fact]
-    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndOpenClosureGate()
+    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndClosureEvidence()
     {
         string mechanics = File.ReadAllText(
             RepositoryPath("docs", "mechanics", "party-inventory-and-economy.md"))
@@ -766,6 +766,12 @@ public sealed class DocumentationFoundationTests
             .ReplaceLineEndings(" ");
         string publicApi = File.ReadAllText(
             RepositoryPath("docs", "public-api-contract.md"))
+            .ReplaceLineEndings(" ");
+        string closure = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md"))
             .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
@@ -832,7 +838,13 @@ public sealed class DocumentationFoundationTests
 
         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             candidate => candidate.Id == "inventory_equipment_economy");
-        Assert.Equal("partial", capability.ImplementationState);
+        Assert.Equal("complete", capability.ImplementationState);
+        Assert.Empty(capability.KnownGaps);
+
+        Assert.Contains("Order 7 is formally complete.", closure, StringComparison.Ordinal);
+        Assert.Contains("no unresolved realistic reachable defect found", closure, StringComparison.Ordinal);
+        Assert.Contains("save contract v19", closure, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("content schema v10", closure, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -6,6 +6,11 @@
 **Runtime findings:** 1 high, 2 medium  
 **Documentation findings:** 1 low
 
+> **Historical review state:** H1, M1, M2, and L1 were corrected in isolated
+> commits after this review. The source-first
+> [post-correction closure review](inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+> is the current closure authority.
+
 ## Review Method
 
 This review began from the active source tree, exported public API, active

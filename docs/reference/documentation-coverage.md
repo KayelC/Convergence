@@ -37,9 +37,13 @@ remain unreviewed until they complete the same process.
 Order 7 now documents inventory-owned equipment instances, authored slot
 layouts, one live equipment profile, typed currencies, resolved pricing,
 policy-owned stock, atomic shops, recovery, and save v19 across player,
-developer, and maintainer audiences. O7-R10 promotes those three documents to
-`reviewed`; the capability itself remains `partial` until O7-R11 performs the
-separate independent adversarial closure audit.
+developer, and maintainer audiences. O7-R10 promoted those three documents to
+`reviewed`. O7-R11 then corrected the remaining live-equipment, acquisition,
+extension-boundary, and save-guidance findings. The
+[post-correction closure review](../reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+found no unresolved realistic reachable defect or documentation contradiction,
+so the capability is `complete` and all three audience entries remain
+`reviewed`.
 O3-R7 independently verified the source and audience documents at that
 revision. A later source-first recheck reopened the developer and technical
 entries while three command-boundary defects were corrected. O3-R8 through

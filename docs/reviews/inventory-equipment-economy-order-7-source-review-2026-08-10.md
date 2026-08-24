@@ -8,8 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R10 complete; O7-R11 corrective
-audit in progress
+**Implementation status:** O7-R1 through O7-R11 complete
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -30,6 +29,12 @@ audit in progress
 > [fresh documentation review](inventory-equipment-economy-order-7-r10-documentation-review-2026-08-13.md)
 > corrected three precision issues and completed R10. All three audience entries
 > are `reviewed`; the capability remains `partial` for O7-R11.
+
+> **O7-R11 closure:** The
+> [post-correction closure review](inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+> re-read current source, tests, host integration, and all three audiences after
+> the isolated R11 corrections. It found no unresolved realistic reachable
+> defect or documentation contradiction. Order 7 is complete.
 
 ## Purpose
 
@@ -1669,3 +1674,24 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
 5. **No new policy or authority was introduced.** The correction is a fixed
    command-boundary invariant. Inventory remains the sole item/equipment owner,
    and save/schema versions do not advance.
+
+### O7-R11-C6: Post-Correction Closure Review
+
+- **Reviewed implementation:** `54d28175`.
+- **Review range:** `91a4f2ec..54d28175`.
+- **Actual destination:** the
+  [post-correction closure review](inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+  independently traces all eight owner decisions through current Framework,
+  persistence, DemoHost, Godot, tests, and three-audience documentation.
+- **Fresh correction during closure:** `54d28175` rejects malformed diagnostics
+  from generic top-level ruleset factories while retaining valid
+  service-plus-diagnostics failure semantics and cancellation propagation.
+- **Result:** no unresolved realistic reachable Order 7 defect or active
+  documentation contradiction remains. `inventory_equipment_economy` advances
+  to `complete`; all three audience entries remain `reviewed`.
+- **Contract versions:** runtime save v19 and content schema v10 remain current.
+- **Verification:** 2,024 tests passed with 0 failed and 0 skipped; strict
+  Release builds reported 0 warnings and 0 errors; format, content, DemoHost,
+  Godot, coverage, documentation, trimming, forbidden-reference, and diff gates
+  passed. Raw evidence is retained under the canonical post-correction closure
+  bundle.

@@ -8,9 +8,9 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-Documentation Order 7 is open under the owner-approved
+Documentation Order 7 is complete under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
 The current resource-management foundation remains usable. O7-R2 establishes
 equipment-instance ownership and removes the duplicated root save authority;
@@ -29,8 +29,12 @@ Training Annex and Godot evidence use the same bound service. O7-R9 certifies
 the combined runtime and wire graph across save/restore, equipment, offers,
 currencies, stock, recovery, DemoHost, and Godot, and seals resolved offers
 against host-side reconstruction. O7-R10 completes and reconciles all three
-audience documents. The capability remains `partial` until O7-R11 completes
-the independent adversarial closure audit.
+audience documents. O7-R11 corrected the remaining live-equipment,
+acquisition, extension-boundary, and save-guidance findings in isolated commits.
+The
+[post-correction closure review](../reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+found no unresolved realistic reachable defect or documentation contradiction
+and passed the complete release gate. The capability is `complete`.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
