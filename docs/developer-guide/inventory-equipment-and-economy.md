@@ -126,10 +126,12 @@ var copy = new RuntimeEquipmentInstanceSnapshot(
     hostAllocatedInstanceId,
     equipmentDefinitionId);
 
-InventoryTransitionResult added = resources.Inventory.AddEquipment(
+InventoryTransitionResult added = resources.Inventory.AcquireEquipment(
     inventory,
     copy,
-    authoredSlotId);
+    inventorySlotId,
+    catalog,
+    allRuntimeActors.Select(actor => actor.InstanceId));
 
 if (added.Applied)
 {
@@ -138,13 +140,19 @@ if (added.Applied)
 ```
 
 The host must allocate IDs that are globally fresh across actors and equipment
-instances in the session. Framework transition and restore boundaries reject
-duplicate IDs, cross-actor assignments, missing ownership, and actor/equipment
-ID collisions; they do not provide a process-global ID generator.
+instances in the session. `AcquireEquipment` resolves the definition through
+the supplied repository, validates the definition and inventory slot through
+the transition service's selected slot-layout policy, and checks the candidate
+ID against the complete live actor-ID set. Missing definitions, incompatible
+slots, malformed actor evidence, and actor/equipment ID collisions return typed
+rejections with unchanged inventory. Framework does not provide a
+process-global ID generator.
 
-When purchasing equipment, pass the fresh ID to `Shop.Buy`. Item purchases pass
-`null`. When selling equipment, identify the exact owned instance rather than
-only its definition.
+When purchasing equipment, pass the fresh ID and a
+`RuntimeEquipmentAcquisitionContext` containing the same repository and
+complete live actor-ID set to `Shop.Buy`. Item purchases pass `null` for both
+the instance ID and acquisition context. When selling equipment, identify the
+exact owned instance rather than only its definition.
 
 ## Equip One Exact Owned Copy
 
@@ -416,6 +424,8 @@ No `Node`, `Resource`, `res://` path, serializer type, or scene handle enters
 
 - One current inventory snapshot owns every equipment instance.
 - Every live item transition supplies a valid item `ContentId`.
+- Every live equipment acquisition supplies the selected definition repository
+  and the complete current actor-ID set.
 - Equipment IDs are globally fresh and stable across save/restore.
 - One selected slot layout is used by validation, transitions, offers, and
   profile resolution.

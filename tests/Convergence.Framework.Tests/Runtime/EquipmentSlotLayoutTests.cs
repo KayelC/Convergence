@@ -164,6 +164,13 @@ public sealed class EquipmentSlotLayoutTests
             StandardEquipmentSlotIds.Weapon,
             StandardEquipmentSlotIds.Weapon,
             []);
+        InventoryTransitionResult acquisition = new InventoryTransitionService(policy)
+            .AcquireEquipment(
+                new RuntimeInventorySnapshot(),
+                new RuntimeEquipmentInstanceSnapshot(instanceId, definition.Id),
+                StandardEquipmentSlotIds.Weapon,
+                definitions,
+                []);
         RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver(policy).Resolve(
             inventory,
             loadout,
@@ -183,6 +190,8 @@ public sealed class EquipmentSlotLayoutTests
             error.Code == ContentValidationErrorCode.PolicyRejected);
         Assert.Equal(ResourceTransactionCode.EquipmentSlotPolicyRejected, equip.Code);
         Assert.Same(equip.Before, equip.After);
+        Assert.Equal(ResourceTransactionCode.EquipmentSlotPolicyRejected, acquisition.Code);
+        Assert.Same(acquisition.Before, acquisition.After);
         Assert.Contains(profile.Diagnostics, diagnostic =>
             diagnostic.Code == RuntimeEquipmentProfileDiagnosticCode.PolicyRejected);
         Assert.Contains(offer.Diagnostics, diagnostic =>
@@ -227,6 +236,13 @@ public sealed class EquipmentSlotLayoutTests
                 instanceId,
                 StandardEquipmentSlotIds.Weapon,
                 StandardEquipmentSlotIds.Weapon,
+                []));
+        Assert.Throws<OperationCanceledException>(() =>
+            new InventoryTransitionService(policy).AcquireEquipment(
+                new RuntimeInventorySnapshot(),
+                new RuntimeEquipmentInstanceSnapshot(instanceId, definition.Id),
+                StandardEquipmentSlotIds.Weapon,
+                definitions,
                 []));
         Assert.Throws<OperationCanceledException>(() =>
             new RuntimeEquipmentProfileResolver(policy).Resolve(inventory, loadout, definitions));

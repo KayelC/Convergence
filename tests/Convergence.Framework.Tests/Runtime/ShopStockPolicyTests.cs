@@ -75,7 +75,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             offer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         ShopTransactionResult second = service.Buy(
             first.AfterInventory,
             first.AfterCurrencyLedger,
@@ -83,7 +84,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             offer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         ShopTransactionResult third = service.Buy(
             second.AfterInventory,
             second.AfterCurrencyLedger,
@@ -91,7 +93,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             offer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
 
         Assert.True(first.Applied);
         Assert.Equal(1, first.AfterInventory.GetQuantity(Medicine));
@@ -124,7 +127,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             offer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         ShopTransactionResult staleSameBeforeCandidate = service.Buy(
             inventory,
             currency,
@@ -132,7 +136,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             offer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         ShopTransactionResult recalculatedAfterAdoption = service.Buy(
             firstCandidate.AfterInventory,
             firstCandidate.AfterCurrencyLedger,
@@ -140,7 +145,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             offer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
 
         Assert.True(firstCandidate.Applied);
         Assert.True(staleSameBeforeCandidate.Applied);
@@ -177,7 +183,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             ordinary,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         RuntimeCurrencyLedgerSnapshot wrongCurrency = RuntimeCurrencyLedgerSnapshot.Single(
             Id("tokens"),
             100);
@@ -188,7 +195,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             ordinary,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         var fullInventory = new RuntimeInventorySnapshot(
             [new KeyValuePair<ContentId, int>(Medicine, 1)]);
         RuntimeShopOfferSnapshot stackLimited =
@@ -200,7 +208,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             stackLimited,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         ShopTransactionResult missingStock = service.Buy(
             emptyInventory,
             funded,
@@ -208,7 +217,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             ordinary,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         var duplicateStock = new RuntimeShopStockSnapshot(
         [
             new RuntimeShopStockEntrySnapshot(ordinary.Identity, 2),
@@ -221,7 +231,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             ordinary,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         RuntimeShopOfferSnapshot throwing = Offer(
             ShopA,
             Id("throwing_offer"),
@@ -236,7 +247,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             throwing,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         RuntimeShopOfferSnapshot unlimited = Offer(
             ShopA,
             Id("unlimited_offer"),
@@ -253,7 +265,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             unlimited,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
 
         AssertAtomicRejection(insufficientCurrency, emptyInventory, insufficientCurrency.BeforeCurrencyLedger, validStock,
             ResourceTransactionCode.InsufficientCurrency);
@@ -361,7 +374,8 @@ public sealed class ShopStockPolicyTests
             Credits,
             offer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null));
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null));
 
         Assert.Empty(inventory.ItemQuantities);
         Assert.Empty(inventory.OwnedEquipmentInstances);

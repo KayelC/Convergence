@@ -84,7 +84,6 @@ public sealed class EquipmentInstanceOwnershipTests
     public void CustomSlotLayout_PreservesCrossActorOwnershipAndDrivesSaveCompatibility()
     {
         ContentId mainHand = Id("main_hand");
-        RuntimeInventorySnapshot inventory = Inventory(FirstSword);
         var empty = new RuntimeEquipmentSnapshot();
         var occupiedByOtherActor = new RuntimeEquipmentSnapshot(
         [
@@ -92,6 +91,15 @@ public sealed class EquipmentInstanceOwnershipTests
         ]);
         var layout = new MainHandEquipmentSlotLayoutPolicy(mainHand);
         var service = new EquipmentTransitionService(layout);
+        GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
+        InventoryTransitionResult acquisition = new InventoryTransitionService(layout)
+            .AcquireEquipment(
+                new RuntimeInventorySnapshot(),
+                new RuntimeEquipmentInstanceSnapshot(FirstSword, Shortsword),
+                StandardEquipmentSlotIds.Weapon,
+                catalog,
+                []);
+        RuntimeInventorySnapshot inventory = acquisition.After;
 
         EquipmentTransitionResult collision = service.Equip(
             inventory,
@@ -109,6 +117,7 @@ public sealed class EquipmentInstanceOwnershipTests
             []);
 
         Assert.Equal(ResourceTransactionCode.EquipmentAlreadyEquipped, collision.Code);
+        Assert.True(acquisition.Applied);
         Assert.Same(empty, collision.Before);
         Assert.Same(empty, collision.After);
         Assert.True(applied.Applied);
@@ -120,8 +129,6 @@ public sealed class EquipmentInstanceOwnershipTests
             baseline,
             [customActor, baseline.Actors[1]],
             inventory);
-        GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
-
         RuntimeSaveValidationResult standardValidation =
             new RuntimeSaveValidator().Validate(snapshot, catalog);
         RuntimeSaveValidationResult customValidation =
@@ -141,6 +148,7 @@ public sealed class EquipmentInstanceOwnershipTests
         RuntimeInventorySnapshot inventory = Inventory(FirstSword);
         var service = new InventoryTransitionService();
         var duplicate = new RuntimeEquipmentInstanceSnapshot(FirstSword, Shortsword);
+        GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
         var equipped = new RuntimeEquipmentSnapshot(
         [
             new KeyValuePair<ContentId, RuntimeInstanceId>(
@@ -148,10 +156,12 @@ public sealed class EquipmentInstanceOwnershipTests
                 FirstSword)
         ]);
 
-        InventoryTransitionResult duplicateResult = service.AddEquipment(
+        InventoryTransitionResult duplicateResult = service.AcquireEquipment(
             inventory,
             duplicate,
-            StandardEquipmentSlotIds.Weapon);
+            StandardEquipmentSlotIds.Weapon,
+            catalog,
+            []);
         InventoryTransitionResult removeResult = service.RemoveEquipment(
             inventory,
             FirstSword,
@@ -171,6 +181,23 @@ public sealed class EquipmentInstanceOwnershipTests
     {
         RuntimeSaveGameSnapshot baseline =
             RuntimePersistenceSnapshotTests.CreateSaveSnapshot();
+        GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
+        var inventoryService = new InventoryTransitionService();
+        RuntimeInstanceId[] actorIds = baseline.Actors
+            .Select(actor => actor.Identity.InstanceId)
+            .ToArray();
+        InventoryTransitionResult firstAcquisition = inventoryService.AcquireEquipment(
+            new RuntimeInventorySnapshot(),
+            new RuntimeEquipmentInstanceSnapshot(FirstSword, Shortsword),
+            StandardEquipmentSlotIds.Weapon,
+            catalog,
+            actorIds);
+        InventoryTransitionResult secondAcquisition = inventoryService.AcquireEquipment(
+            firstAcquisition.After,
+            new RuntimeEquipmentInstanceSnapshot(SecondSword, Shortsword),
+            StandardEquipmentSlotIds.Weapon,
+            catalog,
+            actorIds);
         RuntimeActorSnapshot frost = WithEquipment(
             baseline.Actors[0],
             FirstSword);
@@ -180,12 +207,14 @@ public sealed class EquipmentInstanceOwnershipTests
         RuntimeSaveGameSnapshot snapshot = CopySave(
             baseline,
             [frost, ember],
-            Inventory(FirstSword, SecondSword));
+            secondAcquisition.After);
 
         RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
             snapshot,
-            RuntimePersistenceSnapshotTests.LoadCatalog());
+            catalog);
 
+        Assert.True(firstAcquisition.Applied);
+        Assert.True(secondAcquisition.Applied);
         Assert.True(
             validation.IsValid,
             string.Join(Environment.NewLine, validation.Diagnostics.Select(item => item.Message)));

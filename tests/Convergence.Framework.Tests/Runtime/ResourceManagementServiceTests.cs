@@ -108,19 +108,29 @@ public sealed class ResourceManagementServiceTests
     {
         var service = new InventoryTransitionService();
         ContentId shortsword = Id("shortsword");
+        var repository = new TestEquipmentRepository(Weapon(shortsword, power: 10, accuracy: 100));
         var first = new RuntimeEquipmentInstanceSnapshot(Instance("sword-001"), shortsword);
         var second = new RuntimeEquipmentInstanceSnapshot(Instance("sword-002"), shortsword);
         var empty = new RuntimeInventorySnapshot();
 
-        InventoryTransitionResult added = service.AddEquipment(empty, first, StandardEquipmentSlotIds.Weapon);
-        InventoryTransitionResult secondCopy = service.AddEquipment(
+        InventoryTransitionResult added = service.AcquireEquipment(
+            empty,
+            first,
+            StandardEquipmentSlotIds.Weapon,
+            repository,
+            []);
+        InventoryTransitionResult secondCopy = service.AcquireEquipment(
             added.After,
             second,
-            StandardEquipmentSlotIds.Weapon);
-        InventoryTransitionResult duplicate = service.AddEquipment(
+            StandardEquipmentSlotIds.Weapon,
+            repository,
+            []);
+        InventoryTransitionResult duplicate = service.AcquireEquipment(
             secondCopy.After,
             first,
-            StandardEquipmentSlotIds.Weapon);
+            StandardEquipmentSlotIds.Weapon,
+            repository,
+            []);
         var equipped = new RuntimeEquipmentSnapshot(
             [new KeyValuePair<ContentId, RuntimeInstanceId>(StandardEquipmentSlotIds.Weapon, first.InstanceId)]);
         InventoryTransitionResult removeEquipped = service.RemoveEquipment(
@@ -141,6 +151,110 @@ public sealed class ResourceManagementServiceTests
         Assert.False(removeEquipped.Applied);
         Assert.Equal(ResourceTransactionCode.EquippedItemCannotBeRemoved, removeEquipped.Code);
         Assert.Same(secondCopy.After, removeEquipped.After);
+    }
+
+    [Fact]
+    public void InventoryService_RejectsInvalidLiveEquipmentAcquisitionAtomically()
+    {
+        ContentId sword = Id("shortsword");
+        RuntimeInstanceId instanceId = Instance("sword-001");
+        var equipment = new RuntimeEquipmentInstanceSnapshot(instanceId, sword);
+        var inventory = new RuntimeInventorySnapshot();
+        var repository = new TestEquipmentRepository(Weapon(sword, power: 10, accuracy: 100));
+        var service = new InventoryTransitionService();
+
+        InventoryTransitionResult missing = service.AcquireEquipment(
+            inventory,
+            new RuntimeEquipmentInstanceSnapshot(Instance("missing-001"), Id("missing")),
+            StandardEquipmentSlotIds.Weapon,
+            repository,
+            []);
+        InventoryTransitionResult wrongSlot = service.AcquireEquipment(
+            inventory,
+            equipment,
+            StandardEquipmentSlotIds.Accessory,
+            repository,
+            []);
+        InventoryTransitionResult actorCollision = service.AcquireEquipment(
+            inventory,
+            equipment,
+            StandardEquipmentSlotIds.Weapon,
+            repository,
+            [instanceId]);
+
+        AssertRejectedAcquisition(
+            missing,
+            inventory,
+            ResourceTransactionCode.EquipmentMissing);
+        AssertRejectedAcquisition(
+            wrongSlot,
+            inventory,
+            ResourceTransactionCode.EquipmentSlotMismatch);
+        AssertRejectedAcquisition(
+            actorCollision,
+            inventory,
+            ResourceTransactionCode.RuntimeInstanceIdCollision);
+    }
+
+    [Fact]
+    public void InventoryService_RejectsMalformedLiveActorEvidenceAtomically()
+    {
+        ContentId sword = Id("shortsword");
+        var equipment = new RuntimeEquipmentInstanceSnapshot(Instance("sword-001"), sword);
+        var inventory = new RuntimeInventorySnapshot();
+        var repository = new TestEquipmentRepository(Weapon(sword, power: 10, accuracy: 100));
+        var service = new InventoryTransitionService();
+        RuntimeInstanceId actorId = Instance("actor-001");
+
+        InventoryTransitionResult invalid = service.AcquireEquipment(
+            inventory,
+            equipment,
+            StandardEquipmentSlotIds.Weapon,
+            repository,
+            [default]);
+        InventoryTransitionResult duplicate = service.AcquireEquipment(
+            inventory,
+            equipment,
+            StandardEquipmentSlotIds.Weapon,
+            repository,
+            [actorId, actorId]);
+
+        AssertRejectedAcquisition(
+            invalid,
+            inventory,
+            ResourceTransactionCode.InvalidRuntimeActorEvidence);
+        AssertRejectedAcquisition(
+            duplicate,
+            inventory,
+            ResourceTransactionCode.InvalidRuntimeActorEvidence);
+    }
+
+    [Fact]
+    public void InventoryService_ContainsRepositoryFaultsAndPropagatesCancellation()
+    {
+        ContentId sword = Id("shortsword");
+        var equipment = new RuntimeEquipmentInstanceSnapshot(Instance("sword-001"), sword);
+        var inventory = new RuntimeInventorySnapshot();
+        var service = new InventoryTransitionService();
+
+        InventoryTransitionResult faulted = service.AcquireEquipment(
+            inventory,
+            equipment,
+            StandardEquipmentSlotIds.Weapon,
+            new ThrowingEquipmentRepository(new InvalidOperationException("repository fault")),
+            []);
+
+        AssertRejectedAcquisition(
+            faulted,
+            inventory,
+            ResourceTransactionCode.EquipmentDefinitionLookupFailed);
+        Assert.Contains("repository fault", Assert.Single(faulted.Diagnostics).Message);
+        Assert.Throws<OperationCanceledException>(() => service.AcquireEquipment(
+            inventory,
+            equipment,
+            StandardEquipmentSlotIds.Weapon,
+            new ThrowingEquipmentRepository(new OperationCanceledException("cancelled")),
+            []));
     }
 
     [Fact]
@@ -514,7 +628,8 @@ public sealed class ResourceManagementServiceTests
             CreditsCurrency,
             medicine,
             buyerLuck: 10,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         ShopTransactionResult sold = shop.Sell(
             bought.AfterInventory,
             bought.AfterCurrencyLedger,
@@ -625,7 +740,8 @@ public sealed class ResourceManagementServiceTests
             CreditsCurrency,
             ordinaryOffer,
             buyerLuck: -1,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         ShopTransactionResult overflowingSell = shop.Sell(
             inventory,
             wallet,
@@ -645,6 +761,9 @@ public sealed class ResourceManagementServiceTests
     {
         var shop = new ShopTransactionService();
         ContentId sword = Id("shortsword");
+        var equipmentAcquisition = new RuntimeEquipmentAcquisitionContext(
+            new TestEquipmentRepository(Weapon(sword, power: 10, accuracy: 100)),
+            []);
         RuntimeInstanceId ownedInstanceId = Instance("sword-001");
         var ownedSword = new RuntimeInventorySnapshot(
             ownedEquipmentInstances:
@@ -678,7 +797,8 @@ public sealed class ResourceManagementServiceTests
             CreditsCurrency,
             swordOffer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: Instance("sword-002"));
+            purchasedEquipmentInstanceId: Instance("sword-002"),
+            equipmentAcquisitionContext: equipmentAcquisition);
         ShopTransactionResult duplicate = shop.Buy(
             ownedSword,
             wallet,
@@ -686,7 +806,8 @@ public sealed class ResourceManagementServiceTests
             CreditsCurrency,
             swordOffer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: ownedInstanceId);
+            purchasedEquipmentInstanceId: ownedInstanceId,
+            equipmentAcquisitionContext: equipmentAcquisition);
         ShopTransactionResult stock = shop.Buy(
             new RuntimeInventorySnapshot(),
             wallet,
@@ -694,7 +815,8 @@ public sealed class ResourceManagementServiceTests
             CreditsCurrency,
             trackedSwordOffer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: Instance("sword-003"));
+            purchasedEquipmentInstanceId: Instance("sword-003"),
+            equipmentAcquisitionContext: equipmentAcquisition);
         ShopTransactionResult insufficient = shop.Buy(
             new RuntimeInventorySnapshot(),
             wallet,
@@ -702,7 +824,8 @@ public sealed class ResourceManagementServiceTests
             CreditsCurrency,
             priceyItem,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
 
         Assert.True(anotherCopy.Applied);
         Assert.Equal(2, anotherCopy.AfterInventory.GetEquipmentInstances(StandardEquipmentSlotIds.Weapon).Count);
@@ -710,6 +833,54 @@ public sealed class ResourceManagementServiceTests
         Assert.Equal(1_000, Balance(duplicate.AfterCurrencyLedger));
         Assert.Equal(ResourceTransactionCode.ShopStockUnavailable, stock.Code);
         Assert.Equal(ResourceTransactionCode.InsufficientCurrency, insufficient.Code);
+    }
+
+    [Fact]
+    public void ShopService_RequiresValidatedEquipmentAcquisitionContext()
+    {
+        ContentId sword = Id("shortsword");
+        RuntimeInstanceId actorId = Instance("actor-001");
+        RuntimeShopOfferSnapshot offer = Offer(
+            ShopContentKind.Equipment,
+            sword,
+            100,
+            StandardPricing(),
+            StandardEquipmentSlotIds.Weapon);
+        var inventory = new RuntimeInventorySnapshot();
+        RuntimeCurrencyLedgerSnapshot wallet = Ledger(1_000);
+        RuntimeShopStockSnapshot stock = EmptyStock();
+        var shop = new ShopTransactionService();
+        var repository = new TestEquipmentRepository(Weapon(sword, power: 10, accuracy: 100));
+
+        ShopTransactionResult missingContext = shop.Buy(
+            inventory,
+            wallet,
+            stock,
+            CreditsCurrency,
+            offer,
+            buyerLuck: 0,
+            purchasedEquipmentInstanceId: Instance("sword-001"),
+            equipmentAcquisitionContext: null);
+        ShopTransactionResult actorCollision = shop.Buy(
+            inventory,
+            wallet,
+            stock,
+            CreditsCurrency,
+            offer,
+            buyerLuck: 0,
+            purchasedEquipmentInstanceId: actorId,
+            equipmentAcquisitionContext: new RuntimeEquipmentAcquisitionContext(
+                repository,
+                [actorId]));
+
+        Assert.Equal(ResourceTransactionCode.InvalidRuntimeActorEvidence, missingContext.Code);
+        Assert.Equal(ResourceTransactionCode.RuntimeInstanceIdCollision, actorCollision.Code);
+        Assert.Same(inventory, missingContext.AfterInventory);
+        Assert.Same(wallet, missingContext.AfterCurrencyLedger);
+        Assert.Same(stock, missingContext.AfterStock);
+        Assert.Same(inventory, actorCollision.AfterInventory);
+        Assert.Same(wallet, actorCollision.AfterCurrencyLedger);
+        Assert.Same(stock, actorCollision.AfterStock);
     }
 
     [Fact]
@@ -996,6 +1167,18 @@ public sealed class ResourceManagementServiceTests
             grantedSkillIds: grantedSkillIds,
             boots: new EquipmentBootsProfileDefinition(evasion));
 
+    private static void AssertRejectedAcquisition(
+        InventoryTransitionResult result,
+        RuntimeInventorySnapshot expected,
+        ResourceTransactionCode code)
+    {
+        Assert.False(result.Applied);
+        Assert.Equal(code, result.Code);
+        Assert.Same(expected, result.Before);
+        Assert.Same(expected, result.After);
+        Assert.Equal(code, Assert.Single(result.Diagnostics).Code);
+    }
+
     private static KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>> Owned(
         ContentId slotId,
         RuntimeInstanceId instanceId,
@@ -1014,5 +1197,17 @@ public sealed class ResourceManagementServiceTests
             TryGetEquipment(id, out EquipmentDefinition? equipment)
                 ? equipment!
                 : throw new KeyNotFoundException(id.ToString());
+    }
+
+    private sealed class ThrowingEquipmentRepository(Exception exception)
+        : IEquipmentDefinitionRepository
+    {
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? equipment)
+        {
+            equipment = null;
+            throw exception;
+        }
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) => throw exception;
     }
 }

@@ -31,7 +31,10 @@ public enum ResourceTransactionCode
     AmbiguousCurrencyLedger,
     InvalidShopStock,
     EquipmentSlotPolicyRejected,
-    InvalidItemId
+    InvalidItemId,
+    RuntimeInstanceIdCollision,
+    InvalidRuntimeActorEvidence,
+    EquipmentDefinitionLookupFailed
 }
 
 public sealed record ResourceTransactionDiagnostic(
@@ -393,10 +396,12 @@ public interface IInventoryTransitionService
     InventoryTransitionResult AddItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity, int? stackLimit = null);
     InventoryTransitionResult RemoveItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity);
     InventoryReservationResult ReserveItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity);
-    InventoryTransitionResult AddEquipment(
+    InventoryTransitionResult AcquireEquipment(
         RuntimeInventorySnapshot snapshot,
         RuntimeEquipmentInstanceSnapshot equipment,
-        ContentId slotId);
+        ContentId slotId,
+        IEquipmentDefinitionRepository equipmentRepository,
+        IEnumerable<RuntimeInstanceId> liveActorInstanceIds);
     InventoryTransitionResult RemoveEquipment(
         RuntimeInventorySnapshot snapshot,
         RuntimeInstanceId equipmentInstanceId,
@@ -477,6 +482,13 @@ public sealed class RuntimeItemReservation
 
 public sealed class InventoryTransitionService : IInventoryTransitionService
 {
+    private readonly IEquipmentSlotLayoutPolicy _slotLayout;
+
+    public InventoryTransitionService(IEquipmentSlotLayoutPolicy? slotLayout = null)
+    {
+        _slotLayout = slotLayout ?? StandardEquipmentSlotLayoutPolicy.Instance;
+    }
+
     public InventoryTransitionResult AddItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity, int? stackLimit = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -582,13 +594,17 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
             new RuntimeItemReservation(this, snapshot, itemId, quantity));
     }
 
-    public InventoryTransitionResult AddEquipment(
+    public InventoryTransitionResult AcquireEquipment(
         RuntimeInventorySnapshot snapshot,
         RuntimeEquipmentInstanceSnapshot equipment,
-        ContentId slotId)
+        ContentId slotId,
+        IEquipmentDefinitionRepository equipmentRepository,
+        IEnumerable<RuntimeInstanceId> liveActorInstanceIds)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(equipment);
+        ArgumentNullException.ThrowIfNull(equipmentRepository);
+        ArgumentNullException.ThrowIfNull(liveActorInstanceIds);
         if (!slotId.IsValid)
         {
             throw new ArgumentException("Equipment slot ID must be valid.", nameof(slotId));
@@ -600,6 +616,105 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
                 snapshot,
                 ResourceTransactionCode.EquipmentDuplicate,
                 $"Equipment instance '{equipment.InstanceId}' is already owned.",
+                equipment.DefinitionId,
+                slotId,
+                equipment.InstanceId);
+        }
+
+        RuntimeInstanceId[] actorIds = liveActorInstanceIds.ToArray();
+        if (actorIds.Any(actorId => !actorId.IsValid))
+        {
+            return Rejected(
+                snapshot,
+                ResourceTransactionCode.InvalidRuntimeActorEvidence,
+                "Live actor instance IDs must all be valid.",
+                equipment.DefinitionId,
+                slotId,
+                equipment.InstanceId);
+        }
+        IGrouping<RuntimeInstanceId, RuntimeInstanceId>? duplicateActorId = actorIds
+            .GroupBy(actorId => actorId)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateActorId is not null)
+        {
+            return Rejected(
+                snapshot,
+                ResourceTransactionCode.InvalidRuntimeActorEvidence,
+                $"Live actor evidence contains duplicate instance ID '{duplicateActorId.Key}'.",
+                equipment.DefinitionId,
+                slotId,
+                equipment.InstanceId);
+        }
+        if (actorIds.Contains(equipment.InstanceId))
+        {
+            return Rejected(
+                snapshot,
+                ResourceTransactionCode.RuntimeInstanceIdCollision,
+                $"Equipment instance '{equipment.InstanceId}' collides with a live actor instance ID.",
+                equipment.DefinitionId,
+                slotId,
+                equipment.InstanceId);
+        }
+
+        EquipmentDefinition? definition;
+        try
+        {
+            if (!equipmentRepository.TryGetEquipment(equipment.DefinitionId, out definition) ||
+                definition is null)
+            {
+                return Rejected(
+                    snapshot,
+                    ResourceTransactionCode.EquipmentMissing,
+                    $"Equipment definition '{equipment.DefinitionId}' was not found.",
+                    equipment.DefinitionId,
+                    slotId,
+                    equipment.InstanceId);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return Rejected(
+                snapshot,
+                ResourceTransactionCode.EquipmentDefinitionLookupFailed,
+                $"Equipment definition '{equipment.DefinitionId}' could not be resolved: " +
+                exception.Message,
+                equipment.DefinitionId,
+                slotId,
+                equipment.InstanceId);
+        }
+
+        if (definition.Id != equipment.DefinitionId)
+        {
+            return Rejected(
+                snapshot,
+                ResourceTransactionCode.EquipmentDefinitionLookupFailed,
+                $"Equipment repository returned definition '{definition.Id}' for " +
+                $"'{equipment.DefinitionId}'.",
+                equipment.DefinitionId,
+                slotId,
+                equipment.InstanceId);
+        }
+
+        EquipmentSlotLayoutResult definitionLayout =
+            EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(_slotLayout, definition);
+        EquipmentSlotLayoutResult assignment =
+            EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
+                _slotLayout,
+                definition.SlotId,
+                slotId);
+        if (!definitionLayout.IsCompatible || !assignment.IsCompatible)
+        {
+            bool policyRejected =
+                definitionLayout.Code == EquipmentSlotLayoutCode.PolicyRejected ||
+                assignment.Code == EquipmentSlotLayoutCode.PolicyRejected;
+            return Rejected(
+                snapshot,
+                policyRejected
+                    ? ResourceTransactionCode.EquipmentSlotPolicyRejected
+                    : ResourceTransactionCode.EquipmentSlotMismatch,
+                definitionLayout.Message ??
+                assignment.Message ??
+                $"Equipment definition '{equipment.DefinitionId}' is not compatible with slot '{slotId}'.",
                 equipment.DefinitionId,
                 slotId,
                 equipment.InstanceId);
@@ -694,6 +809,26 @@ public interface IEconomyTransactionService
         RuntimeCurrencyLedgerSnapshot ledger,
         ContentId currencyId,
         int amount);
+}
+
+/// <summary>
+/// Supplies catalog and complete live actor-ID evidence for an equipment acquisition.
+/// </summary>
+public sealed class RuntimeEquipmentAcquisitionContext
+{
+    public RuntimeEquipmentAcquisitionContext(
+        IEquipmentDefinitionRepository equipmentRepository,
+        IEnumerable<RuntimeInstanceId> liveActorInstanceIds)
+    {
+        EquipmentRepository = equipmentRepository ??
+            throw new ArgumentNullException(nameof(equipmentRepository));
+        LiveActorInstanceIds = Array.AsReadOnly(
+            (liveActorInstanceIds ?? throw new ArgumentNullException(nameof(liveActorInstanceIds)))
+            .ToArray());
+    }
+
+    public IEquipmentDefinitionRepository EquipmentRepository { get; }
+    public IReadOnlyList<RuntimeInstanceId> LiveActorInstanceIds { get; }
 }
 
 public sealed class EconomyTransactionService : IEconomyTransactionService
@@ -1495,7 +1630,8 @@ public interface IShopTransactionService
         ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         int buyerLuck,
-        RuntimeInstanceId? purchasedEquipmentInstanceId);
+        RuntimeInstanceId? purchasedEquipmentInstanceId,
+        RuntimeEquipmentAcquisitionContext? equipmentAcquisitionContext);
     ShopTransactionResult Sell(
         RuntimeInventorySnapshot inventory,
         RuntimeCurrencyLedgerSnapshot currencyLedger,
@@ -1545,7 +1681,8 @@ public sealed class ShopTransactionService : IShopTransactionService
         ContentId currencyId,
         RuntimeShopOfferSnapshot offer,
         int buyerLuck,
-        RuntimeInstanceId? purchasedEquipmentInstanceId)
+        RuntimeInstanceId? purchasedEquipmentInstanceId,
+        RuntimeEquipmentAcquisitionContext? equipmentAcquisitionContext)
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(currencyLedger);
@@ -1580,7 +1717,8 @@ public sealed class ShopTransactionService : IShopTransactionService
         InventoryTransitionResult inventoryResult = AddPurchasedContent(
             inventory,
             offer,
-            purchasedEquipmentInstanceId);
+            purchasedEquipmentInstanceId,
+            equipmentAcquisitionContext);
         if (!inventoryResult.Applied)
         {
             return FromInventory(inventoryResult, currencyLedger, stock, currencyId, price);
@@ -1686,17 +1824,28 @@ public sealed class ShopTransactionService : IShopTransactionService
     private InventoryTransitionResult AddPurchasedContent(
         RuntimeInventorySnapshot inventory,
         RuntimeShopOfferSnapshot offer,
-        RuntimeInstanceId? purchasedEquipmentInstanceId) =>
+        RuntimeInstanceId? purchasedEquipmentInstanceId,
+        RuntimeEquipmentAcquisitionContext? equipmentAcquisitionContext) =>
         offer.ContentKind switch
         {
             ShopContentKind.Item => _inventory.AddItem(inventory, offer.ContentId, 1, offer.ItemStackLimit),
             ShopContentKind.Equipment when offer.EquipmentSlotId is ContentId slotId &&
                                            purchasedEquipmentInstanceId is RuntimeInstanceId instanceId &&
-                                           instanceId.IsValid =>
-                _inventory.AddEquipment(
+                                           instanceId.IsValid &&
+                                           equipmentAcquisitionContext is not null =>
+                _inventory.AcquireEquipment(
                     inventory,
                     new RuntimeEquipmentInstanceSnapshot(instanceId, offer.ContentId),
-                    slotId),
+                    slotId,
+                    equipmentAcquisitionContext.EquipmentRepository,
+                    equipmentAcquisitionContext.LiveActorInstanceIds),
+            ShopContentKind.Equipment when equipmentAcquisitionContext is null => InventoryRejected(
+                inventory,
+                ResourceTransactionCode.InvalidRuntimeActorEvidence,
+                "Equipment purchases require catalog and complete live actor-ID evidence.",
+                offer.ContentId,
+                offer.EquipmentSlotId,
+                purchasedEquipmentInstanceId),
             ShopContentKind.Equipment => InventoryRejected(
                 inventory,
                 ResourceTransactionCode.InvalidEquipmentInstanceId,

@@ -79,6 +79,8 @@ Two layers guard the integration boundary.
 - consume ordered events through host sinks;
 - map runtime IDs to host scene handles;
 - round-trip actor, field, currency, and shop-stock snapshots through host-owned storage;
+- acquire equipment through catalog-, slot-layout-, and live actor-ID-aware
+  transitions before storing its runtime instance ID in Godot-owned save data;
 - bind and execute generic recovery without passing a Node or scene handle into Framework.
 
 `samples/Convergence.GodotHost` is the real Godot 4.7.1 .NET reference

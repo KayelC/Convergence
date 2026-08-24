@@ -307,7 +307,10 @@ Slot-layout policy invocation is fault-contained consistently: malformed policy
 results and non-cancellation faults surface through explicit typed policy
 rejection codes, while cancellation propagates.
 
-Hosts allocate globally fresh equipment instance IDs and adopt successful
+Hosts allocate globally fresh equipment instance IDs. Live acquisition supplies
+the equipment repository, selected slot-layout-backed inventory service, and
+complete current actor-ID evidence so malformed catalog/slot identities and
+actor collisions reject before inventory adoption. Hosts adopt successful
 after-snapshots. `ShopTransactionResult` coordinates inventory, currency, and
 stock as one result. `RecoveryTransactionResult` coordinates staged actor state
 with an explicit currency ledger. Presentation code must not construct runtime

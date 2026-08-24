@@ -247,6 +247,29 @@ public sealed class GodotIntegrationContractTests
 
         RuntimeInstanceId equipmentInstanceId =
             RuntimeInstanceId.Parse("godot-practice-blade-001");
+        ContentId equipmentDefinitionId = Id("godot_practice_blade");
+        var equipmentDefinition = new EquipmentDefinition(
+            equipmentDefinitionId,
+            "Godot Practice Blade",
+            "Host-contract equipment fixture.",
+            StandardEquipmentSlotIds.Weapon,
+            baseValue: 10,
+            weapon: new EquipmentWeaponProfileDefinition(
+                new EquipmentBasicAttackDefinition(
+                    DamageElement.Physical,
+                    10,
+                    100,
+                    new NeverCriticalDefinition(),
+                    false)));
+        var inventoryTransitions = new InventoryTransitionService();
+        InventoryTransitionResult acquisition = inventoryTransitions.AcquireEquipment(
+            new RuntimeInventorySnapshot(),
+            new RuntimeEquipmentInstanceSnapshot(
+                equipmentInstanceId,
+                equipmentDefinitionId),
+            StandardEquipmentSlotIds.Weapon,
+            new GodotEquipmentRepository(equipmentDefinition),
+            [frost.State.InstanceId, ember.State.InstanceId]);
         RuntimeActorSnapshot actorSnapshot = ToRuntimeSnapshot(
             frost,
             level: 5,
@@ -256,17 +279,7 @@ public sealed class GodotIntegrationContractTests
                     StandardEquipmentSlotIds.Weapon,
                     equipmentInstanceId)
             ]));
-        var inventorySnapshot = new RuntimeInventorySnapshot(
-            ownedEquipmentInstances:
-            [
-                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
-                    StandardEquipmentSlotIds.Weapon,
-                    [
-                        new RuntimeEquipmentInstanceSnapshot(
-                            equipmentInstanceId,
-                            Id("godot_practice_blade"))
-                    ])
-            ]);
+        RuntimeInventorySnapshot inventorySnapshot = acquisition.After;
         var fieldSnapshot = new RuntimeFieldSnapshot(
             new RuntimeNavigationSnapshot(Id("sample_depths_floor_7")),
             new RuntimeDungeonTraversalSnapshot(
@@ -310,6 +323,7 @@ public sealed class GodotIntegrationContractTests
             roundTripActor.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Weapon]);
         RuntimeEquipmentInstanceSnapshot restoredEquipment = Assert.Single(
             restored.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Weapon));
+        Assert.True(acquisition.Applied);
         Assert.Equal(equipmentInstanceId, restoredEquipment.InstanceId);
         Assert.Equal(125, restored.CurrencyLedger.GetRequiredBalance(Id("credits")));
         Assert.Equal(4, restored.CurrencyLedger.GetRequiredBalance(Id("arena_tokens")));
@@ -569,6 +583,21 @@ public sealed class GodotIntegrationContractTests
                             $"{request.Actor.InstanceId} passed.")
                     ]));
         }
+    }
+
+    private sealed class GodotEquipmentRepository(EquipmentDefinition definition)
+        : IEquipmentDefinitionRepository
+    {
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? equipment)
+        {
+            equipment = id == definition.Id ? definition : null;
+            return equipment is not null;
+        }
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) =>
+            TryGetEquipment(id, out EquipmentDefinition? equipment)
+                ? equipment!
+                : throw new KeyNotFoundException(id.ToString());
     }
 
     private sealed record GodotSaveSnapshot(

@@ -77,8 +77,12 @@ representation is not accepted live transition input.
 
 `RuntimeInventorySnapshot` enforces unique equipment instance IDs across every
 owned slot collection while allowing multiple distinct instances to reference
-the same definition. Aggregate save validation additionally rejects an
-equipment instance ID that collides with any actor instance ID.
+the same definition. Its constructor remains a decoded-state boundary so
+aggregate validation can report malformed catalog, slot, and actor-ID evidence.
+Live acquisition uses `InventoryTransitionService.AcquireEquipment`: it resolves
+the definition, applies the selected slot-layout policy, validates complete
+actor-ID evidence, and rejects actor/equipment ID collisions before returning
+an accepted inventory candidate.
 
 Actor loadouts map authored slot IDs to instance IDs. A valid aggregate
 requires:
@@ -97,6 +101,7 @@ different parts of the check:
 | Boundary | Validation |
 |---|---|
 | Content semantic validation | authored definition profile against the selected layout |
+| `InventoryTransitionService.AcquireEquipment` | definition lookup, definition profile, inventory-slot assignment, unique inventory identity, and complete live actor-ID separation |
 | `EquipmentTransitionService.Equip` | inventory ownership and owned-slot to target-slot assignment, including cross-actor collision evidence |
 | `RuntimeEquipmentProfileResolver` | inventory ownership, definition lookup, definition profile, inventory assignment, and actor assignment |
 | `RuntimeActorEquipmentApplicationService` | complete current actor-map evidence, canonical roster-state coverage, and cross-actor assignment uniqueness before staged composition |

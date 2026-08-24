@@ -272,7 +272,8 @@ public sealed class ShopPricingPolicyTests
             Credits,
             throwingOffer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
         ShopTransactionResult returnedNull = shop.Buy(
             inventory,
             ledger,
@@ -280,7 +281,8 @@ public sealed class ShopPricingPolicyTests
             Credits,
             nullOffer,
             buyerLuck: 0,
-            purchasedEquipmentInstanceId: null);
+            purchasedEquipmentInstanceId: null,
+            equipmentAcquisitionContext: null);
 
         AssertRejectedWithoutMutation(throwing, inventory, ledger, "failed");
         AssertRejectedWithoutMutation(returnedNull, inventory, ledger, "returned no result");
@@ -299,7 +301,8 @@ public sealed class ShopPricingPolicyTests
                 Credits,
                 offer,
                 buyerLuck: 0,
-                purchasedEquipmentInstanceId: null));
+                purchasedEquipmentInstanceId: null,
+                equipmentAcquisitionContext: null));
     }
 
     [Fact]

@@ -453,7 +453,11 @@ internal sealed class CleanTrainingAnnexPlayHost
         var compendiumEvidence = new List<TrainingAnnexCompendiumEvidence>();
         var recruitedThisSession = new HashSet<ContentId>();
         var inventory = new TrainingAnnexItemActionInventory(
-            BuildInitialInventory(_initialInventory, inventoryTransitions),
+            BuildInitialInventory(
+                _initialInventory,
+                inventoryTransitions,
+                catalog,
+                roster.AllActors.Select(actor => actor.Actor.State.InstanceId)),
             inventoryTransitions);
         RuntimeEquipmentSnapshot initialEquipment = BuildInitialEquipment(
             catalog,
@@ -1697,20 +1701,27 @@ internal sealed class CleanTrainingAnnexPlayHost
 
     private static RuntimeInventorySnapshot BuildInitialInventory(
         RuntimeInventorySnapshot? supplied,
-        IInventoryTransitionService inventoryTransitions)
+        IInventoryTransitionService inventoryTransitions,
+        IEquipmentDefinitionRepository equipmentRepository,
+        IEnumerable<RuntimeInstanceId> liveActorInstanceIds)
     {
         RuntimeInventorySnapshot inventory = supplied ?? new RuntimeInventorySnapshot(
             [KeyValuePair.Create(TrainingAnnexHostSupport.AnnexTonic, 1)]);
+        RuntimeInstanceId[] actorIds = liveActorInstanceIds.ToArray();
 
         inventory = AddEquipmentIfMissing(
             inventory,
             inventoryTransitions,
+            equipmentRepository,
+            actorIds,
             TrainingAnnexHostSupport.PracticeBlade,
             TrainingAnnexHostSupport.PracticeBladeInstance,
             StandardEquipmentSlotIds.Weapon);
         inventory = AddEquipmentIfMissing(
             inventory,
             inventoryTransitions,
+            equipmentRepository,
+            actorIds,
             TrainingAnnexHostSupport.FocusCharm,
             TrainingAnnexHostSupport.FocusCharmInstance,
             StandardEquipmentSlotIds.Accessory);
@@ -1721,6 +1732,8 @@ internal sealed class CleanTrainingAnnexPlayHost
     private static RuntimeInventorySnapshot AddEquipmentIfMissing(
         RuntimeInventorySnapshot inventory,
         IInventoryTransitionService inventoryTransitions,
+        IEquipmentDefinitionRepository equipmentRepository,
+        IReadOnlyList<RuntimeInstanceId> liveActorInstanceIds,
         ContentId equipmentId,
         RuntimeInstanceId equipmentInstanceId,
         ContentId slot)
@@ -1731,11 +1744,20 @@ internal sealed class CleanTrainingAnnexPlayHost
             return inventory;
         }
 
-        InventoryTransitionResult result = inventoryTransitions.AddEquipment(
+        InventoryTransitionResult result = inventoryTransitions.AcquireEquipment(
             inventory,
             new RuntimeEquipmentInstanceSnapshot(equipmentInstanceId, equipmentId),
-            slot);
-        return result.Applied ? result.After : inventory;
+            slot,
+            equipmentRepository,
+            liveActorInstanceIds);
+        if (!result.Applied)
+        {
+            throw new InvalidOperationException(
+                $"Initial equipment '{equipmentInstanceId}' could not be acquired: " +
+                string.Join("; ", result.Diagnostics.Select(diagnostic => diagnostic.Message)));
+        }
+
+        return result.After;
     }
 
     private static RuntimeEquipmentSnapshot BuildInitialEquipment(

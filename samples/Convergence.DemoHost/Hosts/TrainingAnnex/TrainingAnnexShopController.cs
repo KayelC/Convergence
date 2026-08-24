@@ -178,6 +178,9 @@ internal sealed class TrainingAnnexShopController
         IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> offerDiagnostics,
         CancellationToken cancellationToken)
     {
+        var equipmentAcquisition = new RuntimeEquipmentAcquisitionContext(
+            catalog,
+            roster.AllActors.Select(actor => actor.Actor.State.InstanceId));
         HostCommandReadResult<CleanTrainingAnnexPlayCommand> offerSelection =
             await _commandSource.ReadAsync(
                 CreateShopBuyMenu(
@@ -187,7 +190,8 @@ internal sealed class TrainingAnnexShopController
                     wallet,
                     shopStock,
                     shopTransactions,
-                    luck),
+                    luck,
+                    equipmentAcquisition),
                 cancellationToken).ConfigureAwait(false);
         if (!offerSelection.IsSelected || offerSelection.Command == CleanTrainingAnnexPlayCommand.Back)
         {
@@ -227,7 +231,8 @@ internal sealed class TrainingAnnexShopController
             TrainingAnnexHostSupport.CreditsCurrency,
             offer.Runtime,
             luck,
-            purchasedEquipmentInstanceId);
+            purchasedEquipmentInstanceId,
+            equipmentAcquisition);
         transactionEvidence.Add(ToShopEvidence(
             shop.Id,
             offer.Runtime,
@@ -563,7 +568,8 @@ internal sealed class TrainingAnnexShopController
         RuntimeCurrencyLedgerSnapshot wallet,
         RuntimeShopStockSnapshot shopStock,
         IShopTransactionService shopTransactions,
-        int luck)
+        int luck,
+        RuntimeEquipmentAcquisitionContext equipmentAcquisition)
     {
         List<HostCommandOption<CleanTrainingAnnexPlayCommand>> options = offers
             .Select(offer =>
@@ -579,7 +585,8 @@ internal sealed class TrainingAnnexShopController
                     TrainingAnnexHostSupport.CreditsCurrency,
                     offer.Runtime,
                     luck,
-                    equipmentInstanceId);
+                    equipmentInstanceId,
+                    equipmentAcquisition);
                 return new HostCommandOption<CleanTrainingAnnexPlayCommand>(
                     CleanTrainingAnnexPlayCommand.SelectShopOffer,
                     $"{offer.DisplayName} - {assessment.Price} C{StockLabel(offer.Runtime, shopStock)}{TransactionLabel(assessment)}",
