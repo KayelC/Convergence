@@ -192,8 +192,8 @@ RuntimeActorEquipmentApplicationResult applied = equipmentApplication.Apply(
         catalog,
         RuntimeStatSourceKind.ActiveHostedEntity,
         MissingHostedEntityBehavior.RejectStatResolution,
-        partyRoster,
-        runtimeActors));
+        runtimeActors,
+        partyRoster));
 
 if (!applied.Applied)
 {
@@ -204,7 +204,11 @@ if (!applied.Applied)
 
 On rejection, `Before` and `After` both describe the unchanged live actor. The
 equipment transition remains a pure candidate operation; the application
-service is the live actor commit boundary.
+service is the live actor commit boundary. `runtimeActors` is mandatory and
+must be the complete current live actor map, including `actor` itself. The
+application rejects duplicate actor IDs, a missing subject or canonical-roster
+actor, and any candidate instance already assigned to another supplied actor
+before staging composition. There is no public raw loadout setter.
 
 Do not manually copy grants into learned skills. Do not independently add
 armor Defense or boots Evasion in battle code.

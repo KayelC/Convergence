@@ -3498,7 +3498,6 @@ Convergence.Execution.RuntimeActorState.IsGuarding.get -> bool
 Convergence.Execution.RuntimeActorState.OtherStatuses.get -> System.Collections.Generic.IReadOnlySet<Convergence.Content.ContentId>!
 Convergence.Execution.RuntimeActorState.Passives.get -> Convergence.Execution.BattlePassiveCollection!
 Convergence.Execution.RuntimeActorState.Progression.get -> Convergence.Runtime.RuntimeProgressionSnapshot!
-Convergence.Execution.RuntimeActorState.ReplaceEquipment(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment) -> void
 Convergence.Execution.RuntimeActorState.Resources.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Execution.BattleResourceState!>!
 Convergence.Execution.RuntimeActorState.RuntimeActorState(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.ContentId entityId, Convergence.Content.ContentId teamId, Convergence.Content.ContentId vitalResourceId, Convergence.Battle.CombatDefenseProfile! defenseProfile, System.Collections.Generic.IEnumerable<Convergence.Execution.BattleResourceState!>! resources, Convergence.Runtime.RuntimeEncounterPresenceSnapshot! encounterPresence, Convergence.Runtime.RuntimeActorAffiliationSnapshot! affiliation, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? stats = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? skillIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? capabilityIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.SkillDefinition!>? passiveSkills = null, Convergence.Runtime.RuntimeActorIdentitySnapshot? identity = null, Convergence.Runtime.RuntimeProgressionSnapshot? progression = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseStats = null, Convergence.Runtime.RuntimeSkillStateSnapshot? skillState = null, Convergence.Runtime.RuntimeEquipmentSnapshot? equipment = null, Convergence.Runtime.RuntimeCombatProfileIdentitySnapshot? combatProfileIdentity = null) -> void
 Convergence.Execution.RuntimeActorState.CombatProfileIdentity.get -> Convergence.Runtime.RuntimeCombatProfileIdentitySnapshot!
@@ -12214,12 +12213,16 @@ Convergence.Runtime.IRuntimeActorEquipmentApplicationService
 Convergence.Runtime.IRuntimeActorEquipmentApplicationService.Apply(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest! request) -> Convergence.Runtime.RuntimeActorEquipmentApplicationResult!
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic!
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.ActorInstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.ActorInstanceId.init -> void
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Code.get -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Code.init -> void
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.CompositionCode.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode?
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.CompositionCode.init -> void
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode Code, out string! Message, out Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileCode, out Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode) -> void
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Equals(Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? other) -> bool
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentInstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentInstanceId.init -> void
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentProfileCode.get -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode?
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentProfileCode.init -> void
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Message.get -> string!
@@ -12228,8 +12231,10 @@ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.RuntimeActorEquip
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected = 2 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.CommitFailed = 3 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentAssignedToAnotherActor = 5 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileRejected = 1 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
 Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileResolutionFailed = 0 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected = 4 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
 Convergence.Runtime.RuntimeActorEquipmentApplicationRequest
 Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorEquipmentApplicationRequest!
 Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
@@ -12239,7 +12244,7 @@ Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.EquipmentRepository.
 Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Inventory.get -> Convergence.Runtime.RuntimeInventorySnapshot!
 Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
 Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
-Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.RuntimeActorEquipmentApplicationRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null) -> void
+Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.RuntimeActorEquipmentApplicationRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! runtimeActors, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null) -> void
 Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.RuntimeActors.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
 Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.SourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
 Convergence.Runtime.RuntimeActorEquipmentApplicationResult

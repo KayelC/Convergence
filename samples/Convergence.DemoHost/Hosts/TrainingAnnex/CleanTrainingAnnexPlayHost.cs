@@ -455,22 +455,36 @@ internal sealed class CleanTrainingAnnexPlayHost
         var inventory = new TrainingAnnexItemActionInventory(
             BuildInitialInventory(_initialInventory, inventoryTransitions),
             inventoryTransitions);
-        roster.Player.Actor.State.ReplaceEquipment(BuildInitialEquipment(
+        RuntimeEquipmentSnapshot initialEquipment = BuildInitialEquipment(
             catalog,
             inventory.Snapshot,
             _initialEquipment,
-            equipmentTransitions));
-        if (!await ComposePlayerStateAsync(
-                roster,
-                partyRoster,
-                combatProfileCompositionService,
-                equipmentProfileResolver,
+            equipmentTransitions);
+        RuntimeActorEquipmentApplicationResult initialEquipmentApplication = equipmentApplication.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                roster.Player.Actor.State,
                 inventory.Snapshot,
+                initialEquipment,
                 catalog,
-                cancellationToken,
-                initializeResourcesToMaximum: true).ConfigureAwait(false))
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                roster.AllActors.Select(actor => actor.Actor.State),
+                partyRoster));
+        if (!initialEquipmentApplication.Applied)
         {
+            foreach (RuntimeActorEquipmentApplicationDiagnostic diagnostic in
+                     initialEquipmentApplication.Diagnostics)
+            {
+                await _eventSink.PublishAsync(
+                    $"[equipment_application:{diagnostic.Code}] {diagnostic.Message}",
+                    cancellationToken).ConfigureAwait(false);
+            }
+
             return 4;
+        }
+        foreach (BattleResourceState resource in roster.Player.Actor.State.Resources.Values)
+        {
+            roster.Player.Actor.State.SetResource(resource.Id, resource.Maximum);
         }
         var savePolicy = new RuntimeSavePolicyService(new RuntimeSavePolicyOptions(
             manualAllowedContextIds:
@@ -2242,8 +2256,7 @@ internal sealed class CleanTrainingAnnexPlayHost
         IRuntimeEquipmentProfileResolver equipmentProfileResolver,
         RuntimeInventorySnapshot inventory,
         IEquipmentDefinitionRepository equipmentRepository,
-        CancellationToken cancellationToken,
-        bool initializeResourcesToMaximum = false)
+        CancellationToken cancellationToken)
     {
         RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
             inventory,
@@ -2268,14 +2281,6 @@ internal sealed class CleanTrainingAnnexPlayHost
             equipmentProfile);
         if (composition.Applied)
         {
-            if (initializeResourcesToMaximum)
-            {
-                foreach (BattleResourceState resource in roster.Player.Actor.State.Resources.Values)
-                {
-                    roster.Player.Actor.State.SetResource(resource.Id, resource.Maximum);
-                }
-            }
-
             return true;
         }
 

@@ -426,8 +426,8 @@ internal sealed class TrainingAnnexShopController
                     catalog,
                     RuntimeStatSourceKind.ActiveHostedEntity,
                     MissingHostedEntityBehavior.RejectStatResolution,
-                    partyRoster,
-                    roster.AllActors.Select(actor => actor.Actor.State)));
+                    roster.AllActors.Select(actor => actor.Actor.State),
+                    partyRoster));
             equipmentEvidence.Add(new TrainingAnnexEquipmentChangeEvidence(
                 equipmentInstanceId,
                 offer.Runtime.ContentId,

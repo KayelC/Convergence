@@ -453,7 +453,7 @@ public sealed class RuntimeActorState
     public decimal SetResource(ContentId id, decimal value) => GetRequiredResource(id).Set(value);
     public decimal AddResource(ContentId id, decimal value) => GetRequiredResource(id).Add(value);
 
-    public void ReplaceEquipment(RuntimeEquipmentSnapshot equipment)
+    internal void ReplaceEquipmentForComposition(RuntimeEquipmentSnapshot equipment)
     {
         ArgumentNullException.ThrowIfNull(equipment);
         var nextPassives = new BattlePassiveCollection(Passives.Entries

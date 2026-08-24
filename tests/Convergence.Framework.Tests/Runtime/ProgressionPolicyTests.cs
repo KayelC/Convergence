@@ -148,7 +148,7 @@ public sealed class ProgressionPolicyTests
                     StandardEquipmentSlotIds.Boots,
                     [new RuntimeEquipmentInstanceSnapshot(bootsInstanceId, bootsId)])
             ]);
-        vessel.ReplaceEquipment(new RuntimeEquipmentSnapshot(
+        var candidate = new RuntimeEquipmentSnapshot(
         [
             new KeyValuePair<ContentId, RuntimeInstanceId>(
                 StandardEquipmentSlotIds.Armor,
@@ -156,10 +156,8 @@ public sealed class ProgressionPolicyTests
             new KeyValuePair<ContentId, RuntimeInstanceId>(
                 StandardEquipmentSlotIds.Boots,
                 bootsInstanceId)
-        ]));
-        var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
-            inventory,
-            new EquipmentRepository(
+        ]);
+        var equipmentRepository = new EquipmentRepository(
                 new EquipmentDefinition(
                     armorId,
                     "Armor",
@@ -174,46 +172,46 @@ public sealed class ProgressionPolicyTests
                     "Contributes Evasion.",
                     StandardEquipmentSlotIds.Boots,
                     10,
-                    boots: new EquipmentBootsProfileDefinition(4))));
+                    boots: new EquipmentBootsProfileDefinition(4)));
         var service = new RuntimeActorCombatProfileCompositionService(
             _stats,
             _resources,
             new SkillRepository(equipmentPassive));
+        var application = new RuntimeActorEquipmentApplicationService(service);
 
-        RuntimeEquipmentProfile equippedProfile = equipmentProfiles.Resolve(vessel);
-        RuntimeActorCombatProfileCompositionResult equipped = service.Compose(
-            new RuntimeActorCombatProfileCompositionRequest(
+        RuntimeActorEquipmentApplicationResult equipped = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
                 vessel,
+                inventory,
+                candidate,
+                equipmentRepository,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                partyRoster,
-                [hostedEntity],
-                equippedProfile.StatModifiers,
-                equippedProfile.GrantedSkillIds));
+                [vessel, hostedEntity],
+                partyRoster));
         Assert.Equal(equipmentPassive.Id, Assert.Single(vessel.Passives.Entries).Skill.Id);
         Assert.DoesNotContain(equipmentPassive.Id, vessel.Skills.LearnedSkillIds);
         Assert.DoesNotContain(equipmentPassive.Id, vessel.Skills.EquippedSkillIds);
-        vessel.ReplaceEquipment(new RuntimeEquipmentSnapshot());
-        Assert.Empty(vessel.Passives.Entries);
-        RuntimeEquipmentProfile unequippedProfile = equipmentProfiles.Resolve(vessel);
-        RuntimeActorCombatProfileCompositionResult unequipped = service.Compose(
-            new RuntimeActorCombatProfileCompositionRequest(
+        RuntimeActorEquipmentApplicationResult unequipped = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
                 vessel,
+                inventory,
+                new RuntimeEquipmentSnapshot(),
+                equipmentRepository,
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                partyRoster,
-                [hostedEntity],
-                unequippedProfile.StatModifiers,
-                unequippedProfile.GrantedSkillIds));
+                [vessel, hostedEntity],
+                partyRoster));
 
         Assert.True(equipped.Applied);
         Assert.Equal(6, equipped.After.Stats.EffectiveStats[StandardProgressionIds.Defense]);
         Assert.Equal(5, equipped.After.Stats.EffectiveStats[StandardProgressionIds.Evasion]);
-        Assert.Empty(equippedProfile.Diagnostics);
+        Assert.Empty(equipped.EquipmentProfile.Diagnostics);
         Assert.True(unequipped.Applied);
+        Assert.Empty(vessel.Passives.Entries);
         Assert.DoesNotContain(StandardProgressionIds.Defense, unequipped.After.Stats.EffectiveStats.Keys);
         Assert.DoesNotContain(StandardProgressionIds.Evasion, unequipped.After.Stats.EffectiveStats.Keys);
-        Assert.Empty(unequippedProfile.StatModifiers);
+        Assert.Empty(unequipped.EquipmentProfile.StatModifiers);
     }
 
     [Fact]
@@ -263,8 +261,8 @@ public sealed class ProgressionPolicyTests
                 new EquipmentRepository(armor),
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                partyRoster,
-                [hostedEntity]));
+                [vessel, hostedEntity],
+                partyRoster));
 
         Assert.True(equipped.Applied);
         Assert.Equal(armorInstanceId, vessel.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Armor]);
@@ -285,8 +283,8 @@ public sealed class ProgressionPolicyTests
                 new EquipmentRepository(armor),
                 RuntimeStatSourceKind.ActiveHostedEntity,
                 MissingHostedEntityBehavior.RejectStatResolution,
-                partyRoster,
-                [hostedEntity]));
+                [vessel, hostedEntity],
+                partyRoster));
 
         Assert.True(unequipped.Applied);
         Assert.Empty(vessel.Equipment.EquippedInstanceIds);
@@ -334,7 +332,8 @@ public sealed class ProgressionPolicyTests
                 candidate,
                 new EquipmentRepository(armor),
                 RuntimeStatSourceKind.Actor,
-                MissingHostedEntityBehavior.UseActorBaseStats));
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                [actor]));
 
         Assert.False(result.Applied);
         Assert.Equal(
@@ -346,6 +345,135 @@ public sealed class ProgressionPolicyTests
         AssertCompositionStateUnchanged(before, actor.ToSnapshot());
         AssertCompositionStateUnchanged(before, result.Before);
         AssertCompositionStateUnchanged(before, result.After);
+    }
+
+    [Fact]
+    public void Order7H1_RawEquipmentReplacementIsNotPublic()
+    {
+        Assert.Null(typeof(RuntimeActorState).GetMethod("ReplaceEquipment"));
+        Assert.Null(typeof(RuntimeActorState).GetMethod("ReplaceEquipmentForComposition"));
+    }
+
+    [Fact]
+    public void Order7H1_EquipmentApplicationRequiresCompleteCurrentActorEvidence()
+    {
+        RuntimeActorState actor = CreateActor("evidence_actor", 5m);
+        RuntimeActorSnapshot before = actor.ToSnapshot();
+        var application = new RuntimeActorEquipmentApplicationService(
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository()));
+
+        RuntimeActorEquipmentApplicationResult result = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                actor,
+                new RuntimeInventorySnapshot(),
+                new RuntimeEquipmentSnapshot(),
+                new EquipmentRepository(),
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                []));
+
+        Assert.False(result.Applied);
+        RuntimeActorEquipmentApplicationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected,
+            diagnostic.Code);
+        Assert.Equal(actor.InstanceId, diagnostic.ActorInstanceId);
+        AssertCompositionStateUnchanged(before, actor.ToSnapshot());
+        AssertCompositionStateUnchanged(before, result.After);
+    }
+
+    [Fact]
+    public void Order7H1_EquipmentApplicationRequiresEveryCanonicalRosterActor()
+    {
+        RuntimeActorState vessel = CreateActor("roster_evidence_vessel", 5m);
+        RuntimeActorState hostedEntity = CreateActor("roster_evidence_hosted", 8m);
+        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
+        RuntimeActorSnapshot before = vessel.ToSnapshot();
+        var application = new RuntimeActorEquipmentApplicationService(
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository()));
+
+        RuntimeActorEquipmentApplicationResult result = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                vessel,
+                new RuntimeInventorySnapshot(),
+                new RuntimeEquipmentSnapshot(),
+                new EquipmentRepository(),
+                RuntimeStatSourceKind.ActiveHostedEntity,
+                MissingHostedEntityBehavior.RejectStatResolution,
+                [vessel],
+                partyRoster));
+
+        Assert.False(result.Applied);
+        RuntimeActorEquipmentApplicationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected,
+            diagnostic.Code);
+        Assert.Equal(hostedEntity.InstanceId, diagnostic.ActorInstanceId);
+        AssertCompositionStateUnchanged(before, vessel.ToSnapshot());
+        AssertCompositionStateUnchanged(before, result.After);
+    }
+
+    [Fact]
+    public void Order7H1_EquipmentApplicationRejectsCrossActorAssignmentAtomically()
+    {
+        RuntimeActorState firstActor = CreateActor("first_assignment_actor", 5m);
+        RuntimeActorState secondActor = CreateActor("second_assignment_actor", 5m);
+        ContentId armorId = ContentId.Parse("test.pack:shared_assignment_armor");
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("shared-assignment-armor-001");
+        var armor = new EquipmentDefinition(
+            armorId,
+            "Shared Assignment Armor",
+            "Must remain assigned to only one actor.",
+            StandardEquipmentSlotIds.Armor,
+            10,
+            armor: new EquipmentArmorProfileDefinition(4, 1));
+        var repository = new EquipmentRepository(armor);
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Armor,
+                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
+            ]);
+        var candidate = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Armor,
+                armorInstanceId)
+        ]);
+        var application = new RuntimeActorEquipmentApplicationService(
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository()));
+
+        RuntimeActorEquipmentApplicationResult first = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                firstActor,
+                inventory,
+                candidate,
+                repository,
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                [firstActor, secondActor]));
+        RuntimeActorSnapshot secondBefore = secondActor.ToSnapshot();
+        RuntimeActorEquipmentApplicationResult second = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                secondActor,
+                inventory,
+                candidate,
+                repository,
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                [firstActor, secondActor]));
+
+        Assert.True(first.Applied);
+        Assert.False(second.Applied);
+        RuntimeActorEquipmentApplicationDiagnostic diagnostic = Assert.Single(second.Diagnostics);
+        Assert.Equal(
+            RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentAssignedToAnotherActor,
+            diagnostic.Code);
+        Assert.Equal(armorInstanceId, diagnostic.EquipmentInstanceId);
+        Assert.Equal(firstActor.InstanceId, diagnostic.ActorInstanceId);
+        AssertCompositionStateUnchanged(secondBefore, secondActor.ToSnapshot());
+        AssertCompositionStateUnchanged(secondBefore, second.After);
     }
 
     [Fact]

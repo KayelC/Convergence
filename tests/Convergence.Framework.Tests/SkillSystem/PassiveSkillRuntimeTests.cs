@@ -43,10 +43,25 @@ public sealed class PassiveSkillRuntimeTests
         RuntimeActorState actor = Actor(
             "intrinsic_actor",
             PlayerTeam,
-            passiveSkills: [intrinsicPassive]);
+            passiveSkills: [intrinsicPassive],
+            skillState: new RuntimeSkillStateSnapshot(
+                [intrinsicPassive.Id],
+                [intrinsicPassive.Id]));
 
-        actor.ReplaceEquipment(new RuntimeEquipmentSnapshot());
+        var application = new RuntimeActorEquipmentApplicationService(
+            new RuntimeActorCombatProfileCompositionService(
+                new TestSkillRepository([intrinsicPassive])));
+        RuntimeActorEquipmentApplicationResult result = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                actor,
+                new RuntimeInventorySnapshot(),
+                new RuntimeEquipmentSnapshot(),
+                new EmptyEquipmentRepository(),
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                runtimeActors: [actor]));
 
+        Assert.True(result.Applied);
         Assert.Equal(intrinsicPassive.Id, Assert.Single(actor.Passives.Entries).Skill.Id);
     }
 
@@ -1404,7 +1419,8 @@ public sealed class PassiveSkillRuntimeTests
         decimal hp = 100,
         decimal sp = 100,
         CombatDefenseProfile? defense = null,
-        IEnumerable<SkillDefinition>? passiveSkills = null) =>
+        IEnumerable<SkillDefinition>? passiveSkills = null,
+        RuntimeSkillStateSnapshot? skillState = null) =>
         new(
             RuntimeInstanceId.Parse(id),
             ContentId.Parse($"{id}_entity"),
@@ -1414,7 +1430,8 @@ public sealed class PassiveSkillRuntimeTests
             [new BattleResourceState(Hp, hp, 100), new BattleResourceState(Sp, sp, 100)],
             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
             new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), team),
-            passiveSkills: passiveSkills);
+            passiveSkills: passiveSkills,
+            skillState: skillState);
 
     private static AilmentDefinition PoisonDefinition() =>
         new(
@@ -1457,6 +1474,30 @@ public sealed class PassiveSkillRuntimeTests
             _ailments.TryGetValue(id, out definition);
 
         public AilmentDefinition GetRequiredAilment(ContentId id) => _ailments[id];
+    }
+
+    private sealed class TestSkillRepository(IEnumerable<SkillDefinition> skills)
+        : ISkillDefinitionRepository
+    {
+        private readonly Dictionary<ContentId, SkillDefinition> _skills =
+            skills.ToDictionary(skill => skill.Id);
+
+        public bool TryGetSkill(ContentId id, out SkillDefinition? definition) =>
+            _skills.TryGetValue(id, out definition);
+
+        public SkillDefinition GetRequiredSkill(ContentId id) => _skills[id];
+    }
+
+    private sealed class EmptyEquipmentRepository : IEquipmentDefinitionRepository
+    {
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? definition)
+        {
+            definition = null;
+            return false;
+        }
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) =>
+            throw new KeyNotFoundException(id.ToString());
     }
 
     private sealed class DelegateDamagePolicy(

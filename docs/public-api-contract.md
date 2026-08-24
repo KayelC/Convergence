@@ -299,7 +299,10 @@ contributions, and equipped-only skill grants without copying grants into
 learned state. `RuntimeActorEquipmentApplicationService` stages a candidate
 loadout and that derived profile on an actor clone, runs canonical combat-profile
 composition, and commits the complete actor only after every step accepts.
-Rejected application results expose equal before/after actor snapshots.
+Its mandatory complete live-actor map is validated for subject/roster coverage,
+duplicate actor IDs, and cross-actor instance assignment before staging.
+Rejected application results expose equal before/after actor snapshots, and
+`RuntimeActorState` exposes no public raw loadout replacement path.
 Slot-layout policy invocation is fault-contained consistently: malformed policy
 results and non-cancellation faults surface through explicit typed policy
 rejection codes, while cancellation propagates.

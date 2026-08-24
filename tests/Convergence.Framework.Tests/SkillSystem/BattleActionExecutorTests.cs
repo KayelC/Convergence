@@ -434,12 +434,16 @@ public sealed class BattleActionExecutorTests
                 StandardEquipmentSlotIds.Armor,
                 armorInstanceId)
         ]);
+        var equipmentRepository = new TestEquipmentRepository([armor]);
         var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
             inventory,
-            new TestEquipmentRepository([armor]));
+            equipmentRepository);
         RuntimeActorState actor = Actor("actor", TeamA);
         RuntimeActorState target = Actor("target", TeamB);
-        actor.ReplaceEquipment(equipped);
+        var equipmentApplication = new RuntimeActorEquipmentApplicationService(
+            new RuntimeActorCombatProfileCompositionService(
+                new TestSkillRepository([grantedSkill])));
+        ApplyEquipment(equipped);
         RuntimeSkillStateSnapshot moveListBefore = actor.Skills;
         var authorization = new CatalogBattleActionAuthorizationPolicy(
             new TestSkillRepository([grantedSkill]),
@@ -453,7 +457,7 @@ public sealed class BattleActionExecutorTests
             [actor, target]);
         BattleActionAssessment preparedWhileEquipped = executor.Assess(request);
 
-        actor.ReplaceEquipment(new RuntimeEquipmentSnapshot());
+        ApplyEquipment(new RuntimeEquipmentSnapshot());
         BattleActionExecutionResult rejectedAfterUnequip = await executor.ExecuteAsync(
             request,
             preparedWhileEquipped);
@@ -468,9 +472,9 @@ public sealed class BattleActionExecutorTests
         Assert.Empty(actor.Skills.LearnedSkillIds);
         Assert.Empty(actor.Skills.EquippedSkillIds);
 
-        actor.ReplaceEquipment(equipped);
+        ApplyEquipment(equipped);
         BattleActionExecutionResult executedAfterReequip = await executor.ExecuteAsync(request);
-        actor.ReplaceEquipment(new RuntimeEquipmentSnapshot());
+        ApplyEquipment(new RuntimeEquipmentSnapshot());
         BattleActionAssessment rejectedAfterSecondUnequip = executor.Assess(request);
 
         Assert.Equal(BattleActionExecutionStatus.Executed, executedAfterReequip.Status);
@@ -479,6 +483,22 @@ public sealed class BattleActionExecutorTests
         Assert.Equal(moveListBefore, actor.Skills);
         Assert.Empty(actor.Skills.LearnedSkillIds);
         Assert.Empty(actor.Skills.EquippedSkillIds);
+
+        void ApplyEquipment(RuntimeEquipmentSnapshot candidate)
+        {
+            RuntimeActorEquipmentApplicationResult result = equipmentApplication.Apply(
+                new RuntimeActorEquipmentApplicationRequest(
+                    actor,
+                    inventory,
+                    candidate,
+                    equipmentRepository,
+                    RuntimeStatSourceKind.Actor,
+                    MissingHostedEntityBehavior.UseActorBaseStats,
+                    runtimeActors: [actor, target]));
+            Assert.True(
+                result.Applied,
+                string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
+        }
     }
 
     [Fact]

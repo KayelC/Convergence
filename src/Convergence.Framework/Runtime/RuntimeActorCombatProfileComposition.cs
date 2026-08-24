@@ -129,18 +129,28 @@ public interface IRuntimeActorCombatProfileCompositionService
 
 public enum RuntimeActorEquipmentApplicationDiagnosticCode
 {
-    EquipmentProfileResolutionFailed,
-    EquipmentProfileRejected,
-    CombatProfileCompositionRejected,
-    CommitFailed
+    EquipmentProfileResolutionFailed = 0,
+    EquipmentProfileRejected = 1,
+    CombatProfileCompositionRejected = 2,
+    CommitFailed = 3,
+    RuntimeActorEvidenceRejected = 4,
+    EquipmentAssignedToAnotherActor = 5
 }
 
 public sealed record RuntimeActorEquipmentApplicationDiagnostic(
     RuntimeActorEquipmentApplicationDiagnosticCode Code,
     string Message,
     RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileCode = null,
-    RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode = null);
+    RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode = null)
+{
+    public RuntimeInstanceId? EquipmentInstanceId { get; init; }
+    public RuntimeInstanceId? ActorInstanceId { get; init; }
+}
 
+/// <summary>
+/// Describes one atomic loadout application. <see cref="RuntimeActors"/> is the
+/// complete current actor map for the live session and must include <see cref="Actor"/>.
+/// </summary>
 public sealed record RuntimeActorEquipmentApplicationRequest
 {
     public RuntimeActorEquipmentApplicationRequest(
@@ -150,8 +160,8 @@ public sealed record RuntimeActorEquipmentApplicationRequest
         IEquipmentDefinitionRepository equipmentRepository,
         RuntimeStatSourceKind sourceKind,
         MissingHostedEntityBehavior missingHostedEntityBehavior,
-        RuntimePartyRosterSnapshot? partyRoster = null,
-        IEnumerable<RuntimeActorState>? runtimeActors = null)
+        IEnumerable<RuntimeActorState> runtimeActors,
+        RuntimePartyRosterSnapshot? partyRoster = null)
     {
         if (!Enum.IsDefined(sourceKind))
         {
@@ -173,7 +183,7 @@ public sealed record RuntimeActorEquipmentApplicationRequest
         MissingHostedEntityBehavior = missingHostedEntityBehavior;
         PartyRoster = partyRoster;
         RuntimeActors = Array.AsReadOnly(
-            (runtimeActors ?? []).Select(runtimeActor =>
+            (runtimeActors ?? throw new ArgumentNullException(nameof(runtimeActors))).Select(runtimeActor =>
                 runtimeActor ?? throw new ArgumentException(
                     "Runtime actor maps cannot contain null entries.",
                     nameof(runtimeActors)))
@@ -243,6 +253,18 @@ public sealed class RuntimeActorEquipmentApplicationService :
         ArgumentNullException.ThrowIfNull(request);
         RuntimeActorSnapshot before = request.Actor.ToSnapshot();
 
+        RuntimeActorEquipmentApplicationDiagnostic? assignmentDiagnostic =
+            ValidateAssignmentEvidence(request);
+        if (assignmentDiagnostic is not null)
+        {
+            return new RuntimeActorEquipmentApplicationResult(
+                before,
+                before,
+                RuntimeEquipmentProfile.Empty,
+                composition: null,
+                [assignmentDiagnostic]);
+        }
+
         RuntimeEquipmentProfile equipmentProfile;
         try
         {
@@ -277,7 +299,7 @@ public sealed class RuntimeActorEquipmentApplicationService :
         }
 
         RuntimeActorState stagedActor = request.Actor.CreateExecutionClone();
-        stagedActor.ReplaceEquipment(request.Equipment);
+        stagedActor.ReplaceEquipmentForComposition(request.Equipment);
         RuntimeActorState[] stagedRuntimeActors = request.RuntimeActors
             .Select(runtimeActor => ReferenceEquals(runtimeActor, request.Actor)
                 ? stagedActor
@@ -341,6 +363,96 @@ public sealed class RuntimeActorEquipmentApplicationService :
             request.Actor.ToSnapshot(),
             equipmentProfile,
             composition);
+    }
+
+    private static RuntimeActorEquipmentApplicationDiagnostic? ValidateAssignmentEvidence(
+        RuntimeActorEquipmentApplicationRequest request)
+    {
+        int subjectOccurrences = request.RuntimeActors.Count(actor =>
+            ReferenceEquals(actor, request.Actor));
+        if (subjectOccurrences != 1)
+        {
+            return new RuntimeActorEquipmentApplicationDiagnostic(
+                RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected,
+                "Equipment application requires the complete current runtime-actor map, " +
+                "including the exact actor being changed once.")
+            {
+                ActorInstanceId = request.Actor.InstanceId
+            };
+        }
+
+        IGrouping<RuntimeInstanceId, RuntimeActorState>? duplicateActor = request.RuntimeActors
+            .GroupBy(actor => actor.InstanceId)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateActor is not null)
+        {
+            return new RuntimeActorEquipmentApplicationDiagnostic(
+                RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected,
+                $"Runtime actor evidence contains duplicate instance ID '{duplicateActor.Key}'.")
+            {
+                ActorInstanceId = duplicateActor.Key
+            };
+        }
+
+        if (request.PartyRoster is not null)
+        {
+            var rosterReferences = new List<RuntimeActorReferenceSnapshot>
+            {
+                request.PartyRoster.Owner
+            };
+            rosterReferences.AddRange(request.PartyRoster.ActiveParty);
+            rosterReferences.AddRange(request.PartyRoster.ReserveMembers);
+            if (request.PartyRoster.ActiveHostedEntity is not null)
+            {
+                rosterReferences.Add(request.PartyRoster.ActiveHostedEntity);
+            }
+            rosterReferences.AddRange(request.PartyRoster.HostedEntityRoster);
+            rosterReferences.AddRange(request.PartyRoster.CompanionRoster);
+            foreach (RuntimeActorReferenceSnapshot rosterReference in rosterReferences
+                         .GroupBy(reference => reference.InstanceId)
+                         .Select(group => group.First()))
+            {
+                RuntimeActorState? runtimeActor = request.RuntimeActors.SingleOrDefault(actor =>
+                    actor.InstanceId == rosterReference.InstanceId);
+                if (runtimeActor is null || runtimeActor.EntityId != rosterReference.EntityDefinitionId)
+                {
+                    return new RuntimeActorEquipmentApplicationDiagnostic(
+                        RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected,
+                        $"Runtime actor evidence does not contain roster actor " +
+                        $"'{rosterReference.InstanceId}' with entity " +
+                        $"'{rosterReference.EntityDefinitionId}'.")
+                    {
+                        ActorInstanceId = rosterReference.InstanceId
+                    };
+                }
+            }
+        }
+
+        HashSet<RuntimeInstanceId> candidateInstanceIds = request.Equipment
+            .EquippedInstanceIds
+            .Values
+            .ToHashSet();
+        foreach (RuntimeActorState otherActor in request.RuntimeActors.Where(actor =>
+                     !ReferenceEquals(actor, request.Actor)))
+        {
+            RuntimeInstanceId conflictingInstanceId = otherActor.Equipment
+                .EquippedInstanceIds
+                .Values
+                .FirstOrDefault(candidateInstanceIds.Contains);
+            if (conflictingInstanceId.IsValid)
+            {
+                return new RuntimeActorEquipmentApplicationDiagnostic(
+                    RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentAssignedToAnotherActor,
+                    $"Equipment instance '{conflictingInstanceId}' is already assigned to actor " +
+                    $"'{otherActor.InstanceId}'.")
+                {
+                    EquipmentInstanceId = conflictingInstanceId,
+                    ActorInstanceId = otherActor.InstanceId
+                };
+            }
+        }
+
+        return null;
     }
 
     private static RuntimeActorEquipmentApplicationResult Rejected(

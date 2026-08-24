@@ -122,15 +122,19 @@ public sealed class CatalogBattleRuntimeTests
                     StandardEquipmentSlotIds.Armor,
                     [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
             ]);
-        actor.State.ReplaceEquipment(new RuntimeEquipmentSnapshot(
+        var equipped = new RuntimeEquipmentSnapshot(
         [
             new KeyValuePair<ContentId, RuntimeInstanceId>(
                 StandardEquipmentSlotIds.Armor,
                 armorInstanceId)
-        ]));
+        ]);
+        var equipmentRepository = new EquipmentRepository(armor);
         var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
             inventory,
-            new EquipmentRepository(armor));
+            equipmentRepository);
+        var equipmentApplication = new RuntimeActorEquipmentApplicationService(
+            new RuntimeActorCombatProfileCompositionService(skillRepository));
+        ApplyEquipment(equipped);
         var executor = new SkillExecutor(Services(LoadDemoCatalog()));
         var selector = new DeterministicBattleActionSelector(executor);
 
@@ -143,7 +147,7 @@ public sealed class CatalogBattleRuntimeTests
             KnowledgeView(),
             activeStatModifierBoundaries: null,
             equipmentProfiles));
-        actor.State.ReplaceEquipment(new RuntimeEquipmentSnapshot());
+        ApplyEquipment(new RuntimeEquipmentSnapshot());
         BattleActionSelection afterUnequip = selector.Select(new BattleActionSelectionRequest(
             actor,
             [actor, target],
@@ -162,6 +166,22 @@ public sealed class CatalogBattleRuntimeTests
         Assert.Equal(BattleActionSelectionStatus.Pass, afterUnequip.Status);
         Assert.Empty(actor.State.Skills.LearnedSkillIds);
         Assert.Empty(actor.State.Skills.EquippedSkillIds);
+
+        void ApplyEquipment(RuntimeEquipmentSnapshot candidate)
+        {
+            RuntimeActorEquipmentApplicationResult result = equipmentApplication.Apply(
+                new RuntimeActorEquipmentApplicationRequest(
+                    actor.State,
+                    inventory,
+                    candidate,
+                    equipmentRepository,
+                    RuntimeStatSourceKind.Actor,
+                    MissingHostedEntityBehavior.UseActorBaseStats,
+                    runtimeActors: [actor.State, target.State]));
+            Assert.True(
+                result.Applied,
+                string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
+        }
     }
 
     [Fact]

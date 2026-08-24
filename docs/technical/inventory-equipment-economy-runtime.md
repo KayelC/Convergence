@@ -99,6 +99,7 @@ different parts of the check:
 | Content semantic validation | authored definition profile against the selected layout |
 | `EquipmentTransitionService.Equip` | inventory ownership and owned-slot to target-slot assignment, including cross-actor collision evidence |
 | `RuntimeEquipmentProfileResolver` | inventory ownership, definition lookup, definition profile, inventory assignment, and actor assignment |
+| `RuntimeActorEquipmentApplicationService` | complete current actor-map evidence, canonical roster-state coverage, and cross-actor assignment uniqueness before staged composition |
 | Save validation/restore | the complete definition, inventory, actor, and cross-actor graph |
 
 All five boundaries route policy calls through
@@ -156,7 +157,18 @@ success between loadout replacement and recomposition.
 
 The application service is a fixed atomic orchestration boundary, not a policy:
 slot compatibility and stat/resource behavior remain delegated to their
-existing selected policies. It does not invent a second equipment formula.
+existing selected policies. Its request requires the complete current live
+actor map, including the exact actor being changed. When a party roster is
+supplied, every actor referenced by that roster must be present with matching
+identity. A duplicate runtime actor ID, omitted subject/roster actor, or
+candidate instance already assigned to another supplied actor returns a typed
+rejection before profile resolution. It does not invent a second equipment
+formula.
+
+`RuntimeActorState` exposes no public loadout setter. Its raw replacement
+operation exists only as an internal staging step used by the application
+service, so accepted loadout, granted-skill/passive, stat, resource, and combat
+profile state commit together.
 
 ## One Equipment Profile
 
@@ -402,9 +414,11 @@ again.
 
 Cross-actor equipment collision checks have the same explicit evidence
 boundary. Equip and resale operations can inspect only the complete current
-loadout collection supplied by the host. Aggregate save validation rechecks the
-whole actor/inventory graph, but it is not a substitute for supplying complete
-live evidence during a transition.
+loadout collection supplied by the host. The application boundary independently
+requires the complete live actor map and rejects conflicting assignment before
+composition. Aggregate save validation rechecks the whole actor/inventory graph,
+but it is not a substitute for supplying complete live evidence during a
+transition.
 
 ## Policy Boundaries
 
