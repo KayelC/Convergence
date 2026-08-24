@@ -833,7 +833,8 @@ public sealed class DocumentationFoundationTests
             "**Review state:** `existing_unreviewed`.",
             "O7-R11 completed against `a21a6dcb`.",
             "O7-R12 hardened custom economy service bundles",
-            "Formal closure remains pending O7-R14 and O7-R15."
+            "O7-R14 corrected and guards the developer purchase sample.",
+            "Formal closure remains pending O7-R15."
         ];
         Assert.All(reviewStateTokens, token =>
         {
@@ -862,13 +863,14 @@ public sealed class DocumentationFoundationTests
             candidate => candidate.Id == "inventory_equipment_economy");
         Assert.Equal("partial", capability.ImplementationState);
         Assert.Equal(
-            ["The developer Shop.Buy example omits the required equipment acquisition context and is not yet guarded against public-signature drift."],
+            ["The corrected Order 7 source and audience documents await the fresh O7-R15 closure audit and complete release gate."],
             capability.KnownGaps);
 
         Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O7-R15", currentAudit, StringComparison.Ordinal);
         Assert.Contains("### O7-R12: Harden Economy Service Bundles", currentAudit, StringComparison.Ordinal);
         Assert.Contains("### O7-R13: Reconcile Audience Review State", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("### O7-R14: Correct And Guard The Shop Purchase Sample", currentAudit, StringComparison.Ordinal);
         Assert.Contains("save v19", currentAudit, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("content schema v10", currentAudit, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("remains `partial`", currentAudit, StringComparison.Ordinal);

@@ -9,8 +9,9 @@ policy-owned stock, recovery, persistence, and Godot integration.
 
 > **Review state:** `existing_unreviewed`. O7-R11 completed against `a21a6dcb`.
 > The independent audit at `6f4b2f0c` reopened Order 7; O7-R12 hardened custom
-> economy service bundles and O7-R13 reconciled this callout. Formal closure
-> remains pending O7-R14 and O7-R15.
+> economy service bundles, O7-R13 reconciled the audience callouts, and O7-R14
+> corrected and guards the developer purchase sample. Formal closure remains
+> pending O7-R15.
 
 ## Authority Split
 
@@ -305,15 +306,45 @@ Price helpers use the same resolved pricing profile as execution:
 ```csharp
 int displayedPrice = resources.Shop.CalculateBuyPrice(offer, buyerLuck);
 
-ShopTransactionResult purchase = resources.Shop.Buy(
-    inventory,
-    currencies,
-    stock,
-    currencyId,
-    offer,
-    buyerLuck,
-    purchasedEquipmentInstanceId);
+ShopTransactionResult purchase;
+if (offer.ContentKind == ShopContentKind.Equipment)
+{
+    var equipmentAcquisition = new RuntimeEquipmentAcquisitionContext(
+        catalog,
+        liveActors.Select(actor => actor.InstanceId));
+    RuntimeInstanceId purchasedEquipmentInstanceId =
+        AllocateFreshEquipmentInstanceId();
+
+    purchase = resources.Shop.Buy(
+        inventory,
+        currencies,
+        stock,
+        currencyId,
+        offer,
+        buyerLuck,
+        purchasedEquipmentInstanceId,
+        equipmentAcquisition);
+}
+else
+{
+    purchase = resources.Shop.Buy(
+        inventory,
+        currencies,
+        stock,
+        currencyId,
+        offer,
+        buyerLuck,
+        purchasedEquipmentInstanceId: null,
+        equipmentAcquisitionContext: null);
+}
 ```
+
+`liveActors` must be the complete current actor collection, not merely the
+active party, and `AllocateFreshEquipmentInstanceId()` is a host-owned globally
+fresh-ID operation. The acquisition context lets Framework validate the
+equipment definition, slot policy, and runtime-ID domain before accepting the
+purchase. Item purchases carry neither an equipment instance nor equipment
+acquisition evidence, so both optional arguments are explicitly `null`.
 
 Adopt all three after-snapshots together:
 

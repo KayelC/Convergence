@@ -6,7 +6,7 @@
 
 **Capability:** `inventory_equipment_economy`
 
-**Verdict:** **reopened; O7-R12 and O7-R13 are complete, while the developer sample correction and fresh closure review remain**
+**Verdict:** **reopened; O7-R12 through O7-R14 are complete, while the fresh source/document closure review remains**
 
 ## Review Method
 
@@ -124,6 +124,8 @@ performed.
 
 ### L2. The documented shop purchase example does not compile against the current API
 
+**Correction status:** corrected and mechanically guarded by O7-R14.
+
 **Intended invariant:** developer-guide examples must use the supported public
 contract and show every load-bearing authority required by an operation.
 
@@ -207,7 +209,7 @@ comparison.
 |---|---|---|---|
 | O7-R12 | Complete (`59039b57`) | Harden `ResourceManagementRulesetServices` and contain malformed custom economy bundles. | Focused ruleset tests prove every required service, typed failure, valid custom/standard binding, and cancellation. |
 | O7-R13 | Complete | Reconcile the mechanics, developer, and technical review-state callouts. | All three pages identify the same current correction state and no stale O7-R11-future wording remains. |
-| O7-R14 | Pending | Correct and guard the `Shop.Buy` developer example. | The example carries acquisition context, distinguishes item/equipment calls, and a documentation contract test pins the public signature. |
+| O7-R14 | Complete | Correct and guard the `Shop.Buy` developer example. | The example carries acquisition context, distinguishes item/equipment calls, and a documentation contract test pins the public signature. |
 | O7-R15 | Pending | Perform a fresh source/document re-evaluation and full release gate. | No unresolved realistic reachable defect or documentation contradiction; capability and three audience entries may return to `complete`/`reviewed`. |
 
 Each checkpoint is an isolated commit. Runtime save contract v19 and content
@@ -219,13 +221,13 @@ and L1/L2 are documentation corrections.
 Order 7's owner-approved mechanics are substantially implemented and its
 standard Framework, DemoHost, and Godot paths are healthy. O7-R12 has removed
 the false-success custom economy-bundle path, and O7-R13 has reconciled the
-three stale review-state callouts. Formal closure is still premature because
-the developer purchase example remains incompatible with the public API and a
-fresh source/document closure review has not yet been performed.
+three stale review-state callouts. O7-R14 has also corrected and mechanically
+guarded the developer purchase example. Formal closure is still premature only
+because a fresh source/document closure review has not yet been performed.
 
 `inventory_equipment_economy` remains `partial`. Its mechanics, developer, and
-technical documentation entries remain `existing_unreviewed` until O7-R14 and
-O7-R15 are completed and independently rechecked.
+technical documentation entries remain `existing_unreviewed` until O7-R15 is
+completed and independently rechecks the corrected implementation.
 
 ## Correction Completion Record
 
@@ -265,3 +267,24 @@ O7-R15 are completed and independently rechecked.
   the sample correction and fresh closure audit.
 - **Scope:** no runtime, save, schema, content, host, or gameplay behavior
   changes in O7-R13.
+
+### O7-R14: Correct And Guard The Shop Purchase Sample
+
+- **Baseline:** `6e9ae62f`; this checkpoint's documentation/test commit records
+  the final hash.
+- **Sample correction:** the developer guide now shows the exact current
+  eight-argument `IShopTransactionService.Buy` contract. Equipment purchases
+  supply a host-allocated fresh instance ID plus a
+  `RuntimeEquipmentAcquisitionContext` containing the catalog repository and
+  complete live actor-ID set. Item purchases explicitly pass `null` for both
+  equipment-only arguments.
+- **Mechanical guard:** `DocumentationContractSynchronizationTests` validates
+  the sample tokens and reflects the public method to pin its single overload,
+  return type, and eight parameter names/types.
+- **Tracking:** no known implementation/documentation defect remains. The
+  executable capability matrix retains O7-R15's pending independent review and
+  complete release gate as its one process-evidence gap. It remains `partial`,
+  and the three audience entries remain `existing_unreviewed`, until that
+  review rechecks the corrected source/document set.
+- **Scope:** no runtime, save, schema, content, host, or gameplay behavior
+  changes in O7-R14.

@@ -265,17 +265,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "O7-R13 reconciled the stale O7-R11 callout after the O7-R12 runtime correction; formal reviewed status waits for the fresh O7-R15 source/document closure audit."
+        "reason": "O7-R12 through O7-R14 corrected the independent-audit findings; formal reviewed status waits for the fresh O7-R15 source/document closure audit."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
-        "reason": "O7-R13 reconciled the stale O7-R11 callout; the Shop.Buy example still requires its O7-R14 contract correction and the page then requires O7-R15 source review."
+        "reason": "O7-R14 corrected and mechanically guards the eight-argument Shop.Buy example; the page remains pending the fresh O7-R15 source/document closure audit."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
-        "reason": "O7-R13 reconciled the stale O7-R11 callout after the O7-R12 runtime correction; its authority trace remains pending the fresh O7-R15 source/document closure audit."
+        "reason": "O7-R12 through O7-R14 corrected the independent-audit findings; its authority trace remains pending the fresh O7-R15 source/document closure audit."
       }
     },
     {

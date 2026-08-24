@@ -673,9 +673,10 @@ complete release gate for that revision. The later
 found stale O7-R11-future callouts in all three audience pages and a developer
 `Shop.Buy` example that omits the required equipment-acquisition context.
 O7-R12 now hardens the custom economy bundle and O7-R13 reconciles the three
-stale callouts. All three entries remain `existing_unreviewed` while O7-R14
-guards the corrected sample and O7-R15 performs a fresh closure gate. The
-executable documentation matrix now records
+stale callouts. O7-R14 corrects and mechanically guards the eight-argument
+purchase sample. All three entries remain `existing_unreviewed` until O7-R15
+performs a fresh source/document closure gate. The executable documentation
+matrix now records
 30 `reviewed`, 25 `existing_unreviewed`, 13 `missing`, and 7 `not_applicable`
 entries.
 

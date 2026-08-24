@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R13 complete; O7-R14 and O7-R15 pending
+**Implementation status:** O7-R1 through O7-R14 complete; O7-R15 pending
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -43,7 +43,8 @@
 > O7-R15; the earlier closure remains historical evidence for its reviewed
 > revision rather than current closure authority. O7-R12 now hardens the
 > service aggregate and binding boundary; O7-R13 reconciles the three stale
-> audience callouts. The developer sample and fresh closure review remain.
+> audience callouts; O7-R14 corrects and mechanically guards the developer
+> purchase sample. The fresh closure review remains.
 
 ## Purpose
 
@@ -1741,3 +1742,26 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
   for O7-R14, followed by O7-R15's fresh closure audit.
 - **Scope:** documentation, tests, and tracking only. No runtime, save, schema,
   content, host, or gameplay behavior changed.
+
+### O7-R14: Correct And Guard The Shop Purchase Sample
+
+- **Baseline:** `6e9ae62f`; this checkpoint's documentation/test commit records
+  the final hash.
+- **Finding corrected:** the developer guide passed seven arguments to
+  `IShopTransactionService.Buy` and omitted the equipment-acquisition authority
+  added during O7-R11.
+- **Actual destination:** the guide now branches by resolved offer kind.
+  Equipment purchases allocate a fresh instance ID and pass
+  `RuntimeEquipmentAcquisitionContext` built from the equipment repository and
+  complete live actor-ID set. Item purchases explicitly pass `null` for both
+  equipment-only arguments.
+- **Executable guard:** `DocumentationContractSynchronizationTests` verifies
+  the sample's load-bearing tokens and reflects the one public `Buy` method to
+  pin all eight parameter names, parameter types, and return type.
+- **Tracking:** no known implementation/documentation defect remains. The
+  executable capability matrix retains O7-R15's pending independent review and
+  release gate as its one process-evidence gap. The capability stays `partial`,
+  and all three audience entries stay `existing_unreviewed`, until that review
+  rechecks current source and documents.
+- **Scope:** documentation, tests, and tracking only. Runtime save v19, content
+  schema v10, content, host behavior, and gameplay rules are unchanged.

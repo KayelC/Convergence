@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Convergence.Content;
 using Convergence.Runtime;
 using Xunit;
 
@@ -7,6 +8,64 @@ namespace Convergence.Framework.Tests.Architecture;
 
 public sealed class DocumentationContractSynchronizationTests
 {
+    [Fact]
+    public void InventoryEquipmentEconomyGuide_UsesCurrentEightArgumentShopBuyContract()
+    {
+        string developer = File.ReadAllText(RepositoryPath(
+            "docs",
+            "developer-guide",
+            "inventory-equipment-and-economy.md"));
+
+        string[] requiredSampleTokens =
+        [
+            "new RuntimeEquipmentAcquisitionContext(",
+            "liveActors.Select(actor => actor.InstanceId)",
+            "AllocateFreshEquipmentInstanceId()",
+            "purchasedEquipmentInstanceId: null",
+            "equipmentAcquisitionContext: null",
+            "complete current actor collection",
+            "host-owned globally"
+        ];
+        Assert.All(
+            requiredSampleTokens,
+            token => Assert.Contains(token, developer, StringComparison.Ordinal));
+        Assert.Equal(
+            2,
+            Regex.Matches(
+                developer,
+                @"resources\.Shop\.Buy\(",
+                RegexOptions.CultureInvariant).Count);
+
+        var buy = Assert.Single(
+            typeof(IShopTransactionService).GetMethods(),
+            method => method.Name == nameof(IShopTransactionService.Buy));
+        Assert.Equal(typeof(ShopTransactionResult), buy.ReturnType);
+        Assert.Equal(
+            [
+                "inventory",
+                "currencyLedger",
+                "stock",
+                "currencyId",
+                "offer",
+                "buyerLuck",
+                "purchasedEquipmentInstanceId",
+                "equipmentAcquisitionContext"
+            ],
+            buy.GetParameters().Select(parameter => parameter.Name));
+        Assert.Equal(
+            [
+                typeof(RuntimeInventorySnapshot),
+                typeof(RuntimeCurrencyLedgerSnapshot),
+                typeof(RuntimeShopStockSnapshot),
+                typeof(ContentId),
+                typeof(RuntimeShopOfferSnapshot),
+                typeof(int),
+                typeof(RuntimeInstanceId?),
+                typeof(RuntimeEquipmentAcquisitionContext)
+            ],
+            buy.GetParameters().Select(parameter => parameter.ParameterType));
+    }
+
     [Fact]
     public void ChargeGuidance_UsesParticipationReceiptsAndExplicitOptionalComposition()
     {

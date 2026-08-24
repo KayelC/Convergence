@@ -38,8 +38,10 @@ passed the complete release gate for its reviewed revision. The later
 found one bounded malformed custom-economy-bundle path and two documentation
 contradictions. O7-R12 now rejects incomplete bundles and contains malformed
 factories as typed binding failure, while O7-R13 reconciles the three stale
-review-state callouts. The capability remains `partial` for the O7-R14
-developer sample correction and O7-R15 independent closure review.
+review-state callouts. O7-R14 corrects and mechanically guards the developer
+purchase sample. No concrete known gap remains; the capability stays `partial`
+with only O7-R15's independent source/document re-evaluation and complete
+release gate recorded as pending evidence.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).

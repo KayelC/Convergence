@@ -186,7 +186,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "The developer Shop.Buy example omits the required equipment acquisition context and is not yet guarded against public-signature drift."
+        "The corrected Order 7 source and audience documents await the fresh O7-R15 closure audit and complete release gate."
       ]
     },
     {
