@@ -175,8 +175,28 @@ public sealed record ShopStockPolicyBindingResult
         BoundShopStockPolicy? policy,
         IEnumerable<ShopStockPolicyDiagnostic>? diagnostics = null)
     {
+        ShopStockPolicyDiagnostic[] copy = (diagnostics ?? []).ToArray();
+        if (copy.Any(diagnostic => diagnostic is null))
+        {
+            throw new ArgumentException(
+                "Shop stock policy diagnostics cannot contain null entries.",
+                nameof(diagnostics));
+        }
+        if (copy.Any(diagnostic =>
+                !Enum.IsDefined(diagnostic.Code) || string.IsNullOrWhiteSpace(diagnostic.Message)))
+        {
+            throw new ArgumentException(
+                "Shop stock policy diagnostics must have defined codes and nonempty messages.",
+                nameof(diagnostics));
+        }
+        if ((policy is null) == (copy.Length == 0))
+        {
+            throw new ArgumentException(
+                "A shop stock policy binding must contain either one policy or one or more diagnostics.");
+        }
+
         Policy = policy;
-        Diagnostics = Array.AsReadOnly((diagnostics ?? []).ToArray());
+        Diagnostics = Array.AsReadOnly(copy);
     }
 
     public BoundShopStockPolicy? Policy { get; }

@@ -125,6 +125,28 @@ public sealed class ShopPricingPolicyTests
         Assert.Equal(ShopPricingPolicyDiagnosticCode.PolicyFactoryFailure, Assert.Single(silent.Diagnostics).Code);
     }
 
+    [Theory]
+    [InlineData(MalformedPricingBindingShape.NullDiagnostic)]
+    [InlineData(MalformedPricingBindingShape.UndefinedDiagnosticCode)]
+    [InlineData(MalformedPricingBindingShape.BlankDiagnosticMessage)]
+    [InlineData(MalformedPricingBindingShape.PolicyAndDiagnostic)]
+    [InlineData(MalformedPricingBindingShape.NeitherPolicyNorDiagnostic)]
+    [InlineData(MalformedPricingBindingShape.NullResult)]
+    public void PricingFactoryRegistry_NormalizesMalformedBindingResults(
+        MalformedPricingBindingShape shape)
+    {
+        ContentId policyId = Id($"malformed_pricing_{(int)shape}");
+        ShopPricingPolicyFactoryRegistry registry = ShopPricingPolicyFactoryRegistry.CreateStandard(
+            [new MalformedPricingBindingFactory(policyId, shape)]);
+
+        ShopPricingPolicyBindingResult result = registry.Bind(policyId, EmptyParameters());
+
+        Assert.False(result.IsSuccess);
+        ShopPricingPolicyDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ShopPricingPolicyDiagnosticCode.PolicyFactoryFailure, diagnostic.Code);
+        Assert.Equal(policyId, diagnostic.PolicyId);
+    }
+
     [Fact]
     public void PricingFactoryRegistry_PreservesCancellationAndRejectsInvalidFactoryIdentity()
     {
@@ -209,6 +231,43 @@ public sealed class ShopPricingPolicyTests
         RuntimeShopOfferResolutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(RuntimeShopOfferResolutionCode.UnsupportedPricePolicy, diagnostic.Code);
         Assert.Equal(ShopPricingPolicyDiagnosticCode.UnsupportedPolicy, diagnostic.PricingDiagnostic?.Code);
+    }
+
+    [Fact]
+    public void OfferResolver_ReturnsTypedDiagnosticForMalformedPricingFactoryResult()
+    {
+        ContentId policyId = Id("malformed_offer_pricing");
+        ShopPricingPolicyFactoryRegistry factories = ShopPricingPolicyFactoryRegistry.CreateStandard(
+            [new MalformedPricingBindingFactory(
+                policyId,
+                MalformedPricingBindingShape.NullDiagnostic)]);
+        var resolver = new RuntimeShopOfferResolver(
+            factories.Bind(StandardShopPricingPolicyIds.Standard, EmptyParameters()).RequirePolicy(),
+            factories,
+            ShopStockPolicyFactoryRegistry.CreateStandard());
+        var definition = new ShopOfferDefinition(
+            Id("malformed_pricing_offer"),
+            ShopContentKind.Item,
+            Medicine,
+            new PolicyShopPriceDefinition(
+                policyId,
+                Parameters(("purchasePrice", 100))),
+            new UnlimitedShopStockDefinition());
+
+        RuntimeShopOfferResolutionResult result = resolver.Resolve(
+            TestShop,
+            definition,
+            ItemCatalog(),
+            ItemCatalog());
+
+        Assert.False(result.IsSuccess);
+        RuntimeShopOfferResolutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            RuntimeShopOfferResolutionCode.InvalidPricePolicyConfiguration,
+            diagnostic.Code);
+        Assert.Equal(
+            ShopPricingPolicyDiagnosticCode.PolicyFactoryFailure,
+            diagnostic.PricingDiagnostic?.Code);
     }
 
     public static TheoryData<object?> InvalidPolicyPurchasePrices =>
@@ -573,6 +632,50 @@ public sealed class ShopPricingPolicyTests
 
         public ShopPricingPolicyBindingResult Create(IReadOnlyDictionary<string, object?> parameters) =>
             new(null);
+    }
+
+    public enum MalformedPricingBindingShape
+    {
+        NullDiagnostic,
+        UndefinedDiagnosticCode,
+        BlankDiagnosticMessage,
+        PolicyAndDiagnostic,
+        NeitherPolicyNorDiagnostic,
+        NullResult
+    }
+
+    private sealed class MalformedPricingBindingFactory(
+        ContentId policyId,
+        MalformedPricingBindingShape shape) : IShopPricingPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public ShopPricingPolicyBindingResult Create(
+            IReadOnlyDictionary<string, object?> parameters) =>
+            shape switch
+            {
+                MalformedPricingBindingShape.NullDiagnostic => new(null, [null!]),
+                MalformedPricingBindingShape.UndefinedDiagnosticCode => new(
+                    null,
+                    [new ShopPricingPolicyDiagnostic(
+                        (ShopPricingPolicyDiagnosticCode)int.MaxValue,
+                        "Undefined code.")]),
+                MalformedPricingBindingShape.BlankDiagnosticMessage => new(
+                    null,
+                    [new ShopPricingPolicyDiagnostic(
+                        ShopPricingPolicyDiagnosticCode.InvalidParameterValue,
+                        " ")]),
+                MalformedPricingBindingShape.PolicyAndDiagnostic => new(
+                    new BoundShopPricingPolicy(
+                        PolicyId,
+                        new FixedPricingPolicy(1, 1)),
+                    [new ShopPricingPolicyDiagnostic(
+                        ShopPricingPolicyDiagnosticCode.InvalidParameterValue,
+                        "Contradictory diagnostic.")]),
+                MalformedPricingBindingShape.NeitherPolicyNorDiagnostic => new(null),
+                MalformedPricingBindingShape.NullResult => null!,
+                _ => throw new ArgumentOutOfRangeException(nameof(shape), shape, null)
+            };
     }
 
     private sealed class ThrowingPricingPolicy : IShopPricingPolicy

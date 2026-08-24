@@ -413,6 +413,39 @@ public sealed class ShopStockPolicyTests
                 [new DuplicateStandardStockPolicyFactory()]));
     }
 
+    [Theory]
+    [InlineData(MalformedStockBindingShape.NullDiagnostic)]
+    [InlineData(MalformedStockBindingShape.UndefinedDiagnosticCode)]
+    [InlineData(MalformedStockBindingShape.BlankDiagnosticMessage)]
+    [InlineData(MalformedStockBindingShape.PolicyAndDiagnostic)]
+    [InlineData(MalformedStockBindingShape.NeitherPolicyNorDiagnostic)]
+    [InlineData(MalformedStockBindingShape.NullResult)]
+    public void PolicyFactoryRegistry_NormalizesMalformedBindingResults(
+        MalformedStockBindingShape shape)
+    {
+        ContentId policyId = Id($"malformed_stock_{(int)shape}");
+        ShopStockPolicyFactoryRegistry registry = ShopStockPolicyFactoryRegistry.CreateStandard(
+            [new MalformedStockBindingFactory(policyId, shape)]);
+
+        ShopStockPolicyBindingResult result = registry.Bind(policyId, EmptyParameters());
+
+        Assert.False(result.IsSuccess);
+        ShopStockPolicyDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ShopStockPolicyDiagnosticCode.PolicyFactoryFailure, diagnostic.Code);
+        Assert.Equal(policyId, diagnostic.PolicyId);
+    }
+
+    [Fact]
+    public void PolicyFactoryRegistry_PropagatesCancellation()
+    {
+        ContentId policyId = Id("canceling_stock_factory");
+        ShopStockPolicyFactoryRegistry registry = ShopStockPolicyFactoryRegistry.CreateStandard(
+            [new CancelingStockPolicyFactory(policyId)]);
+
+        Assert.Throws<OperationCanceledException>(() =>
+            registry.Bind(policyId, EmptyParameters()));
+    }
+
     [Fact]
     public void OfferResolver_BindsFixedAndExplicitStockPoliciesWithoutFallback()
     {
@@ -458,6 +491,37 @@ public sealed class ShopStockPolicyTests
         Assert.Equal(
             RuntimeShopOfferResolutionCode.UnsupportedStockPolicy,
             Assert.Single(unsupported.Diagnostics).Code);
+    }
+
+    [Fact]
+    public void OfferResolver_ReturnsTypedDiagnosticForMalformedStockFactoryResult()
+    {
+        ContentId policyId = Id("malformed_offer_stock");
+        GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
+        var resolver = Resolver(new MalformedStockBindingFactory(
+            policyId,
+            MalformedStockBindingShape.NullDiagnostic));
+        var definition = new ShopOfferDefinition(
+            Id("malformed_stock_offer"),
+            ShopContentKind.Item,
+            Medicine,
+            new FixedShopPriceDefinition(10),
+            new PolicyShopStockDefinition(policyId, 1));
+
+        RuntimeShopOfferResolutionResult result = resolver.Resolve(
+            ShopA,
+            definition,
+            catalog,
+            catalog);
+
+        Assert.False(result.IsSuccess);
+        RuntimeShopOfferResolutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            RuntimeShopOfferResolutionCode.InvalidStockPolicyConfiguration,
+            diagnostic.Code);
+        Assert.Equal(
+            ShopStockPolicyDiagnosticCode.PolicyFactoryFailure,
+            diagnostic.StockDiagnostic?.Code);
     }
 
     [Fact]
@@ -631,6 +695,58 @@ public sealed class ShopStockPolicyTests
         public ShopStockPolicyBindingResult Create(
             IReadOnlyDictionary<string, object?> parameters) =>
             new(new BoundShopStockPolicy(PolicyId, new StandardShopStockPolicy()));
+    }
+
+    public enum MalformedStockBindingShape
+    {
+        NullDiagnostic,
+        UndefinedDiagnosticCode,
+        BlankDiagnosticMessage,
+        PolicyAndDiagnostic,
+        NeitherPolicyNorDiagnostic,
+        NullResult
+    }
+
+    private sealed class MalformedStockBindingFactory(
+        ContentId policyId,
+        MalformedStockBindingShape shape) : IShopStockPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public ShopStockPolicyBindingResult Create(
+            IReadOnlyDictionary<string, object?> parameters) =>
+            shape switch
+            {
+                MalformedStockBindingShape.NullDiagnostic => new(null, [null!]),
+                MalformedStockBindingShape.UndefinedDiagnosticCode => new(
+                    null,
+                    [new ShopStockPolicyDiagnostic(
+                        (ShopStockPolicyDiagnosticCode)int.MaxValue,
+                        "Undefined code.")]),
+                MalformedStockBindingShape.BlankDiagnosticMessage => new(
+                    null,
+                    [new ShopStockPolicyDiagnostic(
+                        ShopStockPolicyDiagnosticCode.InvalidParameterValue,
+                        " ")]),
+                MalformedStockBindingShape.PolicyAndDiagnostic => new(
+                    new BoundShopStockPolicy(PolicyId, new StandardShopStockPolicy()),
+                    [new ShopStockPolicyDiagnostic(
+                        ShopStockPolicyDiagnosticCode.InvalidParameterValue,
+                        "Contradictory diagnostic.")]),
+                MalformedStockBindingShape.NeitherPolicyNorDiagnostic => new(null),
+                MalformedStockBindingShape.NullResult => null!,
+                _ => throw new ArgumentOutOfRangeException(nameof(shape), shape, null)
+            };
+    }
+
+    private sealed class CancelingStockPolicyFactory(ContentId policyId)
+        : IShopStockPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public ShopStockPolicyBindingResult Create(
+            IReadOnlyDictionary<string, object?> parameters) =>
+            throw new OperationCanceledException("Stock factory canceled.");
     }
 
     private sealed class ThrowingStockPolicy : IShopStockPolicy

@@ -237,6 +237,13 @@ Its construction and members are not public mutation boundaries. Invalid
 content kind, missing definitions, incompatible slots, malformed pricing, or
 unsupported stock policy returns typed diagnostics without a fallback.
 
+Pricing and stock binding results are immutable either/or values: exactly one
+bound policy with no diagnostics, or no policy with one-or-more defined,
+nonblank diagnostics. Their registries preserve cancellation and normalize a
+null result, malformed result shape, or other factory exception into the
+existing typed `PolicyFactoryFailure` diagnostic before offer resolution can
+inspect it.
+
 Tracked stock identity is `RuntimeShopOfferIdentity(qualifiedShopId,
 localOfferId)`. Content ID and menu index are not durable stock keys.
 `RuntimeShopStockSnapshot.CreateInitial` creates one entry for each tracked

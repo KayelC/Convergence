@@ -71,6 +71,13 @@ Authored policy IDs select those factories. Equipment ownership,
 equipment-granted skill behavior, and currency identity are fixed data-model
 rules, not policy extension points.
 
+Pricing, stock, and recovery factories must return exactly one bound policy or
+one-or-more diagnostics. Their binding-result constructors reject null
+diagnostics, undefined diagnostic codes, blank messages, contradictory
+policy-plus-diagnostic results, and empty results. Registries translate those
+malformed non-cancellation factory results into typed `PolicyFactoryFailure`
+diagnostics; cancellation continues to propagate.
+
 ## Use One Slot Layout Everywhere
 
 The standard ruleset bundle uses `StandardEquipmentSlotLayoutPolicy`. A game

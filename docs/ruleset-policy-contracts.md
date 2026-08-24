@@ -404,6 +404,13 @@ replenishment. Policies are deterministic, side-effect-free candidate
 calculators because inventory, currency, and stock commit only after every
 transition accepts.
 
+Pricing and stock factories return validated either/or binding results, using
+the same contract as recovery: one policy and no diagnostics, or no policy and
+one-or-more valid diagnostics. Null diagnostics, undefined codes, blank
+messages, contradictory results, empty results, null factory results, and
+non-cancellation factory exceptions become typed `PolicyFactoryFailure`
+diagnostics. `OperationCanceledException` is never normalized.
+
 ## Fixed Growth Policy
 
 `standard_growth` currently accepts no parameters and rejects unknown ones.
