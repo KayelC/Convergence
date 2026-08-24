@@ -36,8 +36,10 @@ The
 passed the complete release gate for its reviewed revision. The later
 [post-correction independent audit](../reviews/inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
 found one bounded malformed custom-economy-bundle path and two documentation
-contradictions. The capability returns to `partial` while O7-R12 through
-O7-R15 correct and independently re-evaluate those findings.
+contradictions. O7-R12 now rejects incomplete bundles and contains malformed
+factories as typed binding failure, while O7-R13 reconciles the three stale
+review-state callouts. The capability remains `partial` for the O7-R14
+developer sample correction and O7-R15 independent closure review.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).

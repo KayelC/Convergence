@@ -186,8 +186,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "A malformed custom economy ruleset factory can bind a non-null ResourceManagementRulesetServices aggregate containing a null required subservice as success.",
-        "The three audience documents retain stale pre-O7-R11 review-state callouts, and the developer Shop.Buy example omits the required equipment acquisition context."
+        "The developer Shop.Buy example omits the required equipment acquisition context and is not yet guarded against public-signature drift."
       ]
     },
     {

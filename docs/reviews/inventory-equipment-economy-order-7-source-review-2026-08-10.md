@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R11 complete; O7-R12 through O7-R15 pending
+**Implementation status:** O7-R1 through O7-R13 complete; O7-R14 and O7-R15 pending
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -41,7 +41,9 @@
 > found one bounded malformed custom-economy-bundle path and two active
 > documentation contradictions. It reopens Order 7 under O7-R12 through
 > O7-R15; the earlier closure remains historical evidence for its reviewed
-> revision rather than current closure authority.
+> revision rather than current closure authority. O7-R12 now hardens the
+> service aggregate and binding boundary; O7-R13 reconciles the three stale
+> audience callouts. The developer sample and fresh closure review remain.
 
 ## Purpose
 
@@ -661,8 +663,8 @@ behind compatibility aliases that would preserve two competing authorities.
 
 ## Closure Rule
 
-Order 7 remains open until O7-R2 through O7-R10 are implemented and O7-R11
-independently audits the result. Unit tests alone do not close it. The final
+Order 7 remains open until O7-R2 through O7-R14 are implemented and O7-R15
+independently audits the corrected result. Unit tests alone do not close it. The final
 closure record must identify intended invariants, realistic reachable paths,
 concrete consequences, reproducible evidence, and any trusted host boundaries.
 
@@ -1702,3 +1704,40 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
   Godot, coverage, documentation, trimming, forbidden-reference, and diff gates
   passed. Raw evidence is retained under the canonical post-correction closure
   bundle.
+
+### O7-R12: Harden Economy Service Bundles
+
+- **Commit:** `59039b57` (`runtime: validate economy service bundles`).
+- **Finding corrected:** a custom economy factory could clone the positional
+  `ResourceManagementRulesetServices` record with a null required member and
+  still produce a top-level successful binding.
+- **Actual destination:** the aggregate is now a sealed, get-only class whose
+  constructor validates inventory, equipment, economy, shop-offer, and shop
+  services. Recovery remains nullable by design.
+- **Typed boundary:** attempted incomplete construction inside a custom factory
+  becomes the existing `PolicyFactoryFailure`; valid custom and standard
+  services preserve identity; `OperationCanceledException` still propagates.
+- **Focused tests:** 67 `RuntimeRulesetBindingTests` passed, including 13 new
+  cases covering every required service, removal of record cloning/init state,
+  every malformed factory path, valid identity, and cancellation.
+- **Full suite:** 1,846 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 2,037 total, 0 failed, 0 skipped. Strict build,
+  formatting, and diff checks passed with 0 warnings and 0 errors.
+- **Versions:** save contract v19 and content schema v10 remain unchanged.
+
+### O7-R13: Reconcile Audience Review State
+
+- **Baseline:** `59039b57`; this checkpoint's documentation commit records the
+  final hash.
+- **Actual destination:** the mechanics, developer, and technical Order 7
+  callouts plus executable capability/documentation matrices and active
+  roadmaps.
+- **Correction:** all three audience pages now identify O7-R11 as completed,
+  identify the later independent audit as the reason Order 7 reopened, and
+  identify O7-R12 as corrected. No page describes O7-R11 as future work.
+- **Current state:** `inventory_equipment_economy` remains `partial`; all three
+  audience entries remain `existing_unreviewed`. The only concrete tracked
+  documentation defect is the unguarded, obsolete `Shop.Buy` sample reserved
+  for O7-R14, followed by O7-R15's fresh closure audit.
+- **Scope:** documentation, tests, and tracking only. No runtime, save, schema,
+  content, host, or gameplay behavior changed.

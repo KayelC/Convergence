@@ -9,9 +9,10 @@ equipment, currency, shops, and recovery.
 It does not define menu presentation, player input, scene ownership, save-file
 serialization, or game-specific currency names.
 
-> **Review state:** `reviewed` after O7-R10 traced the authority graph,
-> transaction order, restore boundary, and diagrams against current source and
-> tests. O7-R11 remains the independent capability-closure audit.
+> **Review state:** `existing_unreviewed`. O7-R11 completed against `a21a6dcb`.
+> The independent audit at `6f4b2f0c` reopened Order 7; O7-R12 hardened custom
+> economy service bundles and O7-R13 reconciled this callout. Formal closure
+> remains pending O7-R14 and O7-R15.
 
 ## Authority Map
 

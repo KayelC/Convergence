@@ -516,6 +516,7 @@ public sealed class DocumentationFoundationTests
         Assert.All(
             technicalTokens,
             token => Assert.Contains(token, technical, StringComparison.Ordinal));
+
         Assert.Contains(
             "`FaultMessage` and `FaultCode` are present together only for `Faulted`",
             publicApi,
@@ -757,13 +758,16 @@ public sealed class DocumentationFoundationTests
     {
         string mechanics = File.ReadAllText(
             RepositoryPath("docs", "mechanics", "party-inventory-and-economy.md"))
-            .ReplaceLineEndings(" ");
+            .ReplaceLineEndings(" ")
+            .Replace("> ", string.Empty, StringComparison.Ordinal);
         string developer = File.ReadAllText(
             RepositoryPath("docs", "developer-guide", "inventory-equipment-and-economy.md"))
-            .ReplaceLineEndings(" ");
+            .ReplaceLineEndings(" ")
+            .Replace("> ", string.Empty, StringComparison.Ordinal);
         string technical = File.ReadAllText(
             RepositoryPath("docs", "technical", "inventory-equipment-economy-runtime.md"))
-            .ReplaceLineEndings(" ");
+            .ReplaceLineEndings(" ")
+            .Replace("> ", string.Empty, StringComparison.Ordinal);
         string publicApi = File.ReadAllText(
             RepositoryPath("docs", "public-api-contract.md"))
             .ReplaceLineEndings(" ");
@@ -824,6 +828,24 @@ public sealed class DocumentationFoundationTests
             technicalTokens,
             token => Assert.Contains(token, technical, StringComparison.Ordinal));
 
+        string[] reviewStateTokens =
+        [
+            "**Review state:** `existing_unreviewed`.",
+            "O7-R11 completed against `a21a6dcb`.",
+            "O7-R12 hardened custom economy service bundles",
+            "Formal closure remains pending O7-R14 and O7-R15."
+        ];
+        Assert.All(reviewStateTokens, token =>
+        {
+            Assert.Contains(token, mechanics, StringComparison.Ordinal);
+            Assert.Contains(token, developer, StringComparison.Ordinal);
+            Assert.Contains(token, technical, StringComparison.Ordinal);
+        });
+        Assert.DoesNotContain("O7-R11 remains", mechanics, StringComparison.Ordinal);
+        Assert.DoesNotContain("O7-R11 remains", developer, StringComparison.Ordinal);
+        Assert.DoesNotContain("O7-R11 remains", technical, StringComparison.Ordinal);
+        Assert.DoesNotContain("until the separate O7-R11", mechanics, StringComparison.Ordinal);
+
         Assert.Contains(
             "Save contract v19 retains the canonical roster",
             publicApi,
@@ -839,13 +861,17 @@ public sealed class DocumentationFoundationTests
         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             candidate => candidate.Id == "inventory_equipment_economy");
         Assert.Equal("partial", capability.ImplementationState);
-        Assert.Equal(2, capability.KnownGaps.Count);
+        Assert.Equal(
+            ["The developer Shop.Buy example omits the required equipment acquisition context and is not yet guarded against public-signature drift."],
+            capability.KnownGaps);
 
         Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O7-R15", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("### O7-R12: Harden Economy Service Bundles", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("### O7-R13: Reconcile Audience Review State", currentAudit, StringComparison.Ordinal);
         Assert.Contains("save v19", currentAudit, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("content schema v10", currentAudit, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("returns to `partial`", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("remains `partial`", currentAudit, StringComparison.Ordinal);
     }
 
     [Fact]

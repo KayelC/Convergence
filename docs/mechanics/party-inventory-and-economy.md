@@ -1,9 +1,9 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Order 7 review state:** `reviewed` after O7-R10 reconciled this page with
-> current source, tests, developer integration, and technical state machines.
-> The capability remains `partial` until the separate O7-R11 adversarial
-> closure audit.
+> **Review state:** `existing_unreviewed`. O7-R11 completed against `a21a6dcb`.
+> The independent audit at `6f4b2f0c` reopened Order 7; O7-R12 hardened custom
+> economy service bundles and O7-R13 reconciled this callout. Formal closure
+> remains pending O7-R14 and O7-R15.
 
 ## What This System Means To A Player
 

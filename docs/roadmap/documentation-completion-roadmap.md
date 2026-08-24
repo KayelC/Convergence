@@ -671,10 +671,11 @@ realistic reachable defect or documentation contradiction, and passed the
 complete release gate for that revision. The later
 [post-correction independent audit](../reviews/inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
 found stale O7-R11-future callouts in all three audience pages and a developer
-`Shop.Buy` example that omits the required equipment-acquisition context. Those
-three entries return to `existing_unreviewed` while O7-R12 through O7-R15
-harden the custom economy bundle, reconcile the pages, guard the sample, and
-perform a fresh closure gate. The executable documentation matrix now records
+`Shop.Buy` example that omits the required equipment-acquisition context.
+O7-R12 now hardens the custom economy bundle and O7-R13 reconciles the three
+stale callouts. All three entries remain `existing_unreviewed` while O7-R14
+guards the corrected sample and O7-R15 performs a fresh closure gate. The
+executable documentation matrix now records
 30 `reviewed`, 25 `existing_unreviewed`, 13 `missing`, and 7 `not_applicable`
 entries.
 

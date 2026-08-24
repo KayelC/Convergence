@@ -46,8 +46,11 @@ passed the complete release gate for its reviewed revision. A later
 [post-correction independent audit](../reviews/inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
 found one bounded false-success path for malformed custom economy service
 bundles, stale review-state callouts in all three audience pages, and an
-out-of-date `Shop.Buy` example. O7-R12 through O7-R15 now govern those
-corrections and re-evaluation. The
+out-of-date `Shop.Buy` example. O7-R12 now rejects incomplete economy service
+bundles at construction and contains malformed factories as typed binding
+failure; O7-R13 reconciles all three review-state callouts. The capability
+remains `partial` for the O7-R14 executable sample correction and O7-R15 fresh
+closure review. The
 owner-approved
 [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 governs the direct data corrections, genuine policy seams, three-audience

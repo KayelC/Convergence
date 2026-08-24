@@ -6,7 +6,7 @@
 
 **Capability:** `inventory_equipment_economy`
 
-**Verdict:** **reopened; one bounded runtime robustness defect and two documentation defects remain**
+**Verdict:** **reopened; O7-R12 and O7-R13 are complete, while the developer sample correction and fresh closure review remain**
 
 ## Review Method
 
@@ -36,6 +36,8 @@ alternative product designs are not reported as vulnerabilities.
 ## Findings
 
 ### M1. A malformed custom economy factory can bind an incomplete service bundle as success
+
+**Correction status:** corrected by O7-R12 in `59039b57`.
 
 **Classification:** medium robustness defect at a public host-extension
 boundary; not a player-input security vulnerability.
@@ -92,6 +94,9 @@ Required regressions:
 - `OperationCanceledException` still propagates.
 
 ### L1. The three audience documents still describe O7-R11 as future work
+
+**Correction status:** corrected by O7-R13. The pages remain
+`existing_unreviewed` until O7-R15 rechecks their complete authority.
 
 **Intended invariant:** active audience documents must report the same review
 state as the executable capability and product roadmaps.
@@ -198,12 +203,12 @@ comparison.
 
 ## Correction Roadmap
 
-| Checkpoint | Work | Completion gate |
-|---|---|---|
-| O7-R12 | Harden `ResourceManagementRulesetServices` and contain malformed custom economy bundles. | Focused ruleset tests prove every required service, typed failure, valid custom/standard binding, and cancellation. |
-| O7-R13 | Reconcile the mechanics, developer, and technical review-state callouts. | All three pages identify the same current reviewed revision and no stale O7-R11-future wording remains. |
-| O7-R14 | Correct and guard the `Shop.Buy` developer example. | The example carries acquisition context, distinguishes item/equipment calls, and a documentation contract test pins the public signature. |
-| O7-R15 | Perform a fresh source/document re-evaluation and full release gate. | No unresolved realistic reachable defect or documentation contradiction; capability and three audience entries may return to `complete`/`reviewed`. |
+| Checkpoint | Status | Work | Completion gate |
+|---|---|---|---|
+| O7-R12 | Complete (`59039b57`) | Harden `ResourceManagementRulesetServices` and contain malformed custom economy bundles. | Focused ruleset tests prove every required service, typed failure, valid custom/standard binding, and cancellation. |
+| O7-R13 | Complete | Reconcile the mechanics, developer, and technical review-state callouts. | All three pages identify the same current correction state and no stale O7-R11-future wording remains. |
+| O7-R14 | Pending | Correct and guard the `Shop.Buy` developer example. | The example carries acquisition context, distinguishes item/equipment calls, and a documentation contract test pins the public signature. |
+| O7-R15 | Pending | Perform a fresh source/document re-evaluation and full release gate. | No unresolved realistic reachable defect or documentation contradiction; capability and three audience entries may return to `complete`/`reviewed`. |
 
 Each checkpoint is an isolated commit. Runtime save contract v19 and content
 schema v10 need not change: M1 hardens a public construction/binding boundary,
@@ -212,11 +217,51 @@ and L1/L2 are documentation corrections.
 ## Closure Verdict
 
 Order 7's owner-approved mechanics are substantially implemented and its
-standard Framework, DemoHost, and Godot paths are healthy. The current source
-does not justify formal closure, however, because a supported custom economy
-factory can still produce a false-success service bundle and the active
-documentation contains two concrete contradictions.
+standard Framework, DemoHost, and Godot paths are healthy. O7-R12 has removed
+the false-success custom economy-bundle path, and O7-R13 has reconciled the
+three stale review-state callouts. Formal closure is still premature because
+the developer purchase example remains incompatible with the public API and a
+fresh source/document closure review has not yet been performed.
 
-`inventory_equipment_economy` returns to `partial`. Its mechanics, developer,
-and technical documentation entries return to `existing_unreviewed` until
-O7-R12 through O7-R15 are completed and independently rechecked.
+`inventory_equipment_economy` remains `partial`. Its mechanics, developer, and
+technical documentation entries remain `existing_unreviewed` until O7-R14 and
+O7-R15 are completed and independently rechecked.
+
+## Correction Completion Record
+
+### O7-R12: Harden Economy Service Bundles
+
+- **Commit:** `59039b57` (`runtime: validate economy service bundles`).
+- **Runtime correction:** `ResourceManagementRulesetServices` is now a sealed,
+  get-only aggregate. Its constructor rejects a missing inventory, equipment,
+  economy, shop-offer, or shop service; recovery remains intentionally
+  optional.
+- **Binding correction:** a custom economy factory that attempts any incomplete
+  construction now throws inside the factory invocation and is contained as
+  one `RulesetBindingDiagnosticCode.PolicyFactoryFailure`. Cancellation remains
+  exempt from that catch and propagates unchanged.
+- **API correction:** record cloning, init setters, deconstruction, and
+  value-equality members were removed from the pre-release API baseline. The
+  validated constructor and six get-only properties are the supported shape.
+- **Evidence:** 67 focused `RuntimeRulesetBindingTests` passed, including every
+  required member, non-record/get-only shape, typed malformed-factory failure,
+  valid custom identity, standard binding, and economy cancellation. The full
+  suite passed 1,846 Framework + 184 DemoHost + 7 ContentValidator tests:
+  2,037 total, 0 failed, 0 skipped. Strict Release build, formatting, and diff
+  checks passed with 0 warnings and 0 errors.
+- **Versions:** save contract v19 and content schema v10 are unchanged.
+
+### O7-R13: Reconcile Audience Review State
+
+- **Baseline:** `59039b57`; this checkpoint's documentation commit records the
+  final hash.
+- **Audience correction:** the mechanics, developer, and technical pages now
+  agree that O7-R11 completed against `a21a6dcb`, the independent audit at
+  `6f4b2f0c` reopened the capability, O7-R12 corrected its runtime finding, and
+  O7-R14/O7-R15 remain.
+- **Tracking correction:** the executable capability matrix removes the fixed
+  runtime defect and stale-callout defect, retaining only the developer sample
+  gap. All three documentation entries remain `existing_unreviewed` pending
+  the sample correction and fresh closure audit.
+- **Scope:** no runtime, save, schema, content, host, or gameplay behavior
+  changes in O7-R13.
