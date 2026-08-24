@@ -1,0 +1,13 @@
+  Convergence.Framework -> C:\Users\kayel\Documents\GitHub\Convergence\src\Convergence.Framework\bin\Release\net8.0\Convergence.Framework.dll
+  Convergence.GodotHost -> C:\Users\kayel\Documents\GitHub\Convergence\samples\Convergence.GodotHost\.godot\mono\temp\bin\Release\Convergence.GodotHost.dll
+  Convergence.ContentValidator -> C:\Users\kayel\Documents\GitHub\Convergence\tools\Convergence.ContentValidator\bin\Release\net8.0\Convergence.ContentValidator.dll
+  Convergence.ContentValidator.Tests -> C:\Users\kayel\Documents\GitHub\Convergence\tests\Convergence.ContentValidator.Tests\bin\Release\net8.0\Convergence.ContentValidator.Tests.dll
+  Convergence.DemoHost -> C:\Users\kayel\Documents\GitHub\Convergence\samples\Convergence.DemoHost\bin\Release\net8.0\Convergence.DemoHost.dll
+  Convergence.Framework.Tests -> C:\Users\kayel\Documents\GitHub\Convergence\tests\Convergence.Framework.Tests\bin\Release\net8.0\Convergence.Framework.Tests.dll
+  Convergence.DemoHost.Tests -> C:\Users\kayel\Documents\GitHub\Convergence\tests\Convergence.DemoHost.Tests\bin\Release\net8.0\Convergence.DemoHost.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:06.63
