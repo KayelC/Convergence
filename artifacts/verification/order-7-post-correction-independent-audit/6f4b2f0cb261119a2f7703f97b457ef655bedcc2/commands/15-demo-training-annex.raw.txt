@@ -1,0 +1,64 @@
+001 [catalog] Loaded Training Annex slice.
+002 [catalog] Sample counts: 4 races, 7 entities, 10 skills, 5 items, 3 encounters.
+003 [ruleset] Bound standard Training Annex rulesets.
+004 [actor] Hydrated Echo Adept.
+005 [dungeon] TransitionApplied: convergence.training_annex_slice:training_annex_entrance -> convergence.training_annex_slice:review_hall.
+006 [encounter] Host trigger annex_scene_trigger selected Ashling Drill.
+007 [encounter] Resolved Ashling Drill: Ashling.
+008 [item] Annex Tonic: HP 60 -> 80; consume=ConsumeOne; remaining=0.
+009 [battle] ActorCreated: Created Echo Adept as echo_adept on player_team.
+010 [battle] ActorCreated: Created Ashling as annex_scene_trigger_ashling_1 on enemy_team.
+011 [battle] BattleStarted: Battle started.
+012 [battle] InitiativeRolled: Initiative order: player_team, enemy_team.
+013 [battle] RoundStarted: Round 1 started.
+014 [battle] PhaseStarted: Team player_team started a phase using action_token with 1 action(s).
+015 [battle] TurnStarted: Echo Adept's turn started.
+016 [battle] CommandSelected: echo_adept selected Frost Tip.
+017 [battle] ResourceChanged: Resource sp changed by -1.
+018 [battle] EffectResolved: Effect 0 resolved as Success (Weakness).
+019 [battle] ResourceChanged: Resource hp changed by -30.
+020 [battle] PassiveActivated: Lifecycle passive triggered: convergence.training_annex_slice:steady_breath.
+021 [battle] EffectResolved: Lifecycle passive effect resolved: convergence.training_annex_slice:steady_breath.
+022 [battle] TurnEconomyChanged: Turn economy action_token: 1 action(s) remaining.
+023 [battle] TurnEnded: Echo Adept's turn ended.
+024 [battle] TurnStarted: Echo Adept's turn started.
+025 [battle] CommandSelected: echo_adept selected Frost Tip.
+026 [battle] ResourceChanged: Resource sp changed by -1.
+027 [battle] EffectResolved: Effect 0 resolved as Success (Weakness).
+028 [battle] ResourceChanged: Resource hp changed by -30.
+029 [battle] PassiveActivated: Lifecycle passive triggered: convergence.training_annex_slice:steady_breath.
+030 [battle] EffectResolved: Lifecycle passive effect resolved: convergence.training_annex_slice:steady_breath.
+031 [battle] TurnEconomyChanged: Turn economy action_token: 0 action(s) remaining.
+032 [battle] TurnEnded: Echo Adept's turn ended.
+033 [battle] PhaseEnded: Team player_team phase ended.
+034 [battle] PhaseStarted: Team enemy_team started a phase using action_token with 1 action(s).
+035 [battle] TurnStarted: Ashling's turn started.
+036 [battle] CommandSelected: annex_scene_trigger_ashling_1 selected Ash Spark.
+037 [battle] ResourceChanged: Resource sp changed by -2.
+038 [battle] EffectResolved: Effect 0 resolved as Success (Normal).
+039 [battle] ResourceChanged: Resource hp changed by -13.
+040 [battle] TurnEconomyChanged: Turn economy action_token: 0 action(s) remaining.
+041 [battle] TurnEnded: Ashling's turn ended.
+042 [battle] PhaseEnded: Team enemy_team phase ended.
+043 [battle] RoundEnded: Round 1 ended.
+044 [battle] RoundStarted: Round 2 started.
+045 [battle] PhaseStarted: Team player_team started a phase using action_token with 1 action(s).
+046 [battle] TurnStarted: Echo Adept's turn started.
+047 [battle] CommandSelected: echo_adept selected Frost Tip.
+048 [battle] ResourceChanged: Resource sp changed by -1.
+049 [battle] EffectResolved: Effect 0 resolved as Success (Weakness).
+050 [battle] ResourceChanged: Resource hp changed by -5.
+051 [battle] PassiveActivated: Lifecycle passive triggered: convergence.training_annex_slice:steady_breath.
+052 [battle] EffectResolved: Lifecycle passive effect resolved: convergence.training_annex_slice:steady_breath.
+053 [battle] ResourceChanged: Lifecycle resource changed: hp +3.
+054 [battle] TurnEconomyChanged: Turn economy action_token: 1 action(s) remaining.
+055 [battle] StatusChanged: Defeat
+056 [battle] ActorDefeated: annex_scene_trigger_ashling_1 was defeated.
+057 [battle] TurnEnded: Echo Adept's turn ended.
+058 [battle] StatusChanged: BattleEnd
+059 [battle] StatusChanged: BattleEnd
+060 [battle] BattleEnded: Team player_team won.
+061 [battle] Outcome Victory; winner player_team.
+062 [reward] Awarded 1 EXP and 14 Credits; Annex Mentor level 5.
+063 [save] Validated Training Annex save snapshot with 0 diagnostic(s).
+064 [outcome] Training Annex runtime slice completed successfully.
