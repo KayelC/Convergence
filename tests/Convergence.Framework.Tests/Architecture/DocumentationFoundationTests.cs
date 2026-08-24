@@ -771,11 +771,29 @@ public sealed class DocumentationFoundationTests
         string publicApi = File.ReadAllText(
             RepositoryPath("docs", "public-api-contract.md"))
             .ReplaceLineEndings(" ");
+        string mechanicsIndex = File.ReadAllText(
+            RepositoryPath("docs", "mechanics", "README.md"))
+            .ReplaceLineEndings(" ");
+        string developerIndex = File.ReadAllText(
+            RepositoryPath("docs", "developer-guide", "README.md"))
+            .ReplaceLineEndings(" ");
+        string technicalIndex = File.ReadAllText(
+            RepositoryPath("docs", "technical", "README.md"))
+            .ReplaceLineEndings(" ");
+        string gameplayOverview = File.ReadAllText(
+            RepositoryPath("docs", "gameplay-systems.md"))
+            .ReplaceLineEndings(" ");
         string currentAudit = File.ReadAllText(
             RepositoryPath(
                 "docs",
                 "reviews",
                 "inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md"))
+            .ReplaceLineEndings(" ");
+        string closureReview = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md"))
             .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
@@ -830,11 +848,11 @@ public sealed class DocumentationFoundationTests
 
         string[] reviewStateTokens =
         [
-            "**Review state:** `existing_unreviewed`.",
-            "O7-R11 completed against `a21a6dcb`.",
-            "O7-R12 hardened custom economy service bundles",
-            "O7-R14 corrected and guards the developer purchase sample.",
-            "Formal closure remains pending O7-R15."
+            "**Review state:** `reviewed`.",
+            "O7-R15 independently re-read the corrected",
+            "at `77a6b9e4`.",
+            "final closure review",
+            "no unresolved realistic reachable defect"
         ];
         Assert.All(reviewStateTokens, token =>
         {
@@ -847,6 +865,21 @@ public sealed class DocumentationFoundationTests
         Assert.DoesNotContain("O7-R11 remains", technical, StringComparison.Ordinal);
         Assert.DoesNotContain("until the separate O7-R11", mechanics, StringComparison.Ordinal);
 
+        const string closureReviewLink =
+            "inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md";
+        string[] currentSummaryDocuments =
+        [
+            mechanicsIndex,
+            developerIndex,
+            technicalIndex,
+            gameplayOverview
+        ];
+        Assert.All(currentSummaryDocuments, document =>
+        {
+            Assert.Contains(closureReviewLink, document, StringComparison.Ordinal);
+            Assert.DoesNotContain("O7-R11 remains", document, StringComparison.Ordinal);
+        });
+
         Assert.Contains(
             "Save contract v19 retains the canonical roster",
             publicApi,
@@ -855,25 +888,37 @@ public sealed class DocumentationFoundationTests
 
         DocumentationCapability documentation = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "inventory_equipment_economy");
-        Assert.Equal("existing_unreviewed", documentation.Mechanics.State);
-        Assert.Equal("existing_unreviewed", documentation.DeveloperGuide.State);
-        Assert.Equal("existing_unreviewed", documentation.Technical.State);
+        Assert.Equal("reviewed", documentation.Mechanics.State);
+        Assert.Equal("reviewed", documentation.DeveloperGuide.State);
+        Assert.Equal("reviewed", documentation.Technical.State);
 
         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             candidate => candidate.Id == "inventory_equipment_economy");
-        Assert.Equal("partial", capability.ImplementationState);
-        Assert.Equal(
-            ["The corrected Order 7 source and audience documents await the fresh O7-R15 closure audit and complete release gate."],
-            capability.KnownGaps);
+        Assert.Equal("complete", capability.ImplementationState);
+        Assert.Empty(capability.KnownGaps);
 
         Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O7-R15", currentAudit, StringComparison.Ordinal);
         Assert.Contains("### O7-R12: Harden Economy Service Bundles", currentAudit, StringComparison.Ordinal);
         Assert.Contains("### O7-R13: Reconcile Audience Review State", currentAudit, StringComparison.Ordinal);
         Assert.Contains("### O7-R14: Correct And Guard The Shop Purchase Sample", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("### O7-R15: Fresh Source, Documentation, And Release Closure", currentAudit, StringComparison.Ordinal);
         Assert.Contains("save v19", currentAudit, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("content schema v10", currentAudit, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("remains `partial`", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("returns to `complete`", currentAudit, StringComparison.Ordinal);
+
+        string[] closureTokens =
+        [
+            "**Reviewed implementation:** `77a6b9e4`",
+            "**Verdict:** **complete; no unresolved realistic reachable defect found**",
+            "No unresolved realistic reachable runtime defect was found.",
+            "`RuntimeInventorySnapshot` is the only owner",
+            "There is no second root equipment authority.",
+            "Order 7 is formally complete."
+        ];
+        Assert.All(
+            closureTokens,
+            token => Assert.Contains(token, closureReview, StringComparison.Ordinal));
     }
 
     [Fact]

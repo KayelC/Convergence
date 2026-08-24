@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R14 complete; O7-R15 pending
+**Implementation status:** O7-R1 through O7-R15 complete
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -44,7 +44,10 @@
 > revision rather than current closure authority. O7-R12 now hardens the
 > service aggregate and binding boundary; O7-R13 reconciles the three stale
 > audience callouts; O7-R14 corrects and mechanically guards the developer
-> purchase sample. The fresh closure review remains.
+> purchase sample. The
+> [O7-R15 final closure review](inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+> re-read the corrected source and audience documents, completed the release
+> gate, and closes Order 7 without another unresolved reachable finding.
 
 ## Purpose
 
@@ -1765,3 +1768,27 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
   rechecks current source and documents.
 - **Scope:** documentation, tests, and tracking only. Runtime save v19, content
   schema v10, content, host behavior, and gameplay rules are unchanged.
+
+### O7-R15: Fresh Source, Documentation, And Release Closure
+
+- **Reviewed implementation:** `77a6b9e4`; reviewed correction range
+  `a184282e..77a6b9e4`.
+- **Actual destination:** the
+  [O7-R15 final closure review](inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+  traces current Framework source, exported API, save/restore, DemoHost, Godot,
+  active content, tests, and all three audience documents.
+- **Correction recheck:** O7-R12's validated economy bundle, O7-R13's audience
+  state, and O7-R14's eight-argument `Shop.Buy` integration all hold in current
+  source. Stale historical Order 7 summaries in the active documentation
+  coverage reference, audience indexes, and gameplay overview were corrected
+  during reconciliation; no runtime contract changed.
+- **Result:** no unresolved realistic reachable Order 7 defect or active
+  documentation contradiction remains. `inventory_equipment_economy` returns
+  to `complete`; mechanics, developer, and technical entries return to
+  `reviewed`.
+- **Versions:** runtime save contract v19 and content schema v10 remain current.
+- **Verification:** 265 canonical focused Framework tests and the full
+  2,038-test suite passed with 0 failed and 0 skipped; strict builds,
+  formatting, content, DemoHost, Godot, coverage, documentation,
+  forbidden-reference, trimming, and diff gates passed. Raw evidence is
+  retained under the canonical O7-R15 verification bundle.

@@ -179,13 +179,14 @@ rewritten after catalog-backed resolution.
 The owner-approved
 [Order 7 roadmap](reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 defines the direct authority corrections and narrowly justified policy seams;
-O7-R10's reviewed
+the R15-reviewed
 [player mechanics](mechanics/party-inventory-and-economy.md),
 [developer integration](developer-guide/inventory-equipment-and-economy.md),
 and [technical authority](technical/inventory-equipment-economy-runtime.md)
 pages provide the detailed contracts. The
-[post-correction closure review](reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
-is the independent source, documentation, and release-gate closure evidence.
+[O7-R15 final closure review](reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+is the current independent source, documentation, and release-gate closure
+evidence.
 
 ## Navigation, Traversal, And Encounter Preparation
 

@@ -59,8 +59,9 @@ independently traces the corrected implementation. This page is `reviewed`,
 and Order 6 is formally complete.
 Order 7 now has a reviewed player-facing page for exact-copy equipment
 ownership, equipped-only grants, typed currencies, policy-shaped prices and
-stock, atomic transactions, recovery, and save v19. O7-R11 remains the separate
-capability-closure audit.
+stock, atomic transactions, recovery, and save v19. The
+[O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+is the current capability-closure authority.
 
 ## Rule Index
 

@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 30 reviewed,
-25 existing_unreviewed, 13 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 33 reviewed,
+22 existing_unreviewed, 13 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -37,13 +37,16 @@ remain unreviewed until they complete the same process.
 Order 7 now documents inventory-owned equipment instances, authored slot
 layouts, one live equipment profile, typed currencies, resolved pricing,
 policy-owned stock, atomic shops, recovery, and save v19 across player,
-developer, and maintainer audiences. O7-R10 promoted those three documents to
-`reviewed`. O7-R11 then corrected the remaining live-equipment, acquisition,
-extension-boundary, and save-guidance findings. The
-[post-correction closure review](../reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
-found no unresolved realistic reachable defect or documentation contradiction,
-so the capability is `complete` and all three audience entries remain
-`reviewed`.
+developer, and maintainer audiences. O7-R10 first promoted those three
+documents to `reviewed`; O7-R11 then corrected live-equipment, acquisition,
+extension-boundary, and save-guidance findings. A later independent audit
+reopened the pages after finding an incomplete custom economy bundle, stale
+review-state callouts, and an obsolete `Shop.Buy` example. O7-R12 through
+O7-R14 corrected and guarded those paths. The
+[O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+independently re-read the resulting source and all three pages, found no
+unresolved realistic reachable defect or contradiction, and returned all three
+audience entries to `reviewed`.
 O3-R7 independently verified the source and audience documents at that
 revision. A later source-first recheck reopened the developer and technical
 entries while three command-boundary defects were corrected. O3-R8 through

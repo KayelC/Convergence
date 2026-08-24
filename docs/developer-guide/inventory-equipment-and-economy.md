@@ -7,11 +7,10 @@ adopts their immutable results. It covers equipment instance IDs, authored
 slots, live equipment profiles, currency ledgers, resolved shop offers,
 policy-owned stock, recovery, persistence, and Godot integration.
 
-> **Review state:** `existing_unreviewed`. O7-R11 completed against `a21a6dcb`.
-> The independent audit at `6f4b2f0c` reopened Order 7; O7-R12 hardened custom
-> economy service bundles, O7-R13 reconciled the audience callouts, and O7-R14
-> corrected and guards the developer purchase sample. Formal closure remains
-> pending O7-R15.
+> **Review state:** `reviewed`. O7-R15 independently re-read the corrected
+> runtime, persistence, host, test, and documentation paths at `77a6b9e4`.
+> The [final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+> found no unresolved realistic reachable defect or integration contradiction.
 
 ## Authority Split
 

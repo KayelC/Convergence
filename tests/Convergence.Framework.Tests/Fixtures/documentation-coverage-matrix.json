@@ -263,19 +263,19 @@
     {
       "id": "inventory_equipment_economy",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "O7-R12 through O7-R14 corrected the independent-audit findings; formal reviewed status waits for the fresh O7-R15 source/document closure audit."
+        "reason": "O7-R15 re-read the corrected runtime and player rules, found no unresolved reachable contradiction, and completed the Order 7 release gate."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
-        "reason": "O7-R14 corrected and mechanically guards the eight-argument Shop.Buy example; the page remains pending the fresh O7-R15 source/document closure audit."
+        "reason": "O7-R15 rechecked the corrected eight-argument Shop.Buy integration, host adoption rules, and current public contracts."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
-        "reason": "O7-R12 through O7-R14 corrected the independent-audit findings; its authority trace remains pending the fresh O7-R15 source/document closure audit."
+        "reason": "O7-R15 traced the corrected equipment, currency, shop, recovery, save, and restore authority graph from current source and tests."
       }
     },
     {

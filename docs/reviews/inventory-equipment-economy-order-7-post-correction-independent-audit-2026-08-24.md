@@ -6,7 +6,7 @@
 
 **Capability:** `inventory_equipment_economy`
 
-**Verdict:** **reopened; O7-R12 through O7-R14 are complete, while the fresh source/document closure review remains**
+**Verdict:** **corrected and closed by O7-R12 through O7-R15**
 
 ## Review Method
 
@@ -208,9 +208,9 @@ comparison.
 | Checkpoint | Status | Work | Completion gate |
 |---|---|---|---|
 | O7-R12 | Complete (`59039b57`) | Harden `ResourceManagementRulesetServices` and contain malformed custom economy bundles. | Focused ruleset tests prove every required service, typed failure, valid custom/standard binding, and cancellation. |
-| O7-R13 | Complete | Reconcile the mechanics, developer, and technical review-state callouts. | All three pages identify the same current correction state and no stale O7-R11-future wording remains. |
-| O7-R14 | Complete | Correct and guard the `Shop.Buy` developer example. | The example carries acquisition context, distinguishes item/equipment calls, and a documentation contract test pins the public signature. |
-| O7-R15 | Pending | Perform a fresh source/document re-evaluation and full release gate. | No unresolved realistic reachable defect or documentation contradiction; capability and three audience entries may return to `complete`/`reviewed`. |
+| O7-R13 | Complete (`6e9ae62f`) | Reconcile the mechanics, developer, and technical review-state callouts. | All three pages identify the same current correction state and no stale O7-R11-future wording remains. |
+| O7-R14 | Complete (`77a6b9e4`) | Correct and guard the `Shop.Buy` developer example. | The example carries acquisition context, distinguishes item/equipment calls, and a documentation contract test pins the public signature. |
+| O7-R15 | Complete | Perform a fresh source/document re-evaluation and full release gate. | No unresolved realistic reachable defect or documentation contradiction; capability and three audience entries return to `complete`/`reviewed`. |
 
 Each checkpoint is an isolated commit. Runtime save contract v19 and content
 schema v10 need not change: M1 hardens a public construction/binding boundary,
@@ -218,16 +218,18 @@ and L1/L2 are documentation corrections.
 
 ## Closure Verdict
 
-Order 7's owner-approved mechanics are substantially implemented and its
-standard Framework, DemoHost, and Godot paths are healthy. O7-R12 has removed
-the false-success custom economy-bundle path, and O7-R13 has reconciled the
-three stale review-state callouts. O7-R14 has also corrected and mechanically
-guarded the developer purchase example. Formal closure is still premature only
-because a fresh source/document closure review has not yet been performed.
+Order 7's owner-approved mechanics are implemented and its standard Framework,
+DemoHost, and Godot paths are healthy. O7-R12 removed the false-success custom
+economy-bundle path, O7-R13 reconciled the three stale review-state callouts,
+and O7-R14 corrected and mechanically guarded the developer purchase example.
+The
+[O7-R15 final closure review](inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+then independently re-read the corrected implementation and audience documents
+and completed the release gate without finding another realistic reachable
+defect or contradiction.
 
-`inventory_equipment_economy` remains `partial`. Its mechanics, developer, and
-technical documentation entries remain `existing_unreviewed` until O7-R15 is
-completed and independently rechecks the corrected implementation.
+`inventory_equipment_economy` returns to `complete`. Its mechanics, developer,
+and technical documentation entries return to `reviewed`.
 
 ## Correction Completion Record
 
@@ -288,3 +290,20 @@ completed and independently rechecks the corrected implementation.
   review rechecks the corrected source/document set.
 - **Scope:** no runtime, save, schema, content, host, or gameplay behavior
   changes in O7-R14.
+
+### O7-R15: Fresh Source, Documentation, And Release Closure
+
+- **Reviewed implementation:** `77a6b9e4`; correction range
+  `a184282e..77a6b9e4`.
+- **Fresh review:** current resource-management source, combat consumption,
+  save validation, aggregate restoration, DemoHost, Godot, active content,
+  exported API, tests, and all three audience pages were re-read directly.
+- **Result:** no unresolved realistic reachable defect remains. Stale Order 7
+  summaries in the active documentation-coverage reference, audience indexes,
+  and gameplay overview were corrected as part of the reconciliation; they did
+  not describe runtime defects.
+- **Tracking:** the capability returns to `complete` with no known gap and all
+  three audience entries return to `reviewed`.
+- **Evidence:** 265 canonical focused Framework tests and 2,038 total solution
+  tests passed with 0 failed and 0 skipped. The complete release gate and raw
+  output are retained in the canonical O7-R15 verification bundle.
