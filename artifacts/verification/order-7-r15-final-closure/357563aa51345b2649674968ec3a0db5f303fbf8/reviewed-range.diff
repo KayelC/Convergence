@@ -1,0 +1,1392 @@
+diff --git a/docs/developer-guide/README.md b/docs/developer-guide/README.md
+index 2d87e7a789f1c8288b66ef46a2f7551703d1d981..e6c19a2bd7862810bf56012f91538117e91355fa 100644
+--- a/docs/developer-guide/README.md
++++ b/docs/developer-guide/README.md
+@@ -93,9 +93,11 @@ O6-R46 reconciles the composition guidance and interface name. The
+ [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+ independently traces the corrected host boundary. This guide is `reviewed`, and
+ Order 6 is formally complete.
+-The Order 7 inventory/economy guide is `reviewed` after O7-R10 traced its
++The Order 7 inventory/economy guide is `reviewed` after O7-R15 rechecked its
+ composition examples and host-adoption rules against current APIs and tests.
+-O7-R11 remains the separate capability-closure audit.
++The
++[O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++is the current capability-closure authority.
+ Other subsystem guides remain tracked as
+ `existing_unreviewed` or `missing` in
+ the [documentation coverage matrix](../reference/documentation-coverage.md).
+diff --git a/docs/developer-guide/inventory-equipment-and-economy.md b/docs/developer-guide/inventory-equipment-and-economy.md
+index 26d34096d9bfa7fe39e48c10e5d5ff70990ce44b..b88fdb2e6aacd10e809d8417e228809c73e03a51 100644
+--- a/docs/developer-guide/inventory-equipment-and-economy.md
++++ b/docs/developer-guide/inventory-equipment-and-economy.md
+@@ -7,9 +7,10 @@ adopts their immutable results. It covers equipment instance IDs, authored
+ slots, live equipment profiles, currency ledgers, resolved shop offers,
+ policy-owned stock, recovery, persistence, and Godot integration.
+ 
+-> **Review state:** `reviewed` after O7-R10 reconciled the mechanics,
+-> integration, and technical authorities with current source and tests. O7-R11
+-> remains the independent capability-closure audit.
++> **Review state:** `reviewed`. O7-R15 independently re-read the corrected
++> runtime, persistence, host, test, and documentation paths at `77a6b9e4`.
++> The [final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++> found no unresolved realistic reachable defect or integration contradiction.
+ 
+ ## Authority Split
+ 
+@@ -304,16 +305,46 @@ Price helpers use the same resolved pricing profile as execution:
+ ```csharp
+ int displayedPrice = resources.Shop.CalculateBuyPrice(offer, buyerLuck);
+ 
+-ShopTransactionResult purchase = resources.Shop.Buy(
+-    inventory,
+-    currencies,
+-    stock,
+-    currencyId,
+-    offer,
+-    buyerLuck,
+-    purchasedEquipmentInstanceId);
++ShopTransactionResult purchase;
++if (offer.ContentKind == ShopContentKind.Equipment)
++{
++    var equipmentAcquisition = new RuntimeEquipmentAcquisitionContext(
++        catalog,
++        liveActors.Select(actor => actor.InstanceId));
++    RuntimeInstanceId purchasedEquipmentInstanceId =
++        AllocateFreshEquipmentInstanceId();
++
++    purchase = resources.Shop.Buy(
++        inventory,
++        currencies,
++        stock,
++        currencyId,
++        offer,
++        buyerLuck,
++        purchasedEquipmentInstanceId,
++        equipmentAcquisition);
++}
++else
++{
++    purchase = resources.Shop.Buy(
++        inventory,
++        currencies,
++        stock,
++        currencyId,
++        offer,
++        buyerLuck,
++        purchasedEquipmentInstanceId: null,
++        equipmentAcquisitionContext: null);
++}
+ ```
+ 
++`liveActors` must be the complete current actor collection, not merely the
++active party, and `AllocateFreshEquipmentInstanceId()` is a host-owned globally
++fresh-ID operation. The acquisition context lets Framework validate the
++equipment definition, slot policy, and runtime-ID domain before accepting the
++purchase. Item purchases carry neither an equipment instance nor equipment
++acquisition evidence, so both optional arguments are explicitly `null`.
++
+ Adopt all three after-snapshots together:
+ 
+ ```csharp
+diff --git a/docs/gameplay-systems.md b/docs/gameplay-systems.md
+index 383fd9721d14315dd51b21a91fce1e85b675b410..2ce3536bc11a612194146ecf97a4574fbc90ad5b 100644
+--- a/docs/gameplay-systems.md
++++ b/docs/gameplay-systems.md
+@@ -179,13 +179,14 @@ rewritten after catalog-backed resolution.
+ The owner-approved
+ [Order 7 roadmap](reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+ defines the direct authority corrections and narrowly justified policy seams;
+-O7-R10's reviewed
++the R15-reviewed
+ [player mechanics](mechanics/party-inventory-and-economy.md),
+ [developer integration](developer-guide/inventory-equipment-and-economy.md),
+ and [technical authority](technical/inventory-equipment-economy-runtime.md)
+ pages provide the detailed contracts. The
+-[post-correction closure review](reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+-is the independent source, documentation, and release-gate closure evidence.
++[O7-R15 final closure review](reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++is the current independent source, documentation, and release-gate closure
++evidence.
+ 
+ ## Navigation, Traversal, And Encounter Preparation
+ 
+diff --git a/docs/mechanics/README.md b/docs/mechanics/README.md
+index 1a29c86a62fc6172c7bcd17496333f191774502d..b7d9b0e3b8a1f094bcf5670b27b926f264684f12 100644
+--- a/docs/mechanics/README.md
++++ b/docs/mechanics/README.md
+@@ -59,8 +59,9 @@ independently traces the corrected implementation. This page is `reviewed`,
+ and Order 6 is formally complete.
+ Order 7 now has a reviewed player-facing page for exact-copy equipment
+ ownership, equipped-only grants, typed currencies, policy-shaped prices and
+-stock, atomic transactions, recovery, and save v19. O7-R11 remains the separate
+-capability-closure audit.
++stock, atomic transactions, recovery, and save v19. The
++[O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++is the current capability-closure authority.
+ 
+ ## Rule Index
+ 
+diff --git a/docs/mechanics/party-inventory-and-economy.md b/docs/mechanics/party-inventory-and-economy.md
+index 2d009226df76987f251dca4f4c8edc974902f0f2..8589f229fdcef78be64ce59af30a1f8fba15b066 100644
+--- a/docs/mechanics/party-inventory-and-economy.md
++++ b/docs/mechanics/party-inventory-and-economy.md
+@@ -1,9 +1,9 @@
+ # Party, Rosters, Inventory, Equipment, And Economy
+ 
+-> **Order 7 review state:** `reviewed` after O7-R10 reconciled this page with
+-> current source, tests, developer integration, and technical state machines.
+-> The capability remains `partial` until the separate O7-R11 adversarial
+-> closure audit.
++> **Review state:** `reviewed`. O7-R15 independently re-read the corrected
++> mechanics, runtime, persistence, host, and test paths at `77a6b9e4`.
++> The [final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++> found no unresolved realistic reachable defect or player-rule contradiction.
+ 
+ ## What This System Means To A Player
+ 
+diff --git a/docs/reference/documentation-coverage.md b/docs/reference/documentation-coverage.md
+index 569e9a11858d7caa60c0e335472d037c9929fb58..529a706f4ecb7a14028e8922a8b170b33e7252fb 100644
+--- a/docs/reference/documentation-coverage.md
++++ b/docs/reference/documentation-coverage.md
+@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
+ 
+ ## Current Reading
+ 
+-The documentation matrix currently records 75 audience entries: 30 reviewed,
+-25 existing_unreviewed, 13 missing, and 7 not_applicable.
++The documentation matrix currently records 75 audience entries: 33 reviewed,
++22 existing_unreviewed, 13 missing, and 7 not_applicable.
+ 
+ The actor composition, progression, party/roster, actor-restoration, and typed
+ action/effect documentation has completed the collaborative workflow. The
+@@ -37,13 +37,16 @@ remain unreviewed until they complete the same process.
+ Order 7 now documents inventory-owned equipment instances, authored slot
+ layouts, one live equipment profile, typed currencies, resolved pricing,
+ policy-owned stock, atomic shops, recovery, and save v19 across player,
+-developer, and maintainer audiences. O7-R10 promoted those three documents to
+-`reviewed`. O7-R11 then corrected the remaining live-equipment, acquisition,
+-extension-boundary, and save-guidance findings. The
+-[post-correction closure review](../reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+-found no unresolved realistic reachable defect or documentation contradiction,
+-so the capability is `complete` and all three audience entries remain
+-`reviewed`.
++developer, and maintainer audiences. O7-R10 first promoted those three
++documents to `reviewed`; O7-R11 then corrected live-equipment, acquisition,
++extension-boundary, and save-guidance findings. A later independent audit
++reopened the pages after finding an incomplete custom economy bundle, stale
++review-state callouts, and an obsolete `Shop.Buy` example. O7-R12 through
++O7-R14 corrected and guarded those paths. The
++[O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++independently re-read the resulting source and all three pages, found no
++unresolved realistic reachable defect or contradiction, and returned all three
++audience entries to `reviewed`.
+ O3-R7 independently verified the source and audience documents at that
+ revision. A later source-first recheck reopened the developer and technical
+ entries while three command-boundary defects were corrected. O3-R8 through
+diff --git a/docs/reviews/README.md b/docs/reviews/README.md
+index 6841e12ccbe47b25839561de04de5f39a123b0a8..1c7c3b7773cede1d3ec205bcda9b6eb94ced670b 100644
+--- a/docs/reviews/README.md
++++ b/docs/reviews/README.md
+@@ -104,6 +104,7 @@ or implementation authority.
+ - [Inventory, Equipment, And Economy Order 7 Fresh Closure Review, 14 August 2026](inventory-equipment-economy-order-7-fresh-closure-review-2026-08-14.md)
+ - [Inventory, Equipment, And Economy Order 7 Post-Correction Closure Review, 24 August 2026](inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+ - [Inventory, Equipment, And Economy Order 7 Post-Correction Independent Audit, 24 August 2026](inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
++- [Inventory, Equipment, And Economy Order 7 O7-R15 Final Closure Review, 24 August 2026](inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+ - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
+ 
+ Current intended behavior belongs in confirmed mechanics and decision documents.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md b/docs/reviews/inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md
+index 8b680b3acfba09de92e7343fdd851dc423c38597..b02f796a06f5955c225779458bac1f27187c033b 100644
+--- a/docs/reviews/inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md
++++ b/docs/reviews/inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md
+@@ -6,7 +6,7 @@
+ 
+ **Capability:** `inventory_equipment_economy`
+ 
+-**Verdict:** **reopened; one bounded runtime robustness defect and two documentation defects remain**
++**Verdict:** **corrected and closed by O7-R12 through O7-R15**
+ 
+ ## Review Method
+ 
+@@ -37,6 +37,8 @@ alternative product designs are not reported as vulnerabilities.
+ 
+ ### M1. A malformed custom economy factory can bind an incomplete service bundle as success
+ 
++**Correction status:** corrected by O7-R12 in `59039b57`.
++
+ **Classification:** medium robustness defect at a public host-extension
+ boundary; not a player-input security vulnerability.
+ 
+@@ -93,6 +95,9 @@ Required regressions:
+ 
+ ### L1. The three audience documents still describe O7-R11 as future work
+ 
++**Correction status:** corrected by O7-R13. The pages remain
++`existing_unreviewed` until O7-R15 rechecks their complete authority.
++
+ **Intended invariant:** active audience documents must report the same review
+ state as the executable capability and product roadmaps.
+ 
+@@ -119,6 +124,8 @@ performed.
+ 
+ ### L2. The documented shop purchase example does not compile against the current API
+ 
++**Correction status:** corrected and mechanically guarded by O7-R14.
++
+ **Intended invariant:** developer-guide examples must use the supported public
+ contract and show every load-bearing authority required by an operation.
+ 
+@@ -198,12 +205,12 @@ comparison.
+ 
+ ## Correction Roadmap
+ 
+-| Checkpoint | Work | Completion gate |
+-|---|---|---|
+-| O7-R12 | Harden `ResourceManagementRulesetServices` and contain malformed custom economy bundles. | Focused ruleset tests prove every required service, typed failure, valid custom/standard binding, and cancellation. |
+-| O7-R13 | Reconcile the mechanics, developer, and technical review-state callouts. | All three pages identify the same current reviewed revision and no stale O7-R11-future wording remains. |
+-| O7-R14 | Correct and guard the `Shop.Buy` developer example. | The example carries acquisition context, distinguishes item/equipment calls, and a documentation contract test pins the public signature. |
+-| O7-R15 | Perform a fresh source/document re-evaluation and full release gate. | No unresolved realistic reachable defect or documentation contradiction; capability and three audience entries may return to `complete`/`reviewed`. |
++| Checkpoint | Status | Work | Completion gate |
++|---|---|---|---|
++| O7-R12 | Complete (`59039b57`) | Harden `ResourceManagementRulesetServices` and contain malformed custom economy bundles. | Focused ruleset tests prove every required service, typed failure, valid custom/standard binding, and cancellation. |
++| O7-R13 | Complete (`6e9ae62f`) | Reconcile the mechanics, developer, and technical review-state callouts. | All three pages identify the same current correction state and no stale O7-R11-future wording remains. |
++| O7-R14 | Complete (`77a6b9e4`) | Correct and guard the `Shop.Buy` developer example. | The example carries acquisition context, distinguishes item/equipment calls, and a documentation contract test pins the public signature. |
++| O7-R15 | Complete | Perform a fresh source/document re-evaluation and full release gate. | No unresolved realistic reachable defect or documentation contradiction; capability and three audience entries return to `complete`/`reviewed`. |
+ 
+ Each checkpoint is an isolated commit. Runtime save contract v19 and content
+ schema v10 need not change: M1 hardens a public construction/binding boundary,
+@@ -211,12 +218,92 @@ and L1/L2 are documentation corrections.
+ 
+ ## Closure Verdict
+ 
+-Order 7's owner-approved mechanics are substantially implemented and its
+-standard Framework, DemoHost, and Godot paths are healthy. The current source
+-does not justify formal closure, however, because a supported custom economy
+-factory can still produce a false-success service bundle and the active
+-documentation contains two concrete contradictions.
+-
+-`inventory_equipment_economy` returns to `partial`. Its mechanics, developer,
+-and technical documentation entries return to `existing_unreviewed` until
+-O7-R12 through O7-R15 are completed and independently rechecked.
++Order 7's owner-approved mechanics are implemented and its standard Framework,
++DemoHost, and Godot paths are healthy. O7-R12 removed the false-success custom
++economy-bundle path, O7-R13 reconciled the three stale review-state callouts,
++and O7-R14 corrected and mechanically guarded the developer purchase example.
++The
++[O7-R15 final closure review](inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++then independently re-read the corrected implementation and audience documents
++and completed the release gate without finding another realistic reachable
++defect or contradiction.
++
++`inventory_equipment_economy` returns to `complete`. Its mechanics, developer,
++and technical documentation entries return to `reviewed`.
++
++## Correction Completion Record
++
++### O7-R12: Harden Economy Service Bundles
++
++- **Commit:** `59039b57` (`runtime: validate economy service bundles`).
++- **Runtime correction:** `ResourceManagementRulesetServices` is now a sealed,
++  get-only aggregate. Its constructor rejects a missing inventory, equipment,
++  economy, shop-offer, or shop service; recovery remains intentionally
++  optional.
++- **Binding correction:** a custom economy factory that attempts any incomplete
++  construction now throws inside the factory invocation and is contained as
++  one `RulesetBindingDiagnosticCode.PolicyFactoryFailure`. Cancellation remains
++  exempt from that catch and propagates unchanged.
++- **API correction:** record cloning, init setters, deconstruction, and
++  value-equality members were removed from the pre-release API baseline. The
++  validated constructor and six get-only properties are the supported shape.
++- **Evidence:** 67 focused `RuntimeRulesetBindingTests` passed, including every
++  required member, non-record/get-only shape, typed malformed-factory failure,
++  valid custom identity, standard binding, and economy cancellation. The full
++  suite passed 1,846 Framework + 184 DemoHost + 7 ContentValidator tests:
++  2,037 total, 0 failed, 0 skipped. Strict Release build, formatting, and diff
++  checks passed with 0 warnings and 0 errors.
++- **Versions:** save contract v19 and content schema v10 are unchanged.
++
++### O7-R13: Reconcile Audience Review State
++
++- **Baseline:** `59039b57`; this checkpoint's documentation commit records the
++  final hash.
++- **Audience correction:** the mechanics, developer, and technical pages now
++  agree that O7-R11 completed against `a21a6dcb`, the independent audit at
++  `6f4b2f0c` reopened the capability, O7-R12 corrected its runtime finding, and
++  O7-R14/O7-R15 remain.
++- **Tracking correction:** the executable capability matrix removes the fixed
++  runtime defect and stale-callout defect, retaining only the developer sample
++  gap. All three documentation entries remain `existing_unreviewed` pending
++  the sample correction and fresh closure audit.
++- **Scope:** no runtime, save, schema, content, host, or gameplay behavior
++  changes in O7-R13.
++
++### O7-R14: Correct And Guard The Shop Purchase Sample
++
++- **Baseline:** `6e9ae62f`; this checkpoint's documentation/test commit records
++  the final hash.
++- **Sample correction:** the developer guide now shows the exact current
++  eight-argument `IShopTransactionService.Buy` contract. Equipment purchases
++  supply a host-allocated fresh instance ID plus a
++  `RuntimeEquipmentAcquisitionContext` containing the catalog repository and
++  complete live actor-ID set. Item purchases explicitly pass `null` for both
++  equipment-only arguments.
++- **Mechanical guard:** `DocumentationContractSynchronizationTests` validates
++  the sample tokens and reflects the public method to pin its single overload,
++  return type, and eight parameter names/types.
++- **Tracking:** no known implementation/documentation defect remains. The
++  executable capability matrix retains O7-R15's pending independent review and
++  complete release gate as its one process-evidence gap. It remains `partial`,
++  and the three audience entries remain `existing_unreviewed`, until that
++  review rechecks the corrected source/document set.
++- **Scope:** no runtime, save, schema, content, host, or gameplay behavior
++  changes in O7-R14.
++
++### O7-R15: Fresh Source, Documentation, And Release Closure
++
++- **Reviewed implementation:** `77a6b9e4`; correction range
++  `a184282e..77a6b9e4`.
++- **Fresh review:** current resource-management source, combat consumption,
++  save validation, aggregate restoration, DemoHost, Godot, active content,
++  exported API, tests, and all three audience pages were re-read directly.
++- **Result:** no unresolved realistic reachable defect remains. Stale Order 7
++  summaries in the active documentation-coverage reference, audience indexes,
++  and gameplay overview were corrected as part of the reconciliation; they did
++  not describe runtime defects.
++- **Tracking:** the capability returns to `complete` with no known gap and all
++  three audience entries return to `reviewed`.
++- **Evidence:** 265 canonical focused Framework tests and 2,038 total solution
++  tests passed with 0 failed and 0 skipped. The complete release gate and raw
++  output are retained in the canonical O7-R15 verification bundle.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md b/docs/reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..313a043517d5718e78c3fc92cb028c5e36064c91
+--- /dev/null
++++ b/docs/reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md
+@@ -0,0 +1,173 @@
++# Inventory, Equipment, And Economy Order 7 O7-R15 Final Closure Review
++
++**Date:** 24 August 2026  
++**Reviewed implementation:** `77a6b9e4`  
++**Reviewed correction range:** `a184282e..77a6b9e4`  
++**Capability:** `inventory_equipment_economy`  
++**Verdict:** **complete; no unresolved realistic reachable defect found**
++
++## Review Method
++
++This review started from current source. Earlier Order 7 reports supplied the
++approved O7-D1 through O7-D8 design decisions and the correction range, but
++their conclusions were not accepted as evidence. The review independently read
++the resource-management implementation, equipment composition and action
++authorization, combat inputs, save validation and aggregate restoration,
++DemoHost and Godot consumers, active content, exported API, focused tests, and
++all three audience documents.
++
++A concern qualified as a defect only when it had an intended invariant, a
++supported realistic path, a concrete consequence, and reproducible source or
++test evidence. Documented host responsibilities, impossible domain values, and
++alternative product designs were not promoted into vulnerabilities.
++
++## Findings
++
++No unresolved realistic reachable runtime defect was found.
++
++The document cross-check did find stale historical Order 7 summaries in
++`docs/reference/documentation-coverage.md`, the three audience index pages, and
++`docs/gameplay-systems.md`. They still described O7-R10 or the earlier O7-R11
++closure as current even though the executable matrix and detailed audience
++pages correctly reflected the later independent audit. This closure revision
++reconciles those summaries with O7-R12 through O7-R15. These are documentation
++state corrections, not gameplay or runtime changes.
++
++## Correction Recheck
++
++| Audit item | Current-source result |
++|---|---|
++| M1: incomplete custom economy bundle | Closed by `59039b57`. `ResourceManagementRulesetServices` is sealed and get-only; its constructor rejects missing inventory, equipment, economy, offer-resolution, or shop services. Recovery remains nullable by design. Factory misuse is contained as typed `PolicyFactoryFailure`; cancellation propagates. |
++| L1: stale audience review callouts | Closed by `6e9ae62f`. All three pages identify the completed R11 revision, the later reopening audit, and the R12-R14 corrections. This review promotes them only after rechecking their complete authority. |
++| L2: obsolete `Shop.Buy` example | Closed by `77a6b9e4`. The sample branches by offer kind, passes a fresh instance ID and complete `RuntimeEquipmentAcquisitionContext` for equipment, passes explicit null equipment arguments for items, and is reflected against the current eight-argument public signature. |
++
++## Current Authority Trace
++
++### Equipment Identity And Slots
++
++`RuntimeInventorySnapshot` is the only owner of immutable equipment instances.
++Each instance has a globally unique runtime ID and one definition ID. Actor
++equipment stores slot-to-instance references only. Constructors and live/save
++boundaries reject duplicate, missing, actor-colliding, and multiply assigned
++instance IDs before accepted mutation.
++
++Equipment slots are authored `ContentId` values. Content validation,
++acquisition, equip transitions, profile resolution, shop offer resolution, and
++save validation all call the selected `IEquipmentSlotLayoutPolicy` through the
++same fault-contained evaluator. The supplied policy owns exactly weapon, armor,
++boots, and accessory; custom layouts may deliberately differ.
++
++### One Equipment Profile And Combat Path
++
++`RuntimeEquipmentProfileResolver` derives equipped definitions, the weapon
++basic attack, granted skills/passives, Defense, Evasion, and accessory
++modifiers from the inventory plus current actor loadout. The atomic application
++service validates the complete supplied actor evidence, resolves that profile,
++composes on an execution clone, and commits one complete actor state only after
++acceptance.
++
++Granted actions remain equipped-only and never enter learned skills or consume
++move-list slots. Authorization resolves the actor's current equipment profile
++for the action tick, so unequipping removes availability without a stale grant
++cache. Defense and Evasion are additive stat inputs consumed by the existing
++`ProductionCombatRuleset` damage and hit policies. There is no equipment-only
++combat formula; absent contributions remain exact zero no-ops.
++
++### Currency, Pricing, Stock, And Shop Atomicity
++
++`RuntimeCurrencyLedgerSnapshot` owns immutable nonnegative balances by currency
++ID. Every credit, debit, shop, recovery, and Compendium transaction names its
++currency. Checked arithmetic and typed diagnostics cover invalid or duplicate
++IDs, missing currencies, negative values, insufficient funds, and overflow.
++The single-currency convenience accessor rejects empty and multi-currency
++ledgers rather than choosing silently.
++
++Only resolver-created `RuntimeShopOfferSnapshot` values carry executable offer
++identity, content, pricing, and stock authority. Pricing and stock factories
++return validated either/or bindings; malformed custom results become typed
++failure and cancellation remains cancellation. Standard pricing preserves the
++authored purchase price and applies configured resale percentage. Luck pricing
++is opt-in. Standard limited stock decrements accepted purchases and does not
++replenish resale.
++
++`ShopTransactionService` calculates pricing, stock, inventory, and named
++currency candidates from the same before-state. Any expected rejection returns
++the original inventory, ledger, and stock. An accepted result exposes all three
++after-snapshots; the host must adopt them together.
++
++### Recovery, Save, And Restore
++
++Recovery policy planning is immutable and names resources, cost, currency,
++ailment removal, and temporary cleanup. `RecoveryService` stages actor changes
++on a transaction clone, uses canonical removal authorities, and commits the
++actor only after the named-currency debit accepts. Protected-only state yields
++no useful treatment and no debit. Assessment returns hypothetical candidates;
++execution returns the committed actor plus the ledger candidate the host must
++adopt from the same accepted result.
++
++Save contract v19 contains inventory-owned equipment instances, actor loadout
++references, named currency balances, and durable shop stock. There is no second
++root equipment authority. Validation checks ownership, slot compatibility,
++cross-actor assignments, catalog references, currency construction, and stock
++completeness before restoration. Aggregate restore derives equipment profiles
++from that graph and exposes either one complete session or diagnostics, never a
++partial live session.
++
++## Host And Documentation Cross-Check
++
++DemoHost adopts accepted shop inventory, currency, and stock candidates
++together, routes equipment changes through canonical atomic application,
++adopts recovery currency only from accepted execution, and saves the live
++authorities. The Godot reference owns JSON and scene mapping while carrying the
++same v19 inventory/currency/stock state through aggregate restoration.
++
++The mechanics, developer, and technical pages agree with current source on
++exact-copy ownership, authored slots, equipped-only grants, additive
++Defense/Evasion, typed currencies, pricing, stock, shop atomicity, recovery,
++save v19, cancellation, and host adoption responsibilities. The developer
++purchase example matches the current public API and is mechanically guarded.
++
++## Trusted Host Boundaries
++
++Two responsibilities intentionally remain host-owned:
++
++- allocate runtime IDs that are globally fresh across the complete live actor
++  and equipment domain, and supply complete actor/loadout evidence to stateless
++  live collision checks; and
++- serialize or compare-and-swap accepted multi-authority shop candidates so
++  two results calculated from the same before-state are not both adopted.
++
++Aggregate save validation independently checks the complete persisted graph.
++These host responsibilities do not create a hidden Framework authority.
++
++## Verification
++
++| Gate | Result |
++|---|---|
++| Canonical focused Order 7 Framework/documentation tests | 265 passed; 0 failed; 0 skipped |
++| Full `dotnet test Convergence.sln --no-restore` | 1,847 Framework + 184 DemoHost + 7 ContentValidator = 2,038 passed; 0 failed; 0 skipped |
++| Strict Release Framework and solution builds | 0 warnings; 0 errors |
++| Format and diff checks | passed |
++| Active content/schema/catalog validation | passed |
++| DemoHost functional modes and scripted Training Annex | passed |
++| Godot 4.7.1 .NET build and headless smoke | passed |
++| Coverage, documentation links, API/forbidden-reference, dependency, and trimming gates | passed |
++
++Raw commands, console output, exit codes, source identity, coverage, and file
++checksums are retained under
++`artifacts/verification/order-7-r15-final-closure/<tested-commit>/`.
++
++Runtime save contract v19 and content schema v10 remain current. O7-R15 changes
++review evidence and tracking only; it does not alter runtime, schema, content,
++host, or gameplay behavior.
++
++## Closure Verdict
++
++The approved O7-D1 through O7-D8 contracts now form one coherent runtime,
++persistence, and host-integration model. The R12-R14 corrections hold under
++focused adversarial coverage and a fresh direct source/document trace. No
++unresolved realistic reachable Order 7 defect or active contradiction remains.
++
++Order 7 is formally complete. `inventory_equipment_economy` returns to
++`complete`, its known-gap list is empty, and all three audience entries return
++to `reviewed`.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+index 86b070c01c83e791c8ace3a63cd1daa7fd909d9b..cf3f83eea1d4a682a264727afa397b9c530ae41e 100644
+--- a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
++++ b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+@@ -8,7 +8,7 @@
+ 
+ **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
+ 
+-**Implementation status:** O7-R1 through O7-R11 complete; O7-R12 through O7-R15 pending
++**Implementation status:** O7-R1 through O7-R15 complete
+ 
+ > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
+ > recorded in
+@@ -41,7 +41,13 @@
+ > found one bounded malformed custom-economy-bundle path and two active
+ > documentation contradictions. It reopens Order 7 under O7-R12 through
+ > O7-R15; the earlier closure remains historical evidence for its reviewed
+-> revision rather than current closure authority.
++> revision rather than current closure authority. O7-R12 now hardens the
++> service aggregate and binding boundary; O7-R13 reconciles the three stale
++> audience callouts; O7-R14 corrects and mechanically guards the developer
++> purchase sample. The
++> [O7-R15 final closure review](inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++> re-read the corrected source and audience documents, completed the release
++> gate, and closes Order 7 without another unresolved reachable finding.
+ 
+ ## Purpose
+ 
+@@ -661,8 +667,8 @@ behind compatibility aliases that would preserve two competing authorities.
+ 
+ ## Closure Rule
+ 
+-Order 7 remains open until O7-R2 through O7-R10 are implemented and O7-R11
+-independently audits the result. Unit tests alone do not close it. The final
++Order 7 remains open until O7-R2 through O7-R14 are implemented and O7-R15
++independently audits the corrected result. Unit tests alone do not close it. The final
+ closure record must identify intended invariants, realistic reachable paths,
+ concrete consequences, reproducible evidence, and any trusted host boundaries.
+ 
+@@ -1702,3 +1708,87 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
+   Godot, coverage, documentation, trimming, forbidden-reference, and diff gates
+   passed. Raw evidence is retained under the canonical post-correction closure
+   bundle.
++
++### O7-R12: Harden Economy Service Bundles
++
++- **Commit:** `59039b57` (`runtime: validate economy service bundles`).
++- **Finding corrected:** a custom economy factory could clone the positional
++  `ResourceManagementRulesetServices` record with a null required member and
++  still produce a top-level successful binding.
++- **Actual destination:** the aggregate is now a sealed, get-only class whose
++  constructor validates inventory, equipment, economy, shop-offer, and shop
++  services. Recovery remains nullable by design.
++- **Typed boundary:** attempted incomplete construction inside a custom factory
++  becomes the existing `PolicyFactoryFailure`; valid custom and standard
++  services preserve identity; `OperationCanceledException` still propagates.
++- **Focused tests:** 67 `RuntimeRulesetBindingTests` passed, including 13 new
++  cases covering every required service, removal of record cloning/init state,
++  every malformed factory path, valid identity, and cancellation.
++- **Full suite:** 1,846 Framework tests, 184 DemoHost tests, and 7
++  ContentValidator tests passed: 2,037 total, 0 failed, 0 skipped. Strict build,
++  formatting, and diff checks passed with 0 warnings and 0 errors.
++- **Versions:** save contract v19 and content schema v10 remain unchanged.
++
++### O7-R13: Reconcile Audience Review State
++
++- **Baseline:** `59039b57`; this checkpoint's documentation commit records the
++  final hash.
++- **Actual destination:** the mechanics, developer, and technical Order 7
++  callouts plus executable capability/documentation matrices and active
++  roadmaps.
++- **Correction:** all three audience pages now identify O7-R11 as completed,
++  identify the later independent audit as the reason Order 7 reopened, and
++  identify O7-R12 as corrected. No page describes O7-R11 as future work.
++- **Current state:** `inventory_equipment_economy` remains `partial`; all three
++  audience entries remain `existing_unreviewed`. The only concrete tracked
++  documentation defect is the unguarded, obsolete `Shop.Buy` sample reserved
++  for O7-R14, followed by O7-R15's fresh closure audit.
++- **Scope:** documentation, tests, and tracking only. No runtime, save, schema,
++  content, host, or gameplay behavior changed.
++
++### O7-R14: Correct And Guard The Shop Purchase Sample
++
++- **Baseline:** `6e9ae62f`; this checkpoint's documentation/test commit records
++  the final hash.
++- **Finding corrected:** the developer guide passed seven arguments to
++  `IShopTransactionService.Buy` and omitted the equipment-acquisition authority
++  added during O7-R11.
++- **Actual destination:** the guide now branches by resolved offer kind.
++  Equipment purchases allocate a fresh instance ID and pass
++  `RuntimeEquipmentAcquisitionContext` built from the equipment repository and
++  complete live actor-ID set. Item purchases explicitly pass `null` for both
++  equipment-only arguments.
++- **Executable guard:** `DocumentationContractSynchronizationTests` verifies
++  the sample's load-bearing tokens and reflects the one public `Buy` method to
++  pin all eight parameter names, parameter types, and return type.
++- **Tracking:** no known implementation/documentation defect remains. The
++  executable capability matrix retains O7-R15's pending independent review and
++  release gate as its one process-evidence gap. The capability stays `partial`,
++  and all three audience entries stay `existing_unreviewed`, until that review
++  rechecks current source and documents.
++- **Scope:** documentation, tests, and tracking only. Runtime save v19, content
++  schema v10, content, host behavior, and gameplay rules are unchanged.
++
++### O7-R15: Fresh Source, Documentation, And Release Closure
++
++- **Reviewed implementation:** `77a6b9e4`; reviewed correction range
++  `a184282e..77a6b9e4`.
++- **Actual destination:** the
++  [O7-R15 final closure review](inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++  traces current Framework source, exported API, save/restore, DemoHost, Godot,
++  active content, tests, and all three audience documents.
++- **Correction recheck:** O7-R12's validated economy bundle, O7-R13's audience
++  state, and O7-R14's eight-argument `Shop.Buy` integration all hold in current
++  source. Stale historical Order 7 summaries in the active documentation
++  coverage reference, audience indexes, and gameplay overview were corrected
++  during reconciliation; no runtime contract changed.
++- **Result:** no unresolved realistic reachable Order 7 defect or active
++  documentation contradiction remains. `inventory_equipment_economy` returns
++  to `complete`; mechanics, developer, and technical entries return to
++  `reviewed`.
++- **Versions:** runtime save contract v19 and content schema v10 remain current.
++- **Verification:** 265 canonical focused Framework tests and the full
++  2,038-test suite passed with 0 failed and 0 skipped; strict builds,
++  formatting, content, DemoHost, Godot, coverage, documentation,
++  forbidden-reference, trimming, and diff gates passed. Raw evidence is
++  retained under the canonical O7-R15 verification bundle.
+diff --git a/docs/roadmap/actor-composition-progression-roster-roadmap.md b/docs/roadmap/actor-composition-progression-roster-roadmap.md
+index 801be42a9b7ef6bb9ce599f796494b4ebd1b718f..641d2862afabbc3c17999c8168895e412945eb5c 100644
+--- a/docs/roadmap/actor-composition-progression-roster-roadmap.md
++++ b/docs/roadmap/actor-composition-progression-roster-roadmap.md
+@@ -6,7 +6,7 @@
+ verified across Checkpoints 0-8.**
+ 
+ **Current product state:** runtime save contract v19 is authoritative; the
+-Framework Capability Matrix records 22 complete, 1 partial, and 2 intentionally
++Framework Capability Matrix records 23 complete, 0 partial, and 2 intentionally
+ deferred capabilities. O6-R29 through O6-R31 corrected the two bounded
+ encounter paths and reconciled their documentation; O6-R32 independently
+ verified and closed them. O4-R42 corrected the narrow status/passive validation
+diff --git a/docs/roadmap/documentation-completion-roadmap.md b/docs/roadmap/documentation-completion-roadmap.md
+index 18dcc693bc4b4411f365ade69cd7eda7f1652ec5..082237c41a9f541d667ef797e03dd050da0dacf8 100644
+--- a/docs/roadmap/documentation-completion-roadmap.md
++++ b/docs/roadmap/documentation-completion-roadmap.md
+@@ -644,7 +644,7 @@ outer action-end before a save is captured. The
+ [final certification record](../reviews/status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
+ is the formal Order 4 closure authority.
+ 
+-## Reopened Order 7
++## Completed Order 7
+ 
+ The owner-approved
+ [Inventory, Equipment, And Economy Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+@@ -671,12 +671,17 @@ realistic reachable defect or documentation contradiction, and passed the
+ complete release gate for that revision. The later
+ [post-correction independent audit](../reviews/inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
+ found stale O7-R11-future callouts in all three audience pages and a developer
+-`Shop.Buy` example that omits the required equipment-acquisition context. Those
+-three entries return to `existing_unreviewed` while O7-R12 through O7-R15
+-harden the custom economy bundle, reconcile the pages, guard the sample, and
+-perform a fresh closure gate. The executable documentation matrix now records
+-30 `reviewed`, 25 `existing_unreviewed`, 13 `missing`, and 7 `not_applicable`
+-entries.
++`Shop.Buy` example that omits the required equipment-acquisition context.
++O7-R12 now hardens the custom economy bundle and O7-R13 reconciles the three
++stale callouts. O7-R14 corrects and mechanically guards the eight-argument
++purchase sample. Those corrections kept all three entries
++`existing_unreviewed` until the independent closure gate. The
++[O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++has now re-read the corrected source, persistence, hosts, tests, and all three
++audiences without finding another realistic reachable defect or contradiction.
++All three entries return to `reviewed`. The executable documentation matrix now
++records 33 `reviewed`, 22 `existing_unreviewed`, 13 `missing`, and 7
++`not_applicable` entries.
+ 
+ ## Deferred Documentation
+ 
+diff --git a/docs/roadmap/framework-capability-matrix.md b/docs/roadmap/framework-capability-matrix.md
+index de14630c5a45f09a7ad6a873edda45441e251671..963867bb25b68e90e48fa03a292d9424f7f54576 100644
+--- a/docs/roadmap/framework-capability-matrix.md
++++ b/docs/roadmap/framework-capability-matrix.md
+@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
+ 
+ ## Current Reading
+ 
+-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
++The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+ 
+-`inventory_equipment_economy` is `partial`. Its immutable transaction and
++`inventory_equipment_economy` is `complete`. Its immutable transaction and
+ validation foundation is usable. O7-R2 gives each equipment copy a unique
+ runtime instance ID, makes inventory its sole owner, permits separate copies of
+ one definition, and removes the former root save equipment authority. O7-R3
+@@ -46,8 +46,16 @@ passed the complete release gate for its reviewed revision. A later
+ [post-correction independent audit](../reviews/inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
+ found one bounded false-success path for malformed custom economy service
+ bundles, stale review-state callouts in all three audience pages, and an
+-out-of-date `Shop.Buy` example. O7-R12 through O7-R15 now govern those
+-corrections and re-evaluation. The
++out-of-date `Shop.Buy` example. O7-R12 now rejects incomplete economy service
++bundles at construction and contains malformed factories as typed binding
++failure; O7-R13 reconciles all three review-state callouts; O7-R14 corrects and
++mechanically guards the eight-argument `Shop.Buy` sample. No concrete known gap
++remains. The
++[O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++then independently re-read the corrected source, persistence, host integration,
++tests, and all three audiences and completed the release gate without finding
++another realistic reachable defect or contradiction. The capability therefore
++returns to `complete` with no known gap. The
+ owner-approved
+ [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+ governs the direct data corrections, genuine policy seams, three-audience
+diff --git a/docs/roadmap/product-roadmap.md b/docs/roadmap/product-roadmap.md
+index 87270db2501262ed373be1bd6c9724b81c513eb5..fc0af98a626d2845a773cf6e26c70e0a61069660 100644
+--- a/docs/roadmap/product-roadmap.md
++++ b/docs/roadmap/product-roadmap.md
+@@ -8,9 +8,9 @@ baseline.
+ 
+ ## Current State
+ 
+-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
++Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+ 
+-Documentation Order 7 is reopened under the owner-approved
++Documentation Order 7 is complete under the owner-approved
+ [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
+ The current resource-management foundation remains usable. O7-R2 establishes
+ equipment-instance ownership and removes the duplicated root save authority;
+@@ -36,8 +36,16 @@ The
+ passed the complete release gate for its reviewed revision. The later
+ [post-correction independent audit](../reviews/inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
+ found one bounded malformed custom-economy-bundle path and two documentation
+-contradictions. The capability returns to `partial` while O7-R12 through
+-O7-R15 correct and independently re-evaluate those findings.
++contradictions. O7-R12 now rejects incomplete bundles and contains malformed
++factories as typed binding failure, while O7-R13 reconciles the three stale
++review-state callouts. O7-R14 corrects and mechanically guards the developer
++purchase sample. No concrete implementation gap remained after those
++corrections, but the capability stayed `partial` until independent closure
++evidence was produced. The
++[O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++now records that source/document re-evaluation and complete release gate. It
++found no unresolved realistic reachable defect or contradiction, so the
++capability returns to `complete` with no known gap.
+ 
+ `encounter_orchestration` has a substantial implemented foundation under the owner-approved
+ [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
+diff --git a/docs/technical/README.md b/docs/technical/README.md
+index 94e7c577dd79d8031ccf25cfff318e339edb39df..c04912095b21908889a22b655e4cc6f8f3f72555 100644
+--- a/docs/technical/README.md
++++ b/docs/technical/README.md
+@@ -92,9 +92,11 @@ O6-R46 reconciles the runtime contract. The
+ [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+ independently traces the corrected source. This reference is `reviewed`, and
+ Order 6 is formally complete.
+-The Order 7 inventory/economy reference is `reviewed` after O7-R10 traced its
++The Order 7 inventory/economy reference is `reviewed` after O7-R15 traced its
+ authority graph, transaction ordering, and save v19 diagrams against current
+-source and tests. O7-R11 remains the separate capability-closure audit.
++source and tests. The
++[O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++is the current capability-closure authority.
+ Other subsystem references
+ remain tracked as `existing_unreviewed` or `missing` in the
+ [documentation coverage matrix](../reference/documentation-coverage.md).
+diff --git a/docs/technical/inventory-equipment-economy-runtime.md b/docs/technical/inventory-equipment-economy-runtime.md
+index 8cae31d80336676219dc9b221b032539a5f0e163..fdd06b18735f276937c57d2073c11c88d792dab3 100644
+--- a/docs/technical/inventory-equipment-economy-runtime.md
++++ b/docs/technical/inventory-equipment-economy-runtime.md
+@@ -9,9 +9,10 @@ equipment, currency, shops, and recovery.
+ It does not define menu presentation, player input, scene ownership, save-file
+ serialization, or game-specific currency names.
+ 
+-> **Review state:** `reviewed` after O7-R10 traced the authority graph,
+-> transaction order, restore boundary, and diagrams against current source and
+-> tests. O7-R11 remains the independent capability-closure audit.
++> **Review state:** `reviewed`. O7-R15 independently re-read the corrected
++> runtime, persistence, host, test, and documentation paths at `77a6b9e4`.
++> The [final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++> found no unresolved realistic reachable defect or authority contradiction.
+ 
+ ## Authority Map
+ 
+diff --git a/src/Convergence.Framework/PublicAPI.Shipped.txt b/src/Convergence.Framework/PublicAPI.Shipped.txt
+index 70e413f777add63587e07b6db90433ac402aba69..22c2045e2f681e02ac0a7f18b5fa3ca4ad91a8bb 100644
+--- a/src/Convergence.Framework/PublicAPI.Shipped.txt
++++ b/src/Convergence.Framework/PublicAPI.Shipped.txt
+@@ -5049,16 +5049,10 @@ Convergence.Runtime.ResourceCurrentAdjustmentMode
+ Convergence.Runtime.ResourceCurrentAdjustmentMode.LevelUpDelta = 1 -> Convergence.Runtime.ResourceCurrentAdjustmentMode
+ Convergence.Runtime.ResourceCurrentAdjustmentMode.PreserveCurrent = 0 -> Convergence.Runtime.ResourceCurrentAdjustmentMode
+ Convergence.Runtime.ResourceManagementRulesetServices
+-Convergence.Runtime.ResourceManagementRulesetServices.<Clone>$() -> Convergence.Runtime.ResourceManagementRulesetServices!
+ Convergence.Runtime.ResourceManagementRulesetServices.Economy.get -> Convergence.Runtime.IEconomyTransactionService!
+-Convergence.Runtime.ResourceManagementRulesetServices.Economy.init -> void
+-Convergence.Runtime.ResourceManagementRulesetServices.Equals(Convergence.Runtime.ResourceManagementRulesetServices? other) -> bool
+ Convergence.Runtime.ResourceManagementRulesetServices.Equipment.get -> Convergence.Runtime.IEquipmentTransitionService!
+-Convergence.Runtime.ResourceManagementRulesetServices.Equipment.init -> void
+ Convergence.Runtime.ResourceManagementRulesetServices.Inventory.get -> Convergence.Runtime.IInventoryTransitionService!
+-Convergence.Runtime.ResourceManagementRulesetServices.Inventory.init -> void
+ Convergence.Runtime.ResourceManagementRulesetServices.Shop.get -> Convergence.Runtime.IShopTransactionService!
+-Convergence.Runtime.ResourceManagementRulesetServices.Shop.init -> void
+ Convergence.Runtime.ResourceRecalculationRequest
+ Convergence.Runtime.ResourceRecalculationRequest.<Clone>$() -> Convergence.Runtime.ResourceRecalculationRequest!
+ Convergence.Runtime.ResourceRecalculationRequest.AdjustmentMode.get -> Convergence.Runtime.ResourceCurrentAdjustmentMode
+@@ -7912,9 +7906,6 @@ override Convergence.Runtime.ReplacePendingSkillCommand.Equals(object? obj) -> b
+ override Convergence.Runtime.ReplacePendingSkillCommand.GetHashCode() -> int
+ override Convergence.Runtime.ReplacePendingSkillCommand.Kind.get -> Convergence.Runtime.RuntimeSkillChoiceDecisionKind
+ override Convergence.Runtime.ReplacePendingSkillCommand.ToString() -> string!
+-override Convergence.Runtime.ResourceManagementRulesetServices.Equals(object? obj) -> bool
+-override Convergence.Runtime.ResourceManagementRulesetServices.GetHashCode() -> int
+-override Convergence.Runtime.ResourceManagementRulesetServices.ToString() -> string!
+ override Convergence.Runtime.ResourceRecalculationRequest.Equals(object? obj) -> bool
+ override Convergence.Runtime.ResourceRecalculationRequest.GetHashCode() -> int
+ override Convergence.Runtime.ResourceRecalculationRequest.ToString() -> string!
+@@ -9178,8 +9169,6 @@ static Convergence.Runtime.ReplaceHostedEntityRequest.operator !=(Convergence.Ru
+ static Convergence.Runtime.ReplaceHostedEntityRequest.operator ==(Convergence.Runtime.ReplaceHostedEntityRequest? left, Convergence.Runtime.ReplaceHostedEntityRequest? right) -> bool
+ static Convergence.Runtime.ReplacePendingSkillCommand.operator !=(Convergence.Runtime.ReplacePendingSkillCommand? left, Convergence.Runtime.ReplacePendingSkillCommand? right) -> bool
+ static Convergence.Runtime.ReplacePendingSkillCommand.operator ==(Convergence.Runtime.ReplacePendingSkillCommand? left, Convergence.Runtime.ReplacePendingSkillCommand? right) -> bool
+-static Convergence.Runtime.ResourceManagementRulesetServices.operator !=(Convergence.Runtime.ResourceManagementRulesetServices? left, Convergence.Runtime.ResourceManagementRulesetServices? right) -> bool
+-static Convergence.Runtime.ResourceManagementRulesetServices.operator ==(Convergence.Runtime.ResourceManagementRulesetServices? left, Convergence.Runtime.ResourceManagementRulesetServices? right) -> bool
+ static Convergence.Runtime.ResourceRecalculationRequest.operator !=(Convergence.Runtime.ResourceRecalculationRequest? left, Convergence.Runtime.ResourceRecalculationRequest? right) -> bool
+ static Convergence.Runtime.ResourceRecalculationRequest.operator ==(Convergence.Runtime.ResourceRecalculationRequest? left, Convergence.Runtime.ResourceRecalculationRequest? right) -> bool
+ static Convergence.Runtime.ResourceRecalculationResult.operator !=(Convergence.Runtime.ResourceRecalculationResult? left, Convergence.Runtime.ResourceRecalculationResult? right) -> bool
+@@ -11696,7 +11685,6 @@ Convergence.Runtime.LuckAdjustedShopPricingPolicy
+ Convergence.Runtime.LuckAdjustedShopPricingPolicy.Calculate(Convergence.Runtime.ShopPriceCalculationRequest! request) -> Convergence.Runtime.ShopPriceCalculationResult!
+ Convergence.Runtime.LuckAdjustedShopPricingPolicy.LuckAdjustedShopPricingPolicy() -> void
+ Convergence.Runtime.ResourceManagementRulesetServices.ShopOffers.get -> Convergence.Runtime.IRuntimeShopOfferResolver!
+-Convergence.Runtime.ResourceManagementRulesetServices.ShopOffers.init -> void
+ Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidPricePolicyConfiguration = 5 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+ Convergence.Runtime.RuntimeShopOfferResolutionCode.UnsupportedStockPolicy = 6 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+ Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.PricingDiagnostic.get -> Convergence.Runtime.ShopPricingPolicyDiagnostic?
+@@ -12144,10 +12132,7 @@ Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.Equals(Convergence.Runtime.R
+ Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.<Clone>$() -> Convergence.Runtime.RecoveryPolicyFactoryDiagnostic!
+ Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.Deconstruct(out Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode Code, out string! Message, out string? ParameterName, out Convergence.Content.ContentId? PolicyId) -> void
+ Convergence.Runtime.ResourceManagementRulesetServices.Recovery.get -> Convergence.Runtime.IRecoveryService?
+-Convergence.Runtime.ResourceManagementRulesetServices.Recovery.init -> void
+-Convergence.Runtime.ResourceManagementRulesetServices.Deconstruct(out Convergence.Runtime.IInventoryTransitionService! Inventory, out Convergence.Runtime.IEquipmentTransitionService! Equipment, out Convergence.Runtime.IEconomyTransactionService! Economy, out Convergence.Runtime.IRuntimeShopOfferResolver! ShopOffers, out Convergence.Runtime.IShopTransactionService! Shop, out Convergence.Runtime.IRecoveryService? Recovery) -> void
+ Convergence.Runtime.StatModifierCleanupScope.RecoveryEvent = 4 -> Convergence.Runtime.StatModifierCleanupScope
+-Convergence.Runtime.ResourceManagementRulesetServices.ResourceManagementRulesetServices(Convergence.Runtime.IInventoryTransitionService! Inventory, Convergence.Runtime.IEquipmentTransitionService! Equipment, Convergence.Runtime.IEconomyTransactionService! Economy, Convergence.Runtime.IRuntimeShopOfferResolver! ShopOffers, Convergence.Runtime.IShopTransactionService! Shop, Convergence.Runtime.IRecoveryService? Recovery) -> void
+ static Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.CreateStandard(System.Collections.Generic.IEnumerable<Convergence.Runtime.IShopPricingPolicyFactory!>? shopPricing, System.Collections.Generic.IEnumerable<Convergence.Runtime.IShopStockPolicyFactory!>? shopStock, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRecoveryPolicyFactory!>? recovery) -> Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry!
+ Convergence.Runtime.IRecoveryService.Assess(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.IStatModifierPolicyService? statModifiers = null) -> Convergence.Runtime.RecoveryTransactionResult!
+ Convergence.Runtime.IRecoveryService.Recover(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.IStatModifierPolicyService? statModifiers = null) -> Convergence.Runtime.RecoveryTransactionResult!
+@@ -12282,3 +12267,4 @@ Convergence.Runtime.RuntimeEquipmentAcquisitionContext
+ Convergence.Runtime.RuntimeEquipmentAcquisitionContext.EquipmentRepository.get -> Convergence.Catalog.IEquipmentDefinitionRepository!
+ Convergence.Runtime.RuntimeEquipmentAcquisitionContext.LiveActorInstanceIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeInstanceId>!
+ Convergence.Runtime.RuntimeEquipmentAcquisitionContext.RuntimeEquipmentAcquisitionContext(Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeInstanceId>! liveActorInstanceIds) -> void
++Convergence.Runtime.ResourceManagementRulesetServices.ResourceManagementRulesetServices(Convergence.Runtime.IInventoryTransitionService! inventory, Convergence.Runtime.IEquipmentTransitionService! equipment, Convergence.Runtime.IEconomyTransactionService! economy, Convergence.Runtime.IRuntimeShopOfferResolver! shopOffers, Convergence.Runtime.IShopTransactionService! shop, Convergence.Runtime.IRecoveryService? recovery) -> void
+diff --git a/src/Convergence.Framework/Runtime/RuntimeRulesetBindings.cs b/src/Convergence.Framework/Runtime/RuntimeRulesetBindings.cs
+index afd7f7be6b88172fbc60870ad54ed77e49f1b3ef..734da061dd5e48ea2f9e7ac09dbdcdb33c7f9c5e 100644
+--- a/src/Convergence.Framework/Runtime/RuntimeRulesetBindings.cs
++++ b/src/Convergence.Framework/Runtime/RuntimeRulesetBindings.cs
+@@ -103,13 +103,36 @@ public sealed record StatRulesetServices(
+     IStatResolutionPolicy StatResolutionPolicy,
+     IStatStageScalingPolicy StageScalingPolicy);
+ 
+-public sealed record ResourceManagementRulesetServices(
+-    IInventoryTransitionService Inventory,
+-    IEquipmentTransitionService Equipment,
+-    IEconomyTransactionService Economy,
+-    IRuntimeShopOfferResolver ShopOffers,
+-    IShopTransactionService Shop,
+-    IRecoveryService? Recovery);
++/// <summary>
++/// Immutable set of resource-management services produced by an economy
++/// ruleset factory. Required services are validated at construction so a
++/// successful ruleset binding cannot expose an unusable partial aggregate.
++/// </summary>
++public sealed class ResourceManagementRulesetServices
++{
++    public ResourceManagementRulesetServices(
++        IInventoryTransitionService inventory,
++        IEquipmentTransitionService equipment,
++        IEconomyTransactionService economy,
++        IRuntimeShopOfferResolver shopOffers,
++        IShopTransactionService shop,
++        IRecoveryService? recovery)
++    {
++        Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
++        Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
++        Economy = economy ?? throw new ArgumentNullException(nameof(economy));
++        ShopOffers = shopOffers ?? throw new ArgumentNullException(nameof(shopOffers));
++        Shop = shop ?? throw new ArgumentNullException(nameof(shop));
++        Recovery = recovery;
++    }
++
++    public IInventoryTransitionService Inventory { get; }
++    public IEquipmentTransitionService Equipment { get; }
++    public IEconomyTransactionService Economy { get; }
++    public IRuntimeShopOfferResolver ShopOffers { get; }
++    public IShopTransactionService Shop { get; }
++    public IRecoveryService? Recovery { get; }
++}
+ 
+ public sealed record BattleTurnEconomyRuleset
+ {
+diff --git a/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs b/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs
+index 7a778ed799065c3834545b52184bb9439f25eab7..d9aabfd2dd0bd3d4454072b03864fe2194b0ca2a 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs
+@@ -1,5 +1,6 @@
+ using System.Text.Json;
+ using System.Text.RegularExpressions;
++using Convergence.Content;
+ using Convergence.Runtime;
+ using Xunit;
+ 
+@@ -7,6 +8,64 @@ namespace Convergence.Framework.Tests.Architecture;
+ 
+ public sealed class DocumentationContractSynchronizationTests
+ {
++    [Fact]
++    public void InventoryEquipmentEconomyGuide_UsesCurrentEightArgumentShopBuyContract()
++    {
++        string developer = File.ReadAllText(RepositoryPath(
++            "docs",
++            "developer-guide",
++            "inventory-equipment-and-economy.md"));
++
++        string[] requiredSampleTokens =
++        [
++            "new RuntimeEquipmentAcquisitionContext(",
++            "liveActors.Select(actor => actor.InstanceId)",
++            "AllocateFreshEquipmentInstanceId()",
++            "purchasedEquipmentInstanceId: null",
++            "equipmentAcquisitionContext: null",
++            "complete current actor collection",
++            "host-owned globally"
++        ];
++        Assert.All(
++            requiredSampleTokens,
++            token => Assert.Contains(token, developer, StringComparison.Ordinal));
++        Assert.Equal(
++            2,
++            Regex.Matches(
++                developer,
++                @"resources\.Shop\.Buy\(",
++                RegexOptions.CultureInvariant).Count);
++
++        var buy = Assert.Single(
++            typeof(IShopTransactionService).GetMethods(),
++            method => method.Name == nameof(IShopTransactionService.Buy));
++        Assert.Equal(typeof(ShopTransactionResult), buy.ReturnType);
++        Assert.Equal(
++            [
++                "inventory",
++                "currencyLedger",
++                "stock",
++                "currencyId",
++                "offer",
++                "buyerLuck",
++                "purchasedEquipmentInstanceId",
++                "equipmentAcquisitionContext"
++            ],
++            buy.GetParameters().Select(parameter => parameter.Name));
++        Assert.Equal(
++            [
++                typeof(RuntimeInventorySnapshot),
++                typeof(RuntimeCurrencyLedgerSnapshot),
++                typeof(RuntimeShopStockSnapshot),
++                typeof(ContentId),
++                typeof(RuntimeShopOfferSnapshot),
++                typeof(int),
++                typeof(RuntimeInstanceId?),
++                typeof(RuntimeEquipmentAcquisitionContext)
++            ],
++            buy.GetParameters().Select(parameter => parameter.ParameterType));
++    }
++
+     [Fact]
+     public void ChargeGuidance_UsesParticipationReceiptsAndExplicitOptionalComposition()
+     {
+diff --git a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+index 98b4fe61fcbcadc045fecfc0d03952f9fbacfc88..775a085ba6cbc9d341b44ca305900b3d229c6331 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+@@ -516,6 +516,7 @@ public sealed class DocumentationFoundationTests
+         Assert.All(
+             technicalTokens,
+             token => Assert.Contains(token, technical, StringComparison.Ordinal));
++
+         Assert.Contains(
+             "`FaultMessage` and `FaultCode` are present together only for `Faulted`",
+             publicApi,
+@@ -757,22 +758,43 @@ public sealed class DocumentationFoundationTests
+     {
+         string mechanics = File.ReadAllText(
+             RepositoryPath("docs", "mechanics", "party-inventory-and-economy.md"))
+-            .ReplaceLineEndings(" ");
++            .ReplaceLineEndings(" ")
++            .Replace("> ", string.Empty, StringComparison.Ordinal);
+         string developer = File.ReadAllText(
+             RepositoryPath("docs", "developer-guide", "inventory-equipment-and-economy.md"))
+-            .ReplaceLineEndings(" ");
++            .ReplaceLineEndings(" ")
++            .Replace("> ", string.Empty, StringComparison.Ordinal);
+         string technical = File.ReadAllText(
+             RepositoryPath("docs", "technical", "inventory-equipment-economy-runtime.md"))
+-            .ReplaceLineEndings(" ");
++            .ReplaceLineEndings(" ")
++            .Replace("> ", string.Empty, StringComparison.Ordinal);
+         string publicApi = File.ReadAllText(
+             RepositoryPath("docs", "public-api-contract.md"))
+             .ReplaceLineEndings(" ");
++        string mechanicsIndex = File.ReadAllText(
++            RepositoryPath("docs", "mechanics", "README.md"))
++            .ReplaceLineEndings(" ");
++        string developerIndex = File.ReadAllText(
++            RepositoryPath("docs", "developer-guide", "README.md"))
++            .ReplaceLineEndings(" ");
++        string technicalIndex = File.ReadAllText(
++            RepositoryPath("docs", "technical", "README.md"))
++            .ReplaceLineEndings(" ");
++        string gameplayOverview = File.ReadAllText(
++            RepositoryPath("docs", "gameplay-systems.md"))
++            .ReplaceLineEndings(" ");
+         string currentAudit = File.ReadAllText(
+             RepositoryPath(
+                 "docs",
+                 "reviews",
+                 "inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md"))
+             .ReplaceLineEndings(" ");
++        string closureReview = File.ReadAllText(
++            RepositoryPath(
++                "docs",
++                "reviews",
++                "inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md"))
++            .ReplaceLineEndings(" ");
+ 
+         string[] mechanicsTokens =
+         [
+@@ -824,6 +846,40 @@ public sealed class DocumentationFoundationTests
+             technicalTokens,
+             token => Assert.Contains(token, technical, StringComparison.Ordinal));
+ 
++        string[] reviewStateTokens =
++        [
++            "**Review state:** `reviewed`.",
++            "O7-R15 independently re-read the corrected",
++            "at `77a6b9e4`.",
++            "final closure review",
++            "no unresolved realistic reachable defect"
++        ];
++        Assert.All(reviewStateTokens, token =>
++        {
++            Assert.Contains(token, mechanics, StringComparison.Ordinal);
++            Assert.Contains(token, developer, StringComparison.Ordinal);
++            Assert.Contains(token, technical, StringComparison.Ordinal);
++        });
++        Assert.DoesNotContain("O7-R11 remains", mechanics, StringComparison.Ordinal);
++        Assert.DoesNotContain("O7-R11 remains", developer, StringComparison.Ordinal);
++        Assert.DoesNotContain("O7-R11 remains", technical, StringComparison.Ordinal);
++        Assert.DoesNotContain("until the separate O7-R11", mechanics, StringComparison.Ordinal);
++
++        const string closureReviewLink =
++            "inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md";
++        string[] currentSummaryDocuments =
++        [
++            mechanicsIndex,
++            developerIndex,
++            technicalIndex,
++            gameplayOverview
++        ];
++        Assert.All(currentSummaryDocuments, document =>
++        {
++            Assert.Contains(closureReviewLink, document, StringComparison.Ordinal);
++            Assert.DoesNotContain("O7-R11 remains", document, StringComparison.Ordinal);
++        });
++
+         Assert.Contains(
+             "Save contract v19 retains the canonical roster",
+             publicApi,
+@@ -832,20 +888,37 @@ public sealed class DocumentationFoundationTests
+ 
+         DocumentationCapability documentation = LoadDocumentationMatrix().Capabilities.Single(
+             capability => capability.Id == "inventory_equipment_economy");
+-        Assert.Equal("existing_unreviewed", documentation.Mechanics.State);
+-        Assert.Equal("existing_unreviewed", documentation.DeveloperGuide.State);
+-        Assert.Equal("existing_unreviewed", documentation.Technical.State);
++        Assert.Equal("reviewed", documentation.Mechanics.State);
++        Assert.Equal("reviewed", documentation.DeveloperGuide.State);
++        Assert.Equal("reviewed", documentation.Technical.State);
+ 
+         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
+             candidate => candidate.Id == "inventory_equipment_economy");
+-        Assert.Equal("partial", capability.ImplementationState);
+-        Assert.Equal(2, capability.KnownGaps.Count);
++        Assert.Equal("complete", capability.ImplementationState);
++        Assert.Empty(capability.KnownGaps);
+ 
+         Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
+         Assert.Contains("O7-R15", currentAudit, StringComparison.Ordinal);
++        Assert.Contains("### O7-R12: Harden Economy Service Bundles", currentAudit, StringComparison.Ordinal);
++        Assert.Contains("### O7-R13: Reconcile Audience Review State", currentAudit, StringComparison.Ordinal);
++        Assert.Contains("### O7-R14: Correct And Guard The Shop Purchase Sample", currentAudit, StringComparison.Ordinal);
++        Assert.Contains("### O7-R15: Fresh Source, Documentation, And Release Closure", currentAudit, StringComparison.Ordinal);
+         Assert.Contains("save v19", currentAudit, StringComparison.OrdinalIgnoreCase);
+         Assert.Contains("content schema v10", currentAudit, StringComparison.OrdinalIgnoreCase);
+-        Assert.Contains("returns to `partial`", currentAudit, StringComparison.Ordinal);
++        Assert.Contains("returns to `complete`", currentAudit, StringComparison.Ordinal);
++
++        string[] closureTokens =
++        [
++            "**Reviewed implementation:** `77a6b9e4`",
++            "**Verdict:** **complete; no unresolved realistic reachable defect found**",
++            "No unresolved realistic reachable runtime defect was found.",
++            "`RuntimeInventorySnapshot` is the only owner",
++            "There is no second root equipment authority.",
++            "Order 7 is formally complete."
++        ];
++        Assert.All(
++            closureTokens,
++            token => Assert.Contains(token, closureReview, StringComparison.Ordinal));
+     }
+ 
+     [Fact]
+diff --git a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+index 6517645d63269ced53c771bbdff3594cf8b0eb93..d0a835012930e5451d1235e5526233ee330998ee 100644
+--- a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
++++ b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+@@ -263,19 +263,19 @@
+     {
+       "id": "inventory_equipment_economy",
+       "mechanics": {
+-        "state": "existing_unreviewed",
++        "state": "reviewed",
+         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
+-        "reason": "The post-correction independent audit found that the page still describes O7-R11 as future work; its substantive mechanics remain current but its review-state authority must be reconciled after O7-R12."
++        "reason": "O7-R15 re-read the corrected runtime and player rules, found no unresolved reachable contradiction, and completed the Order 7 release gate."
+       },
+       "developerGuide": {
+-        "state": "existing_unreviewed",
++        "state": "reviewed",
+         "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
+-        "reason": "The post-correction independent audit found stale O7-R11 review wording and a Shop.Buy example that omits the required RuntimeEquipmentAcquisitionContext argument."
++        "reason": "O7-R15 rechecked the corrected eight-argument Shop.Buy integration, host adoption rules, and current public contracts."
+       },
+       "technical": {
+-        "state": "existing_unreviewed",
++        "state": "reviewed",
+         "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
+-        "reason": "The post-correction independent audit found that the technical page still describes O7-R11 as future work; its authority trace must be reconfirmed after the custom economy-bundle correction."
++        "reason": "O7-R15 traced the corrected equipment, currency, shop, recovery, save, and restore authority graph from current source and tests."
+       }
+     },
+     {
+diff --git a/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json b/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
+index e425b65fb1662f0a8a42fbba15b1186bf6f6829c..4ce36474aba4d10fe6f3197874bcb2e88e7d499b 100644
+--- a/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
++++ b/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
+@@ -167,7 +167,7 @@
+     },
+     {
+       "id": "inventory_equipment_economy",
+-      "implementationState": "partial",
++      "implementationState": "complete",
+       "frameworkTests": [
+         "ResourceManagementServiceTests",
+         "ShopPricingPolicyTests",
+@@ -185,10 +185,7 @@
+       "demoCoverage": "focused",
+       "hostNeutral": true,
+       "optionalModule": true,
+-      "knownGaps": [
+-        "A malformed custom economy ruleset factory can bind a non-null ResourceManagementRulesetServices aggregate containing a null required subservice as success.",
+-        "The three audience documents retain stale pre-O7-R11 review-state callouts, and the developer Shop.Buy example omits the required equipment acquisition context."
+-      ]
++      "knownGaps": []
+     },
+     {
+       "id": "navigation",
+diff --git a/tests/Convergence.Framework.Tests/Runtime/RuntimeRulesetBindingTests.cs b/tests/Convergence.Framework.Tests/Runtime/RuntimeRulesetBindingTests.cs
+index 31e448974d09b6dc13361b02aeb3b17077142908..bb6534d88ae63fde06393cc060ac564713a0a507 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/RuntimeRulesetBindingTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/RuntimeRulesetBindingTests.cs
+@@ -331,7 +331,7 @@ public sealed class RuntimeRulesetBindingTests
+                 pricingFactories,
+                 ShopStockPolicyFactoryRegistry.CreateStandard()),
+             new ShopTransactionService(inventory, economyTransactions),
+-            Recovery: null);
++            recovery: null);
+         var turn = new BattleTurnEconomyRuleset(
+             () => new Convergence.TurnEconomy.ActionTokenTurnEconomy(),
+             new BattlePhaseProgressPolicy(20, 4));
+@@ -603,6 +603,91 @@ public sealed class RuntimeRulesetBindingTests
+         Assert.Contains("Ruleset diagnostic", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+     }
+ 
++    [Theory]
++    [InlineData(ResourceManagementServiceMember.Inventory, "inventory")]
++    [InlineData(ResourceManagementServiceMember.Equipment, "equipment")]
++    [InlineData(ResourceManagementServiceMember.Economy, "economy")]
++    [InlineData(ResourceManagementServiceMember.ShopOffers, "shopOffers")]
++    [InlineData(ResourceManagementServiceMember.Shop, "shop")]
++    public void ResourceManagementRulesetServices_RejectsEveryMissingRequiredService(
++        ResourceManagementServiceMember missingMember,
++        string expectedParameterName)
++    {
++        ArgumentNullException exception = Assert.Throws<ArgumentNullException>(
++            () => ResourceManagementServices(missingMember));
++
++        Assert.Equal(expectedParameterName, exception.ParamName);
++    }
++
++    [Fact]
++    public void ResourceManagementRulesetServices_ExposesASealedGetOnlyNonRecordShape()
++    {
++        Type serviceType = typeof(ResourceManagementRulesetServices);
++
++        Assert.True(serviceType.IsSealed);
++        Assert.Null(serviceType.GetMethod("<Clone>$"));
++        Assert.All(
++            serviceType.GetProperties(),
++            property => Assert.Null(property.SetMethod));
++    }
++
++    [Theory]
++    [InlineData(ResourceManagementServiceMember.Inventory)]
++    [InlineData(ResourceManagementServiceMember.Equipment)]
++    [InlineData(ResourceManagementServiceMember.Economy)]
++    [InlineData(ResourceManagementServiceMember.ShopOffers)]
++    [InlineData(ResourceManagementServiceMember.Shop)]
++    public void EconomyResolver_ContainsIncompleteServiceBundlesAsPolicyFactoryFailure(
++        ResourceManagementServiceMember missingMember)
++    {
++        ContentId policyId = Id("incomplete_economy_policy");
++        RulesetDefinition definition = Ruleset("incomplete_economy", RulesetCategory.Economy, policyId);
++        var resolver = new RuntimeRulesetBindingResolver(new RuntimeRulesetPolicyFactoryRegistry(
++            economy: [new IncompleteEconomyFactory(policyId, missingMember)]));
++
++        RulesetBindingResult<ResourceManagementRulesetServices> result =
++            resolver.BindResourceManagementServices(Catalog(definition), definition.Id);
++
++        Assert.False(result.IsSuccess);
++        Assert.Null(result.Service);
++        RulesetBindingDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(RulesetBindingDiagnosticCode.PolicyFactoryFailure, diagnostic.Code);
++        Assert.Equal(definition.Id, diagnostic.RulesetId);
++        Assert.Equal(RulesetCategory.Economy, diagnostic.ExpectedCategory);
++        Assert.Equal(RulesetCategory.Economy, diagnostic.ActualCategory);
++        Assert.Equal(policyId, diagnostic.PolicyId);
++        Assert.Contains("cannot be null", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
++    }
++
++    [Fact]
++    public void EconomyResolver_PreservesValidCustomServiceIdentity()
++    {
++        ContentId policyId = Id("valid_economy_policy");
++        RulesetDefinition definition = Ruleset("valid_economy", RulesetCategory.Economy, policyId);
++        ResourceManagementRulesetServices services = ResourceManagementServices();
++        var resolver = new RuntimeRulesetBindingResolver(new RuntimeRulesetPolicyFactoryRegistry(
++            economy: [new FixedEconomyFactory(policyId, services)]));
++
++        ResourceManagementRulesetServices bound = resolver
++            .BindResourceManagementServices(Catalog(definition), definition.Id)
++            .RequireService();
++
++        Assert.Same(services, bound);
++        Assert.Null(bound.Recovery);
++    }
++
++    [Fact]
++    public void EconomyResolver_DoesNotConvertFactoryCancellationIntoAConfigurationDiagnostic()
++    {
++        ContentId policyId = Id("canceling_economy_policy");
++        RulesetDefinition definition = Ruleset("canceling_economy", RulesetCategory.Economy, policyId);
++        var resolver = new RuntimeRulesetBindingResolver(new RuntimeRulesetPolicyFactoryRegistry(
++            economy: [new CancelingEconomyFactory(policyId)]));
++
++        Assert.Throws<OperationCanceledException>(() =>
++            resolver.BindResourceManagementServices(Catalog(definition), definition.Id));
++    }
++
+     [Fact]
+     public void DamageBinding_AppliesOnlyApprovedSupportedParameters()
+     {
+@@ -1373,6 +1458,34 @@ public sealed class RuntimeRulesetBindingTests
+             standard,
+             new StandardActionOutcomeAggregationPolicy());
+ 
++    private static ResourceManagementRulesetServices ResourceManagementServices(
++        ResourceManagementServiceMember? missingMember = null)
++    {
++        var inventory = new InventoryTransitionService();
++        var equipment = new EquipmentTransitionService();
++        var economy = new EconomyTransactionService();
++        ShopPricingPolicyFactoryRegistry pricingFactories =
++            ShopPricingPolicyFactoryRegistry.CreateStandard();
++        BoundShopPricingPolicy pricing = pricingFactories
++            .Bind(
++                StandardShopPricingPolicyIds.Standard,
++                new Dictionary<string, object?>())
++            .RequirePolicy();
++        var shopOffers = new RuntimeShopOfferResolver(
++            pricing,
++            pricingFactories,
++            ShopStockPolicyFactoryRegistry.CreateStandard());
++        var shop = new ShopTransactionService(inventory, economy);
++
++        return new ResourceManagementRulesetServices(
++            missingMember == ResourceManagementServiceMember.Inventory ? null! : inventory,
++            missingMember == ResourceManagementServiceMember.Equipment ? null! : equipment,
++            missingMember == ResourceManagementServiceMember.Economy ? null! : economy,
++            missingMember == ResourceManagementServiceMember.ShopOffers ? null! : shopOffers,
++            missingMember == ResourceManagementServiceMember.Shop ? null! : shop,
++            recovery: null);
++    }
++
+     private sealed class RecordingMissHitPolicy : IHitResolutionPolicy
+     {
+         public int CallCount { get; private set; }
+@@ -1504,6 +1617,15 @@ public sealed class RuntimeRulesetBindingTests
+         BlankMessage
+     }
+ 
++    public enum ResourceManagementServiceMember
++    {
++        Inventory,
++        Equipment,
++        Economy,
++        ShopOffers,
++        Shop
++    }
++
+     private sealed class MalformedEconomyFactory(
+         ContentId policyId,
+         MalformedRulesetDiagnosticShape shape) : IRuntimeEconomyRulesetPolicyFactory
+@@ -1535,6 +1657,26 @@ public sealed class RuntimeRulesetBindingTests
+                 });
+     }
+ 
++    private sealed class IncompleteEconomyFactory(
++        ContentId policyId,
++        ResourceManagementServiceMember missingMember) : IRuntimeEconomyRulesetPolicyFactory
++    {
++        public ContentId PolicyId { get; } = policyId;
++
++        public RulesetBindingResult<ResourceManagementRulesetServices> Create(
++            RulesetDefinition definition) =>
++            new(ResourceManagementServices(missingMember));
++    }
++
++    private sealed class CancelingEconomyFactory(ContentId policyId) : IRuntimeEconomyRulesetPolicyFactory
++    {
++        public ContentId PolicyId { get; } = policyId;
++
++        public RulesetBindingResult<ResourceManagementRulesetServices> Create(
++            RulesetDefinition definition) =>
++            throw new OperationCanceledException("Host economy policy factory cancelled.");
++    }
++
+     private sealed class FixedStatFactory(
+         ContentId policyId,
+         StatRulesetServices service) : IRuntimeStatRulesetPolicyFactory

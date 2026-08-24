@@ -1,0 +1,31 @@
+commit 357563aa51345b2649674968ec3a0db5f303fbf8
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Aug 24 10:41:53 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Aug 24 10:41:53 2026 +0200
+
+    docs: close order 7 after fresh review
+
+commit 77a6b9e46522e6f8fc0cd99a7f89d769fc336767
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Aug 24 10:21:44 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Aug 24 10:21:44 2026 +0200
+
+    docs: guard shop purchase integration
+
+commit 6e9ae62fafcf64ad53306bebcdba15b9a2190580
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Aug 24 10:14:33 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Aug 24 10:14:33 2026 +0200
+
+    docs: reconcile order 7 review state
+
+commit 59039b57b0a4139244c957ccefc4369a24ceb934
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Aug 24 10:07:14 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Aug 24 10:07:14 2026 +0200
+
+    runtime: validate economy service bundles
