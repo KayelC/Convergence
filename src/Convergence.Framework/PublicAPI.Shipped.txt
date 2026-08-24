@@ -5049,16 +5049,10 @@ Convergence.Runtime.ResourceCurrentAdjustmentMode
 Convergence.Runtime.ResourceCurrentAdjustmentMode.LevelUpDelta = 1 -> Convergence.Runtime.ResourceCurrentAdjustmentMode
 Convergence.Runtime.ResourceCurrentAdjustmentMode.PreserveCurrent = 0 -> Convergence.Runtime.ResourceCurrentAdjustmentMode
 Convergence.Runtime.ResourceManagementRulesetServices
-Convergence.Runtime.ResourceManagementRulesetServices.<Clone>$() -> Convergence.Runtime.ResourceManagementRulesetServices!
 Convergence.Runtime.ResourceManagementRulesetServices.Economy.get -> Convergence.Runtime.IEconomyTransactionService!
-Convergence.Runtime.ResourceManagementRulesetServices.Economy.init -> void
-Convergence.Runtime.ResourceManagementRulesetServices.Equals(Convergence.Runtime.ResourceManagementRulesetServices? other) -> bool
 Convergence.Runtime.ResourceManagementRulesetServices.Equipment.get -> Convergence.Runtime.IEquipmentTransitionService!
-Convergence.Runtime.ResourceManagementRulesetServices.Equipment.init -> void
 Convergence.Runtime.ResourceManagementRulesetServices.Inventory.get -> Convergence.Runtime.IInventoryTransitionService!
-Convergence.Runtime.ResourceManagementRulesetServices.Inventory.init -> void
 Convergence.Runtime.ResourceManagementRulesetServices.Shop.get -> Convergence.Runtime.IShopTransactionService!
-Convergence.Runtime.ResourceManagementRulesetServices.Shop.init -> void
 Convergence.Runtime.ResourceRecalculationRequest
 Convergence.Runtime.ResourceRecalculationRequest.<Clone>$() -> Convergence.Runtime.ResourceRecalculationRequest!
 Convergence.Runtime.ResourceRecalculationRequest.AdjustmentMode.get -> Convergence.Runtime.ResourceCurrentAdjustmentMode
@@ -7912,9 +7906,6 @@ override Convergence.Runtime.ReplacePendingSkillCommand.Equals(object? obj) -> b
 override Convergence.Runtime.ReplacePendingSkillCommand.GetHashCode() -> int
 override Convergence.Runtime.ReplacePendingSkillCommand.Kind.get -> Convergence.Runtime.RuntimeSkillChoiceDecisionKind
 override Convergence.Runtime.ReplacePendingSkillCommand.ToString() -> string!
-override Convergence.Runtime.ResourceManagementRulesetServices.Equals(object? obj) -> bool
-override Convergence.Runtime.ResourceManagementRulesetServices.GetHashCode() -> int
-override Convergence.Runtime.ResourceManagementRulesetServices.ToString() -> string!
 override Convergence.Runtime.ResourceRecalculationRequest.Equals(object? obj) -> bool
 override Convergence.Runtime.ResourceRecalculationRequest.GetHashCode() -> int
 override Convergence.Runtime.ResourceRecalculationRequest.ToString() -> string!
@@ -9178,8 +9169,6 @@ static Convergence.Runtime.ReplaceHostedEntityRequest.operator !=(Convergence.Ru
 static Convergence.Runtime.ReplaceHostedEntityRequest.operator ==(Convergence.Runtime.ReplaceHostedEntityRequest? left, Convergence.Runtime.ReplaceHostedEntityRequest? right) -> bool
 static Convergence.Runtime.ReplacePendingSkillCommand.operator !=(Convergence.Runtime.ReplacePendingSkillCommand? left, Convergence.Runtime.ReplacePendingSkillCommand? right) -> bool
 static Convergence.Runtime.ReplacePendingSkillCommand.operator ==(Convergence.Runtime.ReplacePendingSkillCommand? left, Convergence.Runtime.ReplacePendingSkillCommand? right) -> bool
-static Convergence.Runtime.ResourceManagementRulesetServices.operator !=(Convergence.Runtime.ResourceManagementRulesetServices? left, Convergence.Runtime.ResourceManagementRulesetServices? right) -> bool
-static Convergence.Runtime.ResourceManagementRulesetServices.operator ==(Convergence.Runtime.ResourceManagementRulesetServices? left, Convergence.Runtime.ResourceManagementRulesetServices? right) -> bool
 static Convergence.Runtime.ResourceRecalculationRequest.operator !=(Convergence.Runtime.ResourceRecalculationRequest? left, Convergence.Runtime.ResourceRecalculationRequest? right) -> bool
 static Convergence.Runtime.ResourceRecalculationRequest.operator ==(Convergence.Runtime.ResourceRecalculationRequest? left, Convergence.Runtime.ResourceRecalculationRequest? right) -> bool
 static Convergence.Runtime.ResourceRecalculationResult.operator !=(Convergence.Runtime.ResourceRecalculationResult? left, Convergence.Runtime.ResourceRecalculationResult? right) -> bool
@@ -11696,7 +11685,6 @@ Convergence.Runtime.LuckAdjustedShopPricingPolicy
 Convergence.Runtime.LuckAdjustedShopPricingPolicy.Calculate(Convergence.Runtime.ShopPriceCalculationRequest! request) -> Convergence.Runtime.ShopPriceCalculationResult!
 Convergence.Runtime.LuckAdjustedShopPricingPolicy.LuckAdjustedShopPricingPolicy() -> void
 Convergence.Runtime.ResourceManagementRulesetServices.ShopOffers.get -> Convergence.Runtime.IRuntimeShopOfferResolver!
-Convergence.Runtime.ResourceManagementRulesetServices.ShopOffers.init -> void
 Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidPricePolicyConfiguration = 5 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.UnsupportedStockPolicy = 6 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionDiagnostic.PricingDiagnostic.get -> Convergence.Runtime.ShopPricingPolicyDiagnostic?
@@ -12144,10 +12132,7 @@ Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.Equals(Convergence.Runtime.R
 Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.<Clone>$() -> Convergence.Runtime.RecoveryPolicyFactoryDiagnostic!
 Convergence.Runtime.RecoveryPolicyFactoryDiagnostic.Deconstruct(out Convergence.Runtime.RecoveryPolicyFactoryDiagnosticCode Code, out string! Message, out string? ParameterName, out Convergence.Content.ContentId? PolicyId) -> void
 Convergence.Runtime.ResourceManagementRulesetServices.Recovery.get -> Convergence.Runtime.IRecoveryService?
-Convergence.Runtime.ResourceManagementRulesetServices.Recovery.init -> void
-Convergence.Runtime.ResourceManagementRulesetServices.Deconstruct(out Convergence.Runtime.IInventoryTransitionService! Inventory, out Convergence.Runtime.IEquipmentTransitionService! Equipment, out Convergence.Runtime.IEconomyTransactionService! Economy, out Convergence.Runtime.IRuntimeShopOfferResolver! ShopOffers, out Convergence.Runtime.IShopTransactionService! Shop, out Convergence.Runtime.IRecoveryService? Recovery) -> void
 Convergence.Runtime.StatModifierCleanupScope.RecoveryEvent = 4 -> Convergence.Runtime.StatModifierCleanupScope
-Convergence.Runtime.ResourceManagementRulesetServices.ResourceManagementRulesetServices(Convergence.Runtime.IInventoryTransitionService! Inventory, Convergence.Runtime.IEquipmentTransitionService! Equipment, Convergence.Runtime.IEconomyTransactionService! Economy, Convergence.Runtime.IRuntimeShopOfferResolver! ShopOffers, Convergence.Runtime.IShopTransactionService! Shop, Convergence.Runtime.IRecoveryService? Recovery) -> void
 static Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry.CreateStandard(System.Collections.Generic.IEnumerable<Convergence.Runtime.IShopPricingPolicyFactory!>? shopPricing, System.Collections.Generic.IEnumerable<Convergence.Runtime.IShopStockPolicyFactory!>? shopStock, System.Collections.Generic.IEnumerable<Convergence.Runtime.IRecoveryPolicyFactory!>? recovery) -> Convergence.Runtime.RuntimeRulesetPolicyFactoryRegistry!
 Convergence.Runtime.IRecoveryService.Assess(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.IStatModifierPolicyService? statModifiers = null) -> Convergence.Runtime.RecoveryTransactionResult!
 Convergence.Runtime.IRecoveryService.Recover(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.IStatModifierPolicyService? statModifiers = null) -> Convergence.Runtime.RecoveryTransactionResult!
@@ -12282,3 +12267,4 @@ Convergence.Runtime.RuntimeEquipmentAcquisitionContext
 Convergence.Runtime.RuntimeEquipmentAcquisitionContext.EquipmentRepository.get -> Convergence.Catalog.IEquipmentDefinitionRepository!
 Convergence.Runtime.RuntimeEquipmentAcquisitionContext.LiveActorInstanceIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeInstanceId>!
 Convergence.Runtime.RuntimeEquipmentAcquisitionContext.RuntimeEquipmentAcquisitionContext(Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeInstanceId>! liveActorInstanceIds) -> void
+Convergence.Runtime.ResourceManagementRulesetServices.ResourceManagementRulesetServices(Convergence.Runtime.IInventoryTransitionService! inventory, Convergence.Runtime.IEquipmentTransitionService! equipment, Convergence.Runtime.IEconomyTransactionService! economy, Convergence.Runtime.IRuntimeShopOfferResolver! shopOffers, Convergence.Runtime.IShopTransactionService! shop, Convergence.Runtime.IRecoveryService? recovery) -> void

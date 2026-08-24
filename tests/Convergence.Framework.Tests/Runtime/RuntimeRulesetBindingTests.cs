@@ -331,7 +331,7 @@ public sealed class RuntimeRulesetBindingTests
                 pricingFactories,
                 ShopStockPolicyFactoryRegistry.CreateStandard()),
             new ShopTransactionService(inventory, economyTransactions),
-            Recovery: null);
+            recovery: null);
         var turn = new BattleTurnEconomyRuleset(
             () => new Convergence.TurnEconomy.ActionTokenTurnEconomy(),
             new BattlePhaseProgressPolicy(20, 4));
@@ -601,6 +601,91 @@ public sealed class RuntimeRulesetBindingTests
         Assert.Equal(RulesetCategory.Economy, diagnostic.ActualCategory);
         Assert.Equal(policyId, diagnostic.PolicyId);
         Assert.Contains("Ruleset diagnostic", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(ResourceManagementServiceMember.Inventory, "inventory")]
+    [InlineData(ResourceManagementServiceMember.Equipment, "equipment")]
+    [InlineData(ResourceManagementServiceMember.Economy, "economy")]
+    [InlineData(ResourceManagementServiceMember.ShopOffers, "shopOffers")]
+    [InlineData(ResourceManagementServiceMember.Shop, "shop")]
+    public void ResourceManagementRulesetServices_RejectsEveryMissingRequiredService(
+        ResourceManagementServiceMember missingMember,
+        string expectedParameterName)
+    {
+        ArgumentNullException exception = Assert.Throws<ArgumentNullException>(
+            () => ResourceManagementServices(missingMember));
+
+        Assert.Equal(expectedParameterName, exception.ParamName);
+    }
+
+    [Fact]
+    public void ResourceManagementRulesetServices_ExposesASealedGetOnlyNonRecordShape()
+    {
+        Type serviceType = typeof(ResourceManagementRulesetServices);
+
+        Assert.True(serviceType.IsSealed);
+        Assert.Null(serviceType.GetMethod("<Clone>$"));
+        Assert.All(
+            serviceType.GetProperties(),
+            property => Assert.Null(property.SetMethod));
+    }
+
+    [Theory]
+    [InlineData(ResourceManagementServiceMember.Inventory)]
+    [InlineData(ResourceManagementServiceMember.Equipment)]
+    [InlineData(ResourceManagementServiceMember.Economy)]
+    [InlineData(ResourceManagementServiceMember.ShopOffers)]
+    [InlineData(ResourceManagementServiceMember.Shop)]
+    public void EconomyResolver_ContainsIncompleteServiceBundlesAsPolicyFactoryFailure(
+        ResourceManagementServiceMember missingMember)
+    {
+        ContentId policyId = Id("incomplete_economy_policy");
+        RulesetDefinition definition = Ruleset("incomplete_economy", RulesetCategory.Economy, policyId);
+        var resolver = new RuntimeRulesetBindingResolver(new RuntimeRulesetPolicyFactoryRegistry(
+            economy: [new IncompleteEconomyFactory(policyId, missingMember)]));
+
+        RulesetBindingResult<ResourceManagementRulesetServices> result =
+            resolver.BindResourceManagementServices(Catalog(definition), definition.Id);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Service);
+        RulesetBindingDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(RulesetBindingDiagnosticCode.PolicyFactoryFailure, diagnostic.Code);
+        Assert.Equal(definition.Id, diagnostic.RulesetId);
+        Assert.Equal(RulesetCategory.Economy, diagnostic.ExpectedCategory);
+        Assert.Equal(RulesetCategory.Economy, diagnostic.ActualCategory);
+        Assert.Equal(policyId, diagnostic.PolicyId);
+        Assert.Contains("cannot be null", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void EconomyResolver_PreservesValidCustomServiceIdentity()
+    {
+        ContentId policyId = Id("valid_economy_policy");
+        RulesetDefinition definition = Ruleset("valid_economy", RulesetCategory.Economy, policyId);
+        ResourceManagementRulesetServices services = ResourceManagementServices();
+        var resolver = new RuntimeRulesetBindingResolver(new RuntimeRulesetPolicyFactoryRegistry(
+            economy: [new FixedEconomyFactory(policyId, services)]));
+
+        ResourceManagementRulesetServices bound = resolver
+            .BindResourceManagementServices(Catalog(definition), definition.Id)
+            .RequireService();
+
+        Assert.Same(services, bound);
+        Assert.Null(bound.Recovery);
+    }
+
+    [Fact]
+    public void EconomyResolver_DoesNotConvertFactoryCancellationIntoAConfigurationDiagnostic()
+    {
+        ContentId policyId = Id("canceling_economy_policy");
+        RulesetDefinition definition = Ruleset("canceling_economy", RulesetCategory.Economy, policyId);
+        var resolver = new RuntimeRulesetBindingResolver(new RuntimeRulesetPolicyFactoryRegistry(
+            economy: [new CancelingEconomyFactory(policyId)]));
+
+        Assert.Throws<OperationCanceledException>(() =>
+            resolver.BindResourceManagementServices(Catalog(definition), definition.Id));
     }
 
     [Fact]
@@ -1373,6 +1458,34 @@ public sealed class RuntimeRulesetBindingTests
             standard,
             new StandardActionOutcomeAggregationPolicy());
 
+    private static ResourceManagementRulesetServices ResourceManagementServices(
+        ResourceManagementServiceMember? missingMember = null)
+    {
+        var inventory = new InventoryTransitionService();
+        var equipment = new EquipmentTransitionService();
+        var economy = new EconomyTransactionService();
+        ShopPricingPolicyFactoryRegistry pricingFactories =
+            ShopPricingPolicyFactoryRegistry.CreateStandard();
+        BoundShopPricingPolicy pricing = pricingFactories
+            .Bind(
+                StandardShopPricingPolicyIds.Standard,
+                new Dictionary<string, object?>())
+            .RequirePolicy();
+        var shopOffers = new RuntimeShopOfferResolver(
+            pricing,
+            pricingFactories,
+            ShopStockPolicyFactoryRegistry.CreateStandard());
+        var shop = new ShopTransactionService(inventory, economy);
+
+        return new ResourceManagementRulesetServices(
+            missingMember == ResourceManagementServiceMember.Inventory ? null! : inventory,
+            missingMember == ResourceManagementServiceMember.Equipment ? null! : equipment,
+            missingMember == ResourceManagementServiceMember.Economy ? null! : economy,
+            missingMember == ResourceManagementServiceMember.ShopOffers ? null! : shopOffers,
+            missingMember == ResourceManagementServiceMember.Shop ? null! : shop,
+            recovery: null);
+    }
+
     private sealed class RecordingMissHitPolicy : IHitResolutionPolicy
     {
         public int CallCount { get; private set; }
@@ -1504,6 +1617,15 @@ public sealed class RuntimeRulesetBindingTests
         BlankMessage
     }
 
+    public enum ResourceManagementServiceMember
+    {
+        Inventory,
+        Equipment,
+        Economy,
+        ShopOffers,
+        Shop
+    }
+
     private sealed class MalformedEconomyFactory(
         ContentId policyId,
         MalformedRulesetDiagnosticShape shape) : IRuntimeEconomyRulesetPolicyFactory
@@ -1533,6 +1655,26 @@ public sealed class RuntimeRulesetBindingTests
                     ],
                     _ => throw new ArgumentOutOfRangeException(nameof(shape))
                 });
+    }
+
+    private sealed class IncompleteEconomyFactory(
+        ContentId policyId,
+        ResourceManagementServiceMember missingMember) : IRuntimeEconomyRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<ResourceManagementRulesetServices> Create(
+            RulesetDefinition definition) =>
+            new(ResourceManagementServices(missingMember));
+    }
+
+    private sealed class CancelingEconomyFactory(ContentId policyId) : IRuntimeEconomyRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<ResourceManagementRulesetServices> Create(
+            RulesetDefinition definition) =>
+            throw new OperationCanceledException("Host economy policy factory cancelled.");
     }
 
     private sealed class FixedStatFactory(

@@ -103,13 +103,36 @@ public sealed record StatRulesetServices(
     IStatResolutionPolicy StatResolutionPolicy,
     IStatStageScalingPolicy StageScalingPolicy);
 
-public sealed record ResourceManagementRulesetServices(
-    IInventoryTransitionService Inventory,
-    IEquipmentTransitionService Equipment,
-    IEconomyTransactionService Economy,
-    IRuntimeShopOfferResolver ShopOffers,
-    IShopTransactionService Shop,
-    IRecoveryService? Recovery);
+/// <summary>
+/// Immutable set of resource-management services produced by an economy
+/// ruleset factory. Required services are validated at construction so a
+/// successful ruleset binding cannot expose an unusable partial aggregate.
+/// </summary>
+public sealed class ResourceManagementRulesetServices
+{
+    public ResourceManagementRulesetServices(
+        IInventoryTransitionService inventory,
+        IEquipmentTransitionService equipment,
+        IEconomyTransactionService economy,
+        IRuntimeShopOfferResolver shopOffers,
+        IShopTransactionService shop,
+        IRecoveryService? recovery)
+    {
+        Inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+        Equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
+        Economy = economy ?? throw new ArgumentNullException(nameof(economy));
+        ShopOffers = shopOffers ?? throw new ArgumentNullException(nameof(shopOffers));
+        Shop = shop ?? throw new ArgumentNullException(nameof(shop));
+        Recovery = recovery;
+    }
+
+    public IInventoryTransitionService Inventory { get; }
+    public IEquipmentTransitionService Equipment { get; }
+    public IEconomyTransactionService Economy { get; }
+    public IRuntimeShopOfferResolver ShopOffers { get; }
+    public IShopTransactionService Shop { get; }
+    public IRecoveryService? Recovery { get; }
+}
 
 public sealed record BattleTurnEconomyRuleset
 {
