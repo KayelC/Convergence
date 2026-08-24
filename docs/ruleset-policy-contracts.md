@@ -44,6 +44,14 @@ factories. Duplicate or qualified factory policy IDs are rejected. Moon phase
 has no standard runtime factory; a game that wants such a module owns its
 policy and composition outside this supplied registry.
 
+Every top-level `RulesetBindingResult<TService>` snapshots its diagnostics and
+rejects null entries, undefined diagnostic codes, and blank messages. A custom
+factory may return a service together with valid diagnostics, but diagnostics
+remain authoritative: the resolver discards that service and returns the
+diagnostics as a failed binding. A null or empty factory result, malformed
+diagnostics, and non-cancellation factory exceptions become a typed
+`PolicyFactoryFailure`; `OperationCanceledException` remains cancellation.
+
 ## Standard Turn Economies
 
 The supplied registry exposes two `turn_economy` factories:

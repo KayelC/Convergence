@@ -577,6 +577,32 @@ public sealed class RuntimeRulesetBindingTests
             StagePolicy()));
     }
 
+    [Theory]
+    [InlineData(MalformedRulesetDiagnosticShape.NullEntry)]
+    [InlineData(MalformedRulesetDiagnosticShape.UndefinedCode)]
+    [InlineData(MalformedRulesetDiagnosticShape.BlankMessage)]
+    public void EconomyResolver_ContainsMalformedHostFactoryDiagnostics(
+        MalformedRulesetDiagnosticShape shape)
+    {
+        ContentId policyId = Id("malformed_economy_policy");
+        RulesetDefinition definition = Ruleset("malformed_economy", RulesetCategory.Economy, policyId);
+        var resolver = new RuntimeRulesetBindingResolver(new RuntimeRulesetPolicyFactoryRegistry(
+            economy: [new MalformedEconomyFactory(policyId, shape)]));
+
+        RulesetBindingResult<ResourceManagementRulesetServices> result =
+            resolver.BindResourceManagementServices(Catalog(definition), definition.Id);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Service);
+        RulesetBindingDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(RulesetBindingDiagnosticCode.PolicyFactoryFailure, diagnostic.Code);
+        Assert.Equal(definition.Id, diagnostic.RulesetId);
+        Assert.Equal(RulesetCategory.Economy, diagnostic.ExpectedCategory);
+        Assert.Equal(RulesetCategory.Economy, diagnostic.ActualCategory);
+        Assert.Equal(policyId, diagnostic.PolicyId);
+        Assert.Contains("Ruleset diagnostic", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void DamageBinding_AppliesOnlyApprovedSupportedParameters()
     {
@@ -1469,6 +1495,44 @@ public sealed class RuntimeRulesetBindingTests
             IRandomSource random,
             IStatStageScalingPolicy stageScalingPolicy) =>
             throw new OperationCanceledException("Host policy factory cancelled.");
+    }
+
+    public enum MalformedRulesetDiagnosticShape
+    {
+        NullEntry,
+        UndefinedCode,
+        BlankMessage
+    }
+
+    private sealed class MalformedEconomyFactory(
+        ContentId policyId,
+        MalformedRulesetDiagnosticShape shape) : IRuntimeEconomyRulesetPolicyFactory
+    {
+        public ContentId PolicyId { get; } = policyId;
+
+        public RulesetBindingResult<ResourceManagementRulesetServices> Create(
+            RulesetDefinition definition) =>
+            new(
+                null,
+                shape switch
+                {
+                    MalformedRulesetDiagnosticShape.NullEntry => [null!],
+                    MalformedRulesetDiagnosticShape.UndefinedCode =>
+                    [
+                        new RulesetBindingDiagnostic(
+                            (RulesetBindingDiagnosticCode)int.MaxValue,
+                            definition.Id,
+                            "Undefined diagnostic code.")
+                    ],
+                    MalformedRulesetDiagnosticShape.BlankMessage =>
+                    [
+                        new RulesetBindingDiagnostic(
+                            RulesetBindingDiagnosticCode.InvalidParameterValue,
+                            definition.Id,
+                            " ")
+                    ],
+                    _ => throw new ArgumentOutOfRangeException(nameof(shape))
+                });
     }
 
     private sealed class FixedStatFactory(

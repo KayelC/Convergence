@@ -52,8 +52,34 @@ public sealed record RulesetBindingResult<TService>
         TService? service,
         IEnumerable<RulesetBindingDiagnostic>? diagnostics = null)
     {
+        RulesetBindingDiagnostic[] diagnosticSnapshot = (diagnostics ?? []).ToArray();
+        for (int index = 0; index < diagnosticSnapshot.Length; index++)
+        {
+            RulesetBindingDiagnostic? diagnostic = diagnosticSnapshot[index];
+            if (diagnostic is null)
+            {
+                throw new ArgumentException(
+                    $"Ruleset diagnostics cannot contain a null entry at index {index}.",
+                    nameof(diagnostics));
+            }
+
+            if (!Enum.IsDefined(diagnostic.Code))
+            {
+                throw new ArgumentException(
+                    $"Ruleset diagnostic at index {index} has undefined code '{diagnostic.Code}'.",
+                    nameof(diagnostics));
+            }
+
+            if (string.IsNullOrWhiteSpace(diagnostic.Message))
+            {
+                throw new ArgumentException(
+                    $"Ruleset diagnostic at index {index} requires a nonblank message.",
+                    nameof(diagnostics));
+            }
+        }
+
         Service = service;
-        Diagnostics = Array.AsReadOnly((diagnostics ?? []).ToArray());
+        Diagnostics = Array.AsReadOnly(diagnosticSnapshot);
     }
 
     public TService? Service { get; }
