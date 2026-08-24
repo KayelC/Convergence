@@ -1,0 +1,47 @@
+commit fadcf31366c7ab9a256526d55eddb4e16e7ae1b8
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Aug 24 08:58:14 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Aug 24 08:58:14 2026 +0200
+
+    docs: close inventory equipment economy order
+
+commit 54d28175700b35e6c52b92a660c4e3032e697304
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Aug 24 08:45:12 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Aug 24 08:45:12 2026 +0200
+
+    runtime: validate ruleset factory diagnostics
+
+commit 33f424539a9fb38834d394abb15558b8542f2ad3
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Aug 24 08:26:17 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Aug 24 08:26:17 2026 +0200
+
+    docs: synchronize runtime save contract guidance
+
+commit 4de21d1076db47451883e67dd4f79203fc758bbc
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Aug 24 08:23:42 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Aug 24 08:23:42 2026 +0200
+
+    runtime: validate shop policy bindings
+
+commit 6fbbfba6cba23f1fa5e1fa2f943f1c8b0ebc468d
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Aug 24 08:17:14 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Aug 24 08:17:14 2026 +0200
+
+    runtime: validate live equipment acquisition
+
+commit 672b30d67e34061815b623fa9567a0d6e27d72ac
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Aug 24 07:56:22 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Aug 24 07:56:22 2026 +0200
+
+    runtime: close equipment loadout authority

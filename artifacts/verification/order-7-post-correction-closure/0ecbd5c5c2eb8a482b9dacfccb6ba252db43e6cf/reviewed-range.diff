@@ -1,0 +1,3209 @@
+diff --git a/docs/developer-guide/inventory-equipment-and-economy.md b/docs/developer-guide/inventory-equipment-and-economy.md
+index dc1eb00deb0e914f23e70dbd5ef88f39ee50a193..26d34096d9bfa7fe39e48c10e5d5ff70990ce44b 100644
+--- a/docs/developer-guide/inventory-equipment-and-economy.md
++++ b/docs/developer-guide/inventory-equipment-and-economy.md
+@@ -71,6 +71,13 @@ Authored policy IDs select those factories. Equipment ownership,
+ equipment-granted skill behavior, and currency identity are fixed data-model
+ rules, not policy extension points.
+ 
++Pricing, stock, and recovery factories must return exactly one bound policy or
++one-or-more diagnostics. Their binding-result constructors reject null
++diagnostics, undefined diagnostic codes, blank messages, contradictory
++policy-plus-diagnostic results, and empty results. Registries translate those
++malformed non-cancellation factory results into typed `PolicyFactoryFailure`
++diagnostics; cancellation continues to propagate.
++
+ ## Use One Slot Layout Everywhere
+ 
+ The standard ruleset bundle uses `StandardEquipmentSlotLayoutPolicy`. A game
+@@ -126,10 +133,12 @@ var copy = new RuntimeEquipmentInstanceSnapshot(
+     hostAllocatedInstanceId,
+     equipmentDefinitionId);
+ 
+-InventoryTransitionResult added = resources.Inventory.AddEquipment(
++InventoryTransitionResult added = resources.Inventory.AcquireEquipment(
+     inventory,
+     copy,
+-    authoredSlotId);
++    inventorySlotId,
++    catalog,
++    allRuntimeActors.Select(actor => actor.InstanceId));
+ 
+ if (added.Applied)
+ {
+@@ -138,13 +147,19 @@ if (added.Applied)
+ ```
+ 
+ The host must allocate IDs that are globally fresh across actors and equipment
+-instances in the session. Framework transition and restore boundaries reject
+-duplicate IDs, cross-actor assignments, missing ownership, and actor/equipment
+-ID collisions; they do not provide a process-global ID generator.
+-
+-When purchasing equipment, pass the fresh ID to `Shop.Buy`. Item purchases pass
+-`null`. When selling equipment, identify the exact owned instance rather than
+-only its definition.
++instances in the session. `AcquireEquipment` resolves the definition through
++the supplied repository, validates the definition and inventory slot through
++the transition service's selected slot-layout policy, and checks the candidate
++ID against the complete live actor-ID set. Missing definitions, incompatible
++slots, malformed actor evidence, and actor/equipment ID collisions return typed
++rejections with unchanged inventory. Framework does not provide a
++process-global ID generator.
++
++When purchasing equipment, pass the fresh ID and a
++`RuntimeEquipmentAcquisitionContext` containing the same repository and
++complete live actor-ID set to `Shop.Buy`. Item purchases pass `null` for both
++the instance ID and acquisition context. When selling equipment, identify the
++exact owned instance rather than only its definition.
+ 
+ ## Equip One Exact Owned Copy
+ 
+@@ -192,8 +207,8 @@ RuntimeActorEquipmentApplicationResult applied = equipmentApplication.Apply(
+         catalog,
+         RuntimeStatSourceKind.ActiveHostedEntity,
+         MissingHostedEntityBehavior.RejectStatResolution,
+-        partyRoster,
+-        runtimeActors));
++        runtimeActors,
++        partyRoster));
+ 
+ if (!applied.Applied)
+ {
+@@ -204,7 +219,11 @@ if (!applied.Applied)
+ 
+ On rejection, `Before` and `After` both describe the unchanged live actor. The
+ equipment transition remains a pure candidate operation; the application
+-service is the live actor commit boundary.
++service is the live actor commit boundary. `runtimeActors` is mandatory and
++must be the complete current live actor map, including `actor` itself. The
++application rejects duplicate actor IDs, a missing subject or canonical-roster
++actor, and any candidate instance already assigned to another supplied actor
++before staging composition. There is no public raw loadout setter.
+ 
+ Do not manually copy grants into learned skills. Do not independently add
+ armor Defense or boots Evasion in battle code.
+@@ -412,6 +431,8 @@ No `Node`, `Resource`, `res://` path, serializer type, or scene handle enters
+ 
+ - One current inventory snapshot owns every equipment instance.
+ - Every live item transition supplies a valid item `ContentId`.
++- Every live equipment acquisition supplies the selected definition repository
++  and the complete current actor-ID set.
+ - Equipment IDs are globally fresh and stable across save/restore.
+ - One selected slot layout is used by validation, transitions, offers, and
+   profile resolution.
+diff --git a/docs/gameplay-systems.md b/docs/gameplay-systems.md
+index abbf3cb84ca4a0d2ddc367baf835809f2e191866..383fd9721d14315dd51b21a91fce1e85b675b410 100644
+--- a/docs/gameplay-systems.md
++++ b/docs/gameplay-systems.md
+@@ -146,7 +146,7 @@ inventory-owned equipment-instance identity, equip compatibility, typed
+ currency-ledger arithmetic, policy-bound shop pricing and stock, shop transactions, and
+ restoration transactions. Hosts own UI and durable inventory storage.
+ 
+-Order 7 is open. O7-R2 now gives each equipment copy a unique runtime instance
++Order 7 is complete. O7-R2 gives each equipment copy a unique runtime instance
+ ID, permits separate copies of one definition, makes inventory the sole owner,
+ and removes the former root save equipment authority. O7-R3 makes equipment
+ slot identity authored and policy-validated. O7-R4 derives weapon attacks,
+@@ -183,8 +183,9 @@ O7-R10's reviewed
+ [player mechanics](mechanics/party-inventory-and-economy.md),
+ [developer integration](developer-guide/inventory-equipment-and-economy.md),
+ and [technical authority](technical/inventory-equipment-economy-runtime.md)
+-pages provide the detailed contracts. This overview is not O7-R11 independent
+-closure evidence.
++pages provide the detailed contracts. The
++[post-correction closure review](reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
++is the independent source, documentation, and release-gate closure evidence.
+ 
+ ## Navigation, Traversal, And Encounter Preparation
+ 
+diff --git a/docs/godot-integration-contract.md b/docs/godot-integration-contract.md
+index 1382fc8a0ccbdfa1418b0db7e3b7ce3ace545c09..59c311f29d3965e990cc199580f219bba556d8f4 100644
+--- a/docs/godot-integration-contract.md
++++ b/docs/godot-integration-contract.md
+@@ -79,6 +79,8 @@ Two layers guard the integration boundary.
+ - consume ordered events through host sinks;
+ - map runtime IDs to host scene handles;
+ - round-trip actor, field, currency, and shop-stock snapshots through host-owned storage;
++- acquire equipment through catalog-, slot-layout-, and live actor-ID-aware
++  transitions before storing its runtime instance ID in Godot-owned save data;
+ - bind and execute generic recovery without passing a Node or scene handle into Framework.
+ 
+ `samples/Convergence.GodotHost` is the real Godot 4.7.1 .NET reference
+diff --git a/docs/public-api-contract.md b/docs/public-api-contract.md
+index eb032e52eef432f31724326c598d65053b81804b..7b36986dd5eb39a4478fd1fcf0a0302add258b84 100644
+--- a/docs/public-api-contract.md
++++ b/docs/public-api-contract.md
+@@ -299,12 +299,18 @@ contributions, and equipped-only skill grants without copying grants into
+ learned state. `RuntimeActorEquipmentApplicationService` stages a candidate
+ loadout and that derived profile on an actor clone, runs canonical combat-profile
+ composition, and commits the complete actor only after every step accepts.
+-Rejected application results expose equal before/after actor snapshots.
++Its mandatory complete live-actor map is validated for subject/roster coverage,
++duplicate actor IDs, and cross-actor instance assignment before staging.
++Rejected application results expose equal before/after actor snapshots, and
++`RuntimeActorState` exposes no public raw loadout replacement path.
+ Slot-layout policy invocation is fault-contained consistently: malformed policy
+ results and non-cancellation faults surface through explicit typed policy
+ rejection codes, while cancellation propagates.
+ 
+-Hosts allocate globally fresh equipment instance IDs and adopt successful
++Hosts allocate globally fresh equipment instance IDs. Live acquisition supplies
++the equipment repository, selected slot-layout-backed inventory service, and
++complete current actor-ID evidence so malformed catalog/slot identities and
++actor collisions reject before inventory adoption. Hosts adopt successful
+ after-snapshots. `ShopTransactionResult` coordinates inventory, currency, and
+ stock as one result. `RecoveryTransactionResult` coordinates staged actor state
+ with an explicit currency ledger. Presentation code must not construct runtime
+diff --git a/docs/reference/documentation-coverage.md b/docs/reference/documentation-coverage.md
+index 230656d6154e01bafec6ecc8a024d38c571c9857..2587b7f77fae257959b5ae8be9627e75f901ae49 100644
+--- a/docs/reference/documentation-coverage.md
++++ b/docs/reference/documentation-coverage.md
+@@ -37,9 +37,13 @@ remain unreviewed until they complete the same process.
+ Order 7 now documents inventory-owned equipment instances, authored slot
+ layouts, one live equipment profile, typed currencies, resolved pricing,
+ policy-owned stock, atomic shops, recovery, and save v19 across player,
+-developer, and maintainer audiences. O7-R10 promotes those three documents to
+-`reviewed`; the capability itself remains `partial` until O7-R11 performs the
+-separate independent adversarial closure audit.
++developer, and maintainer audiences. O7-R10 promoted those three documents to
++`reviewed`. O7-R11 then corrected the remaining live-equipment, acquisition,
++extension-boundary, and save-guidance findings. The
++[post-correction closure review](../reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
++found no unresolved realistic reachable defect or documentation contradiction,
++so the capability is `complete` and all three audience entries remain
++`reviewed`.
+ O3-R7 independently verified the source and audience documents at that
+ revision. A later source-first recheck reopened the developer and technical
+ entries while three command-boundary defects were corrected. O3-R8 through
+diff --git a/docs/reviews/README.md b/docs/reviews/README.md
+index c5d64b67b5bc2e984c026a59d52c8c7f1c8dd9b6..ac63655c4223b7cfdc824ebe0fa00646cc37b1d2 100644
+--- a/docs/reviews/README.md
++++ b/docs/reviews/README.md
+@@ -102,6 +102,7 @@ or implementation authority.
+ - [Inventory, Equipment, And Economy Order 7 R10 Documentation Review, 13 August 2026](inventory-equipment-economy-order-7-r10-documentation-review-2026-08-13.md)
+ - [Inventory, Equipment, And Economy Order 7 R11 Independent Audit, 14 August 2026](inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md)
+ - [Inventory, Equipment, And Economy Order 7 Fresh Closure Review, 14 August 2026](inventory-equipment-economy-order-7-fresh-closure-review-2026-08-14.md)
++- [Inventory, Equipment, And Economy Order 7 Post-Correction Closure Review, 24 August 2026](inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+ - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
+ 
+ Current intended behavior belongs in confirmed mechanics and decision documents.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-fresh-closure-review-2026-08-14.md b/docs/reviews/inventory-equipment-economy-order-7-fresh-closure-review-2026-08-14.md
+index 99710ff1db065632cf30b5e2614e144cf1e20b95..ad728de8d22c74b18488d438505bdbd93388ff51 100644
+--- a/docs/reviews/inventory-equipment-economy-order-7-fresh-closure-review-2026-08-14.md
++++ b/docs/reviews/inventory-equipment-economy-order-7-fresh-closure-review-2026-08-14.md
+@@ -6,6 +6,11 @@
+ **Runtime findings:** 1 high, 2 medium  
+ **Documentation findings:** 1 low
+ 
++> **Historical review state:** H1, M1, M2, and L1 were corrected in isolated
++> commits after this review. The source-first
++> [post-correction closure review](inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
++> is the current closure authority.
++
+ ## Review Method
+ 
+ This review began from the active source tree, exported public API, active
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md b/docs/reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..af56f77ede63b4ca0fb9cc17670a02afb4f3c2c4
+--- /dev/null
++++ b/docs/reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md
+@@ -0,0 +1,160 @@
++# Inventory, Equipment, And Economy Order 7 Post-Correction Closure Review
++
++**Date:** 24 August 2026  
++**Reviewed implementation:** `54d28175`  
++**Reviewed correction range:** `91a4f2ec..54d28175`  
++**Capability:** `inventory_equipment_economy`  
++**Verdict:** **complete; no unresolved realistic reachable defect found**
++
++## Review Method
++
++This review re-read the current Framework implementation, exported API,
++content and schema boundaries, DemoHost and Godot integrations, focused tests,
++and all three audience documents. Earlier reports were used only to identify
++the approved owner decisions and the correction range; their conclusions were
++not treated as proof.
++
++The review required every concern to identify an intended invariant, a
++supported reachable path, a concrete consequence, and reproducible evidence.
++Impossible domain values, documented host responsibilities, and hypothetical
++alternative game designs were not promoted into defects.
++
++## Correction Recheck
++
++| Finding | Current-source result |
++|---|---|
++| H1: public loadout bypass | Closed by `672b30d6`. Raw loadout replacement and execution-state copying are internal staging operations. `RuntimeActorEquipmentApplicationService` validates complete actor evidence, resolves one equipment profile, composes on a clone, and commits one complete actor state only after acceptance. |
++| M1: invalid live equipment acquisition | Closed by `6fbbfba6`. `AcquireEquipment` validates catalog identity, selected slot-layout compatibility, globally fresh runtime identity, and repository/policy faults before inventory mutation. Shop and host acquisition paths use this boundary. |
++| M2: malformed pricing/stock binding results | Closed by `4de21d10`. Binding results snapshot and validate diagnostics, reject contradictory or empty outcomes, contain non-cancellation factory faults, and preserve cancellation. |
++| L1: stale save-contract guidance | Closed by `33f42453`. The active restoration guide and compiled documentation guard now describe save contract v19 and its v16-v19 authority changes. |
++
++The fresh source trace also found one sibling extension-boundary defect not
++listed in the 14 August report: the generic top-level
++`RulesetBindingResult<TService>` accepted null, undefined, or blank host
++factory diagnostics. `54d28175` closes that path while preserving the existing
++intentional contract that valid diagnostics make an otherwise supplied service
++unavailable. Focused tests cover each malformed shape.
++
++## Owner Decisions Revalidated
++
++### O7-D1: Equipment Instance Ownership
++
++`RuntimeInventorySnapshot` is the sole owner of immutable equipment instances.
++Each copy has its own `RuntimeInstanceId` and one equipment definition ID.
++Actor loadouts reference instance IDs. Live application and save validation
++reject missing, duplicate, actor-colliding, and multiply equipped IDs before
++accepted mutation. Separate copies of one definition remain legal.
++
++### O7-D2: Authored Equipment Slots
++
++Slots are `ContentId` values. `IEquipmentSlotLayoutPolicy` is the only intended
++variation seam; `StandardEquipmentSlotLayoutPolicy` supplies weapon, armor,
++boots, and accessory IDs. Content validation, acquisition, equip transitions,
++profile resolution, shop offers, and save validation all invoke custom policies
++through the same fault-contained evaluator.
++
++### O7-D3 And O7-D4: Granted Skills And Combat Contributions
++
++`RuntimeEquipmentProfileResolver` derives current weapon attacks, granted
++skills/passives, Defense, Evasion, and accessory modifiers from inventory plus
++the actor's current loadout. Granted actions are checked from a freshly
++resolved profile and never enter learned skills or consume move-list slots.
++Defense and Evasion are additive inputs to the existing stat and hit formulas;
++there is no equipment-specific combat formula. An absent contribution is zero
++and remains a true no-op.
++
++### O7-D5 And O7-D6: Shop Stock And Pricing
++
++Resolved offers carry stable qualified shop/offer identity and explicit pricing
++and stock policies. The supplied pricing policy uses authored purchase price
++and configurable resale percentage; Luck adjustment is opt-in. Standard limited
++stock decrements only on accepted purchases and does not replenish on resale.
++Shop execution returns coordinated inventory, named-currency, and stock
++candidates, and every expected rejection preserves all three before-states.
++
++### O7-D7: Generic Recovery
++
++Recovery is configured by resource and currency IDs. The supplied standard
++policy fully restores its configured resources, removes only ailments that
++permit recovery events, and clears configured temporary state through canonical
++authorities. Actor cleanup is staged on a clone; the live actor commits only
++after the named-currency debit succeeds. Protected-only state returns no useful
++treatment and does not debit the ledger.
++
++### O7-D8: Typed Currency Authority
++
++`RuntimeCurrencyLedgerSnapshot` owns immutable balances keyed by currency
++`ContentId`. Credit and debit operations always name a currency, use checked
++arithmetic, and reject missing currency IDs. Construction rejects invalid or
++duplicate IDs and negative balances. The one-currency convenience accessor
++explicitly rejects empty and multi-currency ledgers.
++
++## Persistence And Host Integration
++
++Save contract v19 contains inventory-owned equipment instances, actor loadout
++references, named currency balances, and durable shop stock. It has no separate
++root equipment authority. Validation checks the complete ownership and stock
++graph. Aggregate restore derives equipment profiles from the validated save,
++catalog, and selected slot policy before constructing any actor and exposes no
++partial restored session on failure.
++
++DemoHost adopts accepted shop inventory/currency/stock candidates together,
++uses canonical live equipment application, adopts recovery currency only after
++accepted treatment, and restores through the aggregate service. The Godot
++reference codec owns serialization while carrying the same v19 authorities and
++reconnecting scene objects only after aggregate restoration succeeds.
++
++No correction in this range changes a serialized shape. Runtime save contract
++v19 and content schema v10 remain current.
++
++## Trusted Host Boundaries
++
++Two responsibilities remain intentionally host-owned and are documented rather
++than hidden behind mutable Framework repositories:
++
++- hosts serialize a session's shop mutations or compare-and-swap all three
++  before-snapshots before adopting an accepted candidate; and
++- live cross-actor equipment checks require the complete current actor/loadout
++  evidence supplied by the host, while save validation independently rechecks
++  the complete persisted graph.
++
++These are integration contracts, not unresolved Framework defects. The
++Framework remains stateless and host-neutral at those boundaries.
++
++## Documentation Review
++
++The player, developer, and technical pages agree with current source on exact
++copy ownership, authored slots, equipped-only grants, additive Defense/Evasion,
++typed currencies, pricing, stock, atomic shop candidates, generic recovery,
++save v19, and host adoption responsibilities. No stale active Order 7 rule or
++diagram contradiction was found.
++
++## Verification
++
++| Gate | Result |
++|---|---|
++| Focused Order 7 Framework tests | passed; raw output retained in the canonical verification bundle |
++| Focused DemoHost Order 7 tests | passed; raw output retained in the canonical verification bundle |
++| Full `dotnet test Convergence.sln --no-restore` | 1,833 Framework + 184 DemoHost + 7 ContentValidator = 2,024 passed; 0 failed; 0 skipped |
++| Strict Release Framework and solution builds | 0 warnings, 0 errors |
++| `dotnet format --verify-no-changes` | passed |
++| Active content validation | 6 packs, 36 documents, 98 qualified definitions passed |
++| DemoHost modes and scripted Training Annex | passed |
++| Godot 4.7.1 .NET build and headless smoke | passed |
++| Framework coverage | release thresholds passed |
++| Documentation links, forbidden references, trimming, and `git diff --check` | passed |
++
++Raw command lines, combined console output, exit codes, source identity,
++coverage, and checksums are retained under
++`artifacts/verification/order-7-post-correction-closure/<tested-commit>/`.
++
++## Closure Verdict
++
++The approved O7-D1 through O7-D8 contracts are implemented through one coherent
++runtime/save/host model. The R11 corrections and the additional generic
++ruleset-diagnostic correction hold under focused adversarial coverage. No
++unresolved realistic reachable Order 7 defect or active documentation
++contradiction remains at the reviewed revision.
++
++Order 7 is formally complete. `inventory_equipment_economy` advances from
++`partial` to `complete`; its three audience entries remain `reviewed`.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md b/docs/reviews/inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md
+index dbe349df13bb53e21751666a8e512537e99d452a..0756c2c382ad55740fd4613965e3e98b513726e8 100644
+--- a/docs/reviews/inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md
++++ b/docs/reviews/inventory-equipment-economy-order-7-r11-independent-audit-2026-08-14.md
+@@ -243,11 +243,12 @@ host. Aggregate save validation independently rechecks the whole graph.
+ | O7-R11-C3 | complete | Contain custom slot-policy faults at every Framework boundary | runtime + validation/transition/profile/save tests + API evidence |
+ | O7-R11-C4 | complete | Correct recovery wording and document trusted host concurrency/collision boundaries | three-audience docs + executable documentation/boundary tests |
+ | O7-R11-C5 | complete | Reject invalid IDs at live item-transition boundaries while preserving malformed-save diagnostics | runtime + focused tests + affected docs/API evidence |
+-| O7-R11-C6 | open | Freshly re-read post-correction source/docs and run the durable release gate | closure report + tracking/evidence only |
++| O7-R11-C6 | complete | Freshly re-read post-correction source/docs and run the durable release gate | closure report + tracking/evidence only |
+ 
+-Each correction receives its own green commit. Order 7 remains `partial` until
+-O7-R11-C6 finds no remaining realistic reachable defect or documentation
+-contradiction and the complete release gate passes.
++Each correction received its own green commit. The
++[post-correction closure review](inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
++found no remaining realistic reachable defect or documentation contradiction,
++and the complete release gate passed. Order 7 is complete.
+ 
+ ## Scope Guard
+ 
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+index 7b6795bb204b56e87cdcd9f9ed8710a670f7b2a5..0c69bda9b18f9c73493021ef5d84c45a7fac0aec 100644
+--- a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
++++ b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+@@ -8,8 +8,7 @@
+ 
+ **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
+ 
+-**Implementation status:** O7-R1 through O7-R10 complete; O7-R11 corrective
+-audit in progress
++**Implementation status:** O7-R1 through O7-R11 complete
+ 
+ > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
+ > recorded in
+@@ -31,6 +30,12 @@ audit in progress
+ > corrected three precision issues and completed R10. All three audience entries
+ > are `reviewed`; the capability remains `partial` for O7-R11.
+ 
++> **O7-R11 closure:** The
++> [post-correction closure review](inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
++> re-read current source, tests, host integration, and all three audiences after
++> the isolated R11 corrections. It found no unresolved realistic reachable
++> defect or documentation contradiction. Order 7 is complete.
++
+ ## Purpose
+ 
+ This record is the active source of truth for Documentation Order 7. It
+@@ -1669,3 +1674,24 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
+ 5. **No new policy or authority was introduced.** The correction is a fixed
+    command-boundary invariant. Inventory remains the sole item/equipment owner,
+    and save/schema versions do not advance.
++
++### O7-R11-C6: Post-Correction Closure Review
++
++- **Reviewed implementation:** `54d28175`.
++- **Review range:** `91a4f2ec..54d28175`.
++- **Actual destination:** the
++  [post-correction closure review](inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
++  independently traces all eight owner decisions through current Framework,
++  persistence, DemoHost, Godot, tests, and three-audience documentation.
++- **Fresh correction during closure:** `54d28175` rejects malformed diagnostics
++  from generic top-level ruleset factories while retaining valid
++  service-plus-diagnostics failure semantics and cancellation propagation.
++- **Result:** no unresolved realistic reachable Order 7 defect or active
++  documentation contradiction remains. `inventory_equipment_economy` advances
++  to `complete`; all three audience entries remain `reviewed`.
++- **Contract versions:** runtime save v19 and content schema v10 remain current.
++- **Verification:** 2,024 tests passed with 0 failed and 0 skipped; strict
++  Release builds reported 0 warnings and 0 errors; format, content, DemoHost,
++  Godot, coverage, documentation, trimming, forbidden-reference, and diff gates
++  passed. Raw evidence is retained under the canonical post-correction closure
++  bundle.
+diff --git a/docs/roadmap/documentation-completion-roadmap.md b/docs/roadmap/documentation-completion-roadmap.md
+index db42537c9ed5288b25a36fe7cc72f6e90375f1b4..85553d1306f4634916d7271275e2cc6cebdb3eda 100644
+--- a/docs/roadmap/documentation-completion-roadmap.md
++++ b/docs/roadmap/documentation-completion-roadmap.md
+@@ -644,7 +644,7 @@ outer action-end before a save is captured. The
+ [final certification record](../reviews/status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
+ is the formal Order 4 closure authority.
+ 
+-## Open Order 7
++## Completed Order 7
+ 
+ The owner-approved
+ [Inventory, Equipment, And Economy Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+@@ -663,13 +663,13 @@ wire/runtime surface, including aggregate restore, immutable rejected and
+ cancelled operations, sealed resolved-offer authority, all active content,
+ DemoHost, and the real Godot consumer. O7-R10 now supplies and reconciles the
+ player mechanics, developer integration, and technical authority documents.
+-O7-R11 still owns the independent closure audit.
+-
+-The capability remains `partial` while independent closure is open. Its
+-mechanics, developer, and technical entries are `reviewed` after O7-R10's
+-source/test/diagram reconciliation. Documentation maturity does not bypass the
+-remaining O7-R11 adversarial audit. Order 7 closes only after that audit finds
+-no unresolved realistic reachable defect or documentation contradiction.
++O7-R11 corrected the remaining live-equipment, acquisition,
++extension-boundary, and save-guidance findings in isolated commits. Its
++[post-correction closure review](../reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
++then re-read current source and all three audiences, found no unresolved
++realistic reachable defect or documentation contradiction, and passed the
++complete release gate. The capability is `complete`; its mechanics, developer,
++and technical entries remain `reviewed`.
+ 
+ ## Deferred Documentation
+ 
+diff --git a/docs/roadmap/framework-capability-matrix.md b/docs/roadmap/framework-capability-matrix.md
+index e0565d8e023be21149824bbc88a2b43f0771192c..146174e2f7e423e5ee3a177f8af7048186048951 100644
+--- a/docs/roadmap/framework-capability-matrix.md
++++ b/docs/roadmap/framework-capability-matrix.md
+@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
+ 
+ ## Current Reading
+ 
+-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
++The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+ 
+-`inventory_equipment_economy` is `partial`. Its immutable transaction and
++`inventory_equipment_economy` is `complete`. Its immutable transaction and
+ validation foundation is usable. O7-R2 gives each equipment copy a unique
+ runtime instance ID, makes inventory its sole owner, permits separate copies of
+ one definition, and removes the former root save equipment authority. O7-R3
+@@ -38,8 +38,12 @@ explicit standard policy. O7-R9 now certifies the combined save/restore,
+ equipment, offer, currency, stock,
+ recovery, DemoHost, and Godot boundaries; it also makes resolved shop-offer
+ authority externally read-only. O7-R10 supplies reviewed player, developer, and
+-technical documents. The capability remains partial pending independent O7-R11
+-closure. The
++technical documents. O7-R11 then corrected live equipment authority,
++acquisition validation, policy-factory fault containment, and stale save
++guidance in isolated commits. The
++[post-correction closure review](../reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
++found no unresolved realistic reachable defect or documentation contradiction
++and passed the complete release gate. The
+ owner-approved
+ [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+ governs the direct data corrections, genuine policy seams, three-audience
+diff --git a/docs/roadmap/product-roadmap.md b/docs/roadmap/product-roadmap.md
+index ad5c4df820d9f85ada6c6238976b019dd5fe9c47..d008211fd22c3ee7386962f47c70d58cf9c3810a 100644
+--- a/docs/roadmap/product-roadmap.md
++++ b/docs/roadmap/product-roadmap.md
+@@ -8,9 +8,9 @@ baseline.
+ 
+ ## Current State
+ 
+-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
++Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+ 
+-Documentation Order 7 is open under the owner-approved
++Documentation Order 7 is complete under the owner-approved
+ [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
+ The current resource-management foundation remains usable. O7-R2 establishes
+ equipment-instance ownership and removes the duplicated root save authority;
+@@ -29,8 +29,12 @@ Training Annex and Godot evidence use the same bound service. O7-R9 certifies
+ the combined runtime and wire graph across save/restore, equipment, offers,
+ currencies, stock, recovery, DemoHost, and Godot, and seals resolved offers
+ against host-side reconstruction. O7-R10 completes and reconciles all three
+-audience documents. The capability remains `partial` until O7-R11 completes
+-the independent adversarial closure audit.
++audience documents. O7-R11 corrected the remaining live-equipment,
++acquisition, extension-boundary, and save-guidance findings in isolated commits.
++The
++[post-correction closure review](../reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
++found no unresolved realistic reachable defect or documentation contradiction
++and passed the complete release gate. The capability is `complete`.
+ 
+ `encounter_orchestration` has a substantial implemented foundation under the owner-approved
+ [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
+diff --git a/docs/ruleset-policy-contracts.md b/docs/ruleset-policy-contracts.md
+index d784f71a5a279a7de9cf899cd06f2c65b7fc93cc..3f6e5443dde32457b4da14a08d8dc4da19bc1495 100644
+--- a/docs/ruleset-policy-contracts.md
++++ b/docs/ruleset-policy-contracts.md
+@@ -44,6 +44,14 @@ factories. Duplicate or qualified factory policy IDs are rejected. Moon phase
+ has no standard runtime factory; a game that wants such a module owns its
+ policy and composition outside this supplied registry.
+ 
++Every top-level `RulesetBindingResult<TService>` snapshots its diagnostics and
++rejects null entries, undefined diagnostic codes, and blank messages. A custom
++factory may return a service together with valid diagnostics, but diagnostics
++remain authoritative: the resolver discards that service and returns the
++diagnostics as a failed binding. A null or empty factory result, malformed
++diagnostics, and non-cancellation factory exceptions become a typed
++`PolicyFactoryFailure`; `OperationCanceledException` remains cancellation.
++
+ ## Standard Turn Economies
+ 
+ The supplied registry exposes two `turn_economy` factories:
+@@ -404,6 +412,13 @@ replenishment. Policies are deterministic, side-effect-free candidate
+ calculators because inventory, currency, and stock commit only after every
+ transition accepts.
+ 
++Pricing and stock factories return validated either/or binding results, using
++the same contract as recovery: one policy and no diagnostics, or no policy and
++one-or-more valid diagnostics. Null diagnostics, undefined codes, blank
++messages, contradictory results, empty results, null factory results, and
++non-cancellation factory exceptions become typed `PolicyFactoryFailure`
++diagnostics. `OperationCanceledException` is never normalized.
++
+ ## Fixed Growth Policy
+ 
+ `standard_growth` currently accepts no parameters and rejects unknown ones.
+diff --git a/docs/technical/inventory-equipment-economy-runtime.md b/docs/technical/inventory-equipment-economy-runtime.md
+index d71c467fe922386664e25f88d418f164bc39df9d..8cae31d80336676219dc9b221b032539a5f0e163 100644
+--- a/docs/technical/inventory-equipment-economy-runtime.md
++++ b/docs/technical/inventory-equipment-economy-runtime.md
+@@ -77,8 +77,12 @@ representation is not accepted live transition input.
+ 
+ `RuntimeInventorySnapshot` enforces unique equipment instance IDs across every
+ owned slot collection while allowing multiple distinct instances to reference
+-the same definition. Aggregate save validation additionally rejects an
+-equipment instance ID that collides with any actor instance ID.
++the same definition. Its constructor remains a decoded-state boundary so
++aggregate validation can report malformed catalog, slot, and actor-ID evidence.
++Live acquisition uses `InventoryTransitionService.AcquireEquipment`: it resolves
++the definition, applies the selected slot-layout policy, validates complete
++actor-ID evidence, and rejects actor/equipment ID collisions before returning
++an accepted inventory candidate.
+ 
+ Actor loadouts map authored slot IDs to instance IDs. A valid aggregate
+ requires:
+@@ -97,8 +101,10 @@ different parts of the check:
+ | Boundary | Validation |
+ |---|---|
+ | Content semantic validation | authored definition profile against the selected layout |
++| `InventoryTransitionService.AcquireEquipment` | definition lookup, definition profile, inventory-slot assignment, unique inventory identity, and complete live actor-ID separation |
+ | `EquipmentTransitionService.Equip` | inventory ownership and owned-slot to target-slot assignment, including cross-actor collision evidence |
+ | `RuntimeEquipmentProfileResolver` | inventory ownership, definition lookup, definition profile, inventory assignment, and actor assignment |
++| `RuntimeActorEquipmentApplicationService` | complete current actor-map evidence, canonical roster-state coverage, and cross-actor assignment uniqueness before staged composition |
+ | Save validation/restore | the complete definition, inventory, actor, and cross-actor graph |
+ 
+ All five boundaries route policy calls through
+@@ -156,7 +162,18 @@ success between loadout replacement and recomposition.
+ 
+ The application service is a fixed atomic orchestration boundary, not a policy:
+ slot compatibility and stat/resource behavior remain delegated to their
+-existing selected policies. It does not invent a second equipment formula.
++existing selected policies. Its request requires the complete current live
++actor map, including the exact actor being changed. When a party roster is
++supplied, every actor referenced by that roster must be present with matching
++identity. A duplicate runtime actor ID, omitted subject/roster actor, or
++candidate instance already assigned to another supplied actor returns a typed
++rejection before profile resolution. It does not invent a second equipment
++formula.
++
++`RuntimeActorState` exposes no public loadout setter. Its raw replacement
++operation exists only as an internal staging step used by the application
++service, so accepted loadout, granted-skill/passive, stat, resource, and combat
++profile state commit together.
+ 
+ ## One Equipment Profile
+ 
+@@ -220,6 +237,13 @@ Its construction and members are not public mutation boundaries. Invalid
+ content kind, missing definitions, incompatible slots, malformed pricing, or
+ unsupported stock policy returns typed diagnostics without a fallback.
+ 
++Pricing and stock binding results are immutable either/or values: exactly one
++bound policy with no diagnostics, or no policy with one-or-more defined,
++nonblank diagnostics. Their registries preserve cancellation and normalize a
++null result, malformed result shape, or other factory exception into the
++existing typed `PolicyFactoryFailure` diagnostic before offer resolution can
++inspect it.
++
+ Tracked stock identity is `RuntimeShopOfferIdentity(qualifiedShopId,
+ localOfferId)`. Content ID and menu index are not durable stock keys.
+ `RuntimeShopStockSnapshot.CreateInitial` creates one entry for each tracked
+@@ -402,9 +426,11 @@ again.
+ 
+ Cross-actor equipment collision checks have the same explicit evidence
+ boundary. Equip and resale operations can inspect only the complete current
+-loadout collection supplied by the host. Aggregate save validation rechecks the
+-whole actor/inventory graph, but it is not a substitute for supplying complete
+-live evidence during a transition.
++loadout collection supplied by the host. The application boundary independently
++requires the complete live actor map and rejects conflicting assignment before
++composition. Aggregate save validation rechecks the whole actor/inventory graph,
++but it is not a substitute for supplying complete live evidence during a
++transition.
+ 
+ ## Policy Boundaries
+ 
+diff --git a/docs/technical/runtime-actor-state-and-restoration.md b/docs/technical/runtime-actor-state-and-restoration.md
+index 4c62df9ad22e3d2f986b12a587db8faba2adeb93..9af4dcd90d593de231de47b6123a1def72931457 100644
+--- a/docs/technical/runtime-actor-state-and-restoration.md
++++ b/docs/technical/runtime-actor-state-and-restoration.md
+@@ -300,16 +300,26 @@ Key invariants:
+ Transition services do not mutate `RuntimeActorState.IsDeployed`. Encounter
+ orchestration owns presence changes.
+ 
+-## Save Contract V15
+-
+-`RuntimeSaveGameSnapshot.CurrentContractVersion` is `15`. Version 15 retains
+-the canonical roster, complete move-list state, policy-owned stat modifiers,
+-charge-policy identity, and typed status lifetimes established by earlier
+-pre-release contracts, including the optional target runtime ID used when a
+-passive event counts activations per target. It also retains each actor's
+-combat-profile source actor, source entity, and revision. Version 14 removed
+-actor-local Analyze state because persistent knowledge and encounter analysis
+-already have separate canonical snapshots.
++## Save Contract V19
++
++`RuntimeSaveGameSnapshot.CurrentContractVersion` is `19`. The current aggregate
++retains the canonical roster, complete move-list state, policy-owned stat
++modifiers, charge-policy identity, typed status lifetimes, per-target passive
++activation keys, and each actor's combat-profile source actor, source entity,
++and revision established through save v15. The subsequent Order 7 contracts
++changed one authority at a time:
++
++- v16 made inventory the sole owner of immutable equipment instances and left
++  actor loadouts with instance references only;
++- v17 replaced fixed equipment-slot values with authored `ContentId` keys;
++- v18 replaced the unnamed wallet with balances keyed by currency `ContentId`;
++  and
++- v19 added durable remaining stock keyed by qualified shop ID plus shop-local
++  offer ID.
++
++Version 14 removed actor-local Analyze state because persistent knowledge and
++encounter analysis already have separate canonical snapshots. These earlier
++versions are historical pre-release shapes, not alternate current contracts.
+ 
+ The save aggregate contains:
+ 
+@@ -317,8 +327,8 @@ The save aggregate contains:
+ - selected stat-modifier policy IDs, ordered contributions, durations, and
+   lifecycle boundaries;
+ - one canonical party roster;
+-- inventory-owned equipment instances, actor loadout instance references, and
+-  currency balances keyed by qualified content ID;
++- inventory-owned equipment instances, actor loadout instance references,
++  currency balances keyed by qualified content ID, and durable shop stock;
+ - optional field and dungeon state;
+ - Compendium and battle knowledge;
+ - session progress;
+@@ -340,8 +350,8 @@ revision. Roster ownership is not copied into actor snapshots.
+ - combat-profile source existence and source-entity agreement;
+ - pending skill tokens, IDs, levels, and revisions;
+ - passive activation target references when per-target counting is retained;
+-- inventory equipment-instance ownership, actor loadout references, field,
+-  Compendium, and knowledge references.
++- inventory equipment-instance ownership, actor loadout references, shop-stock
++  identity and quantities, field, Compendium, and knowledge references.
+ 
+ ## Aggregate Restoration
+ 
+diff --git a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs
+index b373f884a18bdae0630ecd4fc404537e1527aa92..ebbcf2b950565a1015f8eadf31ebcb2f4325ae71 100644
+--- a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs
++++ b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs
+@@ -453,25 +453,43 @@ internal sealed class CleanTrainingAnnexPlayHost
+         var compendiumEvidence = new List<TrainingAnnexCompendiumEvidence>();
+         var recruitedThisSession = new HashSet<ContentId>();
+         var inventory = new TrainingAnnexItemActionInventory(
+-            BuildInitialInventory(_initialInventory, inventoryTransitions),
++            BuildInitialInventory(
++                _initialInventory,
++                inventoryTransitions,
++                catalog,
++                roster.AllActors.Select(actor => actor.Actor.State.InstanceId)),
+             inventoryTransitions);
+-        roster.Player.Actor.State.ReplaceEquipment(BuildInitialEquipment(
++        RuntimeEquipmentSnapshot initialEquipment = BuildInitialEquipment(
+             catalog,
+             inventory.Snapshot,
+             _initialEquipment,
+-            equipmentTransitions));
+-        if (!await ComposePlayerStateAsync(
+-                roster,
+-                partyRoster,
+-                combatProfileCompositionService,
+-                equipmentProfileResolver,
++            equipmentTransitions);
++        RuntimeActorEquipmentApplicationResult initialEquipmentApplication = equipmentApplication.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
++                roster.Player.Actor.State,
+                 inventory.Snapshot,
++                initialEquipment,
+                 catalog,
+-                cancellationToken,
+-                initializeResourcesToMaximum: true).ConfigureAwait(false))
++                RuntimeStatSourceKind.ActiveHostedEntity,
++                MissingHostedEntityBehavior.RejectStatResolution,
++                roster.AllActors.Select(actor => actor.Actor.State),
++                partyRoster));
++        if (!initialEquipmentApplication.Applied)
+         {
++            foreach (RuntimeActorEquipmentApplicationDiagnostic diagnostic in
++                     initialEquipmentApplication.Diagnostics)
++            {
++                await _eventSink.PublishAsync(
++                    $"[equipment_application:{diagnostic.Code}] {diagnostic.Message}",
++                    cancellationToken).ConfigureAwait(false);
++            }
++
+             return 4;
+         }
++        foreach (BattleResourceState resource in roster.Player.Actor.State.Resources.Values)
++        {
++            roster.Player.Actor.State.SetResource(resource.Id, resource.Maximum);
++        }
+         var savePolicy = new RuntimeSavePolicyService(new RuntimeSavePolicyOptions(
+             manualAllowedContextIds:
+             [
+@@ -1683,20 +1701,27 @@ internal sealed class CleanTrainingAnnexPlayHost
+ 
+     private static RuntimeInventorySnapshot BuildInitialInventory(
+         RuntimeInventorySnapshot? supplied,
+-        IInventoryTransitionService inventoryTransitions)
++        IInventoryTransitionService inventoryTransitions,
++        IEquipmentDefinitionRepository equipmentRepository,
++        IEnumerable<RuntimeInstanceId> liveActorInstanceIds)
+     {
+         RuntimeInventorySnapshot inventory = supplied ?? new RuntimeInventorySnapshot(
+             [KeyValuePair.Create(TrainingAnnexHostSupport.AnnexTonic, 1)]);
++        RuntimeInstanceId[] actorIds = liveActorInstanceIds.ToArray();
+ 
+         inventory = AddEquipmentIfMissing(
+             inventory,
+             inventoryTransitions,
++            equipmentRepository,
++            actorIds,
+             TrainingAnnexHostSupport.PracticeBlade,
+             TrainingAnnexHostSupport.PracticeBladeInstance,
+             StandardEquipmentSlotIds.Weapon);
+         inventory = AddEquipmentIfMissing(
+             inventory,
+             inventoryTransitions,
++            equipmentRepository,
++            actorIds,
+             TrainingAnnexHostSupport.FocusCharm,
+             TrainingAnnexHostSupport.FocusCharmInstance,
+             StandardEquipmentSlotIds.Accessory);
+@@ -1707,6 +1732,8 @@ internal sealed class CleanTrainingAnnexPlayHost
+     private static RuntimeInventorySnapshot AddEquipmentIfMissing(
+         RuntimeInventorySnapshot inventory,
+         IInventoryTransitionService inventoryTransitions,
++        IEquipmentDefinitionRepository equipmentRepository,
++        IReadOnlyList<RuntimeInstanceId> liveActorInstanceIds,
+         ContentId equipmentId,
+         RuntimeInstanceId equipmentInstanceId,
+         ContentId slot)
+@@ -1717,11 +1744,20 @@ internal sealed class CleanTrainingAnnexPlayHost
+             return inventory;
+         }
+ 
+-        InventoryTransitionResult result = inventoryTransitions.AddEquipment(
++        InventoryTransitionResult result = inventoryTransitions.AcquireEquipment(
+             inventory,
+             new RuntimeEquipmentInstanceSnapshot(equipmentInstanceId, equipmentId),
+-            slot);
+-        return result.Applied ? result.After : inventory;
++            slot,
++            equipmentRepository,
++            liveActorInstanceIds);
++        if (!result.Applied)
++        {
++            throw new InvalidOperationException(
++                $"Initial equipment '{equipmentInstanceId}' could not be acquired: " +
++                string.Join("; ", result.Diagnostics.Select(diagnostic => diagnostic.Message)));
++        }
++
++        return result.After;
+     }
+ 
+     private static RuntimeEquipmentSnapshot BuildInitialEquipment(
+@@ -2242,8 +2278,7 @@ internal sealed class CleanTrainingAnnexPlayHost
+         IRuntimeEquipmentProfileResolver equipmentProfileResolver,
+         RuntimeInventorySnapshot inventory,
+         IEquipmentDefinitionRepository equipmentRepository,
+-        CancellationToken cancellationToken,
+-        bool initializeResourcesToMaximum = false)
++        CancellationToken cancellationToken)
+     {
+         RuntimeEquipmentProfile equipmentProfile = equipmentProfileResolver.Resolve(
+             inventory,
+@@ -2268,14 +2303,6 @@ internal sealed class CleanTrainingAnnexPlayHost
+             equipmentProfile);
+         if (composition.Applied)
+         {
+-            if (initializeResourcesToMaximum)
+-            {
+-                foreach (BattleResourceState resource in roster.Player.Actor.State.Resources.Values)
+-                {
+-                    roster.Player.Actor.State.SetResource(resource.Id, resource.Maximum);
+-                }
+-            }
+-
+             return true;
+         }
+ 
+diff --git a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexShopController.cs b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexShopController.cs
+index 450130246a179de1a93c482a20ae3a8ff53da088..056d4aef772281783beae09a6bd3ee183bdb8ed0 100644
+--- a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexShopController.cs
++++ b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexShopController.cs
+@@ -178,6 +178,9 @@ internal sealed class TrainingAnnexShopController
+         IReadOnlyList<RuntimeShopOfferResolutionDiagnostic> offerDiagnostics,
+         CancellationToken cancellationToken)
+     {
++        var equipmentAcquisition = new RuntimeEquipmentAcquisitionContext(
++            catalog,
++            roster.AllActors.Select(actor => actor.Actor.State.InstanceId));
+         HostCommandReadResult<CleanTrainingAnnexPlayCommand> offerSelection =
+             await _commandSource.ReadAsync(
+                 CreateShopBuyMenu(
+@@ -187,7 +190,8 @@ internal sealed class TrainingAnnexShopController
+                     wallet,
+                     shopStock,
+                     shopTransactions,
+-                    luck),
++                    luck,
++                    equipmentAcquisition),
+                 cancellationToken).ConfigureAwait(false);
+         if (!offerSelection.IsSelected || offerSelection.Command == CleanTrainingAnnexPlayCommand.Back)
+         {
+@@ -227,7 +231,8 @@ internal sealed class TrainingAnnexShopController
+             TrainingAnnexHostSupport.CreditsCurrency,
+             offer.Runtime,
+             luck,
+-            purchasedEquipmentInstanceId);
++            purchasedEquipmentInstanceId,
++            equipmentAcquisition);
+         transactionEvidence.Add(ToShopEvidence(
+             shop.Id,
+             offer.Runtime,
+@@ -426,8 +431,8 @@ internal sealed class TrainingAnnexShopController
+                     catalog,
+                     RuntimeStatSourceKind.ActiveHostedEntity,
+                     MissingHostedEntityBehavior.RejectStatResolution,
+-                    partyRoster,
+-                    roster.AllActors.Select(actor => actor.Actor.State)));
++                    roster.AllActors.Select(actor => actor.Actor.State),
++                    partyRoster));
+             equipmentEvidence.Add(new TrainingAnnexEquipmentChangeEvidence(
+                 equipmentInstanceId,
+                 offer.Runtime.ContentId,
+@@ -563,7 +568,8 @@ internal sealed class TrainingAnnexShopController
+         RuntimeCurrencyLedgerSnapshot wallet,
+         RuntimeShopStockSnapshot shopStock,
+         IShopTransactionService shopTransactions,
+-        int luck)
++        int luck,
++        RuntimeEquipmentAcquisitionContext equipmentAcquisition)
+     {
+         List<HostCommandOption<CleanTrainingAnnexPlayCommand>> options = offers
+             .Select(offer =>
+@@ -579,7 +585,8 @@ internal sealed class TrainingAnnexShopController
+                     TrainingAnnexHostSupport.CreditsCurrency,
+                     offer.Runtime,
+                     luck,
+-                    equipmentInstanceId);
++                    equipmentInstanceId,
++                    equipmentAcquisition);
+                 return new HostCommandOption<CleanTrainingAnnexPlayCommand>(
+                     CleanTrainingAnnexPlayCommand.SelectShopOffer,
+                     $"{offer.DisplayName} - {assessment.Price} C{StockLabel(offer.Runtime, shopStock)}{TransactionLabel(assessment)}",
+diff --git a/src/Convergence.Framework/Execution/BattleRuntimeState.cs b/src/Convergence.Framework/Execution/BattleRuntimeState.cs
+index a0dfa226dcbffbc1d7a16f018b2b357729bcdb4f..7847f2591ee11dcdc81e4a311fcb4d967b12597a 100644
+--- a/src/Convergence.Framework/Execution/BattleRuntimeState.cs
++++ b/src/Convergence.Framework/Execution/BattleRuntimeState.cs
+@@ -453,7 +453,7 @@ public sealed class RuntimeActorState
+     public decimal SetResource(ContentId id, decimal value) => GetRequiredResource(id).Set(value);
+     public decimal AddResource(ContentId id, decimal value) => GetRequiredResource(id).Add(value);
+ 
+-    public void ReplaceEquipment(RuntimeEquipmentSnapshot equipment)
++    internal void ReplaceEquipmentForComposition(RuntimeEquipmentSnapshot equipment)
+     {
+         ArgumentNullException.ThrowIfNull(equipment);
+         var nextPassives = new BattlePassiveCollection(Passives.Entries
+diff --git a/src/Convergence.Framework/PublicAPI.Shipped.txt b/src/Convergence.Framework/PublicAPI.Shipped.txt
+index 99a515c588f06f9c58b231226e827251a6fab072..70e413f777add63587e07b6db90433ac402aba69 100644
+--- a/src/Convergence.Framework/PublicAPI.Shipped.txt
++++ b/src/Convergence.Framework/PublicAPI.Shipped.txt
+@@ -3498,7 +3498,6 @@ Convergence.Execution.RuntimeActorState.IsGuarding.get -> bool
+ Convergence.Execution.RuntimeActorState.OtherStatuses.get -> System.Collections.Generic.IReadOnlySet<Convergence.Content.ContentId>!
+ Convergence.Execution.RuntimeActorState.Passives.get -> Convergence.Execution.BattlePassiveCollection!
+ Convergence.Execution.RuntimeActorState.Progression.get -> Convergence.Runtime.RuntimeProgressionSnapshot!
+-Convergence.Execution.RuntimeActorState.ReplaceEquipment(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment) -> void
+ Convergence.Execution.RuntimeActorState.Resources.get -> System.Collections.Generic.IReadOnlyDictionary<Convergence.Content.ContentId, Convergence.Execution.BattleResourceState!>!
+ Convergence.Execution.RuntimeActorState.RuntimeActorState(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.ContentId entityId, Convergence.Content.ContentId teamId, Convergence.Content.ContentId vitalResourceId, Convergence.Battle.CombatDefenseProfile! defenseProfile, System.Collections.Generic.IEnumerable<Convergence.Execution.BattleResourceState!>! resources, Convergence.Runtime.RuntimeEncounterPresenceSnapshot! encounterPresence, Convergence.Runtime.RuntimeActorAffiliationSnapshot! affiliation, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? stats = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? skillIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>? capabilityIds = null, System.Collections.Generic.IEnumerable<Convergence.Content.SkillDefinition!>? passiveSkills = null, Convergence.Runtime.RuntimeActorIdentitySnapshot? identity = null, Convergence.Runtime.RuntimeProgressionSnapshot? progression = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseResourceValues = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<Convergence.Content.ContentId, decimal>>? baseStats = null, Convergence.Runtime.RuntimeSkillStateSnapshot? skillState = null, Convergence.Runtime.RuntimeEquipmentSnapshot? equipment = null, Convergence.Runtime.RuntimeCombatProfileIdentitySnapshot? combatProfileIdentity = null) -> void
+ Convergence.Execution.RuntimeActorState.CombatProfileIdentity.get -> Convergence.Runtime.RuntimeCombatProfileIdentitySnapshot!
+@@ -4779,7 +4778,6 @@ Convergence.Runtime.InventoryTransitionResult.Equals(Convergence.Runtime.Invento
+ Convergence.Runtime.InventoryTransitionResult.InventoryTransitionResult(Convergence.Runtime.ResourceTransactionCode code, Convergence.Runtime.RuntimeInventorySnapshot! before, Convergence.Runtime.RuntimeInventorySnapshot! after, System.Collections.Generic.IEnumerable<Convergence.Runtime.ResourceTransactionDiagnostic!>? diagnostics = null) -> void
+ Convergence.Runtime.InventoryTransitionService
+ Convergence.Runtime.InventoryTransitionService.AddItem(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Content.ContentId itemId, int quantity, int? stackLimit = null) -> Convergence.Runtime.InventoryTransitionResult!
+-Convergence.Runtime.InventoryTransitionService.InventoryTransitionService() -> void
+ Convergence.Runtime.InventoryTransitionService.RemoveItem(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Content.ContentId itemId, int quantity) -> Convergence.Runtime.InventoryTransitionResult!
+ Convergence.Runtime.InventoryTransitionService.ReserveItem(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Content.ContentId itemId, int quantity) -> Convergence.Runtime.InventoryReservationResult!
+ Convergence.Runtime.IPartyRosterTransitionService
+@@ -11582,9 +11580,7 @@ Convergence.Runtime.IEquipmentSlotLayoutPolicy.ValidateAssignment(Convergence.Co
+ Convergence.Runtime.IEquipmentSlotLayoutPolicy.ValidateDefinition(Convergence.Content.EquipmentDefinition! definition) -> Convergence.Runtime.EquipmentSlotLayoutResult!
+ Convergence.Runtime.IEquipmentTransitionService.Equip(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.ContentId ownedSlotId, Convergence.Content.ContentId targetSlotId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! otherActorEquipment) -> Convergence.Runtime.EquipmentTransitionResult!
+ Convergence.Runtime.IEquipmentTransitionService.Unequip(Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Content.ContentId slotId) -> Convergence.Runtime.EquipmentTransitionResult!
+-Convergence.Runtime.IInventoryTransitionService.AddEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot! equipment, Convergence.Content.ContentId slotId) -> Convergence.Runtime.InventoryTransitionResult!
+ Convergence.Runtime.IInventoryTransitionService.RemoveEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.ContentId slotId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.InventoryTransitionResult!
+-Convergence.Runtime.InventoryTransitionService.AddEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot! equipment, Convergence.Content.ContentId slotId) -> Convergence.Runtime.InventoryTransitionResult!
+ Convergence.Runtime.InventoryTransitionService.RemoveEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeInstanceId equipmentInstanceId, Convergence.Content.ContentId slotId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.InventoryTransitionResult!
+ Convergence.Runtime.ResourceTransactionDiagnostic.SlotId.get -> Convergence.Content.ContentId?
+ Convergence.Runtime.ResourceTransactionDiagnostic.SlotId.init -> void
+@@ -11831,7 +11827,6 @@ Convergence.Runtime.IShopStockPolicy.Apply(Convergence.Runtime.ShopStockTransiti
+ Convergence.Runtime.IShopStockPolicyFactory
+ Convergence.Runtime.IShopStockPolicyFactory.Create(System.Collections.Generic.IReadOnlyDictionary<string!, object?>! parameters) -> Convergence.Runtime.ShopStockPolicyBindingResult!
+ Convergence.Runtime.IShopStockPolicyFactory.PolicyId.get -> Convergence.Content.ContentId
+-Convergence.Runtime.IShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! stock, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId) -> Convergence.Runtime.ShopTransactionResult!
+ Convergence.Runtime.IShopTransactionService.Sell(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! stock, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int sellerLuck, Convergence.Runtime.RuntimeInstanceId? soldEquipmentInstanceId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.ShopTransactionResult!
+ Convergence.Runtime.ResourceTransactionCode.InvalidShopStock = 23 -> Convergence.Runtime.ResourceTransactionCode
+ Convergence.Runtime.ResourceTransactionCode.EquipmentSlotPolicyRejected = 24 -> Convergence.Runtime.ResourceTransactionCode
+@@ -11945,7 +11940,6 @@ Convergence.Runtime.ShopStockTransitionResult.ShopStockTransitionResult(Converge
+ Convergence.Runtime.ShopTransactionResult.AfterStock.get -> Convergence.Runtime.RuntimeShopStockSnapshot!
+ Convergence.Runtime.ShopTransactionResult.BeforeStock.get -> Convergence.Runtime.RuntimeShopStockSnapshot!
+ Convergence.Runtime.ShopTransactionResult.ShopTransactionResult(Convergence.Runtime.ResourceTransactionCode code, Convergence.Runtime.RuntimeInventorySnapshot! beforeInventory, Convergence.Runtime.RuntimeInventorySnapshot! afterInventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! beforeCurrencyLedger, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! afterCurrencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! beforeStock, Convergence.Runtime.RuntimeShopStockSnapshot! afterStock, Convergence.Content.ContentId currencyId, int price, System.Collections.Generic.IEnumerable<Convergence.Runtime.ResourceTransactionDiagnostic!>? diagnostics = null) -> void
+-Convergence.Runtime.ShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! stock, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId) -> Convergence.Runtime.ShopTransactionResult!
+ Convergence.Runtime.ShopTransactionService.Sell(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! stock, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int sellerLuck, Convergence.Runtime.RuntimeInstanceId? soldEquipmentInstanceId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeEquipmentSnapshot!>! actorEquipment) -> Convergence.Runtime.ShopTransactionResult!
+ Convergence.Runtime.StandardShopStockPolicy
+ Convergence.Runtime.StandardShopStockPolicy.Apply(Convergence.Runtime.ShopStockTransitionRequest! request) -> Convergence.Runtime.ShopStockTransitionResult!
+@@ -12214,12 +12208,16 @@ Convergence.Runtime.IRuntimeActorEquipmentApplicationService
+ Convergence.Runtime.IRuntimeActorEquipmentApplicationService.Apply(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest! request) -> Convergence.Runtime.RuntimeActorEquipmentApplicationResult!
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.<Clone>$() -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic!
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.ActorInstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.ActorInstanceId.init -> void
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Code.get -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Code.init -> void
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.CompositionCode.get -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode?
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.CompositionCode.init -> void
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Deconstruct(out Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode Code, out string! Message, out Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileCode, out Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode) -> void
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Equals(Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic? other) -> bool
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentInstanceId.get -> Convergence.Runtime.RuntimeInstanceId?
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentInstanceId.init -> void
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentProfileCode.get -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode?
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.EquipmentProfileCode.init -> void
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.Message.get -> string!
+@@ -12228,8 +12226,10 @@ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnostic.RuntimeActorEquip
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected = 2 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.CommitFailed = 3 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentAssignedToAnotherActor = 5 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileRejected = 1 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+ Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileResolutionFailed = 0 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
++Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected = 4 -> Convergence.Runtime.RuntimeActorEquipmentApplicationDiagnosticCode
+ Convergence.Runtime.RuntimeActorEquipmentApplicationRequest
+ Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.<Clone>$() -> Convergence.Runtime.RuntimeActorEquipmentApplicationRequest!
+ Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Actor.get -> Convergence.Execution.RuntimeActorState!
+@@ -12239,7 +12239,7 @@ Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.EquipmentRepository.
+ Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.Inventory.get -> Convergence.Runtime.RuntimeInventorySnapshot!
+ Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.MissingHostedEntityBehavior.get -> Convergence.Runtime.MissingHostedEntityBehavior
+ Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.PartyRoster.get -> Convergence.Runtime.RuntimePartyRosterSnapshot?
+-Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.RuntimeActorEquipmentApplicationRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>? runtimeActors = null) -> void
++Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.RuntimeActorEquipmentApplicationRequest(Convergence.Execution.RuntimeActorState! actor, Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeEquipmentSnapshot! equipment, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository, Convergence.Runtime.RuntimeStatSourceKind sourceKind, Convergence.Runtime.MissingHostedEntityBehavior missingHostedEntityBehavior, System.Collections.Generic.IEnumerable<Convergence.Execution.RuntimeActorState!>! runtimeActors, Convergence.Runtime.RuntimePartyRosterSnapshot? partyRoster = null) -> void
+ Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.RuntimeActors.get -> System.Collections.Generic.IReadOnlyList<Convergence.Execution.RuntimeActorState!>!
+ Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.SourceKind.get -> Convergence.Runtime.RuntimeStatSourceKind
+ Convergence.Runtime.RuntimeActorEquipmentApplicationResult
+@@ -12270,3 +12270,15 @@ static Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.operator !=(C
+ static Convergence.Runtime.RuntimeActorEquipmentApplicationRequest.operator ==(Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? left, Convergence.Runtime.RuntimeActorEquipmentApplicationRequest? right) -> bool
+ static Convergence.Runtime.RuntimeActorEquipmentApplicationResult.operator !=(Convergence.Runtime.RuntimeActorEquipmentApplicationResult? left, Convergence.Runtime.RuntimeActorEquipmentApplicationResult? right) -> bool
+ static Convergence.Runtime.RuntimeActorEquipmentApplicationResult.operator ==(Convergence.Runtime.RuntimeActorEquipmentApplicationResult? left, Convergence.Runtime.RuntimeActorEquipmentApplicationResult? right) -> bool
++Convergence.Runtime.IInventoryTransitionService.AcquireEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot! equipment, Convergence.Content.ContentId slotId, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeInstanceId>! liveActorInstanceIds) -> Convergence.Runtime.InventoryTransitionResult!
++Convergence.Runtime.InventoryTransitionService.AcquireEquipment(Convergence.Runtime.RuntimeInventorySnapshot! snapshot, Convergence.Runtime.RuntimeEquipmentInstanceSnapshot! equipment, Convergence.Content.ContentId slotId, Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeInstanceId>! liveActorInstanceIds) -> Convergence.Runtime.InventoryTransitionResult!
++Convergence.Runtime.InventoryTransitionService.InventoryTransitionService(Convergence.Runtime.IEquipmentSlotLayoutPolicy? slotLayout = null) -> void
++Convergence.Runtime.IShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! stock, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId, Convergence.Runtime.RuntimeEquipmentAcquisitionContext? equipmentAcquisitionContext) -> Convergence.Runtime.ShopTransactionResult!
++Convergence.Runtime.ShopTransactionService.Buy(Convergence.Runtime.RuntimeInventorySnapshot! inventory, Convergence.Runtime.RuntimeCurrencyLedgerSnapshot! currencyLedger, Convergence.Runtime.RuntimeShopStockSnapshot! stock, Convergence.Content.ContentId currencyId, Convergence.Runtime.RuntimeShopOfferSnapshot! offer, int buyerLuck, Convergence.Runtime.RuntimeInstanceId? purchasedEquipmentInstanceId, Convergence.Runtime.RuntimeEquipmentAcquisitionContext? equipmentAcquisitionContext) -> Convergence.Runtime.ShopTransactionResult!
++Convergence.Runtime.ResourceTransactionCode.RuntimeInstanceIdCollision = 26 -> Convergence.Runtime.ResourceTransactionCode
++Convergence.Runtime.ResourceTransactionCode.InvalidRuntimeActorEvidence = 27 -> Convergence.Runtime.ResourceTransactionCode
++Convergence.Runtime.ResourceTransactionCode.EquipmentDefinitionLookupFailed = 28 -> Convergence.Runtime.ResourceTransactionCode
++Convergence.Runtime.RuntimeEquipmentAcquisitionContext
++Convergence.Runtime.RuntimeEquipmentAcquisitionContext.EquipmentRepository.get -> Convergence.Catalog.IEquipmentDefinitionRepository!
++Convergence.Runtime.RuntimeEquipmentAcquisitionContext.LiveActorInstanceIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeInstanceId>!
++Convergence.Runtime.RuntimeEquipmentAcquisitionContext.RuntimeEquipmentAcquisitionContext(Convergence.Catalog.IEquipmentDefinitionRepository! equipmentRepository, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeInstanceId>! liveActorInstanceIds) -> void
+diff --git a/src/Convergence.Framework/Runtime/ResourceManagementServices.cs b/src/Convergence.Framework/Runtime/ResourceManagementServices.cs
+index d806b1c0c1c015c19d5fd08dd8e0995e159125da..011dd38b3ab155e045d118843e22807de8e012d2 100644
+--- a/src/Convergence.Framework/Runtime/ResourceManagementServices.cs
++++ b/src/Convergence.Framework/Runtime/ResourceManagementServices.cs
+@@ -31,7 +31,10 @@ public enum ResourceTransactionCode
+     AmbiguousCurrencyLedger,
+     InvalidShopStock,
+     EquipmentSlotPolicyRejected,
+-    InvalidItemId
++    InvalidItemId,
++    RuntimeInstanceIdCollision,
++    InvalidRuntimeActorEvidence,
++    EquipmentDefinitionLookupFailed
+ }
+ 
+ public sealed record ResourceTransactionDiagnostic(
+@@ -393,10 +396,12 @@ public interface IInventoryTransitionService
+     InventoryTransitionResult AddItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity, int? stackLimit = null);
+     InventoryTransitionResult RemoveItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity);
+     InventoryReservationResult ReserveItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity);
+-    InventoryTransitionResult AddEquipment(
++    InventoryTransitionResult AcquireEquipment(
+         RuntimeInventorySnapshot snapshot,
+         RuntimeEquipmentInstanceSnapshot equipment,
+-        ContentId slotId);
++        ContentId slotId,
++        IEquipmentDefinitionRepository equipmentRepository,
++        IEnumerable<RuntimeInstanceId> liveActorInstanceIds);
+     InventoryTransitionResult RemoveEquipment(
+         RuntimeInventorySnapshot snapshot,
+         RuntimeInstanceId equipmentInstanceId,
+@@ -477,6 +482,13 @@ public sealed class RuntimeItemReservation
+ 
+ public sealed class InventoryTransitionService : IInventoryTransitionService
+ {
++    private readonly IEquipmentSlotLayoutPolicy _slotLayout;
++
++    public InventoryTransitionService(IEquipmentSlotLayoutPolicy? slotLayout = null)
++    {
++        _slotLayout = slotLayout ?? StandardEquipmentSlotLayoutPolicy.Instance;
++    }
++
+     public InventoryTransitionResult AddItem(RuntimeInventorySnapshot snapshot, ContentId itemId, int quantity, int? stackLimit = null)
+     {
+         ArgumentNullException.ThrowIfNull(snapshot);
+@@ -582,13 +594,17 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
+             new RuntimeItemReservation(this, snapshot, itemId, quantity));
+     }
+ 
+-    public InventoryTransitionResult AddEquipment(
++    public InventoryTransitionResult AcquireEquipment(
+         RuntimeInventorySnapshot snapshot,
+         RuntimeEquipmentInstanceSnapshot equipment,
+-        ContentId slotId)
++        ContentId slotId,
++        IEquipmentDefinitionRepository equipmentRepository,
++        IEnumerable<RuntimeInstanceId> liveActorInstanceIds)
+     {
+         ArgumentNullException.ThrowIfNull(snapshot);
+         ArgumentNullException.ThrowIfNull(equipment);
++        ArgumentNullException.ThrowIfNull(equipmentRepository);
++        ArgumentNullException.ThrowIfNull(liveActorInstanceIds);
+         if (!slotId.IsValid)
+         {
+             throw new ArgumentException("Equipment slot ID must be valid.", nameof(slotId));
+@@ -605,6 +621,105 @@ public sealed class InventoryTransitionService : IInventoryTransitionService
+                 equipment.InstanceId);
+         }
+ 
++        RuntimeInstanceId[] actorIds = liveActorInstanceIds.ToArray();
++        if (actorIds.Any(actorId => !actorId.IsValid))
++        {
++            return Rejected(
++                snapshot,
++                ResourceTransactionCode.InvalidRuntimeActorEvidence,
++                "Live actor instance IDs must all be valid.",
++                equipment.DefinitionId,
++                slotId,
++                equipment.InstanceId);
++        }
++        IGrouping<RuntimeInstanceId, RuntimeInstanceId>? duplicateActorId = actorIds
++            .GroupBy(actorId => actorId)
++            .FirstOrDefault(group => group.Count() > 1);
++        if (duplicateActorId is not null)
++        {
++            return Rejected(
++                snapshot,
++                ResourceTransactionCode.InvalidRuntimeActorEvidence,
++                $"Live actor evidence contains duplicate instance ID '{duplicateActorId.Key}'.",
++                equipment.DefinitionId,
++                slotId,
++                equipment.InstanceId);
++        }
++        if (actorIds.Contains(equipment.InstanceId))
++        {
++            return Rejected(
++                snapshot,
++                ResourceTransactionCode.RuntimeInstanceIdCollision,
++                $"Equipment instance '{equipment.InstanceId}' collides with a live actor instance ID.",
++                equipment.DefinitionId,
++                slotId,
++                equipment.InstanceId);
++        }
++
++        EquipmentDefinition? definition;
++        try
++        {
++            if (!equipmentRepository.TryGetEquipment(equipment.DefinitionId, out definition) ||
++                definition is null)
++            {
++                return Rejected(
++                    snapshot,
++                    ResourceTransactionCode.EquipmentMissing,
++                    $"Equipment definition '{equipment.DefinitionId}' was not found.",
++                    equipment.DefinitionId,
++                    slotId,
++                    equipment.InstanceId);
++            }
++        }
++        catch (Exception exception) when (exception is not OperationCanceledException)
++        {
++            return Rejected(
++                snapshot,
++                ResourceTransactionCode.EquipmentDefinitionLookupFailed,
++                $"Equipment definition '{equipment.DefinitionId}' could not be resolved: " +
++                exception.Message,
++                equipment.DefinitionId,
++                slotId,
++                equipment.InstanceId);
++        }
++
++        if (definition.Id != equipment.DefinitionId)
++        {
++            return Rejected(
++                snapshot,
++                ResourceTransactionCode.EquipmentDefinitionLookupFailed,
++                $"Equipment repository returned definition '{definition.Id}' for " +
++                $"'{equipment.DefinitionId}'.",
++                equipment.DefinitionId,
++                slotId,
++                equipment.InstanceId);
++        }
++
++        EquipmentSlotLayoutResult definitionLayout =
++            EquipmentSlotLayoutPolicyEvaluator.ValidateDefinition(_slotLayout, definition);
++        EquipmentSlotLayoutResult assignment =
++            EquipmentSlotLayoutPolicyEvaluator.ValidateAssignment(
++                _slotLayout,
++                definition.SlotId,
++                slotId);
++        if (!definitionLayout.IsCompatible || !assignment.IsCompatible)
++        {
++            bool policyRejected =
++                definitionLayout.Code == EquipmentSlotLayoutCode.PolicyRejected ||
++                assignment.Code == EquipmentSlotLayoutCode.PolicyRejected;
++            return Rejected(
++                snapshot,
++                policyRejected
++                    ? ResourceTransactionCode.EquipmentSlotPolicyRejected
++                    : ResourceTransactionCode.EquipmentSlotMismatch,
++                definitionLayout.Message ??
++                assignment.Message ??
++                $"Equipment definition '{equipment.DefinitionId}' is not compatible with slot '{slotId}'.",
++                equipment.DefinitionId,
++                slotId,
++                equipment.InstanceId);
++        }
++
+         IReadOnlyList<RuntimeEquipmentInstanceSnapshot> current =
+             snapshot.GetEquipmentInstances(slotId);
+         return Applied(snapshot, snapshot.WithEquipment(slotId, current.Append(equipment)));
+@@ -696,6 +811,26 @@ public interface IEconomyTransactionService
+         int amount);
+ }
+ 
++/// <summary>
++/// Supplies catalog and complete live actor-ID evidence for an equipment acquisition.
++/// </summary>
++public sealed class RuntimeEquipmentAcquisitionContext
++{
++    public RuntimeEquipmentAcquisitionContext(
++        IEquipmentDefinitionRepository equipmentRepository,
++        IEnumerable<RuntimeInstanceId> liveActorInstanceIds)
++    {
++        EquipmentRepository = equipmentRepository ??
++            throw new ArgumentNullException(nameof(equipmentRepository));
++        LiveActorInstanceIds = Array.AsReadOnly(
++            (liveActorInstanceIds ?? throw new ArgumentNullException(nameof(liveActorInstanceIds)))
++            .ToArray());
++    }
++
++    public IEquipmentDefinitionRepository EquipmentRepository { get; }
++    public IReadOnlyList<RuntimeInstanceId> LiveActorInstanceIds { get; }
++}
++
+ public sealed class EconomyTransactionService : IEconomyTransactionService
+ {
+     public CurrencyTransactionResult Credit(
+@@ -1495,7 +1630,8 @@ public interface IShopTransactionService
+         ContentId currencyId,
+         RuntimeShopOfferSnapshot offer,
+         int buyerLuck,
+-        RuntimeInstanceId? purchasedEquipmentInstanceId);
++        RuntimeInstanceId? purchasedEquipmentInstanceId,
++        RuntimeEquipmentAcquisitionContext? equipmentAcquisitionContext);
+     ShopTransactionResult Sell(
+         RuntimeInventorySnapshot inventory,
+         RuntimeCurrencyLedgerSnapshot currencyLedger,
+@@ -1545,7 +1681,8 @@ public sealed class ShopTransactionService : IShopTransactionService
+         ContentId currencyId,
+         RuntimeShopOfferSnapshot offer,
+         int buyerLuck,
+-        RuntimeInstanceId? purchasedEquipmentInstanceId)
++        RuntimeInstanceId? purchasedEquipmentInstanceId,
++        RuntimeEquipmentAcquisitionContext? equipmentAcquisitionContext)
+     {
+         ArgumentNullException.ThrowIfNull(inventory);
+         ArgumentNullException.ThrowIfNull(currencyLedger);
+@@ -1580,7 +1717,8 @@ public sealed class ShopTransactionService : IShopTransactionService
+         InventoryTransitionResult inventoryResult = AddPurchasedContent(
+             inventory,
+             offer,
+-            purchasedEquipmentInstanceId);
++            purchasedEquipmentInstanceId,
++            equipmentAcquisitionContext);
+         if (!inventoryResult.Applied)
+         {
+             return FromInventory(inventoryResult, currencyLedger, stock, currencyId, price);
+@@ -1686,17 +1824,28 @@ public sealed class ShopTransactionService : IShopTransactionService
+     private InventoryTransitionResult AddPurchasedContent(
+         RuntimeInventorySnapshot inventory,
+         RuntimeShopOfferSnapshot offer,
+-        RuntimeInstanceId? purchasedEquipmentInstanceId) =>
++        RuntimeInstanceId? purchasedEquipmentInstanceId,
++        RuntimeEquipmentAcquisitionContext? equipmentAcquisitionContext) =>
+         offer.ContentKind switch
+         {
+             ShopContentKind.Item => _inventory.AddItem(inventory, offer.ContentId, 1, offer.ItemStackLimit),
+             ShopContentKind.Equipment when offer.EquipmentSlotId is ContentId slotId &&
+                                            purchasedEquipmentInstanceId is RuntimeInstanceId instanceId &&
+-                                           instanceId.IsValid =>
+-                _inventory.AddEquipment(
++                                           instanceId.IsValid &&
++                                           equipmentAcquisitionContext is not null =>
++                _inventory.AcquireEquipment(
+                     inventory,
+                     new RuntimeEquipmentInstanceSnapshot(instanceId, offer.ContentId),
+-                    slotId),
++                    slotId,
++                    equipmentAcquisitionContext.EquipmentRepository,
++                    equipmentAcquisitionContext.LiveActorInstanceIds),
++            ShopContentKind.Equipment when equipmentAcquisitionContext is null => InventoryRejected(
++                inventory,
++                ResourceTransactionCode.InvalidRuntimeActorEvidence,
++                "Equipment purchases require catalog and complete live actor-ID evidence.",
++                offer.ContentId,
++                offer.EquipmentSlotId,
++                purchasedEquipmentInstanceId),
+             ShopContentKind.Equipment => InventoryRejected(
+                 inventory,
+                 ResourceTransactionCode.InvalidEquipmentInstanceId,
+diff --git a/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs b/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs
+index 7aeb3df56211e29a2a2f55770efe7b018ff96778..08ce161b466f8e5739eb44e47091aa0bb956bfe7 100644
+--- a/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs
++++ b/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs
+@@ -129,18 +129,28 @@ public interface IRuntimeActorCombatProfileCompositionService
+ 
+ public enum RuntimeActorEquipmentApplicationDiagnosticCode
+ {
+-    EquipmentProfileResolutionFailed,
+-    EquipmentProfileRejected,
+-    CombatProfileCompositionRejected,
+-    CommitFailed
++    EquipmentProfileResolutionFailed = 0,
++    EquipmentProfileRejected = 1,
++    CombatProfileCompositionRejected = 2,
++    CommitFailed = 3,
++    RuntimeActorEvidenceRejected = 4,
++    EquipmentAssignedToAnotherActor = 5
+ }
+ 
+ public sealed record RuntimeActorEquipmentApplicationDiagnostic(
+     RuntimeActorEquipmentApplicationDiagnosticCode Code,
+     string Message,
+     RuntimeEquipmentProfileDiagnosticCode? EquipmentProfileCode = null,
+-    RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode = null);
++    RuntimeActorCombatProfileCompositionDiagnosticCode? CompositionCode = null)
++{
++    public RuntimeInstanceId? EquipmentInstanceId { get; init; }
++    public RuntimeInstanceId? ActorInstanceId { get; init; }
++}
+ 
++/// <summary>
++/// Describes one atomic loadout application. <see cref="RuntimeActors"/> is the
++/// complete current actor map for the live session and must include <see cref="Actor"/>.
++/// </summary>
+ public sealed record RuntimeActorEquipmentApplicationRequest
+ {
+     public RuntimeActorEquipmentApplicationRequest(
+@@ -150,8 +160,8 @@ public sealed record RuntimeActorEquipmentApplicationRequest
+         IEquipmentDefinitionRepository equipmentRepository,
+         RuntimeStatSourceKind sourceKind,
+         MissingHostedEntityBehavior missingHostedEntityBehavior,
+-        RuntimePartyRosterSnapshot? partyRoster = null,
+-        IEnumerable<RuntimeActorState>? runtimeActors = null)
++        IEnumerable<RuntimeActorState> runtimeActors,
++        RuntimePartyRosterSnapshot? partyRoster = null)
+     {
+         if (!Enum.IsDefined(sourceKind))
+         {
+@@ -173,7 +183,7 @@ public sealed record RuntimeActorEquipmentApplicationRequest
+         MissingHostedEntityBehavior = missingHostedEntityBehavior;
+         PartyRoster = partyRoster;
+         RuntimeActors = Array.AsReadOnly(
+-            (runtimeActors ?? []).Select(runtimeActor =>
++            (runtimeActors ?? throw new ArgumentNullException(nameof(runtimeActors))).Select(runtimeActor =>
+                 runtimeActor ?? throw new ArgumentException(
+                     "Runtime actor maps cannot contain null entries.",
+                     nameof(runtimeActors)))
+@@ -243,6 +253,18 @@ public sealed class RuntimeActorEquipmentApplicationService :
+         ArgumentNullException.ThrowIfNull(request);
+         RuntimeActorSnapshot before = request.Actor.ToSnapshot();
+ 
++        RuntimeActorEquipmentApplicationDiagnostic? assignmentDiagnostic =
++            ValidateAssignmentEvidence(request);
++        if (assignmentDiagnostic is not null)
++        {
++            return new RuntimeActorEquipmentApplicationResult(
++                before,
++                before,
++                RuntimeEquipmentProfile.Empty,
++                composition: null,
++                [assignmentDiagnostic]);
++        }
++
+         RuntimeEquipmentProfile equipmentProfile;
+         try
+         {
+@@ -277,7 +299,7 @@ public sealed class RuntimeActorEquipmentApplicationService :
+         }
+ 
+         RuntimeActorState stagedActor = request.Actor.CreateExecutionClone();
+-        stagedActor.ReplaceEquipment(request.Equipment);
++        stagedActor.ReplaceEquipmentForComposition(request.Equipment);
+         RuntimeActorState[] stagedRuntimeActors = request.RuntimeActors
+             .Select(runtimeActor => ReferenceEquals(runtimeActor, request.Actor)
+                 ? stagedActor
+@@ -343,6 +365,96 @@ public sealed class RuntimeActorEquipmentApplicationService :
+             composition);
+     }
+ 
++    private static RuntimeActorEquipmentApplicationDiagnostic? ValidateAssignmentEvidence(
++        RuntimeActorEquipmentApplicationRequest request)
++    {
++        int subjectOccurrences = request.RuntimeActors.Count(actor =>
++            ReferenceEquals(actor, request.Actor));
++        if (subjectOccurrences != 1)
++        {
++            return new RuntimeActorEquipmentApplicationDiagnostic(
++                RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected,
++                "Equipment application requires the complete current runtime-actor map, " +
++                "including the exact actor being changed once.")
++            {
++                ActorInstanceId = request.Actor.InstanceId
++            };
++        }
++
++        IGrouping<RuntimeInstanceId, RuntimeActorState>? duplicateActor = request.RuntimeActors
++            .GroupBy(actor => actor.InstanceId)
++            .FirstOrDefault(group => group.Count() > 1);
++        if (duplicateActor is not null)
++        {
++            return new RuntimeActorEquipmentApplicationDiagnostic(
++                RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected,
++                $"Runtime actor evidence contains duplicate instance ID '{duplicateActor.Key}'.")
++            {
++                ActorInstanceId = duplicateActor.Key
++            };
++        }
++
++        if (request.PartyRoster is not null)
++        {
++            var rosterReferences = new List<RuntimeActorReferenceSnapshot>
++            {
++                request.PartyRoster.Owner
++            };
++            rosterReferences.AddRange(request.PartyRoster.ActiveParty);
++            rosterReferences.AddRange(request.PartyRoster.ReserveMembers);
++            if (request.PartyRoster.ActiveHostedEntity is not null)
++            {
++                rosterReferences.Add(request.PartyRoster.ActiveHostedEntity);
++            }
++            rosterReferences.AddRange(request.PartyRoster.HostedEntityRoster);
++            rosterReferences.AddRange(request.PartyRoster.CompanionRoster);
++            foreach (RuntimeActorReferenceSnapshot rosterReference in rosterReferences
++                         .GroupBy(reference => reference.InstanceId)
++                         .Select(group => group.First()))
++            {
++                RuntimeActorState? runtimeActor = request.RuntimeActors.SingleOrDefault(actor =>
++                    actor.InstanceId == rosterReference.InstanceId);
++                if (runtimeActor is null || runtimeActor.EntityId != rosterReference.EntityDefinitionId)
++                {
++                    return new RuntimeActorEquipmentApplicationDiagnostic(
++                        RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected,
++                        $"Runtime actor evidence does not contain roster actor " +
++                        $"'{rosterReference.InstanceId}' with entity " +
++                        $"'{rosterReference.EntityDefinitionId}'.")
++                    {
++                        ActorInstanceId = rosterReference.InstanceId
++                    };
++                }
++            }
++        }
++
++        HashSet<RuntimeInstanceId> candidateInstanceIds = request.Equipment
++            .EquippedInstanceIds
++            .Values
++            .ToHashSet();
++        foreach (RuntimeActorState otherActor in request.RuntimeActors.Where(actor =>
++                     !ReferenceEquals(actor, request.Actor)))
++        {
++            RuntimeInstanceId conflictingInstanceId = otherActor.Equipment
++                .EquippedInstanceIds
++                .Values
++                .FirstOrDefault(candidateInstanceIds.Contains);
++            if (conflictingInstanceId.IsValid)
++            {
++                return new RuntimeActorEquipmentApplicationDiagnostic(
++                    RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentAssignedToAnotherActor,
++                    $"Equipment instance '{conflictingInstanceId}' is already assigned to actor " +
++                    $"'{otherActor.InstanceId}'.")
++                {
++                    EquipmentInstanceId = conflictingInstanceId,
++                    ActorInstanceId = otherActor.InstanceId
++                };
++            }
++        }
++
++        return null;
++    }
++
+     private static RuntimeActorEquipmentApplicationResult Rejected(
+         RuntimeActorSnapshot before,
+         RuntimeEquipmentProfile equipmentProfile,
+diff --git a/src/Convergence.Framework/Runtime/RuntimeRulesetBindings.cs b/src/Convergence.Framework/Runtime/RuntimeRulesetBindings.cs
+index a68387829d1f601514320457906d59c7f8483c14..afd7f7be6b88172fbc60870ad54ed77e49f1b3ef 100644
+--- a/src/Convergence.Framework/Runtime/RuntimeRulesetBindings.cs
++++ b/src/Convergence.Framework/Runtime/RuntimeRulesetBindings.cs
+@@ -52,8 +52,34 @@ public sealed record RulesetBindingResult<TService>
+         TService? service,
+         IEnumerable<RulesetBindingDiagnostic>? diagnostics = null)
+     {
++        RulesetBindingDiagnostic[] diagnosticSnapshot = (diagnostics ?? []).ToArray();
++        for (int index = 0; index < diagnosticSnapshot.Length; index++)
++        {
++            RulesetBindingDiagnostic? diagnostic = diagnosticSnapshot[index];
++            if (diagnostic is null)
++            {
++                throw new ArgumentException(
++                    $"Ruleset diagnostics cannot contain a null entry at index {index}.",
++                    nameof(diagnostics));
++            }
++
++            if (!Enum.IsDefined(diagnostic.Code))
++            {
++                throw new ArgumentException(
++                    $"Ruleset diagnostic at index {index} has undefined code '{diagnostic.Code}'.",
++                    nameof(diagnostics));
++            }
++
++            if (string.IsNullOrWhiteSpace(diagnostic.Message))
++            {
++                throw new ArgumentException(
++                    $"Ruleset diagnostic at index {index} requires a nonblank message.",
++                    nameof(diagnostics));
++            }
++        }
++
+         Service = service;
+-        Diagnostics = Array.AsReadOnly((diagnostics ?? []).ToArray());
++        Diagnostics = Array.AsReadOnly(diagnosticSnapshot);
+     }
+ 
+     public TService? Service { get; }
+diff --git a/src/Convergence.Framework/Runtime/ShopPricingPolicies.cs b/src/Convergence.Framework/Runtime/ShopPricingPolicies.cs
+index e561b95fe2da0e0e498e16e5b036e99649e640e3..a7806ee88b56b721bbcecfd3a6a671b4f80e8c01 100644
+--- a/src/Convergence.Framework/Runtime/ShopPricingPolicies.cs
++++ b/src/Convergence.Framework/Runtime/ShopPricingPolicies.cs
+@@ -202,8 +202,28 @@ public sealed record ShopPricingPolicyBindingResult
+         BoundShopPricingPolicy? policy,
+         IEnumerable<ShopPricingPolicyDiagnostic>? diagnostics = null)
+     {
++        ShopPricingPolicyDiagnostic[] copy = (diagnostics ?? []).ToArray();
++        if (copy.Any(diagnostic => diagnostic is null))
++        {
++            throw new ArgumentException(
++                "Shop pricing policy diagnostics cannot contain null entries.",
++                nameof(diagnostics));
++        }
++        if (copy.Any(diagnostic =>
++                !Enum.IsDefined(diagnostic.Code) || string.IsNullOrWhiteSpace(diagnostic.Message)))
++        {
++            throw new ArgumentException(
++                "Shop pricing policy diagnostics must have defined codes and nonempty messages.",
++                nameof(diagnostics));
++        }
++        if ((policy is null) == (copy.Length == 0))
++        {
++            throw new ArgumentException(
++                "A shop pricing policy binding must contain either one policy or one or more diagnostics.");
++        }
++
+         Policy = policy;
+-        Diagnostics = Array.AsReadOnly((diagnostics ?? []).ToArray());
++        Diagnostics = Array.AsReadOnly(copy);
+     }
+ 
+     public BoundShopPricingPolicy? Policy { get; }
+diff --git a/src/Convergence.Framework/Runtime/ShopStockPolicies.cs b/src/Convergence.Framework/Runtime/ShopStockPolicies.cs
+index 4ee7fb61e5bd79fea7e7faf60f4c2ec19872a520..53837bf4f1f6c634d6fea81dc7c7fdf991a3e389 100644
+--- a/src/Convergence.Framework/Runtime/ShopStockPolicies.cs
++++ b/src/Convergence.Framework/Runtime/ShopStockPolicies.cs
+@@ -175,8 +175,28 @@ public sealed record ShopStockPolicyBindingResult
+         BoundShopStockPolicy? policy,
+         IEnumerable<ShopStockPolicyDiagnostic>? diagnostics = null)
+     {
++        ShopStockPolicyDiagnostic[] copy = (diagnostics ?? []).ToArray();
++        if (copy.Any(diagnostic => diagnostic is null))
++        {
++            throw new ArgumentException(
++                "Shop stock policy diagnostics cannot contain null entries.",
++                nameof(diagnostics));
++        }
++        if (copy.Any(diagnostic =>
++                !Enum.IsDefined(diagnostic.Code) || string.IsNullOrWhiteSpace(diagnostic.Message)))
++        {
++            throw new ArgumentException(
++                "Shop stock policy diagnostics must have defined codes and nonempty messages.",
++                nameof(diagnostics));
++        }
++        if ((policy is null) == (copy.Length == 0))
++        {
++            throw new ArgumentException(
++                "A shop stock policy binding must contain either one policy or one or more diagnostics.");
++        }
++
+         Policy = policy;
+-        Diagnostics = Array.AsReadOnly((diagnostics ?? []).ToArray());
++        Diagnostics = Array.AsReadOnly(copy);
+     }
+ 
+     public BoundShopStockPolicy? Policy { get; }
+diff --git a/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs b/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs
+index 3262344779fac9d274f9a829f2d838bc1fe572ef..7a778ed799065c3834545b52184bb9439f25eab7 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs
+@@ -137,6 +137,14 @@ public sealed class DocumentationContractSynchronizationTests
+             @"current runtime save contract is version `(?<version>\d+)`",
+             expectedVersion,
+             "save mechanics");
++        AssertSingleCurrentVersionClaim(
++            File.ReadAllText(RepositoryPath(
++                "docs",
++                "technical",
++                "runtime-actor-state-and-restoration.md")),
++            @"`RuntimeSaveGameSnapshot\.CurrentContractVersion` is `(?<version>\d+)`",
++            expectedVersion,
++            "runtime actor and restoration technical guide");
+ 
+         using JsonDocument matrix = JsonDocument.Parse(File.ReadAllText(RepositoryPath(
+             "tests",
+diff --git a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+index 05d8ac2532dd57a02f0f2fb2718d972108144994..3b0781ce66d2b8a419c010458678d1c9462e1fcc 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+@@ -753,7 +753,7 @@ public sealed class DocumentationFoundationTests
+     }
+ 
+     [Fact]
+-    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndOpenClosureGate()
++    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndClosureEvidence()
+     {
+         string mechanics = File.ReadAllText(
+             RepositoryPath("docs", "mechanics", "party-inventory-and-economy.md"))
+@@ -767,6 +767,12 @@ public sealed class DocumentationFoundationTests
+         string publicApi = File.ReadAllText(
+             RepositoryPath("docs", "public-api-contract.md"))
+             .ReplaceLineEndings(" ");
++        string closure = File.ReadAllText(
++            RepositoryPath(
++                "docs",
++                "reviews",
++                "inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md"))
++            .ReplaceLineEndings(" ");
+ 
+         string[] mechanicsTokens =
+         [
+@@ -832,7 +838,13 @@ public sealed class DocumentationFoundationTests
+ 
+         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
+             candidate => candidate.Id == "inventory_equipment_economy");
+-        Assert.Equal("partial", capability.ImplementationState);
++        Assert.Equal("complete", capability.ImplementationState);
++        Assert.Empty(capability.KnownGaps);
++
++        Assert.Contains("Order 7 is formally complete.", closure, StringComparison.Ordinal);
++        Assert.Contains("no unresolved realistic reachable defect found", closure, StringComparison.Ordinal);
++        Assert.Contains("save contract v19", closure, StringComparison.OrdinalIgnoreCase);
++        Assert.Contains("content schema v10", closure, StringComparison.OrdinalIgnoreCase);
+     }
+ 
+     [Fact]
+diff --git a/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json b/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
+index 773cd112929a430db6d6d8f16e4bcc60921a01b1..4ce36474aba4d10fe6f3197874bcb2e88e7d499b 100644
+--- a/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
++++ b/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
+@@ -167,7 +167,7 @@
+     },
+     {
+       "id": "inventory_equipment_economy",
+-      "implementationState": "partial",
++      "implementationState": "complete",
+       "frameworkTests": [
+         "ResourceManagementServiceTests",
+         "ShopPricingPolicyTests",
+@@ -185,9 +185,7 @@
+       "demoCoverage": "focused",
+       "hostNeutral": true,
+       "optionalModule": true,
+-      "knownGaps": [
+-        "Complete three-audience documentation and the independent Order 7 closure audit remain pending."
+-      ]
++      "knownGaps": []
+     },
+     {
+       "id": "navigation",
+diff --git a/tests/Convergence.Framework.Tests/Hosting/GodotIntegrationContractTests.cs b/tests/Convergence.Framework.Tests/Hosting/GodotIntegrationContractTests.cs
+index adb99e4866d0dbeab38109c0cca3c48bc88af44c..7dbc8813565e72339ee7c3939b631fc66f1c0e3a 100644
+--- a/tests/Convergence.Framework.Tests/Hosting/GodotIntegrationContractTests.cs
++++ b/tests/Convergence.Framework.Tests/Hosting/GodotIntegrationContractTests.cs
+@@ -247,6 +247,29 @@ public sealed class GodotIntegrationContractTests
+ 
+         RuntimeInstanceId equipmentInstanceId =
+             RuntimeInstanceId.Parse("godot-practice-blade-001");
++        ContentId equipmentDefinitionId = Id("godot_practice_blade");
++        var equipmentDefinition = new EquipmentDefinition(
++            equipmentDefinitionId,
++            "Godot Practice Blade",
++            "Host-contract equipment fixture.",
++            StandardEquipmentSlotIds.Weapon,
++            baseValue: 10,
++            weapon: new EquipmentWeaponProfileDefinition(
++                new EquipmentBasicAttackDefinition(
++                    DamageElement.Physical,
++                    10,
++                    100,
++                    new NeverCriticalDefinition(),
++                    false)));
++        var inventoryTransitions = new InventoryTransitionService();
++        InventoryTransitionResult acquisition = inventoryTransitions.AcquireEquipment(
++            new RuntimeInventorySnapshot(),
++            new RuntimeEquipmentInstanceSnapshot(
++                equipmentInstanceId,
++                equipmentDefinitionId),
++            StandardEquipmentSlotIds.Weapon,
++            new GodotEquipmentRepository(equipmentDefinition),
++            [frost.State.InstanceId, ember.State.InstanceId]);
+         RuntimeActorSnapshot actorSnapshot = ToRuntimeSnapshot(
+             frost,
+             level: 5,
+@@ -256,17 +279,7 @@ public sealed class GodotIntegrationContractTests
+                     StandardEquipmentSlotIds.Weapon,
+                     equipmentInstanceId)
+             ]));
+-        var inventorySnapshot = new RuntimeInventorySnapshot(
+-            ownedEquipmentInstances:
+-            [
+-                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+-                    StandardEquipmentSlotIds.Weapon,
+-                    [
+-                        new RuntimeEquipmentInstanceSnapshot(
+-                            equipmentInstanceId,
+-                            Id("godot_practice_blade"))
+-                    ])
+-            ]);
++        RuntimeInventorySnapshot inventorySnapshot = acquisition.After;
+         var fieldSnapshot = new RuntimeFieldSnapshot(
+             new RuntimeNavigationSnapshot(Id("sample_depths_floor_7")),
+             new RuntimeDungeonTraversalSnapshot(
+@@ -310,6 +323,7 @@ public sealed class GodotIntegrationContractTests
+             roundTripActor.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Weapon]);
+         RuntimeEquipmentInstanceSnapshot restoredEquipment = Assert.Single(
+             restored.Inventory.GetEquipmentInstances(StandardEquipmentSlotIds.Weapon));
++        Assert.True(acquisition.Applied);
+         Assert.Equal(equipmentInstanceId, restoredEquipment.InstanceId);
+         Assert.Equal(125, restored.CurrencyLedger.GetRequiredBalance(Id("credits")));
+         Assert.Equal(4, restored.CurrencyLedger.GetRequiredBalance(Id("arena_tokens")));
+@@ -571,6 +585,21 @@ public sealed class GodotIntegrationContractTests
+         }
+     }
+ 
++    private sealed class GodotEquipmentRepository(EquipmentDefinition definition)
++        : IEquipmentDefinitionRepository
++    {
++        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? equipment)
++        {
++            equipment = id == definition.Id ? definition : null;
++            return equipment is not null;
++        }
++
++        public EquipmentDefinition GetRequiredEquipment(ContentId id) =>
++            TryGetEquipment(id, out EquipmentDefinition? equipment)
++                ? equipment!
++                : throw new KeyNotFoundException(id.ToString());
++    }
++
+     private sealed record GodotSaveSnapshot(
+         IReadOnlyList<RuntimeActorSnapshot> Actors,
+         RuntimeInventorySnapshot Inventory,
+diff --git a/tests/Convergence.Framework.Tests/Runtime/EquipmentInstanceOwnershipTests.cs b/tests/Convergence.Framework.Tests/Runtime/EquipmentInstanceOwnershipTests.cs
+index 291dfbb0aa5339a0c220c5686fa7d201ab6123b3..b2b0234f43e68ebba460e1c183abe79eeaeb8b9f 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/EquipmentInstanceOwnershipTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/EquipmentInstanceOwnershipTests.cs
+@@ -84,7 +84,6 @@ public sealed class EquipmentInstanceOwnershipTests
+     public void CustomSlotLayout_PreservesCrossActorOwnershipAndDrivesSaveCompatibility()
+     {
+         ContentId mainHand = Id("main_hand");
+-        RuntimeInventorySnapshot inventory = Inventory(FirstSword);
+         var empty = new RuntimeEquipmentSnapshot();
+         var occupiedByOtherActor = new RuntimeEquipmentSnapshot(
+         [
+@@ -92,6 +91,15 @@ public sealed class EquipmentInstanceOwnershipTests
+         ]);
+         var layout = new MainHandEquipmentSlotLayoutPolicy(mainHand);
+         var service = new EquipmentTransitionService(layout);
++        GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
++        InventoryTransitionResult acquisition = new InventoryTransitionService(layout)
++            .AcquireEquipment(
++                new RuntimeInventorySnapshot(),
++                new RuntimeEquipmentInstanceSnapshot(FirstSword, Shortsword),
++                StandardEquipmentSlotIds.Weapon,
++                catalog,
++                []);
++        RuntimeInventorySnapshot inventory = acquisition.After;
+ 
+         EquipmentTransitionResult collision = service.Equip(
+             inventory,
+@@ -109,6 +117,7 @@ public sealed class EquipmentInstanceOwnershipTests
+             []);
+ 
+         Assert.Equal(ResourceTransactionCode.EquipmentAlreadyEquipped, collision.Code);
++        Assert.True(acquisition.Applied);
+         Assert.Same(empty, collision.Before);
+         Assert.Same(empty, collision.After);
+         Assert.True(applied.Applied);
+@@ -120,8 +129,6 @@ public sealed class EquipmentInstanceOwnershipTests
+             baseline,
+             [customActor, baseline.Actors[1]],
+             inventory);
+-        GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
+-
+         RuntimeSaveValidationResult standardValidation =
+             new RuntimeSaveValidator().Validate(snapshot, catalog);
+         RuntimeSaveValidationResult customValidation =
+@@ -141,6 +148,7 @@ public sealed class EquipmentInstanceOwnershipTests
+         RuntimeInventorySnapshot inventory = Inventory(FirstSword);
+         var service = new InventoryTransitionService();
+         var duplicate = new RuntimeEquipmentInstanceSnapshot(FirstSword, Shortsword);
++        GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
+         var equipped = new RuntimeEquipmentSnapshot(
+         [
+             new KeyValuePair<ContentId, RuntimeInstanceId>(
+@@ -148,10 +156,12 @@ public sealed class EquipmentInstanceOwnershipTests
+                 FirstSword)
+         ]);
+ 
+-        InventoryTransitionResult duplicateResult = service.AddEquipment(
++        InventoryTransitionResult duplicateResult = service.AcquireEquipment(
+             inventory,
+             duplicate,
+-            StandardEquipmentSlotIds.Weapon);
++            StandardEquipmentSlotIds.Weapon,
++            catalog,
++            []);
+         InventoryTransitionResult removeResult = service.RemoveEquipment(
+             inventory,
+             FirstSword,
+@@ -171,6 +181,23 @@ public sealed class EquipmentInstanceOwnershipTests
+     {
+         RuntimeSaveGameSnapshot baseline =
+             RuntimePersistenceSnapshotTests.CreateSaveSnapshot();
++        GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
++        var inventoryService = new InventoryTransitionService();
++        RuntimeInstanceId[] actorIds = baseline.Actors
++            .Select(actor => actor.Identity.InstanceId)
++            .ToArray();
++        InventoryTransitionResult firstAcquisition = inventoryService.AcquireEquipment(
++            new RuntimeInventorySnapshot(),
++            new RuntimeEquipmentInstanceSnapshot(FirstSword, Shortsword),
++            StandardEquipmentSlotIds.Weapon,
++            catalog,
++            actorIds);
++        InventoryTransitionResult secondAcquisition = inventoryService.AcquireEquipment(
++            firstAcquisition.After,
++            new RuntimeEquipmentInstanceSnapshot(SecondSword, Shortsword),
++            StandardEquipmentSlotIds.Weapon,
++            catalog,
++            actorIds);
+         RuntimeActorSnapshot frost = WithEquipment(
+             baseline.Actors[0],
+             FirstSword);
+@@ -180,12 +207,14 @@ public sealed class EquipmentInstanceOwnershipTests
+         RuntimeSaveGameSnapshot snapshot = CopySave(
+             baseline,
+             [frost, ember],
+-            Inventory(FirstSword, SecondSword));
++            secondAcquisition.After);
+ 
+         RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+             snapshot,
+-            RuntimePersistenceSnapshotTests.LoadCatalog());
++            catalog);
+ 
++        Assert.True(firstAcquisition.Applied);
++        Assert.True(secondAcquisition.Applied);
+         Assert.True(
+             validation.IsValid,
+             string.Join(Environment.NewLine, validation.Diagnostics.Select(item => item.Message)));
+diff --git a/tests/Convergence.Framework.Tests/Runtime/EquipmentSlotLayoutTests.cs b/tests/Convergence.Framework.Tests/Runtime/EquipmentSlotLayoutTests.cs
+index 39d3487bf15327ea6b1d9dfb18741ec404353757..3c973380185a7c541b2e3c3b0973bad6d2f5448a 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/EquipmentSlotLayoutTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/EquipmentSlotLayoutTests.cs
+@@ -164,6 +164,13 @@ public sealed class EquipmentSlotLayoutTests
+             StandardEquipmentSlotIds.Weapon,
+             StandardEquipmentSlotIds.Weapon,
+             []);
++        InventoryTransitionResult acquisition = new InventoryTransitionService(policy)
++            .AcquireEquipment(
++                new RuntimeInventorySnapshot(),
++                new RuntimeEquipmentInstanceSnapshot(instanceId, definition.Id),
++                StandardEquipmentSlotIds.Weapon,
++                definitions,
++                []);
+         RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver(policy).Resolve(
+             inventory,
+             loadout,
+@@ -183,6 +190,8 @@ public sealed class EquipmentSlotLayoutTests
+             error.Code == ContentValidationErrorCode.PolicyRejected);
+         Assert.Equal(ResourceTransactionCode.EquipmentSlotPolicyRejected, equip.Code);
+         Assert.Same(equip.Before, equip.After);
++        Assert.Equal(ResourceTransactionCode.EquipmentSlotPolicyRejected, acquisition.Code);
++        Assert.Same(acquisition.Before, acquisition.After);
+         Assert.Contains(profile.Diagnostics, diagnostic =>
+             diagnostic.Code == RuntimeEquipmentProfileDiagnosticCode.PolicyRejected);
+         Assert.Contains(offer.Diagnostics, diagnostic =>
+@@ -228,6 +237,13 @@ public sealed class EquipmentSlotLayoutTests
+                 StandardEquipmentSlotIds.Weapon,
+                 StandardEquipmentSlotIds.Weapon,
+                 []));
++        Assert.Throws<OperationCanceledException>(() =>
++            new InventoryTransitionService(policy).AcquireEquipment(
++                new RuntimeInventorySnapshot(),
++                new RuntimeEquipmentInstanceSnapshot(instanceId, definition.Id),
++                StandardEquipmentSlotIds.Weapon,
++                definitions,
++                []));
+         Assert.Throws<OperationCanceledException>(() =>
+             new RuntimeEquipmentProfileResolver(policy).Resolve(inventory, loadout, definitions));
+         Assert.Throws<OperationCanceledException>(() => ShopResolver(policy).Resolve(
+diff --git a/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs b/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs
+index ade4b1c9f356565351e12ed50a397f9b58a2c2c4..7ae3906ab50ba621ebb126b61f40b5303efcedb2 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs
+@@ -148,7 +148,7 @@ public sealed class ProgressionPolicyTests
+                     StandardEquipmentSlotIds.Boots,
+                     [new RuntimeEquipmentInstanceSnapshot(bootsInstanceId, bootsId)])
+             ]);
+-        vessel.ReplaceEquipment(new RuntimeEquipmentSnapshot(
++        var candidate = new RuntimeEquipmentSnapshot(
+         [
+             new KeyValuePair<ContentId, RuntimeInstanceId>(
+                 StandardEquipmentSlotIds.Armor,
+@@ -156,10 +156,8 @@ public sealed class ProgressionPolicyTests
+             new KeyValuePair<ContentId, RuntimeInstanceId>(
+                 StandardEquipmentSlotIds.Boots,
+                 bootsInstanceId)
+-        ]));
+-        var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
+-            inventory,
+-            new EquipmentRepository(
++        ]);
++        var equipmentRepository = new EquipmentRepository(
+                 new EquipmentDefinition(
+                     armorId,
+                     "Armor",
+@@ -174,46 +172,46 @@ public sealed class ProgressionPolicyTests
+                     "Contributes Evasion.",
+                     StandardEquipmentSlotIds.Boots,
+                     10,
+-                    boots: new EquipmentBootsProfileDefinition(4))));
++                    boots: new EquipmentBootsProfileDefinition(4)));
+         var service = new RuntimeActorCombatProfileCompositionService(
+             _stats,
+             _resources,
+             new SkillRepository(equipmentPassive));
++        var application = new RuntimeActorEquipmentApplicationService(service);
+ 
+-        RuntimeEquipmentProfile equippedProfile = equipmentProfiles.Resolve(vessel);
+-        RuntimeActorCombatProfileCompositionResult equipped = service.Compose(
+-            new RuntimeActorCombatProfileCompositionRequest(
++        RuntimeActorEquipmentApplicationResult equipped = application.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
+                 vessel,
++                inventory,
++                candidate,
++                equipmentRepository,
+                 RuntimeStatSourceKind.ActiveHostedEntity,
+                 MissingHostedEntityBehavior.RejectStatResolution,
+-                partyRoster,
+-                [hostedEntity],
+-                equippedProfile.StatModifiers,
+-                equippedProfile.GrantedSkillIds));
++                [vessel, hostedEntity],
++                partyRoster));
+         Assert.Equal(equipmentPassive.Id, Assert.Single(vessel.Passives.Entries).Skill.Id);
+         Assert.DoesNotContain(equipmentPassive.Id, vessel.Skills.LearnedSkillIds);
+         Assert.DoesNotContain(equipmentPassive.Id, vessel.Skills.EquippedSkillIds);
+-        vessel.ReplaceEquipment(new RuntimeEquipmentSnapshot());
+-        Assert.Empty(vessel.Passives.Entries);
+-        RuntimeEquipmentProfile unequippedProfile = equipmentProfiles.Resolve(vessel);
+-        RuntimeActorCombatProfileCompositionResult unequipped = service.Compose(
+-            new RuntimeActorCombatProfileCompositionRequest(
++        RuntimeActorEquipmentApplicationResult unequipped = application.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
+                 vessel,
++                inventory,
++                new RuntimeEquipmentSnapshot(),
++                equipmentRepository,
+                 RuntimeStatSourceKind.ActiveHostedEntity,
+                 MissingHostedEntityBehavior.RejectStatResolution,
+-                partyRoster,
+-                [hostedEntity],
+-                unequippedProfile.StatModifiers,
+-                unequippedProfile.GrantedSkillIds));
++                [vessel, hostedEntity],
++                partyRoster));
+ 
+         Assert.True(equipped.Applied);
+         Assert.Equal(6, equipped.After.Stats.EffectiveStats[StandardProgressionIds.Defense]);
+         Assert.Equal(5, equipped.After.Stats.EffectiveStats[StandardProgressionIds.Evasion]);
+-        Assert.Empty(equippedProfile.Diagnostics);
++        Assert.Empty(equipped.EquipmentProfile.Diagnostics);
+         Assert.True(unequipped.Applied);
++        Assert.Empty(vessel.Passives.Entries);
+         Assert.DoesNotContain(StandardProgressionIds.Defense, unequipped.After.Stats.EffectiveStats.Keys);
+         Assert.DoesNotContain(StandardProgressionIds.Evasion, unequipped.After.Stats.EffectiveStats.Keys);
+-        Assert.Empty(unequippedProfile.StatModifiers);
++        Assert.Empty(unequipped.EquipmentProfile.StatModifiers);
+     }
+ 
+     [Fact]
+@@ -263,8 +261,8 @@ public sealed class ProgressionPolicyTests
+                 new EquipmentRepository(armor),
+                 RuntimeStatSourceKind.ActiveHostedEntity,
+                 MissingHostedEntityBehavior.RejectStatResolution,
+-                partyRoster,
+-                [hostedEntity]));
++                [vessel, hostedEntity],
++                partyRoster));
+ 
+         Assert.True(equipped.Applied);
+         Assert.Equal(armorInstanceId, vessel.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Armor]);
+@@ -285,8 +283,8 @@ public sealed class ProgressionPolicyTests
+                 new EquipmentRepository(armor),
+                 RuntimeStatSourceKind.ActiveHostedEntity,
+                 MissingHostedEntityBehavior.RejectStatResolution,
+-                partyRoster,
+-                [hostedEntity]));
++                [vessel, hostedEntity],
++                partyRoster));
+ 
+         Assert.True(unequipped.Applied);
+         Assert.Empty(vessel.Equipment.EquippedInstanceIds);
+@@ -334,7 +332,8 @@ public sealed class ProgressionPolicyTests
+                 candidate,
+                 new EquipmentRepository(armor),
+                 RuntimeStatSourceKind.Actor,
+-                MissingHostedEntityBehavior.UseActorBaseStats));
++                MissingHostedEntityBehavior.UseActorBaseStats,
++                [actor]));
+ 
+         Assert.False(result.Applied);
+         Assert.Equal(
+@@ -348,6 +347,135 @@ public sealed class ProgressionPolicyTests
+         AssertCompositionStateUnchanged(before, result.After);
+     }
+ 
++    [Fact]
++    public void Order7H1_RawEquipmentReplacementIsNotPublic()
++    {
++        Assert.Null(typeof(RuntimeActorState).GetMethod("ReplaceEquipment"));
++        Assert.Null(typeof(RuntimeActorState).GetMethod("ReplaceEquipmentForComposition"));
++    }
++
++    [Fact]
++    public void Order7H1_EquipmentApplicationRequiresCompleteCurrentActorEvidence()
++    {
++        RuntimeActorState actor = CreateActor("evidence_actor", 5m);
++        RuntimeActorSnapshot before = actor.ToSnapshot();
++        var application = new RuntimeActorEquipmentApplicationService(
++            new RuntimeActorCombatProfileCompositionService(new SkillRepository()));
++
++        RuntimeActorEquipmentApplicationResult result = application.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
++                actor,
++                new RuntimeInventorySnapshot(),
++                new RuntimeEquipmentSnapshot(),
++                new EquipmentRepository(),
++                RuntimeStatSourceKind.Actor,
++                MissingHostedEntityBehavior.UseActorBaseStats,
++                []));
++
++        Assert.False(result.Applied);
++        RuntimeActorEquipmentApplicationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(
++            RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected,
++            diagnostic.Code);
++        Assert.Equal(actor.InstanceId, diagnostic.ActorInstanceId);
++        AssertCompositionStateUnchanged(before, actor.ToSnapshot());
++        AssertCompositionStateUnchanged(before, result.After);
++    }
++
++    [Fact]
++    public void Order7H1_EquipmentApplicationRequiresEveryCanonicalRosterActor()
++    {
++        RuntimeActorState vessel = CreateActor("roster_evidence_vessel", 5m);
++        RuntimeActorState hostedEntity = CreateActor("roster_evidence_hosted", 8m);
++        RuntimePartyRosterSnapshot partyRoster = PartyRoster(vessel, hostedEntity);
++        RuntimeActorSnapshot before = vessel.ToSnapshot();
++        var application = new RuntimeActorEquipmentApplicationService(
++            new RuntimeActorCombatProfileCompositionService(new SkillRepository()));
++
++        RuntimeActorEquipmentApplicationResult result = application.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
++                vessel,
++                new RuntimeInventorySnapshot(),
++                new RuntimeEquipmentSnapshot(),
++                new EquipmentRepository(),
++                RuntimeStatSourceKind.ActiveHostedEntity,
++                MissingHostedEntityBehavior.RejectStatResolution,
++                [vessel],
++                partyRoster));
++
++        Assert.False(result.Applied);
++        RuntimeActorEquipmentApplicationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(
++            RuntimeActorEquipmentApplicationDiagnosticCode.RuntimeActorEvidenceRejected,
++            diagnostic.Code);
++        Assert.Equal(hostedEntity.InstanceId, diagnostic.ActorInstanceId);
++        AssertCompositionStateUnchanged(before, vessel.ToSnapshot());
++        AssertCompositionStateUnchanged(before, result.After);
++    }
++
++    [Fact]
++    public void Order7H1_EquipmentApplicationRejectsCrossActorAssignmentAtomically()
++    {
++        RuntimeActorState firstActor = CreateActor("first_assignment_actor", 5m);
++        RuntimeActorState secondActor = CreateActor("second_assignment_actor", 5m);
++        ContentId armorId = ContentId.Parse("test.pack:shared_assignment_armor");
++        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("shared-assignment-armor-001");
++        var armor = new EquipmentDefinition(
++            armorId,
++            "Shared Assignment Armor",
++            "Must remain assigned to only one actor.",
++            StandardEquipmentSlotIds.Armor,
++            10,
++            armor: new EquipmentArmorProfileDefinition(4, 1));
++        var repository = new EquipmentRepository(armor);
++        var inventory = new RuntimeInventorySnapshot(
++            ownedEquipmentInstances:
++            [
++                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
++                    StandardEquipmentSlotIds.Armor,
++                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
++            ]);
++        var candidate = new RuntimeEquipmentSnapshot(
++        [
++            new KeyValuePair<ContentId, RuntimeInstanceId>(
++                StandardEquipmentSlotIds.Armor,
++                armorInstanceId)
++        ]);
++        var application = new RuntimeActorEquipmentApplicationService(
++            new RuntimeActorCombatProfileCompositionService(new SkillRepository()));
++
++        RuntimeActorEquipmentApplicationResult first = application.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
++                firstActor,
++                inventory,
++                candidate,
++                repository,
++                RuntimeStatSourceKind.Actor,
++                MissingHostedEntityBehavior.UseActorBaseStats,
++                [firstActor, secondActor]));
++        RuntimeActorSnapshot secondBefore = secondActor.ToSnapshot();
++        RuntimeActorEquipmentApplicationResult second = application.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
++                secondActor,
++                inventory,
++                candidate,
++                repository,
++                RuntimeStatSourceKind.Actor,
++                MissingHostedEntityBehavior.UseActorBaseStats,
++                [firstActor, secondActor]));
++
++        Assert.True(first.Applied);
++        Assert.False(second.Applied);
++        RuntimeActorEquipmentApplicationDiagnostic diagnostic = Assert.Single(second.Diagnostics);
++        Assert.Equal(
++            RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentAssignedToAnotherActor,
++            diagnostic.Code);
++        Assert.Equal(armorInstanceId, diagnostic.EquipmentInstanceId);
++        Assert.Equal(firstActor.InstanceId, diagnostic.ActorInstanceId);
++        AssertCompositionStateUnchanged(secondBefore, secondActor.ToSnapshot());
++        AssertCompositionStateUnchanged(secondBefore, second.After);
++    }
++
+     [Fact]
+     public void ActorComposition_MissingHostedEntityPolicyEitherRejectsOrUsesActorStats()
+     {
+diff --git a/tests/Convergence.Framework.Tests/Runtime/ResourceManagementServiceTests.cs b/tests/Convergence.Framework.Tests/Runtime/ResourceManagementServiceTests.cs
+index 07124a1fce87213669b316b89791e76ed028f228..99896811e0feed3b34a63a9c905bcd5ffe2c4439 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/ResourceManagementServiceTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/ResourceManagementServiceTests.cs
+@@ -108,19 +108,29 @@ public sealed class ResourceManagementServiceTests
+     {
+         var service = new InventoryTransitionService();
+         ContentId shortsword = Id("shortsword");
++        var repository = new TestEquipmentRepository(Weapon(shortsword, power: 10, accuracy: 100));
+         var first = new RuntimeEquipmentInstanceSnapshot(Instance("sword-001"), shortsword);
+         var second = new RuntimeEquipmentInstanceSnapshot(Instance("sword-002"), shortsword);
+         var empty = new RuntimeInventorySnapshot();
+ 
+-        InventoryTransitionResult added = service.AddEquipment(empty, first, StandardEquipmentSlotIds.Weapon);
+-        InventoryTransitionResult secondCopy = service.AddEquipment(
++        InventoryTransitionResult added = service.AcquireEquipment(
++            empty,
++            first,
++            StandardEquipmentSlotIds.Weapon,
++            repository,
++            []);
++        InventoryTransitionResult secondCopy = service.AcquireEquipment(
+             added.After,
+             second,
+-            StandardEquipmentSlotIds.Weapon);
+-        InventoryTransitionResult duplicate = service.AddEquipment(
++            StandardEquipmentSlotIds.Weapon,
++            repository,
++            []);
++        InventoryTransitionResult duplicate = service.AcquireEquipment(
+             secondCopy.After,
+             first,
+-            StandardEquipmentSlotIds.Weapon);
++            StandardEquipmentSlotIds.Weapon,
++            repository,
++            []);
+         var equipped = new RuntimeEquipmentSnapshot(
+             [new KeyValuePair<ContentId, RuntimeInstanceId>(StandardEquipmentSlotIds.Weapon, first.InstanceId)]);
+         InventoryTransitionResult removeEquipped = service.RemoveEquipment(
+@@ -143,6 +153,110 @@ public sealed class ResourceManagementServiceTests
+         Assert.Same(secondCopy.After, removeEquipped.After);
+     }
+ 
++    [Fact]
++    public void InventoryService_RejectsInvalidLiveEquipmentAcquisitionAtomically()
++    {
++        ContentId sword = Id("shortsword");
++        RuntimeInstanceId instanceId = Instance("sword-001");
++        var equipment = new RuntimeEquipmentInstanceSnapshot(instanceId, sword);
++        var inventory = new RuntimeInventorySnapshot();
++        var repository = new TestEquipmentRepository(Weapon(sword, power: 10, accuracy: 100));
++        var service = new InventoryTransitionService();
++
++        InventoryTransitionResult missing = service.AcquireEquipment(
++            inventory,
++            new RuntimeEquipmentInstanceSnapshot(Instance("missing-001"), Id("missing")),
++            StandardEquipmentSlotIds.Weapon,
++            repository,
++            []);
++        InventoryTransitionResult wrongSlot = service.AcquireEquipment(
++            inventory,
++            equipment,
++            StandardEquipmentSlotIds.Accessory,
++            repository,
++            []);
++        InventoryTransitionResult actorCollision = service.AcquireEquipment(
++            inventory,
++            equipment,
++            StandardEquipmentSlotIds.Weapon,
++            repository,
++            [instanceId]);
++
++        AssertRejectedAcquisition(
++            missing,
++            inventory,
++            ResourceTransactionCode.EquipmentMissing);
++        AssertRejectedAcquisition(
++            wrongSlot,
++            inventory,
++            ResourceTransactionCode.EquipmentSlotMismatch);
++        AssertRejectedAcquisition(
++            actorCollision,
++            inventory,
++            ResourceTransactionCode.RuntimeInstanceIdCollision);
++    }
++
++    [Fact]
++    public void InventoryService_RejectsMalformedLiveActorEvidenceAtomically()
++    {
++        ContentId sword = Id("shortsword");
++        var equipment = new RuntimeEquipmentInstanceSnapshot(Instance("sword-001"), sword);
++        var inventory = new RuntimeInventorySnapshot();
++        var repository = new TestEquipmentRepository(Weapon(sword, power: 10, accuracy: 100));
++        var service = new InventoryTransitionService();
++        RuntimeInstanceId actorId = Instance("actor-001");
++
++        InventoryTransitionResult invalid = service.AcquireEquipment(
++            inventory,
++            equipment,
++            StandardEquipmentSlotIds.Weapon,
++            repository,
++            [default]);
++        InventoryTransitionResult duplicate = service.AcquireEquipment(
++            inventory,
++            equipment,
++            StandardEquipmentSlotIds.Weapon,
++            repository,
++            [actorId, actorId]);
++
++        AssertRejectedAcquisition(
++            invalid,
++            inventory,
++            ResourceTransactionCode.InvalidRuntimeActorEvidence);
++        AssertRejectedAcquisition(
++            duplicate,
++            inventory,
++            ResourceTransactionCode.InvalidRuntimeActorEvidence);
++    }
++
++    [Fact]
++    public void InventoryService_ContainsRepositoryFaultsAndPropagatesCancellation()
++    {
++        ContentId sword = Id("shortsword");
++        var equipment = new RuntimeEquipmentInstanceSnapshot(Instance("sword-001"), sword);
++        var inventory = new RuntimeInventorySnapshot();
++        var service = new InventoryTransitionService();
++
++        InventoryTransitionResult faulted = service.AcquireEquipment(
++            inventory,
++            equipment,
++            StandardEquipmentSlotIds.Weapon,
++            new ThrowingEquipmentRepository(new InvalidOperationException("repository fault")),
++            []);
++
++        AssertRejectedAcquisition(
++            faulted,
++            inventory,
++            ResourceTransactionCode.EquipmentDefinitionLookupFailed);
++        Assert.Contains("repository fault", Assert.Single(faulted.Diagnostics).Message);
++        Assert.Throws<OperationCanceledException>(() => service.AcquireEquipment(
++            inventory,
++            equipment,
++            StandardEquipmentSlotIds.Weapon,
++            new ThrowingEquipmentRepository(new OperationCanceledException("cancelled")),
++            []));
++    }
++
+     [Fact]
+     public void EquipmentService_RequiresOwnershipAndSlotCompatibility()
+     {
+@@ -514,7 +628,8 @@ public sealed class ResourceManagementServiceTests
+             CreditsCurrency,
+             medicine,
+             buyerLuck: 10,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         ShopTransactionResult sold = shop.Sell(
+             bought.AfterInventory,
+             bought.AfterCurrencyLedger,
+@@ -625,7 +740,8 @@ public sealed class ResourceManagementServiceTests
+             CreditsCurrency,
+             ordinaryOffer,
+             buyerLuck: -1,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         ShopTransactionResult overflowingSell = shop.Sell(
+             inventory,
+             wallet,
+@@ -645,6 +761,9 @@ public sealed class ResourceManagementServiceTests
+     {
+         var shop = new ShopTransactionService();
+         ContentId sword = Id("shortsword");
++        var equipmentAcquisition = new RuntimeEquipmentAcquisitionContext(
++            new TestEquipmentRepository(Weapon(sword, power: 10, accuracy: 100)),
++            []);
+         RuntimeInstanceId ownedInstanceId = Instance("sword-001");
+         var ownedSword = new RuntimeInventorySnapshot(
+             ownedEquipmentInstances:
+@@ -678,7 +797,8 @@ public sealed class ResourceManagementServiceTests
+             CreditsCurrency,
+             swordOffer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: Instance("sword-002"));
++            purchasedEquipmentInstanceId: Instance("sword-002"),
++            equipmentAcquisitionContext: equipmentAcquisition);
+         ShopTransactionResult duplicate = shop.Buy(
+             ownedSword,
+             wallet,
+@@ -686,7 +806,8 @@ public sealed class ResourceManagementServiceTests
+             CreditsCurrency,
+             swordOffer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: ownedInstanceId);
++            purchasedEquipmentInstanceId: ownedInstanceId,
++            equipmentAcquisitionContext: equipmentAcquisition);
+         ShopTransactionResult stock = shop.Buy(
+             new RuntimeInventorySnapshot(),
+             wallet,
+@@ -694,7 +815,8 @@ public sealed class ResourceManagementServiceTests
+             CreditsCurrency,
+             trackedSwordOffer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: Instance("sword-003"));
++            purchasedEquipmentInstanceId: Instance("sword-003"),
++            equipmentAcquisitionContext: equipmentAcquisition);
+         ShopTransactionResult insufficient = shop.Buy(
+             new RuntimeInventorySnapshot(),
+             wallet,
+@@ -702,7 +824,8 @@ public sealed class ResourceManagementServiceTests
+             CreditsCurrency,
+             priceyItem,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+ 
+         Assert.True(anotherCopy.Applied);
+         Assert.Equal(2, anotherCopy.AfterInventory.GetEquipmentInstances(StandardEquipmentSlotIds.Weapon).Count);
+@@ -712,6 +835,54 @@ public sealed class ResourceManagementServiceTests
+         Assert.Equal(ResourceTransactionCode.InsufficientCurrency, insufficient.Code);
+     }
+ 
++    [Fact]
++    public void ShopService_RequiresValidatedEquipmentAcquisitionContext()
++    {
++        ContentId sword = Id("shortsword");
++        RuntimeInstanceId actorId = Instance("actor-001");
++        RuntimeShopOfferSnapshot offer = Offer(
++            ShopContentKind.Equipment,
++            sword,
++            100,
++            StandardPricing(),
++            StandardEquipmentSlotIds.Weapon);
++        var inventory = new RuntimeInventorySnapshot();
++        RuntimeCurrencyLedgerSnapshot wallet = Ledger(1_000);
++        RuntimeShopStockSnapshot stock = EmptyStock();
++        var shop = new ShopTransactionService();
++        var repository = new TestEquipmentRepository(Weapon(sword, power: 10, accuracy: 100));
++
++        ShopTransactionResult missingContext = shop.Buy(
++            inventory,
++            wallet,
++            stock,
++            CreditsCurrency,
++            offer,
++            buyerLuck: 0,
++            purchasedEquipmentInstanceId: Instance("sword-001"),
++            equipmentAcquisitionContext: null);
++        ShopTransactionResult actorCollision = shop.Buy(
++            inventory,
++            wallet,
++            stock,
++            CreditsCurrency,
++            offer,
++            buyerLuck: 0,
++            purchasedEquipmentInstanceId: actorId,
++            equipmentAcquisitionContext: new RuntimeEquipmentAcquisitionContext(
++                repository,
++                [actorId]));
++
++        Assert.Equal(ResourceTransactionCode.InvalidRuntimeActorEvidence, missingContext.Code);
++        Assert.Equal(ResourceTransactionCode.RuntimeInstanceIdCollision, actorCollision.Code);
++        Assert.Same(inventory, missingContext.AfterInventory);
++        Assert.Same(wallet, missingContext.AfterCurrencyLedger);
++        Assert.Same(stock, missingContext.AfterStock);
++        Assert.Same(inventory, actorCollision.AfterInventory);
++        Assert.Same(wallet, actorCollision.AfterCurrencyLedger);
++        Assert.Same(stock, actorCollision.AfterStock);
++    }
++
+     [Fact]
+     public void ShopOfferResolver_MapsAuthoredItemAndEquipmentOffersIntoRuntimeOffers()
+     {
+@@ -996,6 +1167,18 @@ public sealed class ResourceManagementServiceTests
+             grantedSkillIds: grantedSkillIds,
+             boots: new EquipmentBootsProfileDefinition(evasion));
+ 
++    private static void AssertRejectedAcquisition(
++        InventoryTransitionResult result,
++        RuntimeInventorySnapshot expected,
++        ResourceTransactionCode code)
++    {
++        Assert.False(result.Applied);
++        Assert.Equal(code, result.Code);
++        Assert.Same(expected, result.Before);
++        Assert.Same(expected, result.After);
++        Assert.Equal(code, Assert.Single(result.Diagnostics).Code);
++    }
++
+     private static KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>> Owned(
+         ContentId slotId,
+         RuntimeInstanceId instanceId,
+@@ -1015,4 +1198,16 @@ public sealed class ResourceManagementServiceTests
+                 ? equipment!
+                 : throw new KeyNotFoundException(id.ToString());
+     }
++
++    private sealed class ThrowingEquipmentRepository(Exception exception)
++        : IEquipmentDefinitionRepository
++    {
++        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? equipment)
++        {
++            equipment = null;
++            throw exception;
++        }
++
++        public EquipmentDefinition GetRequiredEquipment(ContentId id) => throw exception;
++    }
+ }
+diff --git a/tests/Convergence.Framework.Tests/Runtime/RuntimeRulesetBindingTests.cs b/tests/Convergence.Framework.Tests/Runtime/RuntimeRulesetBindingTests.cs
+index 29984d1ddbb57d9890015335fd01441f9808f7c3..31e448974d09b6dc13361b02aeb3b17077142908 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/RuntimeRulesetBindingTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/RuntimeRulesetBindingTests.cs
+@@ -577,6 +577,32 @@ public sealed class RuntimeRulesetBindingTests
+             StagePolicy()));
+     }
+ 
++    [Theory]
++    [InlineData(MalformedRulesetDiagnosticShape.NullEntry)]
++    [InlineData(MalformedRulesetDiagnosticShape.UndefinedCode)]
++    [InlineData(MalformedRulesetDiagnosticShape.BlankMessage)]
++    public void EconomyResolver_ContainsMalformedHostFactoryDiagnostics(
++        MalformedRulesetDiagnosticShape shape)
++    {
++        ContentId policyId = Id("malformed_economy_policy");
++        RulesetDefinition definition = Ruleset("malformed_economy", RulesetCategory.Economy, policyId);
++        var resolver = new RuntimeRulesetBindingResolver(new RuntimeRulesetPolicyFactoryRegistry(
++            economy: [new MalformedEconomyFactory(policyId, shape)]));
++
++        RulesetBindingResult<ResourceManagementRulesetServices> result =
++            resolver.BindResourceManagementServices(Catalog(definition), definition.Id);
++
++        Assert.False(result.IsSuccess);
++        Assert.Null(result.Service);
++        RulesetBindingDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(RulesetBindingDiagnosticCode.PolicyFactoryFailure, diagnostic.Code);
++        Assert.Equal(definition.Id, diagnostic.RulesetId);
++        Assert.Equal(RulesetCategory.Economy, diagnostic.ExpectedCategory);
++        Assert.Equal(RulesetCategory.Economy, diagnostic.ActualCategory);
++        Assert.Equal(policyId, diagnostic.PolicyId);
++        Assert.Contains("Ruleset diagnostic", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
++    }
++
+     [Fact]
+     public void DamageBinding_AppliesOnlyApprovedSupportedParameters()
+     {
+@@ -1471,6 +1497,44 @@ public sealed class RuntimeRulesetBindingTests
+             throw new OperationCanceledException("Host policy factory cancelled.");
+     }
+ 
++    public enum MalformedRulesetDiagnosticShape
++    {
++        NullEntry,
++        UndefinedCode,
++        BlankMessage
++    }
++
++    private sealed class MalformedEconomyFactory(
++        ContentId policyId,
++        MalformedRulesetDiagnosticShape shape) : IRuntimeEconomyRulesetPolicyFactory
++    {
++        public ContentId PolicyId { get; } = policyId;
++
++        public RulesetBindingResult<ResourceManagementRulesetServices> Create(
++            RulesetDefinition definition) =>
++            new(
++                null,
++                shape switch
++                {
++                    MalformedRulesetDiagnosticShape.NullEntry => [null!],
++                    MalformedRulesetDiagnosticShape.UndefinedCode =>
++                    [
++                        new RulesetBindingDiagnostic(
++                            (RulesetBindingDiagnosticCode)int.MaxValue,
++                            definition.Id,
++                            "Undefined diagnostic code.")
++                    ],
++                    MalformedRulesetDiagnosticShape.BlankMessage =>
++                    [
++                        new RulesetBindingDiagnostic(
++                            RulesetBindingDiagnosticCode.InvalidParameterValue,
++                            definition.Id,
++                            " ")
++                    ],
++                    _ => throw new ArgumentOutOfRangeException(nameof(shape))
++                });
++    }
++
+     private sealed class FixedStatFactory(
+         ContentId policyId,
+         StatRulesetServices service) : IRuntimeStatRulesetPolicyFactory
+diff --git a/tests/Convergence.Framework.Tests/Runtime/ShopPricingPolicyTests.cs b/tests/Convergence.Framework.Tests/Runtime/ShopPricingPolicyTests.cs
+index bb14b27b2e16e910fa9c101ef6727b895b2f879f..cd230fadf9450c5dfe55a03e1fd2d05523d292c4 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/ShopPricingPolicyTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/ShopPricingPolicyTests.cs
+@@ -125,6 +125,28 @@ public sealed class ShopPricingPolicyTests
+         Assert.Equal(ShopPricingPolicyDiagnosticCode.PolicyFactoryFailure, Assert.Single(silent.Diagnostics).Code);
+     }
+ 
++    [Theory]
++    [InlineData(MalformedPricingBindingShape.NullDiagnostic)]
++    [InlineData(MalformedPricingBindingShape.UndefinedDiagnosticCode)]
++    [InlineData(MalformedPricingBindingShape.BlankDiagnosticMessage)]
++    [InlineData(MalformedPricingBindingShape.PolicyAndDiagnostic)]
++    [InlineData(MalformedPricingBindingShape.NeitherPolicyNorDiagnostic)]
++    [InlineData(MalformedPricingBindingShape.NullResult)]
++    public void PricingFactoryRegistry_NormalizesMalformedBindingResults(
++        MalformedPricingBindingShape shape)
++    {
++        ContentId policyId = Id($"malformed_pricing_{(int)shape}");
++        ShopPricingPolicyFactoryRegistry registry = ShopPricingPolicyFactoryRegistry.CreateStandard(
++            [new MalformedPricingBindingFactory(policyId, shape)]);
++
++        ShopPricingPolicyBindingResult result = registry.Bind(policyId, EmptyParameters());
++
++        Assert.False(result.IsSuccess);
++        ShopPricingPolicyDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(ShopPricingPolicyDiagnosticCode.PolicyFactoryFailure, diagnostic.Code);
++        Assert.Equal(policyId, diagnostic.PolicyId);
++    }
++
+     [Fact]
+     public void PricingFactoryRegistry_PreservesCancellationAndRejectsInvalidFactoryIdentity()
+     {
+@@ -211,6 +233,43 @@ public sealed class ShopPricingPolicyTests
+         Assert.Equal(ShopPricingPolicyDiagnosticCode.UnsupportedPolicy, diagnostic.PricingDiagnostic?.Code);
+     }
+ 
++    [Fact]
++    public void OfferResolver_ReturnsTypedDiagnosticForMalformedPricingFactoryResult()
++    {
++        ContentId policyId = Id("malformed_offer_pricing");
++        ShopPricingPolicyFactoryRegistry factories = ShopPricingPolicyFactoryRegistry.CreateStandard(
++            [new MalformedPricingBindingFactory(
++                policyId,
++                MalformedPricingBindingShape.NullDiagnostic)]);
++        var resolver = new RuntimeShopOfferResolver(
++            factories.Bind(StandardShopPricingPolicyIds.Standard, EmptyParameters()).RequirePolicy(),
++            factories,
++            ShopStockPolicyFactoryRegistry.CreateStandard());
++        var definition = new ShopOfferDefinition(
++            Id("malformed_pricing_offer"),
++            ShopContentKind.Item,
++            Medicine,
++            new PolicyShopPriceDefinition(
++                policyId,
++                Parameters(("purchasePrice", 100))),
++            new UnlimitedShopStockDefinition());
++
++        RuntimeShopOfferResolutionResult result = resolver.Resolve(
++            TestShop,
++            definition,
++            ItemCatalog(),
++            ItemCatalog());
++
++        Assert.False(result.IsSuccess);
++        RuntimeShopOfferResolutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(
++            RuntimeShopOfferResolutionCode.InvalidPricePolicyConfiguration,
++            diagnostic.Code);
++        Assert.Equal(
++            ShopPricingPolicyDiagnosticCode.PolicyFactoryFailure,
++            diagnostic.PricingDiagnostic?.Code);
++    }
++
+     public static TheoryData<object?> InvalidPolicyPurchasePrices =>
+         new()
+         {
+@@ -272,7 +331,8 @@ public sealed class ShopPricingPolicyTests
+             Credits,
+             throwingOffer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         ShopTransactionResult returnedNull = shop.Buy(
+             inventory,
+             ledger,
+@@ -280,7 +340,8 @@ public sealed class ShopPricingPolicyTests
+             Credits,
+             nullOffer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+ 
+         AssertRejectedWithoutMutation(throwing, inventory, ledger, "failed");
+         AssertRejectedWithoutMutation(returnedNull, inventory, ledger, "returned no result");
+@@ -299,7 +360,8 @@ public sealed class ShopPricingPolicyTests
+                 Credits,
+                 offer,
+                 buyerLuck: 0,
+-                purchasedEquipmentInstanceId: null));
++                purchasedEquipmentInstanceId: null,
++                equipmentAcquisitionContext: null));
+     }
+ 
+     [Fact]
+@@ -572,6 +634,50 @@ public sealed class ShopPricingPolicyTests
+             new(null);
+     }
+ 
++    public enum MalformedPricingBindingShape
++    {
++        NullDiagnostic,
++        UndefinedDiagnosticCode,
++        BlankDiagnosticMessage,
++        PolicyAndDiagnostic,
++        NeitherPolicyNorDiagnostic,
++        NullResult
++    }
++
++    private sealed class MalformedPricingBindingFactory(
++        ContentId policyId,
++        MalformedPricingBindingShape shape) : IShopPricingPolicyFactory
++    {
++        public ContentId PolicyId { get; } = policyId;
++
++        public ShopPricingPolicyBindingResult Create(
++            IReadOnlyDictionary<string, object?> parameters) =>
++            shape switch
++            {
++                MalformedPricingBindingShape.NullDiagnostic => new(null, [null!]),
++                MalformedPricingBindingShape.UndefinedDiagnosticCode => new(
++                    null,
++                    [new ShopPricingPolicyDiagnostic(
++                        (ShopPricingPolicyDiagnosticCode)int.MaxValue,
++                        "Undefined code.")]),
++                MalformedPricingBindingShape.BlankDiagnosticMessage => new(
++                    null,
++                    [new ShopPricingPolicyDiagnostic(
++                        ShopPricingPolicyDiagnosticCode.InvalidParameterValue,
++                        " ")]),
++                MalformedPricingBindingShape.PolicyAndDiagnostic => new(
++                    new BoundShopPricingPolicy(
++                        PolicyId,
++                        new FixedPricingPolicy(1, 1)),
++                    [new ShopPricingPolicyDiagnostic(
++                        ShopPricingPolicyDiagnosticCode.InvalidParameterValue,
++                        "Contradictory diagnostic.")]),
++                MalformedPricingBindingShape.NeitherPolicyNorDiagnostic => new(null),
++                MalformedPricingBindingShape.NullResult => null!,
++                _ => throw new ArgumentOutOfRangeException(nameof(shape), shape, null)
++            };
++    }
++
+     private sealed class ThrowingPricingPolicy : IShopPricingPolicy
+     {
+         public ShopPriceCalculationResult Calculate(ShopPriceCalculationRequest request) =>
+diff --git a/tests/Convergence.Framework.Tests/Runtime/ShopStockPolicyTests.cs b/tests/Convergence.Framework.Tests/Runtime/ShopStockPolicyTests.cs
+index fcf9972293e6b9f3b66409cbbf4de8bc41f12a32..9f2471fb9c2479937a4a32361157fbad5092cd37 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/ShopStockPolicyTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/ShopStockPolicyTests.cs
+@@ -75,7 +75,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             offer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         ShopTransactionResult second = service.Buy(
+             first.AfterInventory,
+             first.AfterCurrencyLedger,
+@@ -83,7 +84,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             offer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         ShopTransactionResult third = service.Buy(
+             second.AfterInventory,
+             second.AfterCurrencyLedger,
+@@ -91,7 +93,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             offer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+ 
+         Assert.True(first.Applied);
+         Assert.Equal(1, first.AfterInventory.GetQuantity(Medicine));
+@@ -124,7 +127,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             offer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         ShopTransactionResult staleSameBeforeCandidate = service.Buy(
+             inventory,
+             currency,
+@@ -132,7 +136,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             offer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         ShopTransactionResult recalculatedAfterAdoption = service.Buy(
+             firstCandidate.AfterInventory,
+             firstCandidate.AfterCurrencyLedger,
+@@ -140,7 +145,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             offer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+ 
+         Assert.True(firstCandidate.Applied);
+         Assert.True(staleSameBeforeCandidate.Applied);
+@@ -177,7 +183,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             ordinary,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         RuntimeCurrencyLedgerSnapshot wrongCurrency = RuntimeCurrencyLedgerSnapshot.Single(
+             Id("tokens"),
+             100);
+@@ -188,7 +195,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             ordinary,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         var fullInventory = new RuntimeInventorySnapshot(
+             [new KeyValuePair<ContentId, int>(Medicine, 1)]);
+         RuntimeShopOfferSnapshot stackLimited =
+@@ -200,7 +208,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             stackLimited,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         ShopTransactionResult missingStock = service.Buy(
+             emptyInventory,
+             funded,
+@@ -208,7 +217,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             ordinary,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         var duplicateStock = new RuntimeShopStockSnapshot(
+         [
+             new RuntimeShopStockEntrySnapshot(ordinary.Identity, 2),
+@@ -221,7 +231,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             ordinary,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         RuntimeShopOfferSnapshot throwing = Offer(
+             ShopA,
+             Id("throwing_offer"),
+@@ -236,7 +247,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             throwing,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+         RuntimeShopOfferSnapshot unlimited = Offer(
+             ShopA,
+             Id("unlimited_offer"),
+@@ -253,7 +265,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             unlimited,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null);
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null);
+ 
+         AssertAtomicRejection(insufficientCurrency, emptyInventory, insufficientCurrency.BeforeCurrencyLedger, validStock,
+             ResourceTransactionCode.InsufficientCurrency);
+@@ -361,7 +374,8 @@ public sealed class ShopStockPolicyTests
+             Credits,
+             offer,
+             buyerLuck: 0,
+-            purchasedEquipmentInstanceId: null));
++            purchasedEquipmentInstanceId: null,
++            equipmentAcquisitionContext: null));
+ 
+         Assert.Empty(inventory.ItemQuantities);
+         Assert.Empty(inventory.OwnedEquipmentInstances);
+@@ -399,6 +413,39 @@ public sealed class ShopStockPolicyTests
+                 [new DuplicateStandardStockPolicyFactory()]));
+     }
+ 
++    [Theory]
++    [InlineData(MalformedStockBindingShape.NullDiagnostic)]
++    [InlineData(MalformedStockBindingShape.UndefinedDiagnosticCode)]
++    [InlineData(MalformedStockBindingShape.BlankDiagnosticMessage)]
++    [InlineData(MalformedStockBindingShape.PolicyAndDiagnostic)]
++    [InlineData(MalformedStockBindingShape.NeitherPolicyNorDiagnostic)]
++    [InlineData(MalformedStockBindingShape.NullResult)]
++    public void PolicyFactoryRegistry_NormalizesMalformedBindingResults(
++        MalformedStockBindingShape shape)
++    {
++        ContentId policyId = Id($"malformed_stock_{(int)shape}");
++        ShopStockPolicyFactoryRegistry registry = ShopStockPolicyFactoryRegistry.CreateStandard(
++            [new MalformedStockBindingFactory(policyId, shape)]);
++
++        ShopStockPolicyBindingResult result = registry.Bind(policyId, EmptyParameters());
++
++        Assert.False(result.IsSuccess);
++        ShopStockPolicyDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(ShopStockPolicyDiagnosticCode.PolicyFactoryFailure, diagnostic.Code);
++        Assert.Equal(policyId, diagnostic.PolicyId);
++    }
++
++    [Fact]
++    public void PolicyFactoryRegistry_PropagatesCancellation()
++    {
++        ContentId policyId = Id("canceling_stock_factory");
++        ShopStockPolicyFactoryRegistry registry = ShopStockPolicyFactoryRegistry.CreateStandard(
++            [new CancelingStockPolicyFactory(policyId)]);
++
++        Assert.Throws<OperationCanceledException>(() =>
++            registry.Bind(policyId, EmptyParameters()));
++    }
++
+     [Fact]
+     public void OfferResolver_BindsFixedAndExplicitStockPoliciesWithoutFallback()
+     {
+@@ -446,6 +493,37 @@ public sealed class ShopStockPolicyTests
+             Assert.Single(unsupported.Diagnostics).Code);
+     }
+ 
++    [Fact]
++    public void OfferResolver_ReturnsTypedDiagnosticForMalformedStockFactoryResult()
++    {
++        ContentId policyId = Id("malformed_offer_stock");
++        GameDataCatalog catalog = RuntimePersistenceSnapshotTests.LoadCatalog();
++        var resolver = Resolver(new MalformedStockBindingFactory(
++            policyId,
++            MalformedStockBindingShape.NullDiagnostic));
++        var definition = new ShopOfferDefinition(
++            Id("malformed_stock_offer"),
++            ShopContentKind.Item,
++            Medicine,
++            new FixedShopPriceDefinition(10),
++            new PolicyShopStockDefinition(policyId, 1));
++
++        RuntimeShopOfferResolutionResult result = resolver.Resolve(
++            ShopA,
++            definition,
++            catalog,
++            catalog);
++
++        Assert.False(result.IsSuccess);
++        RuntimeShopOfferResolutionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(
++            RuntimeShopOfferResolutionCode.InvalidStockPolicyConfiguration,
++            diagnostic.Code);
++        Assert.Equal(
++            ShopStockPolicyDiagnosticCode.PolicyFactoryFailure,
++            diagnostic.StockDiagnostic?.Code);
++    }
++
+     [Fact]
+     public void SaveValidator_ReportsEveryMalformedShopStockShapeWithTypedDiagnostics()
+     {
+@@ -619,6 +697,58 @@ public sealed class ShopStockPolicyTests
+             new(new BoundShopStockPolicy(PolicyId, new StandardShopStockPolicy()));
+     }
+ 
++    public enum MalformedStockBindingShape
++    {
++        NullDiagnostic,
++        UndefinedDiagnosticCode,
++        BlankDiagnosticMessage,
++        PolicyAndDiagnostic,
++        NeitherPolicyNorDiagnostic,
++        NullResult
++    }
++
++    private sealed class MalformedStockBindingFactory(
++        ContentId policyId,
++        MalformedStockBindingShape shape) : IShopStockPolicyFactory
++    {
++        public ContentId PolicyId { get; } = policyId;
++
++        public ShopStockPolicyBindingResult Create(
++            IReadOnlyDictionary<string, object?> parameters) =>
++            shape switch
++            {
++                MalformedStockBindingShape.NullDiagnostic => new(null, [null!]),
++                MalformedStockBindingShape.UndefinedDiagnosticCode => new(
++                    null,
++                    [new ShopStockPolicyDiagnostic(
++                        (ShopStockPolicyDiagnosticCode)int.MaxValue,
++                        "Undefined code.")]),
++                MalformedStockBindingShape.BlankDiagnosticMessage => new(
++                    null,
++                    [new ShopStockPolicyDiagnostic(
++                        ShopStockPolicyDiagnosticCode.InvalidParameterValue,
++                        " ")]),
++                MalformedStockBindingShape.PolicyAndDiagnostic => new(
++                    new BoundShopStockPolicy(PolicyId, new StandardShopStockPolicy()),
++                    [new ShopStockPolicyDiagnostic(
++                        ShopStockPolicyDiagnosticCode.InvalidParameterValue,
++                        "Contradictory diagnostic.")]),
++                MalformedStockBindingShape.NeitherPolicyNorDiagnostic => new(null),
++                MalformedStockBindingShape.NullResult => null!,
++                _ => throw new ArgumentOutOfRangeException(nameof(shape), shape, null)
++            };
++    }
++
++    private sealed class CancelingStockPolicyFactory(ContentId policyId)
++        : IShopStockPolicyFactory
++    {
++        public ContentId PolicyId { get; } = policyId;
++
++        public ShopStockPolicyBindingResult Create(
++            IReadOnlyDictionary<string, object?> parameters) =>
++            throw new OperationCanceledException("Stock factory canceled.");
++    }
++
+     private sealed class ThrowingStockPolicy : IShopStockPolicy
+     {
+         public ShopStockTransitionResult Apply(ShopStockTransitionRequest request) =>
+diff --git a/tests/Convergence.Framework.Tests/SkillSystem/BattleActionExecutorTests.cs b/tests/Convergence.Framework.Tests/SkillSystem/BattleActionExecutorTests.cs
+index 3886424b571ba86f4b313a136b8d847e9c53486d..5199b66c6fbf70159944a5da5037034c0593d31b 100644
+--- a/tests/Convergence.Framework.Tests/SkillSystem/BattleActionExecutorTests.cs
++++ b/tests/Convergence.Framework.Tests/SkillSystem/BattleActionExecutorTests.cs
+@@ -434,12 +434,16 @@ public sealed class BattleActionExecutorTests
+                 StandardEquipmentSlotIds.Armor,
+                 armorInstanceId)
+         ]);
++        var equipmentRepository = new TestEquipmentRepository([armor]);
+         var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
+             inventory,
+-            new TestEquipmentRepository([armor]));
++            equipmentRepository);
+         RuntimeActorState actor = Actor("actor", TeamA);
+         RuntimeActorState target = Actor("target", TeamB);
+-        actor.ReplaceEquipment(equipped);
++        var equipmentApplication = new RuntimeActorEquipmentApplicationService(
++            new RuntimeActorCombatProfileCompositionService(
++                new TestSkillRepository([grantedSkill])));
++        ApplyEquipment(equipped);
+         RuntimeSkillStateSnapshot moveListBefore = actor.Skills;
+         var authorization = new CatalogBattleActionAuthorizationPolicy(
+             new TestSkillRepository([grantedSkill]),
+@@ -453,7 +457,7 @@ public sealed class BattleActionExecutorTests
+             [actor, target]);
+         BattleActionAssessment preparedWhileEquipped = executor.Assess(request);
+ 
+-        actor.ReplaceEquipment(new RuntimeEquipmentSnapshot());
++        ApplyEquipment(new RuntimeEquipmentSnapshot());
+         BattleActionExecutionResult rejectedAfterUnequip = await executor.ExecuteAsync(
+             request,
+             preparedWhileEquipped);
+@@ -468,9 +472,9 @@ public sealed class BattleActionExecutorTests
+         Assert.Empty(actor.Skills.LearnedSkillIds);
+         Assert.Empty(actor.Skills.EquippedSkillIds);
+ 
+-        actor.ReplaceEquipment(equipped);
++        ApplyEquipment(equipped);
+         BattleActionExecutionResult executedAfterReequip = await executor.ExecuteAsync(request);
+-        actor.ReplaceEquipment(new RuntimeEquipmentSnapshot());
++        ApplyEquipment(new RuntimeEquipmentSnapshot());
+         BattleActionAssessment rejectedAfterSecondUnequip = executor.Assess(request);
+ 
+         Assert.Equal(BattleActionExecutionStatus.Executed, executedAfterReequip.Status);
+@@ -479,6 +483,22 @@ public sealed class BattleActionExecutorTests
+         Assert.Equal(moveListBefore, actor.Skills);
+         Assert.Empty(actor.Skills.LearnedSkillIds);
+         Assert.Empty(actor.Skills.EquippedSkillIds);
++
++        void ApplyEquipment(RuntimeEquipmentSnapshot candidate)
++        {
++            RuntimeActorEquipmentApplicationResult result = equipmentApplication.Apply(
++                new RuntimeActorEquipmentApplicationRequest(
++                    actor,
++                    inventory,
++                    candidate,
++                    equipmentRepository,
++                    RuntimeStatSourceKind.Actor,
++                    MissingHostedEntityBehavior.UseActorBaseStats,
++                    runtimeActors: [actor, target]));
++            Assert.True(
++                result.Applied,
++                string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
++        }
+     }
+ 
+     [Fact]
+diff --git a/tests/Convergence.Framework.Tests/SkillSystem/CatalogBattleRuntimeTests.cs b/tests/Convergence.Framework.Tests/SkillSystem/CatalogBattleRuntimeTests.cs
+index fa6a820b27ec6aabea04fe64b16982a727663c36..e902cadaee2a5bb90db06179172bc8c08bfab602 100644
+--- a/tests/Convergence.Framework.Tests/SkillSystem/CatalogBattleRuntimeTests.cs
++++ b/tests/Convergence.Framework.Tests/SkillSystem/CatalogBattleRuntimeTests.cs
+@@ -122,15 +122,19 @@ public sealed class CatalogBattleRuntimeTests
+                     StandardEquipmentSlotIds.Armor,
+                     [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
+             ]);
+-        actor.State.ReplaceEquipment(new RuntimeEquipmentSnapshot(
++        var equipped = new RuntimeEquipmentSnapshot(
+         [
+             new KeyValuePair<ContentId, RuntimeInstanceId>(
+                 StandardEquipmentSlotIds.Armor,
+                 armorInstanceId)
+-        ]));
++        ]);
++        var equipmentRepository = new EquipmentRepository(armor);
+         var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
+             inventory,
+-            new EquipmentRepository(armor));
++            equipmentRepository);
++        var equipmentApplication = new RuntimeActorEquipmentApplicationService(
++            new RuntimeActorCombatProfileCompositionService(skillRepository));
++        ApplyEquipment(equipped);
+         var executor = new SkillExecutor(Services(LoadDemoCatalog()));
+         var selector = new DeterministicBattleActionSelector(executor);
+ 
+@@ -143,7 +147,7 @@ public sealed class CatalogBattleRuntimeTests
+             KnowledgeView(),
+             activeStatModifierBoundaries: null,
+             equipmentProfiles));
+-        actor.State.ReplaceEquipment(new RuntimeEquipmentSnapshot());
++        ApplyEquipment(new RuntimeEquipmentSnapshot());
+         BattleActionSelection afterUnequip = selector.Select(new BattleActionSelectionRequest(
+             actor,
+             [actor, target],
+@@ -162,6 +166,22 @@ public sealed class CatalogBattleRuntimeTests
+         Assert.Equal(BattleActionSelectionStatus.Pass, afterUnequip.Status);
+         Assert.Empty(actor.State.Skills.LearnedSkillIds);
+         Assert.Empty(actor.State.Skills.EquippedSkillIds);
++
++        void ApplyEquipment(RuntimeEquipmentSnapshot candidate)
++        {
++            RuntimeActorEquipmentApplicationResult result = equipmentApplication.Apply(
++                new RuntimeActorEquipmentApplicationRequest(
++                    actor.State,
++                    inventory,
++                    candidate,
++                    equipmentRepository,
++                    RuntimeStatSourceKind.Actor,
++                    MissingHostedEntityBehavior.UseActorBaseStats,
++                    runtimeActors: [actor.State, target.State]));
++            Assert.True(
++                result.Applied,
++                string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
++        }
+     }
+ 
+     [Fact]
+diff --git a/tests/Convergence.Framework.Tests/SkillSystem/PassiveSkillRuntimeTests.cs b/tests/Convergence.Framework.Tests/SkillSystem/PassiveSkillRuntimeTests.cs
+index 24449f20709332599708c720bdca9983bf5a98c9..cd3c62ed69142c3ef695cd9798bd5faf5e0692aa 100644
+--- a/tests/Convergence.Framework.Tests/SkillSystem/PassiveSkillRuntimeTests.cs
++++ b/tests/Convergence.Framework.Tests/SkillSystem/PassiveSkillRuntimeTests.cs
+@@ -43,10 +43,25 @@ public sealed class PassiveSkillRuntimeTests
+         RuntimeActorState actor = Actor(
+             "intrinsic_actor",
+             PlayerTeam,
+-            passiveSkills: [intrinsicPassive]);
+-
+-        actor.ReplaceEquipment(new RuntimeEquipmentSnapshot());
+-
++            passiveSkills: [intrinsicPassive],
++            skillState: new RuntimeSkillStateSnapshot(
++                [intrinsicPassive.Id],
++                [intrinsicPassive.Id]));
++
++        var application = new RuntimeActorEquipmentApplicationService(
++            new RuntimeActorCombatProfileCompositionService(
++                new TestSkillRepository([intrinsicPassive])));
++        RuntimeActorEquipmentApplicationResult result = application.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
++                actor,
++                new RuntimeInventorySnapshot(),
++                new RuntimeEquipmentSnapshot(),
++                new EmptyEquipmentRepository(),
++                RuntimeStatSourceKind.Actor,
++                MissingHostedEntityBehavior.UseActorBaseStats,
++                runtimeActors: [actor]));
++
++        Assert.True(result.Applied);
+         Assert.Equal(intrinsicPassive.Id, Assert.Single(actor.Passives.Entries).Skill.Id);
+     }
+ 
+@@ -1404,7 +1419,8 @@ public sealed class PassiveSkillRuntimeTests
+         decimal hp = 100,
+         decimal sp = 100,
+         CombatDefenseProfile? defense = null,
+-        IEnumerable<SkillDefinition>? passiveSkills = null) =>
++        IEnumerable<SkillDefinition>? passiveSkills = null,
++        RuntimeSkillStateSnapshot? skillState = null) =>
+         new(
+             RuntimeInstanceId.Parse(id),
+             ContentId.Parse($"{id}_entity"),
+@@ -1414,7 +1430,8 @@ public sealed class PassiveSkillRuntimeTests
+             [new BattleResourceState(Hp, hp, 100), new BattleResourceState(Sp, sp, 100)],
+             new RuntimeEncounterPresenceSnapshot(IsDeployed: true),
+             new RuntimeActorAffiliationSnapshot(ContentId.Parse("test_host"), team),
+-            passiveSkills: passiveSkills);
++            passiveSkills: passiveSkills,
++            skillState: skillState);
+ 
+     private static AilmentDefinition PoisonDefinition() =>
+         new(
+@@ -1459,6 +1476,30 @@ public sealed class PassiveSkillRuntimeTests
+         public AilmentDefinition GetRequiredAilment(ContentId id) => _ailments[id];
+     }
+ 
++    private sealed class TestSkillRepository(IEnumerable<SkillDefinition> skills)
++        : ISkillDefinitionRepository
++    {
++        private readonly Dictionary<ContentId, SkillDefinition> _skills =
++            skills.ToDictionary(skill => skill.Id);
++
++        public bool TryGetSkill(ContentId id, out SkillDefinition? definition) =>
++            _skills.TryGetValue(id, out definition);
++
++        public SkillDefinition GetRequiredSkill(ContentId id) => _skills[id];
++    }
++
++    private sealed class EmptyEquipmentRepository : IEquipmentDefinitionRepository
++    {
++        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? definition)
++        {
++            definition = null;
++            return false;
++        }
++
++        public EquipmentDefinition GetRequiredEquipment(ContentId id) =>
++            throw new KeyNotFoundException(id.ToString());
++    }
++
+     private sealed class DelegateDamagePolicy(
+         Func<DamagePolicyRequest, IReadOnlyList<DamageHitResolution>> resolve) : IDamageExecutionPolicy
+     {

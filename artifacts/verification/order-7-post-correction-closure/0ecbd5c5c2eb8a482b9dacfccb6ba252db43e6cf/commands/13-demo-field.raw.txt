@@ -1,0 +1,7 @@
+001 [skill] Recovery Pulse: Executed; restored 25 HP.
+002 [item] Medicine: Executed; consume=ConsumeOne; escape=False; hostRequests=none; remaining=0.
+003 [item] Dis-Poison: Executed; consume=ConsumeOne; escape=False; hostRequests=none; remaining=0.
+004 [item] Revival Bead: Executed; consume=ConsumeOne; escape=False; hostRequests=none; remaining=0.
+005 [item] Battle Exit Charm: Executed; consume=ConsumeOne; escape=True; hostRequests=none; remaining=0.
+006 [item] Return Beacon: Executed; consume=ConsumeOne; escape=False; hostRequests=request_dungeon_exit; remaining=0.
+007 [outcome] Shared field effects demo completed successfully.

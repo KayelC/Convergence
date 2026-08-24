@@ -35,6 +35,11 @@ capture and validation contract.
 
 ## Order 7 Post-Correction Closure
 
+- [Successful complete post-correction gate](order-7-post-correction-closure/0ecbd5c5c2eb8a482b9dacfccb6ba252db43e6cf/README.md):
+  23 commands passed against commit
+  `0ecbd5c5c2eb8a482b9dacfccb6ba252db43e6cf`, reviewing the implementation and
+  closure range
+  `91a4f2ec15e7811ea13289b23de4dbc179bf68c1..fadcf31366c7ab9a256526d55eddb4e16e7ae1b8`.
 - [Retained failed console-binary attempt](order-7-post-correction-closure-failed-20260824T065831Z/fadcf31366c7ab9a256526d55eddb4e16e7ae1b8/README.md):
   commands 00 through 17 passed against `fadcf31366c7ab9a256526d55eddb4e16e7ae1b8`;
   the repository-local Godot `_console.exe` then crashed in native code while
