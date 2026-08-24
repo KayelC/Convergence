@@ -644,7 +644,7 @@ outer action-end before a save is captured. The
 [final certification record](../reviews/status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
 is the formal Order 4 closure authority.
 
-## Completed Order 7
+## Reopened Order 7
 
 The owner-approved
 [Inventory, Equipment, And Economy Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
@@ -668,8 +668,15 @@ extension-boundary, and save-guidance findings in isolated commits. Its
 [post-correction closure review](../reviews/inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
 then re-read current source and all three audiences, found no unresolved
 realistic reachable defect or documentation contradiction, and passed the
-complete release gate. The capability is `complete`; its mechanics, developer,
-and technical entries remain `reviewed`.
+complete release gate for that revision. The later
+[post-correction independent audit](../reviews/inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
+found stale O7-R11-future callouts in all three audience pages and a developer
+`Shop.Buy` example that omits the required equipment-acquisition context. Those
+three entries return to `existing_unreviewed` while O7-R12 through O7-R15
+harden the custom economy bundle, reconcile the pages, guard the sample, and
+perform a fresh closure gate. The executable documentation matrix now records
+30 `reviewed`, 25 `existing_unreviewed`, 13 `missing`, and 7 `not_applicable`
+entries.
 
 ## Deferred Documentation
 

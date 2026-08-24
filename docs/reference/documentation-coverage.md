@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 33 reviewed,
-22 existing_unreviewed, 13 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+25 existing_unreviewed, 13 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -298,8 +298,8 @@ independently rechecks automated execution authority and every command-status
 transaction branch without finding an unresolved realistic reachable defect.
 Order 6 is formally owner-closed; the documentation totals do not change.
 
-The documentation matrix currently records 75 audience entries: 30 reviewed,
-24 existing_unreviewed, 14 missing, and 7 not_applicable.
+At the O6-R51 revision, the documentation matrix recorded 75 audience entries:
+30 reviewed, 24 existing_unreviewed, 14 missing, and 7 not_applicable.
 
 | State | Count |
 |---|---:|

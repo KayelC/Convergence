@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R11 complete
+**Implementation status:** O7-R1 through O7-R11 complete; O7-R12 through O7-R15 pending
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -35,6 +35,13 @@
 > re-read current source, tests, host integration, and all three audiences after
 > the isolated R11 corrections. It found no unresolved realistic reachable
 > defect or documentation contradiction. Order 7 is complete.
+
+> **Post-correction independent audit:** A later source-first
+> [independent audit](inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
+> found one bounded malformed custom-economy-bundle path and two active
+> documentation contradictions. It reopens Order 7 under O7-R12 through
+> O7-R15; the earlier closure remains historical evidence for its reviewed
+> revision rather than current closure authority.
 
 ## Purpose
 

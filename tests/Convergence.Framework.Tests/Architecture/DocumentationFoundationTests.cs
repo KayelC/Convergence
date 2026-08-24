@@ -753,7 +753,7 @@ public sealed class DocumentationFoundationTests
     }
 
     [Fact]
-    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndClosureEvidence()
+    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndCurrentAuditEvidence()
     {
         string mechanics = File.ReadAllText(
             RepositoryPath("docs", "mechanics", "party-inventory-and-economy.md"))
@@ -767,11 +767,11 @@ public sealed class DocumentationFoundationTests
         string publicApi = File.ReadAllText(
             RepositoryPath("docs", "public-api-contract.md"))
             .ReplaceLineEndings(" ");
-        string closure = File.ReadAllText(
+        string currentAudit = File.ReadAllText(
             RepositoryPath(
                 "docs",
                 "reviews",
-                "inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md"))
+                "inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md"))
             .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
@@ -832,19 +832,20 @@ public sealed class DocumentationFoundationTests
 
         DocumentationCapability documentation = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "inventory_equipment_economy");
-        Assert.Equal("reviewed", documentation.Mechanics.State);
-        Assert.Equal("reviewed", documentation.DeveloperGuide.State);
-        Assert.Equal("reviewed", documentation.Technical.State);
+        Assert.Equal("existing_unreviewed", documentation.Mechanics.State);
+        Assert.Equal("existing_unreviewed", documentation.DeveloperGuide.State);
+        Assert.Equal("existing_unreviewed", documentation.Technical.State);
 
         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             candidate => candidate.Id == "inventory_equipment_economy");
-        Assert.Equal("complete", capability.ImplementationState);
-        Assert.Empty(capability.KnownGaps);
+        Assert.Equal("partial", capability.ImplementationState);
+        Assert.Equal(2, capability.KnownGaps.Count);
 
-        Assert.Contains("Order 7 is formally complete.", closure, StringComparison.Ordinal);
-        Assert.Contains("no unresolved realistic reachable defect found", closure, StringComparison.Ordinal);
-        Assert.Contains("save contract v19", closure, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("content schema v10", closure, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("O7-R15", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("save v19", currentAudit, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("content schema v10", currentAudit, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("returns to `partial`", currentAudit, StringComparison.Ordinal);
     }
 
     [Fact]

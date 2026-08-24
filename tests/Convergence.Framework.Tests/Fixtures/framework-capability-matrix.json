@@ -167,7 +167,7 @@
     },
     {
       "id": "inventory_equipment_economy",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "ResourceManagementServiceTests",
         "ShopPricingPolicyTests",
@@ -185,7 +185,10 @@
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "A malformed custom economy ruleset factory can bind a non-null ResourceManagementRulesetServices aggregate containing a null required subservice as success.",
+        "The three audience documents retain stale pre-O7-R11 review-state callouts, and the developer Shop.Buy example omits the required equipment acquisition context."
+      ]
     },
     {
       "id": "navigation",

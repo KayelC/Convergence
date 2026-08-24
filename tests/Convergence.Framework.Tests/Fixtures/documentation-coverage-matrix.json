@@ -263,19 +263,19 @@
     {
       "id": "inventory_equipment_economy",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "O7-R10 reconciles the player-visible ownership, exact-copy equipment, temporary grants, prices, stock, atomic rejection, recovery, and save behavior with current source and tests."
+        "reason": "The post-correction independent audit found that the page still describes O7-R11 as future work; its substantive mechanics remain current but its review-state authority must be reconciled after O7-R12."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
-        "reason": "O7-R10 documents ruleset and slot-policy composition, instance IDs, one live equipment profile, atomic transaction adoption, recovery, saves, and Godot host responsibilities from current APIs."
+        "reason": "The post-correction independent audit found stale O7-R11 review wording and a Shop.Buy example that omits the required RuntimeEquipmentAcquisitionContext argument."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
-        "reason": "O7-R10 defines the equipment, loadout, profile, currency, offer, stock, recovery, transaction, and save v19 authorities with source-traced state-machine diagrams."
+        "reason": "The post-correction independent audit found that the technical page still describes O7-R11 as future work; its authority trace must be reconfirmed after the custom economy-bundle correction."
       }
     },
     {
