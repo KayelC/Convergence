@@ -92,11 +92,14 @@ O6-R46 reconciles the runtime contract. The
 [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
 independently traces the corrected source. This reference is `reviewed`, and
 Order 6 is formally complete.
-The Order 7 inventory/economy reference is `reviewed` after O7-R15 traced its
+The Order 7 inventory/economy reference was `reviewed` after O7-R15 traced its
 authority graph, transaction ordering, and save v19 diagrams against current
 source and tests. The
 [O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
-is the current capability-closure authority.
+is historical closure evidence for that revision. The later
+[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+reopens the reference as `existing_unreviewed` for repository-identity and
+authorization-cancellation corrections through O7-R20.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

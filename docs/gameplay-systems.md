@@ -146,7 +146,8 @@ inventory-owned equipment-instance identity, equip compatibility, typed
 currency-ledger arithmetic, policy-bound shop pricing and stock, shop transactions, and
 restoration transactions. Hosts own UI and durable inventory storage.
 
-Order 7 is complete. O7-R2 gives each equipment copy a unique runtime instance
+Order 7's standard path is implemented, but its certification is reopened.
+O7-R2 gives each equipment copy a unique runtime instance
 ID, permits separate copies of one definition, makes inventory the sole owner,
 and removes the former root save equipment authority. O7-R3 makes equipment
 slot identity authored and policy-validated. O7-R4 derives weapon attacks,
@@ -186,7 +187,11 @@ and [technical authority](technical/inventory-equipment-economy-runtime.md)
 pages provide the detailed contracts. The
 [O7-R15 final closure review](reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
 is the current independent source, documentation, and release-gate closure
-evidence.
+evidence for its reviewed revision. The later
+[post-R15 independent audit](reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+found three bounded custom-extension defects in definition identity and
+cancellation propagation. O7-R16 through O7-R20 now govern correction and fresh
+closure.
 
 ## Navigation, Traversal, And Encounter Preparation
 

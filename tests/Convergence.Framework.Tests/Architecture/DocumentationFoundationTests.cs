@@ -795,6 +795,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md"))
             .ReplaceLineEndings(" ");
+        string freshAudit = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -848,11 +854,10 @@ public sealed class DocumentationFoundationTests
 
         string[] reviewStateTokens =
         [
-            "**Review state:** `reviewed`.",
-            "O7-R15 independently re-read the corrected",
-            "at `77a6b9e4`.",
-            "final closure review",
-            "no unresolved realistic reachable defect"
+            "**Review state:** `existing_unreviewed`.",
+            "post-R15 independent audit",
+            "three reachable extension-boundary defects at `ef4e129e`",
+            "certification are reopened under O7-R16 through O7-R20"
         ];
         Assert.All(reviewStateTokens, token =>
         {
@@ -867,6 +872,8 @@ public sealed class DocumentationFoundationTests
 
         const string closureReviewLink =
             "inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md";
+        const string freshAuditLink =
+            "inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md";
         string[] currentSummaryDocuments =
         [
             mechanicsIndex,
@@ -877,6 +884,7 @@ public sealed class DocumentationFoundationTests
         Assert.All(currentSummaryDocuments, document =>
         {
             Assert.Contains(closureReviewLink, document, StringComparison.Ordinal);
+            Assert.Contains(freshAuditLink, document, StringComparison.Ordinal);
             Assert.DoesNotContain("O7-R11 remains", document, StringComparison.Ordinal);
         });
 
@@ -888,14 +896,14 @@ public sealed class DocumentationFoundationTests
 
         DocumentationCapability documentation = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "inventory_equipment_economy");
-        Assert.Equal("reviewed", documentation.Mechanics.State);
-        Assert.Equal("reviewed", documentation.DeveloperGuide.State);
-        Assert.Equal("reviewed", documentation.Technical.State);
+        Assert.Equal("existing_unreviewed", documentation.Mechanics.State);
+        Assert.Equal("existing_unreviewed", documentation.DeveloperGuide.State);
+        Assert.Equal("existing_unreviewed", documentation.Technical.State);
 
         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             candidate => candidate.Id == "inventory_equipment_economy");
-        Assert.Equal("complete", capability.ImplementationState);
-        Assert.Empty(capability.KnownGaps);
+        Assert.Equal("partial", capability.ImplementationState);
+        Assert.Equal(3, capability.KnownGaps.Count);
 
         Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O7-R15", currentAudit, StringComparison.Ordinal);
@@ -919,6 +927,21 @@ public sealed class DocumentationFoundationTests
         Assert.All(
             closureTokens,
             token => Assert.Contains(token, closureReview, StringComparison.Ordinal));
+
+        string[] freshAuditTokens =
+        [
+            "**Reviewed implementation:** `ef4e129e`",
+            "**Result:** corrections required; Order 7 is reopened",
+            "### O7-M1: Equipment Profile Resolution Accepts A Substituted Definition",
+            "### O7-M2: Shop Item Offers Can Adopt Another Item's Stack Limit",
+            "### O7-M3: Equipment-Backed Authorization Converts Cancellation Into Gameplay Failure",
+            "### O7-R16: Enforce Equipment Definition Identity",
+            "### O7-R20: Fresh Independent Closure",
+            "**Order 7 is not ready for formal closure at `ef4e129e`.**"
+        ];
+        Assert.All(
+            freshAuditTokens,
+            token => Assert.Contains(token, freshAudit, StringComparison.Ordinal));
     }
 
     [Fact]

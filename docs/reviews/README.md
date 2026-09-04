@@ -105,6 +105,7 @@ or implementation authority.
 - [Inventory, Equipment, And Economy Order 7 Post-Correction Closure Review, 24 August 2026](inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
 - [Inventory, Equipment, And Economy Order 7 Post-Correction Independent Audit, 24 August 2026](inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
 - [Inventory, Equipment, And Economy Order 7 O7-R15 Final Closure Review, 24 August 2026](inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+- [Inventory, Equipment, And Economy Order 7 Post-R15 Independent Audit, 31 August 2026](inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.

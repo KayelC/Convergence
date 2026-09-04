@@ -1,9 +1,10 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Review state:** `reviewed`. O7-R15 independently re-read the corrected
-> mechanics, runtime, persistence, host, and test paths at `77a6b9e4`.
-> The [final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
-> found no unresolved realistic reachable defect or player-rule contradiction.
+> **Review state:** `existing_unreviewed`. The
+> [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+> found three reachable extension-boundary defects at `ef4e129e`. The intended
+> player rules below remain owner-approved, but implementation and documentation
+> certification are reopened under O7-R16 through O7-R20.
 
 ## What This System Means To A Player
 

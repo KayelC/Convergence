@@ -57,11 +57,14 @@ O6-R46 reconciles the rule text. The
 [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
 independently traces the corrected implementation. This page is `reviewed`,
 and Order 6 is formally complete.
-Order 7 now has a reviewed player-facing page for exact-copy equipment
+Order 7 has a player-facing page for exact-copy equipment
 ownership, equipped-only grants, typed currencies, policy-shaped prices and
 stock, atomic transactions, recovery, and save v19. The
 [O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
-is the current capability-closure authority.
+is historical closure evidence for that revision. The later
+[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+reopens this page as `existing_unreviewed` while O7-R16 through O7-R20 correct
+three extension-boundary defects and perform fresh closure.
 
 ## Rule Index
 

@@ -167,7 +167,7 @@
     },
     {
       "id": "inventory_equipment_economy",
-      "implementationState": "complete",
+      "implementationState": "partial",
       "frameworkTests": [
         "ResourceManagementServiceTests",
         "ShopPricingPolicyTests",
@@ -185,7 +185,11 @@
       "demoCoverage": "focused",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Equipment profile resolution accepts a mismatched equipment definition returned for an owned definition ID, allowing substituted grants and combat contributions.",
+        "Shop offer resolution accepts mismatched item or equipment definitions; an item offer can therefore adopt another definition's stack limit.",
+        "Battle action assessment and execution normalize OperationCanceledException from equipment-backed authorization into gameplay diagnostics."
+      ]
     },
     {
       "id": "navigation",

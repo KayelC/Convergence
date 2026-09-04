@@ -263,19 +263,19 @@
     {
       "id": "inventory_equipment_economy",
       "mechanics": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "O7-R15 re-read the corrected runtime and player rules, found no unresolved reachable contradiction, and completed the Order 7 release gate."
+        "reason": "The post-R15 source audit reopened certification for three reachable extension-boundary defects; the owner-approved player rules remain the intended contract pending O7-R16 through O7-R20."
       },
       "developerGuide": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
-        "reason": "O7-R15 rechecked the corrected eight-argument Shop.Buy integration, host adoption rules, and current public contracts."
+        "reason": "The post-R15 audit found repository-identity and authorization-cancellation gaps that require correction and integration re-review."
       },
       "technical": {
-        "state": "reviewed",
+        "state": "existing_unreviewed",
         "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
-        "reason": "O7-R15 traced the corrected equipment, currency, shop, recovery, save, and restore authority graph from current source and tests."
+        "reason": "The post-R15 audit found three reachable authority-boundary defects; technical certification remains open through O7-R20."
       }
     },
     {

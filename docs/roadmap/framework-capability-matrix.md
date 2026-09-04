@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
-`inventory_equipment_economy` is `complete`. Its immutable transaction and
+`inventory_equipment_economy` is `partial`. Its immutable transaction and
 validation foundation is usable. O7-R2 gives each equipment copy a unique
 runtime instance ID, makes inventory its sole owner, permits separate copies of
 one definition, and removes the former root save equipment authority. O7-R3
@@ -59,7 +59,14 @@ returns to `complete` with no known gap. The
 owner-approved
 [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 governs the direct data corrections, genuine policy seams, three-audience
-documentation, and independent closure gate.
+documentation, and independent closure gate. A later
+[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+reopened the capability after tracing three realistic public-extension paths:
+substituted equipment definitions can enter live profiles, substituted item
+definitions can supply shop stack limits, and equipment-backed action
+authorization can normalize cancellation as gameplay failure. O7-R16 through
+O7-R20 govern the isolated corrections, documentation reconciliation, and fresh
+closure review.
 
 `encounter_orchestration` is `complete`. Its scheduler, lifecycle,
 turn-economy, event, cancellation, and automated execution foundations remain

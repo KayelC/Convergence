@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R15 complete
+**Implementation status:** O7-R1 through O7-R15 complete; O7-R16 through O7-R20 pending
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -48,6 +48,13 @@
 > [O7-R15 final closure review](inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
 > re-read the corrected source and audience documents, completed the release
 > gate, and closes Order 7 without another unresolved reachable finding.
+
+> **Post-R15 independent audit:** A fresh source-first
+> [audit](inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+> found three realistic extension-boundary defects in repository identity and
+> cancellation propagation. It reopens Order 7 under O7-R16 through O7-R20.
+> O7-R15 remains historical evidence for its reviewed revision, not current
+> closure authority.
 
 ## Purpose
 

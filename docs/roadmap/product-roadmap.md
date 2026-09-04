@@ -8,9 +8,9 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
 
-Documentation Order 7 is complete under the owner-approved
+Documentation Order 7 is reopened under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
 The current resource-management foundation remains usable. O7-R2 establishes
 equipment-instance ownership and removes the duplicated root save authority;
@@ -46,6 +46,14 @@ evidence was produced. The
 now records that source/document re-evaluation and complete release gate. It
 found no unresolved realistic reachable defect or contradiction, so the
 capability returns to `complete` with no known gap.
+
+The later
+[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+re-read current source rather than relying on that closure record. It found
+three bounded public-extension defects in equipment-definition identity,
+shop-content definition identity, and authorization cancellation propagation.
+The standard catalog path remains healthy, but Order 7 is `partial` while
+O7-R16 through O7-R20 correct and independently recheck those boundaries.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).

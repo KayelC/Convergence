@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 33 reviewed,
-22 existing_unreviewed, 13 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 30 reviewed,
+25 existing_unreviewed, 13 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -47,6 +47,11 @@ O7-R14 corrected and guarded those paths. The
 independently re-read the resulting source and all three pages, found no
 unresolved realistic reachable defect or contradiction, and returned all three
 audience entries to `reviewed`.
+The later
+[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+found three reachable extension-boundary defects. All three Order 7 audience
+entries return to `existing_unreviewed` while O7-R16 through O7-R20 correct and
+independently recheck the implementation and documentation.
 O3-R7 independently verified the source and audience documents at that
 revision. A later source-first recheck reopened the developer and technical
 entries while three command-boundary defects were corrected. O3-R8 through

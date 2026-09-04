@@ -7,10 +7,11 @@ adopts their immutable results. It covers equipment instance IDs, authored
 slots, live equipment profiles, currency ledgers, resolved shop offers,
 policy-owned stock, recovery, persistence, and Godot integration.
 
-> **Review state:** `reviewed`. O7-R15 independently re-read the corrected
-> runtime, persistence, host, test, and documentation paths at `77a6b9e4`.
-> The [final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
-> found no unresolved realistic reachable defect or integration contradiction.
+> **Review state:** `existing_unreviewed`. The
+> [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+> found three reachable extension-boundary defects at `ef4e129e`. The intended
+> integration rules below remain owner-approved, but implementation and
+> documentation certification are reopened under O7-R16 through O7-R20.
 
 ## Authority Split
 
