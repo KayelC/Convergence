@@ -1,0 +1,759 @@
+diff --git a/docs/developer-guide/README.md b/docs/developer-guide/README.md
+index e6c19a2bd7862810bf56012f91538117e91355fa..d12945073acffd6164f67e21a6f82214cb9c2954 100644
+--- a/docs/developer-guide/README.md
++++ b/docs/developer-guide/README.md
+@@ -93,11 +93,14 @@ O6-R46 reconciles the composition guidance and interface name. The
+ [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+ independently traces the corrected host boundary. This guide is `reviewed`, and
+ Order 6 is formally complete.
+-The Order 7 inventory/economy guide is `reviewed` after O7-R15 rechecked its
++The Order 7 inventory/economy guide was `reviewed` after O7-R15 rechecked its
+ composition examples and host-adoption rules against current APIs and tests.
+ The
+ [O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+-is the current capability-closure authority.
++is historical closure evidence for that revision. The later
++[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++reopens the guide as `existing_unreviewed` for repository-identity and
++authorization-cancellation corrections through O7-R20.
+ Other subsystem guides remain tracked as
+ `existing_unreviewed` or `missing` in
+ the [documentation coverage matrix](../reference/documentation-coverage.md).
+diff --git a/docs/developer-guide/inventory-equipment-and-economy.md b/docs/developer-guide/inventory-equipment-and-economy.md
+index b88fdb2e6aacd10e809d8417e228809c73e03a51..22df2c56e44c001479a4c439764a093a533f9398 100644
+--- a/docs/developer-guide/inventory-equipment-and-economy.md
++++ b/docs/developer-guide/inventory-equipment-and-economy.md
+@@ -7,10 +7,11 @@ adopts their immutable results. It covers equipment instance IDs, authored
+ slots, live equipment profiles, currency ledgers, resolved shop offers,
+ policy-owned stock, recovery, persistence, and Godot integration.
+ 
+-> **Review state:** `reviewed`. O7-R15 independently re-read the corrected
+-> runtime, persistence, host, test, and documentation paths at `77a6b9e4`.
+-> The [final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+-> found no unresolved realistic reachable defect or integration contradiction.
++> **Review state:** `existing_unreviewed`. The
++> [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++> found three reachable extension-boundary defects at `ef4e129e`. The intended
++> integration rules below remain owner-approved, but implementation and
++> documentation certification are reopened under O7-R16 through O7-R20.
+ 
+ ## Authority Split
+ 
+diff --git a/docs/gameplay-systems.md b/docs/gameplay-systems.md
+index 2ce3536bc11a612194146ecf97a4574fbc90ad5b..7f873427963b13ad3564969a4f9031947dd9d3ad 100644
+--- a/docs/gameplay-systems.md
++++ b/docs/gameplay-systems.md
+@@ -146,7 +146,8 @@ inventory-owned equipment-instance identity, equip compatibility, typed
+ currency-ledger arithmetic, policy-bound shop pricing and stock, shop transactions, and
+ restoration transactions. Hosts own UI and durable inventory storage.
+ 
+-Order 7 is complete. O7-R2 gives each equipment copy a unique runtime instance
++Order 7's standard path is implemented, but its certification is reopened.
++O7-R2 gives each equipment copy a unique runtime instance
+ ID, permits separate copies of one definition, makes inventory the sole owner,
+ and removes the former root save equipment authority. O7-R3 makes equipment
+ slot identity authored and policy-validated. O7-R4 derives weapon attacks,
+@@ -186,7 +187,11 @@ and [technical authority](technical/inventory-equipment-economy-runtime.md)
+ pages provide the detailed contracts. The
+ [O7-R15 final closure review](reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+ is the current independent source, documentation, and release-gate closure
+-evidence.
++evidence for its reviewed revision. The later
++[post-R15 independent audit](reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++found three bounded custom-extension defects in definition identity and
++cancellation propagation. O7-R16 through O7-R20 now govern correction and fresh
++closure.
+ 
+ ## Navigation, Traversal, And Encounter Preparation
+ 
+diff --git a/docs/mechanics/README.md b/docs/mechanics/README.md
+index b7d9b0e3b8a1f094bcf5670b27b926f264684f12..78593e1472a807f12f138394078664668644cdfd 100644
+--- a/docs/mechanics/README.md
++++ b/docs/mechanics/README.md
+@@ -57,11 +57,14 @@ O6-R46 reconciles the rule text. The
+ [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+ independently traces the corrected implementation. This page is `reviewed`,
+ and Order 6 is formally complete.
+-Order 7 now has a reviewed player-facing page for exact-copy equipment
++Order 7 has a player-facing page for exact-copy equipment
+ ownership, equipped-only grants, typed currencies, policy-shaped prices and
+ stock, atomic transactions, recovery, and save v19. The
+ [O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+-is the current capability-closure authority.
++is historical closure evidence for that revision. The later
++[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++reopens this page as `existing_unreviewed` while O7-R16 through O7-R20 correct
++three extension-boundary defects and perform fresh closure.
+ 
+ ## Rule Index
+ 
+diff --git a/docs/mechanics/party-inventory-and-economy.md b/docs/mechanics/party-inventory-and-economy.md
+index 8589f229fdcef78be64ce59af30a1f8fba15b066..1d6f1a346cc537bf0489e89a73ed5854cf4882d2 100644
+--- a/docs/mechanics/party-inventory-and-economy.md
++++ b/docs/mechanics/party-inventory-and-economy.md
+@@ -1,9 +1,10 @@
+ # Party, Rosters, Inventory, Equipment, And Economy
+ 
+-> **Review state:** `reviewed`. O7-R15 independently re-read the corrected
+-> mechanics, runtime, persistence, host, and test paths at `77a6b9e4`.
+-> The [final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+-> found no unresolved realistic reachable defect or player-rule contradiction.
++> **Review state:** `existing_unreviewed`. The
++> [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++> found three reachable extension-boundary defects at `ef4e129e`. The intended
++> player rules below remain owner-approved, but implementation and documentation
++> certification are reopened under O7-R16 through O7-R20.
+ 
+ ## What This System Means To A Player
+ 
+diff --git a/docs/reference/documentation-coverage.md b/docs/reference/documentation-coverage.md
+index 529a706f4ecb7a14028e8922a8b170b33e7252fb..7fad4b4a7666e75bb236b32e017832de56474c2a 100644
+--- a/docs/reference/documentation-coverage.md
++++ b/docs/reference/documentation-coverage.md
+@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
+ 
+ ## Current Reading
+ 
+-The documentation matrix currently records 75 audience entries: 33 reviewed,
+-22 existing_unreviewed, 13 missing, and 7 not_applicable.
++The documentation matrix currently records 75 audience entries: 30 reviewed,
++25 existing_unreviewed, 13 missing, and 7 not_applicable.
+ 
+ The actor composition, progression, party/roster, actor-restoration, and typed
+ action/effect documentation has completed the collaborative workflow. The
+@@ -47,6 +47,11 @@ O7-R14 corrected and guarded those paths. The
+ independently re-read the resulting source and all three pages, found no
+ unresolved realistic reachable defect or contradiction, and returned all three
+ audience entries to `reviewed`.
++The later
++[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++found three reachable extension-boundary defects. All three Order 7 audience
++entries return to `existing_unreviewed` while O7-R16 through O7-R20 correct and
++independently recheck the implementation and documentation.
+ O3-R7 independently verified the source and audience documents at that
+ revision. A later source-first recheck reopened the developer and technical
+ entries while three command-boundary defects were corrected. O3-R8 through
+diff --git a/docs/reviews/README.md b/docs/reviews/README.md
+index 1c7c3b7773cede1d3ec205bcda9b6eb94ced670b..95d9473a1e469ba594795abbf6178bcd2d13a604 100644
+--- a/docs/reviews/README.md
++++ b/docs/reviews/README.md
+@@ -105,6 +105,7 @@ or implementation authority.
+ - [Inventory, Equipment, And Economy Order 7 Post-Correction Closure Review, 24 August 2026](inventory-equipment-economy-order-7-post-correction-closure-review-2026-08-24.md)
+ - [Inventory, Equipment, And Economy Order 7 Post-Correction Independent Audit, 24 August 2026](inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
+ - [Inventory, Equipment, And Economy Order 7 O7-R15 Final Closure Review, 24 August 2026](inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
++- [Inventory, Equipment, And Economy Order 7 Post-R15 Independent Audit, 31 August 2026](inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+ - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
+ 
+ Current intended behavior belongs in confirmed mechanics and decision documents.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md b/docs/reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..45f29655be94cc42b84f658f6159fdca96cadb42
+--- /dev/null
++++ b/docs/reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md
+@@ -0,0 +1,298 @@
++# Inventory, Equipment, And Economy Order 7 Post-R15 Independent Audit
++
++**Date:** 31 August 2026
++
++**Reviewed implementation:** `ef4e129e`
++
++**Capability:** `inventory_equipment_economy`
++
++**Result:** corrections required; Order 7 is reopened
++
++## Verdict
++
++This audit found no Critical or High finding and no defect in the standard
++in-repository catalog path. It found three realistic Medium extension-boundary
++defects:
++
++1. equipment profile resolution accepts a definition returned for the wrong
++   equipment ID;
++2. shop offer resolution can take an item stack limit from a definition
++   returned for the wrong item ID; and
++3. battle-action assessment and execution normalize cancellation raised during
++   equipment-backed authorization into ordinary gameplay failure.
++
++These are not remote-code-execution or player-input security vulnerabilities.
++They require a faulty custom repository or policy implementation supplied
++through a supported public extension contract. They still qualify as framework
++defects because each path returns false authority or loses a documented host
++control signal instead of rejecting the malformed extension result.
++
++Order 7 must remain `partial` until O7-R16 through O7-R20 are complete and
++independently reviewed.
++
++## Review Method
++
++This was a fresh source-first review. Earlier Order 7 reports and closure
++summaries were not used as evidence for implementation health. The audit traced:
++
++- inventory and equipment instance ownership, slot assignment, profile
++  projection, actor composition, action authorization, and save restoration;
++- typed currency, shop offer resolution, pricing, stock, purchase/resale, and
++  recovery transactions;
++- DemoHost and Godot-contract state adoption;
++- adversarial Framework and DemoHost tests; and
++- the current mechanics, developer, technical, capability, and documentation
++  contracts.
++
++Active mechanics and decision documentation was used only to identify intended
++behavior. Source established current behavior. Tests were used after the source
++trace to corroborate covered paths and expose missing adversarial cases.
++
++## Findings
++
++### O7-M1: Equipment Profile Resolution Accepts A Substituted Definition
++
++**Severity:** Medium
++
++**Intended invariant:** an owned equipment instance references one exact
++equipment definition ID. The live equipment profile must derive its attack,
++grants, Defense, Evasion, and modifiers from that definition and no other one.
++
++**Reachable path:**
++
++1. inventory owns an instance whose `DefinitionId` is `equipment_a`;
++2. a custom `IEquipmentDefinitionRepository` is asked for `equipment_a` but,
++   because of an adapter or hot-reload bug, returns definition `equipment_b`;
++3. `RuntimeEquipmentProfileResolver` checks only the Boolean lookup result and
++   null value;
++4. if `equipment_b` is slot-compatible, its attack, grants, and numeric
++   contributions enter the accepted profile.
++
++**Source evidence:**
++
++- [`RuntimeEquipmentProfiles.cs`](../../src/Convergence.Framework/Runtime/RuntimeEquipmentProfiles.cs#L182)
++  obtains the requested ID from the owned instance and accepts the returned
++  definition without checking `definition.Id == equipmentId`.
++- The returned definition becomes the source of grants, basic attack, Defense,
++  Evasion, and accessory modifiers beginning at
++  [`RuntimeEquipmentProfiles.cs`](../../src/Convergence.Framework/Runtime/RuntimeEquipmentProfiles.cs#L218).
++- The acquisition boundary already demonstrates the intended defensive pattern:
++  [`ResourceManagementServices.cs`](../../src/Convergence.Framework/Runtime/ResourceManagementServices.cs#L686)
++  rejects the same requested/returned identity mismatch.
++
++**Concrete consequence:** an instance owned as `equipment_a` can authorize a
++skill granted only by `equipment_b`, use `equipment_b`'s basic attack, or apply
++its combat contributions. Actor application and battle authorization then use
++that false profile as authority. The standard `GameDataCatalog` cannot produce
++this mismatch, but custom repositories are a supported public boundary.
++
++**Reproduction:** supply a repository that returns a compatible weapon B when
++queried for owned weapon A, then resolve A's equipped instance. The current
++result has no diagnostic and exposes B's `GrantedSkillIds` and `BasicAttack`.
++
++**Required correction:** reject requested/returned equipment ID mismatch with a
++typed profile diagnostic before any returned definition field is read. Add
++focused coverage through direct profile resolution, actor application,
++execution authorization, and aggregate restore.
++
++### O7-M2: Shop Item Offers Can Adopt Another Item's Stack Limit
++
++**Severity:** Medium
++
++**Intended invariant:** a resolved shop offer's content ID, catalog definition,
++and executable constraints must describe the same authored item.
++
++**Reachable path:**
++
++1. an authored offer references item `item_a`;
++2. a custom `IItemDefinitionRepository` returns `item_b` for the `item_a`
++   lookup;
++3. `RuntimeShopOfferResolver` retains content ID `item_a` but copies
++   `item_b.StackLimit` into the runtime offer;
++4. purchase adds `item_a` using the copied limit from `item_b`.
++
++**Source evidence:**
++
++- [`ResourceManagementServices.cs`](../../src/Convergence.Framework/Runtime/ResourceManagementServices.cs#L1325)
++  accepts any non-null item returned for the requested offer ID and copies its
++  stack limit without an identity check.
++- [`ResourceManagementServices.cs`](../../src/Convergence.Framework/Runtime/ResourceManagementServices.cs#L1377)
++  constructs the runtime offer with the authored content ID and that detached
++  stack limit.
++- [`ResourceManagementServices.cs`](../../src/Convergence.Framework/Runtime/ResourceManagementServices.cs#L1824)
++  later adds the authored content ID using the runtime offer's stack limit.
++
++**Concrete consequence:** a permissive substituted definition can let purchases
++of `item_a` exceed `item_a`'s authored stack limit. The corresponding equipment
++lookup also accepts substituted definitions during offer resolution, although
++equipment acquisition later performs an additional identity check and rejects
++the purchase.
++
++**Reproduction:** author item A with stack limit 1, return item B with stack
++limit 99 for A's lookup, resolve the offer, and buy into inventory already
++holding A. The current runtime offer exposes 99 and the purchase can accept a
++second A.
++
++**Required correction:** require the returned item/equipment definition ID to
++equal the offer content ID and return a typed offer-resolution diagnostic on
++mismatch. Test both content kinds and prove the item stack limit cannot cross
++definition identity.
++
++### O7-M3: Equipment-Backed Authorization Converts Cancellation Into Gameplay Failure
++
++**Severity:** Medium
++
++**Intended invariant:** `OperationCanceledException` is a host-control signal.
++It must propagate through policy and action boundaries rather than become a
++rejected gameplay command.
++
++**Reachable path:**
++
++1. a skill or basic attack resolves the actor's current equipment profile;
++2. the selected `IEquipmentSlotLayoutPolicy` throws
++   `OperationCanceledException` while validating that profile;
++3. the equipment resolver correctly rethrows cancellation;
++4. `BattleActionExecutor` catches it as a general `Exception` during assessment
++   or execution-time reauthorization and returns `ExecutionFailed` instead.
++
++**Source evidence:**
++
++- Equipment-derived skill authorization resolves the current profile in
++  [`BattleActionAuthorization.cs`](../../src/Convergence.Framework/Execution/BattleActionAuthorization.cs#L177),
++  while equipment-derived basic attacks resolve it in
++  [`BattleActionAuthorization.cs`](../../src/Convergence.Framework/Execution/BattleActionAuthorization.cs#L122).
++- [`BattleActionExecutor.cs`](../../src/Convergence.Framework/Execution/BattleActionExecutor.cs#L519)
++  wraps all assessment exceptions, including cancellation, as
++  `BattleActionDiagnosticCode.ExecutionFailed`.
++- [`BattleActionExecutor.cs`](../../src/Convergence.Framework/Execution/BattleActionExecutor.cs#L650)
++  repeats that normalization during execution-time reauthorization.
++- The direct slot-policy boundary already propagates cancellation and is covered
++  by `EquipmentSlotLayoutTests`; the missing coverage is the canonical action
++  facade that consumes the profile.
++
++**Concrete consequence:** a host cancellation request can be displayed or
++handled as an ordinary unusable action. An encounter adapter may continue its
++gameplay flow instead of unwinding cancellation, and the host loses the ability
++to distinguish user/system cancellation from a rule rejection.
++
++**Documentation contradiction:**
++[`typed-actions-and-effects.md`](../developer-guide/typed-actions-and-effects.md#L156)
++states that cancellation is a host signal, and
++[`inventory-equipment-and-economy.md`](../developer-guide/inventory-equipment-and-economy.md#L112)
++states that slot-policy cancellation propagates. Those are the approved intent;
++the executor currently violates it.
++
++**Required correction:** add explicit cancellation rethrow behavior before the
++general assessment and reauthorization catches. Cover direct assessment,
++execution-time reauthorization, and the encounter-facing adapter path, while
++proving no resource, inventory, actor, or turn mutation occurs.
++
++## Confirmed Healthy Boundaries
++
++The fresh trace also confirmed the following current strengths:
++
++- `RuntimeInventorySnapshot` remains the sole equipment owner; actor loadouts
++  hold only instance references and save v19 has no second root owner.
++- equipment instance IDs, actor/equipment collisions, missing ownership, local
++  duplicates, and cross-actor multiply-equipped state are rejected atomically;
++- the selected slot policy is shared across content validation, acquisition,
++  transitions, profile resolution, shops, save validation, and restoration;
++- equipment grants remain derived, do not enter learned skills, and are
++  rechecked before execution;
++- Defense and Evasion are additive inputs to the canonical combat formulas,
++  with an exact no-equipment zero contribution;
++- currency operations name an explicit `ContentId`, preserve unrelated
++  balances, and use checked arithmetic;
++- shop purchase/resale stage inventory, currency, and stock as one immutable
++  candidate; rejected operations preserve all three before-states;
++- recovery stages actor cleanup and currency debit before committing live actor
++  state; and
++- aggregate restore validates the complete equipment/currency/stock graph before
++  exposing a session.
++
++No evidence was found that these standard-path guarantees regressed.
++
++## Documentation Cross-Check
++
++The three Order 7 audience documents accurately describe the approved target
++mechanics and the standard in-repository path. They do not need to be rewritten
++to make either defect look intentional. Their `reviewed` certification and the
++active `complete` capability statements are stale after this audit, however.
++
++Until the corrections are implemented and re-reviewed:
++
++- `inventory_equipment_economy` is `partial`;
++- mechanics, developer, and technical Order 7 entries are
++  `existing_unreviewed`;
++- the audience prose remains the intended contract; and
++- O7-R15 remains historical evidence for its reviewed revision, not current
++  closure authority.
++
++## Executed Evidence
++
++The unmodified `ef4e129e` baseline produced:
++
++- focused Order 7 Framework tests: 182 passed, 0 failed, 0 skipped;
++- focused Training Annex DemoHost tests: 117 passed, 0 failed, 0 skipped; and
++- full solution: 1,847 Framework + 184 DemoHost + 7 ContentValidator = 2,038
++  passed, 0 failed, 0 skipped.
++
++The green suite corroborates the standard path. It does not invalidate these
++findings because no current test supplies a wrong-ID repository through profile
++or shop resolution, and no action-facade test combines equipment-backed
++authorization with a cancelling slot policy.
++
++## Correction Roadmap
++
++Each checkpoint is an isolated commit and receives focused adversarial tests,
++the full solution gate, strict build, formatting, documentation checks, and
++`git diff --check`.
++
++### O7-R16: Enforce Equipment Definition Identity
++
++- Reject profile lookups whose returned definition ID differs from the owned
++  instance's definition ID.
++- Add a distinct typed diagnostic and public API baseline update if required.
++- Prove direct profile, actor application, battle authorization, and restore all
++  reject without applying substituted grants or combat contributions.
++
++### O7-R17: Enforce Shop Content Definition Identity
++
++- Reject item and equipment lookups whose returned ID differs from the offer's
++  authored content ID.
++- Add typed offer-resolution diagnostics.
++- Prove a substituted item cannot contribute its stack limit and a substituted
++  equipment definition cannot produce a resolved offer.
++
++### O7-R18: Preserve Authorization Cancellation
++
++- Rethrow `OperationCanceledException` from assessment and execution-time
++  authorization while retaining typed containment for non-cancellation faults.
++- Prove assessment and reauthorization cancellation preserve actor, resource,
++  inventory, assessment, and turn state.
++- Prove the encounter-facing action path observes cancellation rather than an
++  ordinary gameplay rejection.
++
++### O7-R19: Reconcile Active Documentation And Tracking
++
++- Document canonical repository-identity validation and action cancellation at
++  all three audience levels where applicable.
++- Re-run code examples and documentation contract tests.
++- Keep the capability `partial` and audience entries `existing_unreviewed`
++  until independent closure.
++
++### O7-R20: Fresh Independent Closure
++
++- Re-read current Framework, persistence, DemoHost, Godot-contract, tests, and
++  all three audience documents without treating this report as implementation
++  evidence.
++- Run and retain the complete release gate.
++- Return Order 7 to `complete`/`reviewed` only if no realistic reachable defect
++  or documentation contradiction remains.
++
++## Closure Decision
++
++**Order 7 is not ready for formal closure at `ef4e129e`.** The standard resource
++management implementation is substantial and healthy, but the three public
++extension-boundary gaps above must be corrected before the capability can be
++certified complete.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+index cf3f83eea1d4a682a264727afa397b9c530ae41e..7b3486f561c01c8bee1501e27bec5b610c1acf1a 100644
+--- a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
++++ b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+@@ -8,7 +8,7 @@
+ 
+ **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
+ 
+-**Implementation status:** O7-R1 through O7-R15 complete
++**Implementation status:** O7-R1 through O7-R15 complete; O7-R16 through O7-R20 pending
+ 
+ > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
+ > recorded in
+@@ -49,6 +49,13 @@
+ > re-read the corrected source and audience documents, completed the release
+ > gate, and closes Order 7 without another unresolved reachable finding.
+ 
++> **Post-R15 independent audit:** A fresh source-first
++> [audit](inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++> found three realistic extension-boundary defects in repository identity and
++> cancellation propagation. It reopens Order 7 under O7-R16 through O7-R20.
++> O7-R15 remains historical evidence for its reviewed revision, not current
++> closure authority.
++
+ ## Purpose
+ 
+ This record is the active source of truth for Documentation Order 7. It
+diff --git a/docs/roadmap/documentation-completion-roadmap.md b/docs/roadmap/documentation-completion-roadmap.md
+index 082237c41a9f541d667ef797e03dd050da0dacf8..904749d7991db25539dacdfc70f5d59da30e3d61 100644
+--- a/docs/roadmap/documentation-completion-roadmap.md
++++ b/docs/roadmap/documentation-completion-roadmap.md
+@@ -644,7 +644,7 @@ outer action-end before a save is captured. The
+ [final certification record](../reviews/status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
+ is the formal Order 4 closure authority.
+ 
+-## Completed Order 7
++## Reopened Order 7
+ 
+ The owner-approved
+ [Inventory, Equipment, And Economy Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+@@ -683,6 +683,15 @@ All three entries return to `reviewed`. The executable documentation matrix now
+ records 33 `reviewed`, 22 `existing_unreviewed`, 13 `missing`, and 7
+ `not_applicable` entries.
+ 
++The later
++[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++found three reachable public-extension defects that invalidate the current
++certification state without changing the owner-approved target rules. Order 7
++is reopened for O7-R16 through O7-R20. Its mechanics, developer, and technical
++entries return to `existing_unreviewed`; the executable documentation matrix
++therefore records 30 `reviewed`, 25 `existing_unreviewed`, 13 `missing`, and 7
++`not_applicable` entries.
++
+ ## Deferred Documentation
+ 
+ Two capability IDs describe extension seams rather than completed mechanics:
+diff --git a/docs/roadmap/framework-capability-matrix.md b/docs/roadmap/framework-capability-matrix.md
+index 963867bb25b68e90e48fa03a292d9424f7f54576..84d757051c51325cb3f3971bb34d38bc08eaa99f 100644
+--- a/docs/roadmap/framework-capability-matrix.md
++++ b/docs/roadmap/framework-capability-matrix.md
+@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
+ 
+ ## Current Reading
+ 
+-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
++The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+ 
+-`inventory_equipment_economy` is `complete`. Its immutable transaction and
++`inventory_equipment_economy` is `partial`. Its immutable transaction and
+ validation foundation is usable. O7-R2 gives each equipment copy a unique
+ runtime instance ID, makes inventory its sole owner, permits separate copies of
+ one definition, and removes the former root save equipment authority. O7-R3
+@@ -59,7 +59,14 @@ returns to `complete` with no known gap. The
+ owner-approved
+ [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+ governs the direct data corrections, genuine policy seams, three-audience
+-documentation, and independent closure gate.
++documentation, and independent closure gate. A later
++[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++reopened the capability after tracing three realistic public-extension paths:
++substituted equipment definitions can enter live profiles, substituted item
++definitions can supply shop stack limits, and equipment-backed action
++authorization can normalize cancellation as gameplay failure. O7-R16 through
++O7-R20 govern the isolated corrections, documentation reconciliation, and fresh
++closure review.
+ 
+ `encounter_orchestration` is `complete`. Its scheduler, lifecycle,
+ turn-economy, event, cancellation, and automated execution foundations remain
+diff --git a/docs/roadmap/product-roadmap.md b/docs/roadmap/product-roadmap.md
+index fc0af98a626d2845a773cf6e26c70e0a61069660..9994d3aefdacb40e599564f40ab9fd76abadfcb8 100644
+--- a/docs/roadmap/product-roadmap.md
++++ b/docs/roadmap/product-roadmap.md
+@@ -8,9 +8,9 @@ baseline.
+ 
+ ## Current State
+ 
+-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
++Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+ 
+-Documentation Order 7 is complete under the owner-approved
++Documentation Order 7 is reopened under the owner-approved
+ [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
+ The current resource-management foundation remains usable. O7-R2 establishes
+ equipment-instance ownership and removes the duplicated root save authority;
+@@ -47,6 +47,14 @@ now records that source/document re-evaluation and complete release gate. It
+ found no unresolved realistic reachable defect or contradiction, so the
+ capability returns to `complete` with no known gap.
+ 
++The later
++[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++re-read current source rather than relying on that closure record. It found
++three bounded public-extension defects in equipment-definition identity,
++shop-content definition identity, and authorization cancellation propagation.
++The standard catalog path remains healthy, but Order 7 is `partial` while
++O7-R16 through O7-R20 correct and independently recheck those boundaries.
++
+ `encounter_orchestration` has a substantial implemented foundation under the owner-approved
+ [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
+ O6-R1 through O6-R13L implemented modular team-phase and Agility
+diff --git a/docs/technical/README.md b/docs/technical/README.md
+index c04912095b21908889a22b655e4cc6f8f3f72555..ae912af61110c848010c3ed9ce12f494cf660009 100644
+--- a/docs/technical/README.md
++++ b/docs/technical/README.md
+@@ -92,11 +92,14 @@ O6-R46 reconciles the runtime contract. The
+ [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
+ independently traces the corrected source. This reference is `reviewed`, and
+ Order 6 is formally complete.
+-The Order 7 inventory/economy reference is `reviewed` after O7-R15 traced its
++The Order 7 inventory/economy reference was `reviewed` after O7-R15 traced its
+ authority graph, transaction ordering, and save v19 diagrams against current
+ source and tests. The
+ [O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+-is the current capability-closure authority.
++is historical closure evidence for that revision. The later
++[post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++reopens the reference as `existing_unreviewed` for repository-identity and
++authorization-cancellation corrections through O7-R20.
+ Other subsystem references
+ remain tracked as `existing_unreviewed` or `missing` in the
+ [documentation coverage matrix](../reference/documentation-coverage.md).
+diff --git a/docs/technical/inventory-equipment-economy-runtime.md b/docs/technical/inventory-equipment-economy-runtime.md
+index fdd06b18735f276937c57d2073c11c88d792dab3..6bfe1388350c69b6cd5cd094e0c941d0c5131041 100644
+--- a/docs/technical/inventory-equipment-economy-runtime.md
++++ b/docs/technical/inventory-equipment-economy-runtime.md
+@@ -9,10 +9,11 @@ equipment, currency, shops, and recovery.
+ It does not define menu presentation, player input, scene ownership, save-file
+ serialization, or game-specific currency names.
+ 
+-> **Review state:** `reviewed`. O7-R15 independently re-read the corrected
+-> runtime, persistence, host, test, and documentation paths at `77a6b9e4`.
+-> The [final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+-> found no unresolved realistic reachable defect or authority contradiction.
++> **Review state:** `existing_unreviewed`. The
++> [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++> found three reachable extension-boundary defects at `ef4e129e`. The intended
++> authority rules below remain owner-approved, but implementation and
++> documentation certification are reopened under O7-R16 through O7-R20.
+ 
+ ## Authority Map
+ 
+diff --git a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+index 775a085ba6cbc9d341b44ca305900b3d229c6331..1452f43259b351b0250297632de376e46c732c2e 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+@@ -795,6 +795,12 @@ public sealed class DocumentationFoundationTests
+                 "reviews",
+                 "inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md"))
+             .ReplaceLineEndings(" ");
++        string freshAudit = File.ReadAllText(
++            RepositoryPath(
++                "docs",
++                "reviews",
++                "inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md"))
++            .ReplaceLineEndings(" ");
+ 
+         string[] mechanicsTokens =
+         [
+@@ -848,11 +854,10 @@ public sealed class DocumentationFoundationTests
+ 
+         string[] reviewStateTokens =
+         [
+-            "**Review state:** `reviewed`.",
+-            "O7-R15 independently re-read the corrected",
+-            "at `77a6b9e4`.",
+-            "final closure review",
+-            "no unresolved realistic reachable defect"
++            "**Review state:** `existing_unreviewed`.",
++            "post-R15 independent audit",
++            "three reachable extension-boundary defects at `ef4e129e`",
++            "certification are reopened under O7-R16 through O7-R20"
+         ];
+         Assert.All(reviewStateTokens, token =>
+         {
+@@ -867,6 +872,8 @@ public sealed class DocumentationFoundationTests
+ 
+         const string closureReviewLink =
+             "inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md";
++        const string freshAuditLink =
++            "inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md";
+         string[] currentSummaryDocuments =
+         [
+             mechanicsIndex,
+@@ -877,6 +884,7 @@ public sealed class DocumentationFoundationTests
+         Assert.All(currentSummaryDocuments, document =>
+         {
+             Assert.Contains(closureReviewLink, document, StringComparison.Ordinal);
++            Assert.Contains(freshAuditLink, document, StringComparison.Ordinal);
+             Assert.DoesNotContain("O7-R11 remains", document, StringComparison.Ordinal);
+         });
+ 
+@@ -888,14 +896,14 @@ public sealed class DocumentationFoundationTests
+ 
+         DocumentationCapability documentation = LoadDocumentationMatrix().Capabilities.Single(
+             capability => capability.Id == "inventory_equipment_economy");
+-        Assert.Equal("reviewed", documentation.Mechanics.State);
+-        Assert.Equal("reviewed", documentation.DeveloperGuide.State);
+-        Assert.Equal("reviewed", documentation.Technical.State);
++        Assert.Equal("existing_unreviewed", documentation.Mechanics.State);
++        Assert.Equal("existing_unreviewed", documentation.DeveloperGuide.State);
++        Assert.Equal("existing_unreviewed", documentation.Technical.State);
+ 
+         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
+             candidate => candidate.Id == "inventory_equipment_economy");
+-        Assert.Equal("complete", capability.ImplementationState);
+-        Assert.Empty(capability.KnownGaps);
++        Assert.Equal("partial", capability.ImplementationState);
++        Assert.Equal(3, capability.KnownGaps.Count);
+ 
+         Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
+         Assert.Contains("O7-R15", currentAudit, StringComparison.Ordinal);
+@@ -919,6 +927,21 @@ public sealed class DocumentationFoundationTests
+         Assert.All(
+             closureTokens,
+             token => Assert.Contains(token, closureReview, StringComparison.Ordinal));
++
++        string[] freshAuditTokens =
++        [
++            "**Reviewed implementation:** `ef4e129e`",
++            "**Result:** corrections required; Order 7 is reopened",
++            "### O7-M1: Equipment Profile Resolution Accepts A Substituted Definition",
++            "### O7-M2: Shop Item Offers Can Adopt Another Item's Stack Limit",
++            "### O7-M3: Equipment-Backed Authorization Converts Cancellation Into Gameplay Failure",
++            "### O7-R16: Enforce Equipment Definition Identity",
++            "### O7-R20: Fresh Independent Closure",
++            "**Order 7 is not ready for formal closure at `ef4e129e`.**"
++        ];
++        Assert.All(
++            freshAuditTokens,
++            token => Assert.Contains(token, freshAudit, StringComparison.Ordinal));
+     }
+ 
+     [Fact]
+diff --git a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+index d0a835012930e5451d1235e5526233ee330998ee..54bd947192f1a847ff7934098ebd808642381a6e 100644
+--- a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
++++ b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+@@ -263,19 +263,19 @@
+     {
+       "id": "inventory_equipment_economy",
+       "mechanics": {
+-        "state": "reviewed",
++        "state": "existing_unreviewed",
+         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
+-        "reason": "O7-R15 re-read the corrected runtime and player rules, found no unresolved reachable contradiction, and completed the Order 7 release gate."
++        "reason": "The post-R15 source audit reopened certification for three reachable extension-boundary defects; the owner-approved player rules remain the intended contract pending O7-R16 through O7-R20."
+       },
+       "developerGuide": {
+-        "state": "reviewed",
++        "state": "existing_unreviewed",
+         "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
+-        "reason": "O7-R15 rechecked the corrected eight-argument Shop.Buy integration, host adoption rules, and current public contracts."
++        "reason": "The post-R15 audit found repository-identity and authorization-cancellation gaps that require correction and integration re-review."
+       },
+       "technical": {
+-        "state": "reviewed",
++        "state": "existing_unreviewed",
+         "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
+-        "reason": "O7-R15 traced the corrected equipment, currency, shop, recovery, save, and restore authority graph from current source and tests."
++        "reason": "The post-R15 audit found three reachable authority-boundary defects; technical certification remains open through O7-R20."
+       }
+     },
+     {
+diff --git a/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json b/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
+index 4ce36474aba4d10fe6f3197874bcb2e88e7d499b..bab9dbe132437d79fb62f8479bdec7b918890546 100644
+--- a/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
++++ b/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
+@@ -167,7 +167,7 @@
+     },
+     {
+       "id": "inventory_equipment_economy",
+-      "implementationState": "complete",
++      "implementationState": "partial",
+       "frameworkTests": [
+         "ResourceManagementServiceTests",
+         "ShopPricingPolicyTests",
+@@ -185,7 +185,11 @@
+       "demoCoverage": "focused",
+       "hostNeutral": true,
+       "optionalModule": true,
+-      "knownGaps": []
++      "knownGaps": [
++        "Equipment profile resolution accepts a mismatched equipment definition returned for an owned definition ID, allowing substituted grants and combat contributions.",
++        "Shop offer resolution accepts mismatched item or equipment definitions; an item offer can therefore adopt another definition's stack limit.",
++        "Battle action assessment and execution normalize OperationCanceledException from equipment-backed authorization into gameplay diagnostics."
++      ]
+     },
+     {
+       "id": "navigation",

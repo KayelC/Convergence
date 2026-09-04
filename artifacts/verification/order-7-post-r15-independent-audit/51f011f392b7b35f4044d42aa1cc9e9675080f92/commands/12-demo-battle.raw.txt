@@ -1,0 +1,72 @@
+001 [ActorCreated] Created Frost Duelist as frost_duelist on player_team.
+002 [ActorCreated] Created Ember Duelist as ember_duelist on enemy_team.
+003 [BattleStarted] Battle started.
+004 [InitiativeRolled] Initiative order: player_team, enemy_team.
+005 [RoundStarted] Round 1 started.
+006 [PhaseStarted] Team player_team started a phase using action_token with 1 action(s).
+007 [TurnStarted] Frost Duelist's turn started.
+008 [CommandSelected] frost_duelist selected Ember Bolt.
+009 [ResourceChanged] Resource sp changed by -3.
+010 [EffectResolved] Effect 0 resolved as Success (Normal).
+011 [ResourceChanged] Resource hp changed by -7.5.
+012 [TurnEconomyChanged] Turn economy action_token: 0 action(s) remaining.
+013 [TurnEnded] Frost Duelist's turn ended.
+014 [PhaseEnded] Team player_team phase ended.
+015 [PhaseStarted] Team enemy_team started a phase using action_token with 1 action(s).
+016 [TurnStarted] Ember Duelist's turn started.
+017 [CommandSelected] ember_duelist selected Ember Bolt.
+018 [ResourceChanged] Resource sp changed by -3.
+019 [EffectResolved] Effect 0 resolved as Success (Normal).
+020 [ResourceChanged] Resource hp changed by -13.
+021 [PassiveActivated] Lifecycle passive triggered: convergence.clean_battle_demo:regenerate_demo.
+022 [EffectResolved] Lifecycle passive effect resolved: convergence.clean_battle_demo:regenerate_demo.
+023 [ResourceChanged] Lifecycle resource changed: hp +4.
+024 [TurnEconomyChanged] Turn economy action_token: 0 action(s) remaining.
+025 [TurnEnded] Ember Duelist's turn ended.
+026 [PhaseEnded] Team enemy_team phase ended.
+027 [RoundEnded] Round 1 ended.
+028 [RoundStarted] Round 2 started.
+029 [PhaseStarted] Team player_team started a phase using action_token with 1 action(s).
+030 [TurnStarted] Frost Duelist's turn started.
+031 [CommandSelected] frost_duelist selected Frost Lance.
+032 [ResourceChanged] Resource sp changed by -3.
+033 [EffectResolved] Effect 0 resolved as Success (Weakness).
+034 [ResourceChanged] Resource hp changed by -35.625.
+035 [TurnEconomyChanged] Turn economy action_token: 1 action(s) remaining.
+036 [TurnEnded] Frost Duelist's turn ended.
+037 [TurnStarted] Frost Duelist's turn started.
+038 [CommandSelected] frost_duelist selected Frost Lance.
+039 [ResourceChanged] Resource sp changed by -3.
+040 [EffectResolved] Effect 0 resolved as Success (Weakness).
+041 [ResourceChanged] Resource hp changed by -35.625.
+042 [TurnEconomyChanged] Turn economy action_token: 0 action(s) remaining.
+043 [TurnEnded] Frost Duelist's turn ended.
+044 [PhaseEnded] Team player_team phase ended.
+045 [PhaseStarted] Team enemy_team started a phase using action_token with 1 action(s).
+046 [TurnStarted] Ember Duelist's turn started.
+047 [CommandSelected] ember_duelist selected Ember Bolt.
+048 [ResourceChanged] Resource sp changed by -3.
+049 [EffectResolved] Effect 0 resolved as Success (Normal).
+050 [ResourceChanged] Resource hp changed by -13.
+051 [PassiveActivated] Lifecycle passive triggered: convergence.clean_battle_demo:regenerate_demo.
+052 [EffectResolved] Lifecycle passive effect resolved: convergence.clean_battle_demo:regenerate_demo.
+053 [ResourceChanged] Lifecycle resource changed: hp +4.
+054 [TurnEconomyChanged] Turn economy action_token: 0 action(s) remaining.
+055 [TurnEnded] Ember Duelist's turn ended.
+056 [PhaseEnded] Team enemy_team phase ended.
+057 [RoundEnded] Round 2 ended.
+058 [RoundStarted] Round 3 started.
+059 [PhaseStarted] Team player_team started a phase using action_token with 1 action(s).
+060 [TurnStarted] Frost Duelist's turn started.
+061 [CommandSelected] frost_duelist selected Frost Lance.
+062 [ResourceChanged] Resource sp changed by -3.
+063 [EffectResolved] Effect 0 resolved as Success (Weakness).
+064 [ResourceChanged] Resource hp changed by -9.250.
+065 [TurnEconomyChanged] Turn economy action_token: 1 action(s) remaining.
+066 [StatusChanged] Defeat
+067 [ActorDefeated] ember_duelist was defeated.
+068 [TurnEnded] Frost Duelist's turn ended.
+069 [StatusChanged] BattleEnd
+070 [StatusChanged] BattleEnd
+071 [BattleEnded] Team player_team won.
+Outcome: Victory; winner: player_team

@@ -1,0 +1,7 @@
+commit b35de48929f9d0a1ed90e63b30f90c126d97ffd6
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 4 08:14:01 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 4 08:14:01 2026 +0200
+
+    docs: reopen order 7 after independent audit
