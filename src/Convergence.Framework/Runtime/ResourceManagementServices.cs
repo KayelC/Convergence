@@ -1238,7 +1238,9 @@ public enum RuntimeShopOfferResolutionCode
     InvalidOfferIdentity,
     EquipmentSlotProfileMismatch,
     UnsupportedContentKind,
-    EquipmentSlotPolicyRejected
+    EquipmentSlotPolicyRejected,
+    ItemDefinitionMismatch,
+    EquipmentDefinitionMismatch
 }
 
 public sealed record RuntimeShopOfferResolutionDiagnostic(
@@ -1331,6 +1333,13 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
                     offer.ContentId,
                     $"Shop item offer '{offer.ContentId}' does not resolve to an item definition."));
             }
+            else if (item.Id != offer.ContentId)
+            {
+                diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                    RuntimeShopOfferResolutionCode.ItemDefinitionMismatch,
+                    offer.ContentId,
+                    $"Shop item lookup for '{offer.ContentId}' returned definition '{item.Id}'."));
+            }
             else
             {
                 itemStackLimit = item.StackLimit;
@@ -1345,6 +1354,13 @@ public sealed class RuntimeShopOfferResolver : IRuntimeShopOfferResolver
                     RuntimeShopOfferResolutionCode.MissingEquipmentDefinition,
                     offer.ContentId,
                     $"Shop equipment offer '{offer.ContentId}' does not resolve to an equipment definition."));
+            }
+            else if (equipment.Id != offer.ContentId)
+            {
+                diagnostics.Add(new RuntimeShopOfferResolutionDiagnostic(
+                    RuntimeShopOfferResolutionCode.EquipmentDefinitionMismatch,
+                    offer.ContentId,
+                    $"Shop equipment lookup for '{offer.ContentId}' returned definition '{equipment.Id}'."));
             }
             else
             {

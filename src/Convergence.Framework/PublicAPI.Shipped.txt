@@ -6098,7 +6098,9 @@ Convergence.Runtime.RuntimeShieldSnapshot.Equals(Convergence.Runtime.RuntimeShie
 Convergence.Runtime.RuntimeShieldSnapshot.Kind.get -> Convergence.Content.ShieldKind
 Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.Applied = 0 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+Convergence.Runtime.RuntimeShopOfferResolutionCode.EquipmentDefinitionMismatch = 13 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.InvalidFixedPrice = 4 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
+Convergence.Runtime.RuntimeShopOfferResolutionCode.ItemDefinitionMismatch = 12 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.MissingEquipmentDefinition = 2 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.MissingItemDefinition = 1 -> Convergence.Runtime.RuntimeShopOfferResolutionCode
 Convergence.Runtime.RuntimeShopOfferResolutionCode.UnsupportedPricePolicy = 3 -> Convergence.Runtime.RuntimeShopOfferResolutionCode

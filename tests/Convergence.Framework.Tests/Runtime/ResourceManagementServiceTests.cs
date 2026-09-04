@@ -1003,6 +1003,68 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
+    public void Order7R17_ShopOfferResolverRejectsSubstitutedItemAndEquipmentDefinitions()
+    {
+        RuntimeShopOfferResolver resolver = ShopOfferResolver();
+        ContentId offeredItemId = Q("offered_item");
+        ContentId substitutedItemId = Q("substituted_item");
+        ContentId offeredEquipmentId = Q("offered_equipment");
+        ContentId substitutedEquipmentId = Q("substituted_equipment");
+        var substitutedItem = new ItemDefinition(
+            substitutedItemId,
+            "Substituted Item",
+            "Its permissive stack limit must not cross definition identity.",
+            ItemKind.Consumable,
+            stackLimit: 99,
+            baseValue: 10);
+        EquipmentDefinition substitutedEquipment = Weapon(
+            substitutedEquipmentId,
+            power: 999,
+            accuracy: 100);
+        var itemOffer = new ShopOfferDefinition(
+            Id("substituted_item_offer"),
+            ShopContentKind.Item,
+            offeredItemId,
+            new FixedShopPriceDefinition(10),
+            new UnlimitedShopStockDefinition());
+        var equipmentOffer = new ShopOfferDefinition(
+            Id("substituted_equipment_offer"),
+            ShopContentKind.Equipment,
+            offeredEquipmentId,
+            new FixedShopPriceDefinition(10),
+            new UnlimitedShopStockDefinition());
+
+        RuntimeShopOfferResolutionResult itemResult = resolver.Resolve(
+            TestShop,
+            itemOffer,
+            new SubstitutingItemRepository(substitutedItem),
+            new TestEquipmentRepository());
+        RuntimeShopOfferResolutionResult equipmentResult = resolver.Resolve(
+            TestShop,
+            equipmentOffer,
+            new EmptyItemRepository(),
+            new SubstitutingEquipmentRepository(substitutedEquipment));
+
+        Assert.False(itemResult.IsSuccess);
+        Assert.Null(itemResult.Offer);
+        RuntimeShopOfferResolutionDiagnostic itemDiagnostic = Assert.Single(itemResult.Diagnostics);
+        Assert.Equal(RuntimeShopOfferResolutionCode.ItemDefinitionMismatch, itemDiagnostic.Code);
+        Assert.Equal(offeredItemId, itemDiagnostic.ContentId);
+        Assert.Contains(offeredItemId.ToString(), itemDiagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains(substitutedItemId.ToString(), itemDiagnostic.Message, StringComparison.Ordinal);
+        Assert.Throws<InvalidOperationException>(itemResult.RequireOffer);
+
+        Assert.False(equipmentResult.IsSuccess);
+        Assert.Null(equipmentResult.Offer);
+        RuntimeShopOfferResolutionDiagnostic equipmentDiagnostic = Assert.Single(equipmentResult.Diagnostics);
+        Assert.Equal(RuntimeShopOfferResolutionCode.EquipmentDefinitionMismatch, equipmentDiagnostic.Code);
+        Assert.Equal(offeredEquipmentId, equipmentDiagnostic.ContentId);
+        Assert.Contains(offeredEquipmentId.ToString(), equipmentDiagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains(substitutedEquipmentId.ToString(), equipmentDiagnostic.Message, StringComparison.Ordinal);
+        Assert.Throws<InvalidOperationException>(equipmentResult.RequireOffer);
+    }
+
+    [Fact]
     public void ShopOfferResolver_RejectsUnsupportedOrMalformedOffersWithoutRuntimeFallbacks()
     {
         RuntimeShopOfferResolver resolver = ShopOfferResolver();
@@ -1267,5 +1329,29 @@ public sealed class ResourceManagementServiceTests
         }
 
         public EquipmentDefinition GetRequiredEquipment(ContentId id) => definition;
+    }
+
+    private sealed class SubstitutingItemRepository(ItemDefinition definition)
+        : IItemDefinitionRepository
+    {
+        public bool TryGetItem(ContentId id, out ItemDefinition? item)
+        {
+            item = definition;
+            return true;
+        }
+
+        public ItemDefinition GetRequiredItem(ContentId id) => definition;
+    }
+
+    private sealed class EmptyItemRepository : IItemDefinitionRepository
+    {
+        public bool TryGetItem(ContentId id, out ItemDefinition? item)
+        {
+            item = null;
+            return false;
+        }
+
+        public ItemDefinition GetRequiredItem(ContentId id) =>
+            throw new KeyNotFoundException(id.ToString());
     }
 }
