@@ -348,6 +348,58 @@ public sealed class ProgressionPolicyTests
     }
 
     [Fact]
+    public void Order7R16_EquipmentApplicationRejectsSubstitutedDefinitionWithoutMutation()
+    {
+        RuntimeActorState actor = CreateActor("substituted_equipment_actor", 5m);
+        RuntimeActorSnapshot before = actor.ToSnapshot();
+        ContentId ownedDefinitionId = ContentId.Parse("test.pack:owned_armor");
+        ContentId substitutedDefinitionId = ContentId.Parse("test.pack:substituted_armor");
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("substituted-armor-001");
+        var substitutedDefinition = new EquipmentDefinition(
+            substitutedDefinitionId,
+            "Substituted Armor",
+            "Must not alter the live actor.",
+            StandardEquipmentSlotIds.Armor,
+            baseValue: 10,
+            armor: new EquipmentArmorProfileDefinition(99, 77));
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Armor,
+                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, ownedDefinitionId)])
+            ]);
+        var candidate = new RuntimeEquipmentSnapshot(
+        [
+            new(StandardEquipmentSlotIds.Armor, armorInstanceId)
+        ]);
+        var application = new RuntimeActorEquipmentApplicationService(
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository()));
+
+        RuntimeActorEquipmentApplicationResult result = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                actor,
+                inventory,
+                candidate,
+                new SubstitutingEquipmentRepository(substitutedDefinition),
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                [actor]));
+
+        Assert.False(result.Applied);
+        RuntimeActorEquipmentApplicationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(RuntimeActorEquipmentApplicationDiagnosticCode.EquipmentProfileRejected, diagnostic.Code);
+        Assert.Equal(
+            RuntimeEquipmentProfileDiagnosticCode.EquipmentDefinitionMismatch,
+            diagnostic.EquipmentProfileCode);
+        Assert.Empty(result.EquipmentProfile.EquippedDefinitions);
+        Assert.Empty(result.EquipmentProfile.StatModifiers);
+        AssertCompositionStateUnchanged(before, actor.ToSnapshot());
+        AssertCompositionStateUnchanged(before, result.Before);
+        AssertCompositionStateUnchanged(before, result.After);
+    }
+
+    [Fact]
     public void Order7H1_RawEquipmentReplacementIsNotPublic()
     {
         Assert.Null(typeof(RuntimeActorState).GetMethod("ReplaceEquipment"));
@@ -1540,6 +1592,18 @@ public sealed class ProgressionPolicyTests
             _equipment.TryGetValue(id, out definition);
 
         public EquipmentDefinition GetRequiredEquipment(ContentId id) => _equipment[id];
+    }
+
+    private sealed class SubstitutingEquipmentRepository(EquipmentDefinition definition) :
+        IEquipmentDefinitionRepository
+    {
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? equipment)
+        {
+            equipment = definition;
+            return true;
+        }
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) => definition;
     }
 
     private sealed class EmptyAilmentRepository : IAilmentDefinitionRepository

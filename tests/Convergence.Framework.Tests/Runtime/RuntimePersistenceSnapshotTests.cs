@@ -390,6 +390,51 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void Order7R16_AggregateRestoreRejectsSubstitutedEquipmentDefinitionBeforeActorConstruction()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        RuntimeSaveGameSnapshot snapshot = CreateSaveSnapshot();
+        var substitutedDefinition = new EquipmentDefinition(
+            Id("convergence.catalog_surface_sample:substituted_shortsword"),
+            "Substituted Shortsword",
+            "Must not replace the saved equipment definition.",
+            StandardEquipmentSlotIds.Weapon,
+            baseValue: 10,
+            weapon: new EquipmentWeaponProfileDefinition(
+                new EquipmentBasicAttackDefinition(
+                    DamageElement.Physical,
+                    999,
+                    100,
+                    new NeverCriticalDefinition(),
+                    false)));
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        var service = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(),
+            factory,
+            new DelegateActorRestoreProfileResolver(_ => ActorProfile()),
+            equipmentProfiles: new SubstitutingEquipmentProfileResolver(substitutedDefinition));
+
+        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Session);
+        Assert.Empty(factory.RestoreOrder);
+        RuntimeSessionRestoreDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            RuntimeSessionRestoreDiagnosticCode.EquipmentProfileResolutionFailed,
+            diagnostic.Code);
+        Assert.Equal(
+            RuntimeEquipmentProfileDiagnosticCode.EquipmentDefinitionMismatch,
+            diagnostic.EquipmentProfileDiagnosticCode);
+        Assert.Equal(RuntimeInstanceId.Parse("frost"), diagnostic.ActorId);
+        Assert.Equal("$.actors.equipment", diagnostic.Path);
+    }
+
+    [Fact]
     public void RuntimeSessionRestoreService_RejectsEquipmentActorIdentityCollisionBeforeAnyActorRestore()
     {
         GameDataCatalog catalog = LoadCatalog();
@@ -3570,6 +3615,31 @@ public sealed class RuntimePersistenceSnapshotTests
                         Id("convergence.catalog_surface_sample:shortsword_sample"),
                         "Deliberate aggregate equipment-profile rejection.")
                 ]);
+    }
+
+    private sealed class SubstitutingEquipmentProfileResolver(EquipmentDefinition definition)
+        : IRuntimeEquipmentProfileResolver
+    {
+        private readonly RuntimeEquipmentProfileResolver _inner = new();
+        private readonly SubstitutingEquipmentRepository _equipment = new(definition);
+
+        public RuntimeEquipmentProfile Resolve(
+            RuntimeInventorySnapshot inventory,
+            RuntimeEquipmentSnapshot equipment,
+            IEquipmentDefinitionRepository equipmentRepository) =>
+            _inner.Resolve(inventory, equipment, _equipment);
+    }
+
+    private sealed class SubstitutingEquipmentRepository(EquipmentDefinition definition)
+        : IEquipmentDefinitionRepository
+    {
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? equipment)
+        {
+            equipment = definition;
+            return true;
+        }
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) => definition;
     }
 
     private sealed class FaultingEquipmentSlotLayoutPolicy(bool cancel = false) :

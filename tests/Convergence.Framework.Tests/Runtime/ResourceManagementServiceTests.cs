@@ -453,6 +453,52 @@ public sealed class ResourceManagementServiceTests
     }
 
     [Fact]
+    public void Order7R16_EquipmentProfileRejectsSubstitutedDefinitionBeforeReadingItsFields()
+    {
+        ContentId ownedDefinitionId = Id("owned_armor");
+        ContentId substitutedDefinitionId = Id("substituted_armor");
+        ContentId substitutedSkillId = Id("substituted_skill");
+        RuntimeInstanceId armorInstanceId = Instance("owned-armor-001");
+        var substitutedDefinition = new EquipmentDefinition(
+            substitutedDefinitionId,
+            "Substituted Armor",
+            "Must not contribute through the owned definition's lookup.",
+            StandardEquipmentSlotIds.Armor,
+            baseValue: 10,
+            grantedSkillIds: [substitutedSkillId],
+            armor: new EquipmentArmorProfileDefinition(99, 77));
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                Owned(
+                    StandardEquipmentSlotIds.Armor,
+                    armorInstanceId,
+                    ownedDefinitionId)
+            ]);
+        var equipment = new RuntimeEquipmentSnapshot(
+        [
+            new(StandardEquipmentSlotIds.Armor, armorInstanceId)
+        ]);
+
+        RuntimeEquipmentProfile profile = new RuntimeEquipmentProfileResolver().Resolve(
+            inventory,
+            equipment,
+            new SubstitutingEquipmentRepository(substitutedDefinition));
+
+        RuntimeEquipmentProfileDiagnostic diagnostic = Assert.Single(profile.Diagnostics);
+        Assert.Equal(RuntimeEquipmentProfileDiagnosticCode.EquipmentDefinitionMismatch, diagnostic.Code);
+        Assert.Equal(StandardEquipmentSlotIds.Armor, diagnostic.SlotId);
+        Assert.Equal(armorInstanceId, diagnostic.EquipmentInstanceId);
+        Assert.Equal(ownedDefinitionId, diagnostic.EquipmentId);
+        Assert.Contains(ownedDefinitionId.ToString(), diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains(substitutedDefinitionId.ToString(), diagnostic.Message, StringComparison.Ordinal);
+        Assert.Empty(profile.EquippedDefinitions);
+        Assert.Empty(profile.GrantedSkillIds);
+        Assert.Empty(profile.StatModifiers);
+        Assert.Null(profile.BasicAttack);
+    }
+
+    [Fact]
     public void EquipmentSnapshots_RejectInvalidInstanceIdentifiersAtConstruction()
     {
         Assert.Throws<ArgumentException>(() => new RuntimeEquipmentInstanceSnapshot(
@@ -1209,5 +1255,17 @@ public sealed class ResourceManagementServiceTests
         }
 
         public EquipmentDefinition GetRequiredEquipment(ContentId id) => throw exception;
+    }
+
+    private sealed class SubstitutingEquipmentRepository(EquipmentDefinition definition)
+        : IEquipmentDefinitionRepository
+    {
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? equipment)
+        {
+            equipment = definition;
+            return true;
+        }
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) => definition;
     }
 }

@@ -11529,6 +11529,7 @@ Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.InstanceId.get -> Convergen
 Convergence.Runtime.RuntimeEquipmentInstanceSnapshot.RuntimeEquipmentInstanceSnapshot(Convergence.Runtime.RuntimeInstanceId instanceId, Convergence.Content.ContentId definitionId) -> void
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.EquipmentInstanceId.get -> Convergence.Runtime.RuntimeInstanceId
 Convergence.Runtime.RuntimeEquipmentProfileDiagnostic.EquipmentInstanceId.init -> void
+Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.EquipmentDefinitionMismatch = 5 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.InvalidIdentifier = 2 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.MissingEquipmentDefinition = 0 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode
 Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode.MissingEquipmentInstance = 3 -> Convergence.Runtime.RuntimeEquipmentProfileDiagnosticCode

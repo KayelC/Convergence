@@ -502,6 +502,99 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public void Order7R16_BattleAuthorizationRejectsSkillsAndAttacksFromSubstitutedEquipment()
+    {
+        SkillDefinition substitutedSkill = ActiveSkill(
+            "substituted_equipment_skill",
+            [],
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                7,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))]);
+        ContentId ownedDefinitionId = Id("owned_weapon");
+        ContentId substitutedDefinitionId = Id("substituted_weapon");
+        RuntimeInstanceId weaponInstanceId = RuntimeInstanceId.Parse("substituted-weapon-001");
+        var basicAttack = new EquipmentBasicAttackDefinition(
+            DamageElement.Physical,
+            999,
+            100,
+            new NeverCriticalDefinition(),
+            false);
+        var substitutedDefinition = new EquipmentDefinition(
+            substitutedDefinitionId,
+            "Substituted Weapon",
+            "Must not authorize its skill or basic attack.",
+            StandardEquipmentSlotIds.Weapon,
+            baseValue: 10,
+            grantedSkillIds: [substitutedSkill.Id],
+            weapon: new EquipmentWeaponProfileDefinition(basicAttack));
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Weapon,
+                    [new RuntimeEquipmentInstanceSnapshot(weaponInstanceId, ownedDefinitionId)])
+            ]);
+        var equipped = new RuntimeEquipmentSnapshot(
+        [
+            new(StandardEquipmentSlotIds.Weapon, weaponInstanceId)
+        ]);
+        var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
+            inventory,
+            new SubstitutingEquipmentRepository(substitutedDefinition));
+        var basicAttacks = new EquipmentBattleBasicAttackProfileSource(
+            equipmentProfiles,
+            SingleEnemy());
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([substitutedSkill]),
+            new TestItemRepository([]),
+            basicAttacks,
+            equipmentProfiles);
+        RuntimeActorState actor = Actor("actor", TeamA, equipment: equipped);
+        RuntimeActorState target = Actor("target", TeamB);
+        BattleActionExecutor executor = Executor(authorization: authorization);
+
+        var skillCommand = new SkillBattleActionCommand(substitutedSkill, [target.InstanceId]);
+        var attackCommand = new BasicAttackBattleActionCommand(
+            basicAttack,
+            SingleEnemy(),
+            [target.InstanceId],
+            substitutedDefinitionId);
+        BattleActionAuthorizationResult skillAuthorization = authorization.Authorize(actor, skillCommand);
+        BattleActionAuthorizationResult attackAuthorization = authorization.Authorize(actor, attackCommand);
+        BattleActionAssessment skillAssessment = executor.Assess(Request(
+            skillCommand,
+            actor,
+            [actor, target]));
+        BattleActionAssessment attackAssessment = executor.Assess(Request(
+            attackCommand,
+            actor,
+            [actor, target]));
+
+        Assert.False(skillAuthorization.IsAuthorized);
+        Assert.Equal(
+            BattleActionAuthorizationDiagnosticCode.SkillNotEquipped,
+            Assert.Single(skillAuthorization.Diagnostics).Code);
+        Assert.False(attackAuthorization.IsAuthorized);
+        Assert.Equal(
+            BattleActionAuthorizationDiagnosticCode.BasicAttackUnavailable,
+            Assert.Single(attackAuthorization.Diagnostics).Code);
+        Assert.False(skillAssessment.CanExecute);
+        Assert.Equal(
+            BattleActionDiagnosticCode.ActionNotAuthorized,
+            Assert.Single(skillAssessment.Diagnostics).Code);
+        Assert.False(attackAssessment.CanExecute);
+        Assert.Equal(
+            BattleActionDiagnosticCode.ActionNotAuthorized,
+            Assert.Single(attackAssessment.Diagnostics).Code);
+        Assert.Equal(100, target.GetRequiredResource(Hp).Current);
+        Assert.Empty(actor.Skills.LearnedSkillIds);
+        Assert.Empty(actor.Skills.EquippedSkillIds);
+    }
+
+    [Fact]
     public async Task CatalogAuthorization_AllowsCanonicalOwnedItem()
     {
         ItemDefinition medicine = ConsumableItem(
@@ -1896,7 +1989,8 @@ public sealed class BattleActionExecutorTests
         decimal hp = 100,
         decimal sp = 20,
         CombatDefenseProfile? defense = null,
-        IEnumerable<ContentId>? skillIds = null) =>
+        IEnumerable<ContentId>? skillIds = null,
+        RuntimeEquipmentSnapshot? equipment = null) =>
         new(
             RuntimeInstanceId.Parse(id),
             Id(id + "_entity"),
@@ -1913,7 +2007,8 @@ public sealed class BattleActionExecutorTests
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Agility, 10),
                 new KeyValuePair<ContentId, decimal>(StandardProgressionIds.Luck, 10)
             ],
-            skillIds: skillIds);
+            skillIds: skillIds,
+            equipment: equipment);
 
     private static SkillDefinition ActiveSkill(
         string id,
@@ -2204,6 +2299,18 @@ public sealed class BattleActionExecutorTests
             _equipment.TryGetValue(id, out EquipmentDefinition? definition)
                 ? definition
                 : throw new KeyNotFoundException($"Equipment '{id}' was not found.");
+    }
+
+    private sealed class SubstitutingEquipmentRepository(EquipmentDefinition definition)
+        : IEquipmentDefinitionRepository
+    {
+        public bool TryGetEquipment(ContentId id, out EquipmentDefinition? equipment)
+        {
+            equipment = definition;
+            return true;
+        }
+
+        public EquipmentDefinition GetRequiredEquipment(ContentId id) => definition;
     }
 
     private sealed class MutableItemRepository(ItemDefinition? item) : IItemDefinitionRepository

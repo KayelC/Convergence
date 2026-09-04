@@ -10,7 +10,8 @@ public enum RuntimeEquipmentProfileDiagnosticCode
     SlotProfileMismatch,
     InvalidIdentifier,
     MissingEquipmentInstance,
-    PolicyRejected
+    PolicyRejected,
+    EquipmentDefinitionMismatch
 }
 
 public sealed record RuntimeEquipmentProfileDiagnostic(
@@ -189,6 +190,17 @@ public sealed class RuntimeEquipmentProfileResolver : IRuntimeEquipmentProfileRe
                     equipmentInstanceId,
                     equipmentId,
                     $"Equipped item '{equipmentId}' was not found."));
+                continue;
+            }
+
+            if (definition.Id != equipmentId)
+            {
+                diagnostics.Add(new RuntimeEquipmentProfileDiagnostic(
+                    RuntimeEquipmentProfileDiagnosticCode.EquipmentDefinitionMismatch,
+                    slotId,
+                    equipmentInstanceId,
+                    equipmentId,
+                    $"Equipment lookup for '{equipmentId}' returned definition '{definition.Id}'."));
                 continue;
             }
 
