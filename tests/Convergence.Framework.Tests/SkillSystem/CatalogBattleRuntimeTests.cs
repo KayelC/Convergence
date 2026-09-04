@@ -1979,6 +1979,144 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public async Task Order7R18_EncounterRestrictionAdapterPropagatesEquipmentAuthorizationCancellation()
+    {
+        GameDataCatalog catalog = LoadDemoCatalog();
+        CatalogBattleActor player = RuntimeCatalogActor(
+            "cancelled_restriction_player",
+            "cancelled_restriction_player",
+            PlayerTeam);
+        CatalogBattleActor enemy = RuntimeCatalogActor(
+            "cancelled_restriction_enemy",
+            "cancelled_restriction_enemy",
+            EnemyTeam);
+        ContentId weaponId = Id("test.pack:cancellation_weapon");
+        RuntimeInstanceId weaponInstanceId = RuntimeInstanceId.Parse("cancellation-weapon-001");
+        var targeting = new TargetingDefinition(
+            TargetRelation.Enemy,
+            TargetSelection.Single,
+            TargetLifeState.Alive,
+            false);
+        var basicAttack = new EquipmentBasicAttackDefinition(
+            DamageElement.Physical,
+            7,
+            100,
+            new NeverCriticalDefinition(),
+            false);
+        var weapon = new EquipmentDefinition(
+            weaponId,
+            "Cancellation Weapon",
+            "Exercises cancellation through the encounter action adapter.",
+            StandardEquipmentSlotIds.Weapon,
+            10,
+            weapon: new EquipmentWeaponProfileDefinition(basicAttack));
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Weapon,
+                    [new RuntimeEquipmentInstanceSnapshot(weaponInstanceId, weaponId)])
+            ]);
+        var equipped = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Weapon,
+                weaponInstanceId)
+        ]);
+        var equipmentRepository = new EquipmentRepository(weapon);
+        var equipmentApplication = new RuntimeActorEquipmentApplicationService(
+            new RuntimeActorCombatProfileCompositionService(new SkillRepository()));
+        RuntimeActorEquipmentApplicationResult applied = equipmentApplication.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                player.State,
+                inventory,
+                equipped,
+                equipmentRepository,
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                runtimeActors: [player.State, enemy.State]));
+        Assert.True(
+            applied.Applied,
+            string.Join(Environment.NewLine, applied.Diagnostics.Select(item => item.Message)));
+        decimal playerHpBefore = player.State.GetRequiredResource(Id("hp")).Current;
+        decimal playerSpBefore = player.State.GetRequiredResource(Id("sp")).Current;
+        decimal enemyHpBefore = enemy.State.GetRequiredResource(Id("hp")).Current;
+
+        using var cancellation = new CancellationTokenSource();
+        var slotLayout = new SignalingCancellationEquipmentSlotLayoutPolicy(cancellation);
+        var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
+            inventory,
+            equipmentRepository,
+            new RuntimeEquipmentProfileResolver(slotLayout));
+        var basicAttacks = new EquipmentBattleBasicAttackProfileSource(
+            equipmentProfiles,
+            targeting);
+        BattleExecutionServices services = Services(catalog);
+        var actionExecutor = new BattleActionExecutor(
+            new SkillExecutor(services),
+            new ItemExecutor(services),
+            services,
+            new CatalogBattleActionAuthorizationPolicy(
+                catalog,
+                catalog,
+                basicAttacks,
+                equipmentProfiles));
+        var source = new RecordingRestrictedActionSource(request =>
+            AutomatedRestrictedActionSelection.Selected(
+                weaponId,
+                new BasicAttackBattleActionCommand(
+                    basicAttack,
+                    targeting,
+                    [enemy.State.InstanceId],
+                    weaponId)));
+        var resolver = new AutomatedBattleTurnRestrictionResolver(actionExecutor, source);
+        BattleEncounterParticipant[] participants =
+        [
+            new BattleEncounterParticipant(player.State, player.Entity.DisplayName),
+            new BattleEncounterParticipant(enemy.State, enemy.Entity.DisplayName)
+        ];
+        var encounter = new BattleEncounterRequest(
+            participants,
+            Battle,
+            NormalBattle,
+            NewMoon,
+            1);
+        var economy = new ActionTokenTurnEconomy();
+        economy.StartPhase(1);
+        var economyBefore = Assert.IsType<ActionTokenTurnEconomySnapshot>(
+            economy.CaptureSnapshot());
+        var turn = new BattleEncounterTurnRequest(
+            encounter,
+            participants[0],
+            participants,
+            BattleTurnStartOutcome.ForcedBasicAttack,
+            economyBefore);
+        var request = new AutomatedBattleTurnRestrictionRequest(
+            turn,
+            player,
+            [player, enemy],
+            KnowledgeView());
+
+        OperationCanceledException exception = await Assert.ThrowsAsync<OperationCanceledException>(
+            () => resolver.ResolveAsync(request, cancellation.Token).AsTask());
+
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+        Assert.True(cancellation.IsCancellationRequested);
+        Assert.Equal(1, source.CallCount);
+        Assert.Equal(playerHpBefore, player.State.GetRequiredResource(Id("hp")).Current);
+        Assert.Equal(playerSpBefore, player.State.GetRequiredResource(Id("sp")).Current);
+        Assert.Equal(enemyHpBefore, enemy.State.GetRequiredResource(Id("hp")).Current);
+        Assert.False(player.State.IsGuarding);
+        Assert.Equal(
+            weaponInstanceId,
+            player.State.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Weapon]);
+        var economyAfter = Assert.IsType<ActionTokenTurnEconomySnapshot>(
+            economy.CaptureSnapshot());
+        Assert.Equal(economyBefore.FullTokens, economyAfter.FullTokens);
+        Assert.Equal(economyBefore.PartialTokens, economyAfter.PartialTokens);
+    }
+
+    [Fact]
     public void Runner_LimitedActionRejectsADisallowedCommandBeforeMutation()
     {
         GameDataCatalog catalog = LoadDemoCatalog();
@@ -3493,6 +3631,36 @@ public sealed class CatalogBattleRuntimeTests
             _equipment.TryGetValue(id, out definition);
 
         public EquipmentDefinition GetRequiredEquipment(ContentId id) => _equipment[id];
+    }
+
+    private sealed class SignalingCancellationEquipmentSlotLayoutPolicy(
+        CancellationTokenSource cancellation) : IEquipmentSlotLayoutPolicy
+    {
+        public IReadOnlyList<ContentId> SlotIds => StandardEquipmentSlotIds.All;
+
+        public EquipmentSlotLayoutResult ValidateDefinition(EquipmentDefinition definition)
+        {
+            Cancel();
+            return StandardEquipmentSlotLayoutPolicy.Instance.ValidateDefinition(definition);
+        }
+
+        public EquipmentSlotLayoutResult ValidateAssignment(
+            ContentId authoredSlotId,
+            ContentId targetSlotId)
+        {
+            Cancel();
+            return StandardEquipmentSlotLayoutPolicy.Instance.ValidateAssignment(
+                authoredSlotId,
+                targetSlotId);
+        }
+
+        private void Cancel()
+        {
+            cancellation.Cancel();
+            throw new OperationCanceledException(
+                "Equipment-backed encounter action authorization was cancelled.",
+                cancellation.Token);
+        }
     }
 
     private sealed class TestInitializationPolicy : IBattleActorInitializationPolicy

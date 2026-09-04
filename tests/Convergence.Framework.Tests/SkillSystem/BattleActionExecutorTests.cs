@@ -1845,6 +1845,102 @@ public sealed class BattleActionExecutorTests
     }
 
     [Fact]
+    public async Task Order7R18_EquipmentAuthorizationCancellationPreservesPreparedActionState()
+    {
+        SkillDefinition grantedSkill = ActiveSkill(
+            "cancelled_equipment_skill",
+            [new SkillCostDefinition(Sp, new FlatAmountDefinition(3))],
+            [new DamageEffectDefinition(
+                DamageElement.Ice,
+                7,
+                100,
+                new NeverCriticalDefinition(),
+                new HitCountDefinition(1, 1))]);
+        ContentId armorId = Id("cancellation_armor");
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("cancellation-armor-001");
+        var armor = new EquipmentDefinition(
+            armorId,
+            "Cancellation Armor",
+            "Provides a granted skill for cancellation-boundary testing.",
+            StandardEquipmentSlotIds.Armor,
+            10,
+            grantedSkillIds: [grantedSkill.Id],
+            armor: new EquipmentArmorProfileDefinition(2, 1));
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Armor,
+                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
+            ]);
+        var equipped = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Armor,
+                armorInstanceId)
+        ]);
+        var slotLayout = new ToggleCancellationEquipmentSlotLayoutPolicy();
+        var equipmentProfiles = new RuntimeActorEquipmentProfileSource(
+            inventory,
+            new TestEquipmentRepository([armor]),
+            new RuntimeEquipmentProfileResolver(slotLayout));
+        var authorization = new CatalogBattleActionAuthorizationPolicy(
+            new TestSkillRepository([grantedSkill]),
+            new TestItemRepository([]),
+            NoBattleBasicAttackProfileSource.Instance,
+            equipmentProfiles);
+        BattleActionExecutor executor = Executor(authorization: authorization);
+        RuntimeActorState actor = Actor("actor", TeamA, equipment: equipped);
+        RuntimeActorState target = Actor("target", TeamB);
+        ItemDefinition unusedItem = ConsumableItem(
+            "unused_item",
+            new RestoreResourceEffectDefinition(Hp, new FlatAmountDefinition(10)));
+        var itemInventory = new TestItemInventory(unusedItem.Id, quantity: 1);
+        BattleActionExecutionRequest request = Request(
+            new SkillBattleActionCommand(grantedSkill, [target.InstanceId]),
+            actor,
+            [actor, target],
+            itemInventory);
+
+        slotLayout.Cancel = true;
+        Assert.Throws<OperationCanceledException>(() => executor.Assess(request));
+        AssertUnchanged();
+
+        slotLayout.Cancel = false;
+        BattleActionAssessment assessment = executor.Assess(request);
+        Assert.True(assessment.CanExecute);
+
+        slotLayout.Cancel = true;
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => executor.ExecuteAsync(request, assessment).AsTask());
+        AssertUnchanged();
+
+        slotLayout.Cancel = false;
+        BattleActionExecutionResult retried = await executor.ExecuteAsync(request, assessment);
+
+        Assert.Equal(BattleActionExecutionStatus.Executed, retried.Status);
+        Assert.Equal(17m, actor.GetRequiredResource(Sp).Current);
+        Assert.Equal(90m, target.GetRequiredResource(Hp).Current);
+        Assert.Equal(1, itemInventory.Quantity);
+        Assert.Equal(0, itemInventory.ReservationsCreated);
+
+        void AssertUnchanged()
+        {
+            Assert.Equal(20m, actor.GetRequiredResource(Sp).Current);
+            Assert.Equal(100m, actor.GetRequiredResource(Hp).Current);
+            Assert.Equal(100m, target.GetRequiredResource(Hp).Current);
+            Assert.False(actor.IsGuarding);
+            Assert.Equal(
+                armorInstanceId,
+                actor.Equipment.EquippedInstanceIds[StandardEquipmentSlotIds.Armor]);
+            Assert.Empty(actor.Skills.LearnedSkillIds);
+            Assert.Empty(actor.Skills.EquippedSkillIds);
+            Assert.Equal(1, itemInventory.Quantity);
+            Assert.Equal(0, itemInventory.ReservationsCreated);
+        }
+    }
+
+    [Fact]
     public async Task AnalyzeEscapeHostAndPartyCommands_ReturnStructuredResults()
     {
         ContentId escapeRule = Id("standard_escape");
@@ -2311,6 +2407,37 @@ public sealed class BattleActionExecutorTests
         }
 
         public EquipmentDefinition GetRequiredEquipment(ContentId id) => definition;
+    }
+
+    private sealed class ToggleCancellationEquipmentSlotLayoutPolicy : IEquipmentSlotLayoutPolicy
+    {
+        public bool Cancel { get; set; }
+
+        public IReadOnlyList<ContentId> SlotIds => StandardEquipmentSlotIds.All;
+
+        public EquipmentSlotLayoutResult ValidateDefinition(EquipmentDefinition definition)
+        {
+            ThrowIfCancellationRequested();
+            return StandardEquipmentSlotLayoutPolicy.Instance.ValidateDefinition(definition);
+        }
+
+        public EquipmentSlotLayoutResult ValidateAssignment(
+            ContentId authoredSlotId,
+            ContentId targetSlotId)
+        {
+            ThrowIfCancellationRequested();
+            return StandardEquipmentSlotLayoutPolicy.Instance.ValidateAssignment(
+                authoredSlotId,
+                targetSlotId);
+        }
+
+        private void ThrowIfCancellationRequested()
+        {
+            if (Cancel)
+            {
+                throw new OperationCanceledException("Equipment profile resolution was cancelled.");
+            }
+        }
     }
 
     private sealed class MutableItemRepository(ItemDefinition? item) : IItemDefinitionRepository

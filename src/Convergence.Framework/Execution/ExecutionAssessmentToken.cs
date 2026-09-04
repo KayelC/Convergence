@@ -41,6 +41,21 @@ internal sealed class ExecutionAssessmentToken<TRequest> where TRequest : class
         failure = ExecutionAssessmentTokenFailure.None;
         return true;
     }
+
+    public void RestoreAfterCancellation(object authority)
+    {
+        if (!IsOwnedBy(authority))
+        {
+            throw new InvalidOperationException(
+                "Only the owning executor can restore a cancelled assessment token.");
+        }
+
+        if (Interlocked.CompareExchange(ref _consumed, 0, 1) != 1)
+        {
+            throw new InvalidOperationException(
+                "Only a consumed assessment token can be restored after cancellation.");
+        }
+    }
 }
 
 internal static class PreparedTargetResolver

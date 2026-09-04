@@ -595,7 +595,7 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                     turnConsumption: ActionTurnConsumption.None)
             };
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
             return CreateAssessment(
                 request,
@@ -647,11 +647,16 @@ public sealed class BattleActionExecutor : IBattleActionExecutor
                     : "The battle-action assessment was not created by this executor."));
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
         BattleActionAuthorizationResult authorization;
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             authorization = _authorization.Authorize(request.Actor, request.Command);
+        }
+        catch (OperationCanceledException)
+        {
+            assessment.Preparation.RestoreAfterCancellation(_assessmentAuthority);
+            throw;
         }
         catch (Exception exception)
         {
