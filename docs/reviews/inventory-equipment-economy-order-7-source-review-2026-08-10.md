@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R19 complete; O7-R20 pending independent closure
+**Implementation status:** O7-R1 through O7-R20 complete; O7-R21 through O7-R23 pending correction and closure
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -57,6 +57,12 @@
 > closure authority. O7-R16 through O7-R18 now correct the three runtime
 > boundaries, and O7-R19 reconciles active documentation without prematurely
 > restoring certification. O7-R20 remains open.
+
+> **O7-R20 independent closure audit:** The fresh
+> [R20 audit](inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+> confirmed O7-R16 through O7-R19, then found one additional reachable skill
+> repository-identity defect in equipment-granted passive composition and
+> aggregate restore. Order 7 remains open under O7-R21 through O7-R23.
 
 ## Purpose
 
@@ -1884,4 +1890,25 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
 - **Strict build and format:** Framework and solution Release builds completed
   with 0 warnings and 0 errors; `dotnet format --verify-no-changes` formatted 0
   of 280 files, and `git diff --check` passed.
+- **Versions:** runtime save v19 and content schema v10 remain unchanged.
+
+### O7-R20: Fresh Independent Closure Audit
+
+- **Reviewed implementation:** `aaacbd97`; reviewed correction range
+  `edf05e09..aaacbd97`.
+- **Actual destination:** the
+  [O7-R20 independent closure audit](inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+  traces current resource management, equipment composition, persistence,
+  DemoHost, Godot-contract, tests, and all three audience documents.
+- **Confirmed corrections:** O7-R16's equipment identity check, O7-R17's shop
+  identity checks, O7-R18's cancellation propagation and assessment-token
+  restoration, and O7-R19's documentation state all hold in current source.
+- **New finding:** a custom skill repository can return a different passive
+  definition for an equipment-granted skill ID during actor composition or
+  aggregate restore. O7-R21 must reject this before actor mutation; O7-R22 must
+  reconcile the audience contract; O7-R23 must perform fresh closure.
+- **Current state:** `inventory_equipment_economy` remains `partial`; all three
+  audience entries remain `existing_unreviewed`.
+- **Baseline tests:** 1,855 Framework, 184 DemoHost, and 7 ContentValidator
+  tests passed: 2,046 total, 0 failed, 0 skipped.
 - **Versions:** runtime save v19 and content schema v10 remain unchanged.
