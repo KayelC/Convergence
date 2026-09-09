@@ -155,7 +155,12 @@ cost entry for the same resource ID in one skill.
 
 Cancellation is checked before action execution and before item reservation or
 commit. `OperationCanceledException` is a host cancellation signal, not a
-gameplay diagnostic.
+gameplay diagnostic. This includes cancellation raised while resolving a live
+equipment profile during initial authorization or execution-time
+reauthorization. The executor rethrows that signal; when cancellation occurs
+after the prepared assessment token is consumed for the final authorization
+check, it restores the token before unwinding. No actor/resource/inventory/turn
+mutation occurs, and the host may retry the same request and assessment.
 
 ## Implement Inventory Reservations
 

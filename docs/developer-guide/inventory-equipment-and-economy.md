@@ -9,9 +9,10 @@ policy-owned stock, recovery, persistence, and Godot integration.
 
 > **Review state:** `existing_unreviewed`. The
 > [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
-> found three reachable extension-boundary defects at `ef4e129e`. The intended
-> integration rules below remain owner-approved, but implementation and
-> documentation certification are reopened under O7-R16 through O7-R20.
+> found three reachable extension-boundary defects at `ef4e129e`. O7-R16 through
+> O7-R18 correct those boundaries, and O7-R19 reconciles this guide with the
+> corrected behavior. Certification remains open until O7-R20 independently
+> reviews the implementation and documentation.
 
 ## Authority Split
 
@@ -117,6 +118,33 @@ diagnostic appropriate to that boundary. `OperationCanceledException` is
 propagated. Hosts should present the typed diagnostic and keep the prior
 immutable state; they should not catch the policy failure and retry with the
 standard layout.
+
+### Enforce Repository Identity
+
+A successful definition lookup must return the requested identity. Custom
+`IEquipmentDefinitionRepository` and `IItemDefinitionRepository`
+implementations must not return a different definition while reporting success.
+Convergence enforces this contract at the two Order 7 projection boundaries:
+
+- `RuntimeEquipmentProfileResolver` returns
+  `EquipmentDefinitionMismatch` before it reads the returned definition's slot,
+  grants, basic attack, or combat contributions; and
+- `RuntimeShopOfferResolver` returns `ItemDefinitionMismatch` or
+  `EquipmentDefinitionMismatch` before it reads an item stack limit or validates
+  an equipment slot/profile.
+
+Treat these as content-authority diagnostics. Do not display or execute a
+partially resolved profile or offer, and do not retry against a fallback
+repository.
+
+Equipment-backed battle authorization uses this same live profile during
+assessment and immediately before execution. If profile resolution throws
+`OperationCanceledException`, `BattleActionExecutor` rethrows it rather than
+returning an `ExecutionFailed` gameplay diagnostic. Cancellation during the
+execution-time recheck restores the prepared assessment's one-use token, so the
+same assessment may be retried; actor state, resources, inventory reservations,
+and turn state remain unchanged. Non-cancellation extension faults retain the
+existing typed containment behavior.
 
 ## Allocate Equipment Instance IDs In The Host
 

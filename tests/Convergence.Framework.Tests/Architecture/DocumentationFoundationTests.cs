@@ -801,6 +801,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md"))
             .ReplaceLineEndings(" ");
+        string sourceReview = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "inventory-equipment-economy-order-7-source-review-2026-08-10.md"))
+            .ReplaceLineEndings(" ");
 
         string[] mechanicsTokens =
         [
@@ -857,7 +863,8 @@ public sealed class DocumentationFoundationTests
             "**Review state:** `existing_unreviewed`.",
             "post-R15 independent audit",
             "three reachable extension-boundary defects at `ef4e129e`",
-            "certification are reopened under O7-R16 through O7-R20"
+            "O7-R18 correct those boundaries",
+            "Certification remains open until O7-R20 independently"
         ];
         Assert.All(reviewStateTokens, token =>
         {
@@ -903,7 +910,8 @@ public sealed class DocumentationFoundationTests
         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             candidate => candidate.Id == "inventory_equipment_economy");
         Assert.Equal("partial", capability.ImplementationState);
-        Assert.Equal(3, capability.KnownGaps.Count);
+        Assert.Single(capability.KnownGaps);
+        Assert.Contains("O7-R20", capability.KnownGaps[0], StringComparison.Ordinal);
 
         Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O7-R15", currentAudit, StringComparison.Ordinal);
@@ -911,6 +919,10 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("### O7-R13: Reconcile Audience Review State", currentAudit, StringComparison.Ordinal);
         Assert.Contains("### O7-R14: Correct And Guard The Shop Purchase Sample", currentAudit, StringComparison.Ordinal);
         Assert.Contains("### O7-R15: Fresh Source, Documentation, And Release Closure", currentAudit, StringComparison.Ordinal);
+        Assert.Contains("### O7-R16: Enforce Equipment Definition Identity", sourceReview, StringComparison.Ordinal);
+        Assert.Contains("### O7-R17: Enforce Shop Content Definition Identity", sourceReview, StringComparison.Ordinal);
+        Assert.Contains("### O7-R18: Preserve Authorization Cancellation", sourceReview, StringComparison.Ordinal);
+        Assert.Contains("### O7-R19: Reconcile Active Documentation And Tracking", sourceReview, StringComparison.Ordinal);
         Assert.Contains("save v19", currentAudit, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("content schema v10", currentAudit, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("returns to `complete`", currentAudit, StringComparison.Ordinal);

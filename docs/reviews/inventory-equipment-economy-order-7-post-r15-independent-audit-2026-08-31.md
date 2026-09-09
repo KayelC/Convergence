@@ -290,6 +290,24 @@ the full solution gate, strict build, formatting, documentation checks, and
 - Return Order 7 to `complete`/`reviewed` only if no realistic reachable defect
   or documentation contradiction remains.
 
+## Correction Status
+
+O7-R16 through O7-R18 have now implemented the three required runtime
+corrections in isolated commits:
+
+- `edf05e09` rejects mismatched equipment definitions before any returned
+  definition field can enter a live profile;
+- `96e7d05f` rejects mismatched shop item/equipment definitions before stack or
+  slot data can enter a resolved offer; and
+- `4d040dc3` propagates equipment-backed action cancellation through assessment,
+  execution-time reauthorization, and the encounter restriction adapter while
+  preserving action state.
+
+O7-R19 reconciles the three audience documents and active tracking with those
+implemented corrections. The capability deliberately remains `partial`, and
+all three audience entries remain `existing_unreviewed`, until O7-R20 performs
+the independent source-first closure and complete retained release gate.
+
 ## Closure Decision
 
 **Order 7 is not ready for formal closure at `ef4e129e`.** The standard resource

@@ -11,9 +11,10 @@ serialization, or game-specific currency names.
 
 > **Review state:** `existing_unreviewed`. The
 > [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
-> found three reachable extension-boundary defects at `ef4e129e`. The intended
-> authority rules below remain owner-approved, but implementation and
-> documentation certification are reopened under O7-R16 through O7-R20.
+> found three reachable extension-boundary defects at `ef4e129e`. O7-R16 through
+> O7-R18 correct those boundaries, and O7-R19 reconciles this reference with the
+> corrected behavior. Certification remains open until O7-R20 independently
+> reviews the implementation and documentation.
 
 ## Authority Map
 
@@ -115,6 +116,15 @@ results retain their authored meaning. Null results, undefined enum values, and
 non-cancellation exceptions normalize to `EquipmentSlotLayoutCode.PolicyRejected`
 and are mapped to a boundary-specific typed diagnostic. Cancellation is
 re-thrown unchanged. No boundary silently substitutes the standard layout.
+
+Definition identity is validated separately from slot compatibility. After a
+successful equipment repository lookup, `RuntimeEquipmentProfileResolver`
+compares the returned `EquipmentDefinition.Id` with the owned instance's
+`DefinitionId`. A mismatch emits `EquipmentDefinitionMismatch` immediately,
+before definition-layout validation and before copying grants, a basic attack,
+or any stat contribution. Consequently, actor application, battle
+authorization, and aggregate restoration all inherit the same rejection from
+the shared profile resolver.
 
 The equip transition cannot validate a definition profile because its public
 request deliberately contains no catalog repository. A host must not treat an
@@ -238,6 +248,12 @@ Only successful resolution produces a complete `RuntimeShopOfferSnapshot`.
 Its construction and members are not public mutation boundaries. Invalid
 content kind, missing definitions, incompatible slots, malformed pricing, or
 unsupported stock policy returns typed diagnostics without a fallback.
+
+Successful item and equipment lookups must likewise return the offer's authored
+content ID. `RuntimeShopOfferResolver` emits `ItemDefinitionMismatch` or
+`EquipmentDefinitionMismatch` before reading the returned item's stack limit or
+the returned equipment definition's slot/profile. A mismatched lookup therefore
+cannot produce any resolved offer authority.
 
 Pricing and stock binding results are immutable either/or values: exactly one
 bound policy with no diagnostics, or no policy with one-or-more defined,
@@ -456,6 +472,10 @@ second behavior.
 - Invalid live item identity returns `InvalidItemId` with unchanged inventory;
   malformed decoded snapshots remain available only for aggregate validation.
 - Host policy cancellation is propagated as `OperationCanceledException`.
+- Equipment-backed action assessment and execution-time reauthorization also
+  propagate `OperationCanceledException`; the latter restores the consumed
+  prepared-assessment token before unwinding, so cancellation leaves the
+  assessment retryable and does not become an `ExecutionFailed` gameplay result.
 - Non-cancellation custom-policy faults are contained as typed diagnostics at
   their binding or execution boundary.
 - Slot-layout policy nulls, undefined codes, and faults use explicit

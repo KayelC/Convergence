@@ -50,8 +50,10 @@ audience entries to `reviewed`.
 The later
 [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
 found three reachable extension-boundary defects. All three Order 7 audience
-entries return to `existing_unreviewed` while O7-R16 through O7-R20 correct and
-independently recheck the implementation and documentation.
+entries returned to `existing_unreviewed`. O7-R16 through O7-R18 correct those
+defects and O7-R19 reconciles the three audience pages; the entries remain
+`existing_unreviewed` until O7-R20 independently rechecks the implementation and
+documentation.
 O3-R7 independently verified the source and audience documents at that
 revision. A later source-first recheck reopened the developer and technical
 entries while three command-boundary defects were corrected. O3-R8 through

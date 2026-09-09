@@ -67,6 +67,14 @@ unequipping a learned skill, substituting an item definition, or changing
 basic-attack equipment between assessment and execution rejects the command
 without cost, effect, inventory, or turn mutation.
 
+`OperationCanceledException` is not an authorization rejection. Assessment
+lets it cross the facade unchanged. During execution-time reauthorization, the
+assessment token has already been consumed; cancellation atomically restores
+that token before it is rethrown. This preserves the pending assessment for an
+explicit retry and leaves actor, resource, inventory, and turn state unchanged.
+Other authorization exceptions retain typed `ExecutionFailed` containment and
+consume the attempted assessment as before.
+
 Other command kinds are authorized by their own assessment paths. Party/roster
 commands use `IPartyRosterTransitionService`; host-mediated commands explicitly
 delegate application behavior.

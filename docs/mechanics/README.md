@@ -63,8 +63,9 @@ stock, atomic transactions, recovery, and save v19. The
 [O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
 is historical closure evidence for that revision. The later
 [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
-reopens this page as `existing_unreviewed` while O7-R16 through O7-R20 correct
-three extension-boundary defects and perform fresh closure.
+reopened this page as `existing_unreviewed`. O7-R16 through O7-R18 correct its
+three extension-boundary defects and O7-R19 reconciles the player rules; O7-R20
+remains the fresh independent closure checkpoint.
 
 ## Rule Index
 

@@ -186,9 +186,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "Equipment profile resolution accepts a mismatched equipment definition returned for an owned definition ID, allowing substituted grants and combat contributions.",
-        "Shop offer resolution accepts mismatched item or equipment definitions; an item offer can therefore adopt another definition's stack limit.",
-        "Battle action assessment and execution normalize OperationCanceledException from equipment-backed authorization into gameplay diagnostics."
+        "O7-R16 through O7-R19 correct and document the post-R15 repository-identity and authorization-cancellation defects; O7-R20 independent source and documentation review plus the complete retained release gate remain required for certification."
       ]
     },
     {

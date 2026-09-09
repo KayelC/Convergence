@@ -2,9 +2,10 @@
 
 > **Review state:** `existing_unreviewed`. The
 > [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
-> found three reachable extension-boundary defects at `ef4e129e`. The intended
-> player rules below remain owner-approved, but implementation and documentation
-> certification are reopened under O7-R16 through O7-R20.
+> found three reachable extension-boundary defects at `ef4e129e`. O7-R16 through
+> O7-R18 correct those boundaries, and O7-R19 reconciles this page with the
+> corrected behavior. Certification remains open until O7-R20 independently
+> reviews the implementation and documentation.
 
 ## What This System Means To A Player
 
@@ -13,6 +14,11 @@ the particular item, equipment copy, currency, shop offer, and actor involved.
 If the complete operation is legal, every affected state advances together. If
 anything rejects, the player's inventory, equipment, currency, and shop stock
 remain unchanged.
+
+Game-supplied catalogs cannot replace requested content with another definition
+that merely looks usable. If equipment or a shop lookup returns a definition
+whose ID differs from the requested ID, the operation rejects before that
+definition can provide stack limits, slots, skills, attacks, or stat values.
 
 The framework fixes ownership and transaction safety. Each game chooses its
 slot layout, currencies, pricing rules, stock behavior, recovery rules, menu
@@ -88,6 +94,12 @@ do not occupy move-list slots and are not written into the actor's learned-skill
 record. Unequipping the granting copy removes the skill immediately. Even an
 action selected before unequipping is checked again before execution, so it
 cannot spend resources or apply effects after its grant has vanished.
+
+If the host cancels while the game is checking equipment-backed action
+availability, cancellation remains a host action rather than appearing as an
+unusable skill or failed attack. The actor, resources, inventory, pending action
+assessment, and turn opportunity remain unchanged so the host may resume or
+retry deliberately.
 
 Defense and Evasion feed the same combat calculations as the actor's other
 stats. Equipment does not run a separate damage or hit formula. An absent

@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R15 complete; O7-R16 through O7-R20 pending
+**Implementation status:** O7-R1 through O7-R19 complete; O7-R20 pending independent closure
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -54,7 +54,9 @@
 > found three realistic extension-boundary defects in repository identity and
 > cancellation propagation. It reopens Order 7 under O7-R16 through O7-R20.
 > O7-R15 remains historical evidence for its reviewed revision, not current
-> closure authority.
+> closure authority. O7-R16 through O7-R18 now correct the three runtime
+> boundaries, and O7-R19 reconciles active documentation without prematurely
+> restoring certification. O7-R20 remains open.
 
 ## Purpose
 
@@ -1799,3 +1801,87 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
   formatting, content, DemoHost, Godot, coverage, documentation,
   forbidden-reference, trimming, and diff gates passed. Raw evidence is
   retained under the canonical O7-R15 verification bundle.
+
+### O7-R16: Enforce Equipment Definition Identity
+
+- **Commit:** `edf05e09` (`runtime: enforce equipment definition identity`).
+- **Finding corrected:** a successful custom equipment-repository lookup could
+  return a definition whose ID differed from the owned instance's authored
+  definition ID, allowing substituted grants and combat contributions into an
+  accepted equipment profile.
+- **Actual destination:** `RuntimeEquipmentProfileResolver` compares the
+  returned definition ID with the requested ID before slot validation or any
+  definition field is read. A mismatch returns the distinct
+  `EquipmentDefinitionMismatch` diagnostic and no resolved profile.
+- **Shared-boundary evidence:** direct profile resolution, actor equipment
+  application, battle authorization, and aggregate session restoration all
+  reject the same substituted definition through the shared resolver.
+- **Focused tests:** 4 equipment-definition identity cases passed: 4 total, 0
+  failed, 0 skipped.
+- **Full suite:** 1,851 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 2,042 total, 0 failed, 0 skipped.
+- **Versions:** runtime save v19 and content schema v10 remain unchanged.
+
+### O7-R17: Enforce Shop Content Definition Identity
+
+- **Commit:** `96e7d05f` (`runtime: enforce shop content definition identity`).
+- **Finding corrected:** successful custom shop lookups could return item or
+  equipment definitions for a different ID and lend their stack-limit or slot
+  data to the requested offer.
+- **Actual destination:** `RuntimeShopOfferResolver` compares returned item and
+  equipment definition IDs with the offer's content ID before stack-limit or
+  slot/profile processing. Mismatches return the distinct
+  `ItemDefinitionMismatch` or `EquipmentDefinitionMismatch` diagnostic and no
+  resolved offer.
+- **Focused tests:** 1 shop-definition identity case passed: 1 total, 0 failed,
+  0 skipped.
+- **Full suite:** 1,852 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 2,043 total, 0 failed, 0 skipped.
+- **Versions:** runtime save v19 and content schema v10 remain unchanged.
+
+### O7-R18: Preserve Authorization Cancellation
+
+- **Commit:** `4d040dc3` (`runtime: preserve action authorization cancellation`).
+- **Finding corrected:** equipment-backed authorization could normalize
+  `OperationCanceledException` into an ordinary gameplay diagnostic during
+  assessment or execution-time reauthorization.
+- **Actual destination:** `BattleActionExecutor` now propagates cancellation
+  from both authorization points. When execution-time reauthorization is
+  cancelled after consuming a prepared assessment's token, the owning executor
+  atomically restores that token before rethrowing.
+- **State evidence:** cancellation preserves actor HP/SP, target HP, guarding,
+  equipped instances, learned/equipped skills, unrelated inventory and
+  reservations, encounter turn state, and Action Token state. The same prepared
+  assessment remains retryable; non-cancellation authorization faults retain
+  typed containment and ordinary single-use semantics.
+- **Focused tests:** 2 direct and encounter-facing cancellation cases passed: 2
+  total, 0 failed, 0 skipped.
+- **Full suite:** 1,854 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 2,045 total, 0 failed, 0 skipped.
+- **Versions:** runtime save v19 and content schema v10 remain unchanged.
+
+### O7-R19: Reconcile Active Documentation And Tracking
+
+- **Baseline:** `4d040dc3`; this checkpoint's documentation/test commit records
+  the final hash.
+- **Actual destination:** the mechanics, developer, and technical Order 7
+  guides; the developer and technical typed-action guides; audience indexes;
+  active roadmaps; executable capability/documentation matrices; and
+  `DocumentationContractSynchronizationTests`.
+- **Documentation correction:** the three audience levels now state the
+  repository-identity rule and cancellation behavior implemented by O7-R16
+  through O7-R18. Action documentation states that execution-time cancellation
+  restores the prepared assessment token and leaves gameplay state unchanged.
+- **Tracking discipline:** `inventory_equipment_economy` deliberately remains
+  `partial`, all three audience entries remain `existing_unreviewed`, and O7-R20
+  remains the sole certification gap. R19 does not promote its own prose.
+- **Scope:** documentation, fixtures, and documentation-contract tests only. No
+  runtime, save, schema, content, host, or gameplay behavior changed.
+- **Focused tests:** 8 documentation synchronization and Order 7 audience-state
+  cases passed: 8 total, 0 failed, 0 skipped.
+- **Full suite:** 1,855 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 2,046 total, 0 failed, 0 skipped.
+- **Strict build and format:** Framework and solution Release builds completed
+  with 0 warnings and 0 errors; `dotnet format --verify-no-changes` formatted 0
+  of 280 files, and `git diff --check` passed.
+- **Versions:** runtime save v19 and content schema v10 remain unchanged.

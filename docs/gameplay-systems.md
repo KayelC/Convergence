@@ -190,8 +190,9 @@ is the current independent source, documentation, and release-gate closure
 evidence for its reviewed revision. The later
 [post-R15 independent audit](reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
 found three bounded custom-extension defects in definition identity and
-cancellation propagation. O7-R16 through O7-R20 now govern correction and fresh
-closure.
+cancellation propagation. O7-R16 through O7-R18 correct those boundaries and
+O7-R19 reconciles the active guidance. O7-R20 remains the independent closure
+and retained-release-gate checkpoint.
 
 ## Navigation, Traversal, And Encounter Preparation
 

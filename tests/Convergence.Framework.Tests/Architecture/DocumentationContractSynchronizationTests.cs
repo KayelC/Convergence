@@ -67,6 +67,76 @@ public sealed class DocumentationContractSynchronizationTests
     }
 
     [Fact]
+    public void Order7R19_GuidancePinsCorrectedAuthorityAndPendingCertification()
+    {
+        string mechanics = File.ReadAllText(RepositoryPath(
+            "docs",
+            "mechanics",
+            "party-inventory-and-economy.md"));
+        string developer = File.ReadAllText(RepositoryPath(
+            "docs",
+            "developer-guide",
+            "inventory-equipment-and-economy.md"));
+        string technical = File.ReadAllText(RepositoryPath(
+            "docs",
+            "technical",
+            "inventory-equipment-economy-runtime.md"));
+        string actionDeveloper = File.ReadAllText(RepositoryPath(
+            "docs",
+            "developer-guide",
+            "typed-actions-and-effects.md"));
+        string actionTechnical = File.ReadAllText(RepositoryPath(
+            "docs",
+            "technical",
+            "typed-action-and-effect-execution.md"));
+
+        Assert.Contains("whose ID differs from the requested ID", mechanics, StringComparison.Ordinal);
+        Assert.Contains("pending action", mechanics, StringComparison.Ordinal);
+        Assert.Contains("### Enforce Repository Identity", developer, StringComparison.Ordinal);
+        Assert.Contains("EquipmentDefinitionMismatch", developer, StringComparison.Ordinal);
+        Assert.Contains("ItemDefinitionMismatch", developer, StringComparison.Ordinal);
+        Assert.Contains("same assessment may be retried", developer, StringComparison.Ordinal);
+        Assert.Contains("before copying grants", technical, StringComparison.Ordinal);
+        Assert.Contains("cannot produce any resolved offer authority", technical, StringComparison.Ordinal);
+        Assert.Contains("does not become an `ExecutionFailed` gameplay result", technical, StringComparison.Ordinal);
+        Assert.Contains("restores the token before unwinding", actionDeveloper, StringComparison.Ordinal);
+        Assert.Contains("atomically restores", actionTechnical, StringComparison.Ordinal);
+        Assert.True(Enum.IsDefined(RuntimeEquipmentProfileDiagnosticCode.EquipmentDefinitionMismatch));
+        Assert.True(Enum.IsDefined(RuntimeShopOfferResolutionCode.ItemDefinitionMismatch));
+        Assert.True(Enum.IsDefined(RuntimeShopOfferResolutionCode.EquipmentDefinitionMismatch));
+
+        using JsonDocument capabilities = JsonDocument.Parse(File.ReadAllText(RepositoryPath(
+            "tests",
+            "Convergence.Framework.Tests",
+            "Fixtures",
+            "framework-capability-matrix.json")));
+        JsonElement capability = capabilities.RootElement
+            .GetProperty("capabilities")
+            .EnumerateArray()
+            .Single(entry => entry.GetProperty("id").GetString() == "inventory_equipment_economy");
+        Assert.Equal("partial", capability.GetProperty("implementationState").GetString());
+        Assert.Contains(
+            "O7-R20",
+            Assert.Single(capability.GetProperty("knownGaps").EnumerateArray()).GetString(),
+            StringComparison.Ordinal);
+
+        using JsonDocument coverage = JsonDocument.Parse(File.ReadAllText(RepositoryPath(
+            "tests",
+            "Convergence.Framework.Tests",
+            "Fixtures",
+            "documentation-coverage-matrix.json")));
+        JsonElement documentation = coverage.RootElement
+            .GetProperty("capabilities")
+            .EnumerateArray()
+            .Single(entry => entry.GetProperty("id").GetString() == "inventory_equipment_economy");
+        Assert.All(
+            new[] { "mechanics", "developerGuide", "technical" },
+            audience => Assert.Equal(
+                "existing_unreviewed",
+                documentation.GetProperty(audience).GetProperty("state").GetString()));
+    }
+
+    [Fact]
     public void ChargeGuidance_UsesParticipationReceiptsAndExplicitOptionalComposition()
     {
         string mechanics = File.ReadAllText(

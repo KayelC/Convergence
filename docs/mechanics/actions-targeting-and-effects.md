@@ -15,7 +15,10 @@ Convergence separates choosing an action from resolving it:
 4. the Framework executes that exact, single-use assessment.
 
 A rejected assessment consumes no resource, inventory item, actor state, or
-turn. Cancelling before execution has the same no-mutation result.
+turn. Cancelling before execution or while live equipment-backed authorization
+is being checked has the same no-mutation result. A cancellation during the
+final authorization check keeps the pending assessment available for a
+deliberate retry.
 
 ## Which Actions An Actor May Use
 

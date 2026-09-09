@@ -265,17 +265,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "The post-R15 source audit reopened certification for three reachable extension-boundary defects; the owner-approved player rules remain the intended contract pending O7-R16 through O7-R20."
+        "reason": "O7-R16 through O7-R18 correct the post-R15 extension-boundary defects and O7-R19 reconciles the player rules; independent O7-R20 certification remains pending."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
-        "reason": "The post-R15 audit found repository-identity and authorization-cancellation gaps that require correction and integration re-review."
+        "reason": "The guide documents the corrected repository-identity and authorization-cancellation boundaries from O7-R16 through O7-R19; independent O7-R20 certification remains pending."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
-        "reason": "The post-R15 audit found three reachable authority-boundary defects; technical certification remains open through O7-R20."
+        "reason": "The reference documents the corrected repository-identity and authorization-cancellation boundaries from O7-R16 through O7-R19; independent O7-R20 certification remains pending."
       }
     },
     {

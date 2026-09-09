@@ -65,8 +65,10 @@ reopened the capability after tracing three realistic public-extension paths:
 substituted equipment definitions can enter live profiles, substituted item
 definitions can supply shop stack limits, and equipment-backed action
 authorization can normalize cancellation as gameplay failure. O7-R16 through
-O7-R20 govern the isolated corrections, documentation reconciliation, and fresh
-closure review.
+O7-R18 correct those three boundaries, and O7-R19 reconciles their active
+documentation. The capability remains `partial` until O7-R20 independently
+rechecks the corrected source and documentation and completes the retained
+release gate.
 
 `encounter_orchestration` is `complete`. Its scheduler, lifecycle,
 turn-economy, event, cancellation, and automated execution foundations remain
