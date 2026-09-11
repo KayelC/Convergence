@@ -52,8 +52,11 @@ The later
 found three reachable extension-boundary defects. All three Order 7 audience
 entries returned to `existing_unreviewed`. O7-R16 through O7-R18 correct those
 defects and O7-R19 reconciles the three audience pages; the entries remain
-`existing_unreviewed` until O7-R20 independently rechecks the implementation and
-documentation.
+`existing_unreviewed`. The
+[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+found one further exact skill-identity defect. O7-R21 corrects it and O7-R22
+reconciles the three audience pages; the entries remain `existing_unreviewed`
+until O7-R23 independently rechecks the implementation and documentation.
 O3-R7 independently verified the source and audience documents at that
 revision. A later source-first recheck reopened the developer and technical
 entries while three command-boundary defects were corrected. O3-R8 through

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Convergence.Content;
+using Convergence.Encounters;
 using Convergence.Runtime;
 using Xunit;
 
@@ -67,7 +68,7 @@ public sealed class DocumentationContractSynchronizationTests
     }
 
     [Fact]
-    public void Order7R19_GuidancePinsCorrectedAuthorityAndPendingCertification()
+    public void Order7R22_GuidancePinsCorrectedAuthorityAndPendingCertification()
     {
         string mechanics = File.ReadAllText(RepositoryPath(
             "docs",
@@ -95,8 +96,12 @@ public sealed class DocumentationContractSynchronizationTests
         Assert.Contains("### Enforce Repository Identity", developer, StringComparison.Ordinal);
         Assert.Contains("EquipmentDefinitionMismatch", developer, StringComparison.Ordinal);
         Assert.Contains("ItemDefinitionMismatch", developer, StringComparison.Ordinal);
+        Assert.Contains("ISkillDefinitionRepository", developer, StringComparison.Ordinal);
+        Assert.Contains("SkillDefinitionMismatch", developer, StringComparison.Ordinal);
         Assert.Contains("same assessment may be retried", developer, StringComparison.Ordinal);
         Assert.Contains("before copying grants", technical, StringComparison.Ordinal);
+        Assert.Contains("every actor projection", technical, StringComparison.Ordinal);
+        Assert.Contains("prevents aggregate restore from exposing a partial session", technical, StringComparison.Ordinal);
         Assert.Contains("cannot produce any resolved offer authority", technical, StringComparison.Ordinal);
         Assert.Contains("does not become an `ExecutionFailed` gameplay result", technical, StringComparison.Ordinal);
         Assert.Contains("restores the token before unwinding", actionDeveloper, StringComparison.Ordinal);
@@ -104,6 +109,8 @@ public sealed class DocumentationContractSynchronizationTests
         Assert.True(Enum.IsDefined(RuntimeEquipmentProfileDiagnosticCode.EquipmentDefinitionMismatch));
         Assert.True(Enum.IsDefined(RuntimeShopOfferResolutionCode.ItemDefinitionMismatch));
         Assert.True(Enum.IsDefined(RuntimeShopOfferResolutionCode.EquipmentDefinitionMismatch));
+        Assert.True(Enum.IsDefined(CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch));
+        Assert.True(Enum.IsDefined(RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch));
 
         using JsonDocument capabilities = JsonDocument.Parse(File.ReadAllText(RepositoryPath(
             "tests",
@@ -116,7 +123,7 @@ public sealed class DocumentationContractSynchronizationTests
             .Single(entry => entry.GetProperty("id").GetString() == "inventory_equipment_economy");
         Assert.Equal("partial", capability.GetProperty("implementationState").GetString());
         Assert.Contains(
-            "O7-R20",
+            "O7-R23",
             Assert.Single(capability.GetProperty("knownGaps").EnumerateArray()).GetString(),
             StringComparison.Ordinal);
 

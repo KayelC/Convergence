@@ -66,9 +66,12 @@ substituted equipment definitions can enter live profiles, substituted item
 definitions can supply shop stack limits, and equipment-backed action
 authorization can normalize cancellation as gameplay failure. O7-R16 through
 O7-R18 correct those three boundaries, and O7-R19 reconciles their active
-documentation. The capability remains `partial` until O7-R20 independently
-rechecks the corrected source and documentation and completes the retained
-release gate.
+documentation. The
+[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+then found an exact skill-identity gap in actor composition and restore. O7-R21
+corrects that boundary and O7-R22 reconciles its documentation. The capability
+remains `partial` until O7-R23 independently rechecks the corrected source and
+documentation and completes the retained release gate.
 
 `encounter_orchestration` is `complete`. Its scheduler, lifecycle,
 turn-economy, event, cancellation, and automated execution foundations remain

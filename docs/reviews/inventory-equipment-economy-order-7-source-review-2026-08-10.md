@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R20 complete; O7-R21 through O7-R23 pending correction and closure
+**Implementation status:** O7-R1 through O7-R22 complete; O7-R23 pending independent closure
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -56,13 +56,15 @@
 > O7-R15 remains historical evidence for its reviewed revision, not current
 > closure authority. O7-R16 through O7-R18 now correct the three runtime
 > boundaries, and O7-R19 reconciles active documentation without prematurely
-> restoring certification. O7-R20 remains open.
+> restoring certification. O7-R20's result is recorded below.
 
 > **O7-R20 independent closure audit:** The fresh
 > [R20 audit](inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
 > confirmed O7-R16 through O7-R19, then found one additional reachable skill
 > repository-identity defect in equipment-granted passive composition and
-> aggregate restore. Order 7 remains open under O7-R21 through O7-R23.
+> aggregate restore. O7-R21 now enforces exact actor skill identity and O7-R22
+> reconciles the active documentation and tracking. Order 7 remains open for
+> O7-R23 independent closure.
 
 ## Purpose
 
@@ -1911,4 +1913,50 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
   audience entries remain `existing_unreviewed`.
 - **Baseline tests:** 1,855 Framework, 184 DemoHost, and 7 ContentValidator
   tests passed: 2,046 total, 0 failed, 0 skipped.
+- **Versions:** runtime save v19 and content schema v10 remain unchanged.
+
+### O7-R21: Enforce Actor Skill Definition Identity
+
+- **Baseline:** `cb48612b`.
+- **Commit:** `57d0d101` (`runtime: enforce actor skill definition identity`).
+- **Actual destination:** `CatalogBattleActorFactory`, `CatalogBattleActor`,
+  `RuntimeActorCombatProfileCompositionService`, their public diagnostic enums,
+  the public API baseline, and focused catalog/composition/equipment/restore
+  tests.
+- **Correction:** every successful skill lookup used by actor construction,
+  restore, skill views, or combat-profile composition must return the exact
+  requested `SkillDefinition.Id`. A mismatch returns a distinct typed
+  `SkillDefinitionMismatch` before the returned definition can become an
+  action, passive, or restored actor authority.
+- **Atomicity:** direct composition and equipment application preserve the live
+  actor on rejection; aggregate restore exposes no session or partial actor.
+- **Focused tests:** 6 adversarial exact-skill-identity cases passed: 6 total,
+  0 failed, 0 skipped.
+- **Full suite:** 1,861 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 2,052 total, 0 failed, 0 skipped.
+- **Strict build and format:** Framework and solution Release builds completed
+  with 0 warnings and 0 errors; `dotnet format --verify-no-changes` formatted 0
+  files, and `git diff --check` passed.
+- **Versions:** runtime save v19 and content schema v10 remain unchanged.
+
+### O7-R22: Reconcile Skill Identity Documentation And Tracking
+
+- **Baseline:** `57d0d101`; this documentation/test commit records the final
+  hash.
+- **Actual destination:** all three Order 7 audience documents; their audience
+  indexes; active gameplay, product, capability, documentation, and coverage
+  roadmaps; executable capability/documentation matrices; the O7-R20 audit;
+  and documentation synchronization tests.
+- **Documentation correction:** player, developer, and technical audiences now
+  state that actor creation, composition, skill views, and restore require the
+  exact requested skill definition before it may enter action or passive state.
+- **Tracking discipline:** `inventory_equipment_economy` deliberately remains
+  `partial`, all three audience entries remain `existing_unreviewed`, and O7-R23
+  remains the sole certification gap. R22 does not promote its own prose.
+- **Scope:** documentation, fixtures, and documentation-contract tests only. No
+  runtime, save, schema, content, host, or gameplay behavior changed.
+- **Focused tests:** 17 documentation synchronization and foundation cases
+  passed: 17 total, 0 failed, 0 skipped.
+- **Full suite:** 1,861 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 2,052 total, 0 failed, 0 skipped.
 - **Versions:** runtime save v19 and content schema v10 remain unchanged.

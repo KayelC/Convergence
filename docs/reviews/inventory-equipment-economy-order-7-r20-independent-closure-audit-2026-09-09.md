@@ -209,3 +209,12 @@ skill repository returning the wrong definition ID for an equipment grant.
 
 **Order 7 is not ready for formal closure at `aaacbd97`.** O7-R16 through
 O7-R19 are healthy, but O7-M4 must be corrected and independently rechecked.
+
+## Correction Status
+
+O7-R21 is implemented by `57d0d101`: exact skill identity is now enforced in
+actor construction, restore, skill views, and combat-profile composition, with
+typed diagnostics and atomic rejection evidence. O7-R22 reconciles the three
+audience documents and executable tracking with that correction. Order 7 still
+remains `partial` / `existing_unreviewed` until O7-R23 performs a new
+source-first closure review and retains the complete release gate.

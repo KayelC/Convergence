@@ -191,8 +191,11 @@ evidence for its reviewed revision. The later
 [post-R15 independent audit](reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
 found three bounded custom-extension defects in definition identity and
 cancellation propagation. O7-R16 through O7-R18 correct those boundaries and
-O7-R19 reconciles the active guidance. O7-R20 remains the independent closure
-and retained-release-gate checkpoint.
+O7-R19 reconciles the active guidance. The
+[O7-R20 independent audit](reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+found one further exact skill-identity defect. O7-R21 corrects it and O7-R22
+reconciles the active guidance. O7-R23 remains the independent closure and
+retained-release-gate checkpoint.
 
 ## Navigation, Traversal, And Encounter Preparation
 

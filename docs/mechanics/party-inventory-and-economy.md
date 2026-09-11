@@ -4,8 +4,11 @@
 > [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
 > found three reachable extension-boundary defects at `ef4e129e`. O7-R16 through
 > O7-R18 correct those boundaries, and O7-R19 reconciles this page with the
-> corrected behavior. Certification remains open until O7-R20 independently
-> reviews the implementation and documentation.
+> corrected behavior. The
+> [O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+> then found one exact skill-definition identity defect. O7-R21 corrects that
+> boundary, and O7-R22 reconciles this page. Certification remains open until
+> O7-R23 independently reviews the implementation and documentation.
 
 ## What This System Means To A Player
 
@@ -19,6 +22,11 @@ Game-supplied catalogs cannot replace requested content with another definition
 that merely looks usable. If equipment or a shop lookup returns a definition
 whose ID differs from the requested ID, the operation rejects before that
 definition can provide stack limits, slots, skills, attacks, or stat values.
+The same exact-ID rule applies when actor creation, combat-profile composition,
+or restore resolves a skill. If equipment grants one skill but a custom
+repository returns another, the operation rejects before the substituted skill
+can become available or enter passive state. The live actor remains unchanged,
+and aggregate restore exposes no partial session.
 
 The framework fixes ownership and transaction safety. Each game chooses its
 slot layout, currencies, pricing rules, stock behavior, recovery rules, menu

@@ -11,8 +11,11 @@ policy-owned stock, recovery, persistence, and Godot integration.
 > [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
 > found three reachable extension-boundary defects at `ef4e129e`. O7-R16 through
 > O7-R18 correct those boundaries, and O7-R19 reconciles this guide with the
-> corrected behavior. Certification remains open until O7-R20 independently
-> reviews the implementation and documentation.
+> corrected behavior. The
+> [O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+> then found one exact skill-definition identity defect. O7-R21 corrects that
+> boundary, and O7-R22 reconciles this guide. Certification remains open until
+> O7-R23 independently reviews the implementation and documentation.
 
 ## Authority Split
 
@@ -122,20 +125,30 @@ standard layout.
 ### Enforce Repository Identity
 
 A successful definition lookup must return the requested identity. Custom
-`IEquipmentDefinitionRepository` and `IItemDefinitionRepository`
-implementations must not return a different definition while reporting success.
-Convergence enforces this contract at the two Order 7 projection boundaries:
+`IEquipmentDefinitionRepository`, `IItemDefinitionRepository`, and
+`ISkillDefinitionRepository` implementations must not return a different
+definition while reporting success. Convergence enforces this contract before
+returned content can become runtime authority:
 
 - `RuntimeEquipmentProfileResolver` returns
   `EquipmentDefinitionMismatch` before it reads the returned definition's slot,
   grants, basic attack, or combat contributions; and
 - `RuntimeShopOfferResolver` returns `ItemDefinitionMismatch` or
   `EquipmentDefinitionMismatch` before it reads an item stack limit or validates
-  an equipment slot/profile.
+  an equipment slot/profile;
+- `CatalogBattleActorFactory` returns `SkillDefinitionMismatch` before actor
+  creation or restore can expose a substituted learned, equipped, pending, or
+  equipment-granted skill; and
+- `RuntimeActorCombatProfileCompositionService` returns
+  `SkillDefinitionMismatch` before a substituted learned, equipped, or
+  equipment-granted skill can mutate the live actor.
 
 Treat these as content-authority diagnostics. Do not display or execute a
 partially resolved profile or offer, and do not retry against a fallback
-repository.
+repository. A rejected composition leaves the actor unchanged. A rejected
+aggregate restore exposes no session. `CatalogBattleActor` also checks exact
+identity when its skill views call `GetRequiredSkill`, so a contradictory custom
+repository cannot substitute content after construction.
 
 Equipment-backed battle authorization uses this same live profile during
 assessment and immediately before execution. If profile resolution throws

@@ -801,6 +801,12 @@ public sealed class DocumentationFoundationTests
                 "reviews",
                 "inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md"))
             .ReplaceLineEndings(" ");
+        string r20Audit = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md"))
+            .ReplaceLineEndings(" ");
         string sourceReview = File.ReadAllText(
             RepositoryPath(
                 "docs",
@@ -863,8 +869,9 @@ public sealed class DocumentationFoundationTests
             "**Review state:** `existing_unreviewed`.",
             "post-R15 independent audit",
             "three reachable extension-boundary defects at `ef4e129e`",
-            "O7-R18 correct those boundaries",
-            "Certification remains open until O7-R20 independently"
+            "O7-R20 independent audit",
+            "O7-R21 corrects that boundary",
+            "Certification remains open until O7-R23 independently"
         ];
         Assert.All(reviewStateTokens, token =>
         {
@@ -881,6 +888,8 @@ public sealed class DocumentationFoundationTests
             "inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md";
         const string freshAuditLink =
             "inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md";
+        const string r20AuditLink =
+            "inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md";
         string[] currentSummaryDocuments =
         [
             mechanicsIndex,
@@ -892,6 +901,7 @@ public sealed class DocumentationFoundationTests
         {
             Assert.Contains(closureReviewLink, document, StringComparison.Ordinal);
             Assert.Contains(freshAuditLink, document, StringComparison.Ordinal);
+            Assert.Contains(r20AuditLink, document, StringComparison.Ordinal);
             Assert.DoesNotContain("O7-R11 remains", document, StringComparison.Ordinal);
         });
 
@@ -911,7 +921,7 @@ public sealed class DocumentationFoundationTests
             candidate => candidate.Id == "inventory_equipment_economy");
         Assert.Equal("partial", capability.ImplementationState);
         Assert.Single(capability.KnownGaps);
-        Assert.Contains("O7-R20", capability.KnownGaps[0], StringComparison.Ordinal);
+        Assert.Contains("O7-R23", capability.KnownGaps[0], StringComparison.Ordinal);
 
         Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O7-R15", currentAudit, StringComparison.Ordinal);
@@ -923,6 +933,9 @@ public sealed class DocumentationFoundationTests
         Assert.Contains("### O7-R17: Enforce Shop Content Definition Identity", sourceReview, StringComparison.Ordinal);
         Assert.Contains("### O7-R18: Preserve Authorization Cancellation", sourceReview, StringComparison.Ordinal);
         Assert.Contains("### O7-R19: Reconcile Active Documentation And Tracking", sourceReview, StringComparison.Ordinal);
+        Assert.Contains("### O7-R20: Fresh Independent Closure Audit", sourceReview, StringComparison.Ordinal);
+        Assert.Contains("### O7-R21: Enforce Actor Skill Definition Identity", sourceReview, StringComparison.Ordinal);
+        Assert.Contains("### O7-R22: Reconcile Skill Identity Documentation And Tracking", sourceReview, StringComparison.Ordinal);
         Assert.Contains("save v19", currentAudit, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("content schema v10", currentAudit, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("returns to `complete`", currentAudit, StringComparison.Ordinal);
@@ -954,6 +967,19 @@ public sealed class DocumentationFoundationTests
         Assert.All(
             freshAuditTokens,
             token => Assert.Contains(token, freshAudit, StringComparison.Ordinal));
+
+        string[] r20AuditTokens =
+        [
+            "**Reviewed implementation:** `aaacbd97`",
+            "### O7-M4: Equipment-Granted Skill Resolution Accepts A Substituted Definition",
+            "### O7-R21: Enforce Actor Skill Definition Identity",
+            "### O7-R23: Fresh Independent Closure And Release Gate",
+            "O7-R21 is implemented by `57d0d101`",
+            "Order 7 still remains `partial` / `existing_unreviewed`"
+        ];
+        Assert.All(
+            r20AuditTokens,
+            token => Assert.Contains(token, r20Audit, StringComparison.Ordinal));
     }
 
     [Fact]

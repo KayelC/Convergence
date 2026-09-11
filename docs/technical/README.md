@@ -100,7 +100,10 @@ is historical closure evidence for that revision. The later
 [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
 reopened the reference as `existing_unreviewed`. O7-R16 through O7-R18 correct
 the repository-identity and authorization-cancellation boundaries, O7-R19
-reconciles the reference, and O7-R20 remains the independent closure checkpoint.
+reconciles the reference, and the
+[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+found one further skill-identity defect. O7-R21 corrects that defect, O7-R22
+reconciles this reference, and O7-R23 remains the independent closure checkpoint.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

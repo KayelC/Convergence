@@ -265,17 +265,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "O7-R16 through O7-R18 correct the post-R15 extension-boundary defects and O7-R19 reconciles the player rules; independent O7-R20 certification remains pending."
+        "reason": "O7-R21 corrects the exact actor skill-identity defect found by O7-R20 and O7-R22 reconciles the player rules; independent O7-R23 certification remains pending."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
-        "reason": "The guide documents the corrected repository-identity and authorization-cancellation boundaries from O7-R16 through O7-R19; independent O7-R20 certification remains pending."
+        "reason": "The guide documents the corrected repository-identity, skill-identity, and authorization-cancellation boundaries through O7-R22; independent O7-R23 certification remains pending."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
-        "reason": "The reference documents the corrected repository-identity and authorization-cancellation boundaries from O7-R16 through O7-R19; independent O7-R20 certification remains pending."
+        "reason": "The reference documents the corrected repository-identity, skill-identity, and authorization-cancellation boundaries through O7-R22; independent O7-R23 certification remains pending."
       }
     },
     {

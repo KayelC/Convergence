@@ -13,8 +13,11 @@ serialization, or game-specific currency names.
 > [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
 > found three reachable extension-boundary defects at `ef4e129e`. O7-R16 through
 > O7-R18 correct those boundaries, and O7-R19 reconciles this reference with the
-> corrected behavior. Certification remains open until O7-R20 independently
-> reviews the implementation and documentation.
+> corrected behavior. The
+> [O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+> then found one exact skill-definition identity defect. O7-R21 corrects that
+> boundary, and O7-R22 reconciles this reference. Certification remains open
+> until O7-R23 independently reviews the implementation and documentation.
 
 ## Authority Map
 
@@ -126,6 +129,17 @@ or any stat contribution. Consequently, actor application, battle
 authorization, and aggregate restoration all inherit the same rejection from
 the shared profile resolver.
 
+Skill definition identity is checked independently at every actor projection
+boundary. `CatalogBattleActorFactory` compares each returned
+`SkillDefinition.Id` with the requested learned, equipped, pending, or
+equipment-granted skill ID before actor creation or restore. A mismatch returns
+`SkillDefinitionMismatch` and no actor. The combat-profile composition service
+performs the same check before it stages learned, equipped, or granted skills;
+a mismatch returns its own typed `SkillDefinitionMismatch`, preserves the live
+actor, and prevents aggregate restore from exposing a partial session.
+`CatalogBattleActor` skill views also reject a contradictory
+`GetRequiredSkill` result whose ID differs from the requested ID.
+
 The equip transition cannot validate a definition profile because its public
 request deliberately contains no catalog repository. A host must not treat an
 accepted assignment as a substitute for resolving the resulting equipment
@@ -208,7 +222,9 @@ input.
 Granted skill IDs remain outside learned and move-list state. Active action
 authorization and passive collection use the current profile. Execution-time
 authorization resolves it again, closing a stale assessment window after
-unequip.
+unequip. Every grant resolution must return the exact requested skill ID before
+the returned definition can enter active or passive state; repository success
+alone is not authority.
 
 `RuntimeActorEquipmentProfileSource` captures an immutable inventory snapshot.
 A host that adopts a new inventory must replace the source; mutating a stale

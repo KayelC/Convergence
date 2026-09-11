@@ -64,8 +64,10 @@ stock, atomic transactions, recovery, and save v19. The
 is historical closure evidence for that revision. The later
 [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
 reopened this page as `existing_unreviewed`. O7-R16 through O7-R18 correct its
-three extension-boundary defects and O7-R19 reconciles the player rules; O7-R20
-remains the fresh independent closure checkpoint.
+three extension-boundary defects and O7-R19 reconciles the player rules. The
+[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+found one further skill-identity defect; O7-R21 corrects it and O7-R22 reconciles
+the player rules. O7-R23 remains the fresh independent closure checkpoint.
 
 ## Rule Index
 

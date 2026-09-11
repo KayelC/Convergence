@@ -186,7 +186,7 @@
       "hostNeutral": true,
       "optionalModule": true,
       "knownGaps": [
-        "O7-R16 through O7-R19 correct and document the post-R15 repository-identity and authorization-cancellation defects; O7-R20 independent source and documentation review plus the complete retained release gate remain required for certification."
+        "O7-R16 through O7-R19 correct and document the post-R15 defects, while O7-R21 corrects the exact actor skill-identity defect found by O7-R20 and O7-R22 reconciles its documentation; O7-R23 independent source and documentation review plus the complete retained release gate remain required for certification."
       ]
     },
     {

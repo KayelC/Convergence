@@ -54,8 +54,12 @@ three bounded public-extension defects in equipment-definition identity,
 shop-content definition identity, and authorization cancellation propagation.
 The standard catalog path remains healthy, but Order 7 is `partial` while
 O7-R16 through O7-R18 correct those boundaries and O7-R19 reconciles the active
-documentation. O7-R20's independent source/documentation review and retained
-release gate remain required before certification returns to `complete`.
+documentation. The
+[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+then found an exact skill-identity gap in actor composition and restore. O7-R21
+corrects that boundary and O7-R22 reconciles the active documentation. O7-R23's
+independent source/documentation review and retained release gate remain
+required before certification returns to `complete`.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).

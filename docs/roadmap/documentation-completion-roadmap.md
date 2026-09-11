@@ -687,12 +687,16 @@ The later
 [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
 found three reachable public-extension defects that invalidate the current
 certification state without changing the owner-approved target rules. Order 7
-is reopened for O7-R16 through O7-R20. O7-R16 through O7-R18 correct the three
+was reopened for O7-R16 through O7-R20. O7-R16 through O7-R18 correct the three
 runtime boundaries, and O7-R19 reconciles the active audience text and tracking.
-Its mechanics, developer, and technical entries remain `existing_unreviewed`
-until O7-R20 independently certifies them; the executable documentation matrix
-therefore continues to record 30 `reviewed`, 25 `existing_unreviewed`, 13
-`missing`, and 7 `not_applicable` entries.
+The
+[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
+then found one further exact skill-identity defect. O7-R21 corrects that runtime
+boundary and O7-R22 reconciles the audience text and tracking. Its mechanics,
+developer, and technical entries remain `existing_unreviewed` until O7-R23
+independently certifies them; the executable documentation matrix therefore
+continues to record 30 `reviewed`, 25 `existing_unreviewed`, 13 `missing`, and
+7 `not_applicable` entries.
 
 ## Deferred Documentation
 
