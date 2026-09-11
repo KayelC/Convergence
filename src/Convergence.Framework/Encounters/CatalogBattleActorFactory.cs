@@ -163,6 +163,7 @@ public enum CatalogBattleActorDiagnosticCode
     SnapshotPendingSkillUnlockMismatch,
     SnapshotPendingSkillLevelUnavailable,
     SnapshotCombatProfileIdentityMismatch,
+    SkillDefinitionMismatch,
 }
 
 public sealed record CatalogBattleActorDiagnostic(
@@ -189,7 +190,7 @@ public sealed class CatalogBattleActor
     public EntityDefinition Entity { get; }
     public RuntimeActorState State { get; }
     public IReadOnlyList<SkillDefinition> SkillLoadout => Array.AsReadOnly(
-        State.Skills.EquippedSkillIds.Select(_skills.GetRequiredSkill).ToArray());
+        State.Skills.EquippedSkillIds.Select(GetRequiredExactSkill).ToArray());
     public IReadOnlyList<SkillDefinition> ActiveSkills => Array.AsReadOnly(
         SkillLoadout.Where(skill => skill.Activation == SkillActivation.Active).ToArray());
 
@@ -202,7 +203,7 @@ public sealed class CatalogBattleActor
             State.Skills.EquippedSkillIds
                 .Concat(profile.GrantedSkillIds)
                 .Distinct()
-                .Select(_skills.GetRequiredSkill)
+                .Select(GetRequiredExactSkill)
                 .ToArray());
     }
 
@@ -223,6 +224,20 @@ public sealed class CatalogBattleActor
             (equipmentProfiles ?? NoRuntimeActorEquipmentProfileSource.Instance)
                 .Resolve(State)
                 .GrantedSkillIds);
+
+    private SkillDefinition GetRequiredExactSkill(ContentId skillId)
+    {
+        SkillDefinition skill = _skills.GetRequiredSkill(skillId) ??
+            throw new InvalidOperationException(
+                $"Skill repository returned no definition for required skill '{skillId}'.");
+        if (skill.Id != skillId)
+        {
+            throw new InvalidOperationException(
+                $"Skill repository returned '{skill.Id}' for required skill '{skillId}'.");
+        }
+
+        return skill;
+    }
 }
 
 public sealed class CatalogBattleActorCreationResult
@@ -389,17 +404,26 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
         var resolvedSkills = new Dictionary<ContentId, SkillDefinition>();
         foreach (ContentId skillId in orderedSkillIds)
         {
-            if (_skills.TryGetSkill(skillId, out SkillDefinition? skill) && skill is not null)
-            {
-                resolvedSkills.Add(skillId, skill);
-            }
-            else
+            if (!_skills.TryGetSkill(skillId, out SkillDefinition? skill) || skill is null)
             {
                 diagnostics.Add(new CatalogBattleActorDiagnostic(
                     CatalogBattleActorDiagnosticCode.SkillMissing,
                     $"Entity '{entity.Id}' references missing skill '{skillId}'.",
                     entity.Id,
                     skillId));
+            }
+            else if (skill.Id != skillId)
+            {
+                diagnostics.Add(new CatalogBattleActorDiagnostic(
+                    CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch,
+                    $"Entity '{entity.Id}' requested skill '{skillId}', but the repository " +
+                    $"returned '{skill.Id}'.",
+                    entity.Id,
+                    skillId));
+            }
+            else
+            {
+                resolvedSkills.Add(skillId, skill);
             }
         }
 
@@ -561,7 +585,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
             }
 
             SkillDefinition[] equippedDefinitions = unlockPlan.After.EquippedSkillIds
-                .Select(_skills.GetRequiredSkill)
+                .Select(skillId => resolvedSkills[skillId])
                 .ToArray();
             state.ApplySkillState(unlockPlan.After, equippedDefinitions);
 
@@ -634,17 +658,26 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
                 continue;
             }
 
-            if (_skills.TryGetSkill(skillId, out SkillDefinition? skill) && skill is not null)
-            {
-                resolvedSkills.Add(skillId, skill);
-            }
-            else
+            if (!_skills.TryGetSkill(skillId, out SkillDefinition? skill) || skill is null)
             {
                 diagnostics.Add(new CatalogBattleActorDiagnostic(
                     CatalogBattleActorDiagnosticCode.SnapshotSkillMissing,
                     $"Saved actor references missing skill '{skillId}'.",
                     entityId,
                     skillId));
+            }
+            else if (skill.Id != skillId)
+            {
+                diagnostics.Add(new CatalogBattleActorDiagnostic(
+                    CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch,
+                    $"Saved actor requested skill '{skillId}', but the repository returned " +
+                    $"'{skill.Id}'.",
+                    entityId,
+                    skillId));
+            }
+            else
+            {
+                resolvedSkills.Add(skillId, skill);
             }
         }
 

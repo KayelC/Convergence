@@ -353,6 +353,61 @@ public sealed class CatalogBattleRuntimeTests
     }
 
     [Fact]
+    public void Order7R21_ActorFactoryCreateRejectsSubstitutedSkillDefinitionBeforeInitialization()
+    {
+        ContentId requestedSkillId = Id("test.pack:authored_creation_skill");
+        SkillDefinition substitutedSkill = Passive("test.pack:substituted_creation_skill");
+        EntityDefinition entity = Entity("test.pack:creation_actor", [requestedSkillId]);
+        var initialization = new RecordingInitializationPolicy();
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SubstitutingSkillRepository(requestedSkillId, substitutedSkill),
+            initialization);
+
+        CatalogBattleActorCreationResult result = factory.Create(
+            new CatalogBattleActorCreationRequest(
+                entity.Id,
+                RuntimeInstanceId.Parse("creation-actor"),
+                PlayerTeam,
+                1,
+                IsDeployed: true,
+                Id("test_host")));
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Actor);
+        CatalogBattleActorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch, diagnostic.Code);
+        Assert.Equal(requestedSkillId, diagnostic.SkillId);
+        Assert.Equal(0, initialization.CallCount);
+    }
+
+    [Fact]
+    public void Order7R21_ActorSkillViewsRejectSubstitutionFromRequiredLookup()
+    {
+        SkillDefinition authoredSkill = Active("test.pack:authored_view_skill", DamageElement.Ice);
+        SkillDefinition substitutedSkill = Active("test.pack:substituted_view_skill", DamageElement.Fire);
+        EntityDefinition entity = Entity("test.pack:view_actor", [authoredSkill.Id]);
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SplitSkillRepository(authoredSkill, substitutedSkill),
+            new TestInitializationPolicy());
+        CatalogBattleActor actor = factory.Create(new CatalogBattleActorCreationRequest(
+            entity.Id,
+            RuntimeInstanceId.Parse("view-actor"),
+            PlayerTeam,
+            1,
+            IsDeployed: true,
+            Id("test_host"))).RequireActor();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => actor.SkillLoadout);
+
+        Assert.Contains(authoredSkill.Id.ToString(), exception.Message, StringComparison.Ordinal);
+        Assert.Contains(substitutedSkill.Id.ToString(), exception.Message, StringComparison.Ordinal);
+        Assert.Equal([authoredSkill.Id], actor.State.Skills.EquippedSkillIds);
+    }
+
+    [Fact]
     public void ActorFactory_RejectsDefaultIdentifiersBeforeRepositoryOrInitializationAccess()
     {
         EntityDefinition entity = Entity("test.pack:entity", []);
@@ -534,6 +589,35 @@ public sealed class CatalogBattleRuntimeTests
         Assert.True(state.IsGuarding);
         Assert.Equal(2, state.StatStages[Id("attack")].Stage);
         Assert.IsType<BattleDurationDefinition>(state.AffinityOverrides[DamageElement.Ice].Duration);
+    }
+
+    [Fact]
+    public void Order7R21_ActorFactoryRestoreRejectsSubstitutedEquipmentGrantedSkill()
+    {
+        ContentId requestedSkillId = Id("test.pack:authored_restore_grant");
+        SkillDefinition substitutedSkill = Passive("test.pack:substituted_restore_grant");
+        EntityDefinition entity = Entity("test.pack:restore_actor", []);
+        RuntimeActorSnapshot snapshot = RestorableActorSnapshot(
+            "restore-actor",
+            entity,
+            CoreStats(5m));
+        var factory = new CatalogBattleActorFactory(
+            new EntityRepository(entity),
+            new SubstitutingSkillRepository(requestedSkillId, substitutedSkill),
+            new ThrowingInitializationPolicy());
+
+        CatalogBattleActorCreationResult result = factory.Restore(
+            new CatalogBattleActorRestoreRequest(
+                snapshot,
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                equipmentGrantedSkillIds: [requestedSkillId]));
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Actor);
+        CatalogBattleActorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch, diagnostic.Code);
+        Assert.Equal(requestedSkillId, diagnostic.SkillId);
     }
 
     [Fact]
@@ -3347,6 +3431,22 @@ public sealed class CatalogBattleRuntimeTests
         availability: new SkillAvailabilityDefinition([Battle]),
         costs: costs);
 
+    private static SkillDefinition Passive(string id) => new(
+        Id(id),
+        id,
+        id,
+        SkillActivation.Passive,
+        null,
+        InheritanceGroup.Passive,
+        new SkillInheritanceDefinition(true),
+        modifiers:
+        [
+            new NumericRuleModifierDefinition(
+                NumericRuleModifierType.DamageDealt,
+                ModifierOperation.Add,
+                1m)
+        ]);
+
     private static SkillDefinition TimedModifierSkill(string id) => new(
         Id(id),
         id,
@@ -3618,6 +3718,36 @@ public sealed class CatalogBattleRuntimeTests
             new ReadOnlyDictionary<ContentId, SkillDefinition>(skills.ToDictionary(skill => skill.Id));
         public bool TryGetSkill(ContentId id, out SkillDefinition? definition) => _skills.TryGetValue(id, out definition);
         public SkillDefinition GetRequiredSkill(ContentId id) => _skills[id];
+    }
+
+    private sealed class SubstitutingSkillRepository(
+        ContentId requestedId,
+        SkillDefinition substitutedDefinition) : ISkillDefinitionRepository
+    {
+        public bool TryGetSkill(ContentId id, out SkillDefinition? definition)
+        {
+            definition = id == requestedId ? substitutedDefinition : null;
+            return definition is not null;
+        }
+
+        public SkillDefinition GetRequiredSkill(ContentId id) => id == requestedId
+            ? substitutedDefinition
+            : throw new KeyNotFoundException(id.ToString());
+    }
+
+    private sealed class SplitSkillRepository(
+        SkillDefinition exactDefinition,
+        SkillDefinition substitutedRequiredDefinition) : ISkillDefinitionRepository
+    {
+        public bool TryGetSkill(ContentId id, out SkillDefinition? definition)
+        {
+            definition = id == exactDefinition.Id ? exactDefinition : null;
+            return definition is not null;
+        }
+
+        public SkillDefinition GetRequiredSkill(ContentId id) => id == exactDefinition.Id
+            ? substitutedRequiredDefinition
+            : throw new KeyNotFoundException(id.ToString());
     }
 
     private sealed class EquipmentRepository(params EquipmentDefinition[] equipment)

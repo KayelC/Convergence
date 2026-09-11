@@ -24,7 +24,8 @@ public enum RuntimeActorCombatProfileCompositionDiagnosticCode
     InvalidSkillState,
     MissingPartyRoster,
     RosterInvariantViolation,
-    CommitFailed
+    CommitFailed,
+    SkillDefinitionMismatch
 }
 
 public sealed record RuntimeActorCombatProfileCompositionDiagnostic(
@@ -736,6 +737,17 @@ public sealed class RuntimeActorCombatProfileCompositionService :
                     $"'{skillId}'.",
                     skillId: skillId);
             }
+            if (skill.Id != skillId)
+            {
+                return Rejected(
+                    before,
+                    resolvedSource,
+                    sourceActor.InstanceId,
+                    RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch,
+                    $"Combat-profile source '{sourceActor.InstanceId}' requested learned skill " +
+                    $"'{skillId}', but the repository returned '{skill.Id}'.",
+                    skillId: skillId);
+            }
         }
         foreach (ContentId skillId in sourceSkills.EquippedSkillIds)
         {
@@ -749,6 +761,17 @@ public sealed class RuntimeActorCombatProfileCompositionService :
                     RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMissing,
                     $"Combat-profile source '{sourceActor.InstanceId}' references missing equipped skill " +
                     $"'{skillId}'.",
+                    skillId: skillId);
+            }
+            if (skill.Id != skillId)
+            {
+                return Rejected(
+                    before,
+                    resolvedSource,
+                    sourceActor.InstanceId,
+                    RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch,
+                    $"Combat-profile source '{sourceActor.InstanceId}' requested equipped skill " +
+                    $"'{skillId}', but the repository returned '{skill.Id}'.",
                     skillId: skillId);
             }
 
@@ -779,6 +802,17 @@ public sealed class RuntimeActorCombatProfileCompositionService :
                     sourceActor.InstanceId,
                     RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMissing,
                     $"Equipment profile references missing granted skill '{skillId}'.",
+                    skillId: skillId);
+            }
+            if (skill.Id != skillId)
+            {
+                return Rejected(
+                    before,
+                    resolvedSource,
+                    sourceActor.InstanceId,
+                    RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch,
+                    $"Equipment profile requested granted skill '{skillId}', but the repository " +
+                    $"returned '{skill.Id}'.",
                     skillId: skillId);
             }
 

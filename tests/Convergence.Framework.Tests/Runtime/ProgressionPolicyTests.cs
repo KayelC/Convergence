@@ -400,6 +400,101 @@ public sealed class ProgressionPolicyTests
     }
 
     [Fact]
+    public void Order7R21_CompositionRejectsSubstitutedEquipmentGrantedSkillWithoutMutation()
+    {
+        RuntimeActorState actor = CreateActor("substituted_grant_composition_actor", 5m);
+        RuntimeActorSnapshot before = actor.ToSnapshot();
+        ContentId requestedSkillId = ContentId.Parse("test.pack:authored_equipment_passive");
+        SkillDefinition substitutedSkill = PassiveSkill(
+            "test.pack:substituted_equipment_passive",
+            ContentId.Parse("owner_turn_end"),
+            restoreAmount: 99m);
+        var service = new RuntimeActorCombatProfileCompositionService(
+            new SubstitutingSkillRepository(requestedSkillId, substitutedSkill));
+
+        RuntimeActorCombatProfileCompositionResult result = service.Compose(
+            new RuntimeActorCombatProfileCompositionRequest(
+                actor,
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                runtimeActors: [actor],
+                equipmentGrantedSkillIds: [requestedSkillId]));
+
+        Assert.False(result.Applied);
+        RuntimeActorCombatProfileCompositionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch,
+            diagnostic.Code);
+        Assert.Equal(requestedSkillId, diagnostic.SkillId);
+        Assert.DoesNotContain(actor.Passives.Entries, entry => entry.Skill.Id == substitutedSkill.Id);
+        AssertCompositionStateUnchanged(before, actor.ToSnapshot());
+        AssertCompositionStateUnchanged(before, result.Before);
+        AssertCompositionStateUnchanged(before, result.After);
+    }
+
+    [Fact]
+    public void Order7R21_EquipmentApplicationRejectsSubstitutedGrantedSkillWithoutMutation()
+    {
+        RuntimeActorState actor = CreateActor("substituted_grant_application_actor", 5m);
+        RuntimeActorSnapshot before = actor.ToSnapshot();
+        ContentId requestedSkillId = ContentId.Parse("test.pack:authored_armor_passive");
+        SkillDefinition substitutedSkill = PassiveSkill(
+            "test.pack:substituted_armor_passive",
+            ContentId.Parse("owner_turn_end"),
+            restoreAmount: 99m);
+        ContentId armorId = ContentId.Parse("test.pack:granting_armor");
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("granting-armor-001");
+        var armor = new EquipmentDefinition(
+            armorId,
+            "Granting Armor",
+            "References the authored passive ID.",
+            StandardEquipmentSlotIds.Armor,
+            baseValue: 10,
+            grantedSkillIds: [requestedSkillId],
+            armor: new EquipmentArmorProfileDefinition(6, 2));
+        var inventory = new RuntimeInventorySnapshot(
+            ownedEquipmentInstances:
+            [
+                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                    StandardEquipmentSlotIds.Armor,
+                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
+            ]);
+        var candidate = new RuntimeEquipmentSnapshot(
+        [
+            new KeyValuePair<ContentId, RuntimeInstanceId>(
+                StandardEquipmentSlotIds.Armor,
+                armorInstanceId)
+        ]);
+        var application = new RuntimeActorEquipmentApplicationService(
+            new RuntimeActorCombatProfileCompositionService(
+                new SubstitutingSkillRepository(requestedSkillId, substitutedSkill)));
+
+        RuntimeActorEquipmentApplicationResult result = application.Apply(
+            new RuntimeActorEquipmentApplicationRequest(
+                actor,
+                inventory,
+                candidate,
+                new EquipmentRepository(armor),
+                RuntimeStatSourceKind.Actor,
+                MissingHostedEntityBehavior.UseActorBaseStats,
+                [actor]));
+
+        Assert.False(result.Applied);
+        RuntimeActorEquipmentApplicationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected,
+            diagnostic.Code);
+        Assert.Equal(
+            RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch,
+            diagnostic.CompositionCode);
+        Assert.Equal([requestedSkillId], result.EquipmentProfile.GrantedSkillIds);
+        Assert.DoesNotContain(actor.Passives.Entries, entry => entry.Skill.Id == substitutedSkill.Id);
+        AssertCompositionStateUnchanged(before, actor.ToSnapshot());
+        AssertCompositionStateUnchanged(before, result.Before);
+        AssertCompositionStateUnchanged(before, result.After);
+    }
+
+    [Fact]
     public void Order7H1_RawEquipmentReplacementIsNotPublic()
     {
         Assert.Null(typeof(RuntimeActorState).GetMethod("ReplaceEquipment"));
@@ -1580,6 +1675,21 @@ public sealed class ProgressionPolicyTests
             _skills.TryGetValue(id, out definition);
 
         public SkillDefinition GetRequiredSkill(ContentId id) => _skills[id];
+    }
+
+    private sealed class SubstitutingSkillRepository(
+        ContentId requestedId,
+        SkillDefinition substitutedDefinition) : ISkillDefinitionRepository
+    {
+        public bool TryGetSkill(ContentId id, out SkillDefinition? definition)
+        {
+            definition = id == requestedId ? substitutedDefinition : null;
+            return definition is not null;
+        }
+
+        public SkillDefinition GetRequiredSkill(ContentId id) => id == requestedId
+            ? substitutedDefinition
+            : throw new KeyNotFoundException(id.ToString());
     }
 
     private sealed class EquipmentRepository(params EquipmentDefinition[] equipment) :

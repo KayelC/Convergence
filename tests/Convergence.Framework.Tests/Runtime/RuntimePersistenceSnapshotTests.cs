@@ -435,6 +435,95 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void Order7R21_AggregateRestoreRejectsSubstitutedEquipmentGrantedSkillWithoutSession()
+    {
+        ContentId armorId = Id("convergence.catalog_surface_sample:training_coat_sample");
+        ContentId grantedPassiveId = Id("convergence.clean_battle_demo:regenerate_demo");
+        GameDataCatalog catalog = WithEquipmentDefinition(
+            LoadCatalog(),
+            new EquipmentDefinition(
+                armorId,
+                "Training Coat",
+                "Restore-derived equipment grant identity test.",
+                StandardEquipmentSlotIds.Armor,
+                500,
+                grantedSkillIds: [grantedPassiveId],
+                armor: new EquipmentArmorProfileDefinition(12, 2)));
+        SkillDefinition substitutedPassive = new(
+            Id("test.pack:substituted_restore_passive"),
+            "Substituted Restore Passive",
+            "Must never enter the restored session.",
+            SkillActivation.Passive,
+            null,
+            InheritanceGroup.Passive,
+            new SkillInheritanceDefinition(true),
+            modifiers:
+            [
+                new NumericRuleModifierDefinition(
+                    NumericRuleModifierType.DamageDealt,
+                    ModifierOperation.Add,
+                    99m)
+            ]);
+        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
+        RuntimeActorSnapshot savedActor = baseline.Actors[0];
+        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("identity-coat-001");
+        RuntimeActorSnapshot equippedActor = CopyActor(
+            savedActor,
+            equipment: new RuntimeEquipmentSnapshot(
+                savedActor.Equipment.EquippedInstanceIds.Concat(
+                [
+                    new KeyValuePair<ContentId, RuntimeInstanceId>(
+                        StandardEquipmentSlotIds.Armor,
+                        armorInstanceId)
+                ])),
+            battleActivations: new RuntimeBattleActivationSnapshot(
+                savedActor.BattleActivations.PassiveActivations,
+                savedActor.BattleActivations.PassiveSkillStates.Concat(
+                [new RuntimePassiveSkillStateSnapshot(grantedPassiveId, IsEnabled: true)])));
+        var inventory = new RuntimeInventorySnapshot(
+            baseline.Inventory.ItemQuantities,
+            baseline.Inventory.OwnedEquipmentInstances.Select(pair =>
+                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                        pair.Key,
+                        pair.Value))
+                .Concat(
+                [
+                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
+                        StandardEquipmentSlotIds.Armor,
+                        [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
+                ]));
+        RuntimeSaveGameSnapshot snapshot = Copy(
+            baseline,
+            actors: [equippedActor, baseline.Actors[1]],
+            inventory: inventory);
+        var skills = new SelectiveSubstitutingSkillRepository(
+            catalog,
+            grantedPassiveId,
+            substitutedPassive);
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            skills,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        var service = new RuntimeSessionRestoreService(
+            new RuntimeSaveValidator(),
+            factory,
+            new DelegateActorRestoreProfileResolver(_ => ActorProfile()));
+
+        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
+
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Session);
+        RuntimeSessionRestoreDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(RuntimeSessionRestoreDiagnosticCode.ActorRestoreFailed, diagnostic.Code);
+        Assert.Equal(CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch, diagnostic.ActorDiagnosticCode);
+        Assert.Equal(equippedActor.Identity.InstanceId, diagnostic.ActorId);
+        Assert.DoesNotContain(
+            substitutedPassive.Id,
+            equippedActor.BattleActivations.PassiveSkillStates.Select(state => state.SkillId));
+    }
+
+    [Fact]
     public void RuntimeSessionRestoreService_RejectsEquipmentActorIdentityCollisionBeforeAnyActorRestore()
     {
         GameDataCatalog catalog = LoadCatalog();
@@ -3640,6 +3729,27 @@ public sealed class RuntimePersistenceSnapshotTests
         }
 
         public EquipmentDefinition GetRequiredEquipment(ContentId id) => definition;
+    }
+
+    private sealed class SelectiveSubstitutingSkillRepository(
+        ISkillDefinitionRepository inner,
+        ContentId requestedId,
+        SkillDefinition substitutedDefinition) : ISkillDefinitionRepository
+    {
+        public bool TryGetSkill(ContentId id, out SkillDefinition? definition)
+        {
+            if (id == requestedId)
+            {
+                definition = substitutedDefinition;
+                return true;
+            }
+
+            return inner.TryGetSkill(id, out definition);
+        }
+
+        public SkillDefinition GetRequiredSkill(ContentId id) => id == requestedId
+            ? substitutedDefinition
+            : inner.GetRequiredSkill(id);
     }
 
     private sealed class FaultingEquipmentSlotLayoutPolicy(bool cancel = false) :
