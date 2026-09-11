@@ -67,7 +67,11 @@ reopened this page as `existing_unreviewed`. O7-R16 through O7-R18 correct its
 three extension-boundary defects and O7-R19 reconciles the player rules. The
 [O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
 found one further skill-identity defect; O7-R21 corrects it and O7-R22 reconciles
-the player rules. O7-R23 remains the fresh independent closure checkpoint.
+the player rules. The
+[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
+independently re-read the corrected implementation and page and completed the
+retained release gate. This page is `reviewed`, and Order 7 is formally
+complete.
 
 ## Rule Index
 

@@ -68,7 +68,7 @@ public sealed class DocumentationContractSynchronizationTests
     }
 
     [Fact]
-    public void Order7R22_GuidancePinsCorrectedAuthorityAndPendingCertification()
+    public void Order7R23_GuidancePinsCorrectedAuthorityAndCompletedCertification()
     {
         string mechanics = File.ReadAllText(RepositoryPath(
             "docs",
@@ -121,11 +121,8 @@ public sealed class DocumentationContractSynchronizationTests
             .GetProperty("capabilities")
             .EnumerateArray()
             .Single(entry => entry.GetProperty("id").GetString() == "inventory_equipment_economy");
-        Assert.Equal("partial", capability.GetProperty("implementationState").GetString());
-        Assert.Contains(
-            "O7-R23",
-            Assert.Single(capability.GetProperty("knownGaps").EnumerateArray()).GetString(),
-            StringComparison.Ordinal);
+        Assert.Equal("complete", capability.GetProperty("implementationState").GetString());
+        Assert.Empty(capability.GetProperty("knownGaps").EnumerateArray());
 
         using JsonDocument coverage = JsonDocument.Parse(File.ReadAllText(RepositoryPath(
             "tests",
@@ -139,7 +136,7 @@ public sealed class DocumentationContractSynchronizationTests
         Assert.All(
             new[] { "mechanics", "developerGuide", "technical" },
             audience => Assert.Equal(
-                "existing_unreviewed",
+                "reviewed",
                 documentation.GetProperty(audience).GetProperty("state").GetString()));
     }
 

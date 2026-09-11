@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-`inventory_equipment_economy` is `partial`. Its immutable transaction and
+`inventory_equipment_economy` is `complete`. Its immutable transaction and
 validation foundation is usable. O7-R2 gives each equipment copy a unique
 runtime instance ID, makes inventory its sole owner, permits separate copies of
 one definition, and removes the former root save equipment authority. O7-R3
@@ -69,9 +69,12 @@ O7-R18 correct those three boundaries, and O7-R19 reconciles their active
 documentation. The
 [O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
 then found an exact skill-identity gap in actor composition and restore. O7-R21
-corrects that boundary and O7-R22 reconciles its documentation. The capability
-remains `partial` until O7-R23 independently rechecks the corrected source and
-documentation and completes the retained release gate.
+corrects that boundary and O7-R22 reconciles its documentation. The
+[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
+independently rechecks the corrected source, persistence, DemoHost, Godot,
+tests, and all three audiences. No unresolved realistic reachable defect or
+active contradiction remains, and the complete retained release gate passes;
+the capability therefore returns to `complete` with no known gap.
 
 `encounter_orchestration` is `complete`. Its scheduler, lifecycle,
 turn-economy, event, cancellation, and automated execution foundations remain

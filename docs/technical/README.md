@@ -103,7 +103,11 @@ the repository-identity and authorization-cancellation boundaries, O7-R19
 reconciles the reference, and the
 [O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
 found one further skill-identity defect. O7-R21 corrects that defect, O7-R22
-reconciles this reference, and O7-R23 remains the independent closure checkpoint.
+reconciles this reference, and the
+[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
+independently re-read the corrected implementation and reference and completed
+the retained release gate. This reference is `reviewed`, and Order 7 is
+formally complete.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).

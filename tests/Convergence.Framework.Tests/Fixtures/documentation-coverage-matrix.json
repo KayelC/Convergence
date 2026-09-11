@@ -263,19 +263,19 @@
     {
       "id": "inventory_equipment_economy",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
-        "reason": "O7-R21 corrects the exact actor skill-identity defect found by O7-R20 and O7-R22 reconciles the player rules; independent O7-R23 certification remains pending."
+        "reason": "O7-R23 independently re-read the corrected exact-copy ownership, equipped-only grants, exact definition identity, pricing, stock, recovery, and save rules and completed the retained release gate."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
-        "reason": "The guide documents the corrected repository-identity, skill-identity, and authorization-cancellation boundaries through O7-R22; independent O7-R23 certification remains pending."
+        "reason": "O7-R23 independently verified the guide's composition, exact-identity, cancellation, transaction-adoption, persistence, and Godot integration contracts against current source and tests."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
-        "reason": "The reference documents the corrected repository-identity, skill-identity, and authorization-cancellation boundaries through O7-R22; independent O7-R23 certification remains pending."
+        "reason": "O7-R23 independently traced the documented authority graph, exact-identity boundaries, atomic state machines, save v19 restoration, host duties, and fault behavior against current implementation."
       }
     },
     {

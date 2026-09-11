@@ -644,7 +644,7 @@ outer action-end before a save is captured. The
 [final certification record](../reviews/status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
 is the formal Order 4 closure authority.
 
-## Reopened Order 7
+## Completed Order 7
 
 The owner-approved
 [Inventory, Equipment, And Economy Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
@@ -697,6 +697,15 @@ developer, and technical entries remain `existing_unreviewed` until O7-R23
 independently certifies them; the executable documentation matrix therefore
 continues to record 30 `reviewed`, 25 `existing_unreviewed`, 13 `missing`, and
 7 `not_applicable` entries.
+
+The
+[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
+independently re-read current Framework, persistence, DemoHost, Godot, focused
+tests, and all three audience documents, then completed the retained release
+gate. It found no unresolved realistic reachable defect or active
+contradiction. Order 7 is formally complete; its three audience entries return
+to `reviewed`, and the executable matrix now records 33 `reviewed`, 22
+`existing_unreviewed`, 13 `missing`, and 7 `not_applicable` entries.
 
 ## Deferred Documentation
 

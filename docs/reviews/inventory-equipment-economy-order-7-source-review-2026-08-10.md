@@ -8,7 +8,7 @@
 
 **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
 
-**Implementation status:** O7-R1 through O7-R22 complete; O7-R23 pending independent closure
+**Implementation status:** O7-R1 through O7-R23 complete; Order 7 closed
 
 > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
 > recorded in
@@ -65,6 +65,13 @@
 > aggregate restore. O7-R21 now enforces exact actor skill identity and O7-R22
 > reconciles the active documentation and tracking. Order 7 remains open for
 > O7-R23 independent closure.
+
+> **O7-R23 final closure:** The fresh
+> [R23 review](inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
+> independently re-read current Framework, persistence, DemoHost, Godot,
+> tests, and all three audience documents. It found no unresolved realistic
+> reachable defect or active contradiction. The complete retained release gate
+> passed, so Order 7 returns to `complete` / `reviewed`.
 
 ## Purpose
 
@@ -1959,4 +1966,36 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
   passed: 17 total, 0 failed, 0 skipped.
 - **Full suite:** 1,861 Framework tests, 184 DemoHost tests, and 7
   ContentValidator tests passed: 2,052 total, 0 failed, 0 skipped.
+- **Versions:** runtime save v19 and content schema v10 remain unchanged.
+
+### O7-R23: Fresh Independent Closure And Release Gate
+
+- **Reviewed implementation:** `ac51f072`; reviewed correction range
+  `edf05e09..ac51f072`.
+- **Actual destination:** the
+  [O7-R23 final closure review](inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md),
+  all three Order 7 audience documents and indexes, active gameplay and roadmap
+  summaries, executable capability/documentation matrices, documentation
+  synchronization tests, and retained verification evidence.
+- **Source evidence:** current inventory/equipment, slot-layout, shared-profile,
+  combat, currency, pricing, stock, shop, recovery, Compendium, save/restore,
+  DemoHost, and Godot paths were independently traced. O7-R16 through O7-R18
+  and O7-R21 remain effective at every shared boundary.
+- **Documentation evidence:** player, developer, and technical documents agree
+  with source on exact identities, cancellation, transaction atomicity, save
+  v19, content schema v10, and trusted host responsibilities.
+- **Result:** no unresolved realistic reachable Order 7 defect or active
+  contradiction remains. `inventory_equipment_economy` is `complete`, its
+  known-gap list is empty, and all three audience entries are `reviewed`.
+- **Focused tests:** 270 canonical Order 7 Framework cases and 135 canonical
+  DemoHost cases passed; the 17 documentation foundation/synchronization cases
+  also passed, all with 0 failed and 0 skipped.
+- **Full suite:** 1,861 Framework tests, 184 DemoHost tests, and 7
+  ContentValidator tests passed: 2,052 total, 0 failed, 0 skipped.
+- **Strict build and format:** Framework and solution Release builds completed
+  with 0 warnings and 0 errors; `dotnet format --verify-no-changes` formatted 0
+  of 280 files, and `git diff --check` passed.
+- **Verification:** the complete release gate passed against the closure commit;
+  raw commands, output, exit codes, coverage, and checksums are retained under
+  `artifacts/verification/order-7-r23-final-closure/<tested-commit>/`.
 - **Versions:** runtime save v19 and content schema v10 remain unchanged.

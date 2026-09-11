@@ -754,7 +754,7 @@ public sealed class DocumentationFoundationTests
     }
 
     [Fact]
-    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndCurrentAuditEvidence()
+    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndR23ClosureEvidence()
     {
         string mechanics = File.ReadAllText(
             RepositoryPath("docs", "mechanics", "party-inventory-and-economy.md"))
@@ -806,6 +806,12 @@ public sealed class DocumentationFoundationTests
                 "docs",
                 "reviews",
                 "inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md"))
+            .ReplaceLineEndings(" ");
+        string r23Closure = File.ReadAllText(
+            RepositoryPath(
+                "docs",
+                "reviews",
+                "inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md"))
             .ReplaceLineEndings(" ");
         string sourceReview = File.ReadAllText(
             RepositoryPath(
@@ -866,12 +872,13 @@ public sealed class DocumentationFoundationTests
 
         string[] reviewStateTokens =
         [
-            "**Review state:** `existing_unreviewed`.",
+            "**Review state:** `reviewed`.",
             "post-R15 independent audit",
             "three reachable extension-boundary defects at `ef4e129e`",
             "O7-R20 independent audit",
             "O7-R21 corrects that boundary",
-            "Certification remains open until O7-R23 independently"
+            "O7-R23 final closure review",
+            "without finding another realistic reachable defect or contradiction"
         ];
         Assert.All(reviewStateTokens, token =>
         {
@@ -890,6 +897,8 @@ public sealed class DocumentationFoundationTests
             "inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md";
         const string r20AuditLink =
             "inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md";
+        const string r23ClosureLink =
+            "inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md";
         string[] currentSummaryDocuments =
         [
             mechanicsIndex,
@@ -902,6 +911,7 @@ public sealed class DocumentationFoundationTests
             Assert.Contains(closureReviewLink, document, StringComparison.Ordinal);
             Assert.Contains(freshAuditLink, document, StringComparison.Ordinal);
             Assert.Contains(r20AuditLink, document, StringComparison.Ordinal);
+            Assert.Contains(r23ClosureLink, document, StringComparison.Ordinal);
             Assert.DoesNotContain("O7-R11 remains", document, StringComparison.Ordinal);
         });
 
@@ -913,15 +923,14 @@ public sealed class DocumentationFoundationTests
 
         DocumentationCapability documentation = LoadDocumentationMatrix().Capabilities.Single(
             capability => capability.Id == "inventory_equipment_economy");
-        Assert.Equal("existing_unreviewed", documentation.Mechanics.State);
-        Assert.Equal("existing_unreviewed", documentation.DeveloperGuide.State);
-        Assert.Equal("existing_unreviewed", documentation.Technical.State);
+        Assert.Equal("reviewed", documentation.Mechanics.State);
+        Assert.Equal("reviewed", documentation.DeveloperGuide.State);
+        Assert.Equal("reviewed", documentation.Technical.State);
 
         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             candidate => candidate.Id == "inventory_equipment_economy");
-        Assert.Equal("partial", capability.ImplementationState);
-        Assert.Single(capability.KnownGaps);
-        Assert.Contains("O7-R23", capability.KnownGaps[0], StringComparison.Ordinal);
+        Assert.Equal("complete", capability.ImplementationState);
+        Assert.Empty(capability.KnownGaps);
 
         Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
         Assert.Contains("O7-R15", currentAudit, StringComparison.Ordinal);
@@ -980,6 +989,20 @@ public sealed class DocumentationFoundationTests
         Assert.All(
             r20AuditTokens,
             token => Assert.Contains(token, r20Audit, StringComparison.Ordinal));
+
+        string[] r23ClosureTokens =
+        [
+            "**Reviewed implementation:** `ac51f072`",
+            "**Verdict:** **complete; no unresolved realistic reachable defect found**",
+            "No unresolved realistic reachable runtime defect or active documentation contradiction was found.",
+            "`RuntimeInventorySnapshot` is the sole owner",
+            "Compendium recall resolves the requested entry",
+            "Runtime save contract v19 and content schema v10 remain current.",
+            "Order 7 is formally complete."
+        ];
+        Assert.All(
+            r23ClosureTokens,
+            token => Assert.Contains(token, r23Closure, StringComparison.Ordinal));
     }
 
     [Fact]

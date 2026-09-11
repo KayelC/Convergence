@@ -146,7 +146,7 @@ inventory-owned equipment-instance identity, equip compatibility, typed
 currency-ledger arithmetic, policy-bound shop pricing and stock, shop transactions, and
 restoration transactions. Hosts own UI and durable inventory storage.
 
-Order 7's standard path is implemented, but its certification is reopened.
+Order 7's standard path is implemented and independently certified.
 O7-R2 gives each equipment copy a unique runtime instance
 ID, permits separate copies of one definition, makes inventory the sole owner,
 and removes the former root save equipment authority. O7-R3 makes equipment
@@ -194,8 +194,11 @@ cancellation propagation. O7-R16 through O7-R18 correct those boundaries and
 O7-R19 reconciles the active guidance. The
 [O7-R20 independent audit](reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
 found one further exact skill-identity defect. O7-R21 corrects it and O7-R22
-reconciles the active guidance. O7-R23 remains the independent closure and
-retained-release-gate checkpoint.
+reconciles the active guidance. The
+[O7-R23 final closure review](reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
+independently rechecks the corrected source, persistence, hosts, tests, and all
+three audiences and completes the retained release gate. No unresolved
+realistic reachable defect or contradiction remains, so Order 7 is complete.
 
 ## Navigation, Traversal, And Encounter Preparation
 

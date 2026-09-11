@@ -1,14 +1,17 @@
 # Party, Rosters, Inventory, Equipment, And Economy
 
-> **Review state:** `existing_unreviewed`. The
+> **Review state:** `reviewed`. The
 > [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
 > found three reachable extension-boundary defects at `ef4e129e`. O7-R16 through
 > O7-R18 correct those boundaries, and O7-R19 reconciles this page with the
 > corrected behavior. The
 > [O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
 > then found one exact skill-definition identity defect. O7-R21 corrects that
-> boundary, and O7-R22 reconciles this page. Certification remains open until
-> O7-R23 independently reviews the implementation and documentation.
+> boundary, and O7-R22 reconciles this page. The
+> [O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
+> independently re-read current source, tests, hosts, and this page, then
+> completed the retained release gate without finding another realistic
+> reachable defect or contradiction.
 
 ## What This System Means To A Player
 

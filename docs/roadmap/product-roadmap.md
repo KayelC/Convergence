@@ -8,9 +8,9 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
 
-Documentation Order 7 is reopened under the owner-approved
+Documentation Order 7 is complete under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
 The current resource-management foundation remains usable. O7-R2 establishes
 equipment-instance ownership and removes the duplicated root save authority;
@@ -57,9 +57,12 @@ O7-R16 through O7-R18 correct those boundaries and O7-R19 reconciles the active
 documentation. The
 [O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
 then found an exact skill-identity gap in actor composition and restore. O7-R21
-corrects that boundary and O7-R22 reconciles the active documentation. O7-R23's
-independent source/documentation review and retained release gate remain
-required before certification returns to `complete`.
+corrects that boundary and O7-R22 reconciles the active documentation. The
+[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
+independently rechecks the corrected source, persistence, DemoHost, Godot,
+tests, and all three audiences. No unresolved realistic reachable defect or
+active contradiction remains, and the complete retained release gate passes;
+Order 7 and `inventory_equipment_economy` are therefore `complete`.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
