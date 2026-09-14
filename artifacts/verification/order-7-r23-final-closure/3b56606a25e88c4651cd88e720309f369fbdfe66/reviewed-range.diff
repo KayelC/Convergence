@@ -1,0 +1,1881 @@
+diff --git a/docs/developer-guide/README.md b/docs/developer-guide/README.md
+index d470b32146d3bd6090cb7eba2d3001c220605ace..ed91e2d759db00ed7ff7cea60170e517b3b8c9bd 100644
+--- a/docs/developer-guide/README.md
++++ b/docs/developer-guide/README.md
+@@ -101,7 +101,14 @@ is historical closure evidence for that revision. The later
+ [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+ reopened the guide as `existing_unreviewed`. O7-R16 through O7-R18 correct the
+ repository-identity and authorization-cancellation boundaries, O7-R19
+-reconciles the guidance, and O7-R20 remains the independent closure checkpoint.
++reconciles the guidance, and the
++[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++found one further skill-identity defect. O7-R21 corrects that defect, O7-R22
++reconciles this guide, and the
++[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++independently re-read the corrected implementation and guide and completed the
++retained release gate. This guide is `reviewed`, and Order 7 is formally
++complete.
+ Other subsystem guides remain tracked as
+ `existing_unreviewed` or `missing` in
+ the [documentation coverage matrix](../reference/documentation-coverage.md).
+diff --git a/docs/developer-guide/inventory-equipment-and-economy.md b/docs/developer-guide/inventory-equipment-and-economy.md
+index 95fc81b3fa62c0067a15743267a718249a59a93b..f2ab5c079baa84dad2e585b9a256b745e9338dfc 100644
+--- a/docs/developer-guide/inventory-equipment-and-economy.md
++++ b/docs/developer-guide/inventory-equipment-and-economy.md
+@@ -7,12 +7,18 @@ adopts their immutable results. It covers equipment instance IDs, authored
+ slots, live equipment profiles, currency ledgers, resolved shop offers,
+ policy-owned stock, recovery, persistence, and Godot integration.
+ 
+-> **Review state:** `existing_unreviewed`. The
++> **Review state:** `reviewed`. The
+ > [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+ > found three reachable extension-boundary defects at `ef4e129e`. O7-R16 through
+ > O7-R18 correct those boundaries, and O7-R19 reconciles this guide with the
+-> corrected behavior. Certification remains open until O7-R20 independently
+-> reviews the implementation and documentation.
++> corrected behavior. The
++> [O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++> then found one exact skill-definition identity defect. O7-R21 corrects that
++> boundary, and O7-R22 reconciles this guide. The
++> [O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++> independently re-read current source, tests, hosts, and this guide, then
++> completed the retained release gate without finding another realistic
++> reachable defect or contradiction.
+ 
+ ## Authority Split
+ 
+@@ -122,20 +128,30 @@ standard layout.
+ ### Enforce Repository Identity
+ 
+ A successful definition lookup must return the requested identity. Custom
+-`IEquipmentDefinitionRepository` and `IItemDefinitionRepository`
+-implementations must not return a different definition while reporting success.
+-Convergence enforces this contract at the two Order 7 projection boundaries:
++`IEquipmentDefinitionRepository`, `IItemDefinitionRepository`, and
++`ISkillDefinitionRepository` implementations must not return a different
++definition while reporting success. Convergence enforces this contract before
++returned content can become runtime authority:
+ 
+ - `RuntimeEquipmentProfileResolver` returns
+   `EquipmentDefinitionMismatch` before it reads the returned definition's slot,
+   grants, basic attack, or combat contributions; and
+ - `RuntimeShopOfferResolver` returns `ItemDefinitionMismatch` or
+   `EquipmentDefinitionMismatch` before it reads an item stack limit or validates
+-  an equipment slot/profile.
++  an equipment slot/profile;
++- `CatalogBattleActorFactory` returns `SkillDefinitionMismatch` before actor
++  creation or restore can expose a substituted learned, equipped, pending, or
++  equipment-granted skill; and
++- `RuntimeActorCombatProfileCompositionService` returns
++  `SkillDefinitionMismatch` before a substituted learned, equipped, or
++  equipment-granted skill can mutate the live actor.
+ 
+ Treat these as content-authority diagnostics. Do not display or execute a
+ partially resolved profile or offer, and do not retry against a fallback
+-repository.
++repository. A rejected composition leaves the actor unchanged. A rejected
++aggregate restore exposes no session. `CatalogBattleActor` also checks exact
++identity when its skill views call `GetRequiredSkill`, so a contradictory custom
++repository cannot substitute content after construction.
+ 
+ Equipment-backed battle authorization uses this same live profile during
+ assessment and immediately before execution. If profile resolution throws
+diff --git a/docs/gameplay-systems.md b/docs/gameplay-systems.md
+index be80a823b438f93eb6f1eeb21912c30cc0e45776..7152fb274ed1e1a68f770020210bc09a95853663 100644
+--- a/docs/gameplay-systems.md
++++ b/docs/gameplay-systems.md
+@@ -146,7 +146,7 @@ inventory-owned equipment-instance identity, equip compatibility, typed
+ currency-ledger arithmetic, policy-bound shop pricing and stock, shop transactions, and
+ restoration transactions. Hosts own UI and durable inventory storage.
+ 
+-Order 7's standard path is implemented, but its certification is reopened.
++Order 7's standard path is implemented and independently certified.
+ O7-R2 gives each equipment copy a unique runtime instance
+ ID, permits separate copies of one definition, makes inventory the sole owner,
+ and removes the former root save equipment authority. O7-R3 makes equipment
+@@ -191,8 +191,14 @@ evidence for its reviewed revision. The later
+ [post-R15 independent audit](reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+ found three bounded custom-extension defects in definition identity and
+ cancellation propagation. O7-R16 through O7-R18 correct those boundaries and
+-O7-R19 reconciles the active guidance. O7-R20 remains the independent closure
+-and retained-release-gate checkpoint.
++O7-R19 reconciles the active guidance. The
++[O7-R20 independent audit](reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++found one further exact skill-identity defect. O7-R21 corrects it and O7-R22
++reconciles the active guidance. The
++[O7-R23 final closure review](reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++independently rechecks the corrected source, persistence, hosts, tests, and all
++three audiences and completes the retained release gate. No unresolved
++realistic reachable defect or contradiction remains, so Order 7 is complete.
+ 
+ ## Navigation, Traversal, And Encounter Preparation
+ 
+diff --git a/docs/mechanics/README.md b/docs/mechanics/README.md
+index 5ba26bca07b5986a2d442f87a725c911c0166f77..272578bf69e44f59c7951e6c8a970712c2bd62c6 100644
+--- a/docs/mechanics/README.md
++++ b/docs/mechanics/README.md
+@@ -64,8 +64,14 @@ stock, atomic transactions, recovery, and save v19. The
+ is historical closure evidence for that revision. The later
+ [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+ reopened this page as `existing_unreviewed`. O7-R16 through O7-R18 correct its
+-three extension-boundary defects and O7-R19 reconciles the player rules; O7-R20
+-remains the fresh independent closure checkpoint.
++three extension-boundary defects and O7-R19 reconciles the player rules. The
++[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++found one further skill-identity defect; O7-R21 corrects it and O7-R22 reconciles
++the player rules. The
++[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++independently re-read the corrected implementation and page and completed the
++retained release gate. This page is `reviewed`, and Order 7 is formally
++complete.
+ 
+ ## Rule Index
+ 
+diff --git a/docs/mechanics/party-inventory-and-economy.md b/docs/mechanics/party-inventory-and-economy.md
+index aa172a39b80c97848f9e67dc8a27006b91ca6659..4c9566cd2fb1bcb00b7b61fea7182cab5b8c22ce 100644
+--- a/docs/mechanics/party-inventory-and-economy.md
++++ b/docs/mechanics/party-inventory-and-economy.md
+@@ -1,11 +1,17 @@
+ # Party, Rosters, Inventory, Equipment, And Economy
+ 
+-> **Review state:** `existing_unreviewed`. The
++> **Review state:** `reviewed`. The
+ > [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+ > found three reachable extension-boundary defects at `ef4e129e`. O7-R16 through
+ > O7-R18 correct those boundaries, and O7-R19 reconciles this page with the
+-> corrected behavior. Certification remains open until O7-R20 independently
+-> reviews the implementation and documentation.
++> corrected behavior. The
++> [O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++> then found one exact skill-definition identity defect. O7-R21 corrects that
++> boundary, and O7-R22 reconciles this page. The
++> [O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++> independently re-read current source, tests, hosts, and this page, then
++> completed the retained release gate without finding another realistic
++> reachable defect or contradiction.
+ 
+ ## What This System Means To A Player
+ 
+@@ -19,6 +25,11 @@ Game-supplied catalogs cannot replace requested content with another definition
+ that merely looks usable. If equipment or a shop lookup returns a definition
+ whose ID differs from the requested ID, the operation rejects before that
+ definition can provide stack limits, slots, skills, attacks, or stat values.
++The same exact-ID rule applies when actor creation, combat-profile composition,
++or restore resolves a skill. If equipment grants one skill but a custom
++repository returns another, the operation rejects before the substituted skill
++can become available or enter passive state. The live actor remains unchanged,
++and aggregate restore exposes no partial session.
+ 
+ The framework fixes ownership and transaction safety. Each game chooses its
+ slot layout, currencies, pricing rules, stock behavior, recovery rules, menu
+diff --git a/docs/reference/documentation-coverage.md b/docs/reference/documentation-coverage.md
+index 3ee03e8eaf51a3debb3150d2190b631298790e5a..d4dc423dcbc2ba7f09a1242163fdd53444d3d028 100644
+--- a/docs/reference/documentation-coverage.md
++++ b/docs/reference/documentation-coverage.md
+@@ -13,8 +13,8 @@ It covers the same 25 capability IDs as the
+ 
+ ## Current Reading
+ 
+-The documentation matrix currently records 75 audience entries: 30 reviewed,
+-25 existing_unreviewed, 13 missing, and 7 not_applicable.
++The documentation matrix currently records 75 audience entries: 33 reviewed,
++22 existing_unreviewed, 13 missing, and 7 not_applicable.
+ 
+ The actor composition, progression, party/roster, actor-restoration, and typed
+ action/effect documentation has completed the collaborative workflow. The
+@@ -52,8 +52,14 @@ The later
+ found three reachable extension-boundary defects. All three Order 7 audience
+ entries returned to `existing_unreviewed`. O7-R16 through O7-R18 correct those
+ defects and O7-R19 reconciles the three audience pages; the entries remain
+-`existing_unreviewed` until O7-R20 independently rechecks the implementation and
+-documentation.
++`existing_unreviewed`. The
++[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++found one further exact skill-identity defect. O7-R21 corrects it and O7-R22
++reconciles the three audience pages. The
++[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++independently rechecks the corrected implementation and documentation and
++completes the retained release gate without another realistic reachable defect
++or contradiction. All three Order 7 audience entries are `reviewed`.
+ O3-R7 independently verified the source and audience documents at that
+ revision. A later source-first recheck reopened the developer and technical
+ entries while three command-boundary defects were corrected. O3-R8 through
+diff --git a/docs/reviews/README.md b/docs/reviews/README.md
+index 95d9473a1e469ba594795abbf6178bcd2d13a604..688d96d5635a707f1982049ee48f822be26355c4 100644
+--- a/docs/reviews/README.md
++++ b/docs/reviews/README.md
+@@ -106,6 +106,8 @@ or implementation authority.
+ - [Inventory, Equipment, And Economy Order 7 Post-Correction Independent Audit, 24 August 2026](inventory-equipment-economy-order-7-post-correction-independent-audit-2026-08-24.md)
+ - [Inventory, Equipment, And Economy Order 7 O7-R15 Final Closure Review, 24 August 2026](inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
+ - [Inventory, Equipment, And Economy Order 7 Post-R15 Independent Audit, 31 August 2026](inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
++- [Inventory, Equipment, And Economy Order 7 R20 Independent Closure Audit, 9 September 2026](inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++- [Inventory, Equipment, And Economy Order 7 R23 Final Closure Review, 11 September 2026](inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
+ - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
+ 
+ Current intended behavior belongs in confirmed mechanics and decision documents.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md b/docs/reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..fb820b2266d0a27eb5c11baf1a0f428cc6efdf0d
+--- /dev/null
++++ b/docs/reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md
+@@ -0,0 +1,220 @@
++# Inventory, Equipment, And Economy Order 7 R20 Independent Closure Audit
++
++**Date:** 9 September 2026
++
++**Reviewed implementation:** `aaacbd97`
++
++**Capability:** `inventory_equipment_economy`
++
++**Result:** one correction required; Order 7 remains open
++
++## Verdict
++
++The O7-R16 through O7-R19 corrections hold in current source. Equipment and
++shop definition identity are checked before foreign definition fields are
++used, and action-authorization cancellation propagates without consuming the
++prepared assessment or mutating gameplay state.
++
++This fresh closure trace found one additional realistic Medium authority gap:
++equipment-granted skill IDs can be resolved to definitions carrying different
++IDs by a faulty custom `ISkillDefinitionRepository`. The substituted definition
++can become a live equipment-granted passive during combat-profile composition
++or aggregate session restoration.
++
++This is not a defect in `GameDataCatalog` and is not a player-input security
++vulnerability. It is a supported-extension robustness defect with a concrete
++gameplay consequence: the Framework can grant and execute a passive that the
++equipped item did not author. Order 7 therefore remains `partial`, and its
++three audience documents remain `existing_unreviewed`, until O7-R21 through
++O7-R23 are complete.
++
++## Review Method
++
++The current implementation was traced from source before consulting earlier
++closure conclusions. The review followed:
++
++- inventory ownership and equipped-instance references;
++- slot-policy and equipment-profile resolution;
++- live actor equipment application and combat-profile composition;
++- skill authorization and passive registration;
++- save validation and aggregate session restoration;
++- DemoHost and Godot-contract resource state adoption;
++- focused adversarial tests and the complete solution suite; and
++- the mechanics, developer, and technical Order 7 documents.
++
++The active documentation was used to identify intended behavior. Source
++established actual behavior, and tests corroborated exercised paths.
++
++## Confirmed Corrections
++
++### O7-R16: Equipment Definition Identity
++
++`RuntimeEquipmentProfileResolver` now compares a returned equipment
++definition's ID with the owned instance's requested definition ID before slot
++validation, grants, attack data, Defense, Evasion, or modifiers are read.
++Direct profile resolution, actor application, battle authorization, and
++aggregate restore share that rejection boundary.
++
++### O7-R17: Shop Content Definition Identity
++
++`RuntimeShopOfferResolver` now rejects returned item and equipment definitions
++whose IDs differ from the authored offer content ID before stack-limit or slot
++data is copied into a runtime offer.
++
++### O7-R18: Authorization Cancellation
++
++`BattleActionExecutor` propagates `OperationCanceledException` from assessment
++and execution-time reauthorization. If cancellation occurs after the prepared
++assessment token is claimed, the token is restored before cancellation leaves
++the executor. Non-cancellation faults retain typed containment.
++
++### O7-R19: Documentation Reconciliation
++
++All three Order 7 audience pages describe the repository-identity and
++cancellation rules above without claiming certification. Executable tracking
++correctly remains `partial` / `existing_unreviewed` pending this audit.
++
++## Finding
++
++### O7-M4: Equipment-Granted Skill Resolution Accepts A Substituted Definition
++
++**Severity:** Medium
++
++**Intended invariant:** an equipment profile grants the exact skill IDs
++authored by the equipped definitions. Resolving a grant must never replace the
++authored skill with another catalog definition.
++
++**Reachable path:**
++
++1. an equipped instance grants skill `skill_a`;
++2. a custom `ISkillDefinitionRepository` is asked for `skill_a` but returns
++   definition `skill_b`;
++3. `RuntimeActorCombatProfileCompositionService` checks only the Boolean
++   lookup result and null value;
++4. `RuntimeActorState.ApplyCombatProfile` accepts `skill_b` as an
++   equipment-granted passive because the passive-definition collection is
++   validated for valid and unique returned IDs, not against the requested
++   grant IDs; and
++5. the actor can execute `skill_b`'s passive lifecycle while no equipment
++   definition authored that grant.
++
++The aggregate restoration path has the same authority gap before composition:
++`CatalogBattleActorFactory.Restore` resolves requested equipment-granted skill
++IDs into a dictionary without verifying each returned definition's ID, then
++passes the returned definitions into `RuntimeActorState.Restore`.
++
++**Source evidence:**
++
++- [`RuntimeActorCombatProfileComposition.cs`](../../src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs#L772)
++  resolves every equipment-granted skill and appends the returned definition
++  without comparing `skill.Id` with the requested `skillId`.
++- [`BattleRuntimeState.cs`](../../src/Convergence.Framework/Execution/BattleRuntimeState.cs#L1289)
++  validates the returned equipment-passive definitions as a collection but
++  cannot recover the original requested IDs at that boundary.
++- [`CatalogBattleActorFactory.cs`](../../src/Convergence.Framework/Encounters/CatalogBattleActorFactory.cs#L617)
++  combines saved, pending, and equipment-granted IDs, then accepts any non-null
++  definition returned for each lookup.
++- [`RuntimeSessionRestoration.cs`](../../src/Convergence.Framework/Runtime/RuntimeSessionRestoration.cs#L583)
++  supplies the equipment profile's grant IDs to that restore path.
++
++**Concrete consequence:** a faulty adapter or hot-reload repository can grant
++a different passive, including its lifecycle effects, while the saved and
++equipped authorities still name only the original skill. The standard catalog
++cannot produce the mismatch, but custom repositories are an intentional public
++composition boundary.
++
++**Required correction:** reject requested/returned skill identity mismatches
++before any returned definition enters actor construction, combat-profile
++composition, passive registration, or aggregate restoration. Return distinct
++typed diagnostics and prove all rejection paths preserve the live actor and
++aggregate restore atomicity.
++
++## Confirmed Healthy Boundaries
++
++The source trace found no regression in these Order 7 guarantees:
++
++- inventory remains the sole owner of immutable equipment instances;
++- equipped actors retain instance references rather than duplicate ownership;
++- missing, duplicate, and multiply-equipped instance IDs reject atomically;
++- custom slot layouts remain policy-owned while the standard layout preserves
++  Weapon, Armor, Boots, and Accessory behavior;
++- equipment grants remain derived and consume no learned move-list slot;
++- Defense and Evasion remain additive inputs to the canonical combat formulas;
++- named-currency ledger operations preserve unrelated balances and reject
++  invalid arithmetic;
++- shop purchase/resale stage inventory, currency, and stock together;
++- recovery stages currency and actor cleanup before committing either; and
++- save v19 validates the complete inventory/equipment/currency/shop graph
++  before aggregate restoration exposes a session.
++
++No separate equipment combat formula, granted-skill policy, currency policy,
++or duplicate save authority was found.
++
++## Documentation Cross-Check
++
++The mechanics, developer, and technical Order 7 documents remain accurate for
++the standard in-repository catalog. Their statement that repository lookups
++cannot lend another definition's authority is incomplete for equipment-granted
++skills, however. O7-R22 must state that exact skill identity is enforced during
++actor construction, composition, and restore after O7-R21 implements it.
++
++Until then:
++
++- `inventory_equipment_economy` remains `partial`;
++- all three Order 7 audience entries remain `existing_unreviewed`; and
++- O7-R15 and the earlier closure reports remain historical evidence for their
++  reviewed revisions, not current closure authority.
++
++## Executed Baseline Evidence
++
++The unmodified `aaacbd97` baseline produced:
++
++- 1,855 Framework tests passed;
++- 184 DemoHost tests passed;
++- 7 ContentValidator tests passed; and
++- 2,046 total tests passed with 0 failed and 0 skipped.
++
++This green baseline confirms the standard path. It does not cover a custom
++skill repository returning the wrong definition ID for an equipment grant.
++
++## Correction Roadmap
++
++### O7-R21: Enforce Actor Skill Definition Identity
++
++- require exact requested/returned skill IDs in catalog actor creation and
++  restore;
++- require the same identity in combat-profile composition, including
++  equipment-granted passives;
++- add distinct typed diagnostics and update the guarded public API baseline;
++- prove direct composition and actor creation/restore reject substitution;
++- prove equipment application leaves the live actor unchanged; and
++- prove aggregate restore returns no session and no partially restored actor.
++
++### O7-R22: Reconcile Documentation And Tracking
++
++- document the exact skill-identity rule in all applicable Order 7 audiences;
++- update executable documentation synchronization evidence;
++- keep capability and audience certification pending until fresh closure.
++
++### O7-R23: Fresh Independent Closure And Release Gate
++
++- re-read current Framework, persistence, DemoHost, Godot-contract, tests, and
++  all three audience documents without using this report as implementation
++  evidence;
++- retain the complete release-gate output in the repository; and
++- promote to `complete` / `reviewed` only if no realistic reachable Order 7
++  defect or active documentation contradiction remains.
++
++## Closure Decision
++
++**Order 7 is not ready for formal closure at `aaacbd97`.** O7-R16 through
++O7-R19 are healthy, but O7-M4 must be corrected and independently rechecked.
++
++## Correction Status
++
++O7-R21 is implemented by `57d0d101`: exact skill identity is now enforced in
++actor construction, restore, skill views, and combat-profile composition, with
++typed diagnostics and atomic rejection evidence. O7-R22 reconciles the three
++audience documents and executable tracking with that correction. Order 7 still
++remains `partial` / `existing_unreviewed` until O7-R23 performs a new
++source-first closure review and retains the complete release gate.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md b/docs/reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..b1238060e8f71a57551a0bfa32f0d45eddffa3b2
+--- /dev/null
++++ b/docs/reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md
+@@ -0,0 +1,220 @@
++# Inventory, Equipment, And Economy Order 7 R23 Final Closure Review
++
++**Date:** 11 September 2026
++
++**Reviewed implementation:** `ac51f072`
++
++**Reviewed correction range:** `edf05e09..ac51f072`
++
++**Capability:** `inventory_equipment_economy`
++
++**Verdict:** **complete; no unresolved realistic reachable defect found**
++
++## Review Method
++
++This review started from current implementation source rather than accepting
++earlier Order 7 conclusions as evidence. The approved decisions were used only
++to establish intended behavior. Source established actual behavior, and tests
++were read to identify which supported paths have executable evidence.
++
++The review traced:
++
++- inventory item and equipment-instance ownership and transitions;
++- authored equipment-slot policy evaluation;
++- one derived equipment profile through creation, Vessel composition,
++  equipment changes, battle authorization/execution, save, and restore;
++- typed currency, pricing, stock, shop, recovery, Compendium, reward, and
++  negotiation transactions;
++- save v19 validation and aggregate restoration;
++- DemoHost state adoption and host-owned JSON;
++- the Godot reference consumer and Godot-shaped integration tests;
++- focused hostile-path tests; and
++- the player, developer, and technical Order 7 documents.
++
++A concern qualified as a defect only when it had an intended invariant, a
++realistically reachable supported path, a concrete consequence, and
++reproducible source or test evidence. Documented host coordination duties,
++impossible domain values, and unsupported alternate product designs were not
++inflated into vulnerabilities.
++
++## Findings
++
++No unresolved realistic reachable runtime defect or active documentation
++contradiction was found.
++
++The retained verification-evidence index did not yet list the already-present
++R15 and post-R15 bundles. R23 updates that index while adding its own canonical
++bundle. This is evidence discoverability, not a gameplay defect.
++
++## Current Authority Trace
++
++### Equipment Ownership, Slots, And Profile
++
++`RuntimeInventorySnapshot` is the sole owner of equipment instances. Each copy
++has one runtime instance ID and one equipment definition ID; actor loadouts
++contain only slot-to-instance references. Acquisition, equip, resale, save
++validation, and aggregate restore reject missing, duplicate, actor-colliding,
++or multiply equipped instance IDs before accepted state can escape.
++
++Slot IDs are authored `ContentId` values. Content mapping, acquisition, equip,
++profile resolution, offer resolution, and save validation all use the selected
++`IEquipmentSlotLayoutPolicy`. The supplied standard policy reproduces weapon,
++armor, boots, and accessory. A custom layout may differ deliberately.
++
++`RuntimeEquipmentProfileResolver` is the shared projection from current
++inventory, loadout, catalog, and slot policy. It derives definitions, one
++standard weapon attack, additive modifiers, Defense, Evasion, and distinct
++granted skill IDs. Actor creation, Vessel composition, atomic equipment
++application, live action authorization, execution-time reauthorization, and
++aggregate restoration all consume this profile rather than maintaining
++separate equipment views.
++
++Granted skills remain derived. They never enter learned skills or move-list
++slots, and removing the granting instance removes availability on the next
++authorization check. Defense and Evasion are ordinary additive inputs to the
++existing production damage and hit formulas. Missing contributions add no
++modifier at all, preserving the exact no-equipment path.
++
++### Repository Identity And Cancellation Corrections
++
++Every successful equipment, shop item, shop equipment, and actor skill lookup
++must return the exact requested definition ID before any returned fields become
++authority. Equipment and skill mismatches reject profile composition and leave
++the live actor unchanged; aggregate restoration exposes no session. Shop
++mismatches reject offer resolution before stack, slot, or profile data is read.
++
++Equipment-backed action assessment and execution-time reauthorization preserve
++`OperationCanceledException`. If cancellation occurs after claiming a prepared
++assessment token, the executor restores that token before unwinding. No actor,
++inventory, command, or turn-economy mutation is presented as a gameplay
++failure.
++
++### Currency, Pricing, Stock, And Shops
++
++`RuntimeCurrencyLedgerSnapshot` owns immutable nonnegative balances by currency
++ID. Every mutation names a currency and checked arithmetic preserves unrelated
++balances. The single-currency accessor rejects empty and multi-currency
++ledgers instead of guessing.
++
++Only resolver-created runtime offers carry executable shop authority. Pricing
++and stock factories return validated either/or bindings; malformed custom
++results are contained as typed failures while cancellation propagates. The
++standard pricing policy uses authored purchase price and configured resale
++percentage. Luck adjustment is opt-in. Standard limited stock decrements an
++accepted purchase and does not replenish resale.
++
++`ShopTransactionService` calculates price, stock, inventory, and named-currency
++candidates from one before-state. Every rejection returns the original three
++authorities. Acceptance returns all three after-snapshots for one host adoption.
++Equipment purchases require a fresh instance ID and complete actor-ID evidence;
++equipment resale requires the exact unassigned owned instance and complete
++current loadout evidence.
++
++### Recovery And Compendium
++
++Recovery planning is immutable and explicitly names resources, cleanup,
++currency, and cost. Execution stages a cloned actor, applies only canonical
++legal cleanup, computes the named-currency debit, and commits the live actor
++only after every step accepts. Assessment remains hypothetical. Cancellation
++propagates and every expected rejection retains actor and ledger before-state.
++
++Compendium recall resolves the requested entry, checks complete roster
++identity, calculates detached roster placement, materializes the recalled actor,
++and stages the named-currency debit before returning one accepted aggregate
++result. Failed placement, materialization, cost, or payment exposes unchanged
++roster and ledger authorities. Explicit Compendium registration remains
++separate from first-acquisition preservation.
++
++### Save, DemoHost, And Godot
++
++Save contract v19 carries inventory-owned equipment instances, actor slot
++references, typed currency balances, and tracked shop stock in one aggregate.
++Validation checks the complete catalog/layout/actor/inventory/currency/stock
++graph before actor restoration. Aggregate restore returns either one complete
++`RuntimeRestoredSession` or diagnostics and never exposes an earlier restored
++actor after a later failure.
++
++DemoHost adopts inventory, currency, and stock only from one accepted shop
++result, routes equip changes through atomic actor composition, adopts recovery
++currency only after accepted live recovery, and replaces the session only from
++successful aggregate restore. Its current slice equips only its player actor;
++the Framework boundary still requires complete actor/loadout evidence for
++general hosts.
++
++The Godot reference owns `res://` access, JSON, Nodes, scene metadata, and
++session scheduling. It carries the same Framework inventory, equipment,
++currency, stock, recovery, and aggregate-restore contracts without introducing
++Godot or serializer types into Framework.
++
++## Documentation Cross-Check
++
++The three audience documents agree with source on:
++
++- exact-copy equipment ownership and authored slot IDs;
++- equipped-only grants and exact definition identity;
++- additive Defense/Evasion through canonical combat math;
++- named currencies, checked arithmetic, resolved pricing, and durable stock;
++- all-or-nothing shop and recovery results;
++- save v19 authority and aggregate restoration;
++- cancellation propagation; and
++- host responsibility for complete evidence and atomic candidate adoption.
++
++The player page describes only observable rules. The developer guide explains
++composition and adoption. The technical page identifies authorities,
++transaction ordering, fault boundaries, and restore dependencies. Their
++Mermaid diagrams match those boundaries.
++
++## Trusted Host And Extension Boundaries
++
++These supported responsibilities are explicit and are not hidden Framework
++authorities:
++
++- hosts allocate globally fresh runtime IDs and supply complete actor/loadout
++  evidence to stateless live transitions;
++- hosts serialize or compare-and-swap multi-authority candidate adoption;
++- a host adopting a new immutable inventory replaces any profile source that
++  captured the previous inventory;
++- custom layouts with multiple simultaneous weapon profiles supply a matching
++  custom `IRuntimeEquipmentProfileResolver`; and
++- custom `TryGet` repositories remain responsible for ordinary repository
++  operation, while Framework verifies the identity of returned definitions
++  before using them.
++
++## Verification
++
++Pre-commit source and tracking verification produced:
++
++| Gate | Result |
++|---|---|
++| Documentation synchronization and foundation | 17 passed; 0 failed; 0 skipped |
++| Canonical focused Order 7 Framework set | 270 passed; 0 failed; 0 skipped |
++| Canonical focused DemoHost set | 135 passed; 0 failed; 0 skipped |
++| Full `dotnet test Convergence.sln` | 1,861 Framework + 184 DemoHost + 7 ContentValidator = 2,052 passed; 0 failed; 0 skipped |
++| Strict Release Framework and solution builds | 0 warnings; 0 errors |
++| `dotnet format --verify-no-changes` | 0 of 280 files formatted |
++| `git diff --check` | passed |
++
++After the closure commit, the canonical retained gate repeats those checks and
++adds locked dependency audit, content/schema/catalog validation, all DemoHost
++modes, scripted Training Annex play, Godot build and headless smoke, coverage,
++documentation links, API and forbidden-reference checks, dependency audit, and
++trimming analysis.
++
++Canonical raw commands, outputs, exit codes, source identity, coverage, and
++checksums are retained in a following evidence-only commit under
++`artifacts/verification/order-7-r23-final-closure/<tested-commit>/`.
++
++Runtime save contract v19 and content schema v10 remain current. R23 changes
++review evidence and tracking only; it changes no runtime, schema, content,
++host, or gameplay behavior.
++
++## Closure Verdict
++
++The owner-approved O7-D1 through O7-D8 model is implemented as one coherent,
++host-neutral authority graph. The post-R15 repository-identity, cancellation,
++and exact-skill-identity corrections hold across direct use, battle execution,
++save validation, aggregate restore, DemoHost, and Godot integration.
++
++Order 7 is formally complete. `inventory_equipment_economy` returns to
++`complete`, its known-gap list is empty, and all three audience entries return
++to `reviewed`.
+diff --git a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+index 399a7089ca3bbcb2c15b852849b5047a35465fe1..64ee0f60ebefdc4d8892c8f384174037ee17c1a2 100644
+--- a/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
++++ b/docs/reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md
+@@ -8,7 +8,7 @@
+ 
+ **Owner-decision status:** general authority principle and decisions O7-D1 through O7-D8 approved
+ 
+-**Implementation status:** O7-R1 through O7-R19 complete; O7-R20 pending independent closure
++**Implementation status:** O7-R1 through O7-R23 complete; Order 7 closed
+ 
+ > **O7-R9 audit:** The independent pre-implementation wire-integrity audit is
+ > recorded in
+@@ -56,7 +56,22 @@
+ > O7-R15 remains historical evidence for its reviewed revision, not current
+ > closure authority. O7-R16 through O7-R18 now correct the three runtime
+ > boundaries, and O7-R19 reconciles active documentation without prematurely
+-> restoring certification. O7-R20 remains open.
++> restoring certification. O7-R20's result is recorded below.
++
++> **O7-R20 independent closure audit:** The fresh
++> [R20 audit](inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++> confirmed O7-R16 through O7-R19, then found one additional reachable skill
++> repository-identity defect in equipment-granted passive composition and
++> aggregate restore. O7-R21 now enforces exact actor skill identity and O7-R22
++> reconciles the active documentation and tracking. Order 7 remains open for
++> O7-R23 independent closure.
++
++> **O7-R23 final closure:** The fresh
++> [R23 review](inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++> independently re-read current Framework, persistence, DemoHost, Godot,
++> tests, and all three audience documents. It found no unresolved realistic
++> reachable defect or active contradiction. The complete retained release gate
++> passed, so Order 7 returns to `complete` / `reviewed`.
+ 
+ ## Purpose
+ 
+@@ -1885,3 +1900,102 @@ scope. It does not replace the broader independent O7-R11 runtime audit.
+   with 0 warnings and 0 errors; `dotnet format --verify-no-changes` formatted 0
+   of 280 files, and `git diff --check` passed.
+ - **Versions:** runtime save v19 and content schema v10 remain unchanged.
++
++### O7-R20: Fresh Independent Closure Audit
++
++- **Reviewed implementation:** `aaacbd97`; reviewed correction range
++  `edf05e09..aaacbd97`.
++- **Actual destination:** the
++  [O7-R20 independent closure audit](inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++  traces current resource management, equipment composition, persistence,
++  DemoHost, Godot-contract, tests, and all three audience documents.
++- **Confirmed corrections:** O7-R16's equipment identity check, O7-R17's shop
++  identity checks, O7-R18's cancellation propagation and assessment-token
++  restoration, and O7-R19's documentation state all hold in current source.
++- **New finding:** a custom skill repository can return a different passive
++  definition for an equipment-granted skill ID during actor composition or
++  aggregate restore. O7-R21 must reject this before actor mutation; O7-R22 must
++  reconcile the audience contract; O7-R23 must perform fresh closure.
++- **Current state:** `inventory_equipment_economy` remains `partial`; all three
++  audience entries remain `existing_unreviewed`.
++- **Baseline tests:** 1,855 Framework, 184 DemoHost, and 7 ContentValidator
++  tests passed: 2,046 total, 0 failed, 0 skipped.
++- **Versions:** runtime save v19 and content schema v10 remain unchanged.
++
++### O7-R21: Enforce Actor Skill Definition Identity
++
++- **Baseline:** `cb48612b`.
++- **Commit:** `57d0d101` (`runtime: enforce actor skill definition identity`).
++- **Actual destination:** `CatalogBattleActorFactory`, `CatalogBattleActor`,
++  `RuntimeActorCombatProfileCompositionService`, their public diagnostic enums,
++  the public API baseline, and focused catalog/composition/equipment/restore
++  tests.
++- **Correction:** every successful skill lookup used by actor construction,
++  restore, skill views, or combat-profile composition must return the exact
++  requested `SkillDefinition.Id`. A mismatch returns a distinct typed
++  `SkillDefinitionMismatch` before the returned definition can become an
++  action, passive, or restored actor authority.
++- **Atomicity:** direct composition and equipment application preserve the live
++  actor on rejection; aggregate restore exposes no session or partial actor.
++- **Focused tests:** 6 adversarial exact-skill-identity cases passed: 6 total,
++  0 failed, 0 skipped.
++- **Full suite:** 1,861 Framework tests, 184 DemoHost tests, and 7
++  ContentValidator tests passed: 2,052 total, 0 failed, 0 skipped.
++- **Strict build and format:** Framework and solution Release builds completed
++  with 0 warnings and 0 errors; `dotnet format --verify-no-changes` formatted 0
++  files, and `git diff --check` passed.
++- **Versions:** runtime save v19 and content schema v10 remain unchanged.
++
++### O7-R22: Reconcile Skill Identity Documentation And Tracking
++
++- **Baseline:** `57d0d101`; this documentation/test commit records the final
++  hash.
++- **Actual destination:** all three Order 7 audience documents; their audience
++  indexes; active gameplay, product, capability, documentation, and coverage
++  roadmaps; executable capability/documentation matrices; the O7-R20 audit;
++  and documentation synchronization tests.
++- **Documentation correction:** player, developer, and technical audiences now
++  state that actor creation, composition, skill views, and restore require the
++  exact requested skill definition before it may enter action or passive state.
++- **Tracking discipline:** `inventory_equipment_economy` deliberately remains
++  `partial`, all three audience entries remain `existing_unreviewed`, and O7-R23
++  remains the sole certification gap. R22 does not promote its own prose.
++- **Scope:** documentation, fixtures, and documentation-contract tests only. No
++  runtime, save, schema, content, host, or gameplay behavior changed.
++- **Focused tests:** 17 documentation synchronization and foundation cases
++  passed: 17 total, 0 failed, 0 skipped.
++- **Full suite:** 1,861 Framework tests, 184 DemoHost tests, and 7
++  ContentValidator tests passed: 2,052 total, 0 failed, 0 skipped.
++- **Versions:** runtime save v19 and content schema v10 remain unchanged.
++
++### O7-R23: Fresh Independent Closure And Release Gate
++
++- **Reviewed implementation:** `ac51f072`; reviewed correction range
++  `edf05e09..ac51f072`.
++- **Actual destination:** the
++  [O7-R23 final closure review](inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md),
++  all three Order 7 audience documents and indexes, active gameplay and roadmap
++  summaries, executable capability/documentation matrices, documentation
++  synchronization tests, and retained verification evidence.
++- **Source evidence:** current inventory/equipment, slot-layout, shared-profile,
++  combat, currency, pricing, stock, shop, recovery, Compendium, save/restore,
++  DemoHost, and Godot paths were independently traced. O7-R16 through O7-R18
++  and O7-R21 remain effective at every shared boundary.
++- **Documentation evidence:** player, developer, and technical documents agree
++  with source on exact identities, cancellation, transaction atomicity, save
++  v19, content schema v10, and trusted host responsibilities.
++- **Result:** no unresolved realistic reachable Order 7 defect or active
++  contradiction remains. `inventory_equipment_economy` is `complete`, its
++  known-gap list is empty, and all three audience entries are `reviewed`.
++- **Focused tests:** 270 canonical Order 7 Framework cases and 135 canonical
++  DemoHost cases passed; the 17 documentation foundation/synchronization cases
++  also passed, all with 0 failed and 0 skipped.
++- **Full suite:** 1,861 Framework tests, 184 DemoHost tests, and 7
++  ContentValidator tests passed: 2,052 total, 0 failed, 0 skipped.
++- **Strict build and format:** Framework and solution Release builds completed
++  with 0 warnings and 0 errors; `dotnet format --verify-no-changes` formatted 0
++  of 280 files, and `git diff --check` passed.
++- **Verification:** the complete release gate passed against the closure commit;
++  raw commands, output, exit codes, coverage, and checksums are retained under
++  `artifacts/verification/order-7-r23-final-closure/<tested-commit>/`.
++- **Versions:** runtime save v19 and content schema v10 remain unchanged.
+diff --git a/docs/roadmap/documentation-completion-roadmap.md b/docs/roadmap/documentation-completion-roadmap.md
+index 22bd880ab857b8311caac0d761b19c5167b33ebb..54df2580626fa002db9613f62e31273b3f11f5a6 100644
+--- a/docs/roadmap/documentation-completion-roadmap.md
++++ b/docs/roadmap/documentation-completion-roadmap.md
+@@ -644,7 +644,7 @@ outer action-end before a save is captured. The
+ [final certification record](../reviews/status-passive-lifecycle-order-4-final-certification-2026-07-26.md)
+ is the formal Order 4 closure authority.
+ 
+-## Reopened Order 7
++## Completed Order 7
+ 
+ The owner-approved
+ [Inventory, Equipment, And Economy Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
+@@ -687,12 +687,25 @@ The later
+ [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+ found three reachable public-extension defects that invalidate the current
+ certification state without changing the owner-approved target rules. Order 7
+-is reopened for O7-R16 through O7-R20. O7-R16 through O7-R18 correct the three
++was reopened for O7-R16 through O7-R20. O7-R16 through O7-R18 correct the three
+ runtime boundaries, and O7-R19 reconciles the active audience text and tracking.
+-Its mechanics, developer, and technical entries remain `existing_unreviewed`
+-until O7-R20 independently certifies them; the executable documentation matrix
+-therefore continues to record 30 `reviewed`, 25 `existing_unreviewed`, 13
+-`missing`, and 7 `not_applicable` entries.
++The
++[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++then found one further exact skill-identity defect. O7-R21 corrects that runtime
++boundary and O7-R22 reconciles the audience text and tracking. Its mechanics,
++developer, and technical entries remain `existing_unreviewed` until O7-R23
++independently certifies them; the executable documentation matrix therefore
++continues to record 30 `reviewed`, 25 `existing_unreviewed`, 13 `missing`, and
++7 `not_applicable` entries.
++
++The
++[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++independently re-read current Framework, persistence, DemoHost, Godot, focused
++tests, and all three audience documents, then completed the retained release
++gate. It found no unresolved realistic reachable defect or active
++contradiction. Order 7 is formally complete; its three audience entries return
++to `reviewed`, and the executable matrix now records 33 `reviewed`, 22
++`existing_unreviewed`, 13 `missing`, and 7 `not_applicable` entries.
+ 
+ ## Deferred Documentation
+ 
+diff --git a/docs/roadmap/framework-capability-matrix.md b/docs/roadmap/framework-capability-matrix.md
+index 076fda7f2006d26d1a447d3a18f5d642774312b3..55d2be97dbadf5ac7e960b3da5a11ade78c76733 100644
+--- a/docs/roadmap/framework-capability-matrix.md
++++ b/docs/roadmap/framework-capability-matrix.md
+@@ -16,9 +16,9 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A
+ 
+ ## Current Reading
+ 
+-The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
++The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+ 
+-`inventory_equipment_economy` is `partial`. Its immutable transaction and
++`inventory_equipment_economy` is `complete`. Its immutable transaction and
+ validation foundation is usable. O7-R2 gives each equipment copy a unique
+ runtime instance ID, makes inventory its sole owner, permits separate copies of
+ one definition, and removes the former root save equipment authority. O7-R3
+@@ -66,9 +66,15 @@ substituted equipment definitions can enter live profiles, substituted item
+ definitions can supply shop stack limits, and equipment-backed action
+ authorization can normalize cancellation as gameplay failure. O7-R16 through
+ O7-R18 correct those three boundaries, and O7-R19 reconciles their active
+-documentation. The capability remains `partial` until O7-R20 independently
+-rechecks the corrected source and documentation and completes the retained
+-release gate.
++documentation. The
++[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++then found an exact skill-identity gap in actor composition and restore. O7-R21
++corrects that boundary and O7-R22 reconciles its documentation. The
++[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++independently rechecks the corrected source, persistence, DemoHost, Godot,
++tests, and all three audiences. No unresolved realistic reachable defect or
++active contradiction remains, and the complete retained release gate passes;
++the capability therefore returns to `complete` with no known gap.
+ 
+ `encounter_orchestration` is `complete`. Its scheduler, lifecycle,
+ turn-economy, event, cancellation, and automated execution foundations remain
+diff --git a/docs/roadmap/product-roadmap.md b/docs/roadmap/product-roadmap.md
+index b2e85c81dc20b4ebd81e49e12ecdfea2a0590682..46b203842b68557f6e6e9967b48540d20200b515 100644
+--- a/docs/roadmap/product-roadmap.md
++++ b/docs/roadmap/product-roadmap.md
+@@ -8,9 +8,9 @@ baseline.
+ 
+ ## Current State
+ 
+-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 complete, 1 partial, and 2 deferred.
++Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+ 
+-Documentation Order 7 is reopened under the owner-approved
++Documentation Order 7 is complete under the owner-approved
+ [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
+ The current resource-management foundation remains usable. O7-R2 establishes
+ equipment-instance ownership and removes the duplicated root save authority;
+@@ -54,8 +54,15 @@ three bounded public-extension defects in equipment-definition identity,
+ shop-content definition identity, and authorization cancellation propagation.
+ The standard catalog path remains healthy, but Order 7 is `partial` while
+ O7-R16 through O7-R18 correct those boundaries and O7-R19 reconciles the active
+-documentation. O7-R20's independent source/documentation review and retained
+-release gate remain required before certification returns to `complete`.
++documentation. The
++[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++then found an exact skill-identity gap in actor composition and restore. O7-R21
++corrects that boundary and O7-R22 reconciles the active documentation. The
++[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++independently rechecks the corrected source, persistence, DemoHost, Godot,
++tests, and all three audiences. No unresolved realistic reachable defect or
++active contradiction remains, and the complete retained release gate passes;
++Order 7 and `inventory_equipment_economy` are therefore `complete`.
+ 
+ `encounter_orchestration` has a substantial implemented foundation under the owner-approved
+ [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
+diff --git a/docs/technical/README.md b/docs/technical/README.md
+index 1c68817d1c01f08bf139cd8e60d04eb4442a81f9..310d4226bb91b8579cc93d38fb050c25b4a79067 100644
+--- a/docs/technical/README.md
++++ b/docs/technical/README.md
+@@ -100,7 +100,14 @@ is historical closure evidence for that revision. The later
+ [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+ reopened the reference as `existing_unreviewed`. O7-R16 through O7-R18 correct
+ the repository-identity and authorization-cancellation boundaries, O7-R19
+-reconciles the reference, and O7-R20 remains the independent closure checkpoint.
++reconciles the reference, and the
++[O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++found one further skill-identity defect. O7-R21 corrects that defect, O7-R22
++reconciles this reference, and the
++[O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++independently re-read the corrected implementation and reference and completed
++the retained release gate. This reference is `reviewed`, and Order 7 is
++formally complete.
+ Other subsystem references
+ remain tracked as `existing_unreviewed` or `missing` in the
+ [documentation coverage matrix](../reference/documentation-coverage.md).
+diff --git a/docs/technical/inventory-equipment-economy-runtime.md b/docs/technical/inventory-equipment-economy-runtime.md
+index bac0bf2381cf935313f672f3fad0262931a9feb7..0261442516d06f36c3a8fa1075966296483318cd 100644
+--- a/docs/technical/inventory-equipment-economy-runtime.md
++++ b/docs/technical/inventory-equipment-economy-runtime.md
+@@ -9,12 +9,18 @@ equipment, currency, shops, and recovery.
+ It does not define menu presentation, player input, scene ownership, save-file
+ serialization, or game-specific currency names.
+ 
+-> **Review state:** `existing_unreviewed`. The
++> **Review state:** `reviewed`. The
+ > [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
+ > found three reachable extension-boundary defects at `ef4e129e`. O7-R16 through
+ > O7-R18 correct those boundaries, and O7-R19 reconciles this reference with the
+-> corrected behavior. Certification remains open until O7-R20 independently
+-> reviews the implementation and documentation.
++> corrected behavior. The
++> [O7-R20 independent audit](../reviews/inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md)
++> then found one exact skill-definition identity defect. O7-R21 corrects that
++> boundary, and O7-R22 reconciles this reference. The
++> [O7-R23 final closure review](../reviews/inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md)
++> independently re-read current source, tests, hosts, and this reference, then
++> completed the retained release gate without finding another realistic
++> reachable defect or contradiction.
+ 
+ ## Authority Map
+ 
+@@ -126,6 +132,17 @@ or any stat contribution. Consequently, actor application, battle
+ authorization, and aggregate restoration all inherit the same rejection from
+ the shared profile resolver.
+ 
++Skill definition identity is checked independently at every actor projection
++boundary. `CatalogBattleActorFactory` compares each returned
++`SkillDefinition.Id` with the requested learned, equipped, pending, or
++equipment-granted skill ID before actor creation or restore. A mismatch returns
++`SkillDefinitionMismatch` and no actor. The combat-profile composition service
++performs the same check before it stages learned, equipped, or granted skills;
++a mismatch returns its own typed `SkillDefinitionMismatch`, preserves the live
++actor, and prevents aggregate restore from exposing a partial session.
++`CatalogBattleActor` skill views also reject a contradictory
++`GetRequiredSkill` result whose ID differs from the requested ID.
++
+ The equip transition cannot validate a definition profile because its public
+ request deliberately contains no catalog repository. A host must not treat an
+ accepted assignment as a substitute for resolving the resulting equipment
+@@ -208,7 +225,9 @@ input.
+ Granted skill IDs remain outside learned and move-list state. Active action
+ authorization and passive collection use the current profile. Execution-time
+ authorization resolves it again, closing a stale assessment window after
+-unequip.
++unequip. Every grant resolution must return the exact requested skill ID before
++the returned definition can enter active or passive state; repository success
++alone is not authority.
+ 
+ `RuntimeActorEquipmentProfileSource` captures an immutable inventory snapshot.
+ A host that adopts a new inventory must replace the source; mutating a stale
+diff --git a/src/Convergence.Framework/Encounters/CatalogBattleActorFactory.cs b/src/Convergence.Framework/Encounters/CatalogBattleActorFactory.cs
+index 395466042861467c4d207ca51af80bc5b01c68ef..8315a8a1c1c20228bb40d19e8837dc4a3daa6569 100644
+--- a/src/Convergence.Framework/Encounters/CatalogBattleActorFactory.cs
++++ b/src/Convergence.Framework/Encounters/CatalogBattleActorFactory.cs
+@@ -163,6 +163,7 @@ public enum CatalogBattleActorDiagnosticCode
+     SnapshotPendingSkillUnlockMismatch,
+     SnapshotPendingSkillLevelUnavailable,
+     SnapshotCombatProfileIdentityMismatch,
++    SkillDefinitionMismatch,
+ }
+ 
+ public sealed record CatalogBattleActorDiagnostic(
+@@ -189,7 +190,7 @@ public sealed class CatalogBattleActor
+     public EntityDefinition Entity { get; }
+     public RuntimeActorState State { get; }
+     public IReadOnlyList<SkillDefinition> SkillLoadout => Array.AsReadOnly(
+-        State.Skills.EquippedSkillIds.Select(_skills.GetRequiredSkill).ToArray());
++        State.Skills.EquippedSkillIds.Select(GetRequiredExactSkill).ToArray());
+     public IReadOnlyList<SkillDefinition> ActiveSkills => Array.AsReadOnly(
+         SkillLoadout.Where(skill => skill.Activation == SkillActivation.Active).ToArray());
+ 
+@@ -202,7 +203,7 @@ public sealed class CatalogBattleActor
+             State.Skills.EquippedSkillIds
+                 .Concat(profile.GrantedSkillIds)
+                 .Distinct()
+-                .Select(_skills.GetRequiredSkill)
++                .Select(GetRequiredExactSkill)
+                 .ToArray());
+     }
+ 
+@@ -223,6 +224,20 @@ public sealed class CatalogBattleActor
+             (equipmentProfiles ?? NoRuntimeActorEquipmentProfileSource.Instance)
+                 .Resolve(State)
+                 .GrantedSkillIds);
++
++    private SkillDefinition GetRequiredExactSkill(ContentId skillId)
++    {
++        SkillDefinition skill = _skills.GetRequiredSkill(skillId) ??
++            throw new InvalidOperationException(
++                $"Skill repository returned no definition for required skill '{skillId}'.");
++        if (skill.Id != skillId)
++        {
++            throw new InvalidOperationException(
++                $"Skill repository returned '{skill.Id}' for required skill '{skillId}'.");
++        }
++
++        return skill;
++    }
+ }
+ 
+ public sealed class CatalogBattleActorCreationResult
+@@ -389,11 +404,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
+         var resolvedSkills = new Dictionary<ContentId, SkillDefinition>();
+         foreach (ContentId skillId in orderedSkillIds)
+         {
+-            if (_skills.TryGetSkill(skillId, out SkillDefinition? skill) && skill is not null)
+-            {
+-                resolvedSkills.Add(skillId, skill);
+-            }
+-            else
++            if (!_skills.TryGetSkill(skillId, out SkillDefinition? skill) || skill is null)
+             {
+                 diagnostics.Add(new CatalogBattleActorDiagnostic(
+                     CatalogBattleActorDiagnosticCode.SkillMissing,
+@@ -401,6 +412,19 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
+                     entity.Id,
+                     skillId));
+             }
++            else if (skill.Id != skillId)
++            {
++                diagnostics.Add(new CatalogBattleActorDiagnostic(
++                    CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch,
++                    $"Entity '{entity.Id}' requested skill '{skillId}', but the repository " +
++                    $"returned '{skill.Id}'.",
++                    entity.Id,
++                    skillId));
++            }
++            else
++            {
++                resolvedSkills.Add(skillId, skill);
++            }
+         }
+ 
+         if (diagnostics.Count > 0)
+@@ -561,7 +585,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
+             }
+ 
+             SkillDefinition[] equippedDefinitions = unlockPlan.After.EquippedSkillIds
+-                .Select(_skills.GetRequiredSkill)
++                .Select(skillId => resolvedSkills[skillId])
+                 .ToArray();
+             state.ApplySkillState(unlockPlan.After, equippedDefinitions);
+ 
+@@ -634,11 +658,7 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
+                 continue;
+             }
+ 
+-            if (_skills.TryGetSkill(skillId, out SkillDefinition? skill) && skill is not null)
+-            {
+-                resolvedSkills.Add(skillId, skill);
+-            }
+-            else
++            if (!_skills.TryGetSkill(skillId, out SkillDefinition? skill) || skill is null)
+             {
+                 diagnostics.Add(new CatalogBattleActorDiagnostic(
+                     CatalogBattleActorDiagnosticCode.SnapshotSkillMissing,
+@@ -646,6 +666,19 @@ public sealed class CatalogBattleActorFactory : ICatalogBattleActorFactory
+                     entityId,
+                     skillId));
+             }
++            else if (skill.Id != skillId)
++            {
++                diagnostics.Add(new CatalogBattleActorDiagnostic(
++                    CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch,
++                    $"Saved actor requested skill '{skillId}', but the repository returned " +
++                    $"'{skill.Id}'.",
++                    entityId,
++                    skillId));
++            }
++            else
++            {
++                resolvedSkills.Add(skillId, skill);
++            }
+         }
+ 
+         foreach (RuntimePendingSkillChoiceSnapshot choice in snapshot.Skills.PendingChoices)
+diff --git a/src/Convergence.Framework/PublicAPI.Shipped.txt b/src/Convergence.Framework/PublicAPI.Shipped.txt
+index 7dc971eb42fd7f418d67b1a64e0e97f03b2e2557..8f83fb2593cdb6b2eaae2fc4eab32e3f55b54fbe 100644
+--- a/src/Convergence.Framework/PublicAPI.Shipped.txt
++++ b/src/Convergence.Framework/PublicAPI.Shipped.txt
+@@ -2268,6 +2268,7 @@ Convergence.Encounters.CatalogBattleActorDiagnosticCode.InvalidLevel = 0 -> Conv
+ Convergence.Encounters.CatalogBattleActorDiagnosticCode.MoveListCapacityRejected = 16 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
+ Convergence.Encounters.CatalogBattleActorDiagnosticCode.ProgressionLevelMismatch = 1 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
+ Convergence.Encounters.CatalogBattleActorDiagnosticCode.RuntimeStateConstructionFailed = 9 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
++Convergence.Encounters.CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch = 22 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
+ Convergence.Encounters.CatalogBattleActorDiagnosticCode.SkillMissing = 4 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
+ Convergence.Encounters.CatalogBattleActorDiagnosticCode.SkillUnlockPlanningFailed = 17 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
+ Convergence.Encounters.CatalogBattleActorDiagnosticCode.SnapshotActorKindMismatch = 10 -> Convergence.Encounters.CatalogBattleActorDiagnosticCode
+@@ -5173,6 +5174,7 @@ Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.MissingPa
+ Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.PartyRosterOwnerMismatch = 4 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+ Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.ResourceRecalculationFailed = 6 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+ Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.RosterInvariantViolation = 10 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
++Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch = 12 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+ Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMissing = 7 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+ Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode.StatResolutionFailed = 5 -> Convergence.Runtime.RuntimeActorCombatProfileCompositionDiagnosticCode
+ Convergence.Runtime.RuntimeActorCombatProfileCompositionRequest
+diff --git a/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs b/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs
+index 08ce161b466f8e5739eb44e47091aa0bb956bfe7..2e0baafe4f6f2ad2216b3744d437472744781808 100644
+--- a/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs
++++ b/src/Convergence.Framework/Runtime/RuntimeActorCombatProfileComposition.cs
+@@ -24,7 +24,8 @@ public enum RuntimeActorCombatProfileCompositionDiagnosticCode
+     InvalidSkillState,
+     MissingPartyRoster,
+     RosterInvariantViolation,
+-    CommitFailed
++    CommitFailed,
++    SkillDefinitionMismatch
+ }
+ 
+ public sealed record RuntimeActorCombatProfileCompositionDiagnostic(
+@@ -736,6 +737,17 @@ public sealed class RuntimeActorCombatProfileCompositionService :
+                     $"'{skillId}'.",
+                     skillId: skillId);
+             }
++            if (skill.Id != skillId)
++            {
++                return Rejected(
++                    before,
++                    resolvedSource,
++                    sourceActor.InstanceId,
++                    RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch,
++                    $"Combat-profile source '{sourceActor.InstanceId}' requested learned skill " +
++                    $"'{skillId}', but the repository returned '{skill.Id}'.",
++                    skillId: skillId);
++            }
+         }
+         foreach (ContentId skillId in sourceSkills.EquippedSkillIds)
+         {
+@@ -751,6 +763,17 @@ public sealed class RuntimeActorCombatProfileCompositionService :
+                     $"'{skillId}'.",
+                     skillId: skillId);
+             }
++            if (skill.Id != skillId)
++            {
++                return Rejected(
++                    before,
++                    resolvedSource,
++                    sourceActor.InstanceId,
++                    RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch,
++                    $"Combat-profile source '{sourceActor.InstanceId}' requested equipped skill " +
++                    $"'{skillId}', but the repository returned '{skill.Id}'.",
++                    skillId: skillId);
++            }
+ 
+             resolvedSkills.Add(skill);
+         }
+@@ -781,6 +804,17 @@ public sealed class RuntimeActorCombatProfileCompositionService :
+                     $"Equipment profile references missing granted skill '{skillId}'.",
+                     skillId: skillId);
+             }
++            if (skill.Id != skillId)
++            {
++                return Rejected(
++                    before,
++                    resolvedSource,
++                    sourceActor.InstanceId,
++                    RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch,
++                    $"Equipment profile requested granted skill '{skillId}', but the repository " +
++                    $"returned '{skill.Id}'.",
++                    skillId: skillId);
++            }
+ 
+             resolvedEquipmentGrantedSkills.Add(skill);
+         }
+diff --git a/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs b/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs
+index 2f190e0e62e1403cff4e9353a91a8d2f6b6ecb07..13a893b41643ed75bf5cacca583808d72c538818 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/DocumentationContractSynchronizationTests.cs
+@@ -1,6 +1,7 @@
+ using System.Text.Json;
+ using System.Text.RegularExpressions;
+ using Convergence.Content;
++using Convergence.Encounters;
+ using Convergence.Runtime;
+ using Xunit;
+ 
+@@ -67,7 +68,7 @@ public sealed class DocumentationContractSynchronizationTests
+     }
+ 
+     [Fact]
+-    public void Order7R19_GuidancePinsCorrectedAuthorityAndPendingCertification()
++    public void Order7R23_GuidancePinsCorrectedAuthorityAndCompletedCertification()
+     {
+         string mechanics = File.ReadAllText(RepositoryPath(
+             "docs",
+@@ -95,8 +96,12 @@ public sealed class DocumentationContractSynchronizationTests
+         Assert.Contains("### Enforce Repository Identity", developer, StringComparison.Ordinal);
+         Assert.Contains("EquipmentDefinitionMismatch", developer, StringComparison.Ordinal);
+         Assert.Contains("ItemDefinitionMismatch", developer, StringComparison.Ordinal);
++        Assert.Contains("ISkillDefinitionRepository", developer, StringComparison.Ordinal);
++        Assert.Contains("SkillDefinitionMismatch", developer, StringComparison.Ordinal);
+         Assert.Contains("same assessment may be retried", developer, StringComparison.Ordinal);
+         Assert.Contains("before copying grants", technical, StringComparison.Ordinal);
++        Assert.Contains("every actor projection", technical, StringComparison.Ordinal);
++        Assert.Contains("prevents aggregate restore from exposing a partial session", technical, StringComparison.Ordinal);
+         Assert.Contains("cannot produce any resolved offer authority", technical, StringComparison.Ordinal);
+         Assert.Contains("does not become an `ExecutionFailed` gameplay result", technical, StringComparison.Ordinal);
+         Assert.Contains("restores the token before unwinding", actionDeveloper, StringComparison.Ordinal);
+@@ -104,6 +109,8 @@ public sealed class DocumentationContractSynchronizationTests
+         Assert.True(Enum.IsDefined(RuntimeEquipmentProfileDiagnosticCode.EquipmentDefinitionMismatch));
+         Assert.True(Enum.IsDefined(RuntimeShopOfferResolutionCode.ItemDefinitionMismatch));
+         Assert.True(Enum.IsDefined(RuntimeShopOfferResolutionCode.EquipmentDefinitionMismatch));
++        Assert.True(Enum.IsDefined(CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch));
++        Assert.True(Enum.IsDefined(RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch));
+ 
+         using JsonDocument capabilities = JsonDocument.Parse(File.ReadAllText(RepositoryPath(
+             "tests",
+@@ -114,11 +121,8 @@ public sealed class DocumentationContractSynchronizationTests
+             .GetProperty("capabilities")
+             .EnumerateArray()
+             .Single(entry => entry.GetProperty("id").GetString() == "inventory_equipment_economy");
+-        Assert.Equal("partial", capability.GetProperty("implementationState").GetString());
+-        Assert.Contains(
+-            "O7-R20",
+-            Assert.Single(capability.GetProperty("knownGaps").EnumerateArray()).GetString(),
+-            StringComparison.Ordinal);
++        Assert.Equal("complete", capability.GetProperty("implementationState").GetString());
++        Assert.Empty(capability.GetProperty("knownGaps").EnumerateArray());
+ 
+         using JsonDocument coverage = JsonDocument.Parse(File.ReadAllText(RepositoryPath(
+             "tests",
+@@ -132,7 +136,7 @@ public sealed class DocumentationContractSynchronizationTests
+         Assert.All(
+             new[] { "mechanics", "developerGuide", "technical" },
+             audience => Assert.Equal(
+-                "existing_unreviewed",
++                "reviewed",
+                 documentation.GetProperty(audience).GetProperty("state").GetString()));
+     }
+ 
+diff --git a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+index 04abfb2651434b2cecf3ffa407345da6003c43eb..8e6132ab4d7ae5746d6286d44ef0f90377fdf3a1 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/DocumentationFoundationTests.cs
+@@ -754,7 +754,7 @@ public sealed class DocumentationFoundationTests
+     }
+ 
+     [Fact]
+-    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndCurrentAuditEvidence()
++    public void InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndR23ClosureEvidence()
+     {
+         string mechanics = File.ReadAllText(
+             RepositoryPath("docs", "mechanics", "party-inventory-and-economy.md"))
+@@ -801,6 +801,18 @@ public sealed class DocumentationFoundationTests
+                 "reviews",
+                 "inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md"))
+             .ReplaceLineEndings(" ");
++        string r20Audit = File.ReadAllText(
++            RepositoryPath(
++                "docs",
++                "reviews",
++                "inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md"))
++            .ReplaceLineEndings(" ");
++        string r23Closure = File.ReadAllText(
++            RepositoryPath(
++                "docs",
++                "reviews",
++                "inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md"))
++            .ReplaceLineEndings(" ");
+         string sourceReview = File.ReadAllText(
+             RepositoryPath(
+                 "docs",
+@@ -860,11 +872,13 @@ public sealed class DocumentationFoundationTests
+ 
+         string[] reviewStateTokens =
+         [
+-            "**Review state:** `existing_unreviewed`.",
++            "**Review state:** `reviewed`.",
+             "post-R15 independent audit",
+             "three reachable extension-boundary defects at `ef4e129e`",
+-            "O7-R18 correct those boundaries",
+-            "Certification remains open until O7-R20 independently"
++            "O7-R20 independent audit",
++            "O7-R21 corrects that boundary",
++            "O7-R23 final closure review",
++            "without finding another realistic reachable defect or contradiction"
+         ];
+         Assert.All(reviewStateTokens, token =>
+         {
+@@ -881,6 +895,10 @@ public sealed class DocumentationFoundationTests
+             "inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md";
+         const string freshAuditLink =
+             "inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md";
++        const string r20AuditLink =
++            "inventory-equipment-economy-order-7-r20-independent-closure-audit-2026-09-09.md";
++        const string r23ClosureLink =
++            "inventory-equipment-economy-order-7-r23-final-closure-review-2026-09-11.md";
+         string[] currentSummaryDocuments =
+         [
+             mechanicsIndex,
+@@ -892,6 +910,8 @@ public sealed class DocumentationFoundationTests
+         {
+             Assert.Contains(closureReviewLink, document, StringComparison.Ordinal);
+             Assert.Contains(freshAuditLink, document, StringComparison.Ordinal);
++            Assert.Contains(r20AuditLink, document, StringComparison.Ordinal);
++            Assert.Contains(r23ClosureLink, document, StringComparison.Ordinal);
+             Assert.DoesNotContain("O7-R11 remains", document, StringComparison.Ordinal);
+         });
+ 
+@@ -903,15 +923,14 @@ public sealed class DocumentationFoundationTests
+ 
+         DocumentationCapability documentation = LoadDocumentationMatrix().Capabilities.Single(
+             capability => capability.Id == "inventory_equipment_economy");
+-        Assert.Equal("existing_unreviewed", documentation.Mechanics.State);
+-        Assert.Equal("existing_unreviewed", documentation.DeveloperGuide.State);
+-        Assert.Equal("existing_unreviewed", documentation.Technical.State);
++        Assert.Equal("reviewed", documentation.Mechanics.State);
++        Assert.Equal("reviewed", documentation.DeveloperGuide.State);
++        Assert.Equal("reviewed", documentation.Technical.State);
+ 
+         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
+             candidate => candidate.Id == "inventory_equipment_economy");
+-        Assert.Equal("partial", capability.ImplementationState);
+-        Assert.Single(capability.KnownGaps);
+-        Assert.Contains("O7-R20", capability.KnownGaps[0], StringComparison.Ordinal);
++        Assert.Equal("complete", capability.ImplementationState);
++        Assert.Empty(capability.KnownGaps);
+ 
+         Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
+         Assert.Contains("O7-R15", currentAudit, StringComparison.Ordinal);
+@@ -923,6 +942,9 @@ public sealed class DocumentationFoundationTests
+         Assert.Contains("### O7-R17: Enforce Shop Content Definition Identity", sourceReview, StringComparison.Ordinal);
+         Assert.Contains("### O7-R18: Preserve Authorization Cancellation", sourceReview, StringComparison.Ordinal);
+         Assert.Contains("### O7-R19: Reconcile Active Documentation And Tracking", sourceReview, StringComparison.Ordinal);
++        Assert.Contains("### O7-R20: Fresh Independent Closure Audit", sourceReview, StringComparison.Ordinal);
++        Assert.Contains("### O7-R21: Enforce Actor Skill Definition Identity", sourceReview, StringComparison.Ordinal);
++        Assert.Contains("### O7-R22: Reconcile Skill Identity Documentation And Tracking", sourceReview, StringComparison.Ordinal);
+         Assert.Contains("save v19", currentAudit, StringComparison.OrdinalIgnoreCase);
+         Assert.Contains("content schema v10", currentAudit, StringComparison.OrdinalIgnoreCase);
+         Assert.Contains("returns to `complete`", currentAudit, StringComparison.Ordinal);
+@@ -954,6 +976,33 @@ public sealed class DocumentationFoundationTests
+         Assert.All(
+             freshAuditTokens,
+             token => Assert.Contains(token, freshAudit, StringComparison.Ordinal));
++
++        string[] r20AuditTokens =
++        [
++            "**Reviewed implementation:** `aaacbd97`",
++            "### O7-M4: Equipment-Granted Skill Resolution Accepts A Substituted Definition",
++            "### O7-R21: Enforce Actor Skill Definition Identity",
++            "### O7-R23: Fresh Independent Closure And Release Gate",
++            "O7-R21 is implemented by `57d0d101`",
++            "Order 7 still remains `partial` / `existing_unreviewed`"
++        ];
++        Assert.All(
++            r20AuditTokens,
++            token => Assert.Contains(token, r20Audit, StringComparison.Ordinal));
++
++        string[] r23ClosureTokens =
++        [
++            "**Reviewed implementation:** `ac51f072`",
++            "**Verdict:** **complete; no unresolved realistic reachable defect found**",
++            "No unresolved realistic reachable runtime defect or active documentation contradiction was found.",
++            "`RuntimeInventorySnapshot` is the sole owner",
++            "Compendium recall resolves the requested entry",
++            "Runtime save contract v19 and content schema v10 remain current.",
++            "Order 7 is formally complete."
++        ];
++        Assert.All(
++            r23ClosureTokens,
++            token => Assert.Contains(token, r23Closure, StringComparison.Ordinal));
+     }
+ 
+     [Fact]
+diff --git a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+index ce8e0ab4a38b7c6e879c52d285aa316df5b6d84b..a3f01e58f90bd7ce89f6f986be04e51ee3d714c0 100644
+--- a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
++++ b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+@@ -263,19 +263,19 @@
+     {
+       "id": "inventory_equipment_economy",
+       "mechanics": {
+-        "state": "existing_unreviewed",
++        "state": "reviewed",
+         "documents": ["docs/mechanics/party-inventory-and-economy.md"],
+-        "reason": "O7-R16 through O7-R18 correct the post-R15 extension-boundary defects and O7-R19 reconciles the player rules; independent O7-R20 certification remains pending."
++        "reason": "O7-R23 independently re-read the corrected exact-copy ownership, equipped-only grants, exact definition identity, pricing, stock, recovery, and save rules and completed the retained release gate."
+       },
+       "developerGuide": {
+-        "state": "existing_unreviewed",
++        "state": "reviewed",
+         "documents": ["docs/developer-guide/inventory-equipment-and-economy.md"],
+-        "reason": "The guide documents the corrected repository-identity and authorization-cancellation boundaries from O7-R16 through O7-R19; independent O7-R20 certification remains pending."
++        "reason": "O7-R23 independently verified the guide's composition, exact-identity, cancellation, transaction-adoption, persistence, and Godot integration contracts against current source and tests."
+       },
+       "technical": {
+-        "state": "existing_unreviewed",
++        "state": "reviewed",
+         "documents": ["docs/technical/inventory-equipment-economy-runtime.md"],
+-        "reason": "The reference documents the corrected repository-identity and authorization-cancellation boundaries from O7-R16 through O7-R19; independent O7-R20 certification remains pending."
++        "reason": "O7-R23 independently traced the documented authority graph, exact-identity boundaries, atomic state machines, save v19 restoration, host duties, and fault behavior against current implementation."
+       }
+     },
+     {
+diff --git a/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json b/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
+index f22ddc6dd6d888a25502dc1e56219258719972aa..4ce36474aba4d10fe6f3197874bcb2e88e7d499b 100644
+--- a/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
++++ b/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
+@@ -167,7 +167,7 @@
+     },
+     {
+       "id": "inventory_equipment_economy",
+-      "implementationState": "partial",
++      "implementationState": "complete",
+       "frameworkTests": [
+         "ResourceManagementServiceTests",
+         "ShopPricingPolicyTests",
+@@ -185,9 +185,7 @@
+       "demoCoverage": "focused",
+       "hostNeutral": true,
+       "optionalModule": true,
+-      "knownGaps": [
+-        "O7-R16 through O7-R19 correct and document the post-R15 repository-identity and authorization-cancellation defects; O7-R20 independent source and documentation review plus the complete retained release gate remain required for certification."
+-      ]
++      "knownGaps": []
+     },
+     {
+       "id": "navigation",
+diff --git a/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs b/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs
+index 4ec9fea076b7bd83f80b4c77a46e594ad78f0662..c8f7946376a9b925613bc48273a4b50eea039160 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/ProgressionPolicyTests.cs
+@@ -399,6 +399,101 @@ public sealed class ProgressionPolicyTests
+         AssertCompositionStateUnchanged(before, result.After);
+     }
+ 
++    [Fact]
++    public void Order7R21_CompositionRejectsSubstitutedEquipmentGrantedSkillWithoutMutation()
++    {
++        RuntimeActorState actor = CreateActor("substituted_grant_composition_actor", 5m);
++        RuntimeActorSnapshot before = actor.ToSnapshot();
++        ContentId requestedSkillId = ContentId.Parse("test.pack:authored_equipment_passive");
++        SkillDefinition substitutedSkill = PassiveSkill(
++            "test.pack:substituted_equipment_passive",
++            ContentId.Parse("owner_turn_end"),
++            restoreAmount: 99m);
++        var service = new RuntimeActorCombatProfileCompositionService(
++            new SubstitutingSkillRepository(requestedSkillId, substitutedSkill));
++
++        RuntimeActorCombatProfileCompositionResult result = service.Compose(
++            new RuntimeActorCombatProfileCompositionRequest(
++                actor,
++                RuntimeStatSourceKind.Actor,
++                MissingHostedEntityBehavior.UseActorBaseStats,
++                runtimeActors: [actor],
++                equipmentGrantedSkillIds: [requestedSkillId]));
++
++        Assert.False(result.Applied);
++        RuntimeActorCombatProfileCompositionDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(
++            RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch,
++            diagnostic.Code);
++        Assert.Equal(requestedSkillId, diagnostic.SkillId);
++        Assert.DoesNotContain(actor.Passives.Entries, entry => entry.Skill.Id == substitutedSkill.Id);
++        AssertCompositionStateUnchanged(before, actor.ToSnapshot());
++        AssertCompositionStateUnchanged(before, result.Before);
++        AssertCompositionStateUnchanged(before, result.After);
++    }
++
++    [Fact]
++    public void Order7R21_EquipmentApplicationRejectsSubstitutedGrantedSkillWithoutMutation()
++    {
++        RuntimeActorState actor = CreateActor("substituted_grant_application_actor", 5m);
++        RuntimeActorSnapshot before = actor.ToSnapshot();
++        ContentId requestedSkillId = ContentId.Parse("test.pack:authored_armor_passive");
++        SkillDefinition substitutedSkill = PassiveSkill(
++            "test.pack:substituted_armor_passive",
++            ContentId.Parse("owner_turn_end"),
++            restoreAmount: 99m);
++        ContentId armorId = ContentId.Parse("test.pack:granting_armor");
++        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("granting-armor-001");
++        var armor = new EquipmentDefinition(
++            armorId,
++            "Granting Armor",
++            "References the authored passive ID.",
++            StandardEquipmentSlotIds.Armor,
++            baseValue: 10,
++            grantedSkillIds: [requestedSkillId],
++            armor: new EquipmentArmorProfileDefinition(6, 2));
++        var inventory = new RuntimeInventorySnapshot(
++            ownedEquipmentInstances:
++            [
++                new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
++                    StandardEquipmentSlotIds.Armor,
++                    [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
++            ]);
++        var candidate = new RuntimeEquipmentSnapshot(
++        [
++            new KeyValuePair<ContentId, RuntimeInstanceId>(
++                StandardEquipmentSlotIds.Armor,
++                armorInstanceId)
++        ]);
++        var application = new RuntimeActorEquipmentApplicationService(
++            new RuntimeActorCombatProfileCompositionService(
++                new SubstitutingSkillRepository(requestedSkillId, substitutedSkill)));
++
++        RuntimeActorEquipmentApplicationResult result = application.Apply(
++            new RuntimeActorEquipmentApplicationRequest(
++                actor,
++                inventory,
++                candidate,
++                new EquipmentRepository(armor),
++                RuntimeStatSourceKind.Actor,
++                MissingHostedEntityBehavior.UseActorBaseStats,
++                [actor]));
++
++        Assert.False(result.Applied);
++        RuntimeActorEquipmentApplicationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(
++            RuntimeActorEquipmentApplicationDiagnosticCode.CombatProfileCompositionRejected,
++            diagnostic.Code);
++        Assert.Equal(
++            RuntimeActorCombatProfileCompositionDiagnosticCode.SkillDefinitionMismatch,
++            diagnostic.CompositionCode);
++        Assert.Equal([requestedSkillId], result.EquipmentProfile.GrantedSkillIds);
++        Assert.DoesNotContain(actor.Passives.Entries, entry => entry.Skill.Id == substitutedSkill.Id);
++        AssertCompositionStateUnchanged(before, actor.ToSnapshot());
++        AssertCompositionStateUnchanged(before, result.Before);
++        AssertCompositionStateUnchanged(before, result.After);
++    }
++
+     [Fact]
+     public void Order7H1_RawEquipmentReplacementIsNotPublic()
+     {
+@@ -1582,6 +1677,21 @@ public sealed class ProgressionPolicyTests
+         public SkillDefinition GetRequiredSkill(ContentId id) => _skills[id];
+     }
+ 
++    private sealed class SubstitutingSkillRepository(
++        ContentId requestedId,
++        SkillDefinition substitutedDefinition) : ISkillDefinitionRepository
++    {
++        public bool TryGetSkill(ContentId id, out SkillDefinition? definition)
++        {
++            definition = id == requestedId ? substitutedDefinition : null;
++            return definition is not null;
++        }
++
++        public SkillDefinition GetRequiredSkill(ContentId id) => id == requestedId
++            ? substitutedDefinition
++            : throw new KeyNotFoundException(id.ToString());
++    }
++
+     private sealed class EquipmentRepository(params EquipmentDefinition[] equipment) :
+         IEquipmentDefinitionRepository
+     {
+diff --git a/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs b/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
+index 5defff825a669b9d6ff8d750543becaa3970600f..14410cac70050c0711cbaadd78a67c11323c55bb 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
+@@ -434,6 +434,95 @@ public sealed class RuntimePersistenceSnapshotTests
+         Assert.Equal("$.actors.equipment", diagnostic.Path);
+     }
+ 
++    [Fact]
++    public void Order7R21_AggregateRestoreRejectsSubstitutedEquipmentGrantedSkillWithoutSession()
++    {
++        ContentId armorId = Id("convergence.catalog_surface_sample:training_coat_sample");
++        ContentId grantedPassiveId = Id("convergence.clean_battle_demo:regenerate_demo");
++        GameDataCatalog catalog = WithEquipmentDefinition(
++            LoadCatalog(),
++            new EquipmentDefinition(
++                armorId,
++                "Training Coat",
++                "Restore-derived equipment grant identity test.",
++                StandardEquipmentSlotIds.Armor,
++                500,
++                grantedSkillIds: [grantedPassiveId],
++                armor: new EquipmentArmorProfileDefinition(12, 2)));
++        SkillDefinition substitutedPassive = new(
++            Id("test.pack:substituted_restore_passive"),
++            "Substituted Restore Passive",
++            "Must never enter the restored session.",
++            SkillActivation.Passive,
++            null,
++            InheritanceGroup.Passive,
++            new SkillInheritanceDefinition(true),
++            modifiers:
++            [
++                new NumericRuleModifierDefinition(
++                    NumericRuleModifierType.DamageDealt,
++                    ModifierOperation.Add,
++                    99m)
++            ]);
++        RuntimeSaveGameSnapshot baseline = CreateSaveSnapshot();
++        RuntimeActorSnapshot savedActor = baseline.Actors[0];
++        RuntimeInstanceId armorInstanceId = RuntimeInstanceId.Parse("identity-coat-001");
++        RuntimeActorSnapshot equippedActor = CopyActor(
++            savedActor,
++            equipment: new RuntimeEquipmentSnapshot(
++                savedActor.Equipment.EquippedInstanceIds.Concat(
++                [
++                    new KeyValuePair<ContentId, RuntimeInstanceId>(
++                        StandardEquipmentSlotIds.Armor,
++                        armorInstanceId)
++                ])),
++            battleActivations: new RuntimeBattleActivationSnapshot(
++                savedActor.BattleActivations.PassiveActivations,
++                savedActor.BattleActivations.PassiveSkillStates.Concat(
++                [new RuntimePassiveSkillStateSnapshot(grantedPassiveId, IsEnabled: true)])));
++        var inventory = new RuntimeInventorySnapshot(
++            baseline.Inventory.ItemQuantities,
++            baseline.Inventory.OwnedEquipmentInstances.Select(pair =>
++                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
++                        pair.Key,
++                        pair.Value))
++                .Concat(
++                [
++                    new KeyValuePair<ContentId, IEnumerable<RuntimeEquipmentInstanceSnapshot>>(
++                        StandardEquipmentSlotIds.Armor,
++                        [new RuntimeEquipmentInstanceSnapshot(armorInstanceId, armorId)])
++                ]));
++        RuntimeSaveGameSnapshot snapshot = Copy(
++            baseline,
++            actors: [equippedActor, baseline.Actors[1]],
++            inventory: inventory);
++        var skills = new SelectiveSubstitutingSkillRepository(
++            catalog,
++            grantedPassiveId,
++            substitutedPassive);
++        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
++            catalog,
++            skills,
++            new RestoreOnlyInitializationPolicy(),
++            catalog));
++        var service = new RuntimeSessionRestoreService(
++            new RuntimeSaveValidator(),
++            factory,
++            new DelegateActorRestoreProfileResolver(_ => ActorProfile()));
++
++        RuntimeSessionRestoreResult result = service.Restore(snapshot, catalog);
++
++        Assert.False(result.IsSuccess);
++        Assert.Null(result.Session);
++        RuntimeSessionRestoreDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(RuntimeSessionRestoreDiagnosticCode.ActorRestoreFailed, diagnostic.Code);
++        Assert.Equal(CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch, diagnostic.ActorDiagnosticCode);
++        Assert.Equal(equippedActor.Identity.InstanceId, diagnostic.ActorId);
++        Assert.DoesNotContain(
++            substitutedPassive.Id,
++            equippedActor.BattleActivations.PassiveSkillStates.Select(state => state.SkillId));
++    }
++
+     [Fact]
+     public void RuntimeSessionRestoreService_RejectsEquipmentActorIdentityCollisionBeforeAnyActorRestore()
+     {
+@@ -3642,6 +3731,27 @@ public sealed class RuntimePersistenceSnapshotTests
+         public EquipmentDefinition GetRequiredEquipment(ContentId id) => definition;
+     }
+ 
++    private sealed class SelectiveSubstitutingSkillRepository(
++        ISkillDefinitionRepository inner,
++        ContentId requestedId,
++        SkillDefinition substitutedDefinition) : ISkillDefinitionRepository
++    {
++        public bool TryGetSkill(ContentId id, out SkillDefinition? definition)
++        {
++            if (id == requestedId)
++            {
++                definition = substitutedDefinition;
++                return true;
++            }
++
++            return inner.TryGetSkill(id, out definition);
++        }
++
++        public SkillDefinition GetRequiredSkill(ContentId id) => id == requestedId
++            ? substitutedDefinition
++            : inner.GetRequiredSkill(id);
++    }
++
+     private sealed class FaultingEquipmentSlotLayoutPolicy(bool cancel = false) :
+         IEquipmentSlotLayoutPolicy
+     {
+diff --git a/tests/Convergence.Framework.Tests/SkillSystem/CatalogBattleRuntimeTests.cs b/tests/Convergence.Framework.Tests/SkillSystem/CatalogBattleRuntimeTests.cs
+index db8a081d40f50b288e83aaf63c0bb4575492636a..ee389ab0e8641985df8ece33bbbc81aa9a36dbc2 100644
+--- a/tests/Convergence.Framework.Tests/SkillSystem/CatalogBattleRuntimeTests.cs
++++ b/tests/Convergence.Framework.Tests/SkillSystem/CatalogBattleRuntimeTests.cs
+@@ -352,6 +352,61 @@ public sealed class CatalogBattleRuntimeTests
+         Assert.Throws<CatalogBattleActorCreationException>(() => invalid.RequireActor());
+     }
+ 
++    [Fact]
++    public void Order7R21_ActorFactoryCreateRejectsSubstitutedSkillDefinitionBeforeInitialization()
++    {
++        ContentId requestedSkillId = Id("test.pack:authored_creation_skill");
++        SkillDefinition substitutedSkill = Passive("test.pack:substituted_creation_skill");
++        EntityDefinition entity = Entity("test.pack:creation_actor", [requestedSkillId]);
++        var initialization = new RecordingInitializationPolicy();
++        var factory = new CatalogBattleActorFactory(
++            new EntityRepository(entity),
++            new SubstitutingSkillRepository(requestedSkillId, substitutedSkill),
++            initialization);
++
++        CatalogBattleActorCreationResult result = factory.Create(
++            new CatalogBattleActorCreationRequest(
++                entity.Id,
++                RuntimeInstanceId.Parse("creation-actor"),
++                PlayerTeam,
++                1,
++                IsDeployed: true,
++                Id("test_host")));
++
++        Assert.False(result.IsSuccess);
++        Assert.Null(result.Actor);
++        CatalogBattleActorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch, diagnostic.Code);
++        Assert.Equal(requestedSkillId, diagnostic.SkillId);
++        Assert.Equal(0, initialization.CallCount);
++    }
++
++    [Fact]
++    public void Order7R21_ActorSkillViewsRejectSubstitutionFromRequiredLookup()
++    {
++        SkillDefinition authoredSkill = Active("test.pack:authored_view_skill", DamageElement.Ice);
++        SkillDefinition substitutedSkill = Active("test.pack:substituted_view_skill", DamageElement.Fire);
++        EntityDefinition entity = Entity("test.pack:view_actor", [authoredSkill.Id]);
++        var factory = new CatalogBattleActorFactory(
++            new EntityRepository(entity),
++            new SplitSkillRepository(authoredSkill, substitutedSkill),
++            new TestInitializationPolicy());
++        CatalogBattleActor actor = factory.Create(new CatalogBattleActorCreationRequest(
++            entity.Id,
++            RuntimeInstanceId.Parse("view-actor"),
++            PlayerTeam,
++            1,
++            IsDeployed: true,
++            Id("test_host"))).RequireActor();
++
++        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
++            () => actor.SkillLoadout);
++
++        Assert.Contains(authoredSkill.Id.ToString(), exception.Message, StringComparison.Ordinal);
++        Assert.Contains(substitutedSkill.Id.ToString(), exception.Message, StringComparison.Ordinal);
++        Assert.Equal([authoredSkill.Id], actor.State.Skills.EquippedSkillIds);
++    }
++
+     [Fact]
+     public void ActorFactory_RejectsDefaultIdentifiersBeforeRepositoryOrInitializationAccess()
+     {
+@@ -536,6 +591,35 @@ public sealed class CatalogBattleRuntimeTests
+         Assert.IsType<BattleDurationDefinition>(state.AffinityOverrides[DamageElement.Ice].Duration);
+     }
+ 
++    [Fact]
++    public void Order7R21_ActorFactoryRestoreRejectsSubstitutedEquipmentGrantedSkill()
++    {
++        ContentId requestedSkillId = Id("test.pack:authored_restore_grant");
++        SkillDefinition substitutedSkill = Passive("test.pack:substituted_restore_grant");
++        EntityDefinition entity = Entity("test.pack:restore_actor", []);
++        RuntimeActorSnapshot snapshot = RestorableActorSnapshot(
++            "restore-actor",
++            entity,
++            CoreStats(5m));
++        var factory = new CatalogBattleActorFactory(
++            new EntityRepository(entity),
++            new SubstitutingSkillRepository(requestedSkillId, substitutedSkill),
++            new ThrowingInitializationPolicy());
++
++        CatalogBattleActorCreationResult result = factory.Restore(
++            new CatalogBattleActorRestoreRequest(
++                snapshot,
++                RuntimeStatSourceKind.Actor,
++                MissingHostedEntityBehavior.UseActorBaseStats,
++                equipmentGrantedSkillIds: [requestedSkillId]));
++
++        Assert.False(result.IsSuccess);
++        Assert.Null(result.Actor);
++        CatalogBattleActorDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++        Assert.Equal(CatalogBattleActorDiagnosticCode.SkillDefinitionMismatch, diagnostic.Code);
++        Assert.Equal(requestedSkillId, diagnostic.SkillId);
++    }
++
+     [Fact]
+     public void ActorFactory_RestoreContainsDefaultSkillAndAilmentIdsInsideTypedDiagnostics()
+     {
+@@ -3347,6 +3431,22 @@ public sealed class CatalogBattleRuntimeTests
+         availability: new SkillAvailabilityDefinition([Battle]),
+         costs: costs);
+ 
++    private static SkillDefinition Passive(string id) => new(
++        Id(id),
++        id,
++        id,
++        SkillActivation.Passive,
++        null,
++        InheritanceGroup.Passive,
++        new SkillInheritanceDefinition(true),
++        modifiers:
++        [
++            new NumericRuleModifierDefinition(
++                NumericRuleModifierType.DamageDealt,
++                ModifierOperation.Add,
++                1m)
++        ]);
++
+     private static SkillDefinition TimedModifierSkill(string id) => new(
+         Id(id),
+         id,
+@@ -3620,6 +3720,36 @@ public sealed class CatalogBattleRuntimeTests
+         public SkillDefinition GetRequiredSkill(ContentId id) => _skills[id];
+     }
+ 
++    private sealed class SubstitutingSkillRepository(
++        ContentId requestedId,
++        SkillDefinition substitutedDefinition) : ISkillDefinitionRepository
++    {
++        public bool TryGetSkill(ContentId id, out SkillDefinition? definition)
++        {
++            definition = id == requestedId ? substitutedDefinition : null;
++            return definition is not null;
++        }
++
++        public SkillDefinition GetRequiredSkill(ContentId id) => id == requestedId
++            ? substitutedDefinition
++            : throw new KeyNotFoundException(id.ToString());
++    }
++
++    private sealed class SplitSkillRepository(
++        SkillDefinition exactDefinition,
++        SkillDefinition substitutedRequiredDefinition) : ISkillDefinitionRepository
++    {
++        public bool TryGetSkill(ContentId id, out SkillDefinition? definition)
++        {
++            definition = id == exactDefinition.Id ? exactDefinition : null;
++            return definition is not null;
++        }
++
++        public SkillDefinition GetRequiredSkill(ContentId id) => id == exactDefinition.Id
++            ? substitutedRequiredDefinition
++            : throw new KeyNotFoundException(id.ToString());
++    }
++
+     private sealed class EquipmentRepository(params EquipmentDefinition[] equipment)
+         : IEquipmentDefinitionRepository
+     {

@@ -44,3 +44,34 @@ capture and validation contract.
   commands 00 through 17 passed against `fadcf31366c7ab9a256526d55eddb4e16e7ae1b8`;
   the repository-local Godot `_console.exe` then crashed in native code while
   opening `user://logs`. This is failure evidence, not a passing gate.
+
+## Order 7 R15 Closure
+
+- [Successful complete R15 closure gate](order-7-r15-final-closure/357563aa51345b2649674968ec3a0db5f303fbf8/README.md):
+  23 commands passed against commit
+  `357563aa51345b2649674968ec3a0db5f303fbf8`, reviewing
+  `a184282e0def13aa78452b980da6f275f647ac29..357563aa51345b2649674968ec3a0db5f303fbf8`.
+
+## Order 7 Post-R15 Independent Audit
+
+- [Successful complete post-R15 gate](order-7-post-r15-independent-audit/51f011f392b7b35f4044d42aa1cc9e9675080f92/README.md):
+  23 commands passed against commit
+  `51f011f392b7b35f4044d42aa1cc9e9675080f92`, reviewing
+  `ef4e129eb50d4dffaa5791bc5a0e509fe446890c..b35de48929f9d0a1ed90e63b30f90c126d97ffd6`.
+- [Retained failed sandbox attempt](order-7-post-r15-independent-audit-failed-20260904T061429Z/b35de48929f9d0a1ed90e63b30f90c126d97ffd6/README.md):
+  commands 00 through 17 passed against `b35de48929f9d0a1ed90e63b30f90c126d97ffd6`;
+  Godot then failed to open its sandbox-confined `user://logs` path and
+  terminated in native code. This is failure evidence, not a passing gate.
+
+## Order 7 R23 Final Closure
+
+- [Successful complete R23 closure gate](order-7-r23-final-closure/3b56606a25e88c4651cd88e720309f369fbdfe66/README.md):
+  23 commands passed against commit
+  `3b56606a25e88c4651cd88e720309f369fbdfe66`, reviewing the corrected Order 7
+  range
+  `aaacbd9729d26fea2d6c65b84a6b367205fe6f25..e61725b65d55901efb2ad01a2e25f9d8f3e9dc8d`.
+- [Retained failed sandbox attempt](order-7-r23-final-closure-failed-20260914T055200Z/e61725b65d55901efb2ad01a2e25f9d8f3e9dc8d/README.md):
+  commands 00 through 17 passed against `e61725b65d55901efb2ad01a2e25f9d8f3e9dc8d`;
+  Godot then failed to open its sandbox-confined `user://logs` path and
+  terminated in native code. The elevated rerun above is the authoritative
+  passing gate.

@@ -1,0 +1,31 @@
+commit e61725b65d55901efb2ad01a2e25f9d8f3e9dc8d
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 11 11:23:18 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 11 11:23:18 2026 +0200
+
+    docs: close order 7 after r23 review
+
+commit ac51f0720ae3eddb528e8b9dae093f394c99b6ce
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 11 11:00:00 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 11 11:00:00 2026 +0200
+
+    docs: reconcile order 7 skill identity
+
+commit 57d0d101d594d6552d2822aa0a7a5b2acc919f52
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 11 10:51:20 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 11 10:51:20 2026 +0200
+
+    runtime: enforce actor skill definition identity
+
+commit cb48612bd236badc1e466cb5d8f0c54360135f92
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Wed Sep 9 08:03:13 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Wed Sep 9 08:03:13 2026 +0200
+
+    docs: record order 7 r20 authority finding
