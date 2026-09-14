@@ -144,7 +144,7 @@ Mechanics, developer, technical, ruleset, content-contract, API, decision,
 quality-gate, and roadmap documents now describe schema v6, the absolute
 `1..1024` authoring range, the supplied standard ceiling of `64`, and the
 authored-versus-derived percentage boundary. The executable capability matrix
-returns `combat_resolution` to `complete` with no hidden implementation gap;
+returns `combat_resolution` to `implemented` with no hidden implementation gap;
 O2-R21 was scheduled as an independent source verification rather than an
 unfinished runtime feature. That verification subsequently found the isolated
 schema discrepancy corrected by O2-R22.

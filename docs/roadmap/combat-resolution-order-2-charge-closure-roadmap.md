@@ -151,7 +151,7 @@ closure remains pending the O2-R40 correction and O2-R41 final review.
 - Run focused tests, the complete solution, strict nonincremental builds,
   formatting, content validation, relevant demos, documentation links, boundary
   searches, and `git diff --check`.
-- Return `combat_resolution` to `complete` only if no realistic reachable defect
+- Return `combat_resolution` to `implemented` only if no realistic reachable defect
   remains in the corrected scope.
 
 **Result:** The source-first review confirmed the original ordering and

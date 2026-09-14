@@ -6,7 +6,7 @@
 verified across Checkpoints 0-8.**
 
 **Current product state:** runtime save contract v19 is authoritative; the
-Framework Capability Matrix records 23 complete, 0 partial, and 2 intentionally
+Framework Capability Matrix records 23 implemented, 0 partial, and 2 intentionally
 deferred capabilities. O6-R29 through O6-R31 corrected the two bounded
 encounter paths and reconciled their documentation; O6-R32 independently
 verified and closed them. O4-R42 corrected the narrow status/passive validation
@@ -324,7 +324,7 @@ Affected capabilities:
 
 Why first:
 
-The current capability matrix reports these contracts as complete. Once their
+The current capability matrix reports these contracts as implemented. Once their
 intended behavior is explicitly corrected, continuing to report them as
 complete would hide known work.
 
@@ -339,7 +339,7 @@ Measured on `main` at `5703554` before implementation:
 - active content schema version 3 and pack version `0.3.0`;
 - runtime save contract version 7;
 - API baseline: 9,474 shipped entries and an empty unshipped baseline;
-- capability matrix before correction work: 23 complete, 0 partial, and 2
+- capability matrix before correction work: 23 implemented, 0 partial, and 2
   deferred.
 
 Checkpoint 0 changes the five affected capability states to `partial`. It does
@@ -632,7 +632,7 @@ Completion review:
 
 - inspect current source rather than relying on checkpoint summaries;
 - verify every D1-D6 decision against code and tests;
-- promote affected capability entries back to `complete` only after review;
+- promote affected capability entries back to `implemented` only after review;
 - record any remaining product choice separately from runtime defects.
 
 **Completion record (2026-07-16):** current source and focused tests were
@@ -645,7 +645,7 @@ choice, replace, forget, defer, and a canonical save/restore after a resolved
 choice. Its presentation remains a narrow host example over framework
 transactions.
 
-At this checkpoint, the framework capability matrix recorded 23 complete, 0
+At this checkpoint, the framework capability matrix recorded 23 implemented, 0
 partial, and 2 deferred capabilities. Documentation coverage recorded 11 reviewed audience
 entries. Verification passed with 1,017 tests (843 Framework, 167 DemoHost, 7
 ContentValidator), zero skipped tests, zero build warnings, formatting
@@ -670,7 +670,7 @@ confirmed the D1-D6 direction but found reachable integration gaps in roster
 owner-level authority, live transition validation, high-level move-list
 capacity, stale prepared growth, direct pending-skill restore validation, and
 the Godot sample's aggregate-restore boundary.
-The executable capability matrix temporarily recorded 20 complete, 3 partial,
+The executable capability matrix temporarily recorded 20 implemented, 3 partial,
 and 2 deferred capabilities until those follow-ups were corrected. See the
 [Actor Runtime Completion Code Review](../reviews/actor-runtime-completion-code-review-2026-07-16.md).
 
@@ -706,7 +706,7 @@ pending-skill catalog, authored-unlock provenance, and actor-level availability
 checks as aggregate save validation.
 
 All completion-review findings were corrected. At that checkpoint, the
-capability matrix returned to 23 complete, 0 partial, and 2 intentionally
+capability matrix returned to 23 implemented, 0 partial, and 2 intentionally
 deferred capabilities. Later policy-family work is tracked independently.
 
 ## Expected File Ownership

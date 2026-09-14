@@ -54,6 +54,15 @@
 - Update the documentation coverage matrix whenever a capability's documentation state or document ownership changes.
 - Preserve review reports under `docs/reviews` and active priorities under `docs/roadmap`; neither replaces current design authority.
 
+## Ordered Capability Tracking
+
+- The numbered Orders come only from `docs/roadmap/documentation-completion-roadmap.md`.
+- Read `tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json` before stating progress.
+- `implementationState: implemented` means usable host-neutral code and direct tests exist. It does not mean the numbered Order has been reviewed or closed.
+- Only `orderState: closed` means the source review, owner decisions, corrections, applicable audience documentation, independent closure review, and retained release gate are complete.
+- Mark an Order `open` when its source-review cycle begins. If that review finds a concrete implementation gap, also change `implementationState` to `partial` and record the gap.
+- Never infer Order completion from old summaries, test counts, demo coverage, or implementation maturity.
+
 ## Review Standard
 
 An actionable defect should identify:

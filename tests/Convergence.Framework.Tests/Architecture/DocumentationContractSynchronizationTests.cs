@@ -121,7 +121,9 @@ public sealed class DocumentationContractSynchronizationTests
             .GetProperty("capabilities")
             .EnumerateArray()
             .Single(entry => entry.GetProperty("id").GetString() == "inventory_equipment_economy");
-        Assert.Equal("complete", capability.GetProperty("implementationState").GetString());
+        Assert.Equal("implemented", capability.GetProperty("implementationState").GetString());
+        Assert.Equal(7, capability.GetProperty("orderNumber").GetInt32());
+        Assert.Equal("closed", capability.GetProperty("orderState").GetString());
         Assert.Empty(capability.GetProperty("knownGaps").EnumerateArray());
 
         using JsonDocument coverage = JsonDocument.Parse(File.ReadAllText(RepositoryPath(

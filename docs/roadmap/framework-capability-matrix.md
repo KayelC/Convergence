@@ -2,23 +2,69 @@
 
 ## Purpose
 
-This matrix reports the maturity of the reusable `Convergence.Framework` product. It replaces the recovery-era parity labels that compared every framework capability to the archived console prototype.
+This matrix reports two independent facts about the reusable
+`Convergence.Framework` product: whether a usable implementation exists, and
+whether its numbered collaborative Order has formally closed. It replaces the
+recovery-era parity labels that compared every framework capability to the
+archived console prototype.
 
 The executable source is [`../../tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json`](../../tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json). Tests require unique capability IDs, valid maturity states, framework test evidence, honest known gaps, and host neutrality.
 
-## States
+## Implementation States
 
-- `complete`: the framework owns a usable, host-neutral contract and implementation with direct tests.
+- `implemented`: the framework owns a usable, host-neutral contract and implementation with direct tests. This does **not** mean its numbered Order is closed.
 - `partial`: a useful implementation exists, but a named part of the framework contract is unfinished.
 - `deferred`: the capability is intentionally outside the current product or reserved for later work.
 
-Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`. A capability does not become incomplete merely because a particular host has not presented every feature.
+Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`.
+A capability does not become partial merely because a particular host has not
+presented every feature.
+
+## Order States
+
+- `not_started`: the numbered source review and owner-dialogue cycle has not begun.
+- `open`: the Order is under source review, decision, correction, documentation, or closure verification.
+- `closed`: current source and tests were reviewed, owner decisions were recorded, applicable audience documentation is reviewed, corrections were independently rechecked, and the retained release gate passed.
+- `not_applicable`: the capability is not one of the numbered Orders.
+
+Only `orderState: closed` means formal Order completion. The executable ledger
+forbids a closed Order unless its implementation is `implemented`, its known-gap
+list is empty, and every applicable documentation audience is `reviewed`.
+
+Historical review records may use `complete` as the former capability-state
+label. In active guidance, read that old label as `implemented`; it does not
+establish that a numbered Order is `closed`.
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
 
-`inventory_equipment_economy` is `complete`. Its immutable transaction and
+The ordered review queue currently records 20 Orders: 7 closed, 0 open, and 13 not_started.
+
+| Order | Capability | Implementation | Order state |
+|---:|---|---|---|
+| 1 | `typed_action_and_effect_execution` | `implemented` | `closed` |
+| 2 | `combat_resolution` | `implemented` | `closed` |
+| 3 | `turn_economy` | `implemented` | `closed` |
+| 4 | `status_and_passive_lifecycle` | `implemented` | `closed` |
+| 5 | `battle_knowledge` | `implemented` | `closed` |
+| 6 | `encounter_orchestration` | `implemented` | `closed` |
+| 7 | `inventory_equipment_economy` | `implemented` | `closed` |
+| 8 | `navigation` | `implemented` | `not_started` |
+| 9 | `dungeon_traversal` | `implemented` | `not_started` |
+| 10 | `negotiation_and_rewards` | `implemented` | `not_started` |
+| 11 | `fusion_and_inheritance` | `implemented` | `not_started` |
+| 12 | `compendium` | `implemented` | `not_started` |
+| 13 | `persistence_snapshots` | `implemented` | `not_started` |
+| 14 | `content_definitions` | `implemented` | `not_started` |
+| 15 | `portable_deserialization` | `implemented` | `not_started` |
+| 16 | `content_validation` | `implemented` | `not_started` |
+| 17 | `catalog_loading` | `implemented` | `not_started` |
+| 18 | `authored_schema_contracts` | `implemented` | `not_started` |
+| 19 | `host_contracts` | `implemented` | `not_started` |
+| 20 | `godot_adapter` | `implemented` | `not_started` |
+
+`inventory_equipment_economy` is `implemented`, and Order 7 is `closed`. Its immutable transaction and
 validation foundation is usable. O7-R2 gives each equipment copy a unique
 runtime instance ID, makes inventory its sole owner, permits separate copies of
 one definition, and removes the former root save equipment authority. O7-R3
@@ -55,7 +101,7 @@ remains. The
 then independently re-read the corrected source, persistence, host integration,
 tests, and all three audiences and completed the release gate without finding
 another realistic reachable defect or contradiction. The capability therefore
-returns to `complete` with no known gap. The
+returns to `implemented` with no known gap. The
 owner-approved
 [Order 7 source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md)
 governs the direct data corrections, genuine policy seams, three-audience
@@ -74,9 +120,9 @@ corrects that boundary and O7-R22 reconciles its documentation. The
 independently rechecks the corrected source, persistence, DemoHost, Godot,
 tests, and all three audiences. No unresolved realistic reachable defect or
 active contradiction remains, and the complete retained release gate passes;
-the capability therefore returns to `complete` with no known gap.
+the capability therefore returns to `implemented` with no known gap.
 
-`encounter_orchestration` is `complete`. Its scheduler, lifecycle,
+`encounter_orchestration` is `implemented`, and Order 6 is `closed`. Its scheduler, lifecycle,
 turn-economy, event, cancellation, and automated execution foundations remain
 implemented. The owner-approved
 [Order 6 roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md)
@@ -131,7 +177,7 @@ O6-R31 reconciled active audience and integration guidance. The
 independently reread current source, adversarial tests, and documentation,
 found no unresolved realistic reachable defect, and passed the complete
 release gate. The capability and all three audience entries therefore return
-to `complete` and `reviewed` at that revision.
+to `implemented` and `reviewed` at that revision.
 
 The subsequent
 [O6-R33 post-R32 independent audit](../reviews/encounter-orchestration-order-6-post-r32-independent-audit-2026-08-05.md)
@@ -146,7 +192,7 @@ corrected contracts across the active audience and API guidance. The
 [O6-R37 final closure review](../reviews/encounter-orchestration-order-6-r37-final-closure-review-2026-08-05.md)
 independently traced current source, hostile tests, both supplied schedulers,
 and all three audience documents. It found no unresolved realistic reachable
-defect, so `encounter_orchestration` returns to `complete` and its audience
+defect, so `encounter_orchestration` returns to `implemented` and its audience
 entries return to `reviewed`.
 
 The later
@@ -167,7 +213,7 @@ the three audience entries to `reviewed`. The
 [O6-R42 final closure review](../reviews/encounter-orchestration-order-6-r42-final-closure-review-2026-08-05.md)
 independently traced the corrected source and documents and passed every
 locally executable release gate without finding another realistic reachable
-defect. The capability therefore returns to `complete` with no known gap.
+defect. The capability therefore returns to `implemented` with no known gap.
 
 The subsequent
 [O6-R43 post-R42 independent audit](../reviews/encounter-orchestration-order-6-post-r42-independent-audit-2026-08-05.md)
@@ -187,9 +233,9 @@ exact restriction-action interface name. The
 [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
 independently reread the corrected source and documents, passed the complete
 local release gate, and found no remaining realistic reachable defect.
-`encounter_orchestration` returns to `complete` with no known gap.
+`encounter_orchestration` returns to `implemented` with no known gap.
 
-`battle_knowledge` is `complete`. Persistent entity facts and encounter-local
+`battle_knowledge` is `implemented`, and Order 5 is `closed`. Persistent entity facts and encounter-local
 runtime facts have separate immutable authorities; typed execution evidence and
 Analyze results pass through one atomic framework transition; automated teams
 share only their own encounter snapshot; familiar acquisition is optional and
@@ -220,7 +266,7 @@ code, content, host, coverage, and Godot gate without another realistic
 reachable finding. The online dependency audit could not be refreshed in the
 restricted local environment and remains a connected CI release gate. The
 [O5-R20 closure review](../reviews/battle-knowledge-order-5-r20-final-closure-review-2026-07-29.md)
-returned the capability to `complete` at that revision. A later independent
+returned the capability to `implemented` at that revision. A later independent
 source trace found that composed Vessels attribute Hosted Entity defenses to the
 owner entity and retain encounter disclosure across profile replacement. It
 also found that public snapshots accept impossible Almighty affinity facts.
@@ -246,9 +292,9 @@ that boundary. O5-R26 now preflights current knowledge before policy evaluation
 and routes valid no-op imports through the injected transition. The
 [O5-R27 final closure review](../reviews/battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
 found no remaining realistic reachable defect and passed the complete local
-gate, returning Order 5 to `complete`.
+gate, returning `battle_knowledge` to `implemented` and closing Order 5.
 
-`status_and_passive_lifecycle` is `complete`. The
+`status_and_passive_lifecycle` is `implemented`, and Order 4 is `closed`. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
 reproduced two bounded defects from current source. O4-R18 now skips a scheduled
 ailment trigger when that exact active instance has been removed or replaced,
@@ -314,7 +360,7 @@ initial and continuous phase snapshot authority, validate typed event payloads,
 bind the neutral standard-actions economy, and cover the complete transition
 and liveness matrix. O3-R6 reconciles all three documentation audiences. The
 confirmed Action Token transition table remains unchanged, and
-`turn_economy` has returned to `complete`. O3-R7 independently verified the
+`turn_economy` has returned to `implemented`. O3-R7 independently verified the
 corrected source and complete release gate under the
 [Turn Economy Order 3 Roadmap](turn-economy-order-3-roadmap.md); no unresolved
 reachable mechanic defect remained.
@@ -325,7 +371,7 @@ double-applied, an executed/cancelled result can spend a turn and tick
 lifecycle, and record cloning can invalidate turn-consumption contracts.
 O3-R8 through O3-R10 corrected those boundaries with isolated regression
 coverage. O3-R11 reconciled the public guidance, accepted API baseline, content
-wording, and executable evidence, so `turn_economy` has returned to `complete`.
+wording, and executable evidence, so `turn_economy` has returned to `implemented`.
 The supplied transition table itself was unchanged.
 
 The owner-closure audit at `7aa3467e` reopened `turn_economy` for one shared
@@ -401,7 +447,7 @@ effect result could carry undefined execution and turn-economy outcomes into
 the ordered pipeline. O2-R28 now rejects malformed result construction and
 record cloning inside the staged execution boundary. O2-R29's current-source
 recheck found no remaining reachable defect in the reviewed paths, so typed
-action execution, combat resolution, and host contracts return to `complete`.
+action execution, combat resolution, and host contracts return to `implemented`.
 O2-R30 through O2-R34 later unified registration preflight across skills, items,
 basic attacks, and escape; corrected current documentation drift; and completed
 a fresh source review with no unresolved reachable defect.
@@ -415,7 +461,7 @@ custom-executor receipt-integrity defect: a source-less charged modifier was
 accepted as a wildcard. O2-R40 now rejects such input before mutation, and its
 custom-executor regression proves staged rollback. O2-R41's fresh source trace
 and complete release gate found no remaining reachable defect in the corrected
-scope, so `combat_resolution` is `complete`.
+scope, so `combat_resolution` is `implemented`.
 
 ## Authority
 

@@ -31,9 +31,11 @@ review across every applicable audience:
 
 `persistence_snapshots` has reviewed developer and technical guidance, but its
 mechanics page still requires owner confirmation. At that starting point, every
-other implemented capability remained in the queue below. The implementation
-state in the [Framework Capability Matrix](framework-capability-matrix.md) is
-independent of this documentation state.
+other implemented capability remained in the queue below. The
+[Framework Capability Matrix](framework-capability-matrix.md) now records both
+axes explicitly: `implementationState: implemented` says usable code exists,
+while only `orderState: closed` says this complete collaborative Order workflow
+has finished.
 
 ## Review Unit
 
@@ -226,11 +228,11 @@ participation, supplied optional composition, and audience reconciliation. The
 three `combat_resolution` audience entries are `reviewed` again. O2-R39 found
 one custom-executor receipt-integrity defect, O2-R40 corrected it atomically,
 and O2-R41's current-source recheck found no unresolved reachable defect.
-`combat_resolution` has returned to `complete`; Order 3 is complete under the
+`combat_resolution` has returned to `implemented`; Order 3 is closed under the
 [Turn Economy Order 3 Roadmap](turn-economy-order-3-roadmap.md). The initial
 source review confirmed the supplied Action Token transition table and found
 three supported-boundary defects plus one authored-composition gap. The
-`turn_economy` returned to `complete` after O3-R1 through O3-R6. O3-R7 then
+`turn_economy` returned to `implemented` after O3-R1 through O3-R6. O3-R7 then
 completed the independent source review and full release gate without finding
 an unresolved reachable mechanic defect.
 

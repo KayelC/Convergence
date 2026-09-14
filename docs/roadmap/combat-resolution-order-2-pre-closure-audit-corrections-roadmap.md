@@ -80,7 +80,7 @@ re-evaluation completed and found O2-M3
 - Run focused tests, the complete suite, strict builds, formatting, active
   content validation, all DemoHost modes, Godot contracts/smoke, coverage,
   documentation links, boundary searches, and `git diff --check`.
-- Return each affected capability to `complete` only if no realistic reachable
+- Return each affected capability to `implemented` only if no realistic reachable
   defect remains in its reviewed paths.
 
 **Planned commit:** `docs: reverify order 2 closure`

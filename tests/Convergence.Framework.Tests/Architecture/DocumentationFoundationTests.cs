@@ -749,7 +749,9 @@ public sealed class DocumentationFoundationTests
 
         FrameworkCapability encounterCapability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             capability => capability.Id == "encounter_orchestration");
-        Assert.Equal("complete", encounterCapability.ImplementationState);
+        Assert.Equal("implemented", encounterCapability.ImplementationState);
+        Assert.Equal(6, encounterCapability.OrderNumber);
+        Assert.Equal("closed", encounterCapability.OrderState);
         Assert.Empty(encounterCapability.KnownGaps);
     }
 
@@ -929,7 +931,9 @@ public sealed class DocumentationFoundationTests
 
         FrameworkCapability capability = LoadFrameworkCapabilityMatrix().Capabilities.Single(
             candidate => candidate.Id == "inventory_equipment_economy");
-        Assert.Equal("complete", capability.ImplementationState);
+        Assert.Equal("implemented", capability.ImplementationState);
+        Assert.Equal(7, capability.OrderNumber);
+        Assert.Equal("closed", capability.OrderState);
         Assert.Empty(capability.KnownGaps);
 
         Assert.Contains("O7-R12", currentAudit, StringComparison.Ordinal);
@@ -1126,5 +1130,7 @@ public sealed class DocumentationFoundationTests
     private sealed record FrameworkCapability(
         string Id,
         string ImplementationState,
+        int? OrderNumber,
+        string OrderState,
         IReadOnlyList<string> KnownGaps);
 }

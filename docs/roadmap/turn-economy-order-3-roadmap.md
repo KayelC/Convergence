@@ -148,7 +148,7 @@ Framework-calculated turn consumption. The confirmed player-facing transition
 table is unchanged.
 
 O3-R8 through O3-R11 are now required before this capability returns to
-`complete`. Earlier completion records remain revision-specific history; they
+`implemented`. Earlier completion records remain revision-specific history; they
 are not current closure authority.
 
 ### O3-R8 Completion
@@ -208,7 +208,7 @@ defines the complete legal command-result matrix and the ownership difference
 between host-authored commands and Framework-calculated results. Reference
 content now describes Action Token as Framework-supplied and host-selected.
 
-The executable capability matrix records 23 complete, 0 partial, and 2
+The executable capability matrix records 23 implemented, 0 partial, and 2
 deferred capabilities. The documentation matrix records 20 reviewed, 32
 `existing_unreviewed`, 16 missing, and 7 `not_applicable` audience entries.
 
@@ -290,7 +290,7 @@ future unclassified kind fail before sequencing or publication.
 
 The three audience documents now distinguish port detail from runner-owned
 structure and explain the typed fault behavior. The capability and
-documentation matrices return to `complete` and `reviewed` respectively.
+documentation matrices return to `implemented` and `reviewed` respectively.
 No Action Token transition, action pricing, scheduler behavior, or persistence
 boundary changed during this correction. Order 3 is complete; Order 4 remains
 the next full documentation order.
@@ -338,7 +338,7 @@ composition, focused tests, and all three audience documents. It confirmed
 that nested `TurnEconomyResolution.TerminatesPhase` remains policy-specific,
 while explicit `ActionTurnConsumption.TerminatePhase` is universal. Mechanics,
 developer, and technical guidance now state that distinction, and executable
-matrices return `turn_economy` to `complete` with all three audiences
+matrices return `turn_economy` to `implemented` with all three audiences
 `reviewed`. No realistic reachable Order 3 defect remains in the reviewed
 scope. The project owner explicitly confirmed the resulting six-rule contract
 on 23 July 2026. Order 4 later completed its first lifecycle review and

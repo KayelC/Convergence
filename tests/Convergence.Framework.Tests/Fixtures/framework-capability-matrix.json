@@ -1,12 +1,15 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "product": "Convergence.Framework",
-  "states": ["complete", "partial", "deferred"],
+  "states": ["implemented", "partial", "deferred"],
+  "orderStates": ["not_applicable", "not_started", "open", "closed"],
   "demoCoverageLevels": ["none", "focused", "end_to_end"],
   "capabilities": [
     {
       "id": "content_definitions",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 14,
+      "orderState": "not_started",
       "frameworkTests": ["DomainDefinitionTests", "ReferenceContentTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
@@ -15,7 +18,9 @@
     },
     {
       "id": "portable_deserialization",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 15,
+      "orderState": "not_started",
       "frameworkTests": ["SchemaDeserializationTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
@@ -24,7 +29,9 @@
     },
     {
       "id": "content_validation",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 16,
+      "orderState": "not_started",
       "frameworkTests": ["ContentValidationTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
@@ -33,7 +40,9 @@
     },
     {
       "id": "catalog_loading",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 17,
+      "orderState": "not_started",
       "frameworkTests": ["CatalogLoaderTests", "CatalogSurfaceTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
@@ -42,7 +51,9 @@
     },
     {
       "id": "runtime_actor_state",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": null,
+      "orderState": "not_applicable",
       "frameworkTests": [
         "RuntimeStateSnapshotTests",
         "ProgressionPolicyTests",
@@ -56,7 +67,9 @@
     },
     {
       "id": "progression_and_resources",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": null,
+      "orderState": "not_applicable",
       "frameworkTests": [
         "ProgressionPolicyTests",
         "RuntimeActorGrowthCompositionTests",
@@ -69,7 +82,9 @@
     },
     {
       "id": "typed_action_and_effect_execution",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 1,
+      "orderState": "closed",
       "frameworkTests": ["ActiveSkillExecutionTests", "BattleActionExecutorTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
@@ -78,7 +93,9 @@
     },
     {
       "id": "combat_resolution",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 2,
+      "orderState": "closed",
       "frameworkTests": [
         "ChargePolicyTests",
         "HitResolutionPolicyTests",
@@ -101,7 +118,9 @@
     },
     {
       "id": "turn_economy",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 3,
+      "orderState": "closed",
       "frameworkTests": ["TurnEconomyContractTests", "BattleEncounterRunnerTests", "RuntimeRulesetBindingTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
@@ -110,7 +129,9 @@
     },
     {
       "id": "status_and_passive_lifecycle",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 4,
+      "orderState": "closed",
       "frameworkTests": ["BattleLifecycleClockTests", "BattleStatusLifecycleTests", "StatusLifecycleCertificationTests", "PassiveSkillRuntimeTests", "LifecycleResultImmutabilityTests", "BattleStatusLifecycleEventMapperTests", "BattleEncounterRunnerTests", "ContentSchemaContractTests", "RuntimeStateSnapshotTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
@@ -119,7 +140,9 @@
     },
     {
       "id": "encounter_orchestration",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 6,
+      "orderState": "closed",
       "frameworkTests": [
         "BattleEncounterRunnerTests",
         "TeamPhaseRoundRobinScheduleTests",
@@ -137,7 +160,9 @@
     },
     {
       "id": "battle_knowledge",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 5,
+      "orderState": "closed",
       "frameworkTests": [
         "PersistentBattleKnowledgeTests",
         "BattleKnowledgeObservationTransitionTests",
@@ -154,7 +179,9 @@
     },
     {
       "id": "party_and_rosters",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": null,
+      "orderState": "not_applicable",
       "frameworkTests": [
         "PartyRosterTransitionTests",
         "RuntimePartyRosterInvariantIntegrationTests",
@@ -167,7 +194,9 @@
     },
     {
       "id": "inventory_equipment_economy",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 7,
+      "orderState": "closed",
       "frameworkTests": [
         "ResourceManagementServiceTests",
         "ShopPricingPolicyTests",
@@ -189,7 +218,9 @@
     },
     {
       "id": "navigation",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 8,
+      "orderState": "not_started",
       "frameworkTests": ["RuntimeNavigationTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
@@ -198,7 +229,9 @@
     },
     {
       "id": "dungeon_traversal",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 9,
+      "orderState": "not_started",
       "frameworkTests": ["RuntimeDungeonTraversalTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
@@ -207,7 +240,9 @@
     },
     {
       "id": "negotiation_and_rewards",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 10,
+      "orderState": "not_started",
       "frameworkTests": ["NegotiationRewardRuntimeTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
@@ -216,7 +251,9 @@
     },
     {
       "id": "fusion_and_inheritance",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 11,
+      "orderState": "not_started",
       "frameworkTests": ["FusionInheritanceTests", "FusionCompendiumRuntimeTests", "FusionStrategyPolicyTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
@@ -225,7 +262,9 @@
     },
     {
       "id": "compendium",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 12,
+      "orderState": "not_started",
       "frameworkTests": ["CompendiumRuntimeServiceTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
@@ -234,7 +273,9 @@
     },
     {
       "id": "persistence_snapshots",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 13,
+      "orderState": "not_started",
       "frameworkTests": ["RuntimePersistenceSnapshotTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
@@ -243,7 +284,9 @@
     },
     {
       "id": "host_contracts",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 19,
+      "orderState": "not_started",
       "frameworkTests": ["FrameworkBoundaryTests", "GodotIntegrationContractTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
@@ -252,7 +295,9 @@
     },
     {
       "id": "authored_schema_contracts",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 18,
+      "orderState": "not_started",
       "frameworkTests": ["SchemaDeserializationTests", "CatalogSurfaceTests"],
       "demoCoverage": "focused",
       "hostNeutral": true,
@@ -261,7 +306,9 @@
     },
     {
       "id": "godot_adapter",
-      "implementationState": "complete",
+      "implementationState": "implemented",
+      "orderNumber": 20,
+      "orderState": "not_started",
       "frameworkTests": ["GodotIntegrationContractTests", "GodotReferenceConsumerBoundaryTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
@@ -271,6 +318,8 @@
     {
       "id": "save_version_migration",
       "implementationState": "deferred",
+      "orderNumber": null,
+      "orderState": "not_applicable",
       "frameworkTests": ["RuntimePersistenceSnapshotTests"],
       "demoCoverage": "none",
       "hostNeutral": true,
@@ -280,6 +329,8 @@
     {
       "id": "deterministic_replay",
       "implementationState": "deferred",
+      "orderNumber": null,
+      "orderState": "not_applicable",
       "frameworkTests": ["RuntimePersistenceSnapshotTests"],
       "demoCoverage": "none",
       "hostNeutral": true,

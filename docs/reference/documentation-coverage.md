@@ -3,8 +3,10 @@
 ## Purpose
 
 Framework implementation maturity and documentation maturity are different.
-Convergence may have a complete, tested capability whose intended rules have not
-yet been reviewed collaboratively with the project owner.
+Convergence may have an `implemented`, tested capability whose intended rules
+have not yet been reviewed collaboratively with the project owner. Only a
+numbered `orderState` of `closed` means the complete collaborative workflow has
+finished.
 
 The executable documentation ledger is
 [`../../tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json`](../../tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json).

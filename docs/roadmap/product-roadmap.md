@@ -8,7 +8,12 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 complete, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
+
+The ordered review queue currently records 20 Orders: 7 closed, 0 open, and 13 not_started.
+Implementation maturity and Order closure are deliberately separate: only an
+explicit `orderState: closed` means the complete collaborative source, owner,
+documentation, independent-review, and release-gate cycle has finished.
 
 Documentation Order 7 is complete under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
@@ -45,7 +50,7 @@ evidence was produced. The
 [O7-R15 final closure review](../reviews/inventory-equipment-economy-order-7-r15-final-closure-review-2026-08-24.md)
 now records that source/document re-evaluation and complete release gate. It
 found no unresolved realistic reachable defect or contradiction, so the
-capability returns to `complete` with no known gap.
+capability returns to `implemented` with no known gap.
 
 The later
 [post-R15 independent audit](../reviews/inventory-equipment-economy-order-7-post-r15-independent-audit-2026-08-31.md)
@@ -62,7 +67,7 @@ corrects that boundary and O7-R22 reconciles the active documentation. The
 independently rechecks the corrected source, persistence, DemoHost, Godot,
 tests, and all three audiences. No unresolved realistic reachable defect or
 active contradiction remains, and the complete retained release gate passes;
-Order 7 and `inventory_equipment_economy` are therefore `complete`.
+Order 7 is therefore `closed`, and `inventory_equipment_economy` is `implemented`.
 
 `encounter_orchestration` has a substantial implemented foundation under the owner-approved
 [Order 6 source review and roadmap](../reviews/encounter-orchestration-order-6-source-review-2026-07-30.md).
@@ -82,7 +87,7 @@ O6-R22 reconciles the resulting contract. The
 [O6-R23 final closure review](../reviews/encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md)
 then re-read the corrected implementation and all three audience documents,
 found no unresolved realistic reachable defect, and returned the capability to
-`complete` after the full local gate passed.
+`implemented` after the full local gate passed.
 
 The
 [O6-R24 post-R23 independent audit](../reviews/encounter-orchestration-order-6-post-r23-independent-audit-2026-08-04.md)
@@ -144,7 +149,7 @@ accepted turn-window safety semantics. The
 independently reread current source, adversarial tests, supplied policies, and
 all three audience documents. No unresolved realistic reachable defect was
 found, and every locally executable release gate passed. Order 6 is formally
-complete and `encounter_orchestration` returns to `complete`.
+complete and `encounter_orchestration` returns to `implemented`.
 
 The later
 [O6-R43 post-R42 independent audit](../reviews/encounter-orchestration-order-6-post-r42-independent-audit-2026-08-05.md)
@@ -160,7 +165,7 @@ interface name. The
 [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
 independently reread the corrected implementation and documentation, passed the
 complete local gate, and found no unresolved realistic reachable defect. Order
-6 is formally complete and `encounter_orchestration` returns to `complete`.
+6 is formally closed and `encounter_orchestration` returns to `implemented`.
 
 `status_and_passive_lifecycle` is complete. The
 [26 July fresh closure audit](../reviews/status-passive-lifecycle-order-4-fresh-closure-audit-2026-07-26.md)
@@ -313,7 +318,7 @@ entry becomes `reviewed`. Existing prose must not be bulk-promoted. Orders 1
 and 2 are complete and owner-confirmed. O2-R30 through O2-R34 corrected
 direct-action registration preflight, instant-defeat terminology, and current
 documentation drift, then independently rechecked the corrected source. The
-capability matrix records `turn_economy` as complete after its isolated runtime,
+capability matrix records `turn_economy` as implemented after its isolated runtime,
 test, and audience-documentation checkpoints. O3-R7 completed the final
 independent source and release-gate verification at that revision. A later
 recheck found and O3-R8 through O3-R11 corrected three command-boundary

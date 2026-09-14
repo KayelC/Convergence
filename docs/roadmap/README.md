@@ -24,10 +24,11 @@ records. It does not define individual mechanics.
 - [Post-O6 Encounter Runner Refactor Roadmap](post-O6-refactor-roadmap.md)
 
 Documentation maturity is tracked separately through the
-[documentation coverage matrix](../reference/documentation-coverage.md). A
-framework capability may be implemented completely while its documentation still
-requires owner review. The Documentation Completion Roadmap governs the ordered
-collaborative review of those outstanding entries.
+[documentation coverage matrix](../reference/documentation-coverage.md). The
+capability matrix uses `implemented` for usable code and a separate numbered
+`orderState`; only `closed` means formal Order completion. The Documentation
+Completion Roadmap governs the ordered collaborative review of outstanding
+entries.
 
 Order 1's mechanics, audience documentation, and typed execution capability
 remain owner-confirmed and complete. Order 2, `combat_resolution`, is also
@@ -122,7 +123,7 @@ O6-R13A through O6-R13K corrected every defect found by the independent
 closure passes. The
 [O6-R13L final closure review](../reviews/encounter-orchestration-order-6-final-closure-review-2026-07-30.md)
 then reconciled current source, tests, and all three audience documents,
-returning `encounter_orchestration` to `complete` at that revision. The later
+returning `encounter_orchestration` to `implemented` at that revision. The later
 [O6-R14 fresh owner-closure audit](../reviews/encounter-orchestration-order-6-fresh-owner-closure-audit-2026-08-04.md)
 reproduced four supported but uncovered paths and reopened the capability as
 `partial`. O6-R15 through O6-R19 corrected and reconciled those paths. O6-R20
@@ -131,7 +132,7 @@ O6-R22 reconciles the active guidance. The
 [O6-R23 final closure review](../reviews/encounter-orchestration-order-6-r23-final-closure-review-2026-08-04.md)
 re-read the corrected source and all three audience documents, found no
 unresolved realistic reachable defect, and returned the capability to
-`complete`. The later
+`implemented`. The later
 [O6-R24 post-R23 independent audit](../reviews/encounter-orchestration-order-6-post-r23-independent-audit-2026-08-04.md)
 reopened the capability as `partial` for contradictory normal-versus-fault
 result metadata and two audience precision corrections. O6-R25 through O6-R27
@@ -172,8 +173,8 @@ O6-R39 and O6-R40 have corrected the two runtime paths. O6-R41 reconciles all
 three audience documents and returns their entries to `reviewed`. The
 [O6-R42 final closure review](../reviews/encounter-orchestration-order-6-r42-final-closure-review-2026-08-05.md)
 independently verifies current source, documentation, and the locally
-executable release gate. Order 6 is formally complete and the capability
-returns to `complete`.
+executable release gate. Order 6 is formally closed and the capability
+returns to `implemented`.
 
 The later
 [O6-R43 post-R42 independent audit](../reviews/encounter-orchestration-order-6-post-r42-independent-audit-2026-08-05.md)
@@ -186,4 +187,4 @@ O6-R44 and O6-R45 correct the two runtime paths, and O6-R46 reconciles the
 active audience and public API guidance. The
 [O6-R47 final closure review](../reviews/encounter-orchestration-order-6-r47-final-closure-review-2026-08-05.md)
 independently re-reads the corrected source and executable gates. Order 6 is
-formally complete; `encounter_orchestration` is `complete` with no known gap.
+formally closed; `encounter_orchestration` is `implemented` with no known gap.
