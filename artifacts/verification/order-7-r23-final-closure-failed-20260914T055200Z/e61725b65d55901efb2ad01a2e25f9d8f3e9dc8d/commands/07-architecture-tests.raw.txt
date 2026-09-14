@@ -1,0 +1,79 @@
+Test run for C:\Users\kayel\Documents\GitHub\Convergence\tests\Convergence.Framework.Tests\bin\Release\net8.0\Convergence.Framework.Tests.dll (.NETCoreApp,Version=v8.0)
+VSTest version 17.11.1 (x64)
+
+Starting test execution, please wait...
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.8.2+699d445a1a (64-bit .NET 8.0.28)
+[xUnit.net 00:00:00.10]   Discovering: Convergence.Framework.Tests
+[xUnit.net 00:00:00.35]   Discovered:  Convergence.Framework.Tests
+[xUnit.net 00:00:00.36]   Starting:    Convergence.Framework.Tests
+  Passed Convergence.Framework.Tests.Architecture.FrameworkNeutralityTests.GenericDungeonTraversal_IsFrameworkOwnedWithoutPrototypeFloorService [6 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductBoundaryTests.SecurityPolicy_DefinesPrivateReportingAndSupportedScope [16 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkBoundaryTests.SolutionReleaseConfiguration_DoesNotBuildAnyProjectAsDebug [22 ms]
+  Passed Convergence.Framework.Tests.Architecture.GodotReferenceConsumerBoundaryTests.GodotProject_StartsTheHeadlessSmokeScene [23 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkNeutralityTests.CurrencyLedgerAndEconomyPublicContracts_UseNeutralCurrencyTermsOnly [14 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationContractSynchronizationTests.InventoryEquipmentEconomyGuide_UsesCurrentEightArgumentShopBuyContract [25 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationContractSynchronizationTests.EffectConfigurationGuidance_PreservesSharedPreflightBoundary [2 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationContractSynchronizationTests.TurnEconomyGuidance_PreservesExplicitTerminationBoundary [3 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductionReadinessRoadmapTests.ActiveDocumentation_KeepsVerifiedRoadmapAndReviewAuthoritative [35 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationContractSynchronizationTests.Order7R23_GuidancePinsCorrectedAuthorityAndCompletedCertification [9 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationContractSynchronizationTests.ChargeGuidance_UsesParticipationReceiptsAndExplicitOptionalComposition [2 ms]
+  Passed Convergence.Framework.Tests.Architecture.GodotReferenceConsumerBoundaryTests.GodotConsumer_UsesCanonicalGeneratedContentWithoutMaintainingADuplicatePack [20 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkSourceInventoryTests.RepositoryGuidance_StatesTheCuratedDocumentationBoundary [57 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationFoundationTests.EncounterOrchestrationDocumentation_PreservesSchedulingAndTerminationAuthority [58 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationFoundationTests.StatusLifecycleDocumentation_PreservesDispatchAndRestoreAuthority [2 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationContractSynchronizationTests.CurrentContentGuidance_UsesActiveSchemaAndOrderTwoCorrectionChain [18 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationFoundationTests.CoverageReference_ReportsTotalsDerivedFromTheExecutableMatrix [3 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkCapabilityMatrixTests.ActiveDocuments_ReportTotalsDerivedFromTheExecutableMatrix [66 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkCapabilityMatrixTests.Matrix_DoesNotCarryLegacyParityOrRemovalAuthorityFields [< 1 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationContractSynchronizationTests.CurrentAuthorityDocuments_UseCompiledRuntimeSaveContractVersion [6 ms]
+  Passed Convergence.Framework.Tests.Architecture.GodotReferenceConsumerBoundaryTests.GodotConsumer_PinsTheSupportedSdkAndReferencesOnlyFramework [24 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationFoundationTests.AudienceEvidenceAndRoadmapDirectories_AreIndexedAndDeclutterTheDocsRoot [5 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkCapabilityMatrixTests.Matrix_UsesCleanProductStatesAndAuditableEvidence [2 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductionReadinessRoadmapTests.Ledger_FinalReviewVerifiesEveryFindingAndRemainsAuditable [36 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationFoundationTests.DocumentationPatternsAndAgentGuide_PreserveCollaborativeDesignAuthority [2 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductionReadinessRoadmapTests.Ledger_RequiresEvidenceWorkOwnershipAndHonestArchiveState [1 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationFoundationTests.StatModifierDecision_PreservesConfirmedRollingDurationExample [2 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductionReadinessRoadmapTests.Ledger_CoversEveryOriginalAuditFindingAndTheCatalystCorrection [1 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationFoundationTests.CombatResolutionDocumentation_PreservesConfirmedPolicyAndExecutionBoundaries [4 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationFoundationTests.StatModifierDocumentation_PreservesConfirmedSignalsAndClockEdges [2 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationFoundationTests.CoverageMatrix_ExactlyCoversFrameworkCapabilitiesAndValidDocuments [39 ms]
+  Passed Convergence.Framework.Tests.Architecture.TerminologyBoundaryTests.Scanner_DetectsRetiredSymbolsWireValuesFixturesAndDirectReferences [122 ms]
+  Passed Convergence.Framework.Tests.Architecture.TerminologyBoundaryTests.Scanner_ExaminesActiveRelativePaths [< 1 ms]
+  Passed Convergence.Framework.Tests.Architecture.TerminologyBoundaryTests.Scanner_ReportsDeterministicOneBasedLocations [< 1 ms]
+  Passed Convergence.Framework.Tests.Architecture.TerminologyBoundaryTests.Scanner_AllowsIncidentalWordsApprovedVocabularyAndRetailStock [< 1 ms]
+  Passed Convergence.Framework.Tests.Architecture.DocumentationFoundationTests.InventoryEquipmentEconomyDocumentation_PreservesOrder7AuthorityAndR23ClosureEvidence [16 ms]
+  Passed Convergence.Framework.Tests.Architecture.GodotReferenceConsumerBoundaryTests.GodotConsumer_ExercisesTheExistingHostNeutralCompositionSurface [72 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductBoundaryTests.DemoHost_DoesNotRegisterBindOrRequireMoonPhase [159 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkBoundaryTests.FrameworkPublicApi_ExposesNoHostSerializerEngineOrLegacyTypes [164 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkBoundaryTests.FrameworkDistribution_IsSourceProjectReferenceRatherThanPackagePublication [35 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductBoundaryTests.ActiveContent_IsManifestOwnedAndSafeForFlatHostCopying [70 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductBoundaryTests.ActiveSolution_ContainsOnlyTheCleanProductProjects [3 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkBoundaryTests.FrameworkRandomConsumers_UseTheSharedHostOutputGuard [1 s]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkNeutralityTests.FrameworkSources_DoNotOwnPrototypeCurrencyNegotiationOrDungeonCompatibility [1 s]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkBoundaryTests.FrameworkFusionSources_DoNotEncodeLegacyCatalystOrMoonPhaseStrategies [3 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkBoundaryTests.FrameworkSources_DoNotUseConsoleFilesystemSleepingOrNewtonsoft [43 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkBoundaryTests.RepositoryProjects_TargetTheGodotCompatibleDotNet8AndCSharp12Baseline [5 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkBoundaryTests.FrameworkCompendiumSources_DoNotOwnHostCurrencyTerminology [1 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductBoundaryTests.ActiveProductionSourcesAndProjects_DoNotReferenceTheLegacyArchive [1 s]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkBoundaryTests.FrameworkPublicApi_IsVersionedDocumentedAndBaselineGuarded [78 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkBoundaryTests.FrameworkAssembly_HasNoConsoleHostOrRuntimePackageDependency [2 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductBoundaryTests.ActiveQualityWorkflow_EnforcesTheCleanProductGate [19 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkBoundaryTests.RepositorySdkPolicy_SelectsTheDotNet8LineWithControlledRollForward [1 ms]
+  Passed Convergence.Framework.Tests.Architecture.FrameworkSourceInventoryTests.Inventory_AccountsForEveryFrameworkSourceAndPublicTypeOwner [1 s]
+  Passed Convergence.Framework.Tests.Architecture.ProductBoundaryTests.PublicLicensing_DefinesNoncommercialScopesAndProtectsArchiveOwnership [23 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductBoundaryTests.ActiveProductRoot_IsTheGitRepositoryRootWhenGitMetadataIsPresent [2 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductBoundaryTests.ActiveDocumentationLinks_ResolveInsideTheProductBoundary [680 ms]
+  Passed Convergence.Framework.Tests.Architecture.ProductBoundaryTests.ActiveContractAssets_AreAlwaysRefreshedInBuildOutputs [3 ms]
+  Passed Convergence.Framework.Tests.Architecture.VerificationEvidenceContractTests.CommittedEvidenceBundles_HaveSuccessfulCommandsCompleteChecksumsAndValidCoverage [3 s]
+  Passed Convergence.Framework.Tests.Architecture.VerificationEvidenceContractTests.EvidencePolicy_TracksCanonicalBundlesAndLabeledRecoveryWithoutNormalizingBytes [18 ms]
+  Passed Convergence.Framework.Tests.Architecture.VerificationEvidenceContractTests.RecoveredHistoricalEvidence_IsExplicitlyNonCanonicalAndChecksummed [457 ms]
+  Passed Convergence.Framework.Tests.Architecture.VerificationEvidenceContractTests.EvidenceRunner_RequiresCleanSourceAndCapturesTheCompleteLocalGate [1 ms]
+  Passed Convergence.Framework.Tests.Architecture.TerminologyBoundaryTests.ActiveProduct_ContainsNoRetiredTerminology [5 s]
+[xUnit.net 00:00:05.96]   Finished:    Convergence.Framework.Tests
+  Passed Convergence.Framework.Tests.Architecture.TerminologyBoundaryTests.ScanPolicy_IncludesActiveProductAndExcludesArchiveAndBuildOutputs [< 1 ms]
+
+Test Run Successful.
+Total tests: 64
+     Passed: 64
+ Total time: 6.4583 Seconds
