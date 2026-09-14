@@ -37,9 +37,9 @@ establish that a numbered Order is `closed`.
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 implemented, 1 partial, and 2 deferred.
 
-The ordered review queue currently records 20 Orders: 7 closed, 0 open, and 13 not_started.
+The ordered review queue currently records 20 Orders: 7 closed, 1 open, and 12 not_started.
 
 | Order | Capability | Implementation | Order state |
 |---:|---|---|---|
@@ -50,7 +50,7 @@ The ordered review queue currently records 20 Orders: 7 closed, 0 open, and 13 n
 | 5 | `battle_knowledge` | `implemented` | `closed` |
 | 6 | `encounter_orchestration` | `implemented` | `closed` |
 | 7 | `inventory_equipment_economy` | `implemented` | `closed` |
-| 8 | `navigation` | `implemented` | `not_started` |
+| 8 | `navigation` | `partial` | `open` |
 | 9 | `dungeon_traversal` | `implemented` | `not_started` |
 | 10 | `negotiation_and_rewards` | `implemented` | `not_started` |
 | 11 | `fusion_and_inheritance` | `implemented` | `not_started` |
@@ -63,6 +63,15 @@ The ordered review queue currently records 20 Orders: 7 closed, 0 open, and 13 n
 | 18 | `authored_schema_contracts` | `implemented` | `not_started` |
 | 19 | `host_contracts` | `implemented` | `not_started` |
 | 20 | `godot_adapter` | `implemented` | `not_started` |
+
+`navigation` is `partial`, and Order 8 is `open`. Its generic transition,
+injected-policy, immutable result, DemoHost, and persistence foundations are
+usable. The current source review identifies missing live identifier validation,
+under-specified public result and custom-policy fault boundaries, one bounded
+Training Annex active-context error, incomplete live Godot adoption evidence,
+and three audience documents that have not completed owner review. The proposed
+correction and decision sequence is recorded in the
+[Navigation Order 8 source review and roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md).
 
 `inventory_equipment_economy` is `implemented`, and Order 7 is `closed`. Its immutable transaction and
 validation foundation is usable. O7-R2 gives each equipment copy a unique

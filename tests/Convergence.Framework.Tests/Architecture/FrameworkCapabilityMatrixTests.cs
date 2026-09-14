@@ -84,8 +84,8 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.Equal(Enumerable.Range(1, OrderedCapabilityIds.Length), ordered.Select(capability => capability.OrderNumber!.Value));
         Assert.Equal(OrderedCapabilityIds, ordered.Select(capability => capability.Id));
         Assert.Equal(7, ordered.Count(capability => capability.OrderState == "closed"));
-        Assert.DoesNotContain(ordered, capability => capability.OrderState == "open");
-        Assert.Equal(13, ordered.Count(capability => capability.OrderState == "not_started"));
+        Assert.Equal(1, ordered.Count(capability => capability.OrderState == "open"));
+        Assert.Equal(12, ordered.Count(capability => capability.OrderState == "not_started"));
 
         using JsonDocument documentation = JsonDocument.Parse(File.ReadAllText(DocumentationMatrixPath()));
         foreach (CapabilityEntry capability in ordered.Where(capability => capability.OrderState == "closed"))
@@ -145,6 +145,35 @@ public sealed class FrameworkCapabilityMatrixTests
             Assert.Contains(expectedImplementation, text, StringComparison.Ordinal);
             Assert.Contains(expectedOrders, text, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public void NavigationOrder8Review_OpensTheOrderAndPinsItsSourceBasedRoadmap()
+    {
+        CapabilityEntry navigation = Load().Capabilities.Single(capability => capability.Id == "navigation");
+
+        Assert.Equal("partial", navigation.ImplementationState);
+        Assert.Equal(8, navigation.OrderNumber);
+        Assert.Equal("open", navigation.OrderState);
+        Assert.Equal(3, navigation.KnownGaps.Count);
+
+        string review = File.ReadAllText(RepositoryPath(
+            "docs",
+            "reviews",
+            "navigation-order-8-source-review-2026-09-14.md"));
+        string[] requiredEvidence =
+        [
+            "**Source baseline:** `a1f91e68`",
+            "### O8-M1: Live navigation accepts empty identifiers",
+            "### O8-M2: The public result contract permits contradictory states",
+            "### O8-M3: The custom-policy failure contract is undefined",
+            "### O8-L1: Training Annex confuses retained dungeon progress with active location",
+            "### O8-L2: Direct evidence does not cover the full public boundary",
+            "### O8-D6: Retain or change the combined field aggregate",
+            "| O8-R8 | `pending` |",
+            "Order 9 remains responsible for dungeon traversal."
+        ];
+        Assert.All(requiredEvidence, token => Assert.Contains(token, review, StringComparison.Ordinal));
     }
 
     private static CapabilityMatrix Load() =>

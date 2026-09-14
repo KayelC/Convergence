@@ -20,6 +20,7 @@ records. It does not define individual mechanics.
 - [Turn Economy Order 3 Roadmap](turn-economy-order-3-roadmap.md)
 - [Documentation Completion Roadmap](documentation-completion-roadmap.md)
 - [Framework Capability Matrix](framework-capability-matrix.md)
+- [Navigation Order 8 Source Review And Proposed Roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md)
 - [Production-Readiness Completion Record](production-readiness-roadmap.md)
 - [Post-O6 Encounter Runner Refactor Roadmap](post-O6-refactor-roadmap.md)
 

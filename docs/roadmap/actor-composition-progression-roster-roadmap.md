@@ -6,8 +6,8 @@
 verified across Checkpoints 0-8.**
 
 **Current product state:** runtime save contract v19 is authoritative; the
-Framework Capability Matrix records 23 implemented, 0 partial, and 2 intentionally
-deferred capabilities. O6-R29 through O6-R31 corrected the two bounded
+Framework Capability Matrix records 22 implemented, 1 partial, and 2 intentionally
+deferred capabilities. Navigation is partial while Order 8 is open. O6-R29 through O6-R31 corrected the two bounded
 encounter paths and reconciled their documentation; O6-R32 independently
 verified and closed them. O4-R42 corrected the narrow status/passive validation
 boundary, O4-R43 and O4-R43A corrected current save-v13 guidance, and O4-R44

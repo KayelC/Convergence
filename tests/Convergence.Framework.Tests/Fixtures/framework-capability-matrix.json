@@ -218,14 +218,18 @@
     },
     {
       "id": "navigation",
-      "implementationState": "implemented",
+      "implementationState": "partial",
       "orderNumber": 8,
-      "orderState": "not_started",
+      "orderState": "open",
       "frameworkTests": ["RuntimeNavigationTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Live navigation does not reject empty current, transition, source, or destination ContentId values before policy evaluation.",
+        "Public navigation result and custom-policy failure boundaries do not yet enforce one typed coherent outcome contract.",
+        "Host adoption, retained-progress context, and live Godot transition evidence remain incomplete."
+      ]
     },
     {
       "id": "dungeon_traversal",

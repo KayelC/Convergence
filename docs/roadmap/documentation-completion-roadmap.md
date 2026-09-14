@@ -709,6 +709,21 @@ contradiction. Order 7 is formally complete; its three audience entries return
 to `reviewed`, and the executable matrix now records 33 `reviewed`, 22
 `existing_unreviewed`, 13 `missing`, and 7 `not_applicable` entries.
 
+## Open Order 8
+
+The source-first
+[Navigation Order 8 review and proposed roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md)
+opens the next numbered workflow. It confirms that the generic transition,
+explicit policy, immutable candidate-state, DemoHost, and persistence
+foundations exist, while identifying missing live identifier validation,
+under-specified result and custom-policy fault boundaries, a bounded Training
+Annex save-context error, and incomplete Godot and audience evidence.
+
+`navigation` is therefore `partial`, and Order 8 is `open`. Owner decisions
+O8-D3 through O8-D10 must be confirmed before the proposed runtime checkpoints
+begin. Dungeon traversal rules remain outside this Order and are reserved for
+Order 9.
+
 ## Deferred Documentation
 
 Two capability IDs describe extension seams rather than completed mechanics:

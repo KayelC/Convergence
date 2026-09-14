@@ -8,12 +8,19 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 implemented, 1 partial, and 2 deferred.
 
-The ordered review queue currently records 20 Orders: 7 closed, 0 open, and 13 not_started.
+The ordered review queue currently records 20 Orders: 7 closed, 1 open, and 12 not_started.
 Implementation maturity and Order closure are deliberately separate: only an
 explicit `orderState: closed` means the complete collaborative source, owner,
 documentation, independent-review, and release-gate cycle has finished.
+
+Documentation Order 8 is open under the
+[Navigation source review and proposed roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md).
+The existing generic transition service remains usable, but live identifier
+validation, public result and custom-policy fault authority, retained-progress
+host context, live Godot adoption evidence, and all three audience reviews must
+be resolved before Order 8 can close.
 
 Documentation Order 7 is complete under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
