@@ -383,7 +383,7 @@ unapproved product decision or requires Order 9 traversal-rule work.
 | O8-R3 | `complete` | Seal public result, event, decision, and enum invariants while retaining custom service implementations. | `runtime: enforce navigation result authority` |
 | O8-R4 | `complete` | Establish the selected custom-policy fault boundary and prove throwing/null policies preserve state. | `runtime: contain navigation policy faults` |
 | O8-R5 | `complete` | Retain save v19 and correct misleading optional-world-state test and documentation wording; defer broad independent-nullability design to Order 13. | `runtime: clarify optional world state` |
-| O8-R6 | `approved` | Correct Training Annex active-context derivation, document candidate adoption, and add focused Godot trigger/event/scene-separation evidence without moving scenes into Framework. | `host: prove generic navigation adoption` |
+| O8-R6 | `complete` | Correct Training Annex active-context derivation, document candidate adoption, and add focused Godot trigger/event/scene-separation evidence without moving scenes into Framework. | `host: prove generic navigation adoption` |
 | O8-R7 | `pending` | Reconcile the mechanics page, add a developer guide, add a technical state-machine page, update indexes and matrices, and include Godot/console examples and diagrams. | `docs: document generic navigation` |
 | O8-R8 | `pending` | Perform a fresh source-first code and documentation review, run the retained release gate, clear only resolved gaps, and close Order 8 only if no realistic reachable defect or contradiction remains. | `review: close navigation order 8` |
 
@@ -650,3 +650,34 @@ navigation snapshot. The focused persistence, restoration, and Godot-contract
 filter passed 84 tests. Full solution: 2,067 passed (Framework 1,876;
 DemoHost 184; ContentValidator 7), zero failed/skipped. Strict nonincremental
 Release build: zero warnings/errors. Formatting and `git diff --check` passed.
+
+## O8-R6 Completion Record
+
+**Baseline:** `b36f9729` (`runtime: clarify optional world state`).
+
+**Actual destination:** Training Annex save/load context now follows
+`field.Navigation.CurrentLocationId`, not whether dungeon progress is
+retained. A return to staging can keep the dungeon snapshot while producing a
+`field_menu` save context. The Godot-shaped contract test routes a signal
+selection to a framework transition, records typed events, and adopts `After`
+only after host-owned scene work succeeds. It proves a host integration
+pattern, not live navigation in the real Godot smoke scene.
+
+**Changed files:** `TrainingAnnexPersistenceController.cs`,
+`CleanTrainingAnnexPlayHostTests.cs`, `GodotIntegrationContractTests.cs`,
+`docs/godot-integration-contract.md`, and this review. Framework source,
+save contract v19, active content, schemas, and archive were unchanged.
+
+**Parity and boundary evidence:** direct and scripted DemoHost tests prove
+retained dungeon progress does not mislabel the current staging context. The
+Godot contract test proves policy rejection skips scene work, approved travel
+with failed scene work retains `Before`, successful scene work adopts `After`,
+cancelled input performs no additional navigation, and ordered events remain
+typed. Only the test host holds scene handles; Framework has no Godot assembly
+reference. No traversal rule or encounter trigger changed.
+
+**Gate:** focused new host and Godot tests passed 3 tests. The full solution
+passed 2,070 tests (Framework 1,877; DemoHost 186; ContentValidator 7), zero
+failed/skipped. Strict nonincremental Release build: zero warnings/errors.
+Formatting verification and `git diff --check` passed. Four noninteractive
+DemoHost modes and scripted Training Annex play exited 0.

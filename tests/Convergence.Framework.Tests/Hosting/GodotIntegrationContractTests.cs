@@ -24,6 +24,69 @@ public sealed class GodotIntegrationContractTests
     private static readonly ContentId Sp = Id("sp");
 
     [Fact]
+    public async Task GodotNavigationTrigger_AdoptsLogicalDestinationOnlyAfterHostSceneSucceeds()
+    {
+        ContentId hub = Id("sample:hub");
+        ContentId entrance = Id("sample:entrance");
+        var transition = new RuntimeNavigationTransition(Id("sample:enter"), hub, entrance);
+        var signals = new GodotSignalCommandSource<RuntimeNavigationTransition>()
+            .QueueSelected(transition)
+            .QueueSelected(transition)
+            .QueueSelected(transition)
+            .QueueCancelled();
+        var policy = new GodotNavigationPolicy();
+        var events = new GodotNavigationEventSink();
+        var scene = new GodotSceneHandle("res://scenes/entrance.tscn", "/root/Entrance");
+        var scenes = new Dictionary<ContentId, GodotSceneHandle> { [entrance] = scene };
+        bool sceneLoadSucceeds = false;
+        int sceneAttempts = 0;
+        var host = new GodotNavigationHost(
+            new RuntimeNavigationSnapshot(hub),
+            new RuntimeNavigationService(policy),
+            events,
+            destination =>
+            {
+                sceneAttempts++;
+                return scenes.ContainsKey(destination) && sceneLoadSucceeds;
+            });
+        var request = new HostCommandRequest<RuntimeNavigationTransition>(
+            "Door trigger",
+            [new HostCommandOption<RuntimeNavigationTransition>(transition, "Enter")]);
+
+        RuntimeNavigationResult rejected = await host.TryTravelAsync(
+            (await signals.ReadAsync(request)).Command!);
+        Assert.Equal(RuntimeNavigationTransitionCode.PolicyRejected, rejected.Code);
+        Assert.Equal(hub, host.Current.CurrentLocationId);
+        Assert.Equal(0, sceneAttempts);
+
+        policy.IsAllowed = true;
+        RuntimeNavigationResult sceneFailed = await host.TryTravelAsync(
+            (await signals.ReadAsync(request)).Command!);
+        Assert.True(sceneFailed.Applied);
+        Assert.Equal(entrance, sceneFailed.After.CurrentLocationId);
+        Assert.Equal(hub, host.Current.CurrentLocationId);
+        Assert.Equal(1, sceneAttempts);
+
+        sceneLoadSucceeds = true;
+        RuntimeNavigationResult adopted = await host.TryTravelAsync(
+            (await signals.ReadAsync(request)).Command!);
+        Assert.True(adopted.Applied);
+        Assert.Equal(entrance, host.Current.CurrentLocationId);
+        Assert.Equal(2, sceneAttempts);
+        Assert.Same(scene, scenes[host.Current.CurrentLocationId]);
+        Assert.Equal(
+            [RuntimeNavigationEventKind.TransitionRejected,
+             RuntimeNavigationEventKind.TransitionApplied,
+             RuntimeNavigationEventKind.TransitionApplied],
+            events.Events.Select(navigationEvent => navigationEvent.Kind));
+        Assert.Equal(HostCommandReadStatus.Cancelled, (await signals.ReadAsync(request)).Status);
+        Assert.Equal(2, sceneAttempts);
+        Assert.DoesNotContain(
+            typeof(RuntimeNavigationService).Assembly.GetReferencedAssemblies(),
+            assembly => assembly.Name?.Contains("Godot", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    [Fact]
     public void GodotHostContract_BindsAndExecutesGenericRecoveryWithoutSceneStateEnteringFramework()
     {
         ContentId credits = Id("godot.sample:credits");
@@ -512,6 +575,57 @@ public sealed class GodotIntegrationContractTests
     }
 
     private sealed record GodotSceneHandle(string PackedScenePath, string NodePath);
+
+    private sealed class GodotNavigationPolicy : IRuntimeNavigationPolicy
+    {
+        public bool IsAllowed { get; set; }
+
+        public RuntimeNavigationPolicyDecision Evaluate(RuntimeNavigationPolicyRequest request) =>
+            IsAllowed
+                ? new RuntimeNavigationPolicyDecision(true)
+                : new RuntimeNavigationPolicyDecision(false, Id("sample:locked"));
+    }
+
+    private sealed class GodotNavigationEventSink : IHostEventSink<RuntimeNavigationEvent>
+    {
+        private readonly List<RuntimeNavigationEvent> _events = [];
+
+        public IReadOnlyList<RuntimeNavigationEvent> Events => _events;
+
+        public ValueTask PublishAsync(
+            RuntimeNavigationEvent hostEvent,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            _events.Add(hostEvent);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class GodotNavigationHost(
+        RuntimeNavigationSnapshot initial,
+        IRuntimeNavigationService navigation,
+        IHostEventSink<RuntimeNavigationEvent> events,
+        Func<ContentId, bool> loadScene)
+    {
+        public RuntimeNavigationSnapshot Current { get; private set; } = initial;
+
+        public async ValueTask<RuntimeNavigationResult> TryTravelAsync(RuntimeNavigationTransition transition)
+        {
+            RuntimeNavigationResult result = navigation.Navigate(Current, transition);
+            foreach (RuntimeNavigationEvent navigationEvent in result.Events)
+            {
+                await events.PublishAsync(navigationEvent);
+            }
+
+            if (result.Applied && loadScene(result.After.CurrentLocationId))
+            {
+                Current = result.After;
+            }
+
+            return result;
+        }
+    }
 
     private sealed class GodotSceneInstanceRegistry
     {

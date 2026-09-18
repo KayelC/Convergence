@@ -4356,6 +4356,46 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public void TrainingAnnexSaveContext_UsesLogicalLocationRatherThanRetainedDungeonProgress()
+    {
+        var dungeon = new RuntimeDungeonTraversalSnapshot(
+            TrainingAnnexHostSupport.TrainingAnnexDungeon,
+            TrainingAnnexHostSupport.ReviewHall);
+        var stagingField = new RuntimeFieldSnapshot(
+            new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea),
+            dungeon);
+        var annexField = new RuntimeFieldSnapshot(
+            new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.TrainingAnnexEntrance));
+
+        Assert.Equal(
+            TrainingAnnexHostSupport.FieldMenuSaveContext,
+            TrainingAnnexPersistenceController.CurrentSaveContext(stagingField, false).ContextId);
+        Assert.Equal(
+            TrainingAnnexHostSupport.DungeonMenuSaveContext,
+            TrainingAnnexPersistenceController.CurrentSaveContext(annexField, false).ContextId);
+        Assert.True(TrainingAnnexPersistenceController.CurrentSaveContext(stagingField, true).HasPendingHostAction);
+        Assert.Same(dungeon, stagingField.DungeonTraversal);
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ReturnedToStagingSavesFieldContextWithRetainedDungeon()
+    {
+        var io = new ScriptedGameIO().QueueMenu(6, 7, 10, 0, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(TrainingAnnexHostSupport.StagingArea, summary.FinalLocationId);
+        Assert.Equal(TrainingAnnexHostSupport.TrainingAnnexEntrance, summary.FinalDungeonNodeId);
+        Assert.Equal(1, summary.ManualSaveCount);
+        Assert.Contains("Manual save created in field_menu", output.ToString(), StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task TrainingAnnexBattleRewardApplicator_RejectedCurrencyLedgerDoesNotMutateProgression()
     {
         GameDataCatalog catalog = await LoadTrainingAnnexCatalogAsync();

@@ -38,6 +38,15 @@ Await asynchronous framework operations. The framework has no engine-thread affi
 
 Navigation and dungeon traversal are optional, policy-injected modules. A Godot game may use movement, doors, map selection, visual-novel hotspots, or scripts to request the same logical transitions. The framework never prescribes a menu or a scene graph.
 
+Treat `RuntimeNavigationResult.After` as a destination candidate. An `Applied`
+result means the logical rule approved the transition, not that Godot loaded a
+scene. Map the typed result and events to host presentation, attempt scene work,
+then adopt `After` only on host success; otherwise retain `Before`. A rejected
+or faulted result never attempts scene work. The contract test exercises this
+trigger-to-adoption sequence with host-owned scene handles. The current real
+Godot smoke sample does not yet implement live navigation; do not mistake its
+save snapshot for proof that it does.
+
 Optional gameplay services do not imply independently nullable members of the
 broad save v19 field aggregate. A saved `Field` requires a logical navigation
 location and may retain dungeon progress; `Field` itself may be omitted. A

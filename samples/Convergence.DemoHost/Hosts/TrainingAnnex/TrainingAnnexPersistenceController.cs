@@ -188,7 +188,7 @@ internal sealed class TrainingAnnexPersistenceController
         RuntimeFieldSnapshot field,
         bool hasPendingHostAction) =>
         new(
-            field.DungeonTraversal is null
+            field.Navigation.CurrentLocationId == TrainingAnnexHostSupport.StagingArea
                 ? TrainingAnnexHostSupport.FieldMenuSaveContext
                 : TrainingAnnexHostSupport.DungeonMenuSaveContext,
             hasPendingHostAction);
