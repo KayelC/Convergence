@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "checkpoint": "navigation-order-8-preclosure",
+  "status": "failed",
+  "testedCommit": "825aff0531d3f9e6fc3e7610e5fd616c68427169",
+  "reviewedRange": {
+    "base": "a1f91e68dea9011d7d3493d76a071d6449e2dcd0",
+    "head": "825aff0531d3f9e6fc3e7610e5fd616c68427169"
+  },
+  "repositoryWasClean": true,
+  "startedUtc": "2026-09-18T08:27:44.9725693Z",
+  "completedUtc": "2026-09-18T08:27:51.9320454Z",
+  "host": {
+    "operatingSystem": "Microsoft Windows NT 10.0.26200.0",
+    "powershellVersion": "7.6.5",
+    "godotExecutable": "tests/Godot_v4.7.1-stable_mono_win64/Godot_v4.7.1-stable_mono_win64_console.exe",
+    "godotSha256": "b2c334ff6bf1e07ded41b80bd6f4785485650db6ddbb2740b802930f35237c26"
+  },
+  "commands": [
+    {
+      "order": 1,
+      "name": "00-dotnet-info",
+      "command": "dotnet --info",
+      "commandFile": "commands/00-dotnet-info.cmd",
+      "outputFile": "commands/00-dotnet-info.raw.txt",
+      "startedUtc": "2026-09-18T08:27:44.9778098Z",
+      "completedUtc": "2026-09-18T08:27:45.3100164Z",
+      "exitCode": 0
+    },
+    {
+      "order": 2,
+      "name": "01-restore-audit",
+      "command": "dotnet restore Convergence.sln --locked-mode -p:NuGetAudit=true -p:NuGetAuditMode=all \"-p:WarningsAsErrors=NU1901%%3BNU1902%%3BNU1903%%3BNU1904\"",
+      "commandFile": "commands/01-restore-audit.cmd",
+      "outputFile": "commands/01-restore-audit.raw.txt",
+      "startedUtc": "2026-09-18T08:27:45.3438061Z",
+      "completedUtc": "2026-09-18T08:27:51.8509355Z",
+      "exitCode": 1
+    }
+  ],
+  "coverage": null,
+  "failure": "Verification command '01-restore-audit' failed with exit code 1."
+}

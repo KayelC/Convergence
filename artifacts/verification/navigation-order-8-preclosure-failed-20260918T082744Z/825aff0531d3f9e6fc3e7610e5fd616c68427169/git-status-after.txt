@@ -1,0 +1,5 @@
+?? artifacts/verification/navigation-order-8-preclosure/825aff0531d3f9e6fc3e7610e5fd616c68427169/commands/00-dotnet-info.cmd
+?? artifacts/verification/navigation-order-8-preclosure/825aff0531d3f9e6fc3e7610e5fd616c68427169/commands/00-dotnet-info.raw.txt
+?? artifacts/verification/navigation-order-8-preclosure/825aff0531d3f9e6fc3e7610e5fd616c68427169/commands/01-restore-audit.cmd
+?? artifacts/verification/navigation-order-8-preclosure/825aff0531d3f9e6fc3e7610e5fd616c68427169/commands/01-restore-audit.raw.txt
+?? artifacts/verification/navigation-order-8-preclosure/825aff0531d3f9e6fc3e7610e5fd616c68427169/git-status-before.txt
