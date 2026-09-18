@@ -382,7 +382,7 @@ unapproved product decision or requires Order 9 traversal-rule work.
 | O8-R2 | `complete` | Implement typed live identifier validation before source/policy evaluation. Add default-value and field-specific adversarial tests. | `runtime: validate navigation requests` |
 | O8-R3 | `complete` | Seal public result, event, decision, and enum invariants while retaining custom service implementations. | `runtime: enforce navigation result authority` |
 | O8-R4 | `complete` | Establish the selected custom-policy fault boundary and prove throwing/null policies preserve state. | `runtime: contain navigation policy faults` |
-| O8-R5 | `approved` | Retain save v19 and correct misleading optional-world-state test and documentation wording; defer broad independent-nullability design to Order 13. | `runtime: clarify optional world state` |
+| O8-R5 | `complete` | Retain save v19 and correct misleading optional-world-state test and documentation wording; defer broad independent-nullability design to Order 13. | `runtime: clarify optional world state` |
 | O8-R6 | `approved` | Correct Training Annex active-context derivation, document candidate adoption, and add focused Godot trigger/event/scene-separation evidence without moving scenes into Framework. | `host: prove generic navigation adoption` |
 | O8-R7 | `pending` | Reconcile the mechanics page, add a developer guide, add a technical state-machine page, update indexes and matrices, and include Godot/console examples and diagrams. | `docs: document generic navigation` |
 | O8-R8 | `pending` | Perform a fresh source-first code and documentation review, run the retained release gate, clear only resolved gaps, and close Order 8 only if no realistic reachable defect or contradiction remains. | `review: close navigation order 8` |
@@ -628,3 +628,25 @@ build had zero warnings/errors. Formatting verification and
 Training Annex play exited 0. Content, schemas, and archive remained unchanged;
 Framework source gained no Godot, filesystem, Newtonsoft, archived namespace,
 or legacy-adapter reference.
+
+## O8-R5 Completion Record
+
+**Baseline:** `68a3c0e6` (`runtime: contain navigation policy faults`).
+
+**Actual destination:** save contract v19 is unchanged. Its field aggregate
+supports no `Field`, navigation only, or navigation with retained dungeon
+progress. A present `Field` cannot contain dungeon progress without a
+navigation snapshot. Independent save-field nullability remains an Order 13
+question, not an Order 8 wire change.
+
+**Changed files:** `RuntimePersistenceSnapshotTests.cs`, `docs/architecture.md`,
+`docs/project-vision.md`, `docs/godot-integration-contract.md`, the active
+documentation-completion roadmap, and this review. No runtime source, host,
+schema, active content, or archive file changed.
+
+**Evidence:** the formerly overstated test now names the actual contract and
+validates all three supported shapes, plus constructor rejection of a missing
+navigation snapshot. The focused persistence, restoration, and Godot-contract
+filter passed 84 tests. Full solution: 2,067 passed (Framework 1,876;
+DemoHost 184; ContentValidator 7), zero failed/skipped. Strict nonincremental
+Release build: zero warnings/errors. Formatting and `git diff --check` passed.

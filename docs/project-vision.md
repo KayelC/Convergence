@@ -28,6 +28,14 @@ the contract's required neutral component snapshots for modules it does not
 activate; doing so stores no gameplay state and does not instantiate or execute
 the corresponding services.
 
+Save v19 permits no `Field`, navigation-only field state, or navigation plus
+retained dungeon progress. A present `Field` requires a logical location; a
+dungeon-only game adopting this broad aggregate supplies a neutral location
+without instantiating the navigation service. The owner chose to retain this
+shape for Order 8's visual-novel overworld and 3D dungeon integration. Order 13
+will reconsider independent save-field nullability as part of a broader
+persistence review; any wire change needs a new contract version.
+
 ## Quality Direction
 
 Convergence favors explicit commands and results, immutable contracts, injected randomness and policy, transactional mutation, qualified content identity, deterministic diagnostics, and tests at public boundaries.

@@ -38,6 +38,13 @@ Await asynchronous framework operations. The framework has no engine-thread affi
 
 Navigation and dungeon traversal are optional, policy-injected modules. A Godot game may use movement, doors, map selection, visual-novel hotspots, or scripts to request the same logical transitions. The framework never prescribes a menu or a scene graph.
 
+Optional gameplay services do not imply independently nullable members of the
+broad save v19 field aggregate. A saved `Field` requires a logical navigation
+location and may retain dungeon progress; `Field` itself may be omitted. A
+Godot game using only dungeon traversal may supply a stable neutral location
+when choosing this aggregate. Godot still owns its current scene and spatial
+position separately.
+
 Godot owns visible enemies, trigger volumes, patrols, spawn points, boss scenes, and despawn rules. Once the host chooses an authored encounter, framework services prepare actors and resolve battle rules. Movement does not automatically start combat.
 
 ## Save Boundary

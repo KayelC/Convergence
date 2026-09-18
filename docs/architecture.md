@@ -196,7 +196,14 @@ Runtime save contract v19 is a deliberately broad interoperability aggregate,
 not the module activation mechanism. When a host chooses to use it, required
 but unused components are represented by neutral snapshots. The minimal party
 roster still identifies the session owner while its placement and ownership
-lists may remain empty. Field state is nullable. A future change to make other
+lists may remain empty. `Field` is nullable; when present, it requires a
+logical navigation snapshot and may also retain dungeon traversal progress.
+Thus v19 supports no field, navigation only, or navigation with dungeon state,
+but not a dungeon-only field snapshot. Using a dungeon traversal service does
+not require instantiating a navigation service; a dungeon-only game using this
+broad save aggregate supplies a stable neutral logical location. Whether the
+save aggregate should represent these modules independently is reserved for
+Order 13, not a hidden change to Order 8. A future change to make other
 components absent would require a new versioned save contract.
 
 Moon-phase IDs remain nullable vocabulary for games that choose such a mechanic. The supplied ruleset registry has no moon-phase factory, and DemoHost does not require or bind a moon-phase system.

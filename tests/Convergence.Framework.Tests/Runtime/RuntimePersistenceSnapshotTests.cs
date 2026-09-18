@@ -2914,22 +2914,29 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
-    public void RuntimeSaveSnapshot_AllowsNavigationAndDungeonModulesToBeOmittedIndependently()
+    public void RuntimeSaveSnapshot_OptionalFieldRequiresNavigationAndCanRetainDungeonProgress()
     {
         GameDataCatalog catalog = LoadCatalog();
         RuntimeSaveGameSnapshot noField = CreateSaveSnapshot(includeDefaultField: false);
         RuntimeSaveGameSnapshot navigationOnly = CreateSaveSnapshot(
             field: new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(Id("host_owned_location"))));
+        RuntimeSaveGameSnapshot navigationAndDungeon = CreateSaveSnapshot();
 
         RuntimeSaveValidationResult noFieldResult = new RuntimeSaveValidator().Validate(noField, catalog);
         RuntimeSaveValidationResult navigationOnlyResult =
             new RuntimeSaveValidator().Validate(navigationOnly, catalog);
+        RuntimeSaveValidationResult navigationAndDungeonResult =
+            new RuntimeSaveValidator().Validate(navigationAndDungeon, catalog);
 
         Assert.True(noFieldResult.IsValid);
         Assert.Null(noField.Field);
         Assert.True(navigationOnlyResult.IsValid);
         Assert.Equal(Id("host_owned_location"), navigationOnly.Field!.Navigation.CurrentLocationId);
         Assert.Null(navigationOnly.Field.DungeonTraversal);
+        Assert.True(navigationAndDungeonResult.IsValid);
+        Assert.NotNull(navigationAndDungeon.Field?.Navigation);
+        Assert.NotNull(navigationAndDungeon.Field.DungeonTraversal);
+        Assert.Throws<ArgumentNullException>(() => new RuntimeFieldSnapshot(null!));
     }
 
     [Fact]
