@@ -5691,10 +5691,16 @@ Convergence.Runtime.RuntimeNavigationResult.Before.get -> Convergence.Runtime.Ru
 Convergence.Runtime.RuntimeNavigationResult.Code.get -> Convergence.Runtime.RuntimeNavigationTransitionCode
 Convergence.Runtime.RuntimeNavigationResult.Equals(Convergence.Runtime.RuntimeNavigationResult? other) -> bool
 Convergence.Runtime.RuntimeNavigationResult.Events.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeNavigationEvent!>!
+Convergence.Runtime.RuntimeNavigationResult.InvalidField.get -> Convergence.Runtime.RuntimeNavigationRequestField?
 Convergence.Runtime.RuntimeNavigationResult.Message.get -> string?
 Convergence.Runtime.RuntimeNavigationResult.ReasonId.get -> Convergence.Content.ContentId?
-Convergence.Runtime.RuntimeNavigationResult.RuntimeNavigationResult(Convergence.Runtime.RuntimeNavigationTransitionCode code, Convergence.Runtime.RuntimeNavigationSnapshot! before, Convergence.Runtime.RuntimeNavigationSnapshot! after, Convergence.Runtime.RuntimeNavigationTransition! transition, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeNavigationEvent!>? events = null, Convergence.Content.ContentId? reasonId = null, string? message = null) -> void
+Convergence.Runtime.RuntimeNavigationResult.RuntimeNavigationResult(Convergence.Runtime.RuntimeNavigationTransitionCode code, Convergence.Runtime.RuntimeNavigationSnapshot! before, Convergence.Runtime.RuntimeNavigationSnapshot! after, Convergence.Runtime.RuntimeNavigationTransition! transition, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeNavigationEvent!>? events = null, Convergence.Content.ContentId? reasonId = null, string? message = null, Convergence.Runtime.RuntimeNavigationRequestField? invalidField = null) -> void
 Convergence.Runtime.RuntimeNavigationResult.Transition.get -> Convergence.Runtime.RuntimeNavigationTransition!
+Convergence.Runtime.RuntimeNavigationRequestField
+Convergence.Runtime.RuntimeNavigationRequestField.CurrentLocationId = 0 -> Convergence.Runtime.RuntimeNavigationRequestField
+Convergence.Runtime.RuntimeNavigationRequestField.DestinationLocationId = 3 -> Convergence.Runtime.RuntimeNavigationRequestField
+Convergence.Runtime.RuntimeNavigationRequestField.SourceLocationId = 2 -> Convergence.Runtime.RuntimeNavigationRequestField
+Convergence.Runtime.RuntimeNavigationRequestField.TransitionId = 1 -> Convergence.Runtime.RuntimeNavigationRequestField
 Convergence.Runtime.RuntimeNavigationService
 Convergence.Runtime.RuntimeNavigationService.Navigate(Convergence.Runtime.RuntimeNavigationSnapshot! current, Convergence.Runtime.RuntimeNavigationTransition! transition) -> Convergence.Runtime.RuntimeNavigationResult!
 Convergence.Runtime.RuntimeNavigationService.RuntimeNavigationService(Convergence.Runtime.IRuntimeNavigationPolicy! policy) -> void
@@ -5718,6 +5724,7 @@ Convergence.Runtime.RuntimeNavigationTransition.SourceLocationId.get -> Converge
 Convergence.Runtime.RuntimeNavigationTransition.SourceLocationId.init -> void
 Convergence.Runtime.RuntimeNavigationTransitionCode
 Convergence.Runtime.RuntimeNavigationTransitionCode.Applied = 0 -> Convergence.Runtime.RuntimeNavigationTransitionCode
+Convergence.Runtime.RuntimeNavigationTransitionCode.InvalidRequest = 3 -> Convergence.Runtime.RuntimeNavigationTransitionCode
 Convergence.Runtime.RuntimeNavigationTransitionCode.PolicyRejected = 2 -> Convergence.Runtime.RuntimeNavigationTransitionCode
 Convergence.Runtime.RuntimeNavigationTransitionCode.SourceMismatch = 1 -> Convergence.Runtime.RuntimeNavigationTransitionCode
 Convergence.Runtime.RuntimePartyRosterInvariantCode

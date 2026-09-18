@@ -25,6 +25,7 @@ public sealed class RuntimeNavigationTests
         RuntimeNavigationResult wrongDirection = service.Navigate(visited.After, outbound);
 
         Assert.True(visited.Applied);
+        Assert.Null(visited.InvalidField);
         Assert.Same(initial, visited.Before);
         Assert.Equal(Id("crystal_garden"), visited.After.CurrentLocationId);
         RuntimeNavigationEvent appliedEvent = Assert.Single(visited.Events);
@@ -34,6 +35,7 @@ public sealed class RuntimeNavigationTests
             ((IList<RuntimeNavigationEvent>)visited.Events).Add(appliedEvent));
 
         Assert.False(wrongDirection.Applied);
+        Assert.Null(wrongDirection.InvalidField);
         Assert.Equal(RuntimeNavigationTransitionCode.SourceMismatch, wrongDirection.Code);
         Assert.Same(visited.After, wrongDirection.After);
         Assert.Equal(1, policy.EvaluationCount);
@@ -65,6 +67,7 @@ public sealed class RuntimeNavigationTests
         RuntimeNavigationResult accepted = service.Navigate(initial, transition);
 
         Assert.False(rejected.Applied);
+        Assert.Null(rejected.InvalidField);
         Assert.Equal(RuntimeNavigationTransitionCode.PolicyRejected, rejected.Code);
         Assert.Same(initial, rejected.Before);
         Assert.Same(initial, rejected.After);
@@ -79,7 +82,78 @@ public sealed class RuntimeNavigationTests
         Assert.Same(initial, policy.LastRequest.Current);
     }
 
+    public static TheoryData<
+        RuntimeNavigationSnapshot,
+        RuntimeNavigationTransition,
+        RuntimeNavigationRequestField> InvalidRequests =>
+        new()
+        {
+            {
+                new RuntimeNavigationSnapshot(default),
+                ValidTransition(),
+                RuntimeNavigationRequestField.CurrentLocationId
+            },
+            {
+                ValidSnapshot(),
+                new RuntimeNavigationTransition(default, Id("origin"), Id("destination")),
+                RuntimeNavigationRequestField.TransitionId
+            },
+            {
+                ValidSnapshot(),
+                new RuntimeNavigationTransition(Id("travel"), default, Id("destination")),
+                RuntimeNavigationRequestField.SourceLocationId
+            },
+            {
+                ValidSnapshot(),
+                new RuntimeNavigationTransition(Id("travel"), Id("origin"), default),
+                RuntimeNavigationRequestField.DestinationLocationId
+            }
+        };
+
+    [Theory]
+    [MemberData(nameof(InvalidRequests))]
+    public void Navigation_RejectsEmptyRequestIdsBeforeCallingThePolicy(
+        RuntimeNavigationSnapshot current,
+        RuntimeNavigationTransition transition,
+        RuntimeNavigationRequestField expectedField)
+    {
+        var policy = new MutableNavigationPolicy { IsAllowed = true };
+        var service = new RuntimeNavigationService(policy);
+
+        RuntimeNavigationResult result = service.Navigate(current, transition);
+
+        Assert.Equal(RuntimeNavigationTransitionCode.InvalidRequest, result.Code);
+        Assert.False(result.Applied);
+        Assert.Same(current, result.Before);
+        Assert.Same(current, result.After);
+        Assert.Same(transition, result.Transition);
+        Assert.Equal(expectedField, result.InvalidField);
+        Assert.Equal(Id("invalid_navigation_request"), result.ReasonId);
+        Assert.Empty(result.Events);
+        Assert.Equal(0, policy.EvaluationCount);
+        Assert.Null(policy.LastRequest);
+    }
+
+    [Fact]
+    public void Navigation_ReportsTheFirstInvalidFieldInStableValidationOrder()
+    {
+        var policy = new MutableNavigationPolicy { IsAllowed = true };
+        var service = new RuntimeNavigationService(policy);
+        var current = new RuntimeNavigationSnapshot(default);
+        var transition = new RuntimeNavigationTransition(default, default, default);
+
+        RuntimeNavigationResult result = service.Navigate(current, transition);
+
+        Assert.Equal(RuntimeNavigationRequestField.CurrentLocationId, result.InvalidField);
+        Assert.Equal(0, policy.EvaluationCount);
+    }
+
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static RuntimeNavigationSnapshot ValidSnapshot() => new(Id("origin"));
+
+    private static RuntimeNavigationTransition ValidTransition() =>
+        new(Id("travel"), Id("origin"), Id("destination"));
 
     private sealed class MutableNavigationPolicy : IRuntimeNavigationPolicy
     {

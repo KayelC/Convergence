@@ -325,6 +325,19 @@ See [Inventory, Equipment, And Economy Integration](developer-guide/inventory-eq
 [Inventory, Equipment, And Economy Runtime](technical/inventory-equipment-economy-runtime.md),
 and the [Content Contract](content-contract.md).
 
+## Navigation Request Validity
+
+`RuntimeNavigationService.Navigate` checks the current location, transition ID,
+source, and destination in that order before comparing the source or invoking
+the supplied policy. A default/empty `ContentId` produces `InvalidRequest`
+with an `InvalidField`, unchanged `Before`/`After`, and no structural event;
+invalid IDs are not published as transition events. This is a pre-release
+addition to the public enum and result constructor, so custom navigation
+service implementations must rebuild against the updated result contract.
+It does not change valid transition, source-mismatch, or policy-rejection
+behavior. The rest of the result/policy boundary is addressed in later Order 8
+checkpoints.
+
 ## Documentation And Build Tooling
 
 Framework emits `Convergence.Framework.xml`. XML documentation is curated and intentionally incomplete; `CS1591` remains suppressed. Summaries cover selected

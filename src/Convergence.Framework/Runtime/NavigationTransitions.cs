@@ -6,7 +6,16 @@ public enum RuntimeNavigationTransitionCode
 {
     Applied,
     SourceMismatch,
-    PolicyRejected
+    PolicyRejected,
+    InvalidRequest
+}
+
+public enum RuntimeNavigationRequestField
+{
+    CurrentLocationId,
+    TransitionId,
+    SourceLocationId,
+    DestinationLocationId
 }
 
 public enum RuntimeNavigationEventKind
@@ -48,7 +57,8 @@ public sealed record RuntimeNavigationResult
         RuntimeNavigationTransition transition,
         IEnumerable<RuntimeNavigationEvent>? events = null,
         ContentId? reasonId = null,
-        string? message = null)
+        string? message = null,
+        RuntimeNavigationRequestField? invalidField = null)
     {
         Code = code;
         Before = before ?? throw new ArgumentNullException(nameof(before));
@@ -57,6 +67,7 @@ public sealed record RuntimeNavigationResult
         Events = RuntimeSnapshotCollections.List(events);
         ReasonId = reasonId;
         Message = message;
+        InvalidField = invalidField;
     }
 
     public RuntimeNavigationTransitionCode Code { get; }
@@ -67,6 +78,7 @@ public sealed record RuntimeNavigationResult
     public IReadOnlyList<RuntimeNavigationEvent> Events { get; }
     public ContentId? ReasonId { get; }
     public string? Message { get; }
+    public RuntimeNavigationRequestField? InvalidField { get; }
 }
 
 public interface IRuntimeNavigationPolicy
@@ -96,6 +108,19 @@ public sealed class RuntimeNavigationService : IRuntimeNavigationService
     {
         ArgumentNullException.ThrowIfNull(current);
         ArgumentNullException.ThrowIfNull(transition);
+
+        RuntimeNavigationRequestField? invalidField = InvalidField(current, transition);
+        if (invalidField is not null)
+        {
+            return new RuntimeNavigationResult(
+                RuntimeNavigationTransitionCode.InvalidRequest,
+                current,
+                current,
+                transition,
+                reasonId: ContentId.Parse("invalid_navigation_request"),
+                message: $"Navigation request field '{invalidField}' cannot be empty.",
+                invalidField: invalidField);
+        }
 
         if (current.CurrentLocationId != transition.SourceLocationId)
         {
@@ -132,6 +157,30 @@ public sealed class RuntimeNavigationService : IRuntimeNavigationService
                     transition.SourceLocationId,
                     transition.DestinationLocationId)
             ]);
+    }
+
+    private static RuntimeNavigationRequestField? InvalidField(
+        RuntimeNavigationSnapshot current,
+        RuntimeNavigationTransition transition)
+    {
+        if (!current.CurrentLocationId.IsValid)
+        {
+            return RuntimeNavigationRequestField.CurrentLocationId;
+        }
+        if (!transition.Id.IsValid)
+        {
+            return RuntimeNavigationRequestField.TransitionId;
+        }
+        if (!transition.SourceLocationId.IsValid)
+        {
+            return RuntimeNavigationRequestField.SourceLocationId;
+        }
+        if (!transition.DestinationLocationId.IsValid)
+        {
+            return RuntimeNavigationRequestField.DestinationLocationId;
+        }
+
+        return null;
     }
 
     private static RuntimeNavigationResult Rejected(

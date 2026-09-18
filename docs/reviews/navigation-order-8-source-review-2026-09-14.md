@@ -379,7 +379,7 @@ unapproved product decision or requires Order 9 traversal-rule work.
 | Checkpoint | State | Work | Intended commit |
 |---|---|---|---|
 | O8-R1 | `complete` | Record this source review, open Order 8, mark the capability partial with named gaps, and align active tracking. No runtime behavior changes. | `docs: open navigation order 8 review` |
-| O8-R2 | `approved` | Implement typed live identifier validation before source/policy evaluation. Add default-value and field-specific adversarial tests. | `runtime: validate navigation requests` |
+| O8-R2 | `complete` | Implement typed live identifier validation before source/policy evaluation. Add default-value and field-specific adversarial tests. | `runtime: validate navigation requests` |
 | O8-R3 | `approved` | Seal public result, event, decision, and enum invariants while retaining custom service implementations. | `runtime: enforce navigation result authority` |
 | O8-R4 | `approved` | Establish the selected custom-policy fault boundary and prove throwing/null policies preserve state. | `runtime: contain navigation policy faults` |
 | O8-R5 | `approved` | Retain save v19 and correct misleading optional-world-state test and documentation wording; defer broad independent-nullability design to Order 13. | `runtime: clarify optional world state` |
@@ -527,5 +527,38 @@ host, schema, save contract, or content behavior.
 - `git diff --check`: passed.
 
 These totals verify the tracking checkpoint, not the proposed runtime fixes.
-O8-R2 through O8-R8 remain pending, and no owner recommendation in this review
-is represented as implemented or approved merely because O8-R1 is complete.
+Owner approval was recorded separately before implementation began.
+
+## O8-R2 Completion Record
+
+**Baseline:** `681f5538` (`docs: confirm navigation order 8 decisions`).
+
+**Actual destination:** `RuntimeNavigationService.Navigate` now validates the
+current location, transition ID, source, and destination, in that order, before
+source comparison and policy evaluation. `InvalidRequest` carries the first
+invalid `RuntimeNavigationRequestField`; it preserves the exact input snapshot
+as both `Before` and `After`, invokes no policy, and records no structural
+transition event with malformed IDs. Valid requests retain their old path.
+
+**Changed files:** `NavigationTransitions.cs`, `RuntimeNavigationTests.cs`,
+`PublicAPI.Shipped.txt`, `docs/public-api-contract.md`, and this review.
+
+**Focused evidence:** four field-specific invalid-ID cases and an all-invalid
+ordering case assert typed field evidence, zero policy calls, unchanged state,
+and empty events. Existing valid, source-mismatch, and policy-rejected cases
+assert `InvalidField` is absent. The navigation/public-API focused filter passed
+13 tests, with no failures or skips.
+
+**Gate:** the full solution passed 2,058 tests (Framework 1,867; DemoHost 184;
+ContentValidator 7), with zero failures or skips. The strict nonincremental
+Release build had zero warnings/errors; formatting verification and
+`git diff --check` passed. All four noninteractive clean DemoHost modes and
+scripted Training Annex play exited 0. `content`, `schemas`, and `ArchiveDocs`
+were unchanged. The Framework source search found no Godot, filesystem,
+Newtonsoft, archived namespace, or legacy-adapter reference; its existing
+internal content JSON deserializer is unrelated to the public navigation
+boundary.
+
+**Remaining:** R3 must enforce the public result/event/decision matrix,
+including the new `InvalidField` combination. R4 must define policy fault
+results. Neither was silently included in R2.
