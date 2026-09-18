@@ -47,6 +47,9 @@ Technical pages focus on:
   equipment-instance and loadout authority, slot validation, live profile
   projection, typed currency, atomic shop/recovery transitions, and save v19
   restoration.
+- [Generic Navigation Runtime Authority](generic-navigation-runtime.md):
+  request validation, policy and result matrix, immutable event evidence,
+  host adoption, and optional save-state ownership.
 
 The actor and typed action/effect references have completed collaborative
 review. That Order 1 review includes stat-modifier runtime authority and its
@@ -111,6 +114,8 @@ formally complete.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).
+The Order 8 navigation reference remains `existing_unreviewed` until its
+independent closure review.
 
 New technical pages must follow the
 [Documentation Design Pattern](../documentation-design-pattern.md).

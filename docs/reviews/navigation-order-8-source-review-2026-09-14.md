@@ -384,7 +384,7 @@ unapproved product decision or requires Order 9 traversal-rule work.
 | O8-R4 | `complete` | Establish the selected custom-policy fault boundary and prove throwing/null policies preserve state. | `runtime: contain navigation policy faults` |
 | O8-R5 | `complete` | Retain save v19 and correct misleading optional-world-state test and documentation wording; defer broad independent-nullability design to Order 13. | `runtime: clarify optional world state` |
 | O8-R6 | `complete` | Correct Training Annex active-context derivation, document candidate adoption, and add focused Godot trigger/event/scene-separation evidence without moving scenes into Framework. | `host: prove generic navigation adoption` |
-| O8-R7 | `pending` | Reconcile the mechanics page, add a developer guide, add a technical state-machine page, update indexes and matrices, and include Godot/console examples and diagrams. | `docs: document generic navigation` |
+| O8-R7 | `complete` | Reconcile the mechanics page, add a developer guide, add a technical state-machine page, update indexes and matrices, and include Godot/console examples and diagrams. | `docs: document generic navigation` |
 | O8-R8 | `pending` | Perform a fresh source-first code and documentation review, run the retained release gate, clear only resolved gaps, and close Order 8 only if no realistic reachable defect or contradiction remains. | `review: close navigation order 8` |
 
 ## Required Test Matrix
@@ -681,3 +681,32 @@ passed 2,070 tests (Framework 1,877; DemoHost 186; ContentValidator 7), zero
 failed/skipped. Strict nonincremental Release build: zero warnings/errors.
 Formatting verification and `git diff --check` passed. Four noninteractive
 DemoHost modes and scripted Training Annex play exited 0.
+
+## O8-R7 Completion Record
+
+**Baseline:** `c366d37c` (`host: prove generic navigation adoption`).
+
+**Actual destination:** the world mechanics page now distinguishes fixed
+transition rules, injected access policy, and host scene responsibility. A new
+developer guide demonstrates policy composition and candidate adoption. A new
+technical page records validation order, result/event matrix, save shape, and
+three ownership/sequence diagrams. Audience indexes, gameplay overview,
+documentation matrix and its count reference, and active roadmaps point to the
+new pages without promoting them to `reviewed` prematurely.
+
+**Changed files:** `docs/mechanics/world-encounters-and-rewards.md`,
+`docs/mechanics/README.md`, `docs/developer-guide/generic-navigation.md`,
+`docs/developer-guide/README.md`, `docs/technical/generic-navigation-runtime.md`,
+`docs/technical/README.md`, `docs/gameplay-systems.md`,
+`docs/reference/documentation-coverage.md`, the product, capability, and
+documentation roadmaps, the executable documentation-coverage matrix, and this
+review. No runtime, host, content, schema, or save contract changed.
+
+**Evidence:** the focused documentation synchronization/foundation and
+navigation filter passed 33 tests. The full solution passed 2,070 tests
+(Framework 1,877; DemoHost 186; ContentValidator 7), zero failed/skipped.
+Strict nonincremental Release build had zero warnings/errors; formatting
+verification and relative-link checks passed. A temporary full-disk failure
+damaged only generated Framework reference outputs; they were rebuilt from
+source, and the successful gate above ran after that recovery. The three
+navigation audience entries remain `existing_unreviewed` until R8.

@@ -283,17 +283,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
-        "reason": "Order 8 is open: generic transition behavior exists, but the source-review decisions, examples, and corrected boundaries still need owner confirmation and review."
+        "reason": "Order 8 owner decisions and current navigation behavior are documented; independent closure review remains pending."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Order 8 still requires a dedicated guide for policies, scene triggers, candidate-state adoption, persistence, typed failures, and Godot/console event mapping."
+        "state": "existing_unreviewed",
+        "documents": ["docs/developer-guide/generic-navigation.md"],
+        "reason": "Order 8 guide covers policy composition and host adoption; independent closure review remains pending."
       },
       "technical": {
         "state": "existing_unreviewed",
-        "documents": ["docs/gameplay-systems.md"],
-        "reason": "Order 8 still requires a dedicated reviewed technical page for validation order, result authority, policy faults, optional-state semantics, and host adoption."
+        "documents": ["docs/technical/generic-navigation-runtime.md"],
+        "reason": "Order 8 runtime authority and diagrams are documented; independent closure review remains pending."
       }
     },
     {

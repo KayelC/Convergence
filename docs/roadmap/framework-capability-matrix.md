@@ -66,11 +66,11 @@ The ordered review queue currently records 20 Orders: 7 closed, 1 open, and 12 n
 
 `navigation` is `partial`, and Order 8 is `open`. Its generic transition,
 injected-policy, immutable result, DemoHost, and persistence foundations are
-usable. The current source review identifies missing live identifier validation,
-under-specified public result and custom-policy fault boundaries, one bounded
-Training Annex active-context error, incomplete live Godot adoption evidence,
-and three audience documents that have not completed owner review. The proposed
-correction and decision sequence is recorded in the
+usable. O8-R2 through O8-R6 corrected identifier, result, policy-fault, and
+Training Annex context boundaries and added test-only Godot adoption evidence.
+O8-R7 writes the three audience documents; independent closure and the retained
+release gate remain pending. The real Godot smoke sample does not navigate live
+scenes. The correction and decision sequence is recorded in the
 [Navigation Order 8 source review and roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md).
 
 `inventory_equipment_economy` is `implemented`, and Order 7 is `closed`. Its immutable transaction and

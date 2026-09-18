@@ -46,6 +46,9 @@ Developer guides focus on:
   economy-ruleset binding, equipment instance IDs and live profiles, authored
   slot policies, atomic shop and recovery results, save authority, and Godot
   adoption.
+- [Generic Navigation Integration](generic-navigation.md): host-authored
+  locations, injected access policy, scene adoption, optional traversal, and
+  save/restore boundaries.
 
 The actor and typed action/effect guides have completed collaborative review.
 That Order 1 review includes stat-modifier policy composition and integration.
@@ -112,6 +115,9 @@ complete.
 Other subsystem guides remain tracked as
 `existing_unreviewed` or `missing` in
 the [documentation coverage matrix](../reference/documentation-coverage.md).
+The Order 8 navigation guide is source-reconciled but remains
+`existing_unreviewed` pending independent closure. The real Godot smoke sample
+does not yet execute live navigation.
 
 New guides must follow the
 [Documentation Design Pattern](../documentation-design-pattern.md).

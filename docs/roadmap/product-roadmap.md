@@ -17,10 +17,11 @@ documentation, independent-review, and release-gate cycle has finished.
 
 Documentation Order 8 is open under the
 [Navigation source review and proposed roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md).
-The existing generic transition service remains usable, but live identifier
-validation, public result and custom-policy fault authority, retained-progress
-host context, live Godot adoption evidence, and all three audience reviews must
-be resolved before Order 8 can close.
+Its request/result/policy-fault corrections, retained-progress host context,
+and test-only Godot adoption evidence are implemented. All three audience
+documents are written but remain unreviewed until the independent closure
+check and retained release gate. The real Godot smoke sample does not yet
+perform live navigation; that remains a separate host capability.
 
 Documentation Order 7 is complete under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).

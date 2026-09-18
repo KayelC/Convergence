@@ -4,9 +4,35 @@
 
 Navigation uses arbitrary location `ContentId` values and explicit transitions containing transition, source, and destination IDs.
 
-**Framework rule:** a transition applies only when the current source matches and the injected `IRuntimeNavigationPolicy` allows it. Reverse travel requires its own explicit transition. Rejected movement preserves the current location.
+**Framework rule:** a transition applies only when its IDs are valid, the
+current location matches its source, and the selected access rule allows it.
+The result offers a new logical location; the game adopts it after its own
+presentation or scene work succeeds. A rejected or faulted request leaves the
+logical location unchanged. Reverse travel requires a separate explicit
+transition. Returning to the same location is permitted if the access rule
+allows it, for example to re-enter or refresh a scene.
+
+**Configured rule:** the game supplies the access rule. It can change as story
+flags or other host-owned state change. An unavailable route reports a typed
+rejection; an invalid request or malfunctioning access rule reports a distinct
+result. The game's UI should use those result categories and its own localized
+text, not parse Framework diagnostic sentences.
+
+**Host responsibility:** the game detects a door, map choice, hotspot, or
+scripted trigger; requests the transition; then loads or presents the target.
+Framework approval does not prove that a Godot scene loaded. If host work
+fails, the game retains its previous logical location. For example, a player
+may return from the Training Annex to the staging area while their dungeon
+checkpoint progress remains saved; retained progress does not mean they are
+still physically in the dungeon.
 
 Convergence does not define cities, menus, world maps, collisions, scene loading, or player movement. A Godot area trigger, VN hotspot, console option, or script can all request the same transition.
+
+Navigation is optional. A game may use dungeon traversal without building a
+navigation service. When using the broad save contract v19, a saved field
+snapshot includes a logical location if field state is present; a dungeon-only
+game may supply a stable neutral location. The wider save shape is revisited
+under Order 13.
 
 ## Optional Dungeon Traversal
 

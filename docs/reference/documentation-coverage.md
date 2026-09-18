@@ -16,7 +16,7 @@ It covers the same 25 capability IDs as the
 ## Current Reading
 
 The documentation matrix currently records 75 audience entries: 33 reviewed,
-22 existing_unreviewed, 13 missing, and 7 not_applicable.
+23 existing_unreviewed, 12 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -36,6 +36,10 @@ conservative contact discovery, policy-controlled Analyze, familiarity imports,
 combat-profile source/revision identity, profile-switch invalidation,
 intrinsic-Almighty enforcement, and save boundaries. Other subsystem entries
 remain unreviewed until they complete the same process.
+Order 8 now has a source-reconciled navigation mechanics section, a dedicated
+developer guide, and a technical state-machine reference. All three remain
+`existing_unreviewed` pending the independent closure review. The real Godot
+smoke sample does not yet execute live navigation.
 Order 7 now documents inventory-owned equipment instances, authored slot
 layouts, one live equipment profile, typed currencies, resolved pricing,
 policy-owned stock, atomic shops, recovery, and save v19 across player,

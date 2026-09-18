@@ -99,6 +99,9 @@ Framework services normally return an immutable result containing:
 
 The host applies or presents accepted results. Rejected operations preserve the original state. Display names and descriptions may be shown to a player, but Framework behavior is selected by typed IDs and definitions rather than text matching.
 
+The navigation section of the world page was reconciled in Order 8, but its
+coverage entry remains `existing_unreviewed` pending independent closure.
+
 ## Optionality
 
 Navigation, traversal, Action Token, ailments, passives, party rosters, economy, negotiation, fusion, Compendium, and persistence are optional modules. A developer enables a module by composing its service and supplying the required policy or content. No Moon Phase mechanic is required; a nullable moon-phase ID exists only for games that choose to use one.

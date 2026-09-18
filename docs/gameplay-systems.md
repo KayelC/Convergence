@@ -204,6 +204,11 @@ realistic reachable defect or contradiction remains, so Order 7 is complete.
 
 Generic navigation uses arbitrary `ContentId` locations and injected access policy. Optional dungeon traversal uses arbitrary node IDs and injected traversal policy. Neither service prescribes scenes, menus, floors, or automatic battles. Hosts explicitly trigger authored encounters; preparation services hydrate ordered runtime actors from catalog formations.
 
+Navigation returns a logical destination candidate and typed events. A host
+adopts it after its own presentation or scene work succeeds; it may retain the
+old location on host failure. See the [developer integration guide](developer-guide/generic-navigation.md)
+and [technical state machine](technical/generic-navigation-runtime.md).
+
 ## Fusion, Inheritance, And Compendium
 
 Fusion services resolve typed recipes and strategy policies, build deterministic candidate plans, validate inherited skill selections, construct previews, and assess transactions. Inheritance precedence is typed and shared between preview and commit. Compendium services distinguish first acquisition from explicit updates: `RecordAcquisition` adds a missing entry but preserves an existing snapshot, while `RegisterActor` is the deliberate add-or-update operation. Recall pricing and familiar-knowledge import remain separately configurable.

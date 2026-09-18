@@ -707,22 +707,25 @@ tests, and all three audience documents, then completed the retained release
 gate. It found no unresolved realistic reachable defect or active
 contradiction. Order 7 is formally complete; its three audience entries return
 to `reviewed`, and the executable matrix now records 33 `reviewed`, 22
-`existing_unreviewed`, 13 `missing`, and 7 `not_applicable` entries.
+`existing_unreviewed`, 13 `missing`, and 7 `not_applicable` entries at that
+revision.
 
 ## Open Order 8
 
 The source-first
-[Navigation Order 8 review and proposed roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md)
-opens the next numbered workflow. It confirms that the generic transition,
-explicit policy, immutable candidate-state, DemoHost, and persistence
-foundations exist, while identifying missing live identifier validation,
-under-specified result and custom-policy fault boundaries, a bounded Training
-Annex save-context error, and incomplete Godot and audience evidence.
+[Navigation Order 8 review and roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md)
+records approved decisions O8-D1 through O8-D10. O8-R2 through O8-R4 corrected
+live request, result, and policy-fault authority. O8-R5 retained save v19 and
+corrected its optional-world-state explanation. O8-R6 corrected Training Annex
+context and proved a Godot-shaped trigger/adoption contract. O8-R7 reconciles
+mechanics, developer, and technical documents and diagrams. The current
+coverage matrix records 33 `reviewed`, 23 `existing_unreviewed`, 12 `missing`,
+and 7 `not_applicable` entries.
 
-`navigation` is therefore `partial`, and Order 8 is `open`. Owner decisions
-O8-D3 through O8-D10 must be confirmed before the proposed runtime checkpoints
-begin. Dungeon traversal rules remain outside this Order and are reserved for
-Order 9.
+`navigation` remains `partial` and Order 8 remains `open` until the independent
+O8-R8 source/document review and retained release gate. The real Godot smoke
+sample does not yet execute live navigation; the test-only contract is not
+represented as that implementation. Dungeon traversal rules remain Order 9.
 
 ## Deferred Documentation
 
