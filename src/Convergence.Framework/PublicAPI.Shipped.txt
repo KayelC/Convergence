@@ -5645,35 +5645,26 @@ Convergence.Runtime.RuntimeMutationStatus.Applied = 0 -> Convergence.Runtime.Run
 Convergence.Runtime.RuntimeMutationStatus.Rejected = 1 -> Convergence.Runtime.RuntimeMutationStatus
 Convergence.Runtime.RuntimeNavigationEvent
 Convergence.Runtime.RuntimeNavigationEvent.<Clone>$() -> Convergence.Runtime.RuntimeNavigationEvent!
-Convergence.Runtime.RuntimeNavigationEvent.Deconstruct(out Convergence.Runtime.RuntimeNavigationEventKind Kind, out Convergence.Content.ContentId TransitionId, out Convergence.Content.ContentId SourceLocationId, out Convergence.Content.ContentId DestinationLocationId, out Convergence.Content.ContentId? ReasonId, out string? Message) -> void
+Convergence.Runtime.RuntimeNavigationEvent.Deconstruct(out Convergence.Runtime.RuntimeNavigationEventKind kind, out Convergence.Content.ContentId transitionId, out Convergence.Content.ContentId sourceLocationId, out Convergence.Content.ContentId destinationLocationId, out Convergence.Content.ContentId? reasonId, out string? message) -> void
 Convergence.Runtime.RuntimeNavigationEvent.DestinationLocationId.get -> Convergence.Content.ContentId
-Convergence.Runtime.RuntimeNavigationEvent.DestinationLocationId.init -> void
 Convergence.Runtime.RuntimeNavigationEvent.Equals(Convergence.Runtime.RuntimeNavigationEvent? other) -> bool
 Convergence.Runtime.RuntimeNavigationEvent.Kind.get -> Convergence.Runtime.RuntimeNavigationEventKind
-Convergence.Runtime.RuntimeNavigationEvent.Kind.init -> void
 Convergence.Runtime.RuntimeNavigationEvent.Message.get -> string?
-Convergence.Runtime.RuntimeNavigationEvent.Message.init -> void
 Convergence.Runtime.RuntimeNavigationEvent.ReasonId.get -> Convergence.Content.ContentId?
-Convergence.Runtime.RuntimeNavigationEvent.ReasonId.init -> void
-Convergence.Runtime.RuntimeNavigationEvent.RuntimeNavigationEvent(Convergence.Runtime.RuntimeNavigationEventKind Kind, Convergence.Content.ContentId TransitionId, Convergence.Content.ContentId SourceLocationId, Convergence.Content.ContentId DestinationLocationId, Convergence.Content.ContentId? ReasonId = null, string? Message = null) -> void
+Convergence.Runtime.RuntimeNavigationEvent.RuntimeNavigationEvent(Convergence.Runtime.RuntimeNavigationEventKind kind, Convergence.Content.ContentId transitionId, Convergence.Content.ContentId sourceLocationId, Convergence.Content.ContentId destinationLocationId, Convergence.Content.ContentId? reasonId = null, string? message = null) -> void
 Convergence.Runtime.RuntimeNavigationEvent.SourceLocationId.get -> Convergence.Content.ContentId
-Convergence.Runtime.RuntimeNavigationEvent.SourceLocationId.init -> void
 Convergence.Runtime.RuntimeNavigationEvent.TransitionId.get -> Convergence.Content.ContentId
-Convergence.Runtime.RuntimeNavigationEvent.TransitionId.init -> void
 Convergence.Runtime.RuntimeNavigationEventKind
 Convergence.Runtime.RuntimeNavigationEventKind.TransitionApplied = 0 -> Convergence.Runtime.RuntimeNavigationEventKind
 Convergence.Runtime.RuntimeNavigationEventKind.TransitionRejected = 1 -> Convergence.Runtime.RuntimeNavigationEventKind
 Convergence.Runtime.RuntimeNavigationPolicyDecision
 Convergence.Runtime.RuntimeNavigationPolicyDecision.<Clone>$() -> Convergence.Runtime.RuntimeNavigationPolicyDecision!
-Convergence.Runtime.RuntimeNavigationPolicyDecision.Deconstruct(out bool IsAllowed, out Convergence.Content.ContentId? ReasonId, out string? Message) -> void
+Convergence.Runtime.RuntimeNavigationPolicyDecision.Deconstruct(out bool isAllowed, out Convergence.Content.ContentId? reasonId, out string? message) -> void
 Convergence.Runtime.RuntimeNavigationPolicyDecision.Equals(Convergence.Runtime.RuntimeNavigationPolicyDecision? other) -> bool
 Convergence.Runtime.RuntimeNavigationPolicyDecision.IsAllowed.get -> bool
-Convergence.Runtime.RuntimeNavigationPolicyDecision.IsAllowed.init -> void
 Convergence.Runtime.RuntimeNavigationPolicyDecision.Message.get -> string?
-Convergence.Runtime.RuntimeNavigationPolicyDecision.Message.init -> void
 Convergence.Runtime.RuntimeNavigationPolicyDecision.ReasonId.get -> Convergence.Content.ContentId?
-Convergence.Runtime.RuntimeNavigationPolicyDecision.ReasonId.init -> void
-Convergence.Runtime.RuntimeNavigationPolicyDecision.RuntimeNavigationPolicyDecision(bool IsAllowed, Convergence.Content.ContentId? ReasonId = null, string? Message = null) -> void
+Convergence.Runtime.RuntimeNavigationPolicyDecision.RuntimeNavigationPolicyDecision(bool isAllowed, Convergence.Content.ContentId? reasonId = null, string? message = null) -> void
 Convergence.Runtime.RuntimeNavigationPolicyRequest
 Convergence.Runtime.RuntimeNavigationPolicyRequest.<Clone>$() -> Convergence.Runtime.RuntimeNavigationPolicyRequest!
 Convergence.Runtime.RuntimeNavigationPolicyRequest.Current.get -> Convergence.Runtime.RuntimeNavigationSnapshot!

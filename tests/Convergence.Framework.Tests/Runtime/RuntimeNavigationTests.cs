@@ -148,6 +148,160 @@ public sealed class RuntimeNavigationTests
         Assert.Equal(0, policy.EvaluationCount);
     }
 
+    [Fact]
+    public void Navigation_AllowsPolicyApprovedSameLocationTransition()
+    {
+        var policy = new MutableNavigationPolicy { IsAllowed = true };
+        var current = ValidSnapshot();
+        var transition = new RuntimeNavigationTransition(Id("refresh"), Id("origin"), Id("origin"));
+
+        RuntimeNavigationResult result = new RuntimeNavigationService(policy).Navigate(current, transition);
+
+        Assert.Equal(RuntimeNavigationTransitionCode.Applied, result.Code);
+        Assert.Equal(current, result.After);
+        Assert.Equal(RuntimeNavigationEventKind.TransitionApplied, Assert.Single(result.Events).Kind);
+        Assert.Equal(1, policy.EvaluationCount);
+    }
+
+    [Fact]
+    public void NavigationResult_RejectsContradictoryStateAndEventEvidence()
+    {
+        RuntimeNavigationSnapshot origin = ValidSnapshot();
+        RuntimeNavigationSnapshot destination = new(Id("destination"));
+        RuntimeNavigationTransition transition = ValidTransition();
+        RuntimeNavigationEvent applied = new(
+            RuntimeNavigationEventKind.TransitionApplied,
+            transition.Id,
+            transition.SourceLocationId,
+            transition.DestinationLocationId);
+        RuntimeNavigationEvent rejected = new(
+            RuntimeNavigationEventKind.TransitionRejected,
+            transition.Id,
+            transition.SourceLocationId,
+            transition.DestinationLocationId);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new RuntimeNavigationResult((RuntimeNavigationTransitionCode)99, origin, destination, transition));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(RuntimeNavigationTransitionCode.Applied, origin, origin, transition, [applied]));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(RuntimeNavigationTransitionCode.Applied, origin, destination, transition, [rejected]));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(RuntimeNavigationTransitionCode.Applied, origin, destination, transition));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(RuntimeNavigationTransitionCode.PolicyRejected, origin, destination, transition, [rejected]));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(RuntimeNavigationTransitionCode.PolicyRejected, origin, origin, transition, [applied]));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(RuntimeNavigationTransitionCode.SourceMismatch, origin, origin, transition, [rejected]));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(
+                RuntimeNavigationTransitionCode.Applied,
+                origin,
+                destination,
+                transition,
+                [applied],
+                invalidField: RuntimeNavigationRequestField.TransitionId));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new RuntimeNavigationResult(
+                RuntimeNavigationTransitionCode.Applied,
+                origin,
+                destination,
+                transition,
+                [applied],
+                invalidField: (RuntimeNavigationRequestField)99));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(RuntimeNavigationTransitionCode.InvalidRequest, origin, origin, transition));
+    }
+
+    [Fact]
+    public void NavigationResult_RejectsMismatchedTransitionReasonAndInvalidRequestField()
+    {
+        RuntimeNavigationSnapshot origin = ValidSnapshot();
+        RuntimeNavigationTransition transition = ValidTransition();
+        RuntimeNavigationEvent wrongTransition = new(
+            RuntimeNavigationEventKind.TransitionRejected,
+            Id("other_transition"),
+            transition.SourceLocationId,
+            transition.DestinationLocationId);
+        RuntimeNavigationEvent rejected = new(
+            RuntimeNavigationEventKind.TransitionRejected,
+            transition.Id,
+            transition.SourceLocationId,
+            transition.DestinationLocationId,
+            Id("route_locked"));
+
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(RuntimeNavigationTransitionCode.PolicyRejected, origin, origin, transition, [wrongTransition]));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(RuntimeNavigationTransitionCode.PolicyRejected, origin, origin, transition, [rejected]));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(
+                RuntimeNavigationTransitionCode.PolicyRejected,
+                origin,
+                origin,
+                transition,
+                [rejected],
+                reasonId: default(ContentId)));
+
+        RuntimeNavigationTransition invalid = new(default, Id("origin"), Id("destination"));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationResult(
+                RuntimeNavigationTransitionCode.InvalidRequest,
+                origin,
+                origin,
+                invalid,
+                reasonId: Id("invalid_navigation_request"),
+                invalidField: RuntimeNavigationRequestField.SourceLocationId));
+    }
+
+    [Fact]
+    public void NavigationEventsAndPolicyDecisions_ValidateIdentifiersAndCannotBeClonedIntoInvalidShapes()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new RuntimeNavigationEvent((RuntimeNavigationEventKind)99, Id("travel"), Id("origin"), Id("destination")));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationEvent(RuntimeNavigationEventKind.TransitionRejected, default, Id("origin"), Id("destination")));
+        Assert.Throws<ArgumentException>(() =>
+            new RuntimeNavigationEvent(
+                RuntimeNavigationEventKind.TransitionApplied,
+                Id("travel"),
+                Id("origin"),
+                Id("destination"),
+                Id("reason")));
+        Assert.Throws<ArgumentException>(() => new RuntimeNavigationPolicyDecision(false, default(ContentId)));
+
+        RuntimeNavigationPolicyDecision allowed = new(true, Id("informational"), "Ignored on approval.");
+        Assert.True(allowed.IsAllowed);
+        Assert.Null(typeof(RuntimeNavigationEvent).GetProperty(nameof(RuntimeNavigationEvent.Kind))!.GetSetMethod());
+        Assert.Null(typeof(RuntimeNavigationPolicyDecision).GetProperty(nameof(RuntimeNavigationPolicyDecision.ReasonId))!.GetSetMethod());
+        Assert.Null(typeof(RuntimeNavigationResult).GetProperty(nameof(RuntimeNavigationResult.Code))!.GetSetMethod());
+    }
+
+    [Fact]
+    public void NavigationResult_CopiesEventInputAndRetainsReadOnlyEvidence()
+    {
+        RuntimeNavigationTransition transition = ValidTransition();
+        RuntimeNavigationEvent applied = new(
+            RuntimeNavigationEventKind.TransitionApplied,
+            transition.Id,
+            transition.SourceLocationId,
+            transition.DestinationLocationId);
+        List<RuntimeNavigationEvent> mutableEvents = [applied];
+
+        RuntimeNavigationResult result = new(
+            RuntimeNavigationTransitionCode.Applied,
+            ValidSnapshot(),
+            new RuntimeNavigationSnapshot(Id("destination")),
+            transition,
+            mutableEvents);
+        mutableEvents.Clear();
+
+        Assert.Same(applied, Assert.Single(result.Events));
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<RuntimeNavigationEvent>)result.Events).Clear());
+    }
+
     private static ContentId Id(string value) => ContentId.Parse(value);
 
     private static RuntimeNavigationSnapshot ValidSnapshot() => new(Id("origin"));

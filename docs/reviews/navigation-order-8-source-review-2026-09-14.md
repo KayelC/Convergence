@@ -380,7 +380,7 @@ unapproved product decision or requires Order 9 traversal-rule work.
 |---|---|---|---|
 | O8-R1 | `complete` | Record this source review, open Order 8, mark the capability partial with named gaps, and align active tracking. No runtime behavior changes. | `docs: open navigation order 8 review` |
 | O8-R2 | `complete` | Implement typed live identifier validation before source/policy evaluation. Add default-value and field-specific adversarial tests. | `runtime: validate navigation requests` |
-| O8-R3 | `approved` | Seal public result, event, decision, and enum invariants while retaining custom service implementations. | `runtime: enforce navigation result authority` |
+| O8-R3 | `complete` | Seal public result, event, decision, and enum invariants while retaining custom service implementations. | `runtime: enforce navigation result authority` |
 | O8-R4 | `approved` | Establish the selected custom-policy fault boundary and prove throwing/null policies preserve state. | `runtime: contain navigation policy faults` |
 | O8-R5 | `approved` | Retain save v19 and correct misleading optional-world-state test and documentation wording; defer broad independent-nullability design to Order 13. | `runtime: clarify optional world state` |
 | O8-R6 | `approved` | Correct Training Annex active-context derivation, document candidate adoption, and add focused Godot trigger/event/scene-separation evidence without moving scenes into Framework. | `host: prove generic navigation adoption` |
@@ -562,3 +562,41 @@ boundary.
 **Remaining:** R3 must enforce the public result/event/decision matrix,
 including the new `InvalidField` combination. R4 must define policy fault
 results. Neither was silently included in R2.
+
+## O8-R3 Completion Record
+
+**Baseline:** `5b4d757b` (`runtime: validate navigation requests`).
+
+**Actual destination:** `RuntimeNavigationResult` validates defined outcome and
+field enums, required state relationships, exactly matching structural events,
+reason/message consistency, and the special no-event invalid-request shape.
+`RuntimeNavigationEvent` validates kind and IDs. Event and policy-decision
+records retain equality and deconstruction but expose no clone-writable
+properties. The shared request-validity helper is used by both service and
+result validation. Custom `IRuntimeNavigationService` implementations remain
+supported, but cannot construct contradictory results through the public
+constructor.
+
+**Changed files:** `NavigationTransitions.cs`, `RuntimeNavigationTests.cs`,
+`PublicAPI.Shipped.txt`, `docs/public-api-contract.md`, and this review.
+
+**Parity and adversarial evidence:** existing applied, source-mismatch, and
+policy-rejected results still pass. A dynamic policy may return approval while
+retaining diagnostic metadata; the standard service still ignores that
+metadata on approval. Same-location travel succeeds when policy-approved.
+Focused tests reject undefined enums, conflicting before/after values, wrong
+event kinds or transition IDs, invalid reasons/fields, missing events, and
+invalid-request contradictions. Event input is defensively copied, its exposed
+collection is read-only, and event/decision/result properties lack public
+setters. The focused navigation suite passed 12 tests.
+
+**Gate:** the full solution passed 2,063 tests (Framework 1,872; DemoHost 184;
+ContentValidator 7), zero failed or skipped. The strict nonincremental Release
+build had zero warnings/errors; formatting verification and
+`git diff --check` passed. All four noninteractive DemoHost modes and scripted
+Training Annex play exited 0. No content, schema, or archive file changed;
+Framework source acquired no Godot, filesystem, Newtonsoft, archived namespace,
+or legacy-adapter reference.
+
+**Remaining:** R4 owns throwing/null custom-policy behavior and its typed
+fault outcome. R3 did not alter that boundary.

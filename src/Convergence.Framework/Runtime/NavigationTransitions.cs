@@ -35,18 +35,93 @@ public sealed record RuntimeNavigationPolicyRequest(
     RuntimeNavigationSnapshot Current,
     RuntimeNavigationTransition Transition);
 
-public sealed record RuntimeNavigationPolicyDecision(
-    bool IsAllowed,
-    ContentId? ReasonId = null,
-    string? Message = null);
+public sealed record RuntimeNavigationPolicyDecision
+{
+    public RuntimeNavigationPolicyDecision(
+        bool isAllowed,
+        ContentId? reasonId = null,
+        string? message = null)
+    {
+        if (reasonId is ContentId id && !id.IsValid)
+        {
+            throw new ArgumentException("Policy reason ID cannot be empty.", nameof(reasonId));
+        }
+        IsAllowed = isAllowed;
+        ReasonId = reasonId;
+        Message = message;
+    }
 
-public sealed record RuntimeNavigationEvent(
-    RuntimeNavigationEventKind Kind,
-    ContentId TransitionId,
-    ContentId SourceLocationId,
-    ContentId DestinationLocationId,
-    ContentId? ReasonId = null,
-    string? Message = null);
+    public bool IsAllowed { get; }
+    public ContentId? ReasonId { get; }
+    public string? Message { get; }
+
+    public void Deconstruct(out bool isAllowed, out ContentId? reasonId, out string? message)
+    {
+        isAllowed = IsAllowed;
+        reasonId = ReasonId;
+        message = Message;
+    }
+}
+
+public sealed record RuntimeNavigationEvent
+{
+    public RuntimeNavigationEvent(
+        RuntimeNavigationEventKind kind,
+        ContentId transitionId,
+        ContentId sourceLocationId,
+        ContentId destinationLocationId,
+        ContentId? reasonId = null,
+        string? message = null)
+    {
+        if (!Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+        if (!transitionId.IsValid || !sourceLocationId.IsValid || !destinationLocationId.IsValid)
+        {
+            throw new ArgumentException("Navigation event identifiers cannot be empty.");
+        }
+        if (reasonId is ContentId id && !id.IsValid)
+        {
+            throw new ArgumentException("Navigation event reason ID cannot be empty.", nameof(reasonId));
+        }
+        if (kind == RuntimeNavigationEventKind.TransitionApplied &&
+            (reasonId is not null || message is not null))
+        {
+            throw new ArgumentException("An applied navigation event cannot carry rejection details.");
+        }
+
+        Kind = kind;
+        TransitionId = transitionId;
+        SourceLocationId = sourceLocationId;
+        DestinationLocationId = destinationLocationId;
+        ReasonId = reasonId;
+        Message = message;
+    }
+
+    public RuntimeNavigationEventKind Kind { get; }
+    public ContentId TransitionId { get; }
+    public ContentId SourceLocationId { get; }
+    public ContentId DestinationLocationId { get; }
+    public ContentId? ReasonId { get; }
+    public string? Message { get; }
+
+    public void Deconstruct(
+        out RuntimeNavigationEventKind kind,
+        out ContentId transitionId,
+        out ContentId sourceLocationId,
+        out ContentId destinationLocationId,
+        out ContentId? reasonId,
+        out string? message)
+    {
+        kind = Kind;
+        transitionId = TransitionId;
+        sourceLocationId = SourceLocationId;
+        destinationLocationId = DestinationLocationId;
+        reasonId = ReasonId;
+        message = Message;
+    }
+}
 
 public sealed record RuntimeNavigationResult
 {
@@ -60,6 +135,19 @@ public sealed record RuntimeNavigationResult
         string? message = null,
         RuntimeNavigationRequestField? invalidField = null)
     {
+        if (!Enum.IsDefined(code))
+        {
+            throw new ArgumentOutOfRangeException(nameof(code));
+        }
+        if (invalidField is RuntimeNavigationRequestField field && !Enum.IsDefined(field))
+        {
+            throw new ArgumentOutOfRangeException(nameof(invalidField));
+        }
+        if (reasonId is ContentId id && !id.IsValid)
+        {
+            throw new ArgumentException("Navigation result reason ID cannot be empty.", nameof(reasonId));
+        }
+
         Code = code;
         Before = before ?? throw new ArgumentNullException(nameof(before));
         After = after ?? throw new ArgumentNullException(nameof(after));
@@ -68,6 +156,7 @@ public sealed record RuntimeNavigationResult
         ReasonId = reasonId;
         Message = message;
         InvalidField = invalidField;
+        ValidateOutcome();
     }
 
     public RuntimeNavigationTransitionCode Code { get; }
@@ -79,6 +168,68 @@ public sealed record RuntimeNavigationResult
     public ContentId? ReasonId { get; }
     public string? Message { get; }
     public RuntimeNavigationRequestField? InvalidField { get; }
+
+    private void ValidateOutcome()
+    {
+        RuntimeNavigationRequestField? firstInvalid = RuntimeNavigationRequestValidation.FirstInvalidField(
+            Before,
+            Transition);
+        if (Code == RuntimeNavigationTransitionCode.InvalidRequest)
+        {
+            if (firstInvalid is null || InvalidField != firstInvalid || After != Before ||
+                Events.Count != 0 || ReasonId != ContentId.Parse("invalid_navigation_request"))
+            {
+                throw new ArgumentException("Invalid navigation request result has inconsistent evidence.");
+            }
+            return;
+        }
+
+        if (firstInvalid is not null || InvalidField is not null || Events.Count != 1)
+        {
+            throw new ArgumentException("Navigation result has invalid request or event evidence.");
+        }
+
+        RuntimeNavigationEvent navigationEvent = Events[0];
+        if (navigationEvent.TransitionId != Transition.Id ||
+            navigationEvent.SourceLocationId != Transition.SourceLocationId ||
+            navigationEvent.DestinationLocationId != Transition.DestinationLocationId)
+        {
+            throw new ArgumentException("Navigation event does not match the requested transition.");
+        }
+
+        switch (Code)
+        {
+            case RuntimeNavigationTransitionCode.Applied:
+                if (Before.CurrentLocationId != Transition.SourceLocationId ||
+                    After.CurrentLocationId != Transition.DestinationLocationId ||
+                    ReasonId is not null || Message is not null ||
+                    navigationEvent.Kind != RuntimeNavigationEventKind.TransitionApplied)
+                {
+                    throw new ArgumentException("Applied navigation result has inconsistent state or event evidence.");
+                }
+                break;
+            case RuntimeNavigationTransitionCode.SourceMismatch:
+                if (Before.CurrentLocationId == Transition.SourceLocationId ||
+                    After != Before ||
+                    navigationEvent.Kind != RuntimeNavigationEventKind.TransitionRejected ||
+                    ReasonId != navigationEvent.ReasonId || Message != navigationEvent.Message)
+                {
+                    throw new ArgumentException("Source-mismatch result has inconsistent state or event evidence.");
+                }
+                break;
+            case RuntimeNavigationTransitionCode.PolicyRejected:
+                if (Before.CurrentLocationId != Transition.SourceLocationId ||
+                    After != Before ||
+                    navigationEvent.Kind != RuntimeNavigationEventKind.TransitionRejected ||
+                    ReasonId != navigationEvent.ReasonId || Message != navigationEvent.Message)
+                {
+                    throw new ArgumentException("Policy-rejected result has inconsistent state or event evidence.");
+                }
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(Code));
+        }
+    }
 }
 
 public interface IRuntimeNavigationPolicy
@@ -109,7 +260,9 @@ public sealed class RuntimeNavigationService : IRuntimeNavigationService
         ArgumentNullException.ThrowIfNull(current);
         ArgumentNullException.ThrowIfNull(transition);
 
-        RuntimeNavigationRequestField? invalidField = InvalidField(current, transition);
+        RuntimeNavigationRequestField? invalidField = RuntimeNavigationRequestValidation.FirstInvalidField(
+            current,
+            transition);
         if (invalidField is not null)
         {
             return new RuntimeNavigationResult(
@@ -159,30 +312,6 @@ public sealed class RuntimeNavigationService : IRuntimeNavigationService
             ]);
     }
 
-    private static RuntimeNavigationRequestField? InvalidField(
-        RuntimeNavigationSnapshot current,
-        RuntimeNavigationTransition transition)
-    {
-        if (!current.CurrentLocationId.IsValid)
-        {
-            return RuntimeNavigationRequestField.CurrentLocationId;
-        }
-        if (!transition.Id.IsValid)
-        {
-            return RuntimeNavigationRequestField.TransitionId;
-        }
-        if (!transition.SourceLocationId.IsValid)
-        {
-            return RuntimeNavigationRequestField.SourceLocationId;
-        }
-        if (!transition.DestinationLocationId.IsValid)
-        {
-            return RuntimeNavigationRequestField.DestinationLocationId;
-        }
-
-        return null;
-    }
-
     private static RuntimeNavigationResult Rejected(
         RuntimeNavigationTransitionCode code,
         RuntimeNavigationSnapshot current,
@@ -205,4 +334,31 @@ public sealed class RuntimeNavigationService : IRuntimeNavigationService
             ],
             reasonId,
             message);
+}
+
+internal static class RuntimeNavigationRequestValidation
+{
+    public static RuntimeNavigationRequestField? FirstInvalidField(
+        RuntimeNavigationSnapshot current,
+        RuntimeNavigationTransition transition)
+    {
+        if (!current.CurrentLocationId.IsValid)
+        {
+            return RuntimeNavigationRequestField.CurrentLocationId;
+        }
+        if (!transition.Id.IsValid)
+        {
+            return RuntimeNavigationRequestField.TransitionId;
+        }
+        if (!transition.SourceLocationId.IsValid)
+        {
+            return RuntimeNavigationRequestField.SourceLocationId;
+        }
+        if (!transition.DestinationLocationId.IsValid)
+        {
+            return RuntimeNavigationRequestField.DestinationLocationId;
+        }
+
+        return null;
+    }
 }

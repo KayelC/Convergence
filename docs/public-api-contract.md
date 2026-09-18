@@ -338,6 +338,17 @@ It does not change valid transition, source-mismatch, or policy-rejection
 behavior. The rest of the result/policy boundary is addressed in later Order 8
 checkpoints.
 
+`RuntimeNavigationResult` now validates each code against its before/after
+state and exact structural event. A valid request has one matching applied or
+rejected event; `InvalidRequest` has no event because its IDs may be malformed.
+`RuntimeNavigationEvent` and `RuntimeNavigationPolicyDecision` retain record
+equality and deconstruction but no longer expose `init` properties that could
+clone them into invalid shapes. Their constructors validate event kinds and
+identifiers. Allowed policy decisions may still carry metadata; the standard
+service ignores it, preserving dynamic-policy behavior. Custom service and
+policy implementations using the old clone-mutable shape must rebuild against
+this guarded pre-release API revision.
+
 ## Documentation And Build Tooling
 
 Framework emits `Convergence.Framework.xml`. XML documentation is curated and intentionally incomplete; `CS1591` remains suppressed. Summaries cover selected
