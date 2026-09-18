@@ -7,7 +7,14 @@ public enum RuntimeNavigationTransitionCode
     Applied,
     SourceMismatch,
     PolicyRejected,
-    InvalidRequest
+    InvalidRequest,
+    PolicyFaulted
+}
+
+public enum RuntimeNavigationPolicyFaultKind
+{
+    Exception,
+    NullDecision
 }
 
 public enum RuntimeNavigationRequestField
@@ -133,7 +140,8 @@ public sealed record RuntimeNavigationResult
         IEnumerable<RuntimeNavigationEvent>? events = null,
         ContentId? reasonId = null,
         string? message = null,
-        RuntimeNavigationRequestField? invalidField = null)
+        RuntimeNavigationRequestField? invalidField = null,
+        RuntimeNavigationPolicyFaultKind? faultKind = null)
     {
         if (!Enum.IsDefined(code))
         {
@@ -142,6 +150,10 @@ public sealed record RuntimeNavigationResult
         if (invalidField is RuntimeNavigationRequestField field && !Enum.IsDefined(field))
         {
             throw new ArgumentOutOfRangeException(nameof(invalidField));
+        }
+        if (faultKind is RuntimeNavigationPolicyFaultKind kind && !Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(faultKind));
         }
         if (reasonId is ContentId id && !id.IsValid)
         {
@@ -156,6 +168,7 @@ public sealed record RuntimeNavigationResult
         ReasonId = reasonId;
         Message = message;
         InvalidField = invalidField;
+        FaultKind = faultKind;
         ValidateOutcome();
     }
 
@@ -168,6 +181,7 @@ public sealed record RuntimeNavigationResult
     public ContentId? ReasonId { get; }
     public string? Message { get; }
     public RuntimeNavigationRequestField? InvalidField { get; }
+    public RuntimeNavigationPolicyFaultKind? FaultKind { get; }
 
     private void ValidateOutcome()
     {
@@ -177,7 +191,8 @@ public sealed record RuntimeNavigationResult
         if (Code == RuntimeNavigationTransitionCode.InvalidRequest)
         {
             if (firstInvalid is null || InvalidField != firstInvalid || After != Before ||
-                Events.Count != 0 || ReasonId != ContentId.Parse("invalid_navigation_request"))
+                Events.Count != 0 || ReasonId != ContentId.Parse("invalid_navigation_request") ||
+                FaultKind is not null)
             {
                 throw new ArgumentException("Invalid navigation request result has inconsistent evidence.");
             }
@@ -202,7 +217,7 @@ public sealed record RuntimeNavigationResult
             case RuntimeNavigationTransitionCode.Applied:
                 if (Before.CurrentLocationId != Transition.SourceLocationId ||
                     After.CurrentLocationId != Transition.DestinationLocationId ||
-                    ReasonId is not null || Message is not null ||
+                    ReasonId is not null || Message is not null || FaultKind is not null ||
                     navigationEvent.Kind != RuntimeNavigationEventKind.TransitionApplied)
                 {
                     throw new ArgumentException("Applied navigation result has inconsistent state or event evidence.");
@@ -212,6 +227,7 @@ public sealed record RuntimeNavigationResult
                 if (Before.CurrentLocationId == Transition.SourceLocationId ||
                     After != Before ||
                     navigationEvent.Kind != RuntimeNavigationEventKind.TransitionRejected ||
+                    FaultKind is not null ||
                     ReasonId != navigationEvent.ReasonId || Message != navigationEvent.Message)
                 {
                     throw new ArgumentException("Source-mismatch result has inconsistent state or event evidence.");
@@ -221,9 +237,20 @@ public sealed record RuntimeNavigationResult
                 if (Before.CurrentLocationId != Transition.SourceLocationId ||
                     After != Before ||
                     navigationEvent.Kind != RuntimeNavigationEventKind.TransitionRejected ||
+                    FaultKind is not null ||
                     ReasonId != navigationEvent.ReasonId || Message != navigationEvent.Message)
                 {
                     throw new ArgumentException("Policy-rejected result has inconsistent state or event evidence.");
+                }
+                break;
+            case RuntimeNavigationTransitionCode.PolicyFaulted:
+                if (Before.CurrentLocationId != Transition.SourceLocationId ||
+                    After != Before || FaultKind is null ||
+                    ReasonId != ContentId.Parse("navigation_policy_faulted") ||
+                    navigationEvent.Kind != RuntimeNavigationEventKind.TransitionRejected ||
+                    ReasonId != navigationEvent.ReasonId || Message != navigationEvent.Message)
+                {
+                    throw new ArgumentException("Policy-faulted result has inconsistent state or event evidence.");
                 }
                 break;
             default:
@@ -285,8 +312,36 @@ public sealed class RuntimeNavigationService : IRuntimeNavigationService
                 message: $"Transition '{transition.Id}' starts at '{transition.SourceLocationId}', not '{current.CurrentLocationId}'.");
         }
 
-        RuntimeNavigationPolicyDecision decision = _policy.Evaluate(
-            new RuntimeNavigationPolicyRequest(current, transition));
+        RuntimeNavigationPolicyDecision? decision;
+        try
+        {
+            decision = _policy.Evaluate(new RuntimeNavigationPolicyRequest(current, transition));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (OutOfMemoryException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return PolicyFaulted(
+                current,
+                transition,
+                RuntimeNavigationPolicyFaultKind.Exception,
+                $"Navigation policy faulted: {exception.GetType().Name}: {exception.Message}");
+        }
+
+        if (decision is null)
+        {
+            return PolicyFaulted(
+                current,
+                transition,
+                RuntimeNavigationPolicyFaultKind.NullDecision,
+                "Navigation policy returned no decision.");
+        }
         if (!decision.IsAllowed)
         {
             return Rejected(
@@ -334,6 +389,30 @@ public sealed class RuntimeNavigationService : IRuntimeNavigationService
             ],
             reasonId,
             message);
+
+    private static RuntimeNavigationResult PolicyFaulted(
+        RuntimeNavigationSnapshot current,
+        RuntimeNavigationTransition transition,
+        RuntimeNavigationPolicyFaultKind faultKind,
+        string message)
+    {
+        ContentId reasonId = ContentId.Parse("navigation_policy_faulted");
+        return new RuntimeNavigationResult(
+            RuntimeNavigationTransitionCode.PolicyFaulted,
+            current,
+            current,
+            transition,
+            [new RuntimeNavigationEvent(
+                RuntimeNavigationEventKind.TransitionRejected,
+                transition.Id,
+                transition.SourceLocationId,
+                transition.DestinationLocationId,
+                reasonId,
+                message)],
+            reasonId,
+            message,
+            faultKind: faultKind);
+    }
 }
 
 internal static class RuntimeNavigationRequestValidation

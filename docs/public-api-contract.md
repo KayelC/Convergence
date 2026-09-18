@@ -349,6 +349,14 @@ service ignores it, preserving dynamic-policy behavior. Custom service and
 policy implementations using the old clone-mutable shape must rebuild against
 this guarded pre-release API revision.
 
+Custom navigation policy exceptions now produce `PolicyFaulted` with a typed
+`FaultKind`, stable `navigation_policy_faulted` reason ID, matching rejection
+event, and unchanged before/after state. A null decision has a distinct
+`NullDecision` kind. `OperationCanceledException` and `OutOfMemoryException`
+propagate rather than being converted to gameplay results. Hosts use the code,
+fault kind, and reason ID for control flow; exception text in `Message` is
+diagnostic only and should not be displayed verbatim to players.
+
 ## Documentation And Build Tooling
 
 Framework emits `Convergence.Framework.xml`. XML documentation is curated and intentionally incomplete; `CS1591` remains suppressed. Summaries cover selected

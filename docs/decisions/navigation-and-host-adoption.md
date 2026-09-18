@@ -27,7 +27,8 @@ progress appear in the broad save aggregate.
    Return a typed, non-mutating result identifying the offending field.
 3. **D4, policy fault:** a throwing or null-returning custom policy produces a
    typed non-mutating fault result. Navigation does not gain an asynchronous
-   policy or scene-loading responsibility.
+   policy or scene-loading responsibility. Operational cancellation and
+   out-of-memory failure are not policy programming faults and still propagate.
 4. **D5, result authority:** public navigation results must have coherent
    code, before/after state, reason, and event evidence. Undefined enum values
    and contradictory results are rejected even when supplied by a custom

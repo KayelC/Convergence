@@ -381,7 +381,7 @@ unapproved product decision or requires Order 9 traversal-rule work.
 | O8-R1 | `complete` | Record this source review, open Order 8, mark the capability partial with named gaps, and align active tracking. No runtime behavior changes. | `docs: open navigation order 8 review` |
 | O8-R2 | `complete` | Implement typed live identifier validation before source/policy evaluation. Add default-value and field-specific adversarial tests. | `runtime: validate navigation requests` |
 | O8-R3 | `complete` | Seal public result, event, decision, and enum invariants while retaining custom service implementations. | `runtime: enforce navigation result authority` |
-| O8-R4 | `approved` | Establish the selected custom-policy fault boundary and prove throwing/null policies preserve state. | `runtime: contain navigation policy faults` |
+| O8-R4 | `complete` | Establish the selected custom-policy fault boundary and prove throwing/null policies preserve state. | `runtime: contain navigation policy faults` |
 | O8-R5 | `approved` | Retain save v19 and correct misleading optional-world-state test and documentation wording; defer broad independent-nullability design to Order 13. | `runtime: clarify optional world state` |
 | O8-R6 | `approved` | Correct Training Annex active-context derivation, document candidate adoption, and add focused Godot trigger/event/scene-separation evidence without moving scenes into Framework. | `host: prove generic navigation adoption` |
 | O8-R7 | `pending` | Reconcile the mechanics page, add a developer guide, add a technical state-machine page, update indexes and matrices, and include Godot/console examples and diagrams. | `docs: document generic navigation` |
@@ -600,3 +600,31 @@ or legacy-adapter reference.
 
 **Remaining:** R4 owns throwing/null custom-policy behavior and its typed
 fault outcome. R3 did not alter that boundary.
+
+## O8-R4 Completion Record
+
+**Baseline:** `128f9295` (`runtime: enforce navigation result authority`).
+
+**Actual destination:** a custom policy exception produces `PolicyFaulted`
+with `FaultKind.Exception`; a null decision produces `FaultKind.NullDecision`.
+Both preserve the input snapshot, use stable `navigation_policy_faulted` reason
+evidence, and record one matching rejected event. The public result validates
+fault-kind/code coherence. Operational cancellation and out-of-memory failures
+continue to propagate rather than masquerading as policy programming faults.
+
+**Changed files:** `NavigationTransitions.cs`, `RuntimeNavigationTests.cs`,
+`PublicAPI.Shipped.txt`, `docs/public-api-contract.md`, the confirmed
+navigation decision record, and this review.
+
+**Adversarial evidence:** focused tests cover a throwing policy, a null-returning
+policy, cancellation propagation, undefined fault kinds, missing fault kinds,
+and a fault kind attached to ordinary policy rejection. The focused navigation
+suite passed 16 tests, zero failed/skipped.
+
+**Gate:** the full solution passed 2,067 tests (Framework 1,876; DemoHost 184;
+ContentValidator 7), zero failed/skipped. The strict nonincremental Release
+build had zero warnings/errors. Formatting verification and
+`git diff --check` passed. All four noninteractive DemoHost modes and scripted
+Training Annex play exited 0. Content, schemas, and archive remained unchanged;
+Framework source gained no Godot, filesystem, Newtonsoft, archived namespace,
+or legacy-adapter reference.

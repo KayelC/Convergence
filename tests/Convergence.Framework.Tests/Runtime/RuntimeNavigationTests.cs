@@ -302,6 +302,84 @@ public sealed class RuntimeNavigationTests
             ((IList<RuntimeNavigationEvent>)result.Events).Clear());
     }
 
+    [Theory]
+    [InlineData(false, RuntimeNavigationPolicyFaultKind.Exception)]
+    [InlineData(true, RuntimeNavigationPolicyFaultKind.NullDecision)]
+    public void Navigation_PolicyFailureReturnsTypedNonMutatingFault(
+        bool returnNull,
+        RuntimeNavigationPolicyFaultKind expectedFaultKind)
+    {
+        var policy = new FaultingNavigationPolicy(returnNull
+            ? _ => null!
+            : _ => throw new InvalidOperationException("Broken route data."));
+        var service = new RuntimeNavigationService(policy);
+        RuntimeNavigationSnapshot current = ValidSnapshot();
+        RuntimeNavigationTransition transition = ValidTransition();
+
+        RuntimeNavigationResult result = service.Navigate(current, transition);
+
+        Assert.Equal(RuntimeNavigationTransitionCode.PolicyFaulted, result.Code);
+        Assert.False(result.Applied);
+        Assert.Same(current, result.Before);
+        Assert.Same(current, result.After);
+        Assert.Same(transition, result.Transition);
+        Assert.Equal(expectedFaultKind, result.FaultKind);
+        Assert.Null(result.InvalidField);
+        Assert.Equal(Id("navigation_policy_faulted"), result.ReasonId);
+        RuntimeNavigationEvent faultEvent = Assert.Single(result.Events);
+        Assert.Equal(RuntimeNavigationEventKind.TransitionRejected, faultEvent.Kind);
+        Assert.Equal(result.ReasonId, faultEvent.ReasonId);
+        Assert.Equal(result.Message, faultEvent.Message);
+        Assert.Equal(1, policy.EvaluationCount);
+    }
+
+    [Fact]
+    public void Navigation_OperationalCancellationIsNotReclassifiedAsPolicyFault()
+    {
+        var policy = new FaultingNavigationPolicy(_ => throw new OperationCanceledException());
+        var service = new RuntimeNavigationService(policy);
+
+        Assert.Throws<OperationCanceledException>(() => service.Navigate(ValidSnapshot(), ValidTransition()));
+        Assert.Equal(1, policy.EvaluationCount);
+    }
+
+    [Fact]
+    public void NavigationResult_RejectsContradictoryPolicyFaultEvidence()
+    {
+        RuntimeNavigationSnapshot current = ValidSnapshot();
+        RuntimeNavigationTransition transition = ValidTransition();
+        RuntimeNavigationEvent rejected = new(
+            RuntimeNavigationEventKind.TransitionRejected,
+            transition.Id,
+            transition.SourceLocationId,
+            transition.DestinationLocationId,
+            Id("navigation_policy_faulted"));
+
+        Assert.Throws<ArgumentException>(() => new RuntimeNavigationResult(
+            RuntimeNavigationTransitionCode.PolicyFaulted,
+            current,
+            current,
+            transition,
+            [rejected],
+            Id("navigation_policy_faulted")));
+        Assert.Throws<ArgumentException>(() => new RuntimeNavigationResult(
+            RuntimeNavigationTransitionCode.PolicyRejected,
+            current,
+            current,
+            transition,
+            [rejected],
+            Id("navigation_policy_faulted"),
+            faultKind: RuntimeNavigationPolicyFaultKind.Exception));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RuntimeNavigationResult(
+            RuntimeNavigationTransitionCode.PolicyFaulted,
+            current,
+            current,
+            transition,
+            [rejected],
+            Id("navigation_policy_faulted"),
+            faultKind: (RuntimeNavigationPolicyFaultKind)99));
+    }
+
     private static ContentId Id(string value) => ContentId.Parse(value);
 
     private static RuntimeNavigationSnapshot ValidSnapshot() => new(Id("origin"));
@@ -322,6 +400,19 @@ public sealed class RuntimeNavigationTests
             EvaluationCount++;
             LastRequest = request;
             return new RuntimeNavigationPolicyDecision(IsAllowed, ReasonId, Message);
+        }
+    }
+
+    private sealed class FaultingNavigationPolicy(
+        Func<RuntimeNavigationPolicyRequest, RuntimeNavigationPolicyDecision> evaluate)
+        : IRuntimeNavigationPolicy
+    {
+        public int EvaluationCount { get; private set; }
+
+        public RuntimeNavigationPolicyDecision Evaluate(RuntimeNavigationPolicyRequest request)
+        {
+            EvaluationCount++;
+            return evaluate(request);
         }
     }
 }
