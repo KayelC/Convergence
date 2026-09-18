@@ -48,6 +48,7 @@ records must link every affected mechanics, developer, and technical page.
 ## Confirmed Decisions
 
 - [Actor Composition, Progression, And Rosters](actor-composition-progression-and-rosters.md)
+- [Generic Navigation And Host Adoption](navigation-and-host-adoption.md)
 - [Battle Action Ownership And Inventory Authority](battle-action-ownership-and-inventory-authority.md)
 - [Combat Resolution Policy Family](combat-resolution-policy-family.md)
 - [Ordered Secondary Effects](ordered-secondary-effects.md)

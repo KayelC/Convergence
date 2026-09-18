@@ -10,9 +10,10 @@
 
 **Order state after this review:** `open`
 
-**Owner-decision status:** the established generic, host-owned direction is
-preserved; decisions O8-D3 through O8-D10 await explicit owner confirmation
-before runtime correction work begins
+**Owner-decision status:** O8-D1 through O8-D10 confirmed by the owner on
+18 September 2026, including O8-D6 option 1 (retain save v19). The active
+[navigation decision](../decisions/navigation-and-host-adoption.md) records
+approved intent; only completed checkpoints describe implemented behavior.
 
 ## Purpose
 
@@ -291,7 +292,7 @@ availability to the injected policy.
 
 ### O8-D3: Invalid identifiers use typed non-mutating rejection
 
-**Recommendation:** approve.
+**Owner decision:** approved; implementation pending.
 
 Add `InvalidRequest`, reject before policy evaluation, preserve before/after
 state, and report the invalid field through typed evidence. This is a direct
@@ -299,7 +300,7 @@ validity correction, not a configurable policy.
 
 ### O8-D4: Custom policy faults become typed results
 
-**Recommendation:** approve.
+**Owner decision:** approved; implementation pending.
 
 Add `PolicyFaulted` and stable fault detail for a throwing or null-returning
 policy. Preserve the original snapshot. Do not add an async navigation policy;
@@ -308,7 +309,7 @@ rule call.
 
 ### O8-D5: Public result shapes are validated
 
-**Recommendation:** approve.
+**Owner decision:** approved; implementation pending.
 
 Keep `IRuntimeNavigationService` replaceable, but make every returned result
 obey one documented state/event matrix. Undefined enum values and contradictory
@@ -316,7 +317,7 @@ before/after/event combinations are invalid framework contract values.
 
 ### O8-D6: Retain or change the combined field aggregate
 
-**Decision required.** Two valid choices exist:
+**Owner decision:** option 1 approved for Order 8. Two choices were considered:
 
 1. **Retain the current v19 aggregate (recommended for Order 8):** `Field` is
    optional; when present, it contains required navigation and optional dungeon
@@ -328,14 +329,15 @@ before/after/event combinations are invalid framework contract values.
    dungeon-only, both, or neither, reject an empty aggregate, advance save v19
    to v20, and migrate Framework, DemoHost, Godot, DTOs, tests, and API baseline.
 
-The earlier discussion identified option 2 as more literally modular. This
-fresh source review does not classify the existing shape as a defect because
-`project-vision.md` explicitly distinguishes service composition from save
-nullability. The owner should choose deliberately.
+The owner chose option 1 for a hybrid visual-novel overworld and 3D dungeon:
+both logical navigation and retained traversal progress are meaningful in that
+game. This fresh source review does not classify the existing shape as a defect
+because `project-vision.md` explicitly distinguishes service composition from
+save nullability. Dungeon-only save composition remains an Order 13 decision.
 
 ### O8-D7: Same-location transitions remain legal when policy-approved
 
-**Recommendation:** approve.
+**Owner decision:** approved; implementation pending.
 
 A transition whose source and destination are equal can represent re-entry,
 refresh, a scripted threshold, or a scene reload. The framework should not
@@ -344,7 +346,7 @@ tests should pin the behavior.
 
 ### O8-D8: Codes and reason IDs are authoritative; messages are diagnostic
 
-**Recommendation:** approve.
+**Owner decision:** approved; implementation pending.
 
 `RuntimeNavigationTransitionCode` and typed reason/fault evidence drive host
 logic. `Message` may help logs and the DemoHost, but a production UI should map
@@ -353,7 +355,7 @@ only explanation of a failure.
 
 ### O8-D9: `Applied` means logical application, not scene-load commitment
 
-**Recommendation:** approve.
+**Owner decision:** approved; implementation pending.
 
 The service may return an applied `After` candidate before a Godot scene is
 loaded because it owns no mutable session. A host should perform fallible scene
@@ -362,7 +364,7 @@ retain `Before`. No framework event proves that a Godot scene loaded.
 
 ### O8-D10: Retained traversal progress does not define current host context
 
-**Recommendation:** approve.
+**Owner decision:** approved; implementation pending.
 
 The Training Annex should retain dungeon progress on return but derive current
 menu/save context from logical location. This is a sample-host correction and
@@ -377,11 +379,11 @@ unapproved product decision or requires Order 9 traversal-rule work.
 | Checkpoint | State | Work | Intended commit |
 |---|---|---|---|
 | O8-R1 | `complete` | Record this source review, open Order 8, mark the capability partial with named gaps, and align active tracking. No runtime behavior changes. | `docs: open navigation order 8 review` |
-| O8-R2 | `pending_owner_confirmation` | Implement typed live identifier validation before source/policy evaluation. Add default-value and field-specific adversarial tests. | `runtime: validate navigation requests` |
-| O8-R3 | `pending_owner_confirmation` | Seal public result, event, decision, and enum invariants while retaining custom service implementations. | `runtime: enforce navigation result authority` |
-| O8-R4 | `pending_owner_confirmation` | Establish the selected custom-policy fault boundary and prove throwing/null policies preserve state. | `runtime: contain navigation policy faults` |
-| O8-R5 | `pending_owner_confirmation` | Apply O8-D6. Either retain v19 and correct evidence wording, or make navigation/traversal independently nullable with a sequential save-contract migration. | `runtime: clarify optional world state` |
-| O8-R6 | `pending_owner_confirmation` | Correct Training Annex active-context derivation, document candidate adoption, and add focused Godot trigger/event/scene-separation evidence without moving scenes into Framework. | `host: prove generic navigation adoption` |
+| O8-R2 | `approved` | Implement typed live identifier validation before source/policy evaluation. Add default-value and field-specific adversarial tests. | `runtime: validate navigation requests` |
+| O8-R3 | `approved` | Seal public result, event, decision, and enum invariants while retaining custom service implementations. | `runtime: enforce navigation result authority` |
+| O8-R4 | `approved` | Establish the selected custom-policy fault boundary and prove throwing/null policies preserve state. | `runtime: contain navigation policy faults` |
+| O8-R5 | `approved` | Retain save v19 and correct misleading optional-world-state test and documentation wording; defer broad independent-nullability design to Order 13. | `runtime: clarify optional world state` |
+| O8-R6 | `approved` | Correct Training Annex active-context derivation, document candidate adoption, and add focused Godot trigger/event/scene-separation evidence without moving scenes into Framework. | `host: prove generic navigation adoption` |
 | O8-R7 | `pending` | Reconcile the mechanics page, add a developer guide, add a technical state-machine page, update indexes and matrices, and include Godot/console examples and diagrams. | `docs: document generic navigation` |
 | O8-R8 | `pending` | Perform a fresh source-first code and documentation review, run the retained release gate, clear only resolved gaps, and close Order 8 only if no realistic reachable defect or contradiction remains. | `review: close navigation order 8` |
 
