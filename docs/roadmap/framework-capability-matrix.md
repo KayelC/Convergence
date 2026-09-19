@@ -37,9 +37,9 @@ establish that a numbered Order is `closed`.
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 22 implemented, 1 partial, and 2 deferred.
 
-The ordered review queue currently records 20 Orders: 8 closed, 0 open, and 12 not_started.
+The ordered review queue currently records 20 Orders: 8 closed, 1 open, and 11 not_started.
 
 | Order | Capability | Implementation | Order state |
 |---:|---|---|---|
@@ -51,7 +51,7 @@ The ordered review queue currently records 20 Orders: 8 closed, 0 open, and 12 n
 | 6 | `encounter_orchestration` | `implemented` | `closed` |
 | 7 | `inventory_equipment_economy` | `implemented` | `closed` |
 | 8 | `navigation` | `implemented` | `closed` |
-| 9 | `dungeon_traversal` | `implemented` | `not_started` |
+| 9 | `dungeon_traversal` | `partial` | `open` |
 | 10 | `negotiation_and_rewards` | `implemented` | `not_started` |
 | 11 | `fusion_and_inheritance` | `implemented` | `not_started` |
 | 12 | `compendium` | `implemented` | `not_started` |
@@ -75,6 +75,13 @@ gate then passed all 23 commands against `fd0ef334`; the
 [Order 8 final closure review](../reviews/navigation-order-8-final-closure-review-2026-09-19.md)
 records the evidence. The real Godot smoke sample does not navigate live
 scenes; that remains separate host work.
+
+`dungeon_traversal` has usable immutable node progress and policy-approved
+transitions, but Order 9 is open and its implementation is `partial`. The
+[Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
+records live-input, progress-eligibility, and navigation/save-host gaps. The
+[Order 9 roadmap](dungeon-traversal-order-9-roadmap.md) keeps host-owned spatial
+movement and explicit encounter triggers separate from logical traversal.
 
 `inventory_equipment_economy` is `implemented`, and Order 7 is `closed`. Its immutable transaction and
 validation foundation is usable. O7-R2 gives each equipment copy a unique

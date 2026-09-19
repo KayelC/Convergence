@@ -54,3 +54,7 @@ records must link every affected mechanics, developer, and technical page.
 - [Ordered Secondary Effects](ordered-secondary-effects.md)
 - [Stat Modifier Policy Family](stat-modifier-policy-family.md)
 - [Turn Economy Policy Family](turn-economy-policy-family.md)
+
+## Proposed Decisions
+
+- [Dungeon Progress Reporting](dungeon-progress-reporting.md)

@@ -8,9 +8,9 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 implemented, 1 partial, and 2 deferred.
 
-The ordered review queue currently records 20 Orders: 8 closed, 0 open, and 12 not_started.
+The ordered review queue currently records 20 Orders: 8 closed, 1 open, and 11 not_started.
 Implementation maturity and Order closure are deliberately separate: only an
 explicit `orderState: closed` means the complete collaborative source, owner,
 documentation, independent-review, and release-gate cycle has finished.
@@ -23,6 +23,14 @@ found no remaining core navigation contract gap, and the owner confirmed all
 three audience pages on 19 September 2026. They are `reviewed`, and the
 retained online release gate passed all 23 commands. The real Godot smoke
 sample does not yet perform live navigation; that remains separate host work.
+
+Documentation Order 9 is open under the
+[dungeon traversal source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
+and [ordered roadmap](dungeon-traversal-order-9-roadmap.md). Its current
+implementation is partial: meaningful node transitions work, but live request
+and progress validation, authored floor semantics, and the combined
+navigation/dungeon/save host boundary need correction or owner decisions.
+Neither entering a floor nor navigating to a dungeon starts combat automatically.
 
 Documentation Order 7 is complete under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
@@ -386,9 +394,8 @@ before policy evaluation and prevents no-op imports from bypassing the
 transition authority. The
 [O5-R27 final closure review](../reviews/battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
 found no remaining realistic reachable defect and passed every local gate.
-`battle_knowledge` is complete and Order 5 is formally closed. Order 6
-encounter orchestration has completed implementation and documentation through
-O6-R12; independent closure review O6-R13 is the active subject.
+`battle_knowledge` is complete and Order 5 is formally closed. The later
+Orders 6 through 8 have closed; Order 9 is the active subject above.
 
 ## Priority 2: Persistence Evolution
 

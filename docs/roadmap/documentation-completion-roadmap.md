@@ -79,7 +79,7 @@ social/fusion systems, authoring infrastructure, and host integration.
 | 6 | `encounter_orchestration` | Initiative, phases, commands, lifecycle ordering, cancellation, faults, typed events | Review mechanics and technical pages; add developer guide |
 | 7 | `inventory_equipment_economy` | Ownership, reservation, equipment effects, pricing policies, atomic transactions | Review mechanics and technical pages; add developer guide |
 | 8 | `navigation` | Generic transition authority, policy rejection, host scene ownership, persistence | Review mechanics and technical pages; add developer guide |
-| 9 | `dungeon_traversal` | Optional traversal state, authored floors/events, encounter requests, host exploration | Review mechanics and technical pages; add developer guide |
+| 9 | `dungeon_traversal` | Optional traversal, progress authority, authored floors and host-triggered encounters, navigation/save-context boundary | Review mechanics and technical pages; add developer guide |
 | 10 | `negotiation_and_rewards` | Prompt/event ports, demands, cancellation, acquisition, reward arithmetic and application | Review mechanics and technical pages; add developer guide |
 | 11 | `fusion_and_inheritance` | Recipe authority, catalyst shifts, inheritance legality, preview/commit parity, mutation | Review mechanics and technical pages; add developer guide |
 | 12 | `compendium` | First acquisition, explicit overwrite, recall, pricing policy, knowledge import | Review mechanics and technical pages; add developer guide |
@@ -731,6 +731,20 @@ confirmed the three audience pages on 19 September 2026, promoting them to
 The real Godot smoke sample does not yet execute live navigation; the
 test-only contract is not represented as that implementation. Dungeon
 traversal rules remain Order 9.
+
+## Open Order 9
+
+The [source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
+and [checkpoint roadmap](dungeon-traversal-order-9-roadmap.md) open Order 9.
+`dungeon_traversal` is `partial`: generic node transitions work, but the
+current live boundary, progress eligibility, and accepted-save host behavior
+need correction or explicit owner decisions. This review includes
+`RuntimeFieldSnapshot`, `CurrentSaveContext`, save validation/restore, and the
+Training Annex menu; it is not limited to `DungeonTraversal.cs`. The current
+mechanics page has been corrected to describe actual checkpoint/boss recording,
+but remains `existing_unreviewed`. Developer guidance is still `missing` and
+technical guidance `existing_unreviewed`; no audience entry was promoted by
+this opening checkpoint.
 
 ## Deferred Documentation
 

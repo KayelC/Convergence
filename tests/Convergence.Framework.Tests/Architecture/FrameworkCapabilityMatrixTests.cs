@@ -84,8 +84,8 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.Equal(Enumerable.Range(1, OrderedCapabilityIds.Length), ordered.Select(capability => capability.OrderNumber!.Value));
         Assert.Equal(OrderedCapabilityIds, ordered.Select(capability => capability.Id));
         Assert.Equal(8, ordered.Count(capability => capability.OrderState == "closed"));
-        Assert.Equal(0, ordered.Count(capability => capability.OrderState == "open"));
-        Assert.Equal(12, ordered.Count(capability => capability.OrderState == "not_started"));
+        Assert.Equal(1, ordered.Count(capability => capability.OrderState == "open"));
+        Assert.Equal(11, ordered.Count(capability => capability.OrderState == "not_started"));
 
         using JsonDocument documentation = JsonDocument.Parse(File.ReadAllText(DocumentationMatrixPath()));
         foreach (CapabilityEntry capability in ordered.Where(capability => capability.OrderState == "closed"))
@@ -190,6 +190,34 @@ public sealed class FrameworkCapabilityMatrixTests
             audience => Assert.Equal(
                 "reviewed",
                 navigationDocumentation.GetProperty(audience).GetProperty("state").GetString()));
+    }
+
+    [Fact]
+    public void DungeonOrder9OpeningReview_TracksTheNavigationSaveBoundaryWithoutClaimingClosure()
+    {
+        CapabilityEntry dungeon = Load().Capabilities.Single(capability => capability.Id == "dungeon_traversal");
+
+        Assert.Equal("partial", dungeon.ImplementationState);
+        Assert.Equal(9, dungeon.OrderNumber);
+        Assert.Equal("open", dungeon.OrderState);
+        Assert.NotEmpty(dungeon.KnownGaps);
+
+        string review = File.ReadAllText(RepositoryPath(
+            "docs", "reviews", "dungeon-traversal-order-9-source-review-2026-09-19.md"));
+        Assert.All(new[]
+        {
+            "### O9-M1:",
+            "### O9-M2:",
+            "### O9-M3:",
+            "### O9-M4:",
+            "## Navigation/Dungeon/Save Boundary"
+        }, token => Assert.Contains(token, review, StringComparison.Ordinal));
+
+        string roadmap = File.ReadAllText(RepositoryPath(
+            "docs", "roadmap", "dungeon-traversal-order-9-roadmap.md"));
+        Assert.Contains("| O9-R1: opening review | complete |", roadmap, StringComparison.Ordinal);
+        Assert.Contains("| O9-R8: independent closure | pending |", roadmap, StringComparison.Ordinal);
+        Assert.Contains("CurrentSaveContext", review, StringComparison.Ordinal);
     }
 
     private static CapabilityMatrix Load() =>

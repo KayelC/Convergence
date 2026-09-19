@@ -229,14 +229,19 @@
     },
     {
       "id": "dungeon_traversal",
-      "implementationState": "implemented",
+      "implementationState": "partial",
       "orderNumber": 9,
-      "orderState": "not_started",
+      "orderState": "open",
       "frameworkTests": ["RuntimeDungeonTraversalTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Live dungeon requests and custom-policy faults lack a typed validation boundary.",
+        "Checkpoint and boss progress reports lack dungeon-context eligibility checks.",
+        "An accepted Training Annex entrance save without dungeon progress has no travel option.",
+        "Authored fixed-floor metadata is not consumed by runtime traversal."
+      ]
     },
     {
       "id": "negotiation_and_rewards",
