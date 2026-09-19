@@ -156,6 +156,87 @@ public sealed class RuntimeDungeonTraversalTests
     }
 
     [Fact]
+    public void Traversal_ReportsMalformedPolicyDecisionAsFault()
+    {
+        var initial = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
+        var transition = new RuntimeDungeonTraversalTransition(Id("move"), Id("archive"), Id("entry"), Id("room"));
+        var service = new RuntimeDungeonTraversalService(
+            new DelegateDungeonPolicy(_ => new RuntimeDungeonTraversalPolicyDecision(false, (ContentId?)default(ContentId))));
+
+        RuntimeDungeonTraversalResult result = service.Traverse(initial, transition);
+
+        Assert.Equal(RuntimeDungeonTraversalCode.PolicyFaulted, result.Code);
+        Assert.Equal(RuntimeDungeonTraversalPolicyFaultKind.MalformedDecision, result.FaultKind);
+        Assert.Same(initial, result.After);
+    }
+
+    [Fact]
+    public void PublicTraversalResult_RejectsContradictoryCustomServiceEvidence()
+    {
+        var before = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
+        var after = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("room"));
+        var transition = new RuntimeDungeonTraversalTransition(Id("move"), Id("archive"), Id("entry"), Id("room"));
+        var applied = new RuntimeDungeonTraversalEvent(
+            RuntimeDungeonTraversalEventKind.TransitionApplied, Id("archive"), Id("move"), Id("entry"), Id("room"));
+        var rejected = new RuntimeDungeonTraversalEvent(
+            RuntimeDungeonTraversalEventKind.TransitionRejected, Id("archive"), Id("move"), Id("entry"), Id("room"));
+
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalResult(
+            RuntimeDungeonTraversalCode.Applied, before, after, transition, [rejected]));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalResult(
+            RuntimeDungeonTraversalCode.PolicyRejected, before, after, transition, [rejected]));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalResult(
+            RuntimeDungeonTraversalCode.Applied, before, before, transition, [applied]));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalResult(
+            RuntimeDungeonTraversalCode.Applied, before, after, transition,
+            [applied with { }], reasonId: Id("wrong")));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RuntimeDungeonTraversalResult(
+            (RuntimeDungeonTraversalCode)999, before, after, transition, [applied]));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalResult(
+            RuntimeDungeonTraversalCode.InvalidRequest, before, before, transition));
+    }
+
+    [Fact]
+    public void PublicProgressResult_RejectsUnrelatedMutationAndWrongEvent()
+    {
+        var before = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
+        var moved = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("room"));
+        var checkpoint = new RuntimeDungeonTraversalEvent(
+            RuntimeDungeonTraversalEventKind.CheckpointUnlocked, Id("archive"), Id("terminal"));
+        var otherDungeon = new RuntimeDungeonTraversalEvent(
+            RuntimeDungeonTraversalEventKind.CheckpointUnlocked, Id("other"), Id("terminal"));
+
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
+            RuntimeDungeonStateChangeCode.Applied, before, moved, [checkpoint]));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
+            RuntimeDungeonStateChangeCode.Applied, before, before, [checkpoint]));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
+            RuntimeDungeonStateChangeCode.Applied, before, before, [otherDungeon]));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
+            RuntimeDungeonStateChangeCode.AlreadyRecorded, before, moved));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RuntimeDungeonStateChangeResult(
+            (RuntimeDungeonStateChangeCode)999, before, before));
+    }
+
+    [Fact]
+    public void DungeonEventAndResults_DoNotPermitMutableCloneEvidence()
+    {
+        var before = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
+        var transition = new RuntimeDungeonTraversalTransition(Id("move"), Id("archive"), Id("entry"), Id("room"));
+        RuntimeDungeonTraversalResult result = new RuntimeDungeonTraversalService(
+            new MutableDungeonPolicy { IsAllowed = true }).Traverse(before, transition);
+        RuntimeDungeonTraversalResult clone = result with { };
+
+        Assert.Null(typeof(RuntimeDungeonTraversalEvent).GetProperty(nameof(RuntimeDungeonTraversalEvent.Kind))!.SetMethod);
+        Assert.Null(typeof(RuntimeDungeonTraversalEvent).GetProperty(nameof(RuntimeDungeonTraversalEvent.ContentId))!.SetMethod);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<RuntimeDungeonTraversalEvent>)clone.Events).Clear());
+        Assert.Equal(result.After.CurrentNodeId, clone.After.CurrentNodeId);
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalEvent(
+            RuntimeDungeonTraversalEventKind.TransitionApplied, Id("archive"), Id("move")));
+    }
+
+    [Fact]
     public void DungeonTraversal_RecordsCheckpointsAndBossesIdempotently()
     {
         var service = new RuntimeDungeonTraversalService(

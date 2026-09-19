@@ -53,7 +53,7 @@ owner rather than silently choosing a content or save model.
 |---|---|---|
 | O9-R1: opening review | complete | Source-first review, this roadmap, executable `partial`/`open` tracking, and correction of present-tense documentation that overclaims policy authority. No runtime change. |
 | O9-R2: live traversal boundary | complete | Reject default/empty dungeon, node, and transition IDs before policy evaluation; define non-mutating typed policy-fault behavior. Test null/throwing policies, cancellation, source/dungeon mismatch precedence, and unchanged visited state under O9-D6. |
-| O9-R3: public result authority | pending | Seal traversal/state-change result and event coherence, including malformed custom-service results and record cloning. Keep before/after snapshots and ordered events immutable; no silent fallback. |
+| O9-R3: public result authority | complete | Seal traversal/state-change result and event coherence, including malformed custom-service results and record cloning. Keep before/after snapshots and ordered events immutable; no silent fallback. |
 | O9-R4: field/save/host boundary | pending | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D4/D5. |
 | O9-R5: checkpoint and boss recording | pending | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
 | O9-R6: authored floor and encounter contract | pending | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
@@ -125,3 +125,15 @@ traversal tests and the full Release suite passed: 1,881 Framework, 186
 DemoHost, seven ContentValidator tests; zero failures/skips. Strict solution
 build had zero warnings and `dotnet format --verify-no-changes` passed. R3
 still owns public result/event coherence.
+
+O9-R3 validates transition result code, request, before/after state, event
+kind, event IDs, and rejection diagnostics together. Applied checkpoint/boss
+results must change only the reported progress list; already-recorded results
+must leave state unchanged. Event records no longer expose public `init`
+setters, so cloning cannot rewrite event evidence. Malformed policy reason IDs
+become typed `MalformedDecision` faults rather than escaping during event
+construction. This pre-release API break requires custom event creators to use
+the validated constructor and recompile. Eleven focused traversal tests and
+the full Release suite passed: 1,885 Framework, 186 DemoHost, seven
+ContentValidator tests; zero failures/skips. Strict solution build had zero
+warnings and formatting verification passed.

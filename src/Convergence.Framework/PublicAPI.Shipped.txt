@@ -5405,26 +5405,20 @@ Convergence.Runtime.RuntimeDungeonTraversalCode.PolicyRejected = 3 -> Convergenc
 Convergence.Runtime.RuntimeDungeonTraversalCode.SourceMismatch = 2 -> Convergence.Runtime.RuntimeDungeonTraversalCode
 Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind
 Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind.Exception = 0 -> Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind
+Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind.MalformedDecision = 2 -> Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind
 Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind.NullDecision = 1 -> Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind
 Convergence.Runtime.RuntimeDungeonTraversalEvent
 Convergence.Runtime.RuntimeDungeonTraversalEvent.<Clone>$() -> Convergence.Runtime.RuntimeDungeonTraversalEvent!
 Convergence.Runtime.RuntimeDungeonTraversalEvent.ContentId.get -> Convergence.Content.ContentId
-Convergence.Runtime.RuntimeDungeonTraversalEvent.ContentId.init -> void
-Convergence.Runtime.RuntimeDungeonTraversalEvent.Deconstruct(out Convergence.Runtime.RuntimeDungeonTraversalEventKind Kind, out Convergence.Content.ContentId DungeonId, out Convergence.Content.ContentId ContentId, out Convergence.Content.ContentId? SourceNodeId, out Convergence.Content.ContentId? DestinationNodeId, out Convergence.Content.ContentId? ReasonId, out string? Message) -> void
+Convergence.Runtime.RuntimeDungeonTraversalEvent.Deconstruct(out Convergence.Runtime.RuntimeDungeonTraversalEventKind kind, out Convergence.Content.ContentId dungeonId, out Convergence.Content.ContentId contentId, out Convergence.Content.ContentId? sourceNodeId, out Convergence.Content.ContentId? destinationNodeId, out Convergence.Content.ContentId? reasonId, out string? message) -> void
 Convergence.Runtime.RuntimeDungeonTraversalEvent.DestinationNodeId.get -> Convergence.Content.ContentId?
-Convergence.Runtime.RuntimeDungeonTraversalEvent.DestinationNodeId.init -> void
 Convergence.Runtime.RuntimeDungeonTraversalEvent.DungeonId.get -> Convergence.Content.ContentId
-Convergence.Runtime.RuntimeDungeonTraversalEvent.DungeonId.init -> void
 Convergence.Runtime.RuntimeDungeonTraversalEvent.Equals(Convergence.Runtime.RuntimeDungeonTraversalEvent? other) -> bool
 Convergence.Runtime.RuntimeDungeonTraversalEvent.Kind.get -> Convergence.Runtime.RuntimeDungeonTraversalEventKind
-Convergence.Runtime.RuntimeDungeonTraversalEvent.Kind.init -> void
 Convergence.Runtime.RuntimeDungeonTraversalEvent.Message.get -> string?
-Convergence.Runtime.RuntimeDungeonTraversalEvent.Message.init -> void
 Convergence.Runtime.RuntimeDungeonTraversalEvent.ReasonId.get -> Convergence.Content.ContentId?
-Convergence.Runtime.RuntimeDungeonTraversalEvent.ReasonId.init -> void
-Convergence.Runtime.RuntimeDungeonTraversalEvent.RuntimeDungeonTraversalEvent(Convergence.Runtime.RuntimeDungeonTraversalEventKind Kind, Convergence.Content.ContentId DungeonId, Convergence.Content.ContentId ContentId, Convergence.Content.ContentId? SourceNodeId = null, Convergence.Content.ContentId? DestinationNodeId = null, Convergence.Content.ContentId? ReasonId = null, string? Message = null) -> void
+Convergence.Runtime.RuntimeDungeonTraversalEvent.RuntimeDungeonTraversalEvent(Convergence.Runtime.RuntimeDungeonTraversalEventKind kind, Convergence.Content.ContentId dungeonId, Convergence.Content.ContentId contentId, Convergence.Content.ContentId? sourceNodeId = null, Convergence.Content.ContentId? destinationNodeId = null, Convergence.Content.ContentId? reasonId = null, string? message = null) -> void
 Convergence.Runtime.RuntimeDungeonTraversalEvent.SourceNodeId.get -> Convergence.Content.ContentId?
-Convergence.Runtime.RuntimeDungeonTraversalEvent.SourceNodeId.init -> void
 Convergence.Runtime.RuntimeDungeonTraversalEventKind
 Convergence.Runtime.RuntimeDungeonTraversalEventKind.BossDefeated = 3 -> Convergence.Runtime.RuntimeDungeonTraversalEventKind
 Convergence.Runtime.RuntimeDungeonTraversalEventKind.CheckpointUnlocked = 2 -> Convergence.Runtime.RuntimeDungeonTraversalEventKind

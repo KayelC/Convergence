@@ -25,7 +25,8 @@ public enum RuntimeDungeonTraversalRequestField
 public enum RuntimeDungeonTraversalPolicyFaultKind
 {
     Exception,
-    NullDecision
+    NullDecision,
+    MalformedDecision
 }
 
 public enum RuntimeDungeonStateChangeCode
@@ -112,14 +113,73 @@ public sealed record RuntimeDungeonTraversalPolicyDecision(
     ContentId? ReasonId = null,
     string? Message = null);
 
-public sealed record RuntimeDungeonTraversalEvent(
-    RuntimeDungeonTraversalEventKind Kind,
-    ContentId DungeonId,
-    ContentId ContentId,
-    ContentId? SourceNodeId = null,
-    ContentId? DestinationNodeId = null,
-    ContentId? ReasonId = null,
-    string? Message = null);
+public sealed record RuntimeDungeonTraversalEvent
+{
+    public RuntimeDungeonTraversalEvent(
+        RuntimeDungeonTraversalEventKind kind,
+        ContentId dungeonId,
+        ContentId contentId,
+        ContentId? sourceNodeId = null,
+        ContentId? destinationNodeId = null,
+        ContentId? reasonId = null,
+        string? message = null)
+    {
+        if (!Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+        if (!dungeonId.IsValid || !contentId.IsValid ||
+            sourceNodeId is ContentId source && !source.IsValid ||
+            destinationNodeId is ContentId destination && !destination.IsValid ||
+            reasonId is ContentId reason && !reason.IsValid)
+        {
+            throw new ArgumentException("Dungeon event identifiers cannot be empty.");
+        }
+        bool isTransition = kind is RuntimeDungeonTraversalEventKind.TransitionApplied or
+            RuntimeDungeonTraversalEventKind.TransitionRejected;
+        if (isTransition != (sourceNodeId is not null && destinationNodeId is not null) ||
+            !isTransition && (reasonId is not null || message is not null) ||
+            kind == RuntimeDungeonTraversalEventKind.TransitionApplied &&
+            (reasonId is not null || message is not null))
+        {
+            throw new ArgumentException("Dungeon event details do not match its kind.");
+        }
+
+        Kind = kind;
+        DungeonId = dungeonId;
+        ContentId = contentId;
+        SourceNodeId = sourceNodeId;
+        DestinationNodeId = destinationNodeId;
+        ReasonId = reasonId;
+        Message = message;
+    }
+
+    public RuntimeDungeonTraversalEventKind Kind { get; }
+    public ContentId DungeonId { get; }
+    public ContentId ContentId { get; }
+    public ContentId? SourceNodeId { get; }
+    public ContentId? DestinationNodeId { get; }
+    public ContentId? ReasonId { get; }
+    public string? Message { get; }
+
+    public void Deconstruct(
+        out RuntimeDungeonTraversalEventKind kind,
+        out ContentId dungeonId,
+        out ContentId contentId,
+        out ContentId? sourceNodeId,
+        out ContentId? destinationNodeId,
+        out ContentId? reasonId,
+        out string? message)
+    {
+        kind = Kind;
+        dungeonId = DungeonId;
+        contentId = ContentId;
+        sourceNodeId = SourceNodeId;
+        destinationNodeId = DestinationNodeId;
+        reasonId = ReasonId;
+        message = Message;
+    }
+}
 
 public sealed record RuntimeDungeonTraversalResult
 {
@@ -143,6 +203,7 @@ public sealed record RuntimeDungeonTraversalResult
         Message = message;
         InvalidField = invalidField;
         FaultKind = faultKind;
+        ValidateOutcome();
     }
 
     public RuntimeDungeonTraversalCode Code { get; }
@@ -155,6 +216,103 @@ public sealed record RuntimeDungeonTraversalResult
     public string? Message { get; }
     public RuntimeDungeonTraversalRequestField? InvalidField { get; }
     public RuntimeDungeonTraversalPolicyFaultKind? FaultKind { get; }
+
+    private void ValidateOutcome()
+    {
+        if (!Enum.IsDefined(Code) ||
+            InvalidField is RuntimeDungeonTraversalRequestField field && !Enum.IsDefined(field) ||
+            FaultKind is RuntimeDungeonTraversalPolicyFaultKind fault && !Enum.IsDefined(fault))
+        {
+            throw new ArgumentOutOfRangeException(nameof(Code));
+        }
+
+        RuntimeDungeonTraversalRequestField? firstInvalid =
+            RuntimeDungeonTraversalRequestValidation.FirstInvalidField(Before, Transition);
+        if (Code == RuntimeDungeonTraversalCode.InvalidRequest)
+        {
+            if (firstInvalid is null || InvalidField != firstInvalid ||
+                !RuntimeDungeonTraversalSnapshotEquality.Same(Before, After) ||
+                Events.Count != 0 || ReasonId != ContentId.Parse("invalid_dungeon_request") ||
+                FaultKind is not null)
+            {
+                throw new ArgumentException("Invalid dungeon traversal result has inconsistent evidence.");
+            }
+            return;
+        }
+
+        if (firstInvalid is not null || InvalidField is not null || Events.Count != 1)
+        {
+            throw new ArgumentException("Dungeon traversal result has invalid request or event evidence.");
+        }
+
+        RuntimeDungeonTraversalEvent movement = Events[0];
+        if (movement is null || movement.DungeonId != Before.DungeonId ||
+            movement.ContentId != Transition.Id || movement.SourceNodeId != Transition.SourceNodeId ||
+            movement.DestinationNodeId != Transition.DestinationNodeId ||
+            ReasonId != movement.ReasonId || Message != movement.Message)
+        {
+            throw new ArgumentException("Dungeon traversal event does not match its transition.");
+        }
+
+        switch (Code)
+        {
+            case RuntimeDungeonTraversalCode.Applied:
+                if (Before.DungeonId != Transition.DungeonId ||
+                    Before.CurrentNodeId != Transition.SourceNodeId ||
+                    !RuntimeDungeonTraversalSnapshotEquality.Same(Before.MoveTo(Transition.DestinationNodeId), After) ||
+                    movement.Kind != RuntimeDungeonTraversalEventKind.TransitionApplied ||
+                    ReasonId is not null || Message is not null || FaultKind is not null)
+                {
+                    throw new ArgumentException("Applied dungeon traversal result has inconsistent evidence.");
+                }
+                break;
+            case RuntimeDungeonTraversalCode.DungeonMismatch:
+                if (Before.DungeonId == Transition.DungeonId || FaultKind is not null ||
+                    ReasonId != ContentId.Parse("dungeon_mismatch"))
+                {
+                    throw new ArgumentException("Dungeon-mismatch result has inconsistent evidence.");
+                }
+                ValidateRejection(movement);
+                break;
+            case RuntimeDungeonTraversalCode.SourceMismatch:
+                if (Before.DungeonId != Transition.DungeonId ||
+                    Before.CurrentNodeId == Transition.SourceNodeId || FaultKind is not null ||
+                    ReasonId != ContentId.Parse("source_mismatch"))
+                {
+                    throw new ArgumentException("Source-mismatch result has inconsistent evidence.");
+                }
+                ValidateRejection(movement);
+                break;
+            case RuntimeDungeonTraversalCode.PolicyRejected:
+                if (Before.DungeonId != Transition.DungeonId ||
+                    Before.CurrentNodeId != Transition.SourceNodeId || FaultKind is not null)
+                {
+                    throw new ArgumentException("Policy rejection has inconsistent evidence.");
+                }
+                ValidateRejection(movement);
+                break;
+            case RuntimeDungeonTraversalCode.PolicyFaulted:
+                if (Before.DungeonId != Transition.DungeonId ||
+                    Before.CurrentNodeId != Transition.SourceNodeId || FaultKind is null ||
+                    ReasonId != ContentId.Parse("dungeon_policy_faulted"))
+                {
+                    throw new ArgumentException("Policy fault has inconsistent evidence.");
+                }
+                ValidateRejection(movement);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(Code));
+        }
+    }
+
+    private void ValidateRejection(RuntimeDungeonTraversalEvent movement)
+    {
+        if (movement.Kind != RuntimeDungeonTraversalEventKind.TransitionRejected ||
+            !RuntimeDungeonTraversalSnapshotEquality.Same(Before, After))
+        {
+            throw new ArgumentException("Rejected dungeon traversal must leave progress unchanged.");
+        }
+    }
 }
 
 public sealed record RuntimeDungeonStateChangeResult
@@ -169,6 +327,7 @@ public sealed record RuntimeDungeonStateChangeResult
         Before = before ?? throw new ArgumentNullException(nameof(before));
         After = after ?? throw new ArgumentNullException(nameof(after));
         Events = RuntimeSnapshotCollections.List(events);
+        ValidateOutcome();
     }
 
     public RuntimeDungeonStateChangeCode Code { get; }
@@ -176,6 +335,43 @@ public sealed record RuntimeDungeonStateChangeResult
     public RuntimeDungeonTraversalSnapshot Before { get; }
     public RuntimeDungeonTraversalSnapshot After { get; }
     public IReadOnlyList<RuntimeDungeonTraversalEvent> Events { get; }
+
+    private void ValidateOutcome()
+    {
+        if (!Enum.IsDefined(Code))
+        {
+            throw new ArgumentOutOfRangeException(nameof(Code));
+        }
+        if (Code == RuntimeDungeonStateChangeCode.AlreadyRecorded)
+        {
+            if (Events.Count != 0 || !RuntimeDungeonTraversalSnapshotEquality.Same(Before, After))
+            {
+                throw new ArgumentException("Already-recorded result must leave progress unchanged.");
+            }
+            return;
+        }
+
+        if (Events.Count != 1 || Events[0] is not RuntimeDungeonTraversalEvent progress ||
+            progress.DungeonId != Before.DungeonId ||
+            Before.DungeonId != After.DungeonId || Before.CurrentNodeId != After.CurrentNodeId ||
+            !Before.VisitedNodeIds.SequenceEqual(After.VisitedNodeIds))
+        {
+            throw new ArgumentException("Dungeon progress result has inconsistent event or location evidence.");
+        }
+
+        RuntimeDungeonTraversalSnapshot expected = progress.Kind switch
+        {
+            RuntimeDungeonTraversalEventKind.CheckpointUnlocked
+                when !Before.IsCheckpointUnlocked(progress.ContentId) => Before.UnlockCheckpoint(progress.ContentId),
+            RuntimeDungeonTraversalEventKind.BossDefeated
+                when !Before.IsBossDefeated(progress.ContentId) => Before.MarkBossDefeated(progress.ContentId),
+            _ => throw new ArgumentException("Dungeon progress event does not describe a new record.")
+        };
+        if (!RuntimeDungeonTraversalSnapshotEquality.Same(expected, After))
+        {
+            throw new ArgumentException("Dungeon progress result does not match its event.");
+        }
+    }
 }
 
 public interface IRuntimeDungeonTraversalPolicy
@@ -214,7 +410,8 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
         ArgumentNullException.ThrowIfNull(current);
         ArgumentNullException.ThrowIfNull(transition);
 
-        RuntimeDungeonTraversalRequestField? invalidField = FirstInvalidField(current, transition);
+        RuntimeDungeonTraversalRequestField? invalidField =
+            RuntimeDungeonTraversalRequestValidation.FirstInvalidField(current, transition);
         if (invalidField is not null)
         {
             return new RuntimeDungeonTraversalResult(
@@ -276,6 +473,14 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
                 transition,
                 RuntimeDungeonTraversalPolicyFaultKind.NullDecision,
                 "Dungeon traversal policy returned no decision.");
+        }
+        if (decision.ReasonId is ContentId reason && !reason.IsValid)
+        {
+            return PolicyFaulted(
+                current,
+                transition,
+                RuntimeDungeonTraversalPolicyFaultKind.MalformedDecision,
+                "Dungeon traversal policy returned an empty reason ID.");
         }
         if (!decision.IsAllowed)
         {
@@ -404,7 +609,11 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
             faultKind: faultKind);
     }
 
-    private static RuntimeDungeonTraversalRequestField? FirstInvalidField(
+}
+
+internal static class RuntimeDungeonTraversalRequestValidation
+{
+    public static RuntimeDungeonTraversalRequestField? FirstInvalidField(
         RuntimeDungeonTraversalSnapshot current,
         RuntimeDungeonTraversalTransition transition)
     {
@@ -435,4 +644,16 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
 
         return null;
     }
+}
+
+internal static class RuntimeDungeonTraversalSnapshotEquality
+{
+    public static bool Same(
+        RuntimeDungeonTraversalSnapshot before,
+        RuntimeDungeonTraversalSnapshot after) =>
+        before.DungeonId == after.DungeonId &&
+        before.CurrentNodeId == after.CurrentNodeId &&
+        before.VisitedNodeIds.SequenceEqual(after.VisitedNodeIds) &&
+        before.UnlockedCheckpointIds.SequenceEqual(after.UnlockedCheckpointIds) &&
+        before.DefeatedBossIds.SequenceEqual(after.DefeatedBossIds);
 }
