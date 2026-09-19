@@ -90,6 +90,72 @@ public sealed class RuntimeDungeonTraversalTests
     }
 
     [Fact]
+    public void Traversal_RejectsEveryEmptyRequestIdBeforeMismatchOrPolicy()
+    {
+        var policy = new MutableDungeonPolicy { IsAllowed = true };
+        var service = new RuntimeDungeonTraversalService(policy);
+        var valid = new RuntimeDungeonTraversalTransition(Id("move"), Id("archive"), Id("entry"), Id("room"));
+        var initial = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
+        var cases = new (RuntimeDungeonTraversalSnapshot Current, RuntimeDungeonTraversalTransition Transition, RuntimeDungeonTraversalRequestField Field)[]
+        {
+            (new RuntimeDungeonTraversalSnapshot(default, Id("entry")), valid, RuntimeDungeonTraversalRequestField.CurrentDungeonId),
+            (new RuntimeDungeonTraversalSnapshot(Id("archive"), default), valid, RuntimeDungeonTraversalRequestField.CurrentNodeId),
+            (initial, valid with { Id = default }, RuntimeDungeonTraversalRequestField.TransitionId),
+            (initial, valid with { DungeonId = default }, RuntimeDungeonTraversalRequestField.TransitionDungeonId),
+            (initial, valid with { SourceNodeId = default }, RuntimeDungeonTraversalRequestField.SourceNodeId),
+            (initial, valid with { DestinationNodeId = default }, RuntimeDungeonTraversalRequestField.DestinationNodeId)
+        };
+
+        foreach (var testCase in cases)
+        {
+            RuntimeDungeonTraversalResult result = service.Traverse(testCase.Current, testCase.Transition);
+            Assert.Equal(RuntimeDungeonTraversalCode.InvalidRequest, result.Code);
+            Assert.Equal(testCase.Field, result.InvalidField);
+            Assert.Same(testCase.Current, result.After);
+            Assert.Equal(testCase.Current.VisitedNodeIds, result.After.VisitedNodeIds);
+            Assert.Empty(result.Events);
+        }
+
+        Assert.Equal(0, policy.EvaluationCount);
+    }
+
+    [Fact]
+    public void Traversal_DistinguishesPolicyRejectionNullAndExceptionWithoutMutation()
+    {
+        var initial = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
+        var transition = new RuntimeDungeonTraversalTransition(Id("move"), Id("archive"), Id("entry"), Id("room"));
+
+        foreach (var (policy, code, faultKind) in new (IRuntimeDungeonTraversalPolicy, RuntimeDungeonTraversalCode, RuntimeDungeonTraversalPolicyFaultKind?)[]
+        {
+            (new DelegateDungeonPolicy(_ => new RuntimeDungeonTraversalPolicyDecision(false)), RuntimeDungeonTraversalCode.PolicyRejected, null),
+            (new DelegateDungeonPolicy(_ => null!), RuntimeDungeonTraversalCode.PolicyFaulted, RuntimeDungeonTraversalPolicyFaultKind.NullDecision),
+            (new DelegateDungeonPolicy(_ => throw new InvalidOperationException("broken")), RuntimeDungeonTraversalCode.PolicyFaulted, RuntimeDungeonTraversalPolicyFaultKind.Exception)
+        })
+        {
+            RuntimeDungeonTraversalResult result = new RuntimeDungeonTraversalService(policy).Traverse(initial, transition);
+            Assert.Equal(code, result.Code);
+            Assert.Equal(faultKind, result.FaultKind);
+            Assert.Same(initial, result.After);
+            Assert.Equal([Id("entry")], result.After.VisitedNodeIds);
+            Assert.Equal(RuntimeDungeonTraversalEventKind.TransitionRejected, Assert.Single(result.Events).Kind);
+        }
+    }
+
+    [Fact]
+    public void Traversal_PropagatesCancellationAndFatalPolicyFailures()
+    {
+        var initial = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
+        var transition = new RuntimeDungeonTraversalTransition(Id("move"), Id("archive"), Id("entry"), Id("room"));
+        Assert.Throws<OperationCanceledException>(() =>
+            new RuntimeDungeonTraversalService(new DelegateDungeonPolicy(_ => throw new OperationCanceledException()))
+                .Traverse(initial, transition));
+        Assert.Throws<OutOfMemoryException>(() =>
+            new RuntimeDungeonTraversalService(new DelegateDungeonPolicy(_ => throw new OutOfMemoryException()))
+                .Traverse(initial, transition));
+        Assert.Equal([Id("entry")], initial.VisitedNodeIds);
+    }
+
+    [Fact]
     public void DungeonTraversal_RecordsCheckpointsAndBossesIdempotently()
     {
         var service = new RuntimeDungeonTraversalService(
@@ -132,5 +198,12 @@ public sealed class RuntimeDungeonTraversalTests
             EvaluationCount++;
             return new RuntimeDungeonTraversalPolicyDecision(IsAllowed, ReasonId, Message);
         }
+    }
+
+    private sealed class DelegateDungeonPolicy(
+        Func<RuntimeDungeonTraversalPolicyRequest, RuntimeDungeonTraversalPolicyDecision> evaluate)
+        : IRuntimeDungeonTraversalPolicy
+    {
+        public RuntimeDungeonTraversalPolicyDecision Evaluate(RuntimeDungeonTraversalPolicyRequest request) => evaluate(request);
     }
 }

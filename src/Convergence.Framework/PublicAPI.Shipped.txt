@@ -5399,8 +5399,13 @@ Convergence.Runtime.RuntimeDungeonStateChangeResult.RuntimeDungeonStateChangeRes
 Convergence.Runtime.RuntimeDungeonTraversalCode
 Convergence.Runtime.RuntimeDungeonTraversalCode.Applied = 0 -> Convergence.Runtime.RuntimeDungeonTraversalCode
 Convergence.Runtime.RuntimeDungeonTraversalCode.DungeonMismatch = 1 -> Convergence.Runtime.RuntimeDungeonTraversalCode
+Convergence.Runtime.RuntimeDungeonTraversalCode.InvalidRequest = 4 -> Convergence.Runtime.RuntimeDungeonTraversalCode
+Convergence.Runtime.RuntimeDungeonTraversalCode.PolicyFaulted = 5 -> Convergence.Runtime.RuntimeDungeonTraversalCode
 Convergence.Runtime.RuntimeDungeonTraversalCode.PolicyRejected = 3 -> Convergence.Runtime.RuntimeDungeonTraversalCode
 Convergence.Runtime.RuntimeDungeonTraversalCode.SourceMismatch = 2 -> Convergence.Runtime.RuntimeDungeonTraversalCode
+Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind
+Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind.Exception = 0 -> Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind
+Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind.NullDecision = 1 -> Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind
 Convergence.Runtime.RuntimeDungeonTraversalEvent
 Convergence.Runtime.RuntimeDungeonTraversalEvent.<Clone>$() -> Convergence.Runtime.RuntimeDungeonTraversalEvent!
 Convergence.Runtime.RuntimeDungeonTraversalEvent.ContentId.get -> Convergence.Content.ContentId
@@ -5453,10 +5458,19 @@ Convergence.Runtime.RuntimeDungeonTraversalResult.Before.get -> Convergence.Runt
 Convergence.Runtime.RuntimeDungeonTraversalResult.Code.get -> Convergence.Runtime.RuntimeDungeonTraversalCode
 Convergence.Runtime.RuntimeDungeonTraversalResult.Equals(Convergence.Runtime.RuntimeDungeonTraversalResult? other) -> bool
 Convergence.Runtime.RuntimeDungeonTraversalResult.Events.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeDungeonTraversalEvent!>!
+Convergence.Runtime.RuntimeDungeonTraversalResult.FaultKind.get -> Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind?
+Convergence.Runtime.RuntimeDungeonTraversalResult.InvalidField.get -> Convergence.Runtime.RuntimeDungeonTraversalRequestField?
 Convergence.Runtime.RuntimeDungeonTraversalResult.Message.get -> string?
 Convergence.Runtime.RuntimeDungeonTraversalResult.ReasonId.get -> Convergence.Content.ContentId?
-Convergence.Runtime.RuntimeDungeonTraversalResult.RuntimeDungeonTraversalResult(Convergence.Runtime.RuntimeDungeonTraversalCode code, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! before, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! after, Convergence.Runtime.RuntimeDungeonTraversalTransition! transition, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeDungeonTraversalEvent!>? events = null, Convergence.Content.ContentId? reasonId = null, string? message = null) -> void
+Convergence.Runtime.RuntimeDungeonTraversalResult.RuntimeDungeonTraversalResult(Convergence.Runtime.RuntimeDungeonTraversalCode code, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! before, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! after, Convergence.Runtime.RuntimeDungeonTraversalTransition! transition, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeDungeonTraversalEvent!>? events = null, Convergence.Content.ContentId? reasonId = null, string? message = null, Convergence.Runtime.RuntimeDungeonTraversalRequestField? invalidField = null, Convergence.Runtime.RuntimeDungeonTraversalPolicyFaultKind? faultKind = null) -> void
 Convergence.Runtime.RuntimeDungeonTraversalResult.Transition.get -> Convergence.Runtime.RuntimeDungeonTraversalTransition!
+Convergence.Runtime.RuntimeDungeonTraversalRequestField
+Convergence.Runtime.RuntimeDungeonTraversalRequestField.CurrentDungeonId = 0 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+Convergence.Runtime.RuntimeDungeonTraversalRequestField.CurrentNodeId = 1 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+Convergence.Runtime.RuntimeDungeonTraversalRequestField.DestinationNodeId = 5 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+Convergence.Runtime.RuntimeDungeonTraversalRequestField.SourceNodeId = 4 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+Convergence.Runtime.RuntimeDungeonTraversalRequestField.TransitionDungeonId = 3 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+Convergence.Runtime.RuntimeDungeonTraversalRequestField.TransitionId = 2 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
 Convergence.Runtime.RuntimeDungeonTraversalService
 Convergence.Runtime.RuntimeDungeonTraversalService.RegisterBossDefeat(Convergence.Runtime.RuntimeDungeonTraversalSnapshot! current, Convergence.Content.ContentId bossId) -> Convergence.Runtime.RuntimeDungeonStateChangeResult!
 Convergence.Runtime.RuntimeDungeonTraversalService.RuntimeDungeonTraversalService(Convergence.Runtime.IRuntimeDungeonTraversalPolicy! policy) -> void

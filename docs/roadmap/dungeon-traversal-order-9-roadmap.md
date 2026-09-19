@@ -52,7 +52,7 @@ owner rather than silently choosing a content or save model.
 | Checkpoint | State | Work and acceptance evidence |
 |---|---|---|
 | O9-R1: opening review | complete | Source-first review, this roadmap, executable `partial`/`open` tracking, and correction of present-tense documentation that overclaims policy authority. No runtime change. |
-| O9-R2: live traversal boundary | pending | Reject default/empty dungeon, node, and transition IDs before policy evaluation; define non-mutating typed policy-fault behavior. Test null/throwing policies, cancellation, source/dungeon mismatch precedence, and unchanged visited state under O9-D6. |
+| O9-R2: live traversal boundary | complete | Reject default/empty dungeon, node, and transition IDs before policy evaluation; define non-mutating typed policy-fault behavior. Test null/throwing policies, cancellation, source/dungeon mismatch precedence, and unchanged visited state under O9-D6. |
 | O9-R3: public result authority | pending | Seal traversal/state-change result and event coherence, including malformed custom-service results and record cloning. Keep before/after snapshots and ordered events immutable; no silent fallback. |
 | O9-R4: field/save/host boundary | pending | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D4/D5. |
 | O9-R5: checkpoint and boss recording | pending | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
@@ -111,3 +111,17 @@ and `git diff --check` passed. No runtime, schema, content, or save-wire file
 changed. The owner subsequently confirmed O9-D1 through O9-D6. The remaining
 checkpoints await implementation, adversarial review, and a retained release
 gate; confirmation alone does not advance their state.
+
+O9-R2 adds typed `InvalidRequest` (with the first invalid ID field) and
+`PolicyFaulted` (exception or null decision) traversal outcomes. Existing
+applied, mismatch, and legal policy-rejection outcomes retain their codes and
+ordering. A malformed request is rejected before dungeon/source mismatch and
+before policy evaluation; rejected and faulted results retain the exact before
+snapshot and visited list. Cancellation and fatal memory failures still
+propagate. This is a pre-release public constructor signature change for
+`RuntimeDungeonTraversalResult`; source callers may omit the new optional
+diagnostic arguments but binaries must be recompiled. Seven focused
+traversal tests and the full Release suite passed: 1,881 Framework, 186
+DemoHost, seven ContentValidator tests; zero failures/skips. Strict solution
+build had zero warnings and `dotnet format --verify-no-changes` passed. R3
+still owns public result/event coherence.

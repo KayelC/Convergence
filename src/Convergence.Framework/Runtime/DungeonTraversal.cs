@@ -7,7 +7,25 @@ public enum RuntimeDungeonTraversalCode
     Applied,
     DungeonMismatch,
     SourceMismatch,
-    PolicyRejected
+    PolicyRejected,
+    InvalidRequest,
+    PolicyFaulted
+}
+
+public enum RuntimeDungeonTraversalRequestField
+{
+    CurrentDungeonId,
+    CurrentNodeId,
+    TransitionId,
+    TransitionDungeonId,
+    SourceNodeId,
+    DestinationNodeId
+}
+
+public enum RuntimeDungeonTraversalPolicyFaultKind
+{
+    Exception,
+    NullDecision
 }
 
 public enum RuntimeDungeonStateChangeCode
@@ -112,7 +130,9 @@ public sealed record RuntimeDungeonTraversalResult
         RuntimeDungeonTraversalTransition transition,
         IEnumerable<RuntimeDungeonTraversalEvent>? events = null,
         ContentId? reasonId = null,
-        string? message = null)
+        string? message = null,
+        RuntimeDungeonTraversalRequestField? invalidField = null,
+        RuntimeDungeonTraversalPolicyFaultKind? faultKind = null)
     {
         Code = code;
         Before = before ?? throw new ArgumentNullException(nameof(before));
@@ -121,6 +141,8 @@ public sealed record RuntimeDungeonTraversalResult
         Events = RuntimeSnapshotCollections.List(events);
         ReasonId = reasonId;
         Message = message;
+        InvalidField = invalidField;
+        FaultKind = faultKind;
     }
 
     public RuntimeDungeonTraversalCode Code { get; }
@@ -131,6 +153,8 @@ public sealed record RuntimeDungeonTraversalResult
     public IReadOnlyList<RuntimeDungeonTraversalEvent> Events { get; }
     public ContentId? ReasonId { get; }
     public string? Message { get; }
+    public RuntimeDungeonTraversalRequestField? InvalidField { get; }
+    public RuntimeDungeonTraversalPolicyFaultKind? FaultKind { get; }
 }
 
 public sealed record RuntimeDungeonStateChangeResult
@@ -190,6 +214,19 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
         ArgumentNullException.ThrowIfNull(current);
         ArgumentNullException.ThrowIfNull(transition);
 
+        RuntimeDungeonTraversalRequestField? invalidField = FirstInvalidField(current, transition);
+        if (invalidField is not null)
+        {
+            return new RuntimeDungeonTraversalResult(
+                RuntimeDungeonTraversalCode.InvalidRequest,
+                current,
+                current,
+                transition,
+                reasonId: ContentId.Parse("invalid_dungeon_request"),
+                message: $"Dungeon traversal request field '{invalidField}' cannot be empty.",
+                invalidField: invalidField);
+        }
+
         if (current.DungeonId != transition.DungeonId)
         {
             return Rejected(
@@ -210,8 +247,36 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
                 $"Transition '{transition.Id}' starts at '{transition.SourceNodeId}', not '{current.CurrentNodeId}'.");
         }
 
-        RuntimeDungeonTraversalPolicyDecision decision = _policy.Evaluate(
-            new RuntimeDungeonTraversalPolicyRequest(current, transition));
+        RuntimeDungeonTraversalPolicyDecision? decision;
+        try
+        {
+            decision = _policy.Evaluate(new RuntimeDungeonTraversalPolicyRequest(current, transition));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (OutOfMemoryException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return PolicyFaulted(
+                current,
+                transition,
+                RuntimeDungeonTraversalPolicyFaultKind.Exception,
+                $"Dungeon traversal policy faulted: {exception.GetType().Name}: {exception.Message}");
+        }
+
+        if (decision is null)
+        {
+            return PolicyFaulted(
+                current,
+                transition,
+                RuntimeDungeonTraversalPolicyFaultKind.NullDecision,
+                "Dungeon traversal policy returned no decision.");
+        }
         if (!decision.IsAllowed)
         {
             return Rejected(
@@ -313,4 +378,61 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
             ],
             reasonId,
             message);
+
+    private static RuntimeDungeonTraversalResult PolicyFaulted(
+        RuntimeDungeonTraversalSnapshot current,
+        RuntimeDungeonTraversalTransition transition,
+        RuntimeDungeonTraversalPolicyFaultKind faultKind,
+        string message)
+    {
+        ContentId reasonId = ContentId.Parse("dungeon_policy_faulted");
+        return new RuntimeDungeonTraversalResult(
+            RuntimeDungeonTraversalCode.PolicyFaulted,
+            current,
+            current,
+            transition,
+            [new RuntimeDungeonTraversalEvent(
+                RuntimeDungeonTraversalEventKind.TransitionRejected,
+                current.DungeonId,
+                transition.Id,
+                transition.SourceNodeId,
+                transition.DestinationNodeId,
+                reasonId,
+                message)],
+            reasonId,
+            message,
+            faultKind: faultKind);
+    }
+
+    private static RuntimeDungeonTraversalRequestField? FirstInvalidField(
+        RuntimeDungeonTraversalSnapshot current,
+        RuntimeDungeonTraversalTransition transition)
+    {
+        if (!current.DungeonId.IsValid)
+        {
+            return RuntimeDungeonTraversalRequestField.CurrentDungeonId;
+        }
+        if (!current.CurrentNodeId.IsValid)
+        {
+            return RuntimeDungeonTraversalRequestField.CurrentNodeId;
+        }
+        if (!transition.Id.IsValid)
+        {
+            return RuntimeDungeonTraversalRequestField.TransitionId;
+        }
+        if (!transition.DungeonId.IsValid)
+        {
+            return RuntimeDungeonTraversalRequestField.TransitionDungeonId;
+        }
+        if (!transition.SourceNodeId.IsValid)
+        {
+            return RuntimeDungeonTraversalRequestField.SourceNodeId;
+        }
+        if (!transition.DestinationNodeId.IsValid)
+        {
+            return RuntimeDungeonTraversalRequestField.DestinationNodeId;
+        }
+
+        return null;
+    }
 }
