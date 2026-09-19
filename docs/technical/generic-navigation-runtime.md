@@ -31,6 +31,11 @@ and `OutOfMemoryException` propagate rather than becoming policy faults.
 
 ## Result And Event Matrix
 
+The table names the outputs of the supplied `RuntimeNavigationService`.
+The public result constructor also checks structural coherence for results
+created by replacement services; it does not force every custom service to
+use the supplied service's diagnostic reason IDs for source mismatch.
+
 | Code | After | Events | Distinct evidence |
 |---|---|---|---|
 | `InvalidRequest` | Same as Before | None | First `InvalidField`, `invalid_navigation_request` reason |

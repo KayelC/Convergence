@@ -29,13 +29,13 @@ var staging = ContentId.Parse("example:staging_area");
 var entrance = ContentId.Parse("example:annex_entrance");
 var enter = new RuntimeNavigationTransition(
     ContentId.Parse("example:enter_annex"), staging, entrance);
-var navigation = new RuntimeNavigationService(new AnnexAccessPolicy(enter.Id));
+var navigation = new RuntimeNavigationService(new AnnexAccessPolicy(enter));
 var current = new RuntimeNavigationSnapshot(staging);
 
-sealed class AnnexAccessPolicy(ContentId allowedTransitionId) : IRuntimeNavigationPolicy
+sealed class AnnexAccessPolicy(RuntimeNavigationTransition allowedTransition) : IRuntimeNavigationPolicy
 {
     public RuntimeNavigationPolicyDecision Evaluate(RuntimeNavigationPolicyRequest request) =>
-        request.Transition.Id == allowedTransitionId
+        request.Transition == allowedTransition
             ? new RuntimeNavigationPolicyDecision(true)
             : new RuntimeNavigationPolicyDecision(
                 false, ContentId.Parse("example:route_locked"));

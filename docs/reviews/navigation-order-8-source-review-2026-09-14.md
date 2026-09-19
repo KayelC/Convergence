@@ -385,7 +385,7 @@ unapproved product decision or requires Order 9 traversal-rule work.
 | O8-R5 | `complete` | Retain save v19 and correct misleading optional-world-state test and documentation wording; defer broad independent-nullability design to Order 13. | `runtime: clarify optional world state` |
 | O8-R6 | `complete` | Correct Training Annex active-context derivation, document candidate adoption, and add focused Godot trigger/event/scene-separation evidence without moving scenes into Framework. | `host: prove generic navigation adoption` |
 | O8-R7 | `complete` | Reconcile the mechanics page, add a developer guide, add a technical state-machine page, update indexes and matrices, and include Godot/console examples and diagrams. | `docs: document generic navigation` |
-| O8-R8 | `pending` | Perform a fresh source-first code and documentation review, run the retained release gate, clear only resolved gaps, and close Order 8 only if no realistic reachable defect or contradiction remains. | `review: close navigation order 8` |
+| O8-R8 | `pending_owner_and_gate` | Fresh source/document review found no remaining core contract gap and cleared the resolved matrix gaps. Audience-owner confirmation and a successful retained online release gate remain outstanding; Order 8 stays open. | `review: audit navigation order 8` |
 
 ## Required Test Matrix
 
@@ -710,3 +710,35 @@ verification and relative-link checks passed. A temporary full-disk failure
 damaged only generated Framework reference outputs; they were rebuilt from
 source, and the successful gate above ran after that recovery. The three
 navigation audience entries remain `existing_unreviewed` until R8.
+
+## O8-R8 Pre-Closure Record
+
+**Reviewed baseline:** O8-R2 through O8-R7 at `825aff05`, followed by the
+retained evidence commits `4273502f` and `eb773bcd`. The independent
+[source and documentation audit](navigation-order-8-preclosure-independent-audit-2026-09-19.md)
+rechecked the present implementation rather than treating those records as
+proof of correctness.
+
+**Result:** the previously named navigation contract gaps are resolved, so
+the executable capability matrix now says `implemented` with no known core
+gap. Order 8 remains `open`. Three new audience pages remain
+`existing_unreviewed` pending explicit owner confirmation. The retained online
+release gate is incomplete: all 2,070 tests and the earlier commands passed,
+but the strict Godot step failed with NuGet `NU1900` when vulnerability data
+could not be fetched. The checksum-verified raw bundle is retained under
+`artifacts/verification/navigation-order-8-preclosure-approved-failed-20260918T082840Z/`.
+
+**Changed files in this audit checkpoint:** the executable capability matrix
+and its architecture test; active capability, product, documentation, and
+actor-composition roadmaps; the developer and technical navigation pages;
+the independent audit and review index; and this source-review record. No
+runtime, DemoHost, Godot sample, content, schema, or save wire file changed.
+
+**Next closure evidence:** owner confirmation of all three audience pages and
+a fully green retained release gate on the reviewed revision, followed by an
+independent evidence check. Neither can be inferred from passing local tests.
+
+**Current-revision checks:** focused navigation/capability/documentation tests
+passed 40; full solution passed 2,070 (1,877 Framework, 186 DemoHost, 7
+ContentValidator), zero failed/skipped; strict nonincremental Release build
+passed with zero warnings/errors; formatting verification passed.

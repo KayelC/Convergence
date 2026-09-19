@@ -722,9 +722,11 @@ mechanics, developer, and technical documents and diagrams. The current
 coverage matrix records 33 `reviewed`, 23 `existing_unreviewed`, 12 `missing`,
 and 7 `not_applicable` entries.
 
-`navigation` remains `partial` and Order 8 remains `open` until the independent
-O8-R8 source/document review and retained release gate. The real Godot smoke
-sample does not yet execute live navigation; the test-only contract is not
+`navigation` is `implemented` while Order 8 remains `open`. The independent
+O8-R8 source/document review found no remaining core contract gap. Owner
+confirmation of the new audience pages and the retained online release gate
+remain outstanding. The real Godot smoke sample does not yet execute live
+navigation; the test-only contract is not
 represented as that implementation. Dungeon traversal rules remain Order 9.
 
 ## Deferred Documentation

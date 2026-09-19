@@ -148,14 +148,14 @@ public sealed class FrameworkCapabilityMatrixTests
     }
 
     [Fact]
-    public void NavigationOrder8Review_OpensTheOrderAndPinsItsSourceBasedRoadmap()
+    public void NavigationOrder8Review_RecordsImplementedCapabilityWhileOrderRemainsOpen()
     {
         CapabilityEntry navigation = Load().Capabilities.Single(capability => capability.Id == "navigation");
 
-        Assert.Equal("partial", navigation.ImplementationState);
+        Assert.Equal("implemented", navigation.ImplementationState);
         Assert.Equal(8, navigation.OrderNumber);
         Assert.Equal("open", navigation.OrderState);
-        Assert.Equal(3, navigation.KnownGaps.Count);
+        Assert.Empty(navigation.KnownGaps);
 
         string review = File.ReadAllText(RepositoryPath(
             "docs",
@@ -170,7 +170,7 @@ public sealed class FrameworkCapabilityMatrixTests
             "### O8-L1: Training Annex confuses retained dungeon progress with active location",
             "### O8-L2: Direct evidence does not cover the full public boundary",
             "### O8-D6: Retain or change the combined field aggregate",
-            "| O8-R8 | `pending` |",
+            "| O8-R8 | `pending_owner_and_gate` |",
             "Order 9 remains responsible for dungeon traversal."
         ];
         Assert.All(requiredEvidence, token => Assert.Contains(token, review, StringComparison.Ordinal));
