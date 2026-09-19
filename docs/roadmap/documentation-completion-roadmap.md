@@ -746,6 +746,13 @@ but remains `existing_unreviewed`. Developer guidance is still `missing` and
 technical guidance `existing_unreviewed`; no audience entry was promoted by
 this opening checkpoint.
 
+The owner subsequently approved O9-D1 through O9-D6. The
+[dungeon-progress decision](../decisions/dungeon-progress-reporting.md) records
+host-reported progress, host-declared eligible IDs/areas, optional floor
+metadata, entrance/checkpoint re-entry, host rejection of incompatible saves,
+and distinct non-mutating failure results. Implementation and audience review
+remain outstanding; approval does not close Order 9.
+
 ## Deferred Documentation
 
 Two capability IDs describe extension seams rather than completed mechanics:

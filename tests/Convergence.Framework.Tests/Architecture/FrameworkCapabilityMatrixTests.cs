@@ -218,6 +218,13 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.Contains("| O9-R1: opening review | complete |", roadmap, StringComparison.Ordinal);
         Assert.Contains("| O9-R8: independent closure | pending |", roadmap, StringComparison.Ordinal);
         Assert.Contains("CurrentSaveContext", review, StringComparison.Ordinal);
+
+        string decision = File.ReadAllText(RepositoryPath(
+            "docs", "decisions", "dungeon-progress-reporting.md"));
+        Assert.Contains("Status: confirmed", decision, StringComparison.Ordinal);
+        Assert.Contains("intended rules for implementation", decision, StringComparison.Ordinal);
+        Assert.All(Enumerable.Range(1, 6), number => Assert.Contains(
+            $"O9-D{number}:", roadmap, StringComparison.Ordinal));
     }
 
     private static CapabilityMatrix Load() =>

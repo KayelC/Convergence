@@ -9,11 +9,13 @@
 **Scope:** Framework traversal, authored dungeon content, encounter preparation,
 Training Annex, navigation/field/save integration, and relevant tests.
 
-This is the opening source review, not a closure review or approval to change a
-public contract. The ordered work is in the
+This is the opening source review, not a closure review. The owner approved
+O9-D1 through O9-D6 after this review; the
+[confirmed decision](../decisions/dungeon-progress-reporting.md) records intended
+behavior, not completed code. The ordered work is in the
 [Order 9 roadmap](../roadmap/dungeon-traversal-order-9-roadmap.md). Current
-source and executable tests establish what works today; the proposed changes
-below remain pending until the owner confirms their precise rules.
+source and executable tests establish what works today; corrections below
+remain pending implementation and independent verification.
 
 ## Plain-English Model
 
@@ -73,10 +75,10 @@ a null dereference; a throwing policy escapes directly. Navigation already has
 typed invalid-request and policy-fault behavior, so this is an inconsistent
 extension boundary, not a claim of remote exploitability.
 
-**Proposed correction:** validate IDs before the policy and define typed,
+**Approved direction:** validate IDs before the policy and define typed,
 non-mutating invalid-request and policy-fault outcomes, with cancellation and
-fatal exceptions still propagated. Obtain owner confirmation before choosing
-whether the dungeon contract exactly mirrors navigation's result vocabulary.
+fatal exceptions still propagated. Exact diagnostic names are chosen during
+implementation without changing that distinction.
 
 ### O9-M2: Public dungeon results can contradict their evidence
 
@@ -99,12 +101,13 @@ host assertions, not independently verified victories. The existing dungeon
 content has no general checkpoint/boss ID registry tied to named host nodes, so
 the Framework cannot honestly claim catalog eligibility checks today.
 
-**Direction from owner dialogue:** the game reports a completed interaction,
+**Approved direction:** the game reports a completed interaction,
 victory, puzzle, or story event; battle-result proof is not mandatory. The
 Framework should reject malformed or context-ineligible progress reports and
-record valid ones idempotently. The precise declaration of eligible IDs and
-nodes remains an owner decision; do not invent a policy or a catalog schema
-solely to make the current implementation appear validated.
+record valid ones idempotently. The host supplies an immutable declaration of
+eligible checkpoint/boss IDs, their dungeons, and allowed areas. Do not invent
+a policy or new catalog schema solely to make the current implementation appear
+validated.
 
 ### O9-M4: Accepted field saves can strand the Training Annex menu
 
@@ -118,11 +121,10 @@ otherwise accepted save, the player has no travel option from that menu.
 Normal `EnterTrainingAnnex` initializes dungeon progress, so this is an
 accepted-save/consumer integration path, not an ordinary entry-flow failure.
 
-**Proposed correction:** preserve Framework's optional field shape, but make
-the Training Annex either reject this host-incompatible save before adoption
-or initialize its host-owned entrance state by an explicit, tested rule. Do not
-silently change the generic v19 save shape or infer active location from stale
-dungeon progress.
+**Approved direction:** preserve Framework's optional field shape, but make
+the Training Annex reject this host-incompatible save with a clear diagnostic
+before adoption. Do not guess an entrance, silently change the generic v19
+save shape, or infer active location from stale dungeon progress.
 
 ### O9-Q1: Authored floors and runtime nodes currently have no shared meaning
 
@@ -131,21 +133,21 @@ host traverses named nodes such as `review_hall`; no runtime service maps one
 model to the other. This is an **unfinished integration/design choice**, not
 proof that every step through a scene ought to be a Framework transition.
 
-**Recommended direction:** floor/block definitions remain optional authored
+**Approved direction:** floor/block definitions remain optional authored
 metadata. Host-owned spatial triggers select meaningful nodes and encounter
 IDs. An authored battle floor is not a compulsory one-battle-per-entry rule;
 the game may place multiple visible enemies, respawns, or no enemy on a visit.
-Decide whether Order 9 needs a read-only resolver for fixed-floor metadata or
-whether the current content family should stay independent until a real host
-uses it. Do not add a mandatory node/scene schema without that use case.
+Hosts can read the existing catalog definitions directly. Do not add a new
+resolver or mandatory node/scene schema without a consuming use case.
 
 ### O9-DOC1: Existing mechanics text overstates policy authority
 
-The [world mechanics page](../mechanics/world-encounters-and-rewards.md) says
-the injected dungeon policy governs checkpoints, barriers, and progress. In
+At this review's baseline, the
+[world mechanics page](../mechanics/world-encounters-and-rewards.md) said the
+injected dungeon policy governed checkpoints, barriers, and progress. In
 source, the policy is called only by `Traverse`; checkpoint and boss recording
-bypass it. The page must describe current behavior until a correction is
-implemented and owner-confirmed.
+bypass it. O9-R1 corrected the present-tense claim. The audience page remains
+unreviewed until implementation, reconciliation, and owner review at O9-R7.
 
 ## Navigation/Dungeon/Save Boundary
 

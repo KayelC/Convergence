@@ -31,6 +31,9 @@ implementation is partial: meaningful node transitions work, but live request
 and progress validation, authored floor semantics, and the combined
 navigation/dungeon/save host boundary need correction or owner decisions.
 Neither entering a floor nor navigating to a dungeon starts combat automatically.
+The owner approved O9-D1 through O9-D6 in the
+[dungeon-progress decision](../decisions/dungeon-progress-reporting.md);
+the implementation remains pending under the Order 9 checkpoints.
 
 Documentation Order 7 is complete under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).

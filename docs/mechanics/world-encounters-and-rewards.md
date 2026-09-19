@@ -41,8 +41,10 @@ IDs and an injected policy to allow or block requested node transitions; a
 barrier can be represented by a rejected transition. Currently the game
 explicitly reports checkpoint unlocks and boss defeats, which are recorded
 idempotently but are not checked against a battle result or dungeon content.
-Order 9 is reviewing that progress-validation boundary. Entering a location
-does not automatically move through dungeon nodes or start combat.
+The [approved Order 9 direction](../decisions/dungeon-progress-reporting.md) is
+to validate host-reported progress against an eligible dungeon/area list; that
+validation is not implemented yet. Entering a location does not automatically
+move through dungeon nodes or start combat.
 
 **Host responsibility:** scenes, doors, stairs, spatial enemies, animations, and map presentation. The host calls traversal or encounter services when its world logic says an event occurred.
 

@@ -4,7 +4,7 @@
 
 **Source baseline:** `d5f8845d`
 
-**Status:** open; planning and owner decisions precede runtime changes.
+**Status:** open; O9-D1 through O9-D6 approved, runtime corrections pending.
 
 **Source evidence:** [Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md).
 
@@ -20,20 +20,24 @@ node transitions. This roadmap addresses the concrete missing guards and the
 unresolved meaning of authored floor metadata. It does not imply that Order 8
 navigation or Order 13 persistence must be reopened.
 
-The [proposed dungeon-progress decision](../decisions/dungeon-progress-reporting.md)
-records why explicit host reporting is preferred and which details still need
-owner confirmation.
+The [confirmed dungeon-progress decision](../decisions/dungeon-progress-reporting.md)
+records O9-D1 through O9-D6 as approved intent. It does not describe already
+implemented runtime behavior.
 
-## Decisions To Confirm Before Runtime Edits
+## Approved Decisions
 
-| ID | Working direction | Status / required answer |
+| ID | Approved behavior | Implementation boundary |
 |---|---|---|
-| O9-D1: progress authority | A game reports a checkpoint or boss outcome explicitly; Framework checks the report and records it. No mandatory battle-result proof. | Direction discussed and used for planning; confirm the exact eligibility evidence before O9-R5. |
-| O9-D2: eligible progress IDs | Checkpoint and boss IDs need a trustworthy dungeon/context declaration. | Decide whether a host-supplied immutable registry is sufficient or authored dungeon content needs a small extension. Do not invent a policy for a simple identity/shape correction. |
-| O9-D3: authored floors | Floor metadata does not automatically move nodes or start battles. | Confirm whether Order 9 should add a read-only fixed-floor resolver or leave the current floor content independent until a real host consumes it. |
-| O9-D4: retained progress | Leaving a dungeon retains progress but makes traversal inactive until re-entry. | Confirm whether re-entry resumes the last node or starts at an entrance/checkpoint selected by the host. The current Training Annex retains state, but this should not become a hidden Framework default. |
-| O9-D5: host-incompatible saves | Framework keeps navigation-only field saves valid; a host requiring dungeon state must handle its own inside-without-progress case. | Recommend typed host rejection before adoption; confirm whether Training Annex should reject or explicitly initialize an entrance snapshot. |
-| O9-D6: failure contract | Invalid IDs and programming faults are distinct from a legal policy denial. | Recommend navigation-grade typed, non-mutating results; operational cancellation propagates. Confirm precise public result shape before changing APIs. |
+| O9-D1: progress authority | The game reports a checkpoint or boss outcome after success; Framework validates and records it. No mandatory battle-result proof. | Bosses may be resolved by battle, puzzle, or script. No progress is inferred from node entry. |
+| O9-D2: eligible progress IDs | The host supplies an immutable list of eligible checkpoint/boss IDs, their dungeons, and allowed areas. | Framework checks reports against the list; do not expand dungeon JSON or add a speculative policy. |
+| O9-D3: authored floors | Existing floor metadata is optional catalog information. It does not move nodes or start battles. | No new resolver until a real consumer needs it; hosts may inspect catalog definitions directly. |
+| O9-D4: retained progress | Leaving retains progress but disables active traversal. On re-entry the host selects an entrance or unlocked checkpoint. | Never infer re-entry from the last visited node; validate checkpoint availability before adopting it. |
+| O9-D5: host-incompatible saves | A host requiring an inside-dungeon position rejects a save missing that position before adoption. | Keep generic navigation-only field saves valid; no silent entrance guess or v19 wire change. |
+| O9-D6: failure contract | Invalid IDs, legal route denial, and malfunctioning custom rules have distinct outcomes; failures leave state unchanged. | Typed diagnostics; cancellation and fatal failures propagate. |
+
+The owner confirmed all six decisions on 19 September 2026. Precise public
+signatures and diagnostic names are implementation details to review against
+these decisions, not invitations to alter their semantics.
 
 The [Order 8 decision](../decisions/navigation-and-host-adoption.md) already
 settles that current logical location, not retained dungeon progress, governs
@@ -41,18 +45,18 @@ active save/menu context. Do not ask the owner to decide that again.
 
 ## Ordered Checkpoints
 
-Each checkpoint has its own narrow commit and focused tests. Stop for owner
-confirmation if a later checkpoint requires an unresolved decision above; do
-not silently choose a content or save model mid-implementation.
+Each checkpoint has its own narrow commit and focused tests. If source work
+reveals a new design choice outside the approved decisions, stop and ask the
+owner rather than silently choosing a content or save model.
 
 | Checkpoint | State | Work and acceptance evidence |
 |---|---|---|
 | O9-R1: opening review | complete | Source-first review, this roadmap, executable `partial`/`open` tracking, and correction of present-tense documentation that overclaims policy authority. No runtime change. |
-| O9-R2: live traversal boundary | pending | Reject default/empty dungeon, node, and transition IDs before policy evaluation; define non-mutating typed policy-fault behavior. Test null/throwing policies, cancellation, source/dungeon mismatch precedence, and unchanged visited state. Requires O9-D6 confirmation. |
+| O9-R2: live traversal boundary | pending | Reject default/empty dungeon, node, and transition IDs before policy evaluation; define non-mutating typed policy-fault behavior. Test null/throwing policies, cancellation, source/dungeon mismatch precedence, and unchanged visited state under O9-D6. |
 | O9-R3: public result authority | pending | Seal traversal/state-change result and event coherence, including malformed custom-service results and record cloning. Keep before/after snapshots and ordered events immutable; no silent fallback. |
-| O9-R4: field/save/host boundary | pending | Cover all four navigation/progress combinations from the source review. Correct Training Annex's accepted-but-unusable inside-without-progress restore, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Requires O9-D4/D5 confirmation. |
-| O9-R5: checkpoint and boss recording | pending | Implement the chosen eligibility declaration and validate dungeon, ID, and allowed context before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID according to O9-D1/D2. |
-| O9-R6: authored floor and encounter contract | pending | Resolve O9-D3. If a resolver is approved, make it read-only and explicit; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entering a floor nor resolving metadata starts combat. Preserve existing clean packs with an explicit schema/version decision if content shape changes. |
+| O9-R4: field/save/host boundary | pending | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D4/D5. |
+| O9-R5: checkpoint and boss recording | pending | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
+| O9-R6: authored floor and encounter contract | pending | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
 | O9-R7: audience documentation | pending | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. Promote coverage entries only after source verification and owner review. |
 | O9-R8: independent closure | pending | Fresh code and document review across traversal, navigation, `RuntimeFieldSnapshot`, `CurrentSaveContext`, save validator/restore, content, DemoHost, and Godot contract. Run and retain the full release gate. Close only if no concrete gap remains and all applicable audience entries are `reviewed`. |
 
@@ -104,5 +108,6 @@ skips. After this opening record, the full Release solution passed 1,878
 Framework, 186 DemoHost, and seven ContentValidator tests (2,071 total), with
 zero failures or skips. Format verification, changed-document relative links,
 and `git diff --check` passed. No runtime, schema, content, or save-wire file
-changed. The remaining checkpoints are proposals pending the owner decisions
-above, implementation, adversarial review, and a retained release gate.
+changed. The owner subsequently confirmed O9-D1 through O9-D6. The remaining
+checkpoints await implementation, adversarial review, and a retained release
+gate; confirmation alone does not advance their state.

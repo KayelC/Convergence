@@ -49,12 +49,9 @@ records must link every affected mechanics, developer, and technical page.
 
 - [Actor Composition, Progression, And Rosters](actor-composition-progression-and-rosters.md)
 - [Generic Navigation And Host Adoption](navigation-and-host-adoption.md)
+- [Dungeon Progress Reporting](dungeon-progress-reporting.md)
 - [Battle Action Ownership And Inventory Authority](battle-action-ownership-and-inventory-authority.md)
 - [Combat Resolution Policy Family](combat-resolution-policy-family.md)
 - [Ordered Secondary Effects](ordered-secondary-effects.md)
 - [Stat Modifier Policy Family](stat-modifier-policy-family.md)
 - [Turn Economy Policy Family](turn-economy-policy-family.md)
-
-## Proposed Decisions
-
-- [Dungeon Progress Reporting](dungeon-progress-reporting.md)
