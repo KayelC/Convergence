@@ -100,3 +100,10 @@ approval synchronization, an active public API guide sentence still described
 the result/policy boundary as future Order 8 work; it was corrected to match
 the implemented source. This addendum changes the documentation status, not
 the failed release-gate verdict or the `open` Order state.
+
+## Final Closure Addendum
+
+The later [final closure review](navigation-order-8-final-closure-review-2026-09-19.md)
+records a successful online audit and complete retained gate against
+`fd0ef334`. This pre-closure audit and its failed gate remain historical
+evidence; they are not the current Order 8 status.

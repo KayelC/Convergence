@@ -64,9 +64,10 @@ future visit without labelling the player as still inside the dungeon.
 - Order 8 corrects navigation and host adoption without changing the save wire
   shape or implementing Order 9 dungeon rules.
 - Framework remains independent of Godot and any visual-novel plugin.
-- The existing [world mechanics page](../mechanics/world-encounters-and-rewards.md)
-  requires Order 8 reconciliation. Dedicated developer and technical
-  navigation pages do not yet exist; O8-R7 creates and links them.
+- The [world mechanics page](../mechanics/world-encounters-and-rewards.md),
+  [developer guide](../developer-guide/generic-navigation.md), and
+  [technical reference](../technical/generic-navigation-runtime.md) were
+  reconciled with the implementation, owner-confirmed, and reviewed in Order 8.
 - The Order 8 review and checkpoint sequence remain in
   [Navigation Order 8 Source Review](../reviews/navigation-order-8-source-review-2026-09-14.md).
 

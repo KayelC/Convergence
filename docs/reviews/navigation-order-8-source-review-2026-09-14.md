@@ -385,7 +385,7 @@ unapproved product decision or requires Order 9 traversal-rule work.
 | O8-R5 | `complete` | Retain save v19 and correct misleading optional-world-state test and documentation wording; defer broad independent-nullability design to Order 13. | `runtime: clarify optional world state` |
 | O8-R6 | `complete` | Correct Training Annex active-context derivation, document candidate adoption, and add focused Godot trigger/event/scene-separation evidence without moving scenes into Framework. | `host: prove generic navigation adoption` |
 | O8-R7 | `complete` | Reconcile the mechanics page, add a developer guide, add a technical state-machine page, update indexes and matrices, and include Godot/console examples and diagrams. | `docs: document generic navigation` |
-| O8-R8 | `pending_release_gate` | Fresh source/document review found no remaining core contract gap and cleared the resolved matrix gaps. The owner confirmed all three audience pages; the retained online release gate remains outstanding, so Order 8 stays open. | `review: audit navigation order 8` |
+| O8-R8 | `complete` | Fresh source/document review cleared the core gaps, the owner confirmed all three audience pages, and the retained online release gate passed all 23 commands. Order 8 is closed. | `review: close navigation order 8` |
 
 ## Required Test Matrix
 
@@ -767,3 +767,14 @@ Framework, 186 DemoHost, 7 ContentValidator), zero failed/skipped; the strict
 nonincremental Release build passed with zero warnings/errors; formatting
 verification passed. These are local checks, not a substitute for the failed
 online dependency audit.
+
+## O8-R8 Final Closure
+
+The [final closure review](navigation-order-8-final-closure-review-2026-09-19.md)
+independently checked the retained gate for tested commit `fd0ef334`: all 23
+commands exited zero, 53 saved SHA-256 checksums matched, 2,070 solution tests
+passed with zero skips, and Godot emitted `CONVERGENCE_GODOT_SMOKE_OK`. The
+online NuGet audit completed without `NU1900` or a vulnerability warning.
+With the owner-confirmed audience pages already `reviewed`, the executable
+capability matrix now records `navigation` as `implemented` and Order 8 as
+`closed`. Real Godot live-scene navigation remains separate host work.

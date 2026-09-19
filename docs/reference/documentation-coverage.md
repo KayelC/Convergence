@@ -39,7 +39,7 @@ remain unreviewed until they complete the same process.
 Order 8 has a source-reconciled navigation mechanics section, a dedicated
 developer guide, and a technical state-machine reference. The independent
 review and project-owner confirmation make all three `reviewed`. Order 8
-remains open until the retained online release gate passes. The real Godot
+closed after the retained online release gate passed. The real Godot
 smoke sample does not yet execute live navigation.
 Order 7 now documents inventory-owned equipment instances, authored slot
 layouts, one live equipment profile, typed currencies, resolved pricing,

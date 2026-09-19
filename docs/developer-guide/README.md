@@ -117,7 +117,7 @@ Other subsystem guides remain tracked as
 the [documentation coverage matrix](../reference/documentation-coverage.md).
 The Order 8 navigation guide was source-reconciled and owner-confirmed, so its
 coverage entry is `reviewed`. The real Godot smoke sample does not yet execute
-live navigation; Order 8 remains open until its retained release gate passes.
+live navigation; Order 8 closed after its retained release gate passed.
 
 New guides must follow the
 [Documentation Design Pattern](../documentation-design-pattern.md).

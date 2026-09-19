@@ -83,8 +83,8 @@ public sealed class FrameworkCapabilityMatrixTests
             .ToArray();
         Assert.Equal(Enumerable.Range(1, OrderedCapabilityIds.Length), ordered.Select(capability => capability.OrderNumber!.Value));
         Assert.Equal(OrderedCapabilityIds, ordered.Select(capability => capability.Id));
-        Assert.Equal(7, ordered.Count(capability => capability.OrderState == "closed"));
-        Assert.Equal(1, ordered.Count(capability => capability.OrderState == "open"));
+        Assert.Equal(8, ordered.Count(capability => capability.OrderState == "closed"));
+        Assert.Equal(0, ordered.Count(capability => capability.OrderState == "open"));
         Assert.Equal(12, ordered.Count(capability => capability.OrderState == "not_started"));
 
         using JsonDocument documentation = JsonDocument.Parse(File.ReadAllText(DocumentationMatrixPath()));
@@ -148,13 +148,13 @@ public sealed class FrameworkCapabilityMatrixTests
     }
 
     [Fact]
-    public void NavigationOrder8Review_RecordsImplementedCapabilityWhileOrderRemainsOpen()
+    public void NavigationOrder8Review_RecordsReviewedEvidenceForClosedOrder()
     {
         CapabilityEntry navigation = Load().Capabilities.Single(capability => capability.Id == "navigation");
 
         Assert.Equal("implemented", navigation.ImplementationState);
         Assert.Equal(8, navigation.OrderNumber);
-        Assert.Equal("open", navigation.OrderState);
+        Assert.Equal("closed", navigation.OrderState);
         Assert.Empty(navigation.KnownGaps);
 
         string review = File.ReadAllText(RepositoryPath(
@@ -170,10 +170,15 @@ public sealed class FrameworkCapabilityMatrixTests
             "### O8-L1: Training Annex confuses retained dungeon progress with active location",
             "### O8-L2: Direct evidence does not cover the full public boundary",
             "### O8-D6: Retain or change the combined field aggregate",
-            "| O8-R8 | `pending_release_gate` |",
+            "| O8-R8 | `complete` |",
             "Order 9 remains responsible for dungeon traversal."
         ];
         Assert.All(requiredEvidence, token => Assert.Contains(token, review, StringComparison.Ordinal));
+
+        string closure = File.ReadAllText(RepositoryPath(
+            "docs", "reviews", "navigation-order-8-final-closure-review-2026-09-19.md"));
+        Assert.Contains("fd0ef334", closure, StringComparison.Ordinal);
+        Assert.Contains("navigation-order-8-owner-closure", closure, StringComparison.Ordinal);
 
         using JsonDocument documentation = JsonDocument.Parse(File.ReadAllText(DocumentationMatrixPath()));
         JsonElement navigationDocumentation = documentation.RootElement

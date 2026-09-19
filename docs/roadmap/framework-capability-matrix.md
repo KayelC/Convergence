@@ -39,7 +39,7 @@ establish that a numbered Order is `closed`.
 
 The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
 
-The ordered review queue currently records 20 Orders: 7 closed, 1 open, and 12 not_started.
+The ordered review queue currently records 20 Orders: 8 closed, 0 open, and 12 not_started.
 
 | Order | Capability | Implementation | Order state |
 |---:|---|---|---|
@@ -50,7 +50,7 @@ The ordered review queue currently records 20 Orders: 7 closed, 1 open, and 12 n
 | 5 | `battle_knowledge` | `implemented` | `closed` |
 | 6 | `encounter_orchestration` | `implemented` | `closed` |
 | 7 | `inventory_equipment_economy` | `implemented` | `closed` |
-| 8 | `navigation` | `implemented` | `open` |
+| 8 | `navigation` | `implemented` | `closed` |
 | 9 | `dungeon_traversal` | `implemented` | `not_started` |
 | 10 | `negotiation_and_rewards` | `implemented` | `not_started` |
 | 11 | `fusion_and_inheritance` | `implemented` | `not_started` |
@@ -64,17 +64,17 @@ The ordered review queue currently records 20 Orders: 7 closed, 1 open, and 12 n
 | 19 | `host_contracts` | `implemented` | `not_started` |
 | 20 | `godot_adapter` | `implemented` | `not_started` |
 
-`navigation` is `implemented`, and Order 8 is `open`. Its generic transition,
+`navigation` is `implemented`, and Order 8 is `closed`. Its generic transition,
 injected-policy, immutable result, DemoHost, and persistence foundations are
 usable. O8-R2 through O8-R6 corrected identifier, result, policy-fault, and
 Training Annex context boundaries and added test-only Godot adoption evidence.
-O8-R7 writes the three audience documents. The independent source/document
+O8-R7 wrote the three audience documents. The independent source/document
 review found no remaining core contract gap. The owner confirmed the three
-navigation audience pages on 19 September 2026; only a successful retained
-online release gate remains for formal closure. The real Godot smoke sample
-does not navigate live scenes. The correction and decision sequence is
-recorded in the
-[Navigation Order 8 source review and roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md).
+navigation audience pages on 19 September 2026. The retained online release
+gate then passed all 23 commands against `fd0ef334`; the
+[Order 8 final closure review](../reviews/navigation-order-8-final-closure-review-2026-09-19.md)
+records the evidence. The real Godot smoke sample does not navigate live
+scenes; that remains separate host work.
 
 `inventory_equipment_economy` is `implemented`, and Order 7 is `closed`. Its immutable transaction and
 validation foundation is usable. O7-R2 gives each equipment copy a unique

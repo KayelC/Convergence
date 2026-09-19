@@ -10,19 +10,19 @@ baseline.
 
 Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
 
-The ordered review queue currently records 20 Orders: 7 closed, 1 open, and 12 not_started.
+The ordered review queue currently records 20 Orders: 8 closed, 0 open, and 12 not_started.
 Implementation maturity and Order closure are deliberately separate: only an
 explicit `orderState: closed` means the complete collaborative source, owner,
 documentation, independent-review, and release-gate cycle has finished.
 
-Documentation Order 8 is open under the
-[Navigation source review and proposed roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md).
+Documentation Order 8 is closed under the
+[final navigation closure review](../reviews/navigation-order-8-final-closure-review-2026-09-19.md).
 Its request/result/policy-fault corrections, retained-progress host context,
 and test-only Godot adoption evidence are implemented. The independent review
 found no remaining core navigation contract gap, and the owner confirmed all
-three audience pages on 19 September 2026. They are now `reviewed`, but the
-retained online release gate has not passed. The real Godot smoke sample does
-not yet perform live navigation; that remains a separate host capability.
+three audience pages on 19 September 2026. They are `reviewed`, and the
+retained online release gate passed all 23 commands. The real Godot smoke
+sample does not yet perform live navigation; that remains separate host work.
 
 Documentation Order 7 is complete under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).

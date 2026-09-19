@@ -710,25 +710,27 @@ to `reviewed`, and the executable matrix now records 33 `reviewed`, 22
 `existing_unreviewed`, 13 `missing`, and 7 `not_applicable` entries at that
 revision.
 
-## Open Order 8
+## Closed Order 8
 
 The source-first
 [Navigation Order 8 review and roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md)
 records approved decisions O8-D1 through O8-D10. O8-R2 through O8-R4 corrected
 live request, result, and policy-fault authority. O8-R5 retained save v19 and
 corrected its optional-world-state explanation. O8-R6 corrected Training Annex
-context and proved a Godot-shaped trigger/adoption contract. O8-R7 reconciles
+context and proved a Godot-shaped trigger/adoption contract. O8-R7 reconciled
 mechanics, developer, and technical documents and diagrams. The current
 coverage matrix records 36 `reviewed`, 20 `existing_unreviewed`, 12 `missing`,
 and 7 `not_applicable` entries.
 
-`navigation` is `implemented` while Order 8 remains `open`. The independent
+`navigation` is `implemented`, and Order 8 is `closed`. The independent
 O8-R8 source/document review found no remaining core contract gap. The owner
 confirmed the three audience pages on 19 September 2026, promoting them to
-`reviewed`. The retained online release gate remains outstanding. The real
-Godot smoke sample does not yet execute live navigation; the test-only
-contract is not represented as that implementation. Dungeon traversal rules
-remain Order 9.
+`reviewed`. The retained online release gate passed all 23 commands against
+`fd0ef334`, with raw output and checksums in the
+[final closure review](../reviews/navigation-order-8-final-closure-review-2026-09-19.md).
+The real Godot smoke sample does not yet execute live navigation; the
+test-only contract is not represented as that implementation. Dungeon
+traversal rules remain Order 9.
 
 ## Deferred Documentation
 

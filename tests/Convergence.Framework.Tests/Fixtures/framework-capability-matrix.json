@@ -220,7 +220,7 @@
       "id": "navigation",
       "implementationState": "implemented",
       "orderNumber": 8,
-      "orderState": "open",
+      "orderState": "closed",
       "frameworkTests": ["RuntimeNavigationTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
