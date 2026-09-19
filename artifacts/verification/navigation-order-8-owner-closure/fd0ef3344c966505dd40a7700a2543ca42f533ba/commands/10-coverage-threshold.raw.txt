@@ -1,0 +1,1 @@
+Framework coverage: lines 90.32%; branches 77.08%.

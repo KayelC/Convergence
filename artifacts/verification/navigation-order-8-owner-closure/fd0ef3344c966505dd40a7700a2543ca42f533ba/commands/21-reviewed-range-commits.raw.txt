@@ -1,0 +1,103 @@
+commit fd0ef3344c966505dd40a7700a2543ca42f533ba
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sat Sep 19 10:50:56 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sat Sep 19 10:50:56 2026 +0200
+
+    docs: confirm navigation audiences
+
+commit 952361aa892f4dfca482c5b9a7046e9e9eee1835
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sat Sep 19 09:23:30 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sat Sep 19 09:23:30 2026 +0200
+
+    test: retain navigation closure gate failure
+
+commit bd994d61536ab2781a3f058de8d3dfa409dfa385
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sat Sep 19 09:20:27 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sat Sep 19 09:20:27 2026 +0200
+
+    review: audit navigation order 8
+
+commit eb773bcdad83c39247edb42426be9aa8a6ad2c51
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 18 10:30:39 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 18 10:30:39 2026 +0200
+
+    test: retain navigation preclosure gate output
+
+commit 4273502fb317a618a364590d903c82c2a71b3ac0
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 18 10:28:25 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 18 10:28:25 2026 +0200
+
+    test: retain blocked navigation gate evidence
+
+commit 825aff0531d3f9e6fc3e7610e5fd616c68427169
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 18 10:23:46 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 18 10:23:46 2026 +0200
+
+    docs: document generic navigation
+
+commit c366d37c8ecaa5c73cc06f8dab2b0184f1caa5b2
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 18 10:16:49 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 18 10:16:49 2026 +0200
+
+    host: prove generic navigation adoption
+
+commit b36f9729ac1fd03447213321a31a90df7b8b9879
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 18 10:11:27 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 18 10:11:27 2026 +0200
+
+    runtime: clarify optional world state
+
+commit 68a3c0e638ba5f1e46201882e2658195d8665151
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 18 10:07:23 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 18 10:07:23 2026 +0200
+
+    runtime: contain navigation policy faults
+
+commit 128f929595ff8eb57435d743b3dea7ff3fb34f2b
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 18 10:03:35 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 18 10:03:35 2026 +0200
+
+    runtime: enforce navigation result authority
+
+commit 5b4d757bdf9a401d4161359c8e60561c81fc9e0d
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 18 09:57:55 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 18 09:57:55 2026 +0200
+
+    runtime: validate navigation requests
+
+commit 681f55382e71a175cf4da01f0288c589510c25f5
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Fri Sep 18 09:55:07 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Fri Sep 18 09:55:07 2026 +0200
+
+    docs: confirm navigation order 8 decisions
+
+commit 112fb6e16764cc702e17288711f1aa5fb4a49724
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 14 09:43:45 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 14 09:43:45 2026 +0200
+
+    docs: open navigation order 8 review
