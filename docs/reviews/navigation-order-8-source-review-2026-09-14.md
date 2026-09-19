@@ -742,3 +742,9 @@ independent evidence check. Neither can be inferred from passing local tests.
 passed 40; full solution passed 2,070 (1,877 Framework, 186 DemoHost, 7
 ContentValidator), zero failed/skipped; strict nonincremental Release build
 passed with zero warnings/errors; formatting verification passed.
+
+**Retained gate retry:** the `bd994d61` run failed at `01-restore-audit` with
+NuGet `NU1900` before build or test execution. Raw output is retained under
+`artifacts/verification/navigation-order-8-r8-gate-failed-20260919T072144Z/`.
+It does not supersede the successful local tests above or make the release
+gate green.

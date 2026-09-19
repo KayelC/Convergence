@@ -1,0 +1,5 @@
+?? artifacts/verification/navigation-order-8-r8-gate/bd994d61536ab2781a3f058de8d3dfa409dfa385/commands/00-dotnet-info.cmd
+?? artifacts/verification/navigation-order-8-r8-gate/bd994d61536ab2781a3f058de8d3dfa409dfa385/commands/00-dotnet-info.raw.txt
+?? artifacts/verification/navigation-order-8-r8-gate/bd994d61536ab2781a3f058de8d3dfa409dfa385/commands/01-restore-audit.cmd
+?? artifacts/verification/navigation-order-8-r8-gate/bd994d61536ab2781a3f058de8d3dfa409dfa385/commands/01-restore-audit.raw.txt
+?? artifacts/verification/navigation-order-8-r8-gate/bd994d61536ab2781a3f058de8d3dfa409dfa385/git-status-before.txt

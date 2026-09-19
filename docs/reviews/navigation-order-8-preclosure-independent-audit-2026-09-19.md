@@ -78,6 +78,13 @@ nonincremental Release solution build passed with zero warnings/errors.
 `dotnet format --verify-no-changes` also passed. None of these checks performs
 the missing online dependency audit.
 
+A fresh retained gate attempt against audit commit `bd994d61` stopped at
+`01-restore-audit` with the same `NU1900` service-index failure, before any
+build or test step. Its raw output and manifest are at
+[`artifacts/verification/navigation-order-8-r8-gate-failed-20260919T072144Z/bd994d61536ab2781a3f058de8d3dfa409dfa385/README.md`](../../artifacts/verification/navigation-order-8-r8-gate-failed-20260919T072144Z/bd994d61536ab2781a3f058de8d3dfa409dfa385/README.md).
+The earlier bundle remains the evidence for checks that this attempt could
+not reach.
+
 To close Order 8, obtain explicit owner confirmation of the mechanics,
 developer, and technical navigation pages; rerun the complete retained
 release gate against a clean reviewed commit with the dependency audit

@@ -1,0 +1,43 @@
+{
+    "schemaVersion":  1,
+    "checkpoint":  "navigation-order-8-r8-gate",
+    "status":  "failed",
+    "testedCommit":  "bd994d61536ab2781a3f058de8d3dfa409dfa385",
+    "reviewedRange":  {
+                          "base":  "a1f91e68dea9011d7d3493d76a071d6449e2dcd0",
+                          "head":  "bd994d61536ab2781a3f058de8d3dfa409dfa385"
+                      },
+    "repositoryWasClean":  true,
+    "startedUtc":  "2026-09-19T07:21:44.0218075Z",
+    "completedUtc":  "2026-09-19T07:21:50.7035131Z",
+    "host":  {
+                 "operatingSystem":  "Microsoft Windows NT 10.0.26200.0",
+                 "powershellVersion":  "5.1.26100.9444",
+                 "godotExecutable":  "tests/Godot_v4.7.1-stable_mono_win64/Godot_v4.7.1-stable_mono_win64_console.exe",
+                 "godotSha256":  "b2c334ff6bf1e07ded41b80bd6f4785485650db6ddbb2740b802930f35237c26"
+             },
+    "commands":  [
+                     {
+                         "order":  1,
+                         "name":  "00-dotnet-info",
+                         "command":  "dotnet --info",
+                         "commandFile":  "commands/00-dotnet-info.cmd",
+                         "outputFile":  "commands/00-dotnet-info.raw.txt",
+                         "startedUtc":  "2026-09-19T07:21:44.0278137Z",
+                         "completedUtc":  "2026-09-19T07:21:44.3073659Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  2,
+                         "name":  "01-restore-audit",
+                         "command":  "dotnet restore Convergence.sln --locked-mode -p:NuGetAudit=true -p:NuGetAuditMode=all \"-p:WarningsAsErrors=NU1901%%3BNU1902%%3BNU1903%%3BNU1904\"",
+                         "commandFile":  "commands/01-restore-audit.cmd",
+                         "outputFile":  "commands/01-restore-audit.raw.txt",
+                         "startedUtc":  "2026-09-19T07:21:44.3607126Z",
+                         "completedUtc":  "2026-09-19T07:21:50.6285151Z",
+                         "exitCode":  1
+                     }
+                 ],
+    "coverage":  null,
+    "failure":  "Verification command \u002701-restore-audit\u0027 failed with exit code 1."
+}
