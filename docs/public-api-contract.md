@@ -335,8 +335,8 @@ invalid IDs are not published as transition events. This is a pre-release
 addition to the public enum and result constructor, so custom navigation
 service implementations must rebuild against the updated result contract.
 It does not change valid transition, source-mismatch, or policy-rejection
-behavior. The rest of the result/policy boundary is addressed in later Order 8
-checkpoints.
+behavior. The remaining result and policy-fault boundaries were completed in
+Order 8's subsequent checkpoints, as described below.
 
 `RuntimeNavigationResult` now validates each code against its before/after
 state and exact structural event. A valid request has one matching applied or

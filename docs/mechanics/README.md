@@ -99,8 +99,9 @@ Framework services normally return an immutable result containing:
 
 The host applies or presents accepted results. Rejected operations preserve the original state. Display names and descriptions may be shown to a player, but Framework behavior is selected by typed IDs and definitions rather than text matching.
 
-The navigation section of the world page was reconciled in Order 8, but its
-coverage entry remains `existing_unreviewed` pending independent closure.
+The navigation section of the world page was source-reconciled and
+owner-confirmed in Order 8, so its coverage entry is `reviewed`. Formal Order
+closure still requires the retained release gate.
 
 ## Optionality
 

@@ -170,10 +170,21 @@ public sealed class FrameworkCapabilityMatrixTests
             "### O8-L1: Training Annex confuses retained dungeon progress with active location",
             "### O8-L2: Direct evidence does not cover the full public boundary",
             "### O8-D6: Retain or change the combined field aggregate",
-            "| O8-R8 | `pending_owner_and_gate` |",
+            "| O8-R8 | `pending_release_gate` |",
             "Order 9 remains responsible for dungeon traversal."
         ];
         Assert.All(requiredEvidence, token => Assert.Contains(token, review, StringComparison.Ordinal));
+
+        using JsonDocument documentation = JsonDocument.Parse(File.ReadAllText(DocumentationMatrixPath()));
+        JsonElement navigationDocumentation = documentation.RootElement
+            .GetProperty("capabilities")
+            .EnumerateArray()
+            .Single(entry => entry.GetProperty("id").GetString() == "navigation");
+        Assert.All(
+            new[] { "mechanics", "developerGuide", "technical" },
+            audience => Assert.Equal(
+                "reviewed",
+                navigationDocumentation.GetProperty(audience).GetProperty("state").GetString()));
     }
 
     private static CapabilityMatrix Load() =>

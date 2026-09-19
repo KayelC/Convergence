@@ -18,9 +18,9 @@ documentation, independent-review, and release-gate cycle has finished.
 Documentation Order 8 is open under the
 [Navigation source review and proposed roadmap](../reviews/navigation-order-8-source-review-2026-09-14.md).
 Its request/result/policy-fault corrections, retained-progress host context,
-and test-only Godot adoption evidence are implemented. All three audience
-documents are written but remain unreviewed pending owner confirmation. The
-independent review found no remaining core navigation contract gap, but the
+and test-only Godot adoption evidence are implemented. The independent review
+found no remaining core navigation contract gap, and the owner confirmed all
+three audience pages on 19 September 2026. They are now `reviewed`, but the
 retained online release gate has not passed. The real Godot smoke sample does
 not yet perform live navigation; that remains a separate host capability.
 

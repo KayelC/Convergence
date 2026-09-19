@@ -91,3 +91,12 @@ release gate against a clean reviewed commit with the dependency audit
 available; then independently recheck the resulting evidence and update the
 documentation/order states. Do not promote either state based on this report
 alone.
+
+## Owner Confirmation Addendum
+
+The project owner explicitly approved the three navigation audience pages on
+19 September 2026. Their coverage entries are now `reviewed`. During the
+approval synchronization, an active public API guide sentence still described
+the result/policy boundary as future Order 8 work; it was corrected to match
+the implemented source. This addendum changes the documentation status, not
+the failed release-gate verdict or the `open` Order state.

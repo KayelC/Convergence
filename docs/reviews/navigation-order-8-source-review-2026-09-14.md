@@ -385,7 +385,7 @@ unapproved product decision or requires Order 9 traversal-rule work.
 | O8-R5 | `complete` | Retain save v19 and correct misleading optional-world-state test and documentation wording; defer broad independent-nullability design to Order 13. | `runtime: clarify optional world state` |
 | O8-R6 | `complete` | Correct Training Annex active-context derivation, document candidate adoption, and add focused Godot trigger/event/scene-separation evidence without moving scenes into Framework. | `host: prove generic navigation adoption` |
 | O8-R7 | `complete` | Reconcile the mechanics page, add a developer guide, add a technical state-machine page, update indexes and matrices, and include Godot/console examples and diagrams. | `docs: document generic navigation` |
-| O8-R8 | `pending_owner_and_gate` | Fresh source/document review found no remaining core contract gap and cleared the resolved matrix gaps. Audience-owner confirmation and a successful retained online release gate remain outstanding; Order 8 stays open. | `review: audit navigation order 8` |
+| O8-R8 | `pending_release_gate` | Fresh source/document review found no remaining core contract gap and cleared the resolved matrix gaps. The owner confirmed all three audience pages; the retained online release gate remains outstanding, so Order 8 stays open. | `review: audit navigation order 8` |
 
 ## Required Test Matrix
 
@@ -748,3 +748,22 @@ NuGet `NU1900` before build or test execution. Raw output is retained under
 `artifacts/verification/navigation-order-8-r8-gate-failed-20260919T072144Z/`.
 It does not supersede the successful local tests above or make the release
 gate green.
+
+## O8-R8 Owner Confirmation
+
+On 19 September 2026, the project owner explicitly approved the three
+navigation audience pages linked in the pre-closure audit: mechanics,
+developer guide, and technical runtime reference. Their executable coverage
+entries are now `reviewed` (36 reviewed, 20 existing_unreviewed, 12 missing,
+7 not_applicable overall). A stale public API guide sentence implying that
+the result/policy boundary was still future work was also corrected against
+the current source. No runtime behavior changed. Order 8 remains `open`
+because the retained online release gate still cannot fetch NuGet vulnerability
+data; the owner approval does not waive that gate.
+
+**Owner-confirmation checkpoint checks:** focused navigation, capability, and
+documentation tests passed 30; the full solution passed 2,070 (1,877
+Framework, 186 DemoHost, 7 ContentValidator), zero failed/skipped; the strict
+nonincremental Release build passed with zero warnings/errors; formatting
+verification passed. These are local checks, not a substitute for the failed
+online dependency audit.

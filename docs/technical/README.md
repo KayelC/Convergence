@@ -114,8 +114,9 @@ formally complete.
 Other subsystem references
 remain tracked as `existing_unreviewed` or `missing` in the
 [documentation coverage matrix](../reference/documentation-coverage.md).
-The Order 8 navigation reference remains `existing_unreviewed` until its
-independent closure review.
+The Order 8 navigation reference passed independent source/document review
+and owner confirmation, so its coverage entry is `reviewed`. Formal Order
+closure still requires the retained release gate.
 
 New technical pages must follow the
 [Documentation Design Pattern](../documentation-design-pattern.md).

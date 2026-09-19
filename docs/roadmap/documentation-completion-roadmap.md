@@ -719,15 +719,16 @@ live request, result, and policy-fault authority. O8-R5 retained save v19 and
 corrected its optional-world-state explanation. O8-R6 corrected Training Annex
 context and proved a Godot-shaped trigger/adoption contract. O8-R7 reconciles
 mechanics, developer, and technical documents and diagrams. The current
-coverage matrix records 33 `reviewed`, 23 `existing_unreviewed`, 12 `missing`,
+coverage matrix records 36 `reviewed`, 20 `existing_unreviewed`, 12 `missing`,
 and 7 `not_applicable` entries.
 
 `navigation` is `implemented` while Order 8 remains `open`. The independent
-O8-R8 source/document review found no remaining core contract gap. Owner
-confirmation of the new audience pages and the retained online release gate
-remain outstanding. The real Godot smoke sample does not yet execute live
-navigation; the test-only contract is not
-represented as that implementation. Dungeon traversal rules remain Order 9.
+O8-R8 source/document review found no remaining core contract gap. The owner
+confirmed the three audience pages on 19 September 2026, promoting them to
+`reviewed`. The retained online release gate remains outstanding. The real
+Godot smoke sample does not yet execute live navigation; the test-only
+contract is not represented as that implementation. Dungeon traversal rules
+remain Order 9.
 
 ## Deferred Documentation
 

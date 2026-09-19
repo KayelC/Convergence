@@ -281,19 +281,19 @@
     {
       "id": "navigation",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
-        "reason": "Order 8 owner decisions and current navigation behavior are documented; independent closure review remains pending."
+        "reason": "The independent Order 8 source/document audit reconciled generic navigation behavior, and the project owner confirmed this mechanics page on 19 September 2026."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/generic-navigation.md"],
-        "reason": "Order 8 guide covers policy composition and host adoption; independent closure review remains pending."
+        "reason": "The independent Order 8 source/document audit checked policy composition and host adoption, and the project owner confirmed this guide on 19 September 2026."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/generic-navigation-runtime.md"],
-        "reason": "Order 8 runtime authority and diagrams are documented; independent closure review remains pending."
+        "reason": "The independent Order 8 source/document audit checked runtime authority and diagrams, and the project owner confirmed this reference on 19 September 2026."
       }
     },
     {
