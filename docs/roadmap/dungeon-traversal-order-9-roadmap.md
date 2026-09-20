@@ -55,7 +55,7 @@ owner rather than silently choosing a content or save model.
 | O9-R2: live traversal boundary | complete | Reject default/empty dungeon, node, and transition IDs before policy evaluation; define non-mutating typed policy-fault behavior. Test null/throwing policies, cancellation, source/dungeon mismatch precedence, and unchanged visited state under O9-D6. |
 | O9-R3: public result authority | complete | Seal traversal/state-change result and event coherence, including malformed custom-service results and record cloning. Keep before/after snapshots and ordered events immutable; no silent fallback. |
 | O9-R4: field/save/host boundary | complete | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D4/D5. |
-| O9-R5: checkpoint and boss recording | pending | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
+| O9-R5: checkpoint and boss recording | complete | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
 | O9-R6: authored floor and encounter contract | pending | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
 | O9-R7: audience documentation | pending | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. Promote coverage entries only after source verification and owner review. |
 | O9-R8: independent closure | pending | Fresh code and document review across traversal, navigation, `RuntimeFieldSnapshot`, `CurrentSaveContext`, save validator/restore, content, DemoHost, and Godot contract. Run and retain the full release gate. Close only if no concrete gap remains and all applicable audience entries are `reviewed`. |
@@ -152,3 +152,20 @@ and Godot contract (five) tests passed. The full Release suite passed 1,886
 Framework, 189 DemoHost, and seven ContentValidator tests; zero failures or
 skips. Strict solution build had zero warnings and formatting verification
 passed. This checkpoint does not add a Godot scene API to Framework.
+
+O9-R5 requires hosts to inject an immutable `RuntimeDungeonProgressRegistry`
+alongside the traversal policy. Each declaration names checkpoint or boss,
+progress ID, dungeon ID, and permitted node IDs; null/duplicate/invalid
+declarations are rejected. `UnlockCheckpoint` and `RegisterBossDefeat` check
+malformed IDs, unknown eligibility, wrong dungeon, and wrong area before
+idempotence. Their typed results carry progress kind and ID, and rejected
+reports retain the exact live snapshot with no event. Merely traversing a node
+does not register victory; a lost encounter can issue no report, while a host
+may report battle, puzzle, or script success without supplying battle proof.
+Training Annex explicitly registers its Review Checkpoint at Review Alcove;
+hosts without progress mechanics inject an empty registry. This is a
+pre-release API break for the service and state-change result constructors;
+integrators must recompile and inject their declarations. Fourteen focused
+traversal tests and the full Release suite passed: 1,889 Framework, 189
+DemoHost, seven ContentValidator tests; zero failures/skips. Strict solution
+build had zero warnings and formatting verification passed.

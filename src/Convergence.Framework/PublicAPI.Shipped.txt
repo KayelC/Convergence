@@ -5384,9 +5384,25 @@ Convergence.Runtime.RuntimeCheckpointLogSnapshot.<Clone>$() -> Convergence.Runti
 Convergence.Runtime.RuntimeCheckpointLogSnapshot.Entries.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeCheckpointEntrySnapshot!>!
 Convergence.Runtime.RuntimeCheckpointLogSnapshot.Equals(Convergence.Runtime.RuntimeCheckpointLogSnapshot? other) -> bool
 Convergence.Runtime.RuntimeCheckpointLogSnapshot.RuntimeCheckpointLogSnapshot(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeCheckpointEntrySnapshot!>? entries = null) -> void
+Convergence.Runtime.RuntimeDungeonProgressEligibility
+Convergence.Runtime.RuntimeDungeonProgressEligibility.AllowedNodeIds.get -> System.Collections.Generic.IReadOnlyList<Convergence.Content.ContentId>!
+Convergence.Runtime.RuntimeDungeonProgressEligibility.DungeonId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeDungeonProgressEligibility.Kind.get -> Convergence.Runtime.RuntimeDungeonProgressKind
+Convergence.Runtime.RuntimeDungeonProgressEligibility.ProgressId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeDungeonProgressEligibility.RuntimeDungeonProgressEligibility(Convergence.Runtime.RuntimeDungeonProgressKind kind, Convergence.Content.ContentId progressId, Convergence.Content.ContentId dungeonId, System.Collections.Generic.IEnumerable<Convergence.Content.ContentId>! allowedNodeIds) -> void
+Convergence.Runtime.RuntimeDungeonProgressKind
+Convergence.Runtime.RuntimeDungeonProgressKind.Boss = 1 -> Convergence.Runtime.RuntimeDungeonProgressKind
+Convergence.Runtime.RuntimeDungeonProgressKind.Checkpoint = 0 -> Convergence.Runtime.RuntimeDungeonProgressKind
+Convergence.Runtime.RuntimeDungeonProgressRegistry
+Convergence.Runtime.RuntimeDungeonProgressRegistry.Eligibility.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeDungeonProgressEligibility!>!
+Convergence.Runtime.RuntimeDungeonProgressRegistry.RuntimeDungeonProgressRegistry(System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeDungeonProgressEligibility!>! eligibility) -> void
 Convergence.Runtime.RuntimeDungeonStateChangeCode
 Convergence.Runtime.RuntimeDungeonStateChangeCode.AlreadyRecorded = 1 -> Convergence.Runtime.RuntimeDungeonStateChangeCode
 Convergence.Runtime.RuntimeDungeonStateChangeCode.Applied = 0 -> Convergence.Runtime.RuntimeDungeonStateChangeCode
+Convergence.Runtime.RuntimeDungeonStateChangeCode.AreaMismatch = 5 -> Convergence.Runtime.RuntimeDungeonStateChangeCode
+Convergence.Runtime.RuntimeDungeonStateChangeCode.DungeonMismatch = 4 -> Convergence.Runtime.RuntimeDungeonStateChangeCode
+Convergence.Runtime.RuntimeDungeonStateChangeCode.InvalidRequest = 2 -> Convergence.Runtime.RuntimeDungeonStateChangeCode
+Convergence.Runtime.RuntimeDungeonStateChangeCode.NotEligible = 3 -> Convergence.Runtime.RuntimeDungeonStateChangeCode
 Convergence.Runtime.RuntimeDungeonStateChangeResult
 Convergence.Runtime.RuntimeDungeonStateChangeResult.<Clone>$() -> Convergence.Runtime.RuntimeDungeonStateChangeResult!
 Convergence.Runtime.RuntimeDungeonStateChangeResult.After.get -> Convergence.Runtime.RuntimeDungeonTraversalSnapshot!
@@ -5395,7 +5411,9 @@ Convergence.Runtime.RuntimeDungeonStateChangeResult.Before.get -> Convergence.Ru
 Convergence.Runtime.RuntimeDungeonStateChangeResult.Code.get -> Convergence.Runtime.RuntimeDungeonStateChangeCode
 Convergence.Runtime.RuntimeDungeonStateChangeResult.Equals(Convergence.Runtime.RuntimeDungeonStateChangeResult? other) -> bool
 Convergence.Runtime.RuntimeDungeonStateChangeResult.Events.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeDungeonTraversalEvent!>!
-Convergence.Runtime.RuntimeDungeonStateChangeResult.RuntimeDungeonStateChangeResult(Convergence.Runtime.RuntimeDungeonStateChangeCode code, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! before, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! after, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeDungeonTraversalEvent!>? events = null) -> void
+Convergence.Runtime.RuntimeDungeonStateChangeResult.ProgressId.get -> Convergence.Content.ContentId
+Convergence.Runtime.RuntimeDungeonStateChangeResult.ProgressKind.get -> Convergence.Runtime.RuntimeDungeonProgressKind
+Convergence.Runtime.RuntimeDungeonStateChangeResult.RuntimeDungeonStateChangeResult(Convergence.Runtime.RuntimeDungeonStateChangeCode code, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! before, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! after, Convergence.Runtime.RuntimeDungeonProgressKind progressKind, Convergence.Content.ContentId progressId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeDungeonTraversalEvent!>? events = null) -> void
 Convergence.Runtime.RuntimeDungeonTraversalCode
 Convergence.Runtime.RuntimeDungeonTraversalCode.Applied = 0 -> Convergence.Runtime.RuntimeDungeonTraversalCode
 Convergence.Runtime.RuntimeDungeonTraversalCode.DungeonMismatch = 1 -> Convergence.Runtime.RuntimeDungeonTraversalCode
@@ -5467,7 +5485,7 @@ Convergence.Runtime.RuntimeDungeonTraversalRequestField.TransitionDungeonId = 3 
 Convergence.Runtime.RuntimeDungeonTraversalRequestField.TransitionId = 2 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
 Convergence.Runtime.RuntimeDungeonTraversalService
 Convergence.Runtime.RuntimeDungeonTraversalService.RegisterBossDefeat(Convergence.Runtime.RuntimeDungeonTraversalSnapshot! current, Convergence.Content.ContentId bossId) -> Convergence.Runtime.RuntimeDungeonStateChangeResult!
-Convergence.Runtime.RuntimeDungeonTraversalService.RuntimeDungeonTraversalService(Convergence.Runtime.IRuntimeDungeonTraversalPolicy! policy) -> void
+Convergence.Runtime.RuntimeDungeonTraversalService.RuntimeDungeonTraversalService(Convergence.Runtime.IRuntimeDungeonTraversalPolicy! policy, Convergence.Runtime.RuntimeDungeonProgressRegistry! progressRegistry) -> void
 Convergence.Runtime.RuntimeDungeonTraversalService.Traverse(Convergence.Runtime.RuntimeDungeonTraversalSnapshot! current, Convergence.Runtime.RuntimeDungeonTraversalTransition! transition) -> Convergence.Runtime.RuntimeDungeonTraversalResult!
 Convergence.Runtime.RuntimeDungeonTraversalService.UnlockCheckpoint(Convergence.Runtime.RuntimeDungeonTraversalSnapshot! current, Convergence.Content.ContentId checkpointId) -> Convergence.Runtime.RuntimeDungeonStateChangeResult!
 Convergence.Runtime.RuntimeDungeonTraversalSnapshot

@@ -92,7 +92,7 @@ public sealed class GodotIntegrationContractTests
         var current = new RuntimeDungeonTraversalSnapshot(Id("sample:depths"), Id("sample:entry"));
         var transition = new RuntimeDungeonTraversalTransition(
             Id("sample:door"), Id("sample:depths"), Id("sample:entry"), Id("sample:hall"));
-        var service = new RuntimeDungeonTraversalService(new GodotDungeonPolicy());
+        var service = new RuntimeDungeonTraversalService(new GodotDungeonPolicy(), new RuntimeDungeonProgressRegistry([]));
         var scenes = new Dictionary<ContentId, GodotSceneHandle>
         {
             [Id("sample:hall")] = new("res://scenes/hall.tscn", "/root/Hall")

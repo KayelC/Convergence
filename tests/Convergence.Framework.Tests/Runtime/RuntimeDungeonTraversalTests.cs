@@ -6,11 +6,13 @@ namespace Convergence.Framework.Tests.Runtime;
 
 public sealed class RuntimeDungeonTraversalTests
 {
+    private static readonly RuntimeDungeonProgressRegistry EmptyRegistry = new([]);
+
     [Fact]
     public void Traversal_UsesArbitraryNodesAndRequiresExplicitReverseTransitions()
     {
         var policy = new MutableDungeonPolicy { IsAllowed = true };
-        var service = new RuntimeDungeonTraversalService(policy);
+        var service = new RuntimeDungeonTraversalService(policy, EmptyRegistry);
         var initial = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry_scene"));
         var enterRoom = new RuntimeDungeonTraversalTransition(
             Id("enter_reading_room"),
@@ -53,7 +55,7 @@ public sealed class RuntimeDungeonTraversalTests
             ReasonId = Id("sealed_door"),
             Message = "The route is sealed."
         };
-        var service = new RuntimeDungeonTraversalService(policy);
+        var service = new RuntimeDungeonTraversalService(policy, EmptyRegistry);
         var initial = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("reading_room"));
         var transition = new RuntimeDungeonTraversalTransition(
             Id("open_restricted_stacks"),
@@ -82,7 +84,7 @@ public sealed class RuntimeDungeonTraversalTests
             Id("room"));
 
         RuntimeDungeonTraversalResult result =
-            new RuntimeDungeonTraversalService(policy).Traverse(current, wrongDungeon);
+            new RuntimeDungeonTraversalService(policy, EmptyRegistry).Traverse(current, wrongDungeon);
 
         Assert.Equal(RuntimeDungeonTraversalCode.DungeonMismatch, result.Code);
         Assert.Same(current, result.After);
@@ -93,7 +95,7 @@ public sealed class RuntimeDungeonTraversalTests
     public void Traversal_RejectsEveryEmptyRequestIdBeforeMismatchOrPolicy()
     {
         var policy = new MutableDungeonPolicy { IsAllowed = true };
-        var service = new RuntimeDungeonTraversalService(policy);
+        var service = new RuntimeDungeonTraversalService(policy, EmptyRegistry);
         var valid = new RuntimeDungeonTraversalTransition(Id("move"), Id("archive"), Id("entry"), Id("room"));
         var initial = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
         var cases = new (RuntimeDungeonTraversalSnapshot Current, RuntimeDungeonTraversalTransition Transition, RuntimeDungeonTraversalRequestField Field)[]
@@ -132,7 +134,7 @@ public sealed class RuntimeDungeonTraversalTests
             (new DelegateDungeonPolicy(_ => throw new InvalidOperationException("broken")), RuntimeDungeonTraversalCode.PolicyFaulted, RuntimeDungeonTraversalPolicyFaultKind.Exception)
         })
         {
-            RuntimeDungeonTraversalResult result = new RuntimeDungeonTraversalService(policy).Traverse(initial, transition);
+            RuntimeDungeonTraversalResult result = new RuntimeDungeonTraversalService(policy, EmptyRegistry).Traverse(initial, transition);
             Assert.Equal(code, result.Code);
             Assert.Equal(faultKind, result.FaultKind);
             Assert.Same(initial, result.After);
@@ -147,10 +149,10 @@ public sealed class RuntimeDungeonTraversalTests
         var initial = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
         var transition = new RuntimeDungeonTraversalTransition(Id("move"), Id("archive"), Id("entry"), Id("room"));
         Assert.Throws<OperationCanceledException>(() =>
-            new RuntimeDungeonTraversalService(new DelegateDungeonPolicy(_ => throw new OperationCanceledException()))
+            new RuntimeDungeonTraversalService(new DelegateDungeonPolicy(_ => throw new OperationCanceledException()), EmptyRegistry)
                 .Traverse(initial, transition));
         Assert.Throws<OutOfMemoryException>(() =>
-            new RuntimeDungeonTraversalService(new DelegateDungeonPolicy(_ => throw new OutOfMemoryException()))
+            new RuntimeDungeonTraversalService(new DelegateDungeonPolicy(_ => throw new OutOfMemoryException()), EmptyRegistry)
                 .Traverse(initial, transition));
         Assert.Equal([Id("entry")], initial.VisitedNodeIds);
     }
@@ -161,7 +163,8 @@ public sealed class RuntimeDungeonTraversalTests
         var initial = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
         var transition = new RuntimeDungeonTraversalTransition(Id("move"), Id("archive"), Id("entry"), Id("room"));
         var service = new RuntimeDungeonTraversalService(
-            new DelegateDungeonPolicy(_ => new RuntimeDungeonTraversalPolicyDecision(false, (ContentId?)default(ContentId))));
+            new DelegateDungeonPolicy(_ => new RuntimeDungeonTraversalPolicyDecision(false, (ContentId?)default(ContentId))),
+            EmptyRegistry);
 
         RuntimeDungeonTraversalResult result = service.Traverse(initial, transition);
 
@@ -207,15 +210,15 @@ public sealed class RuntimeDungeonTraversalTests
             RuntimeDungeonTraversalEventKind.CheckpointUnlocked, Id("other"), Id("terminal"));
 
         Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
-            RuntimeDungeonStateChangeCode.Applied, before, moved, [checkpoint]));
+            RuntimeDungeonStateChangeCode.Applied, before, moved, RuntimeDungeonProgressKind.Checkpoint, Id("terminal"), [checkpoint]));
         Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
-            RuntimeDungeonStateChangeCode.Applied, before, before, [checkpoint]));
+            RuntimeDungeonStateChangeCode.Applied, before, before, RuntimeDungeonProgressKind.Checkpoint, Id("terminal"), [checkpoint]));
         Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
-            RuntimeDungeonStateChangeCode.Applied, before, before, [otherDungeon]));
+            RuntimeDungeonStateChangeCode.Applied, before, before, RuntimeDungeonProgressKind.Checkpoint, Id("terminal"), [otherDungeon]));
         Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
-            RuntimeDungeonStateChangeCode.AlreadyRecorded, before, moved));
+            RuntimeDungeonStateChangeCode.AlreadyRecorded, before, moved, RuntimeDungeonProgressKind.Checkpoint, Id("terminal")));
         Assert.Throws<ArgumentOutOfRangeException>(() => new RuntimeDungeonStateChangeResult(
-            (RuntimeDungeonStateChangeCode)999, before, before));
+            (RuntimeDungeonStateChangeCode)999, before, before, RuntimeDungeonProgressKind.Checkpoint, Id("terminal")));
     }
 
     [Fact]
@@ -224,7 +227,7 @@ public sealed class RuntimeDungeonTraversalTests
         var before = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
         var transition = new RuntimeDungeonTraversalTransition(Id("move"), Id("archive"), Id("entry"), Id("room"));
         RuntimeDungeonTraversalResult result = new RuntimeDungeonTraversalService(
-            new MutableDungeonPolicy { IsAllowed = true }).Traverse(before, transition);
+            new MutableDungeonPolicy { IsAllowed = true }, EmptyRegistry).Traverse(before, transition);
         RuntimeDungeonTraversalResult clone = result with { };
 
         Assert.Null(typeof(RuntimeDungeonTraversalEvent).GetProperty(nameof(RuntimeDungeonTraversalEvent.Kind))!.SetMethod);
@@ -240,7 +243,14 @@ public sealed class RuntimeDungeonTraversalTests
     public void DungeonTraversal_RecordsCheckpointsAndBossesIdempotently()
     {
         var service = new RuntimeDungeonTraversalService(
-            new MutableDungeonPolicy { IsAllowed = true });
+            new MutableDungeonPolicy { IsAllowed = true },
+            new RuntimeDungeonProgressRegistry(
+            [
+                new RuntimeDungeonProgressEligibility(
+                    RuntimeDungeonProgressKind.Checkpoint, Id("reading_room_terminal"), Id("archive"), [Id("entry")]),
+                new RuntimeDungeonProgressEligibility(
+                    RuntimeDungeonProgressKind.Boss, Id("paper_guardian"), Id("archive"), [Id("entry")])
+            ]));
         var initial = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
 
         RuntimeDungeonStateChangeResult checkpoint =
@@ -263,6 +273,104 @@ public sealed class RuntimeDungeonTraversalTests
         Assert.Equal(RuntimeDungeonTraversalEventKind.BossDefeated, Assert.Single(boss.Events).Kind);
         Assert.Equal(RuntimeDungeonStateChangeCode.AlreadyRecorded, duplicateBoss.Code);
         Assert.Same(boss.After, duplicateBoss.After);
+    }
+
+    [Fact]
+    public void ProgressRegistry_DefensivelyCopiesAndRejectsAmbiguousDeclarations()
+    {
+        var areas = new List<ContentId> { Id("entry") };
+        var declarations = new List<RuntimeDungeonProgressEligibility>
+        {
+            new(RuntimeDungeonProgressKind.Checkpoint, Id("terminal"), Id("archive"), areas)
+        };
+        var registry = new RuntimeDungeonProgressRegistry(declarations);
+        areas.Add(Id("hall"));
+        declarations.Clear();
+
+        RuntimeDungeonProgressEligibility entry = Assert.Single(registry.Eligibility);
+        Assert.Equal([Id("entry")], entry.AllowedNodeIds);
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<RuntimeDungeonProgressEligibility>)registry.Eligibility).Clear());
+        Assert.Throws<NotSupportedException>(() =>
+            ((IList<ContentId>)entry.AllowedNodeIds).Add(Id("hall")));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonProgressRegistry([entry, entry]));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonProgressEligibility(
+            RuntimeDungeonProgressKind.Boss, default, Id("archive"), [Id("entry")]));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonProgressEligibility(
+            RuntimeDungeonProgressKind.Boss, Id("guardian"), Id("archive"), []));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonProgressEligibility(
+            RuntimeDungeonProgressKind.Boss, Id("guardian"), Id("archive"), [Id("entry"), Id("entry")]));
+    }
+
+    [Fact]
+    public void ProgressReports_RejectInvalidUnknownWrongDungeonAndWrongAreaWithoutMutation()
+    {
+        var registry = new RuntimeDungeonProgressRegistry(
+        [
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Checkpoint, Id("terminal"), Id("archive"), [Id("entry")]),
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Boss, Id("guardian"), Id("archive"), [Id("room")])
+        ]);
+        var service = new RuntimeDungeonTraversalService(new MutableDungeonPolicy { IsAllowed = true }, registry);
+        var entry = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
+        var room = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("room"));
+        var other = new RuntimeDungeonTraversalSnapshot(Id("other"), Id("entry"));
+        var cases = new (RuntimeDungeonStateChangeResult Result, RuntimeDungeonStateChangeCode Code)[]
+        {
+            (service.UnlockCheckpoint(entry, default), RuntimeDungeonStateChangeCode.InvalidRequest),
+            (service.UnlockCheckpoint(entry, Id("unknown")), RuntimeDungeonStateChangeCode.NotEligible),
+            (service.UnlockCheckpoint(other, Id("terminal")), RuntimeDungeonStateChangeCode.DungeonMismatch),
+            (service.UnlockCheckpoint(room, Id("terminal")), RuntimeDungeonStateChangeCode.AreaMismatch),
+            (service.RegisterBossDefeat(entry, Id("guardian")), RuntimeDungeonStateChangeCode.AreaMismatch),
+            (service.UnlockCheckpoint(new RuntimeDungeonTraversalSnapshot(default, Id("entry")), Id("terminal")),
+                RuntimeDungeonStateChangeCode.InvalidRequest)
+        };
+
+        foreach (var (result, code) in cases)
+        {
+            Assert.Equal(code, result.Code);
+            Assert.Same(result.Before, result.After);
+            Assert.Empty(result.Events);
+            Assert.Empty(result.After.UnlockedCheckpointIds);
+            Assert.Empty(result.After.DefeatedBossIds);
+        }
+
+        RuntimeDungeonStateChangeResult first = service.UnlockCheckpoint(entry, Id("terminal"));
+        RuntimeDungeonStateChangeResult wrongAreaDuplicate = service.UnlockCheckpoint(
+            new RuntimeDungeonTraversalSnapshot(
+                Id("archive"), Id("room"), unlockedCheckpointIds: first.After.UnlockedCheckpointIds),
+            Id("terminal"));
+        Assert.Equal(RuntimeDungeonStateChangeCode.AreaMismatch, wrongAreaDuplicate.Code);
+    }
+
+    [Fact]
+    public void BossProgress_IsHostReportedAfterBattleOrPuzzleNotInferredFromTraversalOrLoss()
+    {
+        var registry = new RuntimeDungeonProgressRegistry(
+        [
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Boss, Id("battle_guardian"), Id("archive"), [Id("room")]),
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Boss, Id("puzzle_guardian"), Id("archive"), [Id("room")])
+        ]);
+        var service = new RuntimeDungeonTraversalService(new MutableDungeonPolicy { IsAllowed = true }, registry);
+        var entrance = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
+        RuntimeDungeonTraversalResult entered = service.Traverse(
+            entrance, new RuntimeDungeonTraversalTransition(Id("door"), Id("archive"), Id("entry"), Id("room")));
+
+        // A lost battle issues no success report, so traversal alone leaves both boss records absent.
+        Assert.True(entered.Applied);
+        Assert.Empty(entered.After.DefeatedBossIds);
+        RuntimeDungeonStateChangeResult battleSuccess = service.RegisterBossDefeat(entered.After, Id("battle_guardian"));
+        RuntimeDungeonStateChangeResult puzzleSuccess = service.RegisterBossDefeat(battleSuccess.After, Id("puzzle_guardian"));
+        RuntimeDungeonStateChangeResult duplicate = service.RegisterBossDefeat(puzzleSuccess.After, Id("battle_guardian"));
+
+        Assert.Equal(RuntimeDungeonStateChangeCode.Applied, battleSuccess.Code);
+        Assert.Equal(RuntimeDungeonStateChangeCode.Applied, puzzleSuccess.Code);
+        Assert.Equal([Id("battle_guardian"), Id("puzzle_guardian")], puzzleSuccess.After.DefeatedBossIds);
+        Assert.Equal(RuntimeDungeonStateChangeCode.AlreadyRecorded, duplicate.Code);
+        Assert.Same(puzzleSuccess.After, duplicate.After);
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);

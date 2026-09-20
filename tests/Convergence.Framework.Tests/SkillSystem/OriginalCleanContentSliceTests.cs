@@ -268,7 +268,8 @@ public sealed class OriginalCleanContentSliceTests
         Assert.Contains(block.FixedFloors, floor =>
             floor.Floor == 5 && floor.Kind == DungeonFixedFloorKind.BlockEnd);
 
-        var service = new RuntimeDungeonTraversalService(new AllowDungeonTraversalPolicy());
+        var service = new RuntimeDungeonTraversalService(
+            new AllowDungeonTraversalPolicy(), new RuntimeDungeonProgressRegistry([]));
         var before = new RuntimeDungeonTraversalSnapshot(dungeon.Id, Qualified("annex_entrance"));
         var transition = new RuntimeDungeonTraversalTransition(
             Id("enter_review_hall"),

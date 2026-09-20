@@ -32,7 +32,17 @@ public enum RuntimeDungeonTraversalPolicyFaultKind
 public enum RuntimeDungeonStateChangeCode
 {
     Applied,
-    AlreadyRecorded
+    AlreadyRecorded,
+    InvalidRequest,
+    NotEligible,
+    DungeonMismatch,
+    AreaMismatch
+}
+
+public enum RuntimeDungeonProgressKind
+{
+    Checkpoint,
+    Boss
 }
 
 public enum RuntimeDungeonTraversalEventKind
@@ -112,6 +122,58 @@ public sealed record RuntimeDungeonTraversalPolicyDecision(
     bool IsAllowed,
     ContentId? ReasonId = null,
     string? Message = null);
+
+public sealed class RuntimeDungeonProgressEligibility
+{
+    public RuntimeDungeonProgressEligibility(
+        RuntimeDungeonProgressKind kind,
+        ContentId progressId,
+        ContentId dungeonId,
+        IEnumerable<ContentId> allowedNodeIds)
+    {
+        if (!Enum.IsDefined(kind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+        if (!progressId.IsValid || !dungeonId.IsValid)
+        {
+            throw new ArgumentException("Dungeon progress and dungeon IDs cannot be empty.");
+        }
+        ArgumentNullException.ThrowIfNull(allowedNodeIds);
+        IReadOnlyList<ContentId> nodes = RuntimeSnapshotCollections.List(allowedNodeIds);
+        if (nodes.Count == 0 || nodes.Any(node => !node.IsValid) || nodes.Distinct().Count() != nodes.Count)
+        {
+            throw new ArgumentException("Allowed dungeon areas must be nonempty, valid, and unique.", nameof(allowedNodeIds));
+        }
+
+        Kind = kind;
+        ProgressId = progressId;
+        DungeonId = dungeonId;
+        AllowedNodeIds = nodes;
+    }
+
+    public RuntimeDungeonProgressKind Kind { get; }
+    public ContentId ProgressId { get; }
+    public ContentId DungeonId { get; }
+    public IReadOnlyList<ContentId> AllowedNodeIds { get; }
+}
+
+public sealed class RuntimeDungeonProgressRegistry
+{
+    public RuntimeDungeonProgressRegistry(IEnumerable<RuntimeDungeonProgressEligibility> eligibility)
+    {
+        ArgumentNullException.ThrowIfNull(eligibility);
+        IReadOnlyList<RuntimeDungeonProgressEligibility> entries = RuntimeSnapshotCollections.List(eligibility);
+        if (entries.Any(entry => entry is null) ||
+            entries.Select(entry => (entry.Kind, entry.DungeonId, entry.ProgressId)).Distinct().Count() != entries.Count)
+        {
+            throw new ArgumentException("Dungeon progress eligibility contains null or duplicate entries.", nameof(eligibility));
+        }
+        Eligibility = entries;
+    }
+
+    public IReadOnlyList<RuntimeDungeonProgressEligibility> Eligibility { get; }
+}
 
 public sealed record RuntimeDungeonTraversalEvent
 {
@@ -321,11 +383,15 @@ public sealed record RuntimeDungeonStateChangeResult
         RuntimeDungeonStateChangeCode code,
         RuntimeDungeonTraversalSnapshot before,
         RuntimeDungeonTraversalSnapshot after,
+        RuntimeDungeonProgressKind progressKind,
+        ContentId progressId,
         IEnumerable<RuntimeDungeonTraversalEvent>? events = null)
     {
         Code = code;
         Before = before ?? throw new ArgumentNullException(nameof(before));
         After = after ?? throw new ArgumentNullException(nameof(after));
+        ProgressKind = progressKind;
+        ProgressId = progressId;
         Events = RuntimeSnapshotCollections.List(events);
         ValidateOutcome();
     }
@@ -334,25 +400,56 @@ public sealed record RuntimeDungeonStateChangeResult
     public bool Applied => Code == RuntimeDungeonStateChangeCode.Applied;
     public RuntimeDungeonTraversalSnapshot Before { get; }
     public RuntimeDungeonTraversalSnapshot After { get; }
+    public RuntimeDungeonProgressKind ProgressKind { get; }
+    public ContentId ProgressId { get; }
     public IReadOnlyList<RuntimeDungeonTraversalEvent> Events { get; }
 
     private void ValidateOutcome()
     {
-        if (!Enum.IsDefined(Code))
+        if (!Enum.IsDefined(Code) || !Enum.IsDefined(ProgressKind))
         {
             throw new ArgumentOutOfRangeException(nameof(Code));
         }
+        bool invalidRequest = !Before.DungeonId.IsValid || !Before.CurrentNodeId.IsValid || !ProgressId.IsValid;
+        if (Code == RuntimeDungeonStateChangeCode.InvalidRequest)
+        {
+            if (!invalidRequest || Events.Count != 0 ||
+                !RuntimeDungeonTraversalSnapshotEquality.Same(Before, After))
+            {
+                throw new ArgumentException("Invalid dungeon progress result has inconsistent evidence.");
+            }
+            return;
+        }
+        if (invalidRequest)
+        {
+            throw new ArgumentException("Dungeon progress result contains an invalid request ID.");
+        }
         if (Code == RuntimeDungeonStateChangeCode.AlreadyRecorded)
         {
-            if (Events.Count != 0 || !RuntimeDungeonTraversalSnapshotEquality.Same(Before, After))
+            bool recorded = ProgressKind == RuntimeDungeonProgressKind.Checkpoint
+                ? Before.IsCheckpointUnlocked(ProgressId)
+                : Before.IsBossDefeated(ProgressId);
+            if (!recorded || Events.Count != 0 ||
+                !RuntimeDungeonTraversalSnapshotEquality.Same(Before, After))
             {
                 throw new ArgumentException("Already-recorded result must leave progress unchanged.");
             }
             return;
         }
 
+        if (Code is RuntimeDungeonStateChangeCode.NotEligible or
+            RuntimeDungeonStateChangeCode.DungeonMismatch or
+            RuntimeDungeonStateChangeCode.AreaMismatch)
+        {
+            if (Events.Count != 0 || !RuntimeDungeonTraversalSnapshotEquality.Same(Before, After))
+            {
+                throw new ArgumentException("Rejected dungeon progress must leave state unchanged.");
+            }
+            return;
+        }
+
         if (Events.Count != 1 || Events[0] is not RuntimeDungeonTraversalEvent progress ||
-            progress.DungeonId != Before.DungeonId ||
+            progress.DungeonId != Before.DungeonId || progress.ContentId != ProgressId ||
             Before.DungeonId != After.DungeonId || Before.CurrentNodeId != After.CurrentNodeId ||
             !Before.VisitedNodeIds.SequenceEqual(After.VisitedNodeIds))
         {
@@ -362,9 +459,11 @@ public sealed record RuntimeDungeonStateChangeResult
         RuntimeDungeonTraversalSnapshot expected = progress.Kind switch
         {
             RuntimeDungeonTraversalEventKind.CheckpointUnlocked
-                when !Before.IsCheckpointUnlocked(progress.ContentId) => Before.UnlockCheckpoint(progress.ContentId),
+                when ProgressKind == RuntimeDungeonProgressKind.Checkpoint &&
+                    !Before.IsCheckpointUnlocked(ProgressId) => Before.UnlockCheckpoint(ProgressId),
             RuntimeDungeonTraversalEventKind.BossDefeated
-                when !Before.IsBossDefeated(progress.ContentId) => Before.MarkBossDefeated(progress.ContentId),
+                when ProgressKind == RuntimeDungeonProgressKind.Boss &&
+                    !Before.IsBossDefeated(ProgressId) => Before.MarkBossDefeated(ProgressId),
             _ => throw new ArgumentException("Dungeon progress event does not describe a new record.")
         };
         if (!RuntimeDungeonTraversalSnapshotEquality.Same(expected, After))
@@ -397,10 +496,14 @@ public interface IRuntimeDungeonTraversalService
 public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalService
 {
     private readonly IRuntimeDungeonTraversalPolicy _policy;
+    private readonly RuntimeDungeonProgressRegistry _progressRegistry;
 
-    public RuntimeDungeonTraversalService(IRuntimeDungeonTraversalPolicy policy)
+    public RuntimeDungeonTraversalService(
+        IRuntimeDungeonTraversalPolicy policy,
+        RuntimeDungeonProgressRegistry progressRegistry)
     {
         _policy = policy ?? throw new ArgumentNullException(nameof(policy));
+        _progressRegistry = progressRegistry ?? throw new ArgumentNullException(nameof(progressRegistry));
     }
 
     public RuntimeDungeonTraversalResult Traverse(
@@ -510,53 +613,76 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
 
     public RuntimeDungeonStateChangeResult UnlockCheckpoint(
         RuntimeDungeonTraversalSnapshot current,
-        ContentId checkpointId)
-    {
-        ArgumentNullException.ThrowIfNull(current);
-        if (current.IsCheckpointUnlocked(checkpointId))
-        {
-            return new RuntimeDungeonStateChangeResult(
-                RuntimeDungeonStateChangeCode.AlreadyRecorded,
-                current,
-                current);
-        }
-
-        RuntimeDungeonTraversalSnapshot after = current.UnlockCheckpoint(checkpointId);
-        return new RuntimeDungeonStateChangeResult(
-            RuntimeDungeonStateChangeCode.Applied,
-            current,
-            after,
-            [
-                new RuntimeDungeonTraversalEvent(
-                    RuntimeDungeonTraversalEventKind.CheckpointUnlocked,
-                    current.DungeonId,
-                    checkpointId)
-            ]);
-    }
+        ContentId checkpointId) =>
+        RecordProgress(current, RuntimeDungeonProgressKind.Checkpoint, checkpointId);
 
     public RuntimeDungeonStateChangeResult RegisterBossDefeat(
         RuntimeDungeonTraversalSnapshot current,
-        ContentId bossId)
+        ContentId bossId) =>
+        RecordProgress(current, RuntimeDungeonProgressKind.Boss, bossId);
+
+    private RuntimeDungeonStateChangeResult RecordProgress(
+        RuntimeDungeonTraversalSnapshot current,
+        RuntimeDungeonProgressKind kind,
+        ContentId progressId)
     {
         ArgumentNullException.ThrowIfNull(current);
-        if (current.IsBossDefeated(bossId))
+        RuntimeDungeonStateChangeResult Rejected(RuntimeDungeonStateChangeCode code) =>
+            new(code, current, current, kind, progressId);
+
+        if (!current.DungeonId.IsValid || !current.CurrentNodeId.IsValid || !progressId.IsValid)
+        {
+            return Rejected(RuntimeDungeonStateChangeCode.InvalidRequest);
+        }
+
+        RuntimeDungeonProgressEligibility[] candidates = _progressRegistry.Eligibility
+            .Where(entry => entry.Kind == kind && entry.ProgressId == progressId)
+            .ToArray();
+        if (candidates.Length == 0)
+        {
+            return Rejected(RuntimeDungeonStateChangeCode.NotEligible);
+        }
+
+        RuntimeDungeonProgressEligibility? eligible = candidates.FirstOrDefault(entry =>
+            entry.DungeonId == current.DungeonId);
+        if (eligible is null)
+        {
+            return Rejected(RuntimeDungeonStateChangeCode.DungeonMismatch);
+        }
+        if (!eligible.AllowedNodeIds.Contains(current.CurrentNodeId))
+        {
+            return Rejected(RuntimeDungeonStateChangeCode.AreaMismatch);
+        }
+
+        bool alreadyRecorded = kind == RuntimeDungeonProgressKind.Checkpoint
+            ? current.IsCheckpointUnlocked(progressId)
+            : current.IsBossDefeated(progressId);
+        if (alreadyRecorded)
         {
             return new RuntimeDungeonStateChangeResult(
                 RuntimeDungeonStateChangeCode.AlreadyRecorded,
                 current,
-                current);
+                current,
+                kind,
+                progressId);
         }
 
-        RuntimeDungeonTraversalSnapshot after = current.MarkBossDefeated(bossId);
+        RuntimeDungeonTraversalSnapshot after = kind == RuntimeDungeonProgressKind.Checkpoint
+            ? current.UnlockCheckpoint(progressId)
+            : current.MarkBossDefeated(progressId);
         return new RuntimeDungeonStateChangeResult(
             RuntimeDungeonStateChangeCode.Applied,
             current,
             after,
+            kind,
+            progressId,
             [
                 new RuntimeDungeonTraversalEvent(
-                    RuntimeDungeonTraversalEventKind.BossDefeated,
+                    kind == RuntimeDungeonProgressKind.Checkpoint
+                        ? RuntimeDungeonTraversalEventKind.CheckpointUnlocked
+                        : RuntimeDungeonTraversalEventKind.BossDefeated,
                     current.DungeonId,
-                    bossId)
+                    progressId)
             ]);
     }
 

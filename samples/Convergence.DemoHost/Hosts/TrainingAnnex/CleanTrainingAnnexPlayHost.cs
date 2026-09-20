@@ -394,7 +394,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                 rosterCapacityPolicy) ??
             throw new InvalidOperationException("The combat-profile composition factory returned no service.");
         var navigation = new RuntimeNavigationService(new TrainingAnnexNavigationPolicy());
-        var dungeonTraversal = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());
+        var dungeonTraversal = new RuntimeDungeonTraversalService(
+            new TrainingAnnexDungeonPolicy(), TrainingAnnexHostSupport.ProgressRegistry);
         var actorFactory = new CatalogBattleActorFactory(
             catalog,
             catalog,

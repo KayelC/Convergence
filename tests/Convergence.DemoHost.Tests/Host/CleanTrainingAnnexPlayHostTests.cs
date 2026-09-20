@@ -4325,7 +4325,8 @@ public sealed class CleanTrainingAnnexPlayHostTests
         using var output = new StringWriter();
         var presenter = new TrainingAnnexFieldPresenter(new TextWriterEventSink(output));
         var navigation = new RuntimeNavigationService(new TrainingAnnexNavigationPolicy());
-        var dungeonTraversal = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());
+        var dungeonTraversal = new RuntimeDungeonTraversalService(
+            new TrainingAnnexDungeonPolicy(), TrainingAnnexHostSupport.ProgressRegistry);
         RuntimeFieldSnapshot field = new(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea));
 
         field = await presenter.ApplyNavigationAsync(

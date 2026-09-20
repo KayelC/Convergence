@@ -163,7 +163,8 @@ internal sealed class CleanTrainingAnnexDemoHost
             .ConfigureAwait(false);
 
         DungeonDefinition dungeon = catalog.GetRequiredDungeon(Qualified("training_annex"));
-        var dungeonService = new RuntimeDungeonTraversalService(new TrainingAnnexDungeonPolicy());
+        var dungeonService = new RuntimeDungeonTraversalService(
+            new TrainingAnnexDungeonPolicy(), TrainingAnnexHostSupport.ProgressRegistry);
         var dungeonStart = new RuntimeDungeonTraversalSnapshot(
             dungeon.Id,
             TrainingAnnexEntrance);
