@@ -4357,6 +4357,31 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task TrainingAnnexFieldPresenter_DistinguishesRejectedProgressFromAlreadyUnlocked()
+    {
+        using var output = new StringWriter();
+        var presenter = new TrainingAnnexFieldPresenter(new TextWriterEventSink(output));
+        var service = new RuntimeDungeonTraversalService(
+            new TrainingAnnexDungeonPolicy(), new RuntimeDungeonProgressRegistry([]));
+        var dungeon = new RuntimeDungeonTraversalSnapshot(
+            TrainingAnnexHostSupport.TrainingAnnexDungeon,
+            TrainingAnnexHostSupport.ReviewAlcove);
+        var field = new RuntimeFieldSnapshot(
+            new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.TrainingAnnexEntrance),
+            dungeon);
+
+        RuntimeFieldSnapshot after = await presenter.ApplyDungeonStateChangeAsync(
+            field,
+            service.UnlockCheckpoint(dungeon, TrainingAnnexHostSupport.ReviewCheckpoint),
+            CancellationToken.None);
+
+        Assert.Same(field, after);
+        Assert.Empty(dungeon.UnlockedCheckpointIds);
+        Assert.Contains("Dungeon progress rejected: NotEligible.", output.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("already unlocked", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingAnnexSaveContext_UsesLogicalLocationRatherThanRetainedDungeonProgress()
     {
         var dungeon = new RuntimeDungeonTraversalSnapshot(

@@ -69,7 +69,9 @@ internal sealed class TrainingAnnexFieldPresenter
         if (!change.Applied)
         {
             await _eventSink.PublishAsync(
-                "Dungeon state unchanged: checkpoint was already unlocked.",
+                change.Code == RuntimeDungeonStateChangeCode.AlreadyRecorded
+                    ? "Dungeon state unchanged: checkpoint was already unlocked."
+                    : $"Dungeon progress rejected: {change.Code}.",
                 cancellationToken).ConfigureAwait(false);
             return field;
         }

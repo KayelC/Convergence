@@ -182,3 +182,12 @@ change was introduced. Twenty-five focused content tests and the full Release
 suite passed: 1,891 Framework, 189 DemoHost, seven ContentValidator tests;
 zero failures/skips. Strict solution build had zero warnings and formatting
 verification passed.
+
+During O9-R7 source reconciliation, a host-only R5 follow-up was found:
+`TrainingAnnexFieldPresenter` described every non-applied progress result as
+"already unlocked," even when the new typed result was `NotEligible`,
+`AreaMismatch`, or another rejection. The presenter now preserves its existing
+already-recorded text only for `AlreadyRecorded` and names other rejection
+codes without adopting state. One focused regression and the full Release
+suite passed: 1,891 Framework, 190 DemoHost, seven ContentValidator tests;
+zero failures/skips. Strict build had zero warnings and formatting passed.
