@@ -209,6 +209,13 @@ adopts it after its own presentation or scene work succeeds; it may retain the
 old location on host failure. See the [developer integration guide](developer-guide/generic-navigation.md)
 and [technical state machine](technical/generic-navigation-runtime.md).
 
+Dungeon traversal separately approves meaningful node changes and validates
+explicit checkpoint/boss reports against host-declared eligible IDs and areas.
+Authored floor metadata never starts combat. A host may retain progress while
+outside and must select an entrance or unlocked checkpoint on re-entry. See the
+[dungeon integration guide](developer-guide/dungeon-traversal.md) and
+[technical state/sequence reference](technical/dungeon-traversal-runtime.md).
+
 ## Fusion, Inheritance, And Compendium
 
 Fusion services resolve typed recipes and strategy policies, build deterministic candidate plans, validate inherited skill selections, construct previews, and assess transactions. Inheritance precedence is typed and shared between preview and commit. Compendium services distinguish first acquisition from explicit updates: `RecordAcquisition` adds a missing entry but preserves an existing snapshot, while `RegisterActor` is the deliberate add-or-update operation. Recall pricing and familiar-knowledge import remain separately configurable.

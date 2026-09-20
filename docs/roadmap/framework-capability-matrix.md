@@ -77,11 +77,13 @@ records the evidence. The real Godot smoke sample does not navigate live
 scenes; that remains separate host work.
 
 `dungeon_traversal` has usable immutable node progress and policy-approved
-transitions, but Order 9 is open and its implementation is `partial`. The
-[Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
-records live-input, progress-eligibility, and navigation/save-host gaps. The
-[Order 9 roadmap](dungeon-traversal-order-9-roadmap.md) keeps host-owned spatial
-movement and explicit encounter triggers separate from logical traversal.
+transitions. O9-R2 through O9-R6 corrected live-input, result-authority,
+progress-eligibility, navigation/save-host, and optional authored-floor gaps.
+The [Order 9 roadmap](dungeon-traversal-order-9-roadmap.md) keeps host-owned
+spatial movement and explicit encounter triggers separate from logical
+traversal. O9-R7 has written the three audience pages, but independent audit,
+owner documentation confirmation, and retained release evidence remain; Order
+9 stays `open` and its implementation state remains `partial` until closure.
 
 `inventory_equipment_economy` is `implemented`, and Order 7 is `closed`. Its immutable transaction and
 validation foundation is usable. O7-R2 gives each equipment copy a unique

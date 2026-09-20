@@ -16,7 +16,7 @@ It covers the same 25 capability IDs as the
 ## Current Reading
 
 The documentation matrix currently records 75 audience entries: 36 reviewed,
-20 existing_unreviewed, 12 missing, and 7 not_applicable.
+21 existing_unreviewed, 11 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -41,6 +41,12 @@ developer guide, and a technical state-machine reference. The independent
 review and project-owner confirmation make all three `reviewed`. Order 8
 closed after the retained online release gate passed. The real Godot
 smoke sample does not yet execute live navigation.
+Order 9 now has a source-reconciled dungeon mechanics section, a developer
+integration guide, and a technical state/sequence reference. O9-R7 wrote
+these audience pages after the runtime corrections. All three remain
+`existing_unreviewed` pending independent source/document review and
+project-owner confirmation; neither the guide's presence nor passing tests
+closes the Order.
 Order 7 now documents inventory-owned equipment instances, authored slot
 layouts, one live equipment profile, typed currencies, resolved pricing,
 policy-owned stock, atomic shops, recovery, and save v19 across player,

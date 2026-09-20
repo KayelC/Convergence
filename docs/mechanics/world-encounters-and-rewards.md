@@ -36,17 +36,49 @@ under Order 13.
 
 ## Optional Dungeon Traversal
 
-Dungeon traversal is separate from navigation. It uses arbitrary dungeon/node
-IDs and an injected policy to allow or block requested node transitions; a
-barrier can be represented by a rejected transition. Currently the game
-explicitly reports checkpoint unlocks and boss defeats, which are recorded
-idempotently but are not checked against a battle result or dungeon content.
-The [approved Order 9 direction](../decisions/dungeon-progress-reporting.md) is
-to validate host-reported progress against an eligible dungeon/area list; that
-validation is not implemented yet. Entering a location does not automatically
-move through dungeon nodes or start combat.
+Dungeon traversal is optional and separate from navigation. Navigation answers
+which logical location the player occupies; traversal tracks a meaningful node
+inside a dungeon, visited nodes, unlocked checkpoints, and defeated bosses.
+It does not move a character through every step of a 3D scene. A door, stairs,
+barrier, or script can request a node transition. Reverse travel needs its own
+transition.
 
-**Host responsibility:** scenes, doors, stairs, spatial enemies, animations, and map presentation. The host calls traversal or encounter services when its world logic says an event occurred.
+**Framework rule:** a move checks its dungeon, node, and transition IDs, then
+whether the current dungeon and source node match. The game's supplied route
+rule decides whether a valid move is allowed. A sealed barrier can therefore
+reject a move without changing the player's node or visited history. Invalid
+IDs, wrong dungeon, wrong source, legal route denial, and a malfunctioning
+route rule have distinct outcomes. Cancellation is not turned into a denial.
+
+**Progress rule:** the game may report a checkpoint unlock or boss defeat only
+after its own success condition. The Framework checks a game-supplied list of
+eligible checkpoint/boss IDs, their dungeon, and allowed areas before recording
+progress. Malformed, unknown, wrong-dungeon, and wrong-area reports leave
+progress unchanged. Repeating a valid report is harmless. Merely entering a
+node never unlocks a checkpoint or defeats a boss. Success may come from a
+battle, puzzle, or story script; the Framework does not require battle-result
+proof for every game design.
+
+**Authored content:** a dungeon may describe floor ranges, encounter pools,
+and fixed-floor metadata. These are optional catalog facts, not orders to move
+the player or start combat. A floor may have no visible enemy, one enemy, or
+several host-triggered encounters. The game chooses when to prepare an
+encounter. A fixed battle floor's encounter ID is a reference that the host
+may use; it is not a one-battle-per-entry limit.
+
+**Host responsibility:** Godot scenes, spatial movement, doors, visible
+enemies, animations, UI, and map presentation remain with the game. Framework
+approval offers a candidate node. The game adopts it only after its scene work
+succeeds. Leaving a dungeon can retain remembered progress while disabling
+active dungeon actions. Re-entry selects an entrance or an unlocked checkpoint
+explicitly; it does not silently resume at the last visited node. A host that
+requires an inside-dungeon position must reject an inside save missing that
+position before adoption. Generic games may still save navigation without
+dungeon state.
+
+The [dungeon progress decision](../decisions/dungeon-progress-reporting.md)
+records the approved rule, and the [developer guide](../developer-guide/dungeon-traversal.md)
+shows how a game supplies the route rule and progress list.
 
 ## Encounter Content And Preparation
 

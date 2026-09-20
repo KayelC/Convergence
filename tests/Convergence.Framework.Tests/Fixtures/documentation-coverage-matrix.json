@@ -301,17 +301,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
-        "reason": "Traversal concepts exist but need node, trigger, encounter, and boss rule confirmation."
+        "reason": "O9-R7 reconciles node, trigger, encounter, and progress rules against current source; independent audit and owner review are pending."
       },
       "developerGuide": {
-        "state": "missing",
-        "documents": [],
-        "reason": "Godot exploration, authored nodes, triggers, and encounter hydration need a guide."
+        "state": "existing_unreviewed",
+        "documents": ["docs/developer-guide/dungeon-traversal.md"],
+        "reason": "O9-R7 documents host route policy, scene adoption, encounters, re-entry, and save checks; independent audit and owner review are pending."
       },
       "technical": {
         "state": "existing_unreviewed",
-        "documents": ["docs/gameplay-systems.md"],
-        "reason": "Traversal snapshots, transition legality, and event ordering need a reviewed technical page."
+        "documents": ["docs/technical/dungeon-traversal-runtime.md"],
+        "reason": "O9-R7 diagrams traversal, progress, adoption, and persistence ordering; independent audit and owner review are pending."
       }
     },
     {

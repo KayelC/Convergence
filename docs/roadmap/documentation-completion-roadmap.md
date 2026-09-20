@@ -735,23 +735,23 @@ traversal rules remain Order 9.
 ## Open Order 9
 
 The [source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
-and [checkpoint roadmap](dungeon-traversal-order-9-roadmap.md) open Order 9.
-`dungeon_traversal` is `partial`: generic node transitions work, but the
-current live boundary, progress eligibility, and accepted-save host behavior
-need correction or explicit owner decisions. This review includes
-`RuntimeFieldSnapshot`, `CurrentSaveContext`, save validation/restore, and the
-Training Annex menu; it is not limited to `DungeonTraversal.cs`. The current
-mechanics page has been corrected to describe actual checkpoint/boss recording,
-but remains `existing_unreviewed`. Developer guidance is still `missing` and
-technical guidance `existing_unreviewed`; no audience entry was promoted by
-this opening checkpoint.
-
-The owner subsequently approved O9-D1 through O9-D6. The
+and [checkpoint roadmap](dungeon-traversal-order-9-roadmap.md) govern Order 9.
+The owner approved O9-D1 through O9-D6; the
 [dungeon-progress decision](../decisions/dungeon-progress-reporting.md) records
 host-reported progress, host-declared eligible IDs/areas, optional floor
 metadata, entrance/checkpoint re-entry, host rejection of incompatible saves,
-and distinct non-mutating failure results. Implementation and audience review
-remain outstanding; approval does not close Order 9.
+and distinct non-mutating failure results. O9-R2 through O9-R6 implement
+those corrections across live traversal, typed results, save/host adoption,
+progress reporting, and authored floor validation. The review includes
+`RuntimeFieldSnapshot`, `CurrentSaveContext`, save validation/restore, and the
+Training Annex menu; it is not limited to `DungeonTraversal.cs`.
+
+O9-R7 reconciles the [mechanics](../mechanics/world-encounters-and-rewards.md),
+[developer guide](../developer-guide/dungeon-traversal.md), and
+[technical reference](../technical/dungeon-traversal-runtime.md). All three
+are `existing_unreviewed` pending independent O9-R8 source/document review and
+project-owner confirmation. `dungeon_traversal` remains `partial` and Order 9
+remains `open`; written guidance and green tests alone do not close it.
 
 ## Deferred Documentation
 
