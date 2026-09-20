@@ -487,6 +487,10 @@ internal sealed class TrainingAnnexPersistenceController
         RuntimeDungeonTraversalSnapshot? dungeon = field.DungeonTraversal;
         if (dungeon is null)
         {
+            if (field.Navigation.CurrentLocationId == TrainingAnnexHostSupport.TrainingAnnexEntrance)
+            {
+                diagnostics.Add("Saved Training Annex location has no active dungeon position.");
+            }
             return;
         }
 

@@ -87,6 +87,41 @@ public sealed class GodotIntegrationContractTests
     }
 
     [Fact]
+    public void GodotDungeonTrigger_DoesNotAdoptApprovedCandidateWhenSceneLoadFails()
+    {
+        var current = new RuntimeDungeonTraversalSnapshot(Id("sample:depths"), Id("sample:entry"));
+        var transition = new RuntimeDungeonTraversalTransition(
+            Id("sample:door"), Id("sample:depths"), Id("sample:entry"), Id("sample:hall"));
+        var service = new RuntimeDungeonTraversalService(new GodotDungeonPolicy());
+        var scenes = new Dictionary<ContentId, GodotSceneHandle>
+        {
+            [Id("sample:hall")] = new("res://scenes/hall.tscn", "/root/Hall")
+        };
+        bool sceneLoadSucceeds = false;
+        RuntimeDungeonTraversalResult TryTraverse()
+        {
+            RuntimeDungeonTraversalResult candidate = service.Traverse(current, transition);
+            if (candidate.Applied && scenes.ContainsKey(candidate.After.CurrentNodeId) && sceneLoadSucceeds)
+            {
+                current = candidate.After;
+            }
+            return candidate;
+        }
+
+        RuntimeDungeonTraversalResult failedScene = TryTraverse();
+        Assert.True(failedScene.Applied);
+        Assert.Equal(Id("sample:hall"), failedScene.After.CurrentNodeId);
+        Assert.Equal(Id("sample:entry"), current.CurrentNodeId);
+        Assert.Equal([Id("sample:entry")], current.VisitedNodeIds);
+
+        sceneLoadSucceeds = true;
+        RuntimeDungeonTraversalResult adopted = TryTraverse();
+        Assert.True(adopted.Applied);
+        Assert.Equal(Id("sample:hall"), current.CurrentNodeId);
+        Assert.Equal([Id("sample:entry"), Id("sample:hall")], current.VisitedNodeIds);
+    }
+
+    [Fact]
     public void GodotHostContract_BindsAndExecutesGenericRecoveryWithoutSceneStateEnteringFramework()
     {
         ContentId credits = Id("godot.sample:credits");
@@ -584,6 +619,12 @@ public sealed class GodotIntegrationContractTests
             IsAllowed
                 ? new RuntimeNavigationPolicyDecision(true)
                 : new RuntimeNavigationPolicyDecision(false, Id("sample:locked"));
+    }
+
+    private sealed class GodotDungeonPolicy : IRuntimeDungeonTraversalPolicy
+    {
+        public RuntimeDungeonTraversalPolicyDecision Evaluate(RuntimeDungeonTraversalPolicyRequest request) =>
+            new(true);
     }
 
     private sealed class GodotNavigationEventSink : IHostEventSink<RuntimeNavigationEvent>

@@ -1028,8 +1028,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                             locationHistory.Add(field.Navigation.CurrentLocationId);
                             field = new RuntimeFieldSnapshot(
                                 field.Navigation,
-                                field.DungeonTraversal ?? new RuntimeDungeonTraversalSnapshot(
-                                    TrainingAnnexHostSupport.TrainingAnnexDungeon,
+                                TrainingAnnexHostSupport.SelectDungeonEntry(
+                                    field.DungeonTraversal,
                                     TrainingAnnexHostSupport.TrainingAnnexEntrance));
                         }
                         break;

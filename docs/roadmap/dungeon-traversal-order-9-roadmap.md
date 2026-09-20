@@ -54,7 +54,7 @@ owner rather than silently choosing a content or save model.
 | O9-R1: opening review | complete | Source-first review, this roadmap, executable `partial`/`open` tracking, and correction of present-tense documentation that overclaims policy authority. No runtime change. |
 | O9-R2: live traversal boundary | complete | Reject default/empty dungeon, node, and transition IDs before policy evaluation; define non-mutating typed policy-fault behavior. Test null/throwing policies, cancellation, source/dungeon mismatch precedence, and unchanged visited state under O9-D6. |
 | O9-R3: public result authority | complete | Seal traversal/state-change result and event coherence, including malformed custom-service results and record cloning. Keep before/after snapshots and ordered events immutable; no silent fallback. |
-| O9-R4: field/save/host boundary | pending | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D4/D5. |
+| O9-R4: field/save/host boundary | complete | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D4/D5. |
 | O9-R5: checkpoint and boss recording | pending | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
 | O9-R6: authored floor and encounter contract | pending | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
 | O9-R7: audience documentation | pending | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. Promote coverage entries only after source verification and owner review. |
@@ -137,3 +137,18 @@ the validated constructor and recompile. Eleven focused traversal tests and
 the full Release suite passed: 1,885 Framework, 186 DemoHost, seven
 ContentValidator tests; zero failures/skips. Strict solution build had zero
 warnings and formatting verification passed.
+
+O9-R4 leaves the generic `RuntimeFieldSnapshot` and save contract unchanged.
+Training Annex now rejects a restored inside location without a dungeon
+position before adopting any actor or field state. `CurrentSaveContext` still
+depends on navigation alone in all four combinations of inside/outside and
+present/absent progress. On entry, the host explicitly selects the entrance;
+its entry helper also accepts the Review Checkpoint only when that checkpoint
+was previously unlocked, preserving visited/unlocked/defeated progress without
+resuming at the last node by accident. A Godot-shaped test keeps an approved
+traversal result as a candidate until a scene load succeeds; failed loading
+leaves the active node and visited list unchanged. Focused Training Annex (122)
+and Godot contract (five) tests passed. The full Release suite passed 1,886
+Framework, 189 DemoHost, and seven ContentValidator tests; zero failures or
+skips. Strict solution build had zero warnings and formatting verification
+passed. This checkpoint does not add a Godot scene API to Framework.

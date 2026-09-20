@@ -159,6 +159,38 @@ internal static class TrainingAnnexHostSupport
         ContentId.Parse("clean_training_annex_ai"),
         RuntimeInstanceId.Parse("review_hall_trigger"));
 
+    public static RuntimeDungeonTraversalSnapshot SelectDungeonEntry(
+        RuntimeDungeonTraversalSnapshot? retained,
+        ContentId selectedEntryId)
+    {
+        if (retained is not null && retained.DungeonId != TrainingAnnexDungeon)
+        {
+            throw new ArgumentException("Retained progress belongs to another dungeon.", nameof(retained));
+        }
+
+        ContentId nodeId;
+        if (selectedEntryId == TrainingAnnexEntrance)
+        {
+            nodeId = TrainingAnnexEntrance;
+        }
+        else if (selectedEntryId == ReviewCheckpoint &&
+                 retained?.IsCheckpointUnlocked(ReviewCheckpoint) == true)
+        {
+            nodeId = ReviewAlcove;
+        }
+        else
+        {
+            throw new ArgumentException("Selected dungeon entry is not an unlocked checkpoint.", nameof(selectedEntryId));
+        }
+
+        return new RuntimeDungeonTraversalSnapshot(
+            TrainingAnnexDungeon,
+            nodeId,
+            retained?.VisitedNodeIds,
+            retained?.UnlockedCheckpointIds,
+            retained?.DefeatedBossIds);
+    }
+
     public static ContentPackTextRequest CreateContentRequest() =>
         new(
             "original/training-annex/training_annex_slice.manifest.json",

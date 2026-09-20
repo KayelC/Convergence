@@ -4375,6 +4375,89 @@ public sealed class CleanTrainingAnnexPlayHostTests
             TrainingAnnexPersistenceController.CurrentSaveContext(annexField, false).ContextId);
         Assert.True(TrainingAnnexPersistenceController.CurrentSaveContext(stagingField, true).HasPendingHostAction);
         Assert.Same(dungeon, stagingField.DungeonTraversal);
+        Assert.Equal(
+            TrainingAnnexHostSupport.FieldMenuSaveContext,
+            TrainingAnnexPersistenceController.CurrentSaveContext(
+                new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea)),
+                false).ContextId);
+        Assert.Equal(
+            TrainingAnnexHostSupport.DungeonMenuSaveContext,
+            TrainingAnnexPersistenceController.CurrentSaveContext(
+                new RuntimeFieldSnapshot(new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.TrainingAnnexEntrance), dungeon),
+                false).ContextId);
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_RejectsInsideSaveWithoutPositionBeforeAdoption()
+    {
+        RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>
+            CopySave(snapshot, field: new RuntimeFieldSnapshot(
+                new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.TrainingAnnexEntrance))));
+        var slots = new TrainingAnnexSaveSlotStore();
+        slots.Save(record);
+        var io = new ScriptedGameIO().QueueMenu(10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, saveSlots: slots);
+
+        Assert.Equal(0, await host.RunAsync());
+
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(0, summary.ManualLoadCount);
+        Assert.Equal(TrainingAnnexHostSupport.StagingArea, summary.FinalLocationId);
+        Assert.Equal(1, summary.SaveDiagnosticCount);
+        Assert.Contains(
+            "Manual load rejected: Saved Training Annex location has no active dungeon position.",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
+    public void TrainingAnnexEntry_SelectsEntranceOrUnlockedCheckpointWithoutUsingLastNode()
+    {
+        var retained = new RuntimeDungeonTraversalSnapshot(
+            TrainingAnnexHostSupport.TrainingAnnexDungeon,
+            TrainingAnnexHostSupport.ReviewHall,
+            unlockedCheckpointIds: [TrainingAnnexHostSupport.ReviewCheckpoint]);
+
+        RuntimeDungeonTraversalSnapshot entrance = TrainingAnnexHostSupport.SelectDungeonEntry(
+            retained, TrainingAnnexHostSupport.TrainingAnnexEntrance);
+        RuntimeDungeonTraversalSnapshot checkpoint = TrainingAnnexHostSupport.SelectDungeonEntry(
+            retained, TrainingAnnexHostSupport.ReviewCheckpoint);
+
+        Assert.Equal(TrainingAnnexHostSupport.TrainingAnnexEntrance, entrance.CurrentNodeId);
+        Assert.Equal(TrainingAnnexHostSupport.ReviewAlcove, checkpoint.CurrentNodeId);
+        Assert.Contains(TrainingAnnexHostSupport.ReviewHall, entrance.VisitedNodeIds);
+        Assert.Contains(TrainingAnnexHostSupport.ReviewCheckpoint, entrance.UnlockedCheckpointIds);
+        Assert.Throws<ArgumentException>(() => TrainingAnnexHostSupport.SelectDungeonEntry(
+            new RuntimeDungeonTraversalSnapshot(
+                TrainingAnnexHostSupport.TrainingAnnexDungeon,
+                TrainingAnnexHostSupport.ReviewHall),
+            TrainingAnnexHostSupport.ReviewCheckpoint));
+    }
+
+    [Fact]
+    public async Task CleanTrainingAnnexPlay_ReentryUsesHostSelectedEntranceWithRetainedProgress()
+    {
+        RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>
+            CopySave(snapshot, field: new RuntimeFieldSnapshot(
+                new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea),
+                new RuntimeDungeonTraversalSnapshot(
+                    TrainingAnnexHostSupport.TrainingAnnexDungeon,
+                    TrainingAnnexHostSupport.ReviewHall))));
+        var slots = new TrainingAnnexSaveSlotStore();
+        slots.Save(record);
+        var io = new ScriptedGameIO().QueueMenu(10, 1, 6, 7, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, saveSlots: slots);
+
+        Assert.Equal(0, await host.RunAsync());
+
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(1, summary.ManualLoadCount);
+        Assert.Equal(TrainingAnnexHostSupport.TrainingAnnexEntrance, summary.FinalDungeonNodeId);
+        Assert.Contains(TrainingAnnexHostSupport.ReviewHall, summary.VisitedDungeonNodeIds);
+        io.AssertConsumed();
     }
 
     [Fact]
