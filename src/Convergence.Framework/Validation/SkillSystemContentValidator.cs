@@ -1016,10 +1016,17 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
                         blockPath + $".encounterPoolIds[{index}]", _encounterIndex, "encounter");
                 }
 
+                var seenFixedFloors = new HashSet<int>();
                 for (int floorIndex = 0; floorIndex < block.FixedFloors.Count; floorIndex++)
                 {
-                    ValidateFixedFloor(source, block, block.FixedFloors[floorIndex],
-                        blockPath + $".fixedFloors[{floorIndex}]");
+                    DungeonFixedFloorDefinition floor = block.FixedFloors[floorIndex];
+                    string floorPath = blockPath + $".fixedFloors[{floorIndex}]";
+                    if (!seenFixedFloors.Add(floor.Floor))
+                    {
+                        Add(source, floorPath + ".floor", ContentValidationErrorCode.ListDuplicateValue,
+                            $"Fixed floor '{floor.Floor}' is listed more than once in block '{block.Id}'.");
+                    }
+                    ValidateFixedFloor(source, block, floor, floorPath);
                 }
             }
         }
@@ -1223,6 +1230,11 @@ public sealed class SkillSystemContentValidator : ISkillSystemContentValidator
             string path)
         {
             RequirePositive(source, floor.Floor, path + ".floor", "Dungeon fixed floor");
+            if (!Enum.IsDefined(floor.Kind))
+            {
+                Add(source, path + ".kind", ContentValidationErrorCode.ShapeInvalid,
+                    $"Dungeon fixed floor kind '{floor.Kind}' is not supported.");
+            }
             if (floor.Floor < block.StartFloor || floor.Floor > block.EndFloor)
             {
                 Add(source, path + ".floor", ContentValidationErrorCode.ValueOutOfRange,

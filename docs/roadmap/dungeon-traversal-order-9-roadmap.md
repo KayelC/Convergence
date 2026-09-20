@@ -56,7 +56,7 @@ owner rather than silently choosing a content or save model.
 | O9-R3: public result authority | complete | Seal traversal/state-change result and event coherence, including malformed custom-service results and record cloning. Keep before/after snapshots and ordered events immutable; no silent fallback. |
 | O9-R4: field/save/host boundary | complete | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D4/D5. |
 | O9-R5: checkpoint and boss recording | complete | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
-| O9-R6: authored floor and encounter contract | pending | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
+| O9-R6: authored floor and encounter contract | complete | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
 | O9-R7: audience documentation | pending | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. Promote coverage entries only after source verification and owner review. |
 | O9-R8: independent closure | pending | Fresh code and document review across traversal, navigation, `RuntimeFieldSnapshot`, `CurrentSaveContext`, save validator/restore, content, DemoHost, and Godot contract. Run and retain the full release gate. Close only if no concrete gap remains and all applicable audience entries are `reviewed`. |
 
@@ -169,3 +169,16 @@ integrators must recompile and inject their declarations. Fourteen focused
 traversal tests and the full Release suite passed: 1,889 Framework, 189
 DemoHost, seven ContentValidator tests; zero failures/skips. Strict solution
 build had zero warnings and formatting verification passed.
+
+O9-R6 keeps `DungeonDefinition` metadata optional and directly readable from
+the catalog. Semantic validation now rejects duplicate fixed-floor numbers
+within one block and unsupported fixed-floor kinds; existing range, encounter
+reference, and required battle/boss encounter checks remain active. An empty
+encounter pool is valid. Training Annex content tests read the authored fixed
+encounter ID and prepare two separate host-triggered encounter plans with
+different actor instance IDs without changing traversal progress or starting
+a battle. No resolver, schema, runtime auto-encounter, or production content
+change was introduced. Twenty-five focused content tests and the full Release
+suite passed: 1,891 Framework, 189 DemoHost, seven ContentValidator tests;
+zero failures/skips. Strict solution build had zero warnings and formatting
+verification passed.

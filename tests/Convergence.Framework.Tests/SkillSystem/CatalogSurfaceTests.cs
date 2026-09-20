@@ -188,6 +188,64 @@ public sealed class CatalogSurfaceTests
     }
 
     [Fact]
+    public void DungeonAuthoring_AllowsEmptyEncounterPoolAndRejectsAmbiguousFixedFloors()
+    {
+        var manifest = new ContentPackManifest(
+            10,
+            "test.pack",
+            SemanticVersion.Parse("1.0.0"),
+            "Test Pack",
+            null,
+            null,
+            [new ContentPackDocumentReference("dungeons", "dungeons.json")]);
+
+        ContentValidationResult Validate(DungeonBlockDefinition block) =>
+            new SkillSystemContentValidator().Validate(new SkillSystemValidationRequest(
+                manifest,
+                "manifest.json",
+                new SkillSystemRegistrationBuilder().Build(),
+                dungeonDocuments:
+                [
+                    Source("dungeons.json", "dungeons.json", new DeserializedContentDocument<DungeonDefinition>(
+                        10,
+                        [new DungeonDefinition(Id("sample_depths"), "Sample Depths", "Test dungeon.", [block])]))
+                ]));
+
+        ContentValidationResult emptyPool = Validate(new DungeonBlockDefinition(Id("first"), "First", 2, 3));
+        Assert.True(emptyPool.IsValid, string.Join(Environment.NewLine, emptyPool.Errors.Select(error => error.Message)));
+
+        ContentValidationResult malformed = Validate(new DungeonBlockDefinition(
+            Id("first"),
+            "First",
+            2,
+            4,
+            fixedFloors:
+            [
+                new DungeonFixedFloorDefinition(2, DungeonFixedFloorKind.Battle, "Missing encounter"),
+                new DungeonFixedFloorDefinition(2, DungeonFixedFloorKind.SafeRoom, "Duplicate floor"),
+                new DungeonFixedFloorDefinition(5, DungeonFixedFloorKind.Empty, "Outside block"),
+                new DungeonFixedFloorDefinition(4, (DungeonFixedFloorKind)999, "Unknown kind"),
+                new DungeonFixedFloorDefinition(3, DungeonFixedFloorKind.Battle, "Unknown encounter", Id("unknown_encounter"))
+            ]));
+
+        Assert.Contains(malformed.Errors, error =>
+            error.JsonPath == "$.dungeons[0].blocks[0].fixedFloors[0].encounterId" &&
+            error.Code == ContentValidationErrorCode.ShapeInvalid);
+        Assert.Contains(malformed.Errors, error =>
+            error.JsonPath == "$.dungeons[0].blocks[0].fixedFloors[1].floor" &&
+            error.Code == ContentValidationErrorCode.ListDuplicateValue);
+        Assert.Contains(malformed.Errors, error =>
+            error.JsonPath == "$.dungeons[0].blocks[0].fixedFloors[2].floor" &&
+            error.Code == ContentValidationErrorCode.ValueOutOfRange);
+        Assert.Contains(malformed.Errors, error =>
+            error.JsonPath == "$.dungeons[0].blocks[0].fixedFloors[3].kind" &&
+            error.Code == ContentValidationErrorCode.ShapeInvalid);
+        Assert.Contains(malformed.Errors, error =>
+            error.JsonPath == "$.dungeons[0].blocks[0].fixedFloors[4].encounterId" &&
+            error.Code == ContentValidationErrorCode.ReferenceMissing);
+    }
+
+    [Fact]
     public void ShopValidation_RejectsDuplicateLocalOfferIdsAndNonPositiveTrackedStock()
     {
         ContentPackManifest manifest = new(

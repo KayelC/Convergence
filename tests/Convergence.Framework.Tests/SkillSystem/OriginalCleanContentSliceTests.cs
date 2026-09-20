@@ -285,6 +285,41 @@ public sealed class OriginalCleanContentSliceTests
     }
 
     [Fact]
+    public void TrainingAnnexSlice_FixedFloorMetadataCanSupportMultipleHostTriggersWithoutStartingBattle()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        DungeonBlockDefinition block = Assert.Single(
+            catalog.GetRequiredDungeon(Qualified("training_annex")).Blocks);
+        DungeonFixedFloorDefinition fixedFloor = Assert.Single(block.FixedFloors, floor => floor.Floor == 4);
+        ContentId encounterId = Assert.IsType<ContentId>(fixedFloor.EncounterId);
+        var planner = new CatalogEncounterStartPlanner(catalog);
+        var traversal = new RuntimeDungeonTraversalService(
+            new AllowDungeonTraversalPolicy(), new RuntimeDungeonProgressRegistry([]));
+        var before = new RuntimeDungeonTraversalSnapshot(Qualified("training_annex"), Qualified("annex_entrance"));
+        RuntimeDungeonTraversalResult entered = traversal.Traverse(
+            before,
+            new RuntimeDungeonTraversalTransition(
+                Id("enter_review_hall"), before.DungeonId, before.CurrentNodeId, Qualified("review_hall")));
+
+        EncounterStartPlanResult first = planner.Plan(new EncounterStartRequest(
+            encounterId, Id("enemy_team"), Id("enemy_ai"), RuntimeInstanceId.Parse("floor_four_enemy_a")));
+        EncounterStartPlanResult second = planner.Plan(new EncounterStartRequest(
+            encounterId, Id("enemy_team"), Id("enemy_ai"), RuntimeInstanceId.Parse("floor_four_enemy_b")));
+
+        Assert.True(entered.Applied);
+        Assert.Equal([RuntimeDungeonTraversalEventKind.TransitionApplied], entered.Events.Select(evt => evt.Kind));
+        Assert.Empty(entered.After.DefeatedBossIds);
+        Assert.True(first.IsSuccess);
+        Assert.True(second.IsSuccess);
+        Assert.Equal(encounterId, first.RequirePlan().Encounter.Id);
+        Assert.Equal(encounterId, second.RequirePlan().Encounter.Id);
+        Assert.NotEqual(
+            Assert.Single(first.RequirePlan().ActorRequests).InstanceId,
+            Assert.Single(second.RequirePlan().ActorRequests).InstanceId);
+        Assert.Equal(Qualified("review_hall"), entered.After.CurrentNodeId);
+    }
+
+    [Fact]
     public void TrainingAnnexSlice_HostSceneEncounterTriggerBuildsBattleActorRequests()
     {
         GameDataCatalog catalog = LoadCatalog();
