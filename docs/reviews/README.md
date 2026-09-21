@@ -112,6 +112,7 @@ or implementation authority.
 - [Navigation Order 8 Pre-Closure Independent Audit, 19 September 2026](navigation-order-8-preclosure-independent-audit-2026-09-19.md)
 - [Navigation Order 8 Final Closure Review, 19 September 2026](navigation-order-8-final-closure-review-2026-09-19.md)
 - [Dungeon Traversal Order 9 Source Review, 19 September 2026](dungeon-traversal-order-9-source-review-2026-09-19.md)
+- [Dungeon Traversal Order 9 Independent Audit, 21 September 2026](dungeon-traversal-order-9-independent-audit-2026-09-21.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.
