@@ -749,8 +749,8 @@ Training Annex menu; it is not limited to `DungeonTraversal.cs`.
 O9-R7 reconciles the [mechanics](../mechanics/world-encounters-and-rewards.md),
 [developer guide](../developer-guide/dungeon-traversal.md), and
 [technical reference](../technical/dungeon-traversal-runtime.md). All three
-are `existing_unreviewed` while the independent O9-R8 review corrections and
-project-owner confirmation are completed. `dungeon_traversal` is
+are `existing_unreviewed` pending project-owner confirmation. The independent
+O9-R8 review corrections and retained release gate have passed. `dungeon_traversal` is
 `implemented` with no open Framework contract gap, but Order 9 remains `open`;
 written guidance and green tests alone do not close it.
 

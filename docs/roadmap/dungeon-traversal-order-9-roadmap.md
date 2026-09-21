@@ -57,7 +57,7 @@ owner rather than silently choosing a content or save model.
 | O9-R4: field/save/host boundary | complete | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D4/D5. |
 | O9-R5: checkpoint and boss recording | complete | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
 | O9-R6: authored floor and encounter contract | complete | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
-| O9-R7: audience documentation | written_pending_owner_confirmation | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. All three audience entries remain `existing_unreviewed` until independent audit and owner confirmation. |
+| O9-R7: audience documentation | written_pending_owner_confirmation | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. The independent audit passed; all three audience entries remain `existing_unreviewed` until owner confirmation. |
 | O9-R8: independent closure | pending | Fresh code and document review across traversal, navigation, `RuntimeFieldSnapshot`, `CurrentSaveContext`, save validator/restore, content, DemoHost, and Godot contract. Run and retain the full release gate. Close only if no concrete gap remains and all applicable audience entries are `reviewed`. |
 
 ## Boundary Contract To Preserve
@@ -207,3 +207,23 @@ ContentValidator tests (2,088 total), with zero failures or skips. Strict
 solution build reported zero warnings; format verification and `git diff
 --check` passed. No runtime behavior, save wire, schema, or content changed
 in this documentation checkpoint. R8 and owner review remain open.
+
+O9-R8 independently re-read the live traversal and progress services,
+navigation/field/save/restore boundary, floor validation, Training Annex,
+Godot-shaped contracts, and all three audience pages. It found one stale
+decision record and its matching architecture assertion (O9-DOC1), plus stale
+capability gaps/counts (O9-TRACK2). Those were corrected in separate commits;
+the final recheck found no further realistic reachable Order 9 defect or
+documentation contradiction. `dungeon_traversal` is now `implemented` with
+an empty known-gap list but `orderState: open`. The retained 23-command release
+gate tested `0189a6c2` and passed: 1,891 Framework, 190 DemoHost, seven
+ContentValidator tests; zero failures/skips/warnings; 90.36% Framework line
+and 77.23% branch coverage; six active packs and 36 documents validated;
+all five DemoHost modes and Godot 4.7.1 headless smoke passed. Raw outputs,
+reviewed diff, and checksums are in
+`artifacts/verification/o9-r8-verified/0189a6c26138cb6fe105899c906b13c9bc9a7d40`.
+The [independent audit](../reviews/dungeon-traversal-order-9-independent-audit-2026-09-21.md)
+records both findings and corrections. O9-R8 is not marked complete because
+the three audience pages remain `existing_unreviewed` until explicit
+project-owner confirmation. No Framework runtime, schema, or save-wire change
+was made during R8; its source change was an architecture-test assertion.

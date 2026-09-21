@@ -81,11 +81,12 @@ transitions. O9-R2 through O9-R6 corrected live-input, result-authority,
 progress-eligibility, navigation/save-host, and optional authored-floor gaps.
 The [Order 9 roadmap](dungeon-traversal-order-9-roadmap.md) keeps host-owned
 spatial movement and explicit encounter triggers separate from logical
-traversal. O9-R7 has written the three audience pages. The independent audit
-found and corrected stale decision/gate wording, and a retained gate passed
-before this tracking update; a final gate rerun and owner documentation
-confirmation remain. Order 9 stays `open` while its implementation state is
-`implemented`. Implementation and collaborative closure are separate gates;
+traversal. O9-R7 wrote the three audience pages. The independent audit
+corrected stale decision/gate and capability-tracking claims. A retained
+23-command gate passed on the corrected matrix at `0189a6c2`; owner
+documentation confirmation remains. Order 9 stays `open` while its
+implementation state is `implemented`. Implementation and collaborative
+closure are separate gates;
 the approved optional floor metadata does not require a runtime resolver.
 
 `inventory_equipment_economy` is `implemented`, and Order 7 is `closed`. Its immutable transaction and
