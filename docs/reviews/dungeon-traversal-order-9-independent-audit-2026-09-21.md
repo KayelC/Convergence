@@ -28,6 +28,28 @@ accepts any ID from any node. Update only the stale implementation and
 documentation-status language; preserve the confirmed design decision and
 historical alternatives.
 
+**Correction:** `cd59b6f6` updates the decision record. The corresponding
+architecture assertion was still pinned to its retired phrase, so
+`c3a7356e` changes that gate to assert the implemented registry and pending
+audience state instead. The raw failed intermediate gate is retained under
+`artifacts/verification/o9-r8-online-failed-20260921T144015Z`.
+
+## Finding O9-TRACK2: Capability Matrix Retains Closed Gaps
+
+**Severity:** progress-reporting correctness, not a runtime vulnerability.
+
+The executable capability matrix still labels `dungeon_traversal` `partial`
+and lists four known gaps. Its live-input, eligible-progress, and incompatible
+Training Annex save gaps were corrected in O9-R2, R5, and R4. The remaining
+"fixed-floor metadata is not consumed by runtime traversal" item is not a
+gap under approved O9-D3: metadata is intentionally optional catalog
+information and no resolver is planned without a consuming need. This fixture
+misleads readers about what remains to build and contradicts the matrix's
+explicit separation of implementation maturity from Order closure. Change the
+implementation to `implemented` with no known gaps while keeping `orderState`
+`open` and all three audience entries `existing_unreviewed`. Reconcile the
+active count/roadmap prose and its architecture assertion together.
+
 ## Source And Boundary Evidence
 
 - `RuntimeDungeonTraversalService.Traverse` validates six request IDs before
@@ -59,8 +81,15 @@ Godot scenes, content, or host policies have been implemented or certified.
 
 ## Closure Gate
 
-Correct O9-DOC1 in a separate commit, re-read the affected audience claims,
-run the retained release gate against a clean reviewed revision, and obtain
-explicit project-owner confirmation of the three Order 9 audience pages.
+O9-DOC1 is corrected. Correct O9-TRACK2 in a separate commit, re-read the
+affected audience and tracking claims, run the retained release gate against
+the resulting clean revision, and obtain explicit project-owner confirmation
+of the three Order 9 audience pages. A 23-command interim gate against
+`c3a7356e` passed with 1,891 Framework, 190 DemoHost, and seven validator
+tests, 90.36% Framework line coverage, 77.23% branch coverage, zero build
+warnings, and real Godot 4.7.1 headless smoke. Its raw checked evidence is
+`artifacts/verification/o9-r8-final/c3a7356e012cf85cf14830798bfa0e2f53737338`.
+Because O9-TRACK2 changes the executable matrix after that gate, rerun the
+retained gate before treating it as final evidence.
 Until then all three remain `existing_unreviewed`, the implementation matrix
 stays `partial`, and Order 9 stays `open`.
