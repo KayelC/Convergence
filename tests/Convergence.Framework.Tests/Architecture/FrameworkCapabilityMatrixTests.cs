@@ -193,7 +193,7 @@ public sealed class FrameworkCapabilityMatrixTests
     }
 
     [Fact]
-    public void DungeonOrder9OpeningReview_TracksTheNavigationSaveBoundaryWithoutClaimingClosure()
+    public void DungeonOrder9Review_TracksImplementedCorrectionsWithoutClaimingClosure()
     {
         CapabilityEntry dungeon = Load().Capabilities.Single(capability => capability.Id == "dungeon_traversal");
 
@@ -222,7 +222,10 @@ public sealed class FrameworkCapabilityMatrixTests
         string decision = File.ReadAllText(RepositoryPath(
             "docs", "decisions", "dungeon-progress-reporting.md"));
         Assert.Contains("Status: confirmed", decision, StringComparison.Ordinal);
-        Assert.Contains("intended rules for implementation", decision, StringComparison.Ordinal);
+        Assert.Contains("O9-R2 through O9-R6 subsequently implemented", decision, StringComparison.Ordinal);
+        Assert.Contains("`RuntimeDungeonProgressRegistry` declares eligible IDs", decision, StringComparison.Ordinal);
+        Assert.Contains("All three remain `existing_unreviewed`", decision, StringComparison.Ordinal);
+        Assert.DoesNotContain("matches the current service", decision, StringComparison.Ordinal);
         Assert.All(Enumerable.Range(1, 6), number => Assert.Contains(
             $"O9-D{number}:", roadmap, StringComparison.Ordinal));
     }
