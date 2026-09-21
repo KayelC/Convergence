@@ -5,15 +5,16 @@ Date: 2026-09-19
 
 ## Context
 
-The current dungeon service records a supplied checkpoint or boss ID
-idempotently. It does not know whether the player touched a checkpoint,
-defeated a boss in battle, solved a puzzle, or completed a story event.
+The dungeon service records an eligible checkpoint or boss ID idempotently.
+It does not know whether the player touched a checkpoint, defeated a boss in
+battle, solved a puzzle, or completed a story event.
 Requiring only a Framework battle result would exclude legitimate
 non-battle outcomes and couple optional traversal to one combat system.
 
 The project owner approved O9-D1 through O9-D6 after the Order 9 discussion on
-19 September 2026. These are intended rules for implementation, not a claim
-that the current runtime already enforces them.
+19 September 2026. O9-R2 through O9-R6 subsequently implemented the live
+request, progress eligibility, save/host, and authored-floor boundaries;
+independent closure and audience confirmation remain separate gates.
 
 ## Confirmed Decision
 
@@ -60,14 +61,16 @@ same kind of progress without inventing a battle result.
 
 - **Mandatory battle proof:** stronger coupling for battle-only games, but
   excludes puzzle/story resolutions and alternative combat implementations.
-- **Unvalidated host assertion:** matches the current service, but can record
-  arbitrary IDs at unrelated nodes and gives save/restore little trustworthy
-  context to check.
+- **Unvalidated host assertion:** the former service could record arbitrary IDs
+  at unrelated nodes. O9-R5 replaced that behavior with injected eligibility
+  declarations and typed rejection.
 
 ## Implementation Boundary
 
-The precise C# types and diagnostic names are chosen during isolated Order 9
-checkpoints. They must satisfy the approved behavior above without making
+`RuntimeDungeonProgressRegistry` declares eligible IDs, dungeons, and areas;
+`RuntimeDungeonTraversalService` checks reports before idempotent recording.
+Typed traversal and progress results distinguish invalid requests, wrong
+context, ordinary route denial, and policy faults. These contracts do not make
 Godot, a scene graph, a battle system, or a fixed-floor resolver mandatory.
 The broad save aggregate remains at v19 unless a separate, explicitly
 approved save-contract change proves necessary; independent navigation and
@@ -76,10 +79,11 @@ dungeon nullability remains Order 13's question.
 ## Evidence
 
 The [Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
-identifies current behavior, and the [Order 9 roadmap](../roadmap/dungeon-traversal-order-9-roadmap.md)
-separates approved behavior from pending implementation. Existing affected
-audience guidance is the [world mechanics page](../mechanics/world-encounters-and-rewards.md),
-[generic navigation developer guide](../developer-guide/generic-navigation.md),
-and [navigation technical reference](../technical/generic-navigation-runtime.md).
-Dedicated dungeon developer and technical pages remain scheduled under O9-R7.
-No documentation coverage entry is promoted by this decision record alone.
+records the opening behavior, while the
+[Order 9 roadmap](../roadmap/dungeon-traversal-order-9-roadmap.md) tracks
+subsequent implementation and review. Current audience guidance is the
+[world mechanics page](../mechanics/world-encounters-and-rewards.md),
+[dungeon developer guide](../developer-guide/dungeon-traversal.md), and
+[dungeon technical reference](../technical/dungeon-traversal-runtime.md).
+All three remain `existing_unreviewed` until independent audit and explicit
+project-owner confirmation; this decision record alone does not promote them.
