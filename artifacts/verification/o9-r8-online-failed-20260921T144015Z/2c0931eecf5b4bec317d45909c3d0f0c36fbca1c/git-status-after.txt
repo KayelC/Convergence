@@ -1,0 +1,17 @@
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/00-dotnet-info.cmd
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/00-dotnet-info.raw.txt
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/01-restore-audit.cmd
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/01-restore-audit.raw.txt
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/02-format.cmd
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/02-format.raw.txt
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/03-framework-build.cmd
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/03-framework-build.raw.txt
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/04-solution-build.cmd
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/04-solution-build.raw.txt
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/05-focused-framework-tests.cmd
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/05-focused-framework-tests.raw.txt
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/06-focused-demohost-tests.cmd
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/06-focused-demohost-tests.raw.txt
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/07-architecture-tests.cmd
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/commands/07-architecture-tests.raw.txt
+?? artifacts/verification/o9-r8-online/2c0931eecf5b4bec317d45909c3d0f0c36fbca1c/git-status-before.txt
