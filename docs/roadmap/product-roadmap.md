@@ -8,7 +8,7 @@ baseline.
 
 ## Current State
 
-Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 22 implemented, 1 partial, and 2 deferred.
+Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
 
 The ordered review queue currently records 20 Orders: 8 closed, 1 open, and 11 not_started.
 Implementation maturity and Order closure are deliberately separate: only an
@@ -27,13 +27,14 @@ sample does not yet perform live navigation; that remains separate host work.
 Documentation Order 9 is open under the
 [dungeon traversal source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
 and [ordered roadmap](dungeon-traversal-order-9-roadmap.md). Its current
-implementation is partial: meaningful node transitions work, but live request
-and progress validation, authored floor semantics, and the combined
-navigation/dungeon/save host boundary need correction or owner decisions.
+implementation is usable: meaningful node transitions, typed failures,
+eligibility-checked progress reports, optional authored-floor metadata, and
+the combined navigation/dungeon/save host boundary have direct tests.
 Neither entering a floor nor navigating to a dungeon starts combat automatically.
 The owner approved O9-D1 through O9-D6 in the
 [dungeon-progress decision](../decisions/dungeon-progress-reporting.md);
-the implementation remains pending under the Order 9 checkpoints.
+the implementation is `implemented` while audience confirmation and formal
+Order closure remain pending under the Order 9 checkpoints.
 
 Documentation Order 7 is complete under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).

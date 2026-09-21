@@ -37,7 +37,7 @@ establish that a numbered Order is `closed`.
 
 ## Current Reading
 
-The matrix currently records 25 capabilities: 22 implemented, 1 partial, and 2 deferred.
+The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
 
 The ordered review queue currently records 20 Orders: 8 closed, 1 open, and 11 not_started.
 
@@ -51,7 +51,7 @@ The ordered review queue currently records 20 Orders: 8 closed, 1 open, and 11 n
 | 6 | `encounter_orchestration` | `implemented` | `closed` |
 | 7 | `inventory_equipment_economy` | `implemented` | `closed` |
 | 8 | `navigation` | `implemented` | `closed` |
-| 9 | `dungeon_traversal` | `partial` | `open` |
+| 9 | `dungeon_traversal` | `implemented` | `open` |
 | 10 | `negotiation_and_rewards` | `implemented` | `not_started` |
 | 11 | `fusion_and_inheritance` | `implemented` | `not_started` |
 | 12 | `compendium` | `implemented` | `not_started` |
@@ -81,9 +81,12 @@ transitions. O9-R2 through O9-R6 corrected live-input, result-authority,
 progress-eligibility, navigation/save-host, and optional authored-floor gaps.
 The [Order 9 roadmap](dungeon-traversal-order-9-roadmap.md) keeps host-owned
 spatial movement and explicit encounter triggers separate from logical
-traversal. O9-R7 has written the three audience pages, but independent audit,
-owner documentation confirmation, and retained release evidence remain; Order
-9 stays `open` and its implementation state remains `partial` until closure.
+traversal. O9-R7 has written the three audience pages. The independent audit
+found and corrected stale decision/gate wording, and a retained gate passed
+before this tracking update; a final gate rerun and owner documentation
+confirmation remain. Order 9 stays `open` while its implementation state is
+`implemented`. Implementation and collaborative closure are separate gates;
+the approved optional floor metadata does not require a runtime resolver.
 
 `inventory_equipment_economy` is `implemented`, and Order 7 is `closed`. Its immutable transaction and
 validation foundation is usable. O7-R2 gives each equipment copy a unique

@@ -197,10 +197,10 @@ public sealed class FrameworkCapabilityMatrixTests
     {
         CapabilityEntry dungeon = Load().Capabilities.Single(capability => capability.Id == "dungeon_traversal");
 
-        Assert.Equal("partial", dungeon.ImplementationState);
+        Assert.Equal("implemented", dungeon.ImplementationState);
         Assert.Equal(9, dungeon.OrderNumber);
         Assert.Equal("open", dungeon.OrderState);
-        Assert.NotEmpty(dungeon.KnownGaps);
+        Assert.Empty(dungeon.KnownGaps);
 
         string review = File.ReadAllText(RepositoryPath(
             "docs", "reviews", "dungeon-traversal-order-9-source-review-2026-09-19.md"));
@@ -216,6 +216,7 @@ public sealed class FrameworkCapabilityMatrixTests
         string roadmap = File.ReadAllText(RepositoryPath(
             "docs", "roadmap", "dungeon-traversal-order-9-roadmap.md"));
         Assert.Contains("| O9-R1: opening review | complete |", roadmap, StringComparison.Ordinal);
+        Assert.Contains("| O9-R7: audience documentation | written_pending_owner_confirmation |", roadmap, StringComparison.Ordinal);
         Assert.Contains("| O9-R8: independent closure | pending |", roadmap, StringComparison.Ordinal);
         Assert.Contains("CurrentSaveContext", review, StringComparison.Ordinal);
 
