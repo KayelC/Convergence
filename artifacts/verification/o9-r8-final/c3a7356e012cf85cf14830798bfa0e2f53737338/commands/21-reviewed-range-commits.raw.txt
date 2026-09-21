@@ -1,0 +1,111 @@
+commit c3a7356e012cf85cf14830798bfa0e2f53737338
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 21 16:43:41 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 21 16:43:41 2026 +0200
+
+    test: align order 9 decision gate with implementation
+
+commit 7ee35848874b775ee36ba8d53d25077733ae3b87
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 21 16:42:01 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 21 16:42:01 2026 +0200
+
+    test: retain order 9 gate assertion failure
+
+commit 2c0931eecf5b4bec317d45909c3d0f0c36fbca1c
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 21 16:40:04 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 21 16:40:04 2026 +0200
+
+    test: retain blocked order 9 gate evidence
+
+commit cd59b6f6ab62c7fdef8d0be80d264d17c6ca257e
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 21 16:38:52 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 21 16:38:52 2026 +0200
+
+    docs: correct dungeon progress decision status
+
+commit 95122e62c31acf7b208dbfd603da6d8fce242243
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 21 16:37:58 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 21 16:37:58 2026 +0200
+
+    docs: audit order 9 traversal boundaries
+
+commit 7c61792a16d80a88eab58d2aa083a30be3058a23
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sun Sep 20 15:53:14 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sun Sep 20 15:53:14 2026 +0200
+
+    docs: document optional dungeon traversal contract
+
+commit a2f7cb1f574803197166ef99f624097ca275365e
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sun Sep 20 15:45:48 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sun Sep 20 15:45:48 2026 +0200
+
+    host: distinguish rejected dungeon progress reports
+
+commit 597bd9af6cb5c39dee9babab4d3eaedf2010327a
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sun Sep 20 15:42:23 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sun Sep 20 15:42:23 2026 +0200
+
+    content: validate optional dungeon floor metadata
+
+commit 525adfa2d7475595e427140925e24a8a7985d411
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sun Sep 20 15:37:34 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sun Sep 20 15:37:34 2026 +0200
+
+    runtime: validate dungeon checkpoint and boss reports
+
+commit 4557fcbb6ec307b951d6f3ffa3ce65a793232806
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sun Sep 20 15:28:54 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sun Sep 20 15:28:54 2026 +0200
+
+    host: validate dungeon save context and reentry
+
+commit e858826e627a68305fde56b4a818da88d29ea55c
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sat Sep 19 17:42:40 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sat Sep 19 17:42:40 2026 +0200
+
+    runtime: validate dungeon traversal results and events
+
+commit 3b0663761cd35eec111e12c225bbd2dd4b6b6720
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sat Sep 19 17:38:09 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sat Sep 19 17:38:09 2026 +0200
+
+    runtime: validate dungeon traversal requests and policy faults
+
+commit 322dad88234ef1cb82fddd5128f8a79e87c231d4
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sat Sep 19 16:56:43 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sat Sep 19 16:56:43 2026 +0200
+
+    docs: confirm dungeon traversal decisions
+
+commit 3ae3b675f695b169572f1120e8d2f2701cfae658
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Sat Sep 19 14:43:20 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Sat Sep 19 14:43:20 2026 +0200
+
+    docs: open dungeon traversal order 9 review
