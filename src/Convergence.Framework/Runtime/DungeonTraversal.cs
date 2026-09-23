@@ -19,7 +19,11 @@ public enum RuntimeDungeonTraversalRequestField
     TransitionId,
     TransitionDungeonId,
     SourceNodeId,
-    DestinationNodeId
+    DestinationNodeId,
+    VisitedNodeIds,
+    UnlockedCheckpointIds,
+    DefeatedBossIds,
+    ProgressId
 }
 
 public enum RuntimeDungeonTraversalPolicyFaultKind
@@ -386,6 +390,28 @@ public sealed record RuntimeDungeonStateChangeResult
         RuntimeDungeonProgressKind progressKind,
         ContentId progressId,
         IEnumerable<RuntimeDungeonTraversalEvent>? events = null)
+        : this(
+            code,
+            before,
+            after,
+            progressKind,
+            progressId,
+            events,
+            before is null
+                ? null
+                : RuntimeDungeonTraversalRequestValidation.FirstInvalidSnapshotField(before) ??
+                    (!progressId.IsValid ? RuntimeDungeonTraversalRequestField.ProgressId : null))
+    {
+    }
+
+    public RuntimeDungeonStateChangeResult(
+        RuntimeDungeonStateChangeCode code,
+        RuntimeDungeonTraversalSnapshot before,
+        RuntimeDungeonTraversalSnapshot after,
+        RuntimeDungeonProgressKind progressKind,
+        ContentId progressId,
+        IEnumerable<RuntimeDungeonTraversalEvent>? events,
+        RuntimeDungeonTraversalRequestField? invalidField)
     {
         Code = code;
         Before = before ?? throw new ArgumentNullException(nameof(before));
@@ -393,6 +419,7 @@ public sealed record RuntimeDungeonStateChangeResult
         ProgressKind = progressKind;
         ProgressId = progressId;
         Events = RuntimeSnapshotCollections.List(events);
+        InvalidField = invalidField;
         ValidateOutcome();
     }
 
@@ -403,26 +430,30 @@ public sealed record RuntimeDungeonStateChangeResult
     public RuntimeDungeonProgressKind ProgressKind { get; }
     public ContentId ProgressId { get; }
     public IReadOnlyList<RuntimeDungeonTraversalEvent> Events { get; }
+    public RuntimeDungeonTraversalRequestField? InvalidField { get; }
 
     private void ValidateOutcome()
     {
-        if (!Enum.IsDefined(Code) || !Enum.IsDefined(ProgressKind))
+        if (!Enum.IsDefined(Code) || !Enum.IsDefined(ProgressKind) ||
+            InvalidField is RuntimeDungeonTraversalRequestField field && !Enum.IsDefined(field))
         {
             throw new ArgumentOutOfRangeException(nameof(Code));
         }
-        bool invalidRequest = !Before.DungeonId.IsValid || !Before.CurrentNodeId.IsValid || !ProgressId.IsValid;
+        RuntimeDungeonTraversalRequestField? firstInvalid =
+            RuntimeDungeonTraversalRequestValidation.FirstInvalidSnapshotField(Before) ??
+            (!ProgressId.IsValid ? RuntimeDungeonTraversalRequestField.ProgressId : null);
         if (Code == RuntimeDungeonStateChangeCode.InvalidRequest)
         {
-            if (!invalidRequest || Events.Count != 0 ||
+            if (firstInvalid is null || InvalidField != firstInvalid || Events.Count != 0 ||
                 !RuntimeDungeonTraversalSnapshotEquality.Same(Before, After))
             {
                 throw new ArgumentException("Invalid dungeon progress result has inconsistent evidence.");
             }
             return;
         }
-        if (invalidRequest)
+        if (firstInvalid is not null || InvalidField is not null)
         {
-            throw new ArgumentException("Dungeon progress result contains an invalid request ID.");
+            throw new ArgumentException("Dungeon progress result contains invalid request evidence.");
         }
         if (Code == RuntimeDungeonStateChangeCode.AlreadyRecorded)
         {
@@ -627,12 +658,17 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
         ContentId progressId)
     {
         ArgumentNullException.ThrowIfNull(current);
-        RuntimeDungeonStateChangeResult Rejected(RuntimeDungeonStateChangeCode code) =>
-            new(code, current, current, kind, progressId);
+        RuntimeDungeonStateChangeResult Rejected(
+            RuntimeDungeonStateChangeCode code,
+            RuntimeDungeonTraversalRequestField? invalidField = null) =>
+            new(code, current, current, kind, progressId, events: null, invalidField);
 
-        if (!current.DungeonId.IsValid || !current.CurrentNodeId.IsValid || !progressId.IsValid)
+        RuntimeDungeonTraversalRequestField? invalidField =
+            RuntimeDungeonTraversalRequestValidation.FirstInvalidSnapshotField(current) ??
+            (!progressId.IsValid ? RuntimeDungeonTraversalRequestField.ProgressId : null);
+        if (invalidField is not null)
         {
-            return Rejected(RuntimeDungeonStateChangeCode.InvalidRequest);
+            return Rejected(RuntimeDungeonStateChangeCode.InvalidRequest, invalidField);
         }
 
         RuntimeDungeonProgressEligibility[] candidates = _progressRegistry.Eligibility
@@ -739,9 +775,8 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
 
 internal static class RuntimeDungeonTraversalRequestValidation
 {
-    public static RuntimeDungeonTraversalRequestField? FirstInvalidField(
-        RuntimeDungeonTraversalSnapshot current,
-        RuntimeDungeonTraversalTransition transition)
+    public static RuntimeDungeonTraversalRequestField? FirstInvalidSnapshotField(
+        RuntimeDungeonTraversalSnapshot current)
     {
         if (!current.DungeonId.IsValid)
         {
@@ -750,6 +785,31 @@ internal static class RuntimeDungeonTraversalRequestValidation
         if (!current.CurrentNodeId.IsValid)
         {
             return RuntimeDungeonTraversalRequestField.CurrentNodeId;
+        }
+        if (current.VisitedNodeIds.Any(nodeId => !nodeId.IsValid))
+        {
+            return RuntimeDungeonTraversalRequestField.VisitedNodeIds;
+        }
+        if (current.UnlockedCheckpointIds.Any(checkpointId => !checkpointId.IsValid))
+        {
+            return RuntimeDungeonTraversalRequestField.UnlockedCheckpointIds;
+        }
+        if (current.DefeatedBossIds.Any(bossId => !bossId.IsValid))
+        {
+            return RuntimeDungeonTraversalRequestField.DefeatedBossIds;
+        }
+
+        return null;
+    }
+
+    public static RuntimeDungeonTraversalRequestField? FirstInvalidField(
+        RuntimeDungeonTraversalSnapshot current,
+        RuntimeDungeonTraversalTransition transition)
+    {
+        RuntimeDungeonTraversalRequestField? invalidSnapshotField = FirstInvalidSnapshotField(current);
+        if (invalidSnapshotField is not null)
+        {
+            return invalidSnapshotField;
         }
         if (!transition.Id.IsValid)
         {

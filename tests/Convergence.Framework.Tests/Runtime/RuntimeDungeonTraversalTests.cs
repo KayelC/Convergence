@@ -122,6 +122,31 @@ public sealed class RuntimeDungeonTraversalTests
     }
 
     [Fact]
+    public void Traversal_RejectsMalformedRetainedHistoryBeforePolicyWithoutMutation()
+    {
+        var policy = new MutableDungeonPolicy { IsAllowed = true };
+        var service = new RuntimeDungeonTraversalService(policy, EmptyRegistry);
+        var transition = new RuntimeDungeonTraversalTransition(
+            Id("move"), Id("archive"), Id("entry"), Id("room"));
+
+        foreach (var (current, field) in MalformedHistoryCases())
+        {
+            RuntimeDungeonTraversalResult result = service.Traverse(current, transition);
+
+            Assert.Equal(RuntimeDungeonTraversalCode.InvalidRequest, result.Code);
+            Assert.Equal(field, result.InvalidField);
+            Assert.Same(current, result.Before);
+            Assert.Same(current, result.After);
+            Assert.Empty(result.Events);
+            Assert.Equal(current.VisitedNodeIds, result.After.VisitedNodeIds);
+            Assert.Equal(current.UnlockedCheckpointIds, result.After.UnlockedCheckpointIds);
+            Assert.Equal(current.DefeatedBossIds, result.After.DefeatedBossIds);
+        }
+
+        Assert.Equal(0, policy.EvaluationCount);
+    }
+
+    [Fact]
     public void Traversal_DistinguishesPolicyRejectionNullAndExceptionWithoutMutation()
     {
         var initial = new RuntimeDungeonTraversalSnapshot(Id("archive"), Id("entry"));
@@ -197,6 +222,26 @@ public sealed class RuntimeDungeonTraversalTests
             (RuntimeDungeonTraversalCode)999, before, after, transition, [applied]));
         Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalResult(
             RuntimeDungeonTraversalCode.InvalidRequest, before, before, transition));
+
+        RuntimeDungeonTraversalSnapshot malformed = MalformedHistoryCases().First().Current;
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalResult(
+            RuntimeDungeonTraversalCode.Applied,
+            malformed,
+            new RuntimeDungeonTraversalSnapshot(
+                malformed.DungeonId,
+                Id("room"),
+                malformed.VisitedNodeIds,
+                malformed.UnlockedCheckpointIds,
+                malformed.DefeatedBossIds),
+            transition,
+            [applied]));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalResult(
+            RuntimeDungeonTraversalCode.InvalidRequest,
+            malformed,
+            malformed,
+            transition,
+            reasonId: Id("invalid_dungeon_request"),
+            invalidField: RuntimeDungeonTraversalRequestField.UnlockedCheckpointIds));
     }
 
     [Fact]
@@ -219,6 +264,29 @@ public sealed class RuntimeDungeonTraversalTests
             RuntimeDungeonStateChangeCode.AlreadyRecorded, before, moved, RuntimeDungeonProgressKind.Checkpoint, Id("terminal")));
         Assert.Throws<ArgumentOutOfRangeException>(() => new RuntimeDungeonStateChangeResult(
             (RuntimeDungeonStateChangeCode)999, before, before, RuntimeDungeonProgressKind.Checkpoint, Id("terminal")));
+
+        RuntimeDungeonTraversalSnapshot malformed = MalformedHistoryCases().First().Current;
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
+            RuntimeDungeonStateChangeCode.NotEligible,
+            malformed,
+            malformed,
+            RuntimeDungeonProgressKind.Checkpoint,
+            Id("terminal")));
+        Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
+            RuntimeDungeonStateChangeCode.InvalidRequest,
+            malformed,
+            malformed,
+            RuntimeDungeonProgressKind.Checkpoint,
+            Id("terminal"),
+            events: null,
+            invalidField: RuntimeDungeonTraversalRequestField.UnlockedCheckpointIds));
+        RuntimeDungeonStateChangeResult inferredInvalid = new(
+            RuntimeDungeonStateChangeCode.InvalidRequest,
+            malformed,
+            malformed,
+            RuntimeDungeonProgressKind.Checkpoint,
+            Id("terminal"));
+        Assert.Equal(RuntimeDungeonTraversalRequestField.VisitedNodeIds, inferredInvalid.InvalidField);
     }
 
     [Fact]
@@ -336,12 +404,55 @@ public sealed class RuntimeDungeonTraversalTests
             Assert.Empty(result.After.DefeatedBossIds);
         }
 
+        Assert.Equal(
+            RuntimeDungeonTraversalRequestField.ProgressId,
+            service.UnlockCheckpoint(entry, default).InvalidField);
+        Assert.Equal(
+            RuntimeDungeonTraversalRequestField.CurrentDungeonId,
+            service.UnlockCheckpoint(
+                new RuntimeDungeonTraversalSnapshot(default, Id("entry")),
+                Id("terminal")).InvalidField);
+
         RuntimeDungeonStateChangeResult first = service.UnlockCheckpoint(entry, Id("terminal"));
         RuntimeDungeonStateChangeResult wrongAreaDuplicate = service.UnlockCheckpoint(
             new RuntimeDungeonTraversalSnapshot(
                 Id("archive"), Id("room"), unlockedCheckpointIds: first.After.UnlockedCheckpointIds),
             Id("terminal"));
         Assert.Equal(RuntimeDungeonStateChangeCode.AreaMismatch, wrongAreaDuplicate.Code);
+    }
+
+    [Fact]
+    public void ProgressReports_RejectMalformedRetainedHistoryBeforeRegistryWithoutMutation()
+    {
+        var registry = new RuntimeDungeonProgressRegistry(
+        [
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Checkpoint, Id("terminal"), Id("archive"), [Id("entry")]),
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Boss, Id("guardian"), Id("archive"), [Id("entry")])
+        ]);
+        var service = new RuntimeDungeonTraversalService(new MutableDungeonPolicy { IsAllowed = true }, registry);
+
+        foreach (var (current, field) in MalformedHistoryCases())
+        {
+            RuntimeDungeonStateChangeResult[] results =
+            [
+                service.UnlockCheckpoint(current, Id("terminal")),
+                service.RegisterBossDefeat(current, Id("guardian"))
+            ];
+
+            foreach (RuntimeDungeonStateChangeResult result in results)
+            {
+                Assert.Equal(RuntimeDungeonStateChangeCode.InvalidRequest, result.Code);
+                Assert.Equal(field, result.InvalidField);
+                Assert.Same(current, result.Before);
+                Assert.Same(current, result.After);
+                Assert.Empty(result.Events);
+                Assert.Equal(current.VisitedNodeIds, result.After.VisitedNodeIds);
+                Assert.Equal(current.UnlockedCheckpointIds, result.After.UnlockedCheckpointIds);
+                Assert.Equal(current.DefeatedBossIds, result.After.DefeatedBossIds);
+            }
+        }
     }
 
     [Fact]
@@ -374,6 +485,20 @@ public sealed class RuntimeDungeonTraversalTests
     }
 
     private static ContentId Id(string value) => ContentId.Parse(value);
+
+    private static IReadOnlyList<(RuntimeDungeonTraversalSnapshot Current, RuntimeDungeonTraversalRequestField Field)>
+        MalformedHistoryCases() =>
+        [
+            (new RuntimeDungeonTraversalSnapshot(
+                Id("archive"), Id("entry"), visitedNodeIds: [default]),
+                RuntimeDungeonTraversalRequestField.VisitedNodeIds),
+            (new RuntimeDungeonTraversalSnapshot(
+                Id("archive"), Id("entry"), unlockedCheckpointIds: [default]),
+                RuntimeDungeonTraversalRequestField.UnlockedCheckpointIds),
+            (new RuntimeDungeonTraversalSnapshot(
+                Id("archive"), Id("entry"), defeatedBossIds: [default]),
+                RuntimeDungeonTraversalRequestField.DefeatedBossIds)
+        ];
 
     private sealed class MutableDungeonPolicy : IRuntimeDungeonTraversalPolicy
     {

@@ -5411,9 +5411,11 @@ Convergence.Runtime.RuntimeDungeonStateChangeResult.Before.get -> Convergence.Ru
 Convergence.Runtime.RuntimeDungeonStateChangeResult.Code.get -> Convergence.Runtime.RuntimeDungeonStateChangeCode
 Convergence.Runtime.RuntimeDungeonStateChangeResult.Equals(Convergence.Runtime.RuntimeDungeonStateChangeResult? other) -> bool
 Convergence.Runtime.RuntimeDungeonStateChangeResult.Events.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeDungeonTraversalEvent!>!
+Convergence.Runtime.RuntimeDungeonStateChangeResult.InvalidField.get -> Convergence.Runtime.RuntimeDungeonTraversalRequestField?
 Convergence.Runtime.RuntimeDungeonStateChangeResult.ProgressId.get -> Convergence.Content.ContentId
 Convergence.Runtime.RuntimeDungeonStateChangeResult.ProgressKind.get -> Convergence.Runtime.RuntimeDungeonProgressKind
 Convergence.Runtime.RuntimeDungeonStateChangeResult.RuntimeDungeonStateChangeResult(Convergence.Runtime.RuntimeDungeonStateChangeCode code, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! before, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! after, Convergence.Runtime.RuntimeDungeonProgressKind progressKind, Convergence.Content.ContentId progressId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeDungeonTraversalEvent!>? events = null) -> void
+Convergence.Runtime.RuntimeDungeonStateChangeResult.RuntimeDungeonStateChangeResult(Convergence.Runtime.RuntimeDungeonStateChangeCode code, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! before, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! after, Convergence.Runtime.RuntimeDungeonProgressKind progressKind, Convergence.Content.ContentId progressId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeDungeonTraversalEvent!>? events, Convergence.Runtime.RuntimeDungeonTraversalRequestField? invalidField) -> void
 Convergence.Runtime.RuntimeDungeonTraversalCode
 Convergence.Runtime.RuntimeDungeonTraversalCode.Applied = 0 -> Convergence.Runtime.RuntimeDungeonTraversalCode
 Convergence.Runtime.RuntimeDungeonTraversalCode.DungeonMismatch = 1 -> Convergence.Runtime.RuntimeDungeonTraversalCode
@@ -5479,10 +5481,14 @@ Convergence.Runtime.RuntimeDungeonTraversalResult.Transition.get -> Convergence.
 Convergence.Runtime.RuntimeDungeonTraversalRequestField
 Convergence.Runtime.RuntimeDungeonTraversalRequestField.CurrentDungeonId = 0 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
 Convergence.Runtime.RuntimeDungeonTraversalRequestField.CurrentNodeId = 1 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+Convergence.Runtime.RuntimeDungeonTraversalRequestField.DefeatedBossIds = 8 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
 Convergence.Runtime.RuntimeDungeonTraversalRequestField.DestinationNodeId = 5 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+Convergence.Runtime.RuntimeDungeonTraversalRequestField.ProgressId = 9 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
 Convergence.Runtime.RuntimeDungeonTraversalRequestField.SourceNodeId = 4 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
 Convergence.Runtime.RuntimeDungeonTraversalRequestField.TransitionDungeonId = 3 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
 Convergence.Runtime.RuntimeDungeonTraversalRequestField.TransitionId = 2 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+Convergence.Runtime.RuntimeDungeonTraversalRequestField.UnlockedCheckpointIds = 7 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+Convergence.Runtime.RuntimeDungeonTraversalRequestField.VisitedNodeIds = 6 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
 Convergence.Runtime.RuntimeDungeonTraversalService
 Convergence.Runtime.RuntimeDungeonTraversalService.RegisterBossDefeat(Convergence.Runtime.RuntimeDungeonTraversalSnapshot! current, Convergence.Content.ContentId bossId) -> Convergence.Runtime.RuntimeDungeonStateChangeResult!
 Convergence.Runtime.RuntimeDungeonTraversalService.RuntimeDungeonTraversalService(Convergence.Runtime.IRuntimeDungeonTraversalPolicy! policy, Convergence.Runtime.RuntimeDungeonProgressRegistry! progressRegistry) -> void
