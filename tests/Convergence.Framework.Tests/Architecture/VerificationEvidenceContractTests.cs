@@ -75,6 +75,8 @@ public sealed class VerificationEvidenceContractTests
             "--clean-training-annex-demo",
             "--clean-training-annex-play",
             "--convergence-smoke",
+            "--log-file",
+            "%EVIDENCE_ROOT%\\godot-smoke.log",
             "EnableTrimAnalyzer=true",
             "git diff --check",
             "manifest.json",

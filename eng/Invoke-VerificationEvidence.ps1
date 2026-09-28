@@ -193,7 +193,7 @@ try {
     Invoke-RecordedCommand -Name '15-demo-training-annex' -CommandLine 'dotnet run --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj --configuration Release --no-build --no-restore -- --clean-training-annex-demo'
     Invoke-RecordedCommand -Name '16-demo-training-annex-play' -CommandLine 'echo 10| dotnet run --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj --configuration Release --no-build --no-restore -- --clean-training-annex-play'
     Invoke-RecordedCommand -Name '17-godot-build' -CommandLine 'dotnet build samples/Convergence.GodotHost/Convergence.GodotHost.csproj --configuration Debug --no-restore --no-incremental -warnaserror /clp:Summary'
-    Invoke-RecordedCommand -Name '18-godot-smoke' -CommandLine "$godotCommandPath --headless --path samples/Convergence.GodotHost -- --convergence-smoke"
+    Invoke-RecordedCommand -Name '18-godot-smoke' -CommandLine "$godotCommandPath --headless --log-file `"%EVIDENCE_ROOT%\godot-smoke.log`" --path samples/Convergence.GodotHost -- --convergence-smoke"
     Invoke-RecordedCommand -Name '19-trimming-analysis' -CommandLine 'dotnet build src/Convergence.Framework/Convergence.Framework.csproj --configuration Release --no-restore --no-incremental -p:EnableTrimAnalyzer=true -p:IsTrimmable=true -p:TreatWarningsAsErrors=true /clp:Summary'
     Invoke-RecordedCommand -Name '20-diff-check' -CommandLine 'git diff --check'
 

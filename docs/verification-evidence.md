@@ -55,6 +55,9 @@ Every successful bundle contains:
 - `reviewed-range.diff` and `reviewed-range-commits.txt` when a range is given;
 - one portable `.cmd` wrapper and one unedited `.raw.txt` combined-output file
   for every command;
+- `godot-smoke.log`, written directly into the bundle by the real headless
+  smoke so local verification does not depend on Godot's default `user://`
+  profile path;
 - `coverage/coverage.cobertura.xml.gz`, preserving the exact collected XML in
   compressed form, plus its uncompressed SHA-256 in the manifest; and
 - `SHA256SUMS.txt`, covering every bundle file except the checksum file itself.
