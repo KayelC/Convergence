@@ -114,6 +114,7 @@ or implementation authority.
 - [Dungeon Traversal Order 9 Source Review, 19 September 2026](dungeon-traversal-order-9-source-review-2026-09-19.md)
 - [Dungeon Traversal Order 9 Independent Audit, 21 September 2026](dungeon-traversal-order-9-independent-audit-2026-09-21.md)
 - [Dungeon Traversal Order 9 Fresh Closure Audit, 23 September 2026](dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md)
+- [Dungeon Traversal Order 9 Post-Correction Independent Audit, 28 September 2026](dungeon-traversal-order-9-post-correction-independent-audit-2026-09-28.md)
 - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
 
 Current intended behavior belongs in confirmed mechanics and decision documents.
