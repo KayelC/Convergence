@@ -220,11 +220,24 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.Contains("| O9-R8: independent closure | pending |", roadmap, StringComparison.Ordinal);
         Assert.Contains("CurrentSaveContext", review, StringComparison.Ordinal);
 
+        string capabilityNarrative = File.ReadAllText(RepositoryPath(
+            "docs", "roadmap", "framework-capability-matrix.md"));
+        Assert.Contains("23 September fresh audit", capabilityNarrative, StringComparison.Ordinal);
+        Assert.All(Enumerable.Range(1, 4), number => Assert.Contains(
+            $"O9-C{number}", capabilityNarrative, StringComparison.Ordinal));
+        Assert.Contains("post-correction review and retained gate", capabilityNarrative, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "owner documentation confirmation remains",
+            capabilityNarrative,
+            StringComparison.Ordinal);
+
         string decision = File.ReadAllText(RepositoryPath(
             "docs", "decisions", "dungeon-progress-reporting.md"));
         Assert.Contains("Status: confirmed", decision, StringComparison.Ordinal);
         Assert.Contains("O9-R2 through O9-R6 subsequently implemented", decision, StringComparison.Ordinal);
+        Assert.Contains("O9-C1 and O9-C2 correct those gaps", decision, StringComparison.Ordinal);
         Assert.Contains("`RuntimeDungeonProgressRegistry` declares eligible IDs", decision, StringComparison.Ordinal);
+        Assert.Contains("`RuntimeSaveValidator.CreateWithDungeonProgressRegistry`", decision, StringComparison.Ordinal);
         Assert.Contains("All three remain `existing_unreviewed`", decision, StringComparison.Ordinal);
         Assert.DoesNotContain("matches the current service", decision, StringComparison.Ordinal);
         Assert.All(Enumerable.Range(1, 6), number => Assert.Contains(

@@ -114,6 +114,6 @@ resolve the active-document contradiction.
 
 | Checkpoint | State | Exit condition |
 |---|---|---|
-| O9-C4-L1 | open | Active capability/decision evidence names the correction chain and pending C4 authority; executable documentation test passes. |
+| O9-C4-L1 | corrected_pending_gate | Active capability/decision evidence now names the correction chain and pending C4 authority; the executable documentation test guards both documents. |
 | O9-C4-GATE | pending | Fresh recheck finds no realistic reachable defect or contradiction and the retained release gate passes on the clean corrected commit. |
 

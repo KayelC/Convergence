@@ -13,8 +13,12 @@ non-battle outcomes and couple optional traversal to one combat system.
 
 The project owner approved O9-D1 through O9-D6 after the Order 9 discussion on
 19 September 2026. O9-R2 through O9-R6 subsequently implemented the live
-request, progress eligibility, save/host, and authored-floor boundaries;
-independent closure and audience confirmation remain separate gates.
+request, progress eligibility, save/host, and authored-floor boundaries. The
+23 September fresh audit then found two authority gaps: malformed retained
+history could reach live policy evaluation, and restored progress did not use
+the live registry. O9-C1 and O9-C2 correct those gaps; O9-C3 aligns fixtures
+and guidance. Post-correction independent closure and audience confirmation
+remain separate gates.
 
 ## Confirmed Decision
 
@@ -72,6 +76,11 @@ same kind of progress without inventing a battle result.
 Typed traversal and progress results distinguish invalid requests, wrong
 context, ordinary route denial, and policy faults. These contracts do not make
 Godot, a scene graph, a battle system, or a fixed-floor resolver mandatory.
+`RuntimeSaveValidator.CreateWithDungeonProgressRegistry` applies the same
+declaration authority to retained checkpoint and boss records before aggregate
+restore. Games with no retained checkpoint or boss records do not need that
+optional validator composition. Save validation does not add a battle receipt
+or infer progress from visiting a node.
 The broad save aggregate remains at v19 unless a separate, explicitly
 approved save-contract change proves necessary; independent navigation and
 dungeon nullability remains Order 13's question.
@@ -80,10 +89,13 @@ dungeon nullability remains Order 13's question.
 
 The [Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
 records the opening behavior, while the
+[fresh closure audit](../reviews/dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md)
+records the authority gaps and O9-C1 through O9-C4 correction sequence. The
 [Order 9 roadmap](../roadmap/dungeon-traversal-order-9-roadmap.md) tracks
 subsequent implementation and review. Current audience guidance is the
 [world mechanics page](../mechanics/world-encounters-and-rewards.md),
 [dungeon developer guide](../developer-guide/dungeon-traversal.md), and
 [dungeon technical reference](../technical/dungeon-traversal-runtime.md).
-All three remain `existing_unreviewed` until independent audit and explicit
-project-owner confirmation; this decision record alone does not promote them.
+All three remain `existing_unreviewed` until the post-correction audit and
+explicit project-owner confirmation; this decision record alone does not
+promote them.
