@@ -1,0 +1,63 @@
+commit 299cbc158e8cb91c7a9f2e786b1685d457aa02b9
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 28 08:16:30 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 28 08:16:30 2026 +0200
+
+    quality: confine Godot verification logs
+
+commit 0187a7f892fb7170216729fd43b99a3629c13b9a
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 28 08:14:15 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 28 08:14:15 2026 +0200
+
+    docs: record order 9 gate portability finding
+
+commit 511fc387d270139c8fed7361711a23b288d7d1df
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 28 08:01:09 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 28 08:01:09 2026 +0200
+
+    docs: correct order 9 closure authority
+
+commit 467c8be251cfcabbd32629deed8dfd43fc550510
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 28 07:59:03 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 28 07:59:03 2026 +0200
+
+    docs: audit corrected dungeon traversal authority
+
+commit 11e69b124ccf3c362163e5abe4351c83f70a061f
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 28 07:54:00 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 28 07:54:00 2026 +0200
+
+    docs: align restored dungeon progress guidance
+
+commit 9390290d4ede3626d1a5b705452d531b02d7f404
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Mon Sep 28 07:46:19 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Mon Sep 28 07:46:19 2026 +0200
+
+    runtime: validate restored dungeon progress
+
+commit 76da99130b9ba903f15221f5cf705acd7b6589ad
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Wed Sep 23 08:57:59 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Wed Sep 23 08:57:59 2026 +0200
+
+    runtime: reject malformed dungeon history
+
+commit 96861ec1b550e3bb5530dd8e8ad72ede4870b628
+Author:     Kayel Calleja <kayelcalleja64@gmail.com>
+AuthorDate: Wed Sep 23 08:47:36 2026 +0200
+Commit:     Kayel Calleja <kayelcalleja64@gmail.com>
+CommitDate: Wed Sep 23 08:47:36 2026 +0200
+
+    docs: record order 9 fresh closure audit

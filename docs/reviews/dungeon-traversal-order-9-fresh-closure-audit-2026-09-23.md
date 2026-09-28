@@ -225,10 +225,13 @@ suite is green.
   accepts the live immutable progress registry and rejects missing authority,
   undeclared IDs, wrong kinds, wrong dungeons, and progress without an eligible
   visited area. Training Annex and the clean save demo supply their registries.
-- **O9-C3 — complete (this documentation/fixture commit):** the re-entry
+- **O9-C3 — complete (`11e69b12`):** the re-entry
   fixture now earns its checkpoint through live traversal and progress services;
   all active audience, API, capability, coverage, and roadmap guidance reflects
   C1/C2. The complete Release suite passed 2,093 tests with zero failures or
   skips, and strict build/format/diff gates passed.
-- **O9-C4 — pending:** perform a fresh source/document review and retained
-  release gate. Order 9 and all three audience entries remain open meanwhile.
+- **O9-C4 — complete (`299cbc15` tested):** the fresh source/document review
+  found no further dungeon-runtime defect, corrected two low-severity
+  quality-boundary findings, and retained a successful 23-command release gate.
+  Order 9 and all three audience entries remain open for explicit owner
+  confirmation.

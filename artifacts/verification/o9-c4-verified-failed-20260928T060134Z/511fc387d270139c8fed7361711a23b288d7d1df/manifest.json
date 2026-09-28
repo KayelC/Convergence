@@ -1,0 +1,222 @@
+{
+    "schemaVersion":  1,
+    "checkpoint":  "o9-c4-verified",
+    "status":  "failed",
+    "testedCommit":  "511fc387d270139c8fed7361711a23b288d7d1df",
+    "reviewedRange":  {
+                          "base":  "d6608d95c7432d7b4eedea224bed09cd5d84c8b4",
+                          "head":  "511fc387d270139c8fed7361711a23b288d7d1df"
+                      },
+    "repositoryWasClean":  true,
+    "startedUtc":  "2026-09-28T06:01:34.6034858Z",
+    "completedUtc":  "2026-09-28T06:03:14.8769979Z",
+    "host":  {
+                 "operatingSystem":  "Microsoft Windows NT 10.0.26200.0",
+                 "powershellVersion":  "5.1.26100.9444",
+                 "godotExecutable":  "tests/Godot_v4.7.1-stable_mono_win64/Godot_v4.7.1-stable_mono_win64_console.exe",
+                 "godotSha256":  "b2c334ff6bf1e07ded41b80bd6f4785485650db6ddbb2740b802930f35237c26"
+             },
+    "commands":  [
+                     {
+                         "order":  1,
+                         "name":  "00-dotnet-info",
+                         "command":  "dotnet --info",
+                         "commandFile":  "commands/00-dotnet-info.cmd",
+                         "outputFile":  "commands/00-dotnet-info.raw.txt",
+                         "startedUtc":  "2026-09-28T06:01:34.6084735Z",
+                         "completedUtc":  "2026-09-28T06:01:34.9263492Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  2,
+                         "name":  "01-restore-audit",
+                         "command":  "dotnet restore Convergence.sln --locked-mode -p:NuGetAudit=true -p:NuGetAuditMode=all \"-p:WarningsAsErrors=NU1901%%3BNU1902%%3BNU1903%%3BNU1904\"",
+                         "commandFile":  "commands/01-restore-audit.cmd",
+                         "outputFile":  "commands/01-restore-audit.raw.txt",
+                         "startedUtc":  "2026-09-28T06:01:34.9723642Z",
+                         "completedUtc":  "2026-09-28T06:01:35.6213296Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  3,
+                         "name":  "02-format",
+                         "command":  "dotnet format Convergence.sln --no-restore --verify-no-changes --verbosity diagnostic",
+                         "commandFile":  "commands/02-format.cmd",
+                         "outputFile":  "commands/02-format.raw.txt",
+                         "startedUtc":  "2026-09-28T06:01:35.6283284Z",
+                         "completedUtc":  "2026-09-28T06:01:58.9925447Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  4,
+                         "name":  "03-framework-build",
+                         "command":  "dotnet build src/Convergence.Framework/Convergence.Framework.csproj --configuration Release --no-restore --no-incremental -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true /clp:Summary",
+                         "commandFile":  "commands/03-framework-build.cmd",
+                         "outputFile":  "commands/03-framework-build.raw.txt",
+                         "startedUtc":  "2026-09-28T06:01:59.0275956Z",
+                         "completedUtc":  "2026-09-28T06:02:01.5736481Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  5,
+                         "name":  "04-solution-build",
+                         "command":  "dotnet build Convergence.sln --configuration Release --no-restore --no-incremental -p:TreatWarningsAsErrors=true -p:ContinuousIntegrationBuild=true /clp:Summary",
+                         "commandFile":  "commands/04-solution-build.cmd",
+                         "outputFile":  "commands/04-solution-build.raw.txt",
+                         "startedUtc":  "2026-09-28T06:02:01.5851641Z",
+                         "completedUtc":  "2026-09-28T06:02:06.5140623Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  6,
+                         "name":  "05-focused-framework-tests",
+                         "command":  "dotnet test tests/Convergence.Framework.Tests/Convergence.Framework.Tests.csproj --configuration Release --no-build --no-restore --filter \"FullyQualifiedName~EquipmentInstanceOwnershipTests|FullyQualifiedName~EquipmentSlotLayoutTests|FullyQualifiedName~ResourceManagementServiceTests|FullyQualifiedName~ShopPricingPolicyTests|FullyQualifiedName~ShopStockPolicyTests|FullyQualifiedName~RecoveryPolicyTests|FullyQualifiedName~RuntimePersistenceSnapshotTests|FullyQualifiedName~RuntimeRulesetBindingTests|FullyQualifiedName~GodotIntegrationContractTests|FullyQualifiedName~DocumentationFoundationTests|FullyQualifiedName~DocumentationContractSynchronizationTests\" --logger \"console;verbosity=normal\"",
+                         "commandFile":  "commands/05-focused-framework-tests.cmd",
+                         "outputFile":  "commands/05-focused-framework-tests.raw.txt",
+                         "startedUtc":  "2026-09-28T06:02:06.5328221Z",
+                         "completedUtc":  "2026-09-28T06:02:10.6992586Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  7,
+                         "name":  "06-focused-demohost-tests",
+                         "command":  "dotnet test tests/Convergence.DemoHost.Tests/Convergence.DemoHost.Tests.csproj --configuration Release --no-build --no-restore --filter \"FullyQualifiedName~CleanSaveDemoHostTests|FullyQualifiedName~CleanTrainingAnnexDemoHostTests|FullyQualifiedName~CleanTrainingAnnexPlayHostTests\" --logger \"console;verbosity=normal\"",
+                         "commandFile":  "commands/06-focused-demohost-tests.cmd",
+                         "outputFile":  "commands/06-focused-demohost-tests.raw.txt",
+                         "startedUtc":  "2026-09-28T06:02:10.9129503Z",
+                         "completedUtc":  "2026-09-28T06:02:15.5817249Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  8,
+                         "name":  "07-architecture-tests",
+                         "command":  "dotnet test tests/Convergence.Framework.Tests/Convergence.Framework.Tests.csproj --configuration Release --no-build --no-restore --filter \"FullyQualifiedName~Convergence.Framework.Tests.Architecture\" --logger \"console;verbosity=normal\"",
+                         "commandFile":  "commands/07-architecture-tests.cmd",
+                         "outputFile":  "commands/07-architecture-tests.raw.txt",
+                         "startedUtc":  "2026-09-28T06:02:15.6651121Z",
+                         "completedUtc":  "2026-09-28T06:02:17.9140363Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  9,
+                         "name":  "08-full-tests",
+                         "command":  "dotnet test Convergence.sln --configuration Release --no-build --no-restore --logger \"console;verbosity=normal\"",
+                         "commandFile":  "commands/08-full-tests.cmd",
+                         "outputFile":  "commands/08-full-tests.raw.txt",
+                         "startedUtc":  "2026-09-28T06:02:17.9715306Z",
+                         "completedUtc":  "2026-09-28T06:02:22.2639325Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  10,
+                         "name":  "09-framework-coverage",
+                         "command":  "dotnet test tests/Convergence.Framework.Tests/Convergence.Framework.Tests.csproj --configuration Release --no-build --no-restore --collect:\"XPlat Code Coverage\" --results-directory \"%EVIDENCE_ROOT%\\coverage-work\" --logger \"console;verbosity=minimal\"",
+                         "commandFile":  "commands/09-framework-coverage.cmd",
+                         "outputFile":  "commands/09-framework-coverage.raw.txt",
+                         "startedUtc":  "2026-09-28T06:02:23.5798487Z",
+                         "completedUtc":  "2026-09-28T06:02:57.4316265Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  11,
+                         "name":  "10-coverage-threshold",
+                         "command":  "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\eng\\Assert-CoberturaCoverage.ps1 -CoveragePath \"%EVIDENCE_ROOT%\\coverage\\coverage.cobertura.xml\" -MinimumLineRate 0.90 -MinimumBranchRate 0.70",
+                         "commandFile":  "commands/10-coverage-threshold.cmd",
+                         "outputFile":  "commands/10-coverage-threshold.raw.txt",
+                         "startedUtc":  "2026-09-28T06:02:57.4601912Z",
+                         "completedUtc":  "2026-09-28T06:02:59.5253503Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  12,
+                         "name":  "11-content-validation",
+                         "command":  "dotnet run --project tools/Convergence.ContentValidator/Convergence.ContentValidator.csproj --configuration Release --no-build --no-restore -- --content-root content --schema-root schemas/content/v10 --registrations config/content-validator/active-samples.registrations.json",
+                         "commandFile":  "commands/11-content-validation.cmd",
+                         "outputFile":  "commands/11-content-validation.raw.txt",
+                         "startedUtc":  "2026-09-28T06:03:01.7686863Z",
+                         "completedUtc":  "2026-09-28T06:03:03.0892839Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  13,
+                         "name":  "12-demo-battle",
+                         "command":  "dotnet run --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj --configuration Release --no-build --no-restore -- --clean-battle-demo",
+                         "commandFile":  "commands/12-demo-battle.cmd",
+                         "outputFile":  "commands/12-demo-battle.raw.txt",
+                         "startedUtc":  "2026-09-28T06:03:03.1003414Z",
+                         "completedUtc":  "2026-09-28T06:03:04.0458156Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  14,
+                         "name":  "13-demo-field",
+                         "command":  "dotnet run --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj --configuration Release --no-build --no-restore -- --clean-field-demo",
+                         "commandFile":  "commands/13-demo-field.cmd",
+                         "outputFile":  "commands/13-demo-field.raw.txt",
+                         "startedUtc":  "2026-09-28T06:03:04.0968948Z",
+                         "completedUtc":  "2026-09-28T06:03:04.7582657Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  15,
+                         "name":  "14-demo-save",
+                         "command":  "dotnet run --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj --configuration Release --no-build --no-restore -- --clean-save-demo",
+                         "commandFile":  "commands/14-demo-save.cmd",
+                         "outputFile":  "commands/14-demo-save.raw.txt",
+                         "startedUtc":  "2026-09-28T06:03:04.7694037Z",
+                         "completedUtc":  "2026-09-28T06:03:05.5688487Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  16,
+                         "name":  "15-demo-training-annex",
+                         "command":  "dotnet run --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj --configuration Release --no-build --no-restore -- --clean-training-annex-demo",
+                         "commandFile":  "commands/15-demo-training-annex.cmd",
+                         "outputFile":  "commands/15-demo-training-annex.raw.txt",
+                         "startedUtc":  "2026-09-28T06:03:05.5817836Z",
+                         "completedUtc":  "2026-09-28T06:03:06.5519658Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  17,
+                         "name":  "16-demo-training-annex-play",
+                         "command":  "echo 10| dotnet run --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj --configuration Release --no-build --no-restore -- --clean-training-annex-play",
+                         "commandFile":  "commands/16-demo-training-annex-play.cmd",
+                         "outputFile":  "commands/16-demo-training-annex-play.raw.txt",
+                         "startedUtc":  "2026-09-28T06:03:06.6272167Z",
+                         "completedUtc":  "2026-09-28T06:03:07.4100092Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  18,
+                         "name":  "17-godot-build",
+                         "command":  "dotnet build samples/Convergence.GodotHost/Convergence.GodotHost.csproj --configuration Debug --no-restore --no-incremental -warnaserror /clp:Summary",
+                         "commandFile":  "commands/17-godot-build.cmd",
+                         "outputFile":  "commands/17-godot-build.raw.txt",
+                         "startedUtc":  "2026-09-28T06:03:07.4266195Z",
+                         "completedUtc":  "2026-09-28T06:03:10.5259369Z",
+                         "exitCode":  0
+                     },
+                     {
+                         "order":  19,
+                         "name":  "18-godot-smoke",
+                         "command":  "\"%REPO_ROOT%\\tests\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe\" --headless --path samples/Convergence.GodotHost -- --convergence-smoke",
+                         "commandFile":  "commands/18-godot-smoke.cmd",
+                         "outputFile":  "commands/18-godot-smoke.raw.txt",
+                         "startedUtc":  "2026-09-28T06:03:10.5351872Z",
+                         "completedUtc":  "2026-09-28T06:03:14.6089465Z",
+                         "exitCode":  -1073741819
+                     }
+                 ],
+    "coverage":  {
+                     "compressedFile":  "coverage/coverage.cobertura.xml.gz",
+                     "uncompressedSha256":  "fffc4d2dd1ce1e403ea5a7bb11dc28ff6eea33cf2376f919003f23dd9f13e994",
+                     "lineRate":  0.9037999999999999,
+                     "branchRate":  0.7731999999999999,
+                     "linesCovered":  46539,
+                     "linesValid":  51487,
+                     "branchesCovered":  12394,
+                     "branchesValid":  16028
+                 },
+    "failure":  "Verification command \u002718-godot-smoke\u0027 failed with exit code -1073741819."
+}

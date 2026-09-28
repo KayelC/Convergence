@@ -96,6 +96,6 @@ subsequent implementation and review. Current audience guidance is the
 [world mechanics page](../mechanics/world-encounters-and-rewards.md),
 [dungeon developer guide](../developer-guide/dungeon-traversal.md), and
 [dungeon technical reference](../technical/dungeon-traversal-runtime.md).
-All three remain `existing_unreviewed` until the post-correction audit and
-explicit project-owner confirmation; this decision record alone does not
-promote them.
+The post-correction audit and retained gate are complete. All three audience
+entries remain `existing_unreviewed` until explicit project-owner confirmation;
+this decision record alone does not promote them.

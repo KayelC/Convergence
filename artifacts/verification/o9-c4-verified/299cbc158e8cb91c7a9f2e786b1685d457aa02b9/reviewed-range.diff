@@ -1,0 +1,1988 @@
+diff --git a/docs/decisions/dungeon-progress-reporting.md b/docs/decisions/dungeon-progress-reporting.md
+index 3f10049fd6465db8a34d7ffd3fb3792d0ae4fd46..bf5954977886ad654f6ca4e11ed327fe759b8a2c 100644
+--- a/docs/decisions/dungeon-progress-reporting.md
++++ b/docs/decisions/dungeon-progress-reporting.md
+@@ -13,8 +13,12 @@ non-battle outcomes and couple optional traversal to one combat system.
+ 
+ The project owner approved O9-D1 through O9-D6 after the Order 9 discussion on
+ 19 September 2026. O9-R2 through O9-R6 subsequently implemented the live
+-request, progress eligibility, save/host, and authored-floor boundaries;
+-independent closure and audience confirmation remain separate gates.
++request, progress eligibility, save/host, and authored-floor boundaries. The
++23 September fresh audit then found two authority gaps: malformed retained
++history could reach live policy evaluation, and restored progress did not use
++the live registry. O9-C1 and O9-C2 correct those gaps; O9-C3 aligns fixtures
++and guidance. Post-correction independent closure and audience confirmation
++remain separate gates.
+ 
+ ## Confirmed Decision
+ 
+@@ -72,6 +76,11 @@ same kind of progress without inventing a battle result.
+ Typed traversal and progress results distinguish invalid requests, wrong
+ context, ordinary route denial, and policy faults. These contracts do not make
+ Godot, a scene graph, a battle system, or a fixed-floor resolver mandatory.
++`RuntimeSaveValidator.CreateWithDungeonProgressRegistry` applies the same
++declaration authority to retained checkpoint and boss records before aggregate
++restore. Games with no retained checkpoint or boss records do not need that
++optional validator composition. Save validation does not add a battle receipt
++or infer progress from visiting a node.
+ The broad save aggregate remains at v19 unless a separate, explicitly
+ approved save-contract change proves necessary; independent navigation and
+ dungeon nullability remains Order 13's question.
+@@ -80,10 +89,13 @@ dungeon nullability remains Order 13's question.
+ 
+ The [Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
+ records the opening behavior, while the
++[fresh closure audit](../reviews/dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md)
++records the authority gaps and O9-C1 through O9-C4 correction sequence. The
+ [Order 9 roadmap](../roadmap/dungeon-traversal-order-9-roadmap.md) tracks
+ subsequent implementation and review. Current audience guidance is the
+ [world mechanics page](../mechanics/world-encounters-and-rewards.md),
+ [dungeon developer guide](../developer-guide/dungeon-traversal.md), and
+ [dungeon technical reference](../technical/dungeon-traversal-runtime.md).
+-All three remain `existing_unreviewed` until independent audit and explicit
+-project-owner confirmation; this decision record alone does not promote them.
++All three remain `existing_unreviewed` until the post-correction audit and
++explicit project-owner confirmation; this decision record alone does not
++promote them.
+diff --git a/docs/developer-guide/dungeon-traversal.md b/docs/developer-guide/dungeon-traversal.md
+index e55f4276a8c19cfd917209138b31daea3dbed47e..a14a0abc5e98afdbddb3fc74e13df3d42542c3ce 100644
+--- a/docs/developer-guide/dungeon-traversal.md
++++ b/docs/developer-guide/dungeon-traversal.md
+@@ -110,15 +110,32 @@ Annex's `SelectDungeonEntry` is one host-local example of this rule.
+ ## Save And Restore
+ 
+ Save contract v19 permits no field state, navigation-only field state, or
+-navigation plus retained dungeon state. Framework validation checks basic
+-IDs and catalog dungeon references, but it does not know your scene graph.
+-Before adopting an aggregate restore, the host must check any stronger
+-requirements: for example, an inside location that requires a current dungeon
+-node, recognized node IDs, and available scenes. A visual host must finish
+-loading its scene before adopting the candidate restored state. An outside
+-location with retained dungeon progress is valid and should use the outside
+-save/menu context. `CurrentSaveContext` in Training Annex demonstrates that
+-the logical location, not mere progress presence, chooses context.
++navigation plus retained dungeon state. When a save retains unlocked
++checkpoints or defeated bosses, construct the validator with the same immutable
++registry used by the live traversal service:
++
++```csharp
++var saveValidator = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(registry);
++RuntimeSaveValidationResult validation = saveValidator.Validate(snapshot, catalog);
++```
++
++Validation rejects an undeclared progress ID, the wrong checkpoint/boss kind,
++the wrong dungeon, or a record whose eligible area is absent from visited
++history. Calling the ordinary `RuntimeSaveValidator` constructor remains valid
++for games with no retained checkpoint or boss records; a save containing such
++records returns `DungeonProgressRegistryMissing` instead of trusting them.
++Passing a registry does not make the dungeon module mandatory and does not
++infer progress from node entry.
++
++Framework validation also checks basic IDs and the catalog dungeon reference,
++but it does not know your scene graph. Before adopting an aggregate restore,
++the host must check any stronger requirements: for example, an inside location
++that requires a current dungeon node, recognized node IDs, and available
++scenes. A visual host must finish loading its scene before adopting the
++candidate restored state. An outside location with retained dungeon progress
++is valid and should use the outside save/menu context. `CurrentSaveContext` in
++Training Annex demonstrates that the logical location, not mere progress
++presence, chooses context.
+ 
+ See the [technical traversal contract](../technical/dungeon-traversal-runtime.md)
+ for ordering and the [mechanics overview](../mechanics/world-encounters-and-rewards.md)
+diff --git a/docs/gameplay-systems.md b/docs/gameplay-systems.md
+index 7da019290f712a62158be58178b8a753de6f4a01..ab97115d05785fcbfecd963935336218f8b2765f 100644
+--- a/docs/gameplay-systems.md
++++ b/docs/gameplay-systems.md
+@@ -211,8 +211,10 @@ and [technical state machine](technical/generic-navigation-runtime.md).
+ 
+ Dungeon traversal separately approves meaningful node changes and validates
+ explicit checkpoint/boss reports against host-declared eligible IDs and areas.
+-Authored floor metadata never starts combat. A host may retain progress while
+-outside and must select an entrance or unlocked checkpoint on re-entry. See the
++Saved checkpoint/boss records are reconciled against that same registry and
++eligible visited history before restore. Authored floor metadata never starts
++combat. A host may retain progress while outside and must select an entrance or
++unlocked checkpoint on re-entry. See the
+ [dungeon integration guide](developer-guide/dungeon-traversal.md) and
+ [technical state/sequence reference](technical/dungeon-traversal-runtime.md).
+ 
+diff --git a/docs/mechanics/world-encounters-and-rewards.md b/docs/mechanics/world-encounters-and-rewards.md
+index 00315c1a585f89cd66b7a6a271dec560674436e1..c8eb6e1831e6948dad2f965c9943ac149fb052eb 100644
+--- a/docs/mechanics/world-encounters-and-rewards.md
++++ b/docs/mechanics/world-encounters-and-rewards.md
+@@ -43,12 +43,14 @@ It does not move a character through every step of a 3D scene. A door, stairs,
+ barrier, or script can request a node transition. Reverse travel needs its own
+ transition.
+ 
+-**Framework rule:** a move checks its dungeon, node, and transition IDs, then
+-whether the current dungeon and source node match. The game's supplied route
+-rule decides whether a valid move is allowed. A sealed barrier can therefore
+-reject a move without changing the player's node or visited history. Invalid
+-IDs, wrong dungeon, wrong source, legal route denial, and a malfunctioning
+-route rule have distinct outcomes. Cancellation is not turned into a denial.
++**Framework rule:** a move first checks the dungeon, current node, retained
++visited/checkpoint/boss history, and transition IDs. It then checks whether the
++current dungeon and source node match. The game's supplied route rule decides
++whether a valid move is allowed. A sealed barrier can therefore reject a move
++without changing the player's node or visited history. Invalid current or
++retained IDs, wrong dungeon, wrong source, legal route denial, and a
++malfunctioning route rule have distinct outcomes. Cancellation is not turned
++into a denial.
+ 
+ **Progress rule:** the game may report a checkpoint unlock or boss defeat only
+ after its own success condition. The Framework checks a game-supplied list of
+@@ -59,6 +61,13 @@ node never unlocks a checkpoint or defeats a boss. Success may come from a
+ battle, puzzle, or story script; the Framework does not require battle-result
+ proof for every game design.
+ 
++Saved checkpoint and boss records are checked against that same declared list
++before restoration. A record must have the expected checkpoint/boss kind,
++belong to the saved dungeon, and name an eligible area that appears in visited
++history. This prevents a save from granting progress that live play could not
++have recorded. Games with no retained checkpoint or boss records do not need
++to configure this optional validation module.
++
+ **Authored content:** a dungeon may describe floor ranges, encounter pools,
+ and fixed-floor metadata. These are optional catalog facts, not orders to move
+ the player or start combat. A floor may have no visible enemy, one enemy, or
+diff --git a/docs/public-api-contract.md b/docs/public-api-contract.md
+index f5bdacfaf9edf268b0a30e77b44e370f135f1eb7..4d213c98ee17b9870180ef5ebb2e363a3aabc4e8 100644
+--- a/docs/public-api-contract.md
++++ b/docs/public-api-contract.md
+@@ -357,6 +357,25 @@ propagate rather than being converted to gameplay results. Hosts use the code,
+ fault kind, and reason ID for control flow; exception text in `Message` is
+ diagnostic only and should not be displayed verbatim to players.
+ 
++## Dungeon Traversal And Restored Progress Validity
++
++`RuntimeDungeonTraversalService` validates the complete live snapshot before
++route policy or progress-registry evaluation. In addition to current/request
++IDs, `RuntimeDungeonTraversalRequestField` identifies malformed visited-node,
++unlocked-checkpoint, defeated-boss, and reported-progress IDs. Invalid requests
++remain non-mutating and cannot expose an applied event.
++
++`RuntimeSaveValidator.CreateWithDungeonProgressRegistry` is the supported
++composition path for a save that retains checkpoint or boss progress. The
++validator checks each record against the same immutable declaration authority
++used during live reporting: progress ID, checkpoint/boss kind, dungeon, and an
++eligible node in visited history. The additive diagnostics distinguish missing
++registry, undeclared progress, wrong kind, wrong dungeon, and absent eligible
++history. Saves with no retained checkpoint or boss IDs remain valid through the
++ordinary constructor, preserving the dungeon module's optional use. Save
++contract v19 is unchanged because this strengthens validation without changing
++the snapshot shape.
++
+ ## Documentation And Build Tooling
+ 
+ Framework emits `Convergence.Framework.xml`. XML documentation is curated and intentionally incomplete; `CS1591` remains suppressed. Summaries cover selected
+diff --git a/docs/reference/documentation-coverage.md b/docs/reference/documentation-coverage.md
+index 9efa43b2d52b6dbb18da20f3814ae4cefbe0eb5b..2cfd8210201d44f8a3889452badac9069c9441ba 100644
+--- a/docs/reference/documentation-coverage.md
++++ b/docs/reference/documentation-coverage.md
+@@ -42,11 +42,12 @@ review and project-owner confirmation make all three `reviewed`. Order 8
+ closed after the retained online release gate passed. The real Godot
+ smoke sample does not yet execute live navigation.
+ Order 9 now has a source-reconciled dungeon mechanics section, a developer
+-integration guide, and a technical state/sequence reference. O9-R7 wrote
+-these audience pages after the runtime corrections. The independent review
+-and retained release gate passed after two documentation/tracking corrections.
+-All three remain `existing_unreviewed` pending project-owner confirmation;
+-neither the guide's presence nor passing tests closes the Order.
++integration guide, and a technical state/sequence reference. The 23 September
++fresh audit subsequently found two authority gaps. O9-C1 validates retained
++live history, O9-C2 reconciles restored progress with the live registry, and
++O9-C3 aligns these pages with those corrections. All three remain
++`existing_unreviewed` pending the O9-C4 post-correction audit and project-owner
++confirmation; neither the guide's presence nor passing tests closes the Order.
+ Order 7 now documents inventory-owned equipment instances, authored slot
+ layouts, one live equipment profile, typed currencies, resolved pricing,
+ policy-owned stock, atomic shops, recovery, and save v19 across player,
+diff --git a/docs/reviews/README.md b/docs/reviews/README.md
+index 697770617c2c77cf25b2ff6471d9933be83d197e..f59ac73e06a6fb7e2d58a135df1ad3ce25d4793e 100644
+--- a/docs/reviews/README.md
++++ b/docs/reviews/README.md
+@@ -113,6 +113,8 @@ or implementation authority.
+ - [Navigation Order 8 Final Closure Review, 19 September 2026](navigation-order-8-final-closure-review-2026-09-19.md)
+ - [Dungeon Traversal Order 9 Source Review, 19 September 2026](dungeon-traversal-order-9-source-review-2026-09-19.md)
+ - [Dungeon Traversal Order 9 Independent Audit, 21 September 2026](dungeon-traversal-order-9-independent-audit-2026-09-21.md)
++- [Dungeon Traversal Order 9 Fresh Closure Audit, 23 September 2026](dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md)
++- [Dungeon Traversal Order 9 Post-Correction Independent Audit, 28 September 2026](dungeon-traversal-order-9-post-correction-independent-audit-2026-09-28.md)
+ - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
+ 
+ Current intended behavior belongs in confirmed mechanics and decision documents.
+diff --git a/docs/reviews/dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md b/docs/reviews/dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..0c233c87c3d52f5480e95d8e274dfd271b523f03
+--- /dev/null
++++ b/docs/reviews/dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md
+@@ -0,0 +1,234 @@
++# Dungeon Traversal Order 9 Fresh Closure Audit
++
++**Audit date:** 23 September 2026  
++**Source baseline:** `d6608d95c7432d7b4eedea224bed09cd5d84c8b4`  
++**Audit method:** fresh source, test, host-integration, and audience-document
++review. Earlier Order 9 reports and completion summaries were not used as
++evidence for the findings below.
++
++## Verdict
++
++Order 9 should remain open. Its central design is coherent and most of the
++implementation is strong, but two reachable authority gaps remain:
++
++- live traversal can approve a transition while carrying malformed retained
++  history into the candidate state;
++- restored checkpoint or boss progress is not checked against the same
++  eligibility registry that governs live reports.
++
++There are no high-severity findings. This audit records two medium findings
++and one low documentation/tracking finding. They are closure blockers because
++both medium findings concern who is allowed to create authoritative dungeon
++state, not cosmetic hardening.
++
++## Findings
++
++### O9-M1: valid transitions preserve malformed retained history
++
++**Intended invariant.** O9-D6 says invalid live dungeon IDs produce typed,
++non-mutating failures. The technical contract also says live requests validate
++IDs at the service boundary.
++
++**Reachable path.** `RuntimeDungeonTraversalSnapshot` accepts the visited-node,
++checkpoint, and boss collections without checking each `ContentId`. The live
++request validator checks only current dungeon, current node, transition,
++transition dungeon, source node, and destination node. With those six values
++valid, `Traverse` calls `MoveTo`, which carries all three malformed collections
++into an `Applied` result.
++
++Relevant source:
++
++- `src/Convergence.Framework/Runtime/DungeonTraversal.cs:58-72`
++- `src/Convergence.Framework/Runtime/DungeonTraversal.cs:86-108`
++- `src/Convergence.Framework/Runtime/DungeonTraversal.cs:516-528`
++- `src/Convergence.Framework/Runtime/DungeonTraversal.cs:740-771`
++
++**Reproduction.** A temporary .NET 8 audit probe constructed a snapshot with
++valid current IDs and a default `ContentId` in each retained collection, then
++requested an allowed valid move. The unedited result was:
++
++```text
++Code=Applied
++InvalidVisitedRetained=True
++InvalidCheckpointRetained=True
++InvalidBossRetained=True
++Destination=audit:room
++```
++
++The probe was removed after execution and did not modify an active project.
++
++**Consequence.** A public caller, custom host decoder, or earlier faulty state
++producer can receive a successful transition whose history cannot pass save
++validation. `IsCheckpointUnlocked(default)` and `IsBossDefeated(default)` can
++also report true on that malformed state. The route policy is called even
++though the state it receives is not runtime-valid.
++
++**Required correction.** Validate every retained node, checkpoint, and boss ID
++before dungeon/source matching or policy evaluation. Return a typed
++`InvalidRequest` that identifies the first malformed collection and leaves the
++exact state unchanged. Apply the same complete snapshot validity rule to
++progress-report requests and public result coherence checks. Do not move this
++validation into a host or add a policy; it is a Framework state invariant.
++
++**Required tests.** Cover one malformed value in each retained collection for
++`Traverse`, `UnlockCheckpoint`, and `RegisterBossDefeat`; prove the policy is
++not called, no event is emitted, and no collection changes.
++
++### O9-M2: restore can bypass progress eligibility authority
++
++**Intended invariant.** O9-D1 and O9-D2 make the supplied progress registry the
++authority for checkpoint and boss IDs, their dungeon, and the areas where they
++can be earned. Re-entry may select only an actually unlocked checkpoint.
++
++**Reachable path.** Framework save validation checks retained progress IDs only
++for syntactic validity and checks only the dungeon ID against the catalog. It
++does not receive or consult `RuntimeDungeonProgressRegistry`. Aggregate restore
++then exposes the saved field snapshot unchanged. Training Annex adds a host
++check, but that check only recognizes the checkpoint ID; it does not prove the
++checkpoint has a matching registry declaration or that an allowed node was
++ever visited. `SelectDungeonEntry` trusts membership in
++`UnlockedCheckpointIds` alone.
++
++Relevant source and existing executable evidence:
++
++- `src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs:630-644`
++- `src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs:1713-1727`
++- `src/Convergence.Framework/Runtime/RuntimeSessionRestoration.cs:225-232`
++- `samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexPersistenceController.cs:471-537`
++- `samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexHostSupport.cs:168-197`
++- `tests/Convergence.DemoHost.Tests/Host/CleanTrainingAnnexPlayHostTests.cs:4441-4457`
++
++The existing entry test constructs a retained snapshot whose current and only
++visited node is Review Hall while claiming the Review Checkpoint. That
++checkpoint is declared as earnable only in Review Alcove. The helper accepts
++the claim and selects Review Alcove anyway. This state cannot be produced by
++the live progress service, but it can arrive through a malformed, stale, or
++host-decoded save.
++
++**Consequence.** Restore is a second authority for progress. A syntactically
++valid save can grant a checkpoint or boss record that live gameplay would have
++rejected. In Training Annex this can authorize checkpoint entry. A generic host
++following the current developer guide may accept undeclared progress entirely,
++because the guide mentions scene/node checks but not registry reconciliation.
++
++**Required correction.** Add a Framework-owned saved-progress validation path
++using the same immutable registry. For every retained checkpoint and boss, it
++must verify the matching kind, progress ID, and dungeon declaration and verify
++that at least one declared eligible node is present in visited history. Wire
++that validation into aggregate save/restore composition without making the
++optional dungeon module mandatory for games that store no dungeon progress.
++Training Annex must pass its existing registry instead of maintaining a weaker
++parallel whitelist. The correction must preserve the approved trusted-host
++reporting model: it must not require a battle receipt or infer progress from
++node entry.
++
++**Required tests.** Reject undeclared, wrong-dungeon, wrong-kind, and
++never-visited-eligible-area progress before any restored state is adopted;
++accept legitimate live-produced progress and outside-location saves retaining
++that progress. Replace the current impossible-state entry fixture with a
++snapshot produced by the live service.
++
++### O9-L1: active documentation and tracking overstate the current gate
++
++The audience pages are substantially accurate about navigation/traversal
++separation, host scene adoption, explicit encounter preparation, and trusted
++progress reporting. They do not describe the two bypasses above:
++
++- `docs/technical/dungeon-traversal-runtime.md:12-13` broadly claims that live
++  requests and saves validate IDs, while its six-ID flow omits retained state;
++- `docs/developer-guide/dungeon-traversal.md:110-121` does not tell integrators
++  to reconcile restored progress with the current progress registry;
++- `tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json:231-239`
++  records `implemented` with no known gaps;
++- `docs/roadmap/documentation-completion-roadmap.md:749-755` says no Framework
++  contract gap remains;
++- the documentation coverage matrix still says the independent audit is
++  pending, while the Order 9 roadmap says an earlier audit passed.
++
++**Required correction.** Keep Order 9 and all three audience entries open.
++Record O9-M1 and O9-M2 as known gaps while their corrections are in progress.
++After the runtime and restore fixes, update all three audience views together,
++then run a new independent closure audit before changing either capability or
++documentation status.
++
++## Confirmed Strengths And Non-Findings
++
++The audit deliberately did not classify the following approved boundaries as
++bugs:
++
++1. Navigation and dungeon traversal remain separate optional services.
++   Retained progress does not establish current physical location.
++2. Godot owns continuous movement, scenes, collision, visible enemies, and the
++   decision to adopt an approved candidate after scene work succeeds.
++3. Traversal does not automatically prepare an encounter or start combat.
++   Fixed-floor and encounter-pool content remains optional catalog metadata.
++4. Reverse movement requires a separately requested transition; barriers are
++   supplied policy decisions.
++5. Invalid current/request IDs, dungeon/source mismatch, legal denial, null or
++   throwing policies, cancellation, and fatal failures have distinct behavior.
++6. Traversal and progress results defend event ordering, before/after
++   coherence, and collection immutability, including custom result creation.
++7. Live progress reports are checked against kind, ID, dungeon, and current
++   area before idempotence. No battle-only proof is required because approved
++   progress may come from battle, puzzle, or script.
++8. Leaving with retained progress and selecting a new entry point on re-entry
++   is coherent. The last visited node is not silently resumed.
++9. The real Godot smoke sample is not presented as a complete spatial dungeon
++   game; Godot-shaped contract tests prove only the engine-neutral adoption
++   boundary promised by current documentation.
++10. Independent navigation/dungeon nullability remains an Order 13 question;
++    no v20 save-wire change is justified by this audit alone.
++
++## Verification Performed
++
++The focused traversal suite passed from the audited baseline:
++
++```text
++Test Run Successful.
++Total tests: 14
++     Passed: 14
++ Total time: 1.5944 Seconds
++```
++
++The full solution also passed before this report was written:
++
++```text
++Convergence.ContentValidator.Tests: 7 passed, 0 failed, 0 skipped
++Convergence.Framework.Tests: 1,891 passed, 0 failed, 0 skipped
++Convergence.DemoHost.Tests: 190 passed, 0 failed, 0 skipped
++Total: 2,088 passed, 0 failed, 0 skipped
++```
++
++These green tests do not invalidate O9-M1 or O9-M2: the focused suite does not
++exercise malformed retained collections, and one DemoHost test currently
++asserts acceptance of the impossible checkpoint state described in O9-M2.
++
++## Correction Roadmap
++
++| Checkpoint | Work | Exit condition |
++|---|---|---|
++| O9-C1 | Enforce complete live snapshot validity and typed non-mutating rejection. | Malformed history cannot reach policy evaluation or an applied/progress result. |
++| O9-C2 | Reconcile saved checkpoint/boss progress against the supplied registry before restore adoption. | Restore has the same progress authority as live reporting, while no-progress games remain optional. |
++| O9-C3 | Replace impossible fixtures and align mechanics, developer, technical, capability, and coverage tracking. | Tests demonstrate legitimate live-produced progress; documents state the actual boundary. |
++| O9-C4 | Fresh independent code/document review and retained release gate. | No realistic reachable Order 9 defect remains; owner confirmation may then close the Order. |
++
++Each correction should be isolated in its own commit and reviewed before the
++next begins. Order 9 must not be marked closed merely because the pre-correction
++suite is green.
++
++## Correction Progress
++
++- **O9-C1 — complete (`76da9913`):** complete live snapshot validation now
++  rejects malformed visited-node, checkpoint, and boss history before policy
++  or registry evaluation and carries typed first-invalid-field evidence.
++- **O9-C2 — complete (`9390290d`):** save and aggregate restore validation now
++  accepts the live immutable progress registry and rejects missing authority,
++  undeclared IDs, wrong kinds, wrong dungeons, and progress without an eligible
++  visited area. Training Annex and the clean save demo supply their registries.
++- **O9-C3 — complete (this documentation/fixture commit):** the re-entry
++  fixture now earns its checkpoint through live traversal and progress services;
++  all active audience, API, capability, coverage, and roadmap guidance reflects
++  C1/C2. The complete Release suite passed 2,093 tests with zero failures or
++  skips, and strict build/format/diff gates passed.
++- **O9-C4 — pending:** perform a fresh source/document review and retained
++  release gate. Order 9 and all three audience entries remain open meanwhile.
+diff --git a/docs/reviews/dungeon-traversal-order-9-post-correction-independent-audit-2026-09-28.md b/docs/reviews/dungeon-traversal-order-9-post-correction-independent-audit-2026-09-28.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..12fca478512f0e349aebeb2bc02981d3cf678f46
+--- /dev/null
++++ b/docs/reviews/dungeon-traversal-order-9-post-correction-independent-audit-2026-09-28.md
+@@ -0,0 +1,148 @@
++# Dungeon Traversal Order 9 Post-Correction Independent Audit
++
++**Audit date:** 28 September 2026  
++**Reviewed source baseline:** `11e69b12`  
++**Method:** fresh source, test, host-integration, and audience-document trace.
++Earlier Order 9 reports were consulted only after findings were derived from
++current code and current active documentation.
++
++## Interim Verdict
++
++The corrected runtime is coherent, and this pass found no unresolved realistic
++reachable Framework or DemoHost defect in Order 9. Two low-severity active
++quality-boundary defects prevent the closure gate from being called complete:
++one documentation/tracking contradiction and one nonportable local Godot-log
++destination in the retained-evidence runner. Order 9 and its three audience
++entries remain open.
++
++## Finding
++
++### O9-C4-L1: active capability prose still presents a superseded gate as current
++
++**Intended invariant.** The executable capability matrix, active roadmap, and
++active capability narrative must identify the same current review authority.
++Historical audits remain evidence but may not appear to be the latest closure
++gate after a later audit reopens an Order.
++
++**Reachable path.** The executable matrix correctly records
++`dungeon_traversal` as `implemented` with `orderState: open`, and the active
++Order 9 roadmap says O9-C4 is pending. However,
++`docs/roadmap/framework-capability-matrix.md` still says the retained gate at
++`0189a6c2` passed and that only owner documentation confirmation remains. It
++does not mention the 23 September fresh audit or O9-C1 through O9-C3. The
++confirmed decision record likewise ends its implementation evidence at
++O9-R2 through O9-R6, omitting the later authority corrections.
++
++**Consequence.** A maintainer reading the active capability narrative can
++reasonably conclude that runtime review is already complete and only owner
++confirmation remains. That contradicts the actual roadmap and can cause C4 to
++be skipped after context loss. Runtime behavior is unaffected.
++
++**Required correction.** Update the active capability narrative and decision
++implementation evidence to identify the fresh audit, O9-C1/C2 authority fixes,
++O9-C3 alignment, and pending O9-C4 gate. Add an executable documentation
++assertion so the active narrative cannot silently regress to the superseded
++closure claim.
++
++### O9-C4-L2: the retained local Godot gate relies on the engine's default user log path
++
++**Intended invariant.** The canonical retained-evidence runner must execute the
++real Godot smoke with all generated output confined to a known writable local
++path. A host environment's inaccessible profile directory must not prevent the
++sample project from loading or make the release gate irreproducible.
++
++**Reachable path.** `Invoke-VerificationEvidence.ps1` invokes the selected
++Godot executable with `--headless --path ...` but no explicit `--log-file`.
++On the current Windows verification host, Godot cannot open
++`user://logs/godot...log` and crashes with a native access violation before the
++project begins. Redirecting the entire process `APPDATA` is not a valid runner
++fix because it also changes the preceding .NET/NuGet environment. Running the
++identical smoke with `--log-file` targeting the ignored repository-local
++artifact directory reaches every `GODOT_*_OK` marker and exits zero.
++
++**Consequence.** A correct Framework and Godot consumer can fail the retained
++release gate before project execution. Repeated manual environment workarounds
++also make the canonical command and its evidence differ, weakening the audit
++trail. This does not indicate a dungeon-runtime defect.
++
++**Required correction.** Give the canonical Godot smoke an explicit log file
++inside `%EVIDENCE_ROOT%`, record that argument in the generated command, and
++guard it with an executable evidence-runner contract test. Do not redirect the
++whole gate's .NET user environment.
++
++## Fresh Runtime Review
++
++The following current behavior was traced directly from source and tests:
++
++1. `RuntimeDungeonTraversalService` validates current dungeon/node, every
++   retained visited/checkpoint/boss ID, and all transition IDs before dungeon
++   matching, source matching, or route-policy evaluation. Invalid requests are
++   typed, non-mutating, eventless, and expose the first invalid field.
++2. Progress reports apply the same complete snapshot validation before the
++   reported ID and immutable registry. Declaration kind, dungeon, and current
++   eligible area are checked before idempotence. Node entry alone records no
++   progress.
++3. Public traversal and progress result constructors reject contradictory
++   before/after/event/diagnostic evidence. Snapshot and event collections are
++   defensively copied and cannot be rewritten through record cloning.
++4. `RuntimeSaveValidator.CreateWithDungeonProgressRegistry` validates every
++   retained checkpoint and boss against declaration ID, kind, dungeon, and an
++   eligible node in visited history. Missing registry authority rejects retained
++   progress. Saves with no retained checkpoint/boss records remain independent
++   of this optional module.
++5. `RuntimeSessionRestoreService` runs that validator before resolving profiles
++   or creating actors, so invalid retained progress exposes no partial restored
++   session. It does not replay traversal or manufacture a progress receipt.
++6. Training Annex save, load, aggregate restore, startup validation, and the
++   clean save demo supply their actual progress registries. Training Annex keeps
++   node/scene compatibility as a host concern and no longer maintains a weaker
++   progress whitelist.
++7. Navigation location still determines active field/save context. Outside
++   location plus retained progress remains legal; re-entry selects an entrance
++   or legally unlocked checkpoint rather than silently resuming the last node.
++8. Godot-shaped adoption keeps an applied traversal result as a candidate until
++   scene work succeeds. The real Godot smoke sample remains accurately scoped
++   as a broader contract proof rather than a spatial dungeon implementation.
++9. Authored dungeon floors remain optional catalog metadata. Validation covers
++   floor range, duplicate floor numbers, kind, required encounter references,
++   and registrations; traversal does not resolve floors or start encounters.
++
++## Documentation Review
++
++The mechanics, developer, and technical pages agree on the corrected authority:
++
++- hosts request and adopt traversal separately from navigation and scene work;
++- live retained history is validated before policy evaluation;
++- saved checkpoint/boss records require the same registry used by live reports;
++- eligible visited history is evidence for restore validation, not a battle
++  receipt;
++- no-progress games remain free of the optional registry at save validation;
++- independent navigation/dungeon nullability remains an Order 13 question.
++
++Their Mermaid transition, progress, and host-adoption flows match current call
++ordering. All three entries correctly remain `existing_unreviewed` pending this
++post-correction gate and explicit owner confirmation.
++
++## Verification At Audit Point
++
++Before this audit document was created, the C3 baseline passed:
++
++- focused live-produced re-entry fixture: 1/1;
++- documentation/capability boundary gate: 32/32;
++- full Release suite: 1,895 Framework, 191 DemoHost, seven ContentValidator
++  tests (2,093 total), zero failed and zero skipped;
++- strict nonincremental solution build: zero warnings and zero errors;
++- format verification and `git diff --check`.
++
++The retained release gate has not yet been claimed for C4. It must run on the
++clean corrected commit after O9-C4-L1 is fixed. A green pre-fix gate would not
++resolve the active-document contradiction.
++
++## Correction Checkpoint
++
++| Checkpoint | State | Exit condition |
++|---|---|---|
++| O9-C4-L1 | corrected_pending_gate | Active capability/decision evidence now names the correction chain and pending C4 authority; the executable documentation test guards both documents. |
++| O9-C4-L2 | open | The canonical Godot command confines its log to the retained evidence bundle and an executable contract test prevents removal of that argument. |
++| O9-C4-GATE | pending | Fresh recheck finds no realistic reachable defect or contradiction and the retained release gate passes on the clean corrected commit. |
++
+diff --git a/docs/roadmap/documentation-completion-roadmap.md b/docs/roadmap/documentation-completion-roadmap.md
+index db0725de4072939ec1324aeadb0fbe9324cafb23..f120580c79a0a6aff92aa95bdceecd70a8d3f717 100644
+--- a/docs/roadmap/documentation-completion-roadmap.md
++++ b/docs/roadmap/documentation-completion-roadmap.md
+@@ -748,11 +748,14 @@ Training Annex menu; it is not limited to `DungeonTraversal.cs`.
+ 
+ O9-R7 reconciles the [mechanics](../mechanics/world-encounters-and-rewards.md),
+ [developer guide](../developer-guide/dungeon-traversal.md), and
+-[technical reference](../technical/dungeon-traversal-runtime.md). All three
+-are `existing_unreviewed` pending project-owner confirmation. The independent
+-O9-R8 review corrections and retained release gate have passed. `dungeon_traversal` is
+-`implemented` with no open Framework contract gap, but Order 9 remains `open`;
+-written guidance and green tests alone do not close it.
++[technical reference](../technical/dungeon-traversal-runtime.md). The later
++[fresh closure audit](../reviews/dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md)
++found live retained-history validation and restored-progress authority gaps.
++O9-C1 and O9-C2 correct those runtime boundaries; O9-C3 updates all three
++audience views and replaces the impossible checkpoint fixture. The pages remain
++`existing_unreviewed` while O9-C4 performs a fresh post-correction review and
++retained release gate. `dungeon_traversal` remains `implemented` and Order 9
++remains `open`; corrected guidance and green tests do not replace owner closure.
+ 
+ ## Deferred Documentation
+ 
+diff --git a/docs/roadmap/dungeon-traversal-order-9-roadmap.md b/docs/roadmap/dungeon-traversal-order-9-roadmap.md
+index 3142b7eea00068da43bb45271bc05e49a095f0e8..c17001eef04d00d5555ee366f2c71edf26f82d6b 100644
+--- a/docs/roadmap/dungeon-traversal-order-9-roadmap.md
++++ b/docs/roadmap/dungeon-traversal-order-9-roadmap.md
+@@ -4,7 +4,8 @@
+ 
+ **Source baseline:** `d5f8845d`
+ 
+-**Status:** open; O9-D1 through O9-D6 approved, R2-R6 implemented, audience review pending.
++**Status:** open; O9-D1 through O9-D6 approved, fresh-audit corrections
++O9-C1 through O9-C3 complete, and O9-C4 pending.
+ 
+ **Source evidence:** [Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md).
+ 
+@@ -57,8 +58,20 @@ owner rather than silently choosing a content or save model.
+ | O9-R4: field/save/host boundary | complete | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D4/D5. |
+ | O9-R5: checkpoint and boss recording | complete | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
+ | O9-R6: authored floor and encounter contract | complete | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
+-| O9-R7: audience documentation | written_pending_owner_confirmation | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. The independent audit passed; all three audience entries remain `existing_unreviewed` until owner confirmation. |
+-| O9-R8: independent closure | pending | Fresh code and document review across traversal, navigation, `RuntimeFieldSnapshot`, `CurrentSaveContext`, save validator/restore, content, DemoHost, and Godot contract. Run and retain the full release gate. Close only if no concrete gap remains and all applicable audience entries are `reviewed`. |
++| O9-R7: audience documentation | written_pending_owner_confirmation | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. All three audience entries remain `existing_unreviewed` until the post-correction audit and owner confirmation. |
++| O9-R8: independent closure | pending | The 21 September audit and retained gate remain historical evidence, but the later 23 September fresh audit found two reachable authority gaps and reopened this active closure checkpoint. O9-C4 must independently review the corrected state. |
++
++## Fresh-Audit Correction Checkpoints
++
++The [23 September fresh closure audit](../reviews/dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md)
++supersedes the earlier no-gap conclusion without erasing its historical gate.
++
++| Checkpoint | State | Work and acceptance evidence |
++|---|---|---|
++| O9-C1: complete live-state validity | complete | Validate current and retained IDs before traversal policy or progress-registry evaluation; return typed, non-mutating evidence for the first malformed field. |
++| O9-C2: restored progress authority | complete | Validate retained checkpoint/boss records against the live immutable registry before save/restore adoption, while keeping games with no retained progress independent of the optional module. |
++| O9-C3: fixtures and audience alignment | complete | Produce re-entry evidence through live traversal/progress services and align mechanics, developer, technical, API, capability, and coverage guidance with C1/C2. |
++| O9-C4: post-correction independent closure | pending | Re-read current source and audience documentation, correct the capability-authority contradiction and retained Godot-log portability defect found by that review, then run and retain the release gate. Owner confirmation remains required for closure. |
+ 
+ ## Boundary Contract To Preserve
+ 
+@@ -227,3 +240,47 @@ records both findings and corrections. O9-R8 is not marked complete because
+ the three audience pages remain `existing_unreviewed` until explicit
+ project-owner confirmation. No Framework runtime, schema, or save-wire change
+ was made during R8; its source change was an architecture-test assertion.
++
++## Fresh-Audit Correction Completion Record
++
++O9-C1 (`76da9913`) validates every retained visited-node, checkpoint, and boss
++ID before traversal policy or progress-registry evaluation. Invalid requests
++identify the first malformed field, retain the exact before-state, emit no
++event, and do not call the policy. Sixteen focused traversal tests passed. The
++full Release suite passed 1,893 Framework, 190 DemoHost, and seven
++ContentValidator tests (2,090 total), with zero failures or skips; strict build,
++format verification, and `git diff --check` passed.
++
++O9-C2 (`9390290d`) gives save and aggregate restore validation the same
++immutable progress registry used by live reports. Retained progress now rejects
++missing registry authority, undeclared IDs, wrong kinds, wrong dungeons, and
++records without an eligible visited node. Games retaining no checkpoint/boss
++records remain independent of the optional registry. Training Annex and the
++clean save demo both supply their real declarations; the weaker host whitelist
++is gone. Focused persistence (83) and DemoHost save/Training Annex (140) tests
++passed. The full Release suite passed 1,895 Framework, 191 DemoHost, and seven
++ContentValidator tests (2,093 total), with zero failures or skips; strict build,
++format verification, both relevant demos, and `git diff --check` passed. Save
++contract v19 remains unchanged because the snapshot shape did not change.
++
++O9-C3 (this documentation/fixture commit) replaces the manually forged
++checkpoint-entry fixture with state produced by entrance-to-hall-to-alcove
++traversal, live checkpoint recording, and return-to-hall traversal. The test
++therefore still proves that re-entry selection does not use the last node while
++also proving the retained checkpoint was legally earned. Mechanics, developer,
++technical, API, capability, coverage, and roadmap guidance now describe complete
++live-history validation and registry-backed restore validation. The focused
++host regression passed one test and the documentation/capability gate passed 32
++tests. The full Release suite passed 1,895 Framework, 191 DemoHost, and seven
++ContentValidator tests (2,093 total), with zero failures or skips. Strict build
++reported zero warnings; format verification and `git diff --check` passed.
++O9-C4 and explicit owner confirmation remain required; this record does not
++close Order 9 or promote its three audience entries.
++
++The fresh O9-C4 review found no further dungeon-runtime defect. It did find two
++low-severity quality-boundary defects: stale active capability prose (corrected
++in `511fc387`) and a retained-evidence Godot invocation that relied on an
++inaccessible default `user://logs` path. O9-C4-L2 will confine only Godot's log
++to `%EVIDENCE_ROOT%`; it will not redirect the .NET/NuGet environment used by
++the rest of the gate. The retained release gate remains pending until that
++correction is committed and the complete clean-tree harness succeeds.
+diff --git a/docs/roadmap/framework-capability-matrix.md b/docs/roadmap/framework-capability-matrix.md
+index 5c93761c915dac772989797a16534a2cc5ffc95c..e8dc222bc6c6a69dda30cc4bc81c420af731c120 100644
+--- a/docs/roadmap/framework-capability-matrix.md
++++ b/docs/roadmap/framework-capability-matrix.md
+@@ -81,13 +81,16 @@ transitions. O9-R2 through O9-R6 corrected live-input, result-authority,
+ progress-eligibility, navigation/save-host, and optional authored-floor gaps.
+ The [Order 9 roadmap](dungeon-traversal-order-9-roadmap.md) keeps host-owned
+ spatial movement and explicit encounter triggers separate from logical
+-traversal. O9-R7 wrote the three audience pages. The independent audit
+-corrected stale decision/gate and capability-tracking claims. A retained
+-23-command gate passed on the corrected matrix at `0189a6c2`; owner
+-documentation confirmation remains. Order 9 stays `open` while its
+-implementation state is `implemented`. Implementation and collaborative
+-closure are separate gates;
+-the approved optional floor metadata does not require a runtime resolver.
++traversal. O9-R7 wrote the three audience pages. The 21 September independent
++audit and retained gate at `0189a6c2` are historical evidence: the
++[23 September fresh audit](../reviews/dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md)
++later found live retained-history and restored-progress authority gaps. O9-C1
++and O9-C2 correct those boundaries; O9-C3 aligns fixtures and active guidance.
++O9-C4's post-correction review and retained gate, followed by owner
++documentation confirmation, remain pending. Order 9 therefore stays `open`
++while its implementation state is `implemented`. Implementation and
++collaborative closure are separate gates; the approved optional floor metadata
++does not require a runtime resolver.
+ 
+ `inventory_equipment_economy` is `implemented`, and Order 7 is `closed`. Its immutable transaction and
+ validation foundation is usable. O7-R2 gives each equipment copy a unique
+diff --git a/docs/technical/dungeon-traversal-runtime.md b/docs/technical/dungeon-traversal-runtime.md
+index e9093bb6425bb2c9c6dc0adf95cc1592342a90eb..d4af3d5a5ed87a2ed50c3ff022c464e9a88de3a8 100644
+--- a/docs/technical/dungeon-traversal-runtime.md
++++ b/docs/technical/dungeon-traversal-runtime.md
+@@ -19,23 +19,30 @@ calls the other, loads a scene, selects an encounter, or changes a battle.
+ 
+ ```mermaid
+ flowchart TD
+-    A[Current snapshot and requested transition] --> B{Six live IDs valid?}
++    A[Current snapshot and requested transition] --> B{Current dungeon and node valid?}
+     B -- No --> C[InvalidRequest; unchanged; no event]
+-    B -- Yes --> D{Dungeon matches?}
+-    D -- No --> E[DungeonMismatch; unchanged; rejected event]
+-    D -- Yes --> F{Source node matches?}
+-    F -- No --> G[SourceMismatch; unchanged; rejected event]
+-    F -- Yes --> H[Call route policy once]
+-    H --> I{Policy outcome}
+-    I -- Denied --> J[PolicyRejected; unchanged; rejected event]
+-    I -- Null, malformed, or exception --> K[PolicyFaulted; unchanged; rejected event]
+-    I -- Allowed --> L[Applied candidate; destination visited; applied event]
++    B -- Yes --> D{Every retained history ID valid?}
++    D -- No --> C
++    D -- Yes --> E{All transition IDs valid?}
++    E -- No --> C
++    E -- Yes --> F{Dungeon matches?}
++    F -- No --> G[DungeonMismatch; unchanged; rejected event]
++    F -- Yes --> H{Source node matches?}
++    H -- No --> I[SourceMismatch; unchanged; rejected event]
++    H -- Yes --> J[Call route policy once]
++    J --> K{Policy outcome}
++    K -- Denied --> L[PolicyRejected; unchanged; rejected event]
++    K -- Null, malformed, or exception --> M[PolicyFaulted; unchanged; rejected event]
++    K -- Allowed --> N[Applied candidate; destination visited; applied event]
+ ```
+ 
+-The six IDs are current dungeon, current node, transition, transition dungeon,
+-source node, and destination node, in that validation order. A custom policy
+-is not called for invalid or mismatched requests. `OperationCanceledException`
+-and `OutOfMemoryException` propagate rather than becoming policy faults.
++Validation order is current dungeon, current node, all visited nodes, all
++unlocked checkpoints, all defeated bosses, transition, transition dungeon,
++source node, and destination node. A custom policy is not called for invalid
++or mismatched requests. Progress reports apply the same complete snapshot check
++before evaluating their reported progress ID or registry declaration.
++`OperationCanceledException` and `OutOfMemoryException` propagate rather than
++becoming policy faults.
+ `RuntimeDungeonTraversalResult` validates code, request, before/after state,
+ event kind and IDs, and diagnostic consistency even when built by a custom
+ service. Its ordered event list is defensively copied; event records expose
+@@ -116,15 +123,23 @@ pool. No floor-to-node resolver or automatic combat exists.
+ 
+ Save contract v19 permits `Field` to be absent. If present, it requires a
+ navigation snapshot and may retain a dungeon snapshot. Framework save
+-validation checks nonempty IDs and a catalog dungeon reference; aggregate
+-restore does not replay traversal or validate a host-specific scene graph.
+-Training Annex rejects an inside save lacking its dungeon node before adopting
+-restored session state. Its `CurrentSaveContext` follows navigation location,
+-not mere progress presence. On leaving, progress may remain saved but inactive.
+-On re-entry, the host selects an entrance or an unlocked checkpoint and maps
+-that selection to a node, rather than silently using the last current node.
+-Independent navigation/dungeon nullability in the broad save aggregate is an
+-Order 13 question, not a hidden Order 9 wire change.
++validation checks nonempty IDs and a catalog dungeon reference. A save with
++unlocked checkpoint or defeated boss IDs additionally requires a validator
++created through `RuntimeSaveValidator.CreateWithDungeonProgressRegistry` using
++the live immutable registry. For each retained ID, validation checks declaration,
++kind, dungeon, and whether visited history contains at least one declared
++eligible node. The ordinary validator remains sufficient when both retained
++progress lists are empty; it returns `DungeonProgressRegistryMissing` rather
++than accepting retained progress without its authority.
++
++Aggregate restore does not replay traversal, prove a battle result, or validate
++a host-specific scene graph. Training Annex rejects an inside save lacking its
++dungeon node before adopting restored session state. Its `CurrentSaveContext`
++follows navigation location, not mere progress presence. On leaving, progress
++may remain saved but inactive. On re-entry, the host selects an entrance or an
++unlocked checkpoint and maps that selection to a node, rather than silently
++using the last current node. Independent navigation/dungeon nullability in the
++broad save aggregate is an Order 13 question, not a hidden Order 9 wire change.
+ 
+ **Source and tests:**
+ [`DungeonTraversal.cs`](../../src/Convergence.Framework/Runtime/DungeonTraversal.cs),
+diff --git a/docs/verification-evidence.md b/docs/verification-evidence.md
+index ff29e945f79c8a2966e0d6a50c7990018ecd2ea9..e8e3819ce0f9be06af13791eef6c0b52d6f81168 100644
+--- a/docs/verification-evidence.md
++++ b/docs/verification-evidence.md
+@@ -55,6 +55,9 @@ Every successful bundle contains:
+ - `reviewed-range.diff` and `reviewed-range-commits.txt` when a range is given;
+ - one portable `.cmd` wrapper and one unedited `.raw.txt` combined-output file
+   for every command;
++- `godot-smoke.log`, written directly into the bundle by the real headless
++  smoke so local verification does not depend on Godot's default `user://`
++  profile path;
+ - `coverage/coverage.cobertura.xml.gz`, preserving the exact collected XML in
+   compressed form, plus its uncompressed SHA-256 in the manifest; and
+ - `SHA256SUMS.txt`, covering every bundle file except the checksum file itself.
+diff --git a/eng/Invoke-VerificationEvidence.ps1 b/eng/Invoke-VerificationEvidence.ps1
+index 538d2836ae0af29aed65263a7c9499e5deb31a41..a6f4716ec2488ba22014145cc23dd55a5be4ae1c 100644
+--- a/eng/Invoke-VerificationEvidence.ps1
++++ b/eng/Invoke-VerificationEvidence.ps1
+@@ -193,7 +193,7 @@ try {
+     Invoke-RecordedCommand -Name '15-demo-training-annex' -CommandLine 'dotnet run --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj --configuration Release --no-build --no-restore -- --clean-training-annex-demo'
+     Invoke-RecordedCommand -Name '16-demo-training-annex-play' -CommandLine 'echo 10| dotnet run --project samples/Convergence.DemoHost/Convergence.DemoHost.csproj --configuration Release --no-build --no-restore -- --clean-training-annex-play'
+     Invoke-RecordedCommand -Name '17-godot-build' -CommandLine 'dotnet build samples/Convergence.GodotHost/Convergence.GodotHost.csproj --configuration Debug --no-restore --no-incremental -warnaserror /clp:Summary'
+-    Invoke-RecordedCommand -Name '18-godot-smoke' -CommandLine "$godotCommandPath --headless --path samples/Convergence.GodotHost -- --convergence-smoke"
++    Invoke-RecordedCommand -Name '18-godot-smoke' -CommandLine "$godotCommandPath --headless --log-file `"%EVIDENCE_ROOT%\godot-smoke.log`" --path samples/Convergence.GodotHost -- --convergence-smoke"
+     Invoke-RecordedCommand -Name '19-trimming-analysis' -CommandLine 'dotnet build src/Convergence.Framework/Convergence.Framework.csproj --configuration Release --no-restore --no-incremental -p:EnableTrimAnalyzer=true -p:IsTrimmable=true -p:TreatWarningsAsErrors=true /clp:Summary'
+     Invoke-RecordedCommand -Name '20-diff-check' -CommandLine 'git diff --check'
+ 
+diff --git a/samples/Convergence.DemoHost/Hosts/CleanSaveDemoHost.cs b/samples/Convergence.DemoHost/Hosts/CleanSaveDemoHost.cs
+index 0c9e03e14aac441593a64537bf5152c0d5f4e85e..175629396d637f0371d82637cf3cae9897b26ed6 100644
+--- a/samples/Convergence.DemoHost/Hosts/CleanSaveDemoHost.cs
++++ b/samples/Convergence.DemoHost/Hosts/CleanSaveDemoHost.cs
+@@ -103,7 +103,8 @@ internal sealed class CleanSaveDemoHost
+             RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
+         RuntimeSaveGameSnapshot snapshot = BuildDemoSnapshot();
+         ChargePolicyRegistry chargePolicies = ChargePolicyRegistry.CreateStandard();
+-        RuntimeSaveValidator validator = new(
++        RuntimeSaveValidator validator = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
++            BuildDungeonProgressRegistry(),
+             rulesetBindings: rulesetResolver,
+             chargePolicies: chargePolicies);
+         RuntimeSaveValidationResult before = validator.Validate(snapshot, catalog);
+@@ -292,6 +293,26 @@ internal sealed class CleanSaveDemoHost
+             [new KeyValuePair<ContentId, string>(ContentId.Parse("scene"), "clean_save_demo")]);
+     }
+ 
++    internal static RuntimeDungeonProgressRegistry BuildDungeonProgressRegistry() =>
++        new(
++        [
++            new RuntimeDungeonProgressEligibility(
++                RuntimeDungeonProgressKind.Checkpoint,
++                ContentId.Parse("convergence.catalog_surface_sample:terminal_1"),
++                ContentId.Parse("convergence.catalog_surface_sample:sample_depths"),
++                [ContentId.Parse("convergence.catalog_surface_sample:floor_1")]),
++            new RuntimeDungeonProgressEligibility(
++                RuntimeDungeonProgressKind.Checkpoint,
++                ContentId.Parse("convergence.catalog_surface_sample:terminal_5"),
++                ContentId.Parse("convergence.catalog_surface_sample:sample_depths"),
++                [ContentId.Parse("convergence.catalog_surface_sample:floor_5")]),
++            new RuntimeDungeonProgressEligibility(
++                RuntimeDungeonProgressKind.Boss,
++                ContentId.Parse("convergence.catalog_surface_sample:entry_block_training_sample"),
++                ContentId.Parse("convergence.catalog_surface_sample:sample_depths"),
++                [ContentId.Parse("convergence.catalog_surface_sample:floor_5")])
++        ]);
++
+     private static RuntimeActorSnapshot CreateActor(
+         RuntimeInstanceId instanceId,
+         ContentId entityId,
+diff --git a/samples/Convergence.DemoHost/Hosts/CleanTrainingAnnexDemoHost.cs b/samples/Convergence.DemoHost/Hosts/CleanTrainingAnnexDemoHost.cs
+index 8eee10226e8cab17e71731903482fb46516de461..52f833c66d0adab7f5c5682d87da3080c414d9ed 100644
+--- a/samples/Convergence.DemoHost/Hosts/CleanTrainingAnnexDemoHost.cs
++++ b/samples/Convergence.DemoHost/Hosts/CleanTrainingAnnexDemoHost.cs
+@@ -348,6 +348,17 @@ internal sealed class CleanTrainingAnnexDemoHost
+             $"{growthActor.Actor.Entity.DisplayName} level {growth.Progression.Level}.",
+             cancellationToken).ConfigureAwait(false);
+ 
++        RuntimeDungeonTraversalResult enteredAlcove = dungeonService.Traverse(
++            traversed.After,
++            EnterReviewAlcoveTransition);
++        RuntimeDungeonStateChangeResult unlockedCheckpoint = dungeonService.UnlockCheckpoint(
++            enteredAlcove.After,
++            ReviewCheckpoint);
++        RuntimeDungeonTraversalSnapshot retainedProgress =
++            enteredAlcove.Applied && unlockedCheckpoint.Applied
++                ? unlockedCheckpoint.After
++                : throw new InvalidOperationException(
++                    "Training Annex demo could not produce its checkpoint through live dungeon rules.");
+         RuntimeSaveGameSnapshot save = BuildSaveSnapshot(
+             catalog,
+             roster,
+@@ -358,12 +369,9 @@ internal sealed class CleanTrainingAnnexDemoHost
+             shopStock,
+             new RuntimeFieldSnapshot(
+                 new RuntimeNavigationSnapshot(Qualified("training_annex_floor_2")),
+-                new RuntimeDungeonTraversalSnapshot(
+-                    dungeon.Id,
+-                    Qualified("annex_floor_2"),
+-                    visitedNodeIds: [Qualified("annex_entrance"), Qualified("annex_floor_2")],
+-                    unlockedCheckpointIds: [Qualified("annex_lobby_checkpoint")])));
+-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
++                retainedProgress));
++        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
++            TrainingAnnexHostSupport.ProgressRegistry,
+             rulesetBindings: resolver,
+             chargePolicies: ChargePolicyRegistry.CreateStandard()).Validate(save, catalog);
+         await PrintAsync(
+diff --git a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs
+index 2353efd830fe074be22665e84b2cb81d61e19881..f9d72e3bb4d188955808315242b256408b5373a0 100644
+--- a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs
++++ b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/CleanTrainingAnnexPlayHost.cs
+@@ -913,7 +913,8 @@ internal sealed class CleanTrainingAnnexPlayHost
+                     composeAfterCommand = false;
+                     break;
+                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
+-                    RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
++                    RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
++                        TrainingAnnexHostSupport.ProgressRegistry,
+                         rosterCapacityPolicy,
+                         rulesetBindings: rulesetResolver,
+                         chargePolicies: ChargePolicyRegistry.CreateStandard()).Validate(
+diff --git a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexPersistenceController.cs b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexPersistenceController.cs
+index 92b8ac10836a6c127d4df14785c4360625e67f81..3890af935b6762fc1a907281af1db1f98a8eaa72 100644
+--- a/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexPersistenceController.cs
++++ b/samples/Convergence.DemoHost/Hosts/TrainingAnnex/TrainingAnnexPersistenceController.cs
+@@ -76,7 +76,8 @@ internal sealed class TrainingAnnexPersistenceController
+             preparedBattleOutcome,
+             preparedBattleWinningTeamId,
+             compendium);
+-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
++        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
++                TrainingAnnexHostSupport.ProgressRegistry,
+                 _rosterCapacityPolicy,
+                 rulesetBindings: _rulesetBindings,
+                 chargePolicies: ChargePolicyRegistry.CreateStandard())
+@@ -133,7 +134,8 @@ internal sealed class TrainingAnnexPersistenceController
+             return new TrainingAnnexLoadActionResult(null, assessment.Diagnostics.Count, false);
+         }
+ 
+-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
++        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
++                TrainingAnnexHostSupport.ProgressRegistry,
+                 _rosterCapacityPolicy,
+                 rulesetBindings: _rulesetBindings,
+                 chargePolicies: ChargePolicyRegistry.CreateStandard())
+@@ -299,7 +301,8 @@ internal sealed class TrainingAnnexPersistenceController
+         var profileResolver = new TrainingAnnexActorRestoreProfileResolver(
+             currentRoster.Player.Actor.State.InstanceId);
+         RuntimeSessionRestoreResult aggregate = new RuntimeSessionRestoreService(
+-                new RuntimeSaveValidator(
++                RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
++                    TrainingAnnexHostSupport.ProgressRegistry,
+                     _rosterCapacityPolicy,
+                     rulesetBindings: _rulesetBindings,
+                     chargePolicies: ChargePolicyRegistry.CreateStandard()),
+@@ -521,20 +524,6 @@ internal sealed class TrainingAnnexPersistenceController
+             }
+         }
+ 
+-        foreach (ContentId checkpointId in dungeon.UnlockedCheckpointIds)
+-        {
+-            if (checkpointId != TrainingAnnexHostSupport.ReviewCheckpoint)
+-            {
+-                diagnostics.Add(
+-                    $"Saved checkpoint '{checkpointId}' is not recognized by the Training Annex host.");
+-            }
+-        }
+-
+-        foreach (ContentId bossId in dungeon.DefeatedBossIds)
+-        {
+-            diagnostics.Add(
+-                $"Saved defeated boss '{bossId}' is not recognized by the Training Annex host.");
+-        }
+     }
+ 
+     private static bool TryGetCompatibleSnapshot(
+diff --git a/src/Convergence.Framework/PublicAPI.Shipped.txt b/src/Convergence.Framework/PublicAPI.Shipped.txt
+index 709d40339bad47a5083064b584560d6830a27fc7..b53db16372f2c73e6718d5505f26c2f1aae54a9a 100644
+--- a/src/Convergence.Framework/PublicAPI.Shipped.txt
++++ b/src/Convergence.Framework/PublicAPI.Shipped.txt
+@@ -5411,9 +5411,11 @@ Convergence.Runtime.RuntimeDungeonStateChangeResult.Before.get -> Convergence.Ru
+ Convergence.Runtime.RuntimeDungeonStateChangeResult.Code.get -> Convergence.Runtime.RuntimeDungeonStateChangeCode
+ Convergence.Runtime.RuntimeDungeonStateChangeResult.Equals(Convergence.Runtime.RuntimeDungeonStateChangeResult? other) -> bool
+ Convergence.Runtime.RuntimeDungeonStateChangeResult.Events.get -> System.Collections.Generic.IReadOnlyList<Convergence.Runtime.RuntimeDungeonTraversalEvent!>!
++Convergence.Runtime.RuntimeDungeonStateChangeResult.InvalidField.get -> Convergence.Runtime.RuntimeDungeonTraversalRequestField?
+ Convergence.Runtime.RuntimeDungeonStateChangeResult.ProgressId.get -> Convergence.Content.ContentId
+ Convergence.Runtime.RuntimeDungeonStateChangeResult.ProgressKind.get -> Convergence.Runtime.RuntimeDungeonProgressKind
+ Convergence.Runtime.RuntimeDungeonStateChangeResult.RuntimeDungeonStateChangeResult(Convergence.Runtime.RuntimeDungeonStateChangeCode code, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! before, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! after, Convergence.Runtime.RuntimeDungeonProgressKind progressKind, Convergence.Content.ContentId progressId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeDungeonTraversalEvent!>? events = null) -> void
++Convergence.Runtime.RuntimeDungeonStateChangeResult.RuntimeDungeonStateChangeResult(Convergence.Runtime.RuntimeDungeonStateChangeCode code, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! before, Convergence.Runtime.RuntimeDungeonTraversalSnapshot! after, Convergence.Runtime.RuntimeDungeonProgressKind progressKind, Convergence.Content.ContentId progressId, System.Collections.Generic.IEnumerable<Convergence.Runtime.RuntimeDungeonTraversalEvent!>? events, Convergence.Runtime.RuntimeDungeonTraversalRequestField? invalidField) -> void
+ Convergence.Runtime.RuntimeDungeonTraversalCode
+ Convergence.Runtime.RuntimeDungeonTraversalCode.Applied = 0 -> Convergence.Runtime.RuntimeDungeonTraversalCode
+ Convergence.Runtime.RuntimeDungeonTraversalCode.DungeonMismatch = 1 -> Convergence.Runtime.RuntimeDungeonTraversalCode
+@@ -5479,10 +5481,14 @@ Convergence.Runtime.RuntimeDungeonTraversalResult.Transition.get -> Convergence.
+ Convergence.Runtime.RuntimeDungeonTraversalRequestField
+ Convergence.Runtime.RuntimeDungeonTraversalRequestField.CurrentDungeonId = 0 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+ Convergence.Runtime.RuntimeDungeonTraversalRequestField.CurrentNodeId = 1 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
++Convergence.Runtime.RuntimeDungeonTraversalRequestField.DefeatedBossIds = 8 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+ Convergence.Runtime.RuntimeDungeonTraversalRequestField.DestinationNodeId = 5 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
++Convergence.Runtime.RuntimeDungeonTraversalRequestField.ProgressId = 9 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+ Convergence.Runtime.RuntimeDungeonTraversalRequestField.SourceNodeId = 4 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+ Convergence.Runtime.RuntimeDungeonTraversalRequestField.TransitionDungeonId = 3 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+ Convergence.Runtime.RuntimeDungeonTraversalRequestField.TransitionId = 2 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
++Convergence.Runtime.RuntimeDungeonTraversalRequestField.UnlockedCheckpointIds = 7 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
++Convergence.Runtime.RuntimeDungeonTraversalRequestField.VisitedNodeIds = 6 -> Convergence.Runtime.RuntimeDungeonTraversalRequestField
+ Convergence.Runtime.RuntimeDungeonTraversalService
+ Convergence.Runtime.RuntimeDungeonTraversalService.RegisterBossDefeat(Convergence.Runtime.RuntimeDungeonTraversalSnapshot! current, Convergence.Content.ContentId bossId) -> Convergence.Runtime.RuntimeDungeonStateChangeResult!
+ Convergence.Runtime.RuntimeDungeonTraversalService.RuntimeDungeonTraversalService(Convergence.Runtime.IRuntimeDungeonTraversalPolicy! policy, Convergence.Runtime.RuntimeDungeonProgressRegistry! progressRegistry) -> void
+@@ -11863,6 +11869,12 @@ Convergence.Runtime.RuntimeSaveValidationCode.MissingShopStockEntry = 96 -> Conv
+ Convergence.Runtime.RuntimeSaveValidationCode.NegativeShopStockQuantity = 95 -> Convergence.Runtime.RuntimeSaveValidationCode
+ Convergence.Runtime.RuntimeSaveValidationCode.UnexpectedShopStockEntry = 97 -> Convergence.Runtime.RuntimeSaveValidationCode
+ Convergence.Runtime.RuntimeSaveValidationCode.EquipmentSlotPolicyRejected = 98 -> Convergence.Runtime.RuntimeSaveValidationCode
++Convergence.Runtime.RuntimeSaveValidationCode.DungeonProgressRegistryMissing = 99 -> Convergence.Runtime.RuntimeSaveValidationCode
++Convergence.Runtime.RuntimeSaveValidationCode.DungeonProgressUndeclared = 100 -> Convergence.Runtime.RuntimeSaveValidationCode
++Convergence.Runtime.RuntimeSaveValidationCode.DungeonProgressKindMismatch = 101 -> Convergence.Runtime.RuntimeSaveValidationCode
++Convergence.Runtime.RuntimeSaveValidationCode.DungeonProgressDungeonMismatch = 102 -> Convergence.Runtime.RuntimeSaveValidationCode
++Convergence.Runtime.RuntimeSaveValidationCode.DungeonProgressEligibleAreaNotVisited = 103 -> Convergence.Runtime.RuntimeSaveValidationCode
++static Convergence.Runtime.RuntimeSaveValidator.CreateWithDungeonProgressRegistry(Convergence.Runtime.RuntimeDungeonProgressRegistry! dungeonProgressRegistry, Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null, Convergence.Runtime.IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null) -> Convergence.Runtime.RuntimeSaveValidator!
+ Convergence.Runtime.RuntimeShopOfferIdentity
+ Convergence.Runtime.RuntimeShopOfferIdentity.<Clone>$() -> Convergence.Runtime.RuntimeShopOfferIdentity!
+ Convergence.Runtime.RuntimeShopOfferIdentity.Equals(Convergence.Runtime.RuntimeShopOfferIdentity? other) -> bool
+diff --git a/src/Convergence.Framework/Runtime/DungeonTraversal.cs b/src/Convergence.Framework/Runtime/DungeonTraversal.cs
+index 6ebe742f8a191a82c896f173744fa8eef918e7ea..f65539d051047ddd019d827008ea0363e6d3dbba 100644
+--- a/src/Convergence.Framework/Runtime/DungeonTraversal.cs
++++ b/src/Convergence.Framework/Runtime/DungeonTraversal.cs
+@@ -19,7 +19,11 @@ public enum RuntimeDungeonTraversalRequestField
+     TransitionId,
+     TransitionDungeonId,
+     SourceNodeId,
+-    DestinationNodeId
++    DestinationNodeId,
++    VisitedNodeIds,
++    UnlockedCheckpointIds,
++    DefeatedBossIds,
++    ProgressId
+ }
+ 
+ public enum RuntimeDungeonTraversalPolicyFaultKind
+@@ -386,6 +390,28 @@ public sealed record RuntimeDungeonStateChangeResult
+         RuntimeDungeonProgressKind progressKind,
+         ContentId progressId,
+         IEnumerable<RuntimeDungeonTraversalEvent>? events = null)
++        : this(
++            code,
++            before,
++            after,
++            progressKind,
++            progressId,
++            events,
++            before is null
++                ? null
++                : RuntimeDungeonTraversalRequestValidation.FirstInvalidSnapshotField(before) ??
++                    (!progressId.IsValid ? RuntimeDungeonTraversalRequestField.ProgressId : null))
++    {
++    }
++
++    public RuntimeDungeonStateChangeResult(
++        RuntimeDungeonStateChangeCode code,
++        RuntimeDungeonTraversalSnapshot before,
++        RuntimeDungeonTraversalSnapshot after,
++        RuntimeDungeonProgressKind progressKind,
++        ContentId progressId,
++        IEnumerable<RuntimeDungeonTraversalEvent>? events,
++        RuntimeDungeonTraversalRequestField? invalidField)
+     {
+         Code = code;
+         Before = before ?? throw new ArgumentNullException(nameof(before));
+@@ -393,6 +419,7 @@ public sealed record RuntimeDungeonStateChangeResult
+         ProgressKind = progressKind;
+         ProgressId = progressId;
+         Events = RuntimeSnapshotCollections.List(events);
++        InvalidField = invalidField;
+         ValidateOutcome();
+     }
+ 
+@@ -403,26 +430,30 @@ public sealed record RuntimeDungeonStateChangeResult
+     public RuntimeDungeonProgressKind ProgressKind { get; }
+     public ContentId ProgressId { get; }
+     public IReadOnlyList<RuntimeDungeonTraversalEvent> Events { get; }
++    public RuntimeDungeonTraversalRequestField? InvalidField { get; }
+ 
+     private void ValidateOutcome()
+     {
+-        if (!Enum.IsDefined(Code) || !Enum.IsDefined(ProgressKind))
++        if (!Enum.IsDefined(Code) || !Enum.IsDefined(ProgressKind) ||
++            InvalidField is RuntimeDungeonTraversalRequestField field && !Enum.IsDefined(field))
+         {
+             throw new ArgumentOutOfRangeException(nameof(Code));
+         }
+-        bool invalidRequest = !Before.DungeonId.IsValid || !Before.CurrentNodeId.IsValid || !ProgressId.IsValid;
++        RuntimeDungeonTraversalRequestField? firstInvalid =
++            RuntimeDungeonTraversalRequestValidation.FirstInvalidSnapshotField(Before) ??
++            (!ProgressId.IsValid ? RuntimeDungeonTraversalRequestField.ProgressId : null);
+         if (Code == RuntimeDungeonStateChangeCode.InvalidRequest)
+         {
+-            if (!invalidRequest || Events.Count != 0 ||
++            if (firstInvalid is null || InvalidField != firstInvalid || Events.Count != 0 ||
+                 !RuntimeDungeonTraversalSnapshotEquality.Same(Before, After))
+             {
+                 throw new ArgumentException("Invalid dungeon progress result has inconsistent evidence.");
+             }
+             return;
+         }
+-        if (invalidRequest)
++        if (firstInvalid is not null || InvalidField is not null)
+         {
+-            throw new ArgumentException("Dungeon progress result contains an invalid request ID.");
++            throw new ArgumentException("Dungeon progress result contains invalid request evidence.");
+         }
+         if (Code == RuntimeDungeonStateChangeCode.AlreadyRecorded)
+         {
+@@ -627,12 +658,17 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
+         ContentId progressId)
+     {
+         ArgumentNullException.ThrowIfNull(current);
+-        RuntimeDungeonStateChangeResult Rejected(RuntimeDungeonStateChangeCode code) =>
+-            new(code, current, current, kind, progressId);
++        RuntimeDungeonStateChangeResult Rejected(
++            RuntimeDungeonStateChangeCode code,
++            RuntimeDungeonTraversalRequestField? invalidField = null) =>
++            new(code, current, current, kind, progressId, events: null, invalidField);
+ 
+-        if (!current.DungeonId.IsValid || !current.CurrentNodeId.IsValid || !progressId.IsValid)
++        RuntimeDungeonTraversalRequestField? invalidField =
++            RuntimeDungeonTraversalRequestValidation.FirstInvalidSnapshotField(current) ??
++            (!progressId.IsValid ? RuntimeDungeonTraversalRequestField.ProgressId : null);
++        if (invalidField is not null)
+         {
+-            return Rejected(RuntimeDungeonStateChangeCode.InvalidRequest);
++            return Rejected(RuntimeDungeonStateChangeCode.InvalidRequest, invalidField);
+         }
+ 
+         RuntimeDungeonProgressEligibility[] candidates = _progressRegistry.Eligibility
+@@ -739,9 +775,8 @@ public sealed class RuntimeDungeonTraversalService : IRuntimeDungeonTraversalSer
+ 
+ internal static class RuntimeDungeonTraversalRequestValidation
+ {
+-    public static RuntimeDungeonTraversalRequestField? FirstInvalidField(
+-        RuntimeDungeonTraversalSnapshot current,
+-        RuntimeDungeonTraversalTransition transition)
++    public static RuntimeDungeonTraversalRequestField? FirstInvalidSnapshotField(
++        RuntimeDungeonTraversalSnapshot current)
+     {
+         if (!current.DungeonId.IsValid)
+         {
+@@ -751,6 +786,31 @@ internal static class RuntimeDungeonTraversalRequestValidation
+         {
+             return RuntimeDungeonTraversalRequestField.CurrentNodeId;
+         }
++        if (current.VisitedNodeIds.Any(nodeId => !nodeId.IsValid))
++        {
++            return RuntimeDungeonTraversalRequestField.VisitedNodeIds;
++        }
++        if (current.UnlockedCheckpointIds.Any(checkpointId => !checkpointId.IsValid))
++        {
++            return RuntimeDungeonTraversalRequestField.UnlockedCheckpointIds;
++        }
++        if (current.DefeatedBossIds.Any(bossId => !bossId.IsValid))
++        {
++            return RuntimeDungeonTraversalRequestField.DefeatedBossIds;
++        }
++
++        return null;
++    }
++
++    public static RuntimeDungeonTraversalRequestField? FirstInvalidField(
++        RuntimeDungeonTraversalSnapshot current,
++        RuntimeDungeonTraversalTransition transition)
++    {
++        RuntimeDungeonTraversalRequestField? invalidSnapshotField = FirstInvalidSnapshotField(current);
++        if (invalidSnapshotField is not null)
++        {
++            return invalidSnapshotField;
++        }
+         if (!transition.Id.IsValid)
+         {
+             return RuntimeDungeonTraversalRequestField.TransitionId;
+diff --git a/src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs b/src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs
+index 553a3bb4968997444655ff610cf8b36a781a21d2..bf6248361cc73e15996443b70f24ea86df84fd7b 100644
+--- a/src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs
++++ b/src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs
+@@ -105,7 +105,12 @@ public enum RuntimeSaveValidationCode
+     NegativeShopStockQuantity = 95,
+     MissingShopStockEntry = 96,
+     UnexpectedShopStockEntry = 97,
+-    EquipmentSlotPolicyRejected = 98
++    EquipmentSlotPolicyRejected = 98,
++    DungeonProgressRegistryMissing = 99,
++    DungeonProgressUndeclared = 100,
++    DungeonProgressKindMismatch = 101,
++    DungeonProgressDungeonMismatch = 102,
++    DungeonProgressEligibleAreaNotVisited = 103
+ }
+ 
+ public sealed record RuntimeSaveValidationDiagnostic(
+@@ -402,6 +407,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
+     private readonly IRuntimeRulesetBindingResolver? _rulesetBindings;
+     private readonly IChargePolicyResolver? _chargePolicies;
+     private readonly IEquipmentSlotLayoutPolicy _equipmentSlotLayout;
++    private readonly RuntimeDungeonProgressRegistry? _dungeonProgressRegistry;
+ 
+     public RuntimeSaveValidator(
+         IRosterCapacityPolicy? rosterCapacityPolicy = null,
+@@ -409,6 +415,38 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
+         IRuntimeRulesetBindingResolver? rulesetBindings = null,
+         IChargePolicyResolver? chargePolicies = null,
+         IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null)
++        : this(
++            rosterCapacityPolicy,
++            moveListCapacityPolicy,
++            rulesetBindings,
++            chargePolicies,
++            equipmentSlotLayout,
++            dungeonProgressRegistry: null)
++    {
++    }
++
++    public static RuntimeSaveValidator CreateWithDungeonProgressRegistry(
++        RuntimeDungeonProgressRegistry dungeonProgressRegistry,
++        IRosterCapacityPolicy? rosterCapacityPolicy = null,
++        IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null,
++        IRuntimeRulesetBindingResolver? rulesetBindings = null,
++        IChargePolicyResolver? chargePolicies = null,
++        IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null) =>
++        new(
++            rosterCapacityPolicy,
++            moveListCapacityPolicy,
++            rulesetBindings,
++            chargePolicies,
++            equipmentSlotLayout,
++            dungeonProgressRegistry ?? throw new ArgumentNullException(nameof(dungeonProgressRegistry)));
++
++    private RuntimeSaveValidator(
++        IRosterCapacityPolicy? rosterCapacityPolicy,
++        IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy,
++        IRuntimeRulesetBindingResolver? rulesetBindings,
++        IChargePolicyResolver? chargePolicies,
++        IEquipmentSlotLayoutPolicy? equipmentSlotLayout,
++        RuntimeDungeonProgressRegistry? dungeonProgressRegistry)
+     {
+         _rosterCapacityPolicy = rosterCapacityPolicy ?? NoLimitRosterCapacityPolicy.Instance;
+         _moveListCapacityPolicy = moveListCapacityPolicy ??
+@@ -417,6 +455,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
+         _chargePolicies = chargePolicies;
+         _equipmentSlotLayout = equipmentSlotLayout ??
+             StandardEquipmentSlotLayoutPolicy.Instance;
++        _dungeonProgressRegistry = dungeonProgressRegistry;
+     }
+ 
+     public RuntimeSaveValidationResult Validate(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
+@@ -1710,20 +1749,130 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
+ 
+     private static string SlotPath(ContentId slotId) => slotId.ToString();
+ 
+-    private static void ValidateField(
++    private void ValidateField(
+         RuntimeFieldSnapshot field,
+         GameDataCatalog catalog,
+         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+     {
+-        if (field.DungeonTraversal is not null &&
+-            !catalog.Dungeons.ContainsKey(field.DungeonTraversal.DungeonId))
++        RuntimeDungeonTraversalSnapshot? dungeon = field.DungeonTraversal;
++        if (dungeon is null)
++        {
++            return;
++        }
++
++        if (!catalog.Dungeons.ContainsKey(dungeon.DungeonId))
+         {
+             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                 RuntimeSaveValidationCode.MissingCatalogDungeon,
+-                $"Dungeon '{field.DungeonTraversal.DungeonId}' is not present in the catalog.",
+-                ContentId: field.DungeonTraversal.DungeonId,
++                $"Dungeon '{dungeon.DungeonId}' is not present in the catalog.",
++                ContentId: dungeon.DungeonId,
+                 Path: "$.field.dungeonTraversal.dungeonId"));
+         }
++
++        if (dungeon.UnlockedCheckpointIds.Count == 0 && dungeon.DefeatedBossIds.Count == 0)
++        {
++            return;
++        }
++
++        if (_dungeonProgressRegistry is null)
++        {
++            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
++                RuntimeSaveValidationCode.DungeonProgressRegistryMissing,
++                "Retained dungeon progress requires the live dungeon-progress registry during save validation.",
++                ContentId: dungeon.DungeonId,
++                Path: "$.field.dungeonTraversal"));
++            return;
++        }
++
++        ValidateRetainedProgress(
++            dungeon,
++            RuntimeDungeonProgressKind.Checkpoint,
++            dungeon.UnlockedCheckpointIds,
++            "$.field.dungeonTraversal.unlockedCheckpointIds",
++            _dungeonProgressRegistry,
++            diagnostics);
++        ValidateRetainedProgress(
++            dungeon,
++            RuntimeDungeonProgressKind.Boss,
++            dungeon.DefeatedBossIds,
++            "$.field.dungeonTraversal.defeatedBossIds",
++            _dungeonProgressRegistry,
++            diagnostics);
++    }
++
++    private static void ValidateRetainedProgress(
++        RuntimeDungeonTraversalSnapshot dungeon,
++        RuntimeDungeonProgressKind expectedKind,
++        IReadOnlyList<ContentId> progressIds,
++        string path,
++        RuntimeDungeonProgressRegistry registry,
++        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
++    {
++        if (!dungeon.DungeonId.IsValid)
++        {
++            return;
++        }
++
++        HashSet<ContentId> visitedNodeIds = dungeon.VisitedNodeIds
++            .Where(nodeId => nodeId.IsValid)
++            .ToHashSet();
++        for (int index = 0; index < progressIds.Count; index++)
++        {
++            ContentId progressId = progressIds[index];
++            if (!progressId.IsValid)
++            {
++                continue;
++            }
++
++            string progressPath = $"{path}[{index}]";
++            RuntimeDungeonProgressEligibility[] idMatches = registry.Eligibility
++                .Where(entry => entry.ProgressId == progressId)
++                .ToArray();
++            if (idMatches.Length == 0)
++            {
++                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
++                    RuntimeSaveValidationCode.DungeonProgressUndeclared,
++                    $"Dungeon progress '{progressId}' is not declared by the supplied registry.",
++                    ContentId: progressId,
++                    Path: progressPath));
++                continue;
++            }
++
++            RuntimeDungeonProgressEligibility[] kindMatches = idMatches
++                .Where(entry => entry.Kind == expectedKind)
++                .ToArray();
++            if (kindMatches.Length == 0)
++            {
++                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
++                    RuntimeSaveValidationCode.DungeonProgressKindMismatch,
++                    $"Dungeon progress '{progressId}' is not declared as '{expectedKind}'.",
++                    ContentId: progressId,
++                    Path: progressPath));
++                continue;
++            }
++
++            RuntimeDungeonProgressEligibility[] dungeonMatches = kindMatches
++                .Where(entry => entry.DungeonId == dungeon.DungeonId)
++                .ToArray();
++            if (dungeonMatches.Length == 0)
++            {
++                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
++                    RuntimeSaveValidationCode.DungeonProgressDungeonMismatch,
++                    $"Dungeon progress '{progressId}' is not declared for dungeon '{dungeon.DungeonId}'.",
++                    ContentId: progressId,
++                    Path: progressPath));
++                continue;
++            }
++
++            if (!dungeonMatches.Any(entry => entry.AllowedNodeIds.Any(visitedNodeIds.Contains)))
++            {
++                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
++                    RuntimeSaveValidationCode.DungeonProgressEligibleAreaNotVisited,
++                    $"Dungeon progress '{progressId}' has no declared eligible area in visited history.",
++                    ContentId: progressId,
++                    Path: progressPath));
++            }
++        }
+     }
+ 
+     private static void ValidateCompendium(
+diff --git a/tests/Convergence.DemoHost.Tests/Host/CleanSaveDemoHostTests.cs b/tests/Convergence.DemoHost.Tests/Host/CleanSaveDemoHostTests.cs
+index f04c272d3e3c32b6ee82d41198a6e82f7f81d676..e73448837a36a1d0e27a44a462c68c381379ae52 100644
+--- a/tests/Convergence.DemoHost.Tests/Host/CleanSaveDemoHostTests.cs
++++ b/tests/Convergence.DemoHost.Tests/Host/CleanSaveDemoHostTests.cs
+@@ -385,7 +385,8 @@ public sealed class CleanSaveDemoHostTests
+         stats["strength"] = -1;
+ 
+         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
+-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
++        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
++            CleanSaveDemoHost.BuildDungeonProgressRegistry()).Validate(
+             restored,
+             CleanSaveTestFixture.LoadCatalog());
+ 
+@@ -413,7 +414,8 @@ public sealed class CleanSaveDemoHostTests
+         stats["forged_stat"] = 4;
+ 
+         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
+-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
++        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
++            CleanSaveDemoHost.BuildDungeonProgressRegistry()).Validate(
+             restored,
+             CleanSaveTestFixture.LoadCatalog());
+ 
+@@ -471,7 +473,8 @@ public sealed class CleanSaveDemoHostTests
+         }
+ 
+         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
+-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
++        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
++            CleanSaveDemoHost.BuildDungeonProgressRegistry()).Validate(
+             restored,
+             CleanSaveTestFixture.LoadCatalog());
+ 
+diff --git a/tests/Convergence.DemoHost.Tests/Host/CleanTrainingAnnexPlayHostTests.cs b/tests/Convergence.DemoHost.Tests/Host/CleanTrainingAnnexPlayHostTests.cs
+index ca4105d674d56bde2ecc29cb71baef9c30a61a9d..7a28f0aa83d39f3b375902aa3e0ca3f16bc26f3f 100644
+--- a/tests/Convergence.DemoHost.Tests/Host/CleanTrainingAnnexPlayHostTests.cs
++++ b/tests/Convergence.DemoHost.Tests/Host/CleanTrainingAnnexPlayHostTests.cs
+@@ -4235,6 +4235,40 @@ public sealed class CleanTrainingAnnexPlayHostTests
+         io.AssertConsumed();
+     }
+ 
++    [Fact]
++    public async Task CleanTrainingAnnexPlay_ManualLoadRejectsCheckpointWithoutEligibleVisitedAreaBeforeMutation()
++    {
++        RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>
++            CopySave(
++                snapshot,
++                field: new RuntimeFieldSnapshot(
++                    new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea),
++                    new RuntimeDungeonTraversalSnapshot(
++                        TrainingAnnexHostSupport.TrainingAnnexDungeon,
++                        TrainingAnnexHostSupport.ReviewHall,
++                        unlockedCheckpointIds: [TrainingAnnexHostSupport.ReviewCheckpoint]))));
++        var slots = new TrainingAnnexSaveSlotStore();
++        slots.Save(record);
++        var io = new ScriptedGameIO().QueueMenu(10, 1, 9);
++        using var output = new StringWriter();
++        var host = CreateHost(io, output, saveSlots: slots);
++
++        int exitCode = await host.RunAsync();
++
++        Assert.Equal(0, exitCode);
++        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
++        Assert.Equal(0, summary.ManualLoadCount);
++        Assert.True(summary.HasManualSave);
++        Assert.Equal(1, summary.SaveDiagnosticCount);
++        Assert.Equal(TrainingAnnexHostSupport.StagingArea, summary.FinalLocationId);
++        Assert.Contains(
++            "Manual load rejected [DungeonProgressEligibleAreaNotVisited] " +
++            "$.field.dungeonTraversal.unlockedCheckpointIds[0]",
++            output.ToString(),
++            StringComparison.Ordinal);
++        io.AssertConsumed();
++    }
++
+     [Fact]
+     public async Task CleanTrainingAnnexPlay_ManualLoadRejectsContentPackVersionMismatch()
+     {
+@@ -4441,10 +4475,25 @@ public sealed class CleanTrainingAnnexPlayHostTests
+     [Fact]
+     public void TrainingAnnexEntry_SelectsEntranceOrUnlockedCheckpointWithoutUsingLastNode()
+     {
+-        var retained = new RuntimeDungeonTraversalSnapshot(
++        var service = new RuntimeDungeonTraversalService(
++            new TrainingAnnexDungeonPolicy(), TrainingAnnexHostSupport.ProgressRegistry);
++        var initial = new RuntimeDungeonTraversalSnapshot(
+             TrainingAnnexHostSupport.TrainingAnnexDungeon,
+-            TrainingAnnexHostSupport.ReviewHall,
+-            unlockedCheckpointIds: [TrainingAnnexHostSupport.ReviewCheckpoint]);
++            TrainingAnnexHostSupport.TrainingAnnexEntrance);
++        RuntimeDungeonTraversalResult enteredHall = service.Traverse(
++            initial, TrainingAnnexHostSupport.EnterReviewHallTransition);
++        RuntimeDungeonTraversalResult enteredAlcove = service.Traverse(
++            enteredHall.After, TrainingAnnexHostSupport.EnterReviewAlcoveTransition);
++        RuntimeDungeonStateChangeResult unlocked = service.UnlockCheckpoint(
++            enteredAlcove.After, TrainingAnnexHostSupport.ReviewCheckpoint);
++        RuntimeDungeonTraversalResult returnedToHall = service.Traverse(
++            unlocked.After, TrainingAnnexHostSupport.ReturnToReviewHallTransition);
++
++        Assert.Equal(RuntimeDungeonTraversalCode.Applied, enteredHall.Code);
++        Assert.Equal(RuntimeDungeonTraversalCode.Applied, enteredAlcove.Code);
++        Assert.Equal(RuntimeDungeonStateChangeCode.Applied, unlocked.Code);
++        Assert.Equal(RuntimeDungeonTraversalCode.Applied, returnedToHall.Code);
++        RuntimeDungeonTraversalSnapshot retained = returnedToHall.After;
+ 
+         RuntimeDungeonTraversalSnapshot entrance = TrainingAnnexHostSupport.SelectDungeonEntry(
+             retained, TrainingAnnexHostSupport.TrainingAnnexEntrance);
+@@ -4454,6 +4503,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
+         Assert.Equal(TrainingAnnexHostSupport.TrainingAnnexEntrance, entrance.CurrentNodeId);
+         Assert.Equal(TrainingAnnexHostSupport.ReviewAlcove, checkpoint.CurrentNodeId);
+         Assert.Contains(TrainingAnnexHostSupport.ReviewHall, entrance.VisitedNodeIds);
++        Assert.Contains(TrainingAnnexHostSupport.ReviewAlcove, entrance.VisitedNodeIds);
+         Assert.Contains(TrainingAnnexHostSupport.ReviewCheckpoint, entrance.UnlockedCheckpointIds);
+         Assert.Throws<ArgumentException>(() => TrainingAnnexHostSupport.SelectDungeonEntry(
+             new RuntimeDungeonTraversalSnapshot(
+diff --git a/tests/Convergence.Framework.Tests/Architecture/FrameworkCapabilityMatrixTests.cs b/tests/Convergence.Framework.Tests/Architecture/FrameworkCapabilityMatrixTests.cs
+index 4acc40d832818d06cdb5b9f62897514af94d1908..1563d2a76943fac53febc92376b4b935263eed3c 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/FrameworkCapabilityMatrixTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/FrameworkCapabilityMatrixTests.cs
+@@ -220,11 +220,24 @@ public sealed class FrameworkCapabilityMatrixTests
+         Assert.Contains("| O9-R8: independent closure | pending |", roadmap, StringComparison.Ordinal);
+         Assert.Contains("CurrentSaveContext", review, StringComparison.Ordinal);
+ 
++        string capabilityNarrative = File.ReadAllText(RepositoryPath(
++            "docs", "roadmap", "framework-capability-matrix.md"));
++        Assert.Contains("23 September fresh audit", capabilityNarrative, StringComparison.Ordinal);
++        Assert.All(Enumerable.Range(1, 4), number => Assert.Contains(
++            $"O9-C{number}", capabilityNarrative, StringComparison.Ordinal));
++        Assert.Contains("post-correction review and retained gate", capabilityNarrative, StringComparison.Ordinal);
++        Assert.DoesNotContain(
++            "owner documentation confirmation remains",
++            capabilityNarrative,
++            StringComparison.Ordinal);
++
+         string decision = File.ReadAllText(RepositoryPath(
+             "docs", "decisions", "dungeon-progress-reporting.md"));
+         Assert.Contains("Status: confirmed", decision, StringComparison.Ordinal);
+         Assert.Contains("O9-R2 through O9-R6 subsequently implemented", decision, StringComparison.Ordinal);
++        Assert.Contains("O9-C1 and O9-C2 correct those gaps", decision, StringComparison.Ordinal);
+         Assert.Contains("`RuntimeDungeonProgressRegistry` declares eligible IDs", decision, StringComparison.Ordinal);
++        Assert.Contains("`RuntimeSaveValidator.CreateWithDungeonProgressRegistry`", decision, StringComparison.Ordinal);
+         Assert.Contains("All three remain `existing_unreviewed`", decision, StringComparison.Ordinal);
+         Assert.DoesNotContain("matches the current service", decision, StringComparison.Ordinal);
+         Assert.All(Enumerable.Range(1, 6), number => Assert.Contains(
+diff --git a/tests/Convergence.Framework.Tests/Architecture/VerificationEvidenceContractTests.cs b/tests/Convergence.Framework.Tests/Architecture/VerificationEvidenceContractTests.cs
+index f69ffb09cc85cd9ac5dbbad3bfce0dfe6e1989a8..b4d33059697e12ee45b5336b913cddb5e00735b2 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/VerificationEvidenceContractTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/VerificationEvidenceContractTests.cs
+@@ -75,6 +75,8 @@ public sealed class VerificationEvidenceContractTests
+             "--clean-training-annex-demo",
+             "--clean-training-annex-play",
+             "--convergence-smoke",
++            "--log-file",
++            "%EVIDENCE_ROOT%\\godot-smoke.log",
+             "EnableTrimAnalyzer=true",
+             "git diff --check",
+             "manifest.json",
+diff --git a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+index 11c899b6b843a532648b8b60111584631762f307..f8027843224781f3ea2cd9ea9e6d5732ac07183d 100644
+--- a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
++++ b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+@@ -301,17 +301,17 @@
+       "mechanics": {
+         "state": "existing_unreviewed",
+         "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
+-        "reason": "O9-R7 reconciles node, trigger, encounter, and progress rules against current source; independent audit and owner review are pending."
++        "reason": "O9-C3 reconciles node, trigger, encounter, live-history, and restored-progress rules after the fresh audit; post-correction audit and owner review are pending."
+       },
+       "developerGuide": {
+         "state": "existing_unreviewed",
+         "documents": ["docs/developer-guide/dungeon-traversal.md"],
+-        "reason": "O9-R7 documents host route policy, scene adoption, encounters, re-entry, and save checks; independent audit and owner review are pending."
++        "reason": "O9-C3 documents host route policy, scene adoption, encounters, re-entry, and registry-backed save checks; post-correction audit and owner review are pending."
+       },
+       "technical": {
+         "state": "existing_unreviewed",
+         "documents": ["docs/technical/dungeon-traversal-runtime.md"],
+-        "reason": "O9-R7 diagrams traversal, progress, adoption, and persistence ordering; independent audit and owner review are pending."
++        "reason": "O9-C3 diagrams complete live validation and registry-backed restored-progress authority; post-correction audit and owner review are pending."
+       }
+     },
+     {
+diff --git a/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json b/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
+index 7583f0974c98f2e05739e4c59e4c893e56161309..b180dc51f59cbe6b409a0fbe35d94f11998b7504 100644
+--- a/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
++++ b/tests/Convergence.Framework.Tests/Fixtures/framework-capability-matrix.json
+@@ -232,7 +232,7 @@
+       "implementationState": "implemented",
+       "orderNumber": 9,
+       "orderState": "open",
+-      "frameworkTests": ["RuntimeDungeonTraversalTests"],
++      "frameworkTests": ["RuntimeDungeonTraversalTests", "RuntimePersistenceSnapshotTests"],
+       "demoCoverage": "end_to_end",
+       "hostNeutral": true,
+       "optionalModule": true,
+diff --git a/tests/Convergence.Framework.Tests/Runtime/RuntimeDungeonTraversalTests.cs b/tests/Convergence.Framework.Tests/Runtime/RuntimeDungeonTraversalTests.cs
+index d4e18aad3d7af7aba90d58442b592b7afbf1363e..5af55b340c65b962fd3257e873e6027356475f4f 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/RuntimeDungeonTraversalTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/RuntimeDungeonTraversalTests.cs
+@@ -121,6 +121,31 @@ public sealed class RuntimeDungeonTraversalTests
+         Assert.Equal(0, policy.EvaluationCount);
+     }
+ 
++    [Fact]
++    public void Traversal_RejectsMalformedRetainedHistoryBeforePolicyWithoutMutation()
++    {
++        var policy = new MutableDungeonPolicy { IsAllowed = true };
++        var service = new RuntimeDungeonTraversalService(policy, EmptyRegistry);
++        var transition = new RuntimeDungeonTraversalTransition(
++            Id("move"), Id("archive"), Id("entry"), Id("room"));
++
++        foreach (var (current, field) in MalformedHistoryCases())
++        {
++            RuntimeDungeonTraversalResult result = service.Traverse(current, transition);
++
++            Assert.Equal(RuntimeDungeonTraversalCode.InvalidRequest, result.Code);
++            Assert.Equal(field, result.InvalidField);
++            Assert.Same(current, result.Before);
++            Assert.Same(current, result.After);
++            Assert.Empty(result.Events);
++            Assert.Equal(current.VisitedNodeIds, result.After.VisitedNodeIds);
++            Assert.Equal(current.UnlockedCheckpointIds, result.After.UnlockedCheckpointIds);
++            Assert.Equal(current.DefeatedBossIds, result.After.DefeatedBossIds);
++        }
++
++        Assert.Equal(0, policy.EvaluationCount);
++    }
++
+     [Fact]
+     public void Traversal_DistinguishesPolicyRejectionNullAndExceptionWithoutMutation()
+     {
+@@ -197,6 +222,26 @@ public sealed class RuntimeDungeonTraversalTests
+             (RuntimeDungeonTraversalCode)999, before, after, transition, [applied]));
+         Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalResult(
+             RuntimeDungeonTraversalCode.InvalidRequest, before, before, transition));
++
++        RuntimeDungeonTraversalSnapshot malformed = MalformedHistoryCases().First().Current;
++        Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalResult(
++            RuntimeDungeonTraversalCode.Applied,
++            malformed,
++            new RuntimeDungeonTraversalSnapshot(
++                malformed.DungeonId,
++                Id("room"),
++                malformed.VisitedNodeIds,
++                malformed.UnlockedCheckpointIds,
++                malformed.DefeatedBossIds),
++            transition,
++            [applied]));
++        Assert.Throws<ArgumentException>(() => new RuntimeDungeonTraversalResult(
++            RuntimeDungeonTraversalCode.InvalidRequest,
++            malformed,
++            malformed,
++            transition,
++            reasonId: Id("invalid_dungeon_request"),
++            invalidField: RuntimeDungeonTraversalRequestField.UnlockedCheckpointIds));
+     }
+ 
+     [Fact]
+@@ -219,6 +264,29 @@ public sealed class RuntimeDungeonTraversalTests
+             RuntimeDungeonStateChangeCode.AlreadyRecorded, before, moved, RuntimeDungeonProgressKind.Checkpoint, Id("terminal")));
+         Assert.Throws<ArgumentOutOfRangeException>(() => new RuntimeDungeonStateChangeResult(
+             (RuntimeDungeonStateChangeCode)999, before, before, RuntimeDungeonProgressKind.Checkpoint, Id("terminal")));
++
++        RuntimeDungeonTraversalSnapshot malformed = MalformedHistoryCases().First().Current;
++        Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
++            RuntimeDungeonStateChangeCode.NotEligible,
++            malformed,
++            malformed,
++            RuntimeDungeonProgressKind.Checkpoint,
++            Id("terminal")));
++        Assert.Throws<ArgumentException>(() => new RuntimeDungeonStateChangeResult(
++            RuntimeDungeonStateChangeCode.InvalidRequest,
++            malformed,
++            malformed,
++            RuntimeDungeonProgressKind.Checkpoint,
++            Id("terminal"),
++            events: null,
++            invalidField: RuntimeDungeonTraversalRequestField.UnlockedCheckpointIds));
++        RuntimeDungeonStateChangeResult inferredInvalid = new(
++            RuntimeDungeonStateChangeCode.InvalidRequest,
++            malformed,
++            malformed,
++            RuntimeDungeonProgressKind.Checkpoint,
++            Id("terminal"));
++        Assert.Equal(RuntimeDungeonTraversalRequestField.VisitedNodeIds, inferredInvalid.InvalidField);
+     }
+ 
+     [Fact]
+@@ -336,6 +404,15 @@ public sealed class RuntimeDungeonTraversalTests
+             Assert.Empty(result.After.DefeatedBossIds);
+         }
+ 
++        Assert.Equal(
++            RuntimeDungeonTraversalRequestField.ProgressId,
++            service.UnlockCheckpoint(entry, default).InvalidField);
++        Assert.Equal(
++            RuntimeDungeonTraversalRequestField.CurrentDungeonId,
++            service.UnlockCheckpoint(
++                new RuntimeDungeonTraversalSnapshot(default, Id("entry")),
++                Id("terminal")).InvalidField);
++
+         RuntimeDungeonStateChangeResult first = service.UnlockCheckpoint(entry, Id("terminal"));
+         RuntimeDungeonStateChangeResult wrongAreaDuplicate = service.UnlockCheckpoint(
+             new RuntimeDungeonTraversalSnapshot(
+@@ -344,6 +421,40 @@ public sealed class RuntimeDungeonTraversalTests
+         Assert.Equal(RuntimeDungeonStateChangeCode.AreaMismatch, wrongAreaDuplicate.Code);
+     }
+ 
++    [Fact]
++    public void ProgressReports_RejectMalformedRetainedHistoryBeforeRegistryWithoutMutation()
++    {
++        var registry = new RuntimeDungeonProgressRegistry(
++        [
++            new RuntimeDungeonProgressEligibility(
++                RuntimeDungeonProgressKind.Checkpoint, Id("terminal"), Id("archive"), [Id("entry")]),
++            new RuntimeDungeonProgressEligibility(
++                RuntimeDungeonProgressKind.Boss, Id("guardian"), Id("archive"), [Id("entry")])
++        ]);
++        var service = new RuntimeDungeonTraversalService(new MutableDungeonPolicy { IsAllowed = true }, registry);
++
++        foreach (var (current, field) in MalformedHistoryCases())
++        {
++            RuntimeDungeonStateChangeResult[] results =
++            [
++                service.UnlockCheckpoint(current, Id("terminal")),
++                service.RegisterBossDefeat(current, Id("guardian"))
++            ];
++
++            foreach (RuntimeDungeonStateChangeResult result in results)
++            {
++                Assert.Equal(RuntimeDungeonStateChangeCode.InvalidRequest, result.Code);
++                Assert.Equal(field, result.InvalidField);
++                Assert.Same(current, result.Before);
++                Assert.Same(current, result.After);
++                Assert.Empty(result.Events);
++                Assert.Equal(current.VisitedNodeIds, result.After.VisitedNodeIds);
++                Assert.Equal(current.UnlockedCheckpointIds, result.After.UnlockedCheckpointIds);
++                Assert.Equal(current.DefeatedBossIds, result.After.DefeatedBossIds);
++            }
++        }
++    }
++
+     [Fact]
+     public void BossProgress_IsHostReportedAfterBattleOrPuzzleNotInferredFromTraversalOrLoss()
+     {
+@@ -375,6 +486,20 @@ public sealed class RuntimeDungeonTraversalTests
+ 
+     private static ContentId Id(string value) => ContentId.Parse(value);
+ 
++    private static IReadOnlyList<(RuntimeDungeonTraversalSnapshot Current, RuntimeDungeonTraversalRequestField Field)>
++        MalformedHistoryCases() =>
++        [
++            (new RuntimeDungeonTraversalSnapshot(
++                Id("archive"), Id("entry"), visitedNodeIds: [default]),
++                RuntimeDungeonTraversalRequestField.VisitedNodeIds),
++            (new RuntimeDungeonTraversalSnapshot(
++                Id("archive"), Id("entry"), unlockedCheckpointIds: [default]),
++                RuntimeDungeonTraversalRequestField.UnlockedCheckpointIds),
++            (new RuntimeDungeonTraversalSnapshot(
++                Id("archive"), Id("entry"), defeatedBossIds: [default]),
++                RuntimeDungeonTraversalRequestField.DefeatedBossIds)
++        ];
++
+     private sealed class MutableDungeonPolicy : IRuntimeDungeonTraversalPolicy
+     {
+         public bool IsAllowed { get; set; }
+diff --git a/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs b/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
+index 48461a36cb3fba4deb0d825b6c153bc4f2b7c8ff..095cc9b3ff78a5ef8f3335ccccd76b114b4bca33 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
+@@ -2939,6 +2939,176 @@ public sealed class RuntimePersistenceSnapshotTests
+         Assert.Throws<ArgumentNullException>(() => new RuntimeFieldSnapshot(null!));
+     }
+ 
++    [Fact]
++    public void RuntimeSaveValidator_RequiresRegistryAndRejectsEveryRetainedProgressAuthorityMismatch()
++    {
++        GameDataCatalog catalog = LoadCatalog();
++        ContentId dungeonId = Id("convergence.catalog_surface_sample:sample_depths");
++        ContentId floorOne = Id("convergence.catalog_surface_sample:floor_1");
++        ContentId floorFive = Id("convergence.catalog_surface_sample:floor_5");
++        ContentId checkpointId = Id("audit:checkpoint");
++        ContentId bossId = Id("audit:boss");
++
++        RuntimeSaveGameSnapshot Snapshot(RuntimeDungeonTraversalSnapshot dungeon) =>
++            CreateSaveSnapshot(field: new RuntimeFieldSnapshot(
++                new RuntimeNavigationSnapshot(Id("outside_location")),
++                dungeon));
++
++        RuntimeDungeonTraversalSnapshot retained = new(
++            dungeonId,
++            floorOne,
++            unlockedCheckpointIds: [checkpointId]);
++        AssertProgressDiagnostic(
++            new RuntimeSaveValidator().Validate(Snapshot(retained), catalog),
++            RuntimeSaveValidationCode.DungeonProgressRegistryMissing);
++        AssertProgressDiagnostic(
++            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(new RuntimeDungeonProgressRegistry([]))
++                .Validate(Snapshot(retained), catalog),
++            RuntimeSaveValidationCode.DungeonProgressUndeclared);
++        AssertProgressDiagnostic(
++            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(new RuntimeDungeonProgressRegistry([]))
++                .Validate(
++                    Snapshot(new RuntimeDungeonTraversalSnapshot(
++                        dungeonId,
++                        floorOne,
++                        defeatedBossIds: [bossId])),
++                    catalog),
++            RuntimeSaveValidationCode.DungeonProgressUndeclared);
++        AssertProgressDiagnostic(
++            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(new RuntimeDungeonProgressRegistry(
++            [
++                new RuntimeDungeonProgressEligibility(
++                    RuntimeDungeonProgressKind.Boss,
++                    checkpointId,
++                    dungeonId,
++                    [floorOne])
++            ])).Validate(Snapshot(retained), catalog),
++            RuntimeSaveValidationCode.DungeonProgressKindMismatch);
++        AssertProgressDiagnostic(
++            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(new RuntimeDungeonProgressRegistry(
++            [
++                new RuntimeDungeonProgressEligibility(
++                    RuntimeDungeonProgressKind.Checkpoint,
++                    checkpointId,
++                    Id("audit:other_dungeon"),
++                    [floorOne])
++            ])).Validate(Snapshot(retained), catalog),
++            RuntimeSaveValidationCode.DungeonProgressDungeonMismatch);
++        AssertProgressDiagnostic(
++            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(new RuntimeDungeonProgressRegistry(
++            [
++                new RuntimeDungeonProgressEligibility(
++                    RuntimeDungeonProgressKind.Checkpoint,
++                    checkpointId,
++                    dungeonId,
++                    [floorFive])
++            ])).Validate(Snapshot(retained), catalog),
++            RuntimeSaveValidationCode.DungeonProgressEligibleAreaNotVisited);
++        Assert.Throws<ArgumentNullException>(() =>
++            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(null!));
++
++        static void AssertProgressDiagnostic(
++            RuntimeSaveValidationResult result,
++            RuntimeSaveValidationCode expectedCode)
++        {
++            RuntimeSaveValidationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
++            Assert.Equal(expectedCode, diagnostic.Code);
++            Assert.StartsWith("$.field.dungeonTraversal", diagnostic.Path, StringComparison.Ordinal);
++        }
++    }
++
++    [Fact]
++    public void RuntimeSessionRestoreService_AcceptsLiveProducedProgressOutsideDungeonAndRejectsForgedProgressAtomically()
++    {
++        GameDataCatalog catalog = LoadCatalog();
++        ContentId dungeonId = Id("convergence.catalog_surface_sample:sample_depths");
++        ContentId floorOne = Id("convergence.catalog_surface_sample:floor_1");
++        ContentId floorFive = Id("convergence.catalog_surface_sample:floor_5");
++        ContentId checkpointId = Id("audit:floor_five_checkpoint");
++        ContentId bossId = Id("audit:floor_five_guardian");
++        var registry = new RuntimeDungeonProgressRegistry(
++        [
++            new RuntimeDungeonProgressEligibility(
++                RuntimeDungeonProgressKind.Checkpoint,
++                checkpointId,
++                dungeonId,
++                [floorFive]),
++            new RuntimeDungeonProgressEligibility(
++                RuntimeDungeonProgressKind.Boss,
++                bossId,
++                dungeonId,
++                [floorFive])
++        ]);
++        var traversal = new RuntimeDungeonTraversalService(new AllowDungeonPolicy(), registry);
++        RuntimeDungeonTraversalSnapshot initial = new(dungeonId, floorOne);
++        RuntimeDungeonTraversalResult moved = traversal.Traverse(
++            initial,
++            new RuntimeDungeonTraversalTransition(
++                Id("audit:to_floor_five"),
++                dungeonId,
++                floorOne,
++                floorFive));
++        RuntimeDungeonStateChangeResult checkpoint =
++            traversal.UnlockCheckpoint(moved.After, checkpointId);
++        RuntimeDungeonStateChangeResult boss =
++            traversal.RegisterBossDefeat(checkpoint.After, bossId);
++        Assert.True(moved.Applied);
++        Assert.True(checkpoint.Applied);
++        Assert.True(boss.Applied);
++
++        RuntimeSaveGameSnapshot legitimate = CreateSaveSnapshot(field: new RuntimeFieldSnapshot(
++            new RuntimeNavigationSnapshot(Id("outside_location")),
++            boss.After));
++        RuntimeSaveValidator validator = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(registry);
++        RuntimeSaveValidationResult validation = validator.Validate(legitimate, catalog);
++        Assert.True(
++            validation.IsValid,
++            string.Join(Environment.NewLine, validation.Diagnostics.Select(item => item.Message)));
++
++        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
++            catalog,
++            catalog,
++            new RestoreOnlyInitializationPolicy(),
++            catalog));
++        var restoreService = new RuntimeSessionRestoreService(
++            validator,
++            factory,
++            new DelegateActorRestoreProfileResolver(_ => ActorProfile()));
++        RuntimeSessionRestoreResult restored = restoreService.Restore(legitimate, catalog);
++
++        Assert.True(
++            restored.IsSuccess,
++            string.Join(Environment.NewLine, restored.Diagnostics.Select(item => item.Message)));
++        RuntimeFieldSnapshot restoredField = Assert.IsType<RuntimeFieldSnapshot>(restored.RequireSession().Field);
++        Assert.Equal(Id("outside_location"), restoredField.Navigation.CurrentLocationId);
++        Assert.Equal([checkpointId], restoredField.DungeonTraversal!.UnlockedCheckpointIds);
++        Assert.Equal([bossId], restoredField.DungeonTraversal.DefeatedBossIds);
++
++        RuntimeSaveGameSnapshot forged = CreateSaveSnapshot(field: new RuntimeFieldSnapshot(
++            new RuntimeNavigationSnapshot(Id("outside_location")),
++            new RuntimeDungeonTraversalSnapshot(
++                dungeonId,
++                floorOne,
++                unlockedCheckpointIds: [checkpointId])));
++        var rejectingFactory = new RecordingActorFactory(new CatalogBattleActorFactory(
++            catalog,
++            catalog,
++            new RestoreOnlyInitializationPolicy(),
++            catalog));
++        RuntimeSessionRestoreResult rejected = new RuntimeSessionRestoreService(
++                validator,
++                rejectingFactory,
++                new DelegateActorRestoreProfileResolver(_ => ActorProfile()))
++            .Restore(forged, catalog);
++
++        Assert.False(rejected.IsSuccess);
++        Assert.Empty(rejectingFactory.RestoreOrder);
++        Assert.Contains(rejected.Diagnostics, diagnostic =>
++            diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.SaveValidationRejected &&
++            diagnostic.SaveValidationCode ==
++                RuntimeSaveValidationCode.DungeonProgressEligibleAreaNotVisited);
++    }
++
+     [Fact]
+     public void RuntimeSavePolicy_AllowsManualAndSuspendOnlyInRegisteredStableContexts()
+     {
+@@ -3173,13 +3343,7 @@ public sealed class RuntimePersistenceSnapshotTests
+                         [
+                             Id("convergence.catalog_surface_sample:floor_1"),
+                             Id("convergence.catalog_surface_sample:floor_5")
+-                        ],
+-                        unlockedCheckpointIds:
+-                        [
+-                            Id("convergence.catalog_surface_sample:terminal_1"),
+-                            Id("convergence.catalog_surface_sample:terminal_5")
+-                        ],
+-                        defeatedBossIds: [Id("convergence.catalog_surface_sample:entry_block_training_sample")]))
++                        ]))
+                 : null),
+             compendium ?? new CompendiumStateSnapshot(
+             [
+@@ -3688,6 +3852,13 @@ public sealed class RuntimePersistenceSnapshotTests
+         public int GetCapacity(RuntimeRosterKind rosterKind, int ownerLevel) => capacity;
+     }
+ 
++    private sealed class AllowDungeonPolicy : IRuntimeDungeonTraversalPolicy
++    {
++        public RuntimeDungeonTraversalPolicyDecision Evaluate(
++            RuntimeDungeonTraversalPolicyRequest request) =>
++            new(true);
++    }
++
+     private sealed class DelegateActorRestoreProfileResolver(
+         Func<RuntimeActorRestoreProfileRequest, RuntimeActorRestoreProfile> resolve)
+         : IRuntimeActorRestoreProfileResolver

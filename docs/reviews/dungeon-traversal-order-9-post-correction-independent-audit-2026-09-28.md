@@ -1,21 +1,21 @@
 # Dungeon Traversal Order 9 Post-Correction Independent Audit
 
 **Audit date:** 28 September 2026  
-**Reviewed source baseline:** `11e69b12`  
+**Reviewed source baseline:** `11e69b12`; corrected range verified through `299cbc15`
 **Method:** fresh source, test, host-integration, and audience-document trace.
 Earlier Order 9 reports were consulted only after findings were derived from
 current code and current active documentation.
 
-## Interim Verdict
+## Final Verdict
 
 The corrected runtime is coherent, and this pass found no unresolved realistic
-reachable Framework or DemoHost defect in Order 9. Two low-severity active
-quality-boundary defects prevent the closure gate from being called complete:
-one documentation/tracking contradiction and one nonportable local Godot-log
-destination in the retained-evidence runner. Order 9 and its three audience
-entries remain open.
+reachable Framework or DemoHost defect in Order 9. The two low-severity
+quality-boundary defects found by this pass were corrected separately, and the
+complete retained release gate then passed on the corrected clean commit.
+O9-C4 is technically complete. Order 9 and its three audience entries remain
+open only for explicit project-owner documentation confirmation.
 
-## Finding
+## Findings And Corrections
 
 ### O9-C4-L1: active capability prose still presents a superseded gate as current
 
@@ -44,6 +44,10 @@ O9-C3 alignment, and pending O9-C4 gate. Add an executable documentation
 assertion so the active narrative cannot silently regress to the superseded
 closure claim.
 
+**Correction.** Commit `511fc387` updates the active capability and decision
+authority, and `FrameworkCapabilityMatrixTests` prevents the superseded gate
+from being presented as current.
+
 ### O9-C4-L2: the retained local Godot gate relies on the engine's default user log path
 
 **Intended invariant.** The canonical retained-evidence runner must execute the
@@ -69,6 +73,12 @@ trail. This does not indicate a dungeon-runtime defect.
 inside `%EVIDENCE_ROOT%`, record that argument in the generated command, and
 guard it with an executable evidence-runner contract test. Do not redirect the
 whole gate's .NET user environment.
+
+**Correction.** Commit `299cbc15` adds an explicit
+`--log-file "%EVIDENCE_ROOT%\godot-smoke.log"` to the canonical smoke command,
+documents the retained log, and guards the argument in
+`VerificationEvidenceContractTests`. The final run used the normal .NET/NuGet
+environment and completed the real Godot 4.7.1 smoke with exit code zero.
 
 ## Fresh Runtime Review
 
@@ -120,29 +130,42 @@ The mechanics, developer, and technical pages agree on the corrected authority:
 - independent navigation/dungeon nullability remains an Order 13 question.
 
 Their Mermaid transition, progress, and host-adoption flows match current call
-ordering. All three entries correctly remain `existing_unreviewed` pending this
-post-correction gate and explicit owner confirmation.
+ordering. The post-correction gate is complete; all three entries correctly
+remain `existing_unreviewed` pending explicit owner confirmation.
 
-## Verification At Audit Point
+## Final Verification
 
-Before this audit document was created, the C3 baseline passed:
+The canonical 23-command gate tested clean commit
+`299cbc158e8cb91c7a9f2e786b1685d457aa02b9` and reviewed
+`d6608d95c7432d7b4eedea224bed09cd5d84c8b4..299cbc158e8cb91c7a9f2e786b1685d457aa02b9`.
+It recorded:
 
-- focused live-produced re-entry fixture: 1/1;
-- documentation/capability boundary gate: 32/32;
+- focused Framework gate: 274/274;
+- focused DemoHost gate: 142/142;
+- architecture gate: 66/66;
 - full Release suite: 1,895 Framework, 191 DemoHost, seven ContentValidator
   tests (2,093 total), zero failed and zero skipped;
-- strict nonincremental solution build: zero warnings and zero errors;
-- format verification and `git diff --check`.
+- Framework coverage: 90.38% lines and 77.32% branches;
+- six packs, 36 documents, and 98 qualified definitions validated;
+- locked restore/vulnerability audit, formatting, strict Framework and solution
+  builds, trimming analysis, and `git diff --check` passed with zero warnings;
+- all five DemoHost modes passed; and
+- the real Godot 4.7.1 build and headless smoke emitted
+  `CONVERGENCE_GODOT_SMOKE_OK` and exited zero.
 
-The retained release gate has not yet been claimed for C4. It must run on the
-clean corrected commit after O9-C4-L1 is fixed. A green pre-fix gate would not
-resolve the active-document contradiction.
+The successful raw bundle, exact reviewed diff, command wrappers, outputs,
+Godot log, compressed coverage, manifest, and checksums are retained at
+`artifacts/verification/o9-c4-verified/299cbc158e8cb91c7a9f2e786b1685d457aa02b9`.
+Three failed attempts are also retained and explicitly labeled as failures:
+the first exposed O9-C4-L2 at `18-godot-smoke`; two subsequent experiments that
+redirected the whole user environment failed NuGet audit/build commands and
+proved why the correction had to be Godot-specific.
 
 ## Correction Checkpoint
 
 | Checkpoint | State | Exit condition |
 |---|---|---|
-| O9-C4-L1 | corrected_pending_gate | Active capability/decision evidence now names the correction chain and pending C4 authority; the executable documentation test guards both documents. |
-| O9-C4-L2 | open | The canonical Godot command confines its log to the retained evidence bundle and an executable contract test prevents removal of that argument. |
-| O9-C4-GATE | pending | Fresh recheck finds no realistic reachable defect or contradiction and the retained release gate passes on the clean corrected commit. |
+| O9-C4-L1 | verified | Active capability/decision evidence names the correction chain; the executable documentation test guards both documents. |
+| O9-C4-L2 | verified | The canonical Godot command confines its log to the retained evidence bundle and an executable contract test prevents removal of that argument. |
+| O9-C4-GATE | verified | Fresh recheck found no realistic reachable defect or contradiction, and all 23 retained-gate commands passed on `299cbc15`. |
 

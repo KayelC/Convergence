@@ -1,0 +1,5 @@
+?? artifacts/verification/o9-c4-verified/511fc387d270139c8fed7361711a23b288d7d1df/commands/00-dotnet-info.cmd
+?? artifacts/verification/o9-c4-verified/511fc387d270139c8fed7361711a23b288d7d1df/commands/00-dotnet-info.raw.txt
+?? artifacts/verification/o9-c4-verified/511fc387d270139c8fed7361711a23b288d7d1df/commands/01-restore-audit.cmd
+?? artifacts/verification/o9-c4-verified/511fc387d270139c8fed7361711a23b288d7d1df/commands/01-restore-audit.raw.txt
+?? artifacts/verification/o9-c4-verified/511fc387d270139c8fed7361711a23b288d7d1df/git-status-before.txt

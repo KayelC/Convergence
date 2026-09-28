@@ -752,10 +752,11 @@ O9-R7 reconciles the [mechanics](../mechanics/world-encounters-and-rewards.md),
 [fresh closure audit](../reviews/dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md)
 found live retained-history validation and restored-progress authority gaps.
 O9-C1 and O9-C2 correct those runtime boundaries; O9-C3 updates all three
-audience views and replaces the impossible checkpoint fixture. The pages remain
-`existing_unreviewed` while O9-C4 performs a fresh post-correction review and
-retained release gate. `dungeon_traversal` remains `implemented` and Order 9
-remains `open`; corrected guidance and green tests do not replace owner closure.
+audience views and replaces the impossible checkpoint fixture. O9-C4 completed
+the fresh post-correction review and retained release gate on `299cbc15`. The
+pages remain `existing_unreviewed`, and Order 9 remains `open`, until explicit
+owner confirmation; corrected guidance and green tests do not replace owner
+closure.
 
 ## Deferred Documentation
 

@@ -45,9 +45,10 @@ Order 9 now has a source-reconciled dungeon mechanics section, a developer
 integration guide, and a technical state/sequence reference. The 23 September
 fresh audit subsequently found two authority gaps. O9-C1 validates retained
 live history, O9-C2 reconciles restored progress with the live registry, and
-O9-C3 aligns these pages with those corrections. All three remain
-`existing_unreviewed` pending the O9-C4 post-correction audit and project-owner
-confirmation; neither the guide's presence nor passing tests closes the Order.
+O9-C3 aligns these pages with those corrections. O9-C4 independently reviewed
+the corrected source and prose and retained a green release gate. All three
+remain `existing_unreviewed` pending project-owner confirmation; neither the
+guide's presence nor passing tests closes the Order.
 Order 7 now documents inventory-owned equipment instances, authored slot
 layouts, one live equipment profile, typed currencies, resolved pricing,
 policy-owned stock, atomic shops, recovery, and save v19 across player,

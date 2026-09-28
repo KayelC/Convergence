@@ -4,8 +4,8 @@
 
 **Source baseline:** `d5f8845d`
 
-**Status:** open; O9-D1 through O9-D6 approved, fresh-audit corrections
-O9-C1 through O9-C3 complete, and O9-C4 pending.
+**Status:** open pending explicit owner confirmation; O9-D1 through O9-D6
+approved and O9-C1 through O9-C4 complete.
 
 **Source evidence:** [Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md).
 
@@ -59,7 +59,7 @@ owner rather than silently choosing a content or save model.
 | O9-R5: checkpoint and boss recording | complete | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
 | O9-R6: authored floor and encounter contract | complete | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
 | O9-R7: audience documentation | written_pending_owner_confirmation | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. All three audience entries remain `existing_unreviewed` until the post-correction audit and owner confirmation. |
-| O9-R8: independent closure | pending | The 21 September audit and retained gate remain historical evidence, but the later 23 September fresh audit found two reachable authority gaps and reopened this active closure checkpoint. O9-C4 must independently review the corrected state. |
+| O9-R8: independent closure | complete | The 21 September audit remains historical evidence. The 23 September fresh audit reopened the checkpoint; O9-C1 through O9-C3 corrected its findings, and O9-C4 independently reviewed the corrected state and retained a green release gate. Explicit owner confirmation still controls formal Order closure. |
 
 ## Fresh-Audit Correction Checkpoints
 
@@ -71,7 +71,7 @@ supersedes the earlier no-gap conclusion without erasing its historical gate.
 | O9-C1: complete live-state validity | complete | Validate current and retained IDs before traversal policy or progress-registry evaluation; return typed, non-mutating evidence for the first malformed field. |
 | O9-C2: restored progress authority | complete | Validate retained checkpoint/boss records against the live immutable registry before save/restore adoption, while keeping games with no retained progress independent of the optional module. |
 | O9-C3: fixtures and audience alignment | complete | Produce re-entry evidence through live traversal/progress services and align mechanics, developer, technical, API, capability, and coverage guidance with C1/C2. |
-| O9-C4: post-correction independent closure | pending | Re-read current source and audience documentation, correct the capability-authority contradiction and retained Godot-log portability defect found by that review, then run and retain the release gate. Owner confirmation remains required for closure. |
+| O9-C4: post-correction independent closure | complete | Current source and audience documentation were re-read, both low-severity quality findings were corrected, and all 23 retained release-gate commands passed on `299cbc15`. Owner confirmation remains required for formal closure. |
 
 ## Boundary Contract To Preserve
 
@@ -263,7 +263,7 @@ ContentValidator tests (2,093 total), with zero failures or skips; strict build,
 format verification, both relevant demos, and `git diff --check` passed. Save
 contract v19 remains unchanged because the snapshot shape did not change.
 
-O9-C3 (this documentation/fixture commit) replaces the manually forged
+O9-C3 (`11e69b12`) replaces the manually forged
 checkpoint-entry fixture with state produced by entrance-to-hall-to-alcove
 traversal, live checkpoint recording, and return-to-hall traversal. The test
 therefore still proves that re-entry selection does not use the last node while
@@ -280,7 +280,17 @@ close Order 9 or promote its three audience entries.
 The fresh O9-C4 review found no further dungeon-runtime defect. It did find two
 low-severity quality-boundary defects: stale active capability prose (corrected
 in `511fc387`) and a retained-evidence Godot invocation that relied on an
-inaccessible default `user://logs` path. O9-C4-L2 will confine only Godot's log
-to `%EVIDENCE_ROOT%`; it will not redirect the .NET/NuGet environment used by
-the rest of the gate. The retained release gate remains pending until that
-correction is committed and the complete clean-tree harness succeeds.
+inaccessible default `user://logs` path (corrected in `299cbc15`). The latter
+now confines only Godot's log to `%EVIDENCE_ROOT%` and leaves the .NET/NuGet
+environment unchanged.
+
+The final retained 23-command gate tested `299cbc15` and passed 1,895 Framework,
+191 DemoHost, and seven ContentValidator tests (2,093 total), with no failures
+or skips. Focused Framework, DemoHost, and architecture gates passed 274, 142,
+and 66 tests respectively. Strict builds and trimming reported zero warnings;
+coverage measured 90.38% lines and 77.32% branches; six packs, 36 documents,
+and 98 definitions validated; every DemoHost mode and the real Godot 4.7.1
+headless smoke passed. The complete evidence bundle is retained at
+`artifacts/verification/o9-c4-verified/299cbc158e8cb91c7a9f2e786b1685d457aa02b9`.
+O9-C4 and O9-R8 are complete. Order 9 remains open only for explicit owner
+confirmation of its audience documentation.

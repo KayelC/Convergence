@@ -1,0 +1,26 @@
+ERROR: Failed to open 'user://logs/godot2026-09-28T08.03.11.log'.
+   at: copy (core/io/dir_access.cpp:429)
+
+================================================================
+CrashHandlerException: Program crashed with signal 11
+Engine version: Godot Engine v4.7.1.stable.mono.official (a13da4feb8d8aefc283c3763d33a2f170a18d541)
+Dumping the backtrace. Please include this when reporting the bug on: https://github.com/godotengine/godot/issues
+Load address: 7ff4d9c10000
+
+[1] 7ff61dd42361 (main+4132361) - no debug info in PE/COFF executable
+[2] 7ffbe6e24702 (ntdll.dll+124702) - no debug info in PE/COFF executable
+[3] 7ffbe6e654fe (ntdll.dll+1654fe) - no debug info in PE/COFF executable
+[4] 7ffbe6dcbd24 (ntdll.dll+cbd24) - no debug info in PE/COFF executable
+[5] 7ffbe6e64e3d (ntdll.dll+164e3d) - no debug info in PE/COFF executable
+[6] 7ff61da85713 (main+3e75713) - no debug info in PE/COFF executable
+[7] 7ff61d6a48cc (main+3a948cc) - no debug info in PE/COFF executable
+[8] 7ff619c82d7f (main+72d7f) - no debug info in PE/COFF executable
+[9] 7ff619c6248f (main+5248f) - no debug info in PE/COFF executable
+[10] 7ff619c625fd (main+525fd) - no debug info in PE/COFF executable
+[11] 7ff619c110c8 (main+10c8) - no debug info in PE/COFF executable
+[12] 7ff619c113f5 (main+13f5) - no debug info in PE/COFF executable
+[13] 7ffbe680cd86 (kernel32.dll+2cd86) - no debug info in PE/COFF executable
+[14] 7ffbe6dacaeb (ntdll.dll+acaeb) - no debug info in PE/COFF executable
+[15] -1 (main+-7ff619c10001) - no debug info in PE/COFF executable
+-- END OF C++ BACKTRACE --
+================================================================

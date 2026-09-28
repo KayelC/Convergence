@@ -217,7 +217,11 @@ public sealed class FrameworkCapabilityMatrixTests
             "docs", "roadmap", "dungeon-traversal-order-9-roadmap.md"));
         Assert.Contains("| O9-R1: opening review | complete |", roadmap, StringComparison.Ordinal);
         Assert.Contains("| O9-R7: audience documentation | written_pending_owner_confirmation |", roadmap, StringComparison.Ordinal);
-        Assert.Contains("| O9-R8: independent closure | pending |", roadmap, StringComparison.Ordinal);
+        Assert.Contains("| O9-R8: independent closure | complete |", roadmap, StringComparison.Ordinal);
+        Assert.Contains(
+            "| O9-C4: post-correction independent closure | complete |",
+            roadmap,
+            StringComparison.Ordinal);
         Assert.Contains("CurrentSaveContext", review, StringComparison.Ordinal);
 
         string capabilityNarrative = File.ReadAllText(RepositoryPath(
@@ -225,7 +229,7 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.Contains("23 September fresh audit", capabilityNarrative, StringComparison.Ordinal);
         Assert.All(Enumerable.Range(1, 4), number => Assert.Contains(
             $"O9-C{number}", capabilityNarrative, StringComparison.Ordinal));
-        Assert.Contains("post-correction review and retained gate", capabilityNarrative, StringComparison.Ordinal);
+        Assert.Contains("23-command retained gate passed on `299cbc15`", capabilityNarrative, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "owner documentation confirmation remains",
             capabilityNarrative,
@@ -238,7 +242,8 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.Contains("O9-C1 and O9-C2 correct those gaps", decision, StringComparison.Ordinal);
         Assert.Contains("`RuntimeDungeonProgressRegistry` declares eligible IDs", decision, StringComparison.Ordinal);
         Assert.Contains("`RuntimeSaveValidator.CreateWithDungeonProgressRegistry`", decision, StringComparison.Ordinal);
-        Assert.Contains("All three remain `existing_unreviewed`", decision, StringComparison.Ordinal);
+        Assert.Contains("post-correction audit and retained gate are complete", decision, StringComparison.Ordinal);
+        Assert.Contains("entries remain `existing_unreviewed`", decision, StringComparison.Ordinal);
         Assert.DoesNotContain("matches the current service", decision, StringComparison.Ordinal);
         Assert.All(Enumerable.Range(1, 6), number => Assert.Contains(
             $"O9-D{number}:", roadmap, StringComparison.Ordinal));

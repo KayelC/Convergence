@@ -75,3 +75,19 @@ capture and validation contract.
   Godot then failed to open its sandbox-confined `user://logs` path and
   terminated in native code. The elevated rerun above is the authoritative
   passing gate.
+
+## Order 9 C4 Post-Correction Closure
+
+- [Successful complete post-correction gate](o9-c4-verified/299cbc158e8cb91c7a9f2e786b1685d457aa02b9/README.md):
+  all 23 commands passed against commit
+  `299cbc158e8cb91c7a9f2e786b1685d457aa02b9`, reviewing
+  `d6608d95c7432d7b4eedea224bed09cd5d84c8b4..299cbc158e8cb91c7a9f2e786b1685d457aa02b9`.
+- [Retained default-log failure](o9-c4-verified-failed-20260928T060134Z/511fc387d270139c8fed7361711a23b288d7d1df/README.md):
+  commands 00 through 17 passed, then Godot crashed before project execution
+  while opening its default `user://logs` path. This exposed O9-C4-L2.
+- [Retained whole-environment redirect restore failure](o9-c4-verified-failed-20260928T060527Z/511fc387d270139c8fed7361711a23b288d7d1df/README.md):
+  the experimental workaround changed the .NET/NuGet user environment and the
+  locked vulnerability-audit restore failed. It is not a passing gate.
+- [Retained whole-environment redirect build failure](o9-c4-verified-failed-20260928T060613Z/511fc387d270139c8fed7361711a23b288d7d1df/README.md):
+  the same broad workaround reached the Godot build but retained a NuGet audit
+  warning as an error. The successful gate instead redirects only Godot's log.
