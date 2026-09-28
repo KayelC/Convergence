@@ -348,6 +348,17 @@ internal sealed class CleanTrainingAnnexDemoHost
             $"{growthActor.Actor.Entity.DisplayName} level {growth.Progression.Level}.",
             cancellationToken).ConfigureAwait(false);
 
+        RuntimeDungeonTraversalResult enteredAlcove = dungeonService.Traverse(
+            traversed.After,
+            EnterReviewAlcoveTransition);
+        RuntimeDungeonStateChangeResult unlockedCheckpoint = dungeonService.UnlockCheckpoint(
+            enteredAlcove.After,
+            ReviewCheckpoint);
+        RuntimeDungeonTraversalSnapshot retainedProgress =
+            enteredAlcove.Applied && unlockedCheckpoint.Applied
+                ? unlockedCheckpoint.After
+                : throw new InvalidOperationException(
+                    "Training Annex demo could not produce its checkpoint through live dungeon rules.");
         RuntimeSaveGameSnapshot save = BuildSaveSnapshot(
             catalog,
             roster,
@@ -358,12 +369,9 @@ internal sealed class CleanTrainingAnnexDemoHost
             shopStock,
             new RuntimeFieldSnapshot(
                 new RuntimeNavigationSnapshot(Qualified("training_annex_floor_2")),
-                new RuntimeDungeonTraversalSnapshot(
-                    dungeon.Id,
-                    Qualified("annex_floor_2"),
-                    visitedNodeIds: [Qualified("annex_entrance"), Qualified("annex_floor_2")],
-                    unlockedCheckpointIds: [Qualified("annex_lobby_checkpoint")])));
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
+                retainedProgress));
+        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
+            TrainingAnnexHostSupport.ProgressRegistry,
             rulesetBindings: resolver,
             chargePolicies: ChargePolicyRegistry.CreateStandard()).Validate(save, catalog);
         await PrintAsync(

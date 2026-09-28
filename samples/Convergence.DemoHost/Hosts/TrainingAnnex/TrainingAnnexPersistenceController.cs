@@ -76,7 +76,8 @@ internal sealed class TrainingAnnexPersistenceController
             preparedBattleOutcome,
             preparedBattleWinningTeamId,
             compendium);
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
+        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
+                TrainingAnnexHostSupport.ProgressRegistry,
                 _rosterCapacityPolicy,
                 rulesetBindings: _rulesetBindings,
                 chargePolicies: ChargePolicyRegistry.CreateStandard())
@@ -133,7 +134,8 @@ internal sealed class TrainingAnnexPersistenceController
             return new TrainingAnnexLoadActionResult(null, assessment.Diagnostics.Count, false);
         }
 
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
+        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
+                TrainingAnnexHostSupport.ProgressRegistry,
                 _rosterCapacityPolicy,
                 rulesetBindings: _rulesetBindings,
                 chargePolicies: ChargePolicyRegistry.CreateStandard())
@@ -299,7 +301,8 @@ internal sealed class TrainingAnnexPersistenceController
         var profileResolver = new TrainingAnnexActorRestoreProfileResolver(
             currentRoster.Player.Actor.State.InstanceId);
         RuntimeSessionRestoreResult aggregate = new RuntimeSessionRestoreService(
-                new RuntimeSaveValidator(
+                RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
+                    TrainingAnnexHostSupport.ProgressRegistry,
                     _rosterCapacityPolicy,
                     rulesetBindings: _rulesetBindings,
                     chargePolicies: ChargePolicyRegistry.CreateStandard()),
@@ -521,20 +524,6 @@ internal sealed class TrainingAnnexPersistenceController
             }
         }
 
-        foreach (ContentId checkpointId in dungeon.UnlockedCheckpointIds)
-        {
-            if (checkpointId != TrainingAnnexHostSupport.ReviewCheckpoint)
-            {
-                diagnostics.Add(
-                    $"Saved checkpoint '{checkpointId}' is not recognized by the Training Annex host.");
-            }
-        }
-
-        foreach (ContentId bossId in dungeon.DefeatedBossIds)
-        {
-            diagnostics.Add(
-                $"Saved defeated boss '{bossId}' is not recognized by the Training Annex host.");
-        }
     }
 
     private static bool TryGetCompatibleSnapshot(

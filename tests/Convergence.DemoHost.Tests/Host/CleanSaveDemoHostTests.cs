@@ -385,7 +385,8 @@ public sealed class CleanSaveDemoHostTests
         stats["strength"] = -1;
 
         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
+            CleanSaveDemoHost.BuildDungeonProgressRegistry()).Validate(
             restored,
             CleanSaveTestFixture.LoadCatalog());
 
@@ -413,7 +414,8 @@ public sealed class CleanSaveDemoHostTests
         stats["forged_stat"] = 4;
 
         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
+            CleanSaveDemoHost.BuildDungeonProgressRegistry()).Validate(
             restored,
             CleanSaveTestFixture.LoadCatalog());
 
@@ -471,7 +473,8 @@ public sealed class CleanSaveDemoHostTests
         }
 
         RuntimeSaveGameSnapshot restored = CleanSaveJsonCodec.Deserialize(root.ToJsonString());
-        RuntimeSaveValidationResult validation = new RuntimeSaveValidator().Validate(
+        RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
+            CleanSaveDemoHost.BuildDungeonProgressRegistry()).Validate(
             restored,
             CleanSaveTestFixture.LoadCatalog());
 

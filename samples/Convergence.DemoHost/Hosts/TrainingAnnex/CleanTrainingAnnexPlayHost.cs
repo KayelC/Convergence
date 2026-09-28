@@ -913,7 +913,8 @@ internal sealed class CleanTrainingAnnexPlayHost
                     composeAfterCommand = false;
                     break;
                 case CleanTrainingAnnexPlayCommand.ValidateStartupSnapshot:
-                    RuntimeSaveValidationResult validation = new RuntimeSaveValidator(
+                    RuntimeSaveValidationResult validation = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
+                        TrainingAnnexHostSupport.ProgressRegistry,
                         rosterCapacityPolicy,
                         rulesetBindings: rulesetResolver,
                         chargePolicies: ChargePolicyRegistry.CreateStandard()).Validate(

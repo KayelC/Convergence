@@ -4236,6 +4236,40 @@ public sealed class CleanTrainingAnnexPlayHostTests
     }
 
     [Fact]
+    public async Task CleanTrainingAnnexPlay_ManualLoadRejectsCheckpointWithoutEligibleVisitedAreaBeforeMutation()
+    {
+        RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>
+            CopySave(
+                snapshot,
+                field: new RuntimeFieldSnapshot(
+                    new RuntimeNavigationSnapshot(TrainingAnnexHostSupport.StagingArea),
+                    new RuntimeDungeonTraversalSnapshot(
+                        TrainingAnnexHostSupport.TrainingAnnexDungeon,
+                        TrainingAnnexHostSupport.ReviewHall,
+                        unlockedCheckpointIds: [TrainingAnnexHostSupport.ReviewCheckpoint]))));
+        var slots = new TrainingAnnexSaveSlotStore();
+        slots.Save(record);
+        var io = new ScriptedGameIO().QueueMenu(10, 1, 9);
+        using var output = new StringWriter();
+        var host = CreateHost(io, output, saveSlots: slots);
+
+        int exitCode = await host.RunAsync();
+
+        Assert.Equal(0, exitCode);
+        CleanTrainingAnnexPlaySummary summary = Assert.IsType<CleanTrainingAnnexPlaySummary>(host.LastSummary);
+        Assert.Equal(0, summary.ManualLoadCount);
+        Assert.True(summary.HasManualSave);
+        Assert.Equal(1, summary.SaveDiagnosticCount);
+        Assert.Equal(TrainingAnnexHostSupport.StagingArea, summary.FinalLocationId);
+        Assert.Contains(
+            "Manual load rejected [DungeonProgressEligibleAreaNotVisited] " +
+            "$.field.dungeonTraversal.unlockedCheckpointIds[0]",
+            output.ToString(),
+            StringComparison.Ordinal);
+        io.AssertConsumed();
+    }
+
+    [Fact]
     public async Task CleanTrainingAnnexPlay_ManualLoadRejectsContentPackVersionMismatch()
     {
         RuntimeSaveRecord record = await CreateTrainingAnnexSaveRecordAsync(snapshot =>

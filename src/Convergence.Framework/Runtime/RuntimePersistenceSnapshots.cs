@@ -105,7 +105,12 @@ public enum RuntimeSaveValidationCode
     NegativeShopStockQuantity = 95,
     MissingShopStockEntry = 96,
     UnexpectedShopStockEntry = 97,
-    EquipmentSlotPolicyRejected = 98
+    EquipmentSlotPolicyRejected = 98,
+    DungeonProgressRegistryMissing = 99,
+    DungeonProgressUndeclared = 100,
+    DungeonProgressKindMismatch = 101,
+    DungeonProgressDungeonMismatch = 102,
+    DungeonProgressEligibleAreaNotVisited = 103
 }
 
 public sealed record RuntimeSaveValidationDiagnostic(
@@ -402,6 +407,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
     private readonly IRuntimeRulesetBindingResolver? _rulesetBindings;
     private readonly IChargePolicyResolver? _chargePolicies;
     private readonly IEquipmentSlotLayoutPolicy _equipmentSlotLayout;
+    private readonly RuntimeDungeonProgressRegistry? _dungeonProgressRegistry;
 
     public RuntimeSaveValidator(
         IRosterCapacityPolicy? rosterCapacityPolicy = null,
@@ -409,6 +415,38 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         IRuntimeRulesetBindingResolver? rulesetBindings = null,
         IChargePolicyResolver? chargePolicies = null,
         IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null)
+        : this(
+            rosterCapacityPolicy,
+            moveListCapacityPolicy,
+            rulesetBindings,
+            chargePolicies,
+            equipmentSlotLayout,
+            dungeonProgressRegistry: null)
+    {
+    }
+
+    public static RuntimeSaveValidator CreateWithDungeonProgressRegistry(
+        RuntimeDungeonProgressRegistry dungeonProgressRegistry,
+        IRosterCapacityPolicy? rosterCapacityPolicy = null,
+        IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null,
+        IRuntimeRulesetBindingResolver? rulesetBindings = null,
+        IChargePolicyResolver? chargePolicies = null,
+        IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null) =>
+        new(
+            rosterCapacityPolicy,
+            moveListCapacityPolicy,
+            rulesetBindings,
+            chargePolicies,
+            equipmentSlotLayout,
+            dungeonProgressRegistry ?? throw new ArgumentNullException(nameof(dungeonProgressRegistry)));
+
+    private RuntimeSaveValidator(
+        IRosterCapacityPolicy? rosterCapacityPolicy,
+        IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy,
+        IRuntimeRulesetBindingResolver? rulesetBindings,
+        IChargePolicyResolver? chargePolicies,
+        IEquipmentSlotLayoutPolicy? equipmentSlotLayout,
+        RuntimeDungeonProgressRegistry? dungeonProgressRegistry)
     {
         _rosterCapacityPolicy = rosterCapacityPolicy ?? NoLimitRosterCapacityPolicy.Instance;
         _moveListCapacityPolicy = moveListCapacityPolicy ??
@@ -417,6 +455,7 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
         _chargePolicies = chargePolicies;
         _equipmentSlotLayout = equipmentSlotLayout ??
             StandardEquipmentSlotLayoutPolicy.Instance;
+        _dungeonProgressRegistry = dungeonProgressRegistry;
     }
 
     public RuntimeSaveValidationResult Validate(RuntimeSaveGameSnapshot snapshot, GameDataCatalog catalog)
@@ -1710,19 +1749,129 @@ public sealed class RuntimeSaveValidator : IRuntimeSaveValidator
 
     private static string SlotPath(ContentId slotId) => slotId.ToString();
 
-    private static void ValidateField(
+    private void ValidateField(
         RuntimeFieldSnapshot field,
         GameDataCatalog catalog,
         ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
     {
-        if (field.DungeonTraversal is not null &&
-            !catalog.Dungeons.ContainsKey(field.DungeonTraversal.DungeonId))
+        RuntimeDungeonTraversalSnapshot? dungeon = field.DungeonTraversal;
+        if (dungeon is null)
+        {
+            return;
+        }
+
+        if (!catalog.Dungeons.ContainsKey(dungeon.DungeonId))
         {
             diagnostics.Add(new RuntimeSaveValidationDiagnostic(
                 RuntimeSaveValidationCode.MissingCatalogDungeon,
-                $"Dungeon '{field.DungeonTraversal.DungeonId}' is not present in the catalog.",
-                ContentId: field.DungeonTraversal.DungeonId,
+                $"Dungeon '{dungeon.DungeonId}' is not present in the catalog.",
+                ContentId: dungeon.DungeonId,
                 Path: "$.field.dungeonTraversal.dungeonId"));
+        }
+
+        if (dungeon.UnlockedCheckpointIds.Count == 0 && dungeon.DefeatedBossIds.Count == 0)
+        {
+            return;
+        }
+
+        if (_dungeonProgressRegistry is null)
+        {
+            diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                RuntimeSaveValidationCode.DungeonProgressRegistryMissing,
+                "Retained dungeon progress requires the live dungeon-progress registry during save validation.",
+                ContentId: dungeon.DungeonId,
+                Path: "$.field.dungeonTraversal"));
+            return;
+        }
+
+        ValidateRetainedProgress(
+            dungeon,
+            RuntimeDungeonProgressKind.Checkpoint,
+            dungeon.UnlockedCheckpointIds,
+            "$.field.dungeonTraversal.unlockedCheckpointIds",
+            _dungeonProgressRegistry,
+            diagnostics);
+        ValidateRetainedProgress(
+            dungeon,
+            RuntimeDungeonProgressKind.Boss,
+            dungeon.DefeatedBossIds,
+            "$.field.dungeonTraversal.defeatedBossIds",
+            _dungeonProgressRegistry,
+            diagnostics);
+    }
+
+    private static void ValidateRetainedProgress(
+        RuntimeDungeonTraversalSnapshot dungeon,
+        RuntimeDungeonProgressKind expectedKind,
+        IReadOnlyList<ContentId> progressIds,
+        string path,
+        RuntimeDungeonProgressRegistry registry,
+        ICollection<RuntimeSaveValidationDiagnostic> diagnostics)
+    {
+        if (!dungeon.DungeonId.IsValid)
+        {
+            return;
+        }
+
+        HashSet<ContentId> visitedNodeIds = dungeon.VisitedNodeIds
+            .Where(nodeId => nodeId.IsValid)
+            .ToHashSet();
+        for (int index = 0; index < progressIds.Count; index++)
+        {
+            ContentId progressId = progressIds[index];
+            if (!progressId.IsValid)
+            {
+                continue;
+            }
+
+            string progressPath = $"{path}[{index}]";
+            RuntimeDungeonProgressEligibility[] idMatches = registry.Eligibility
+                .Where(entry => entry.ProgressId == progressId)
+                .ToArray();
+            if (idMatches.Length == 0)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.DungeonProgressUndeclared,
+                    $"Dungeon progress '{progressId}' is not declared by the supplied registry.",
+                    ContentId: progressId,
+                    Path: progressPath));
+                continue;
+            }
+
+            RuntimeDungeonProgressEligibility[] kindMatches = idMatches
+                .Where(entry => entry.Kind == expectedKind)
+                .ToArray();
+            if (kindMatches.Length == 0)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.DungeonProgressKindMismatch,
+                    $"Dungeon progress '{progressId}' is not declared as '{expectedKind}'.",
+                    ContentId: progressId,
+                    Path: progressPath));
+                continue;
+            }
+
+            RuntimeDungeonProgressEligibility[] dungeonMatches = kindMatches
+                .Where(entry => entry.DungeonId == dungeon.DungeonId)
+                .ToArray();
+            if (dungeonMatches.Length == 0)
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.DungeonProgressDungeonMismatch,
+                    $"Dungeon progress '{progressId}' is not declared for dungeon '{dungeon.DungeonId}'.",
+                    ContentId: progressId,
+                    Path: progressPath));
+                continue;
+            }
+
+            if (!dungeonMatches.Any(entry => entry.AllowedNodeIds.Any(visitedNodeIds.Contains)))
+            {
+                diagnostics.Add(new RuntimeSaveValidationDiagnostic(
+                    RuntimeSaveValidationCode.DungeonProgressEligibleAreaNotVisited,
+                    $"Dungeon progress '{progressId}' has no declared eligible area in visited history.",
+                    ContentId: progressId,
+                    Path: progressPath));
+            }
         }
     }
 

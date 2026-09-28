@@ -103,7 +103,8 @@ internal sealed class CleanSaveDemoHost
             RuntimeRulesetPolicyFactoryRegistry.CreateStandard());
         RuntimeSaveGameSnapshot snapshot = BuildDemoSnapshot();
         ChargePolicyRegistry chargePolicies = ChargePolicyRegistry.CreateStandard();
-        RuntimeSaveValidator validator = new(
+        RuntimeSaveValidator validator = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(
+            BuildDungeonProgressRegistry(),
             rulesetBindings: rulesetResolver,
             chargePolicies: chargePolicies);
         RuntimeSaveValidationResult before = validator.Validate(snapshot, catalog);
@@ -291,6 +292,26 @@ internal sealed class CleanSaveDemoHost
             ]),
             [new KeyValuePair<ContentId, string>(ContentId.Parse("scene"), "clean_save_demo")]);
     }
+
+    internal static RuntimeDungeonProgressRegistry BuildDungeonProgressRegistry() =>
+        new(
+        [
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Checkpoint,
+                ContentId.Parse("convergence.catalog_surface_sample:terminal_1"),
+                ContentId.Parse("convergence.catalog_surface_sample:sample_depths"),
+                [ContentId.Parse("convergence.catalog_surface_sample:floor_1")]),
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Checkpoint,
+                ContentId.Parse("convergence.catalog_surface_sample:terminal_5"),
+                ContentId.Parse("convergence.catalog_surface_sample:sample_depths"),
+                [ContentId.Parse("convergence.catalog_surface_sample:floor_5")]),
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Boss,
+                ContentId.Parse("convergence.catalog_surface_sample:entry_block_training_sample"),
+                ContentId.Parse("convergence.catalog_surface_sample:sample_depths"),
+                [ContentId.Parse("convergence.catalog_surface_sample:floor_5")])
+        ]);
 
     private static RuntimeActorSnapshot CreateActor(
         RuntimeInstanceId instanceId,

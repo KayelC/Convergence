@@ -2940,6 +2940,176 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
+    public void RuntimeSaveValidator_RequiresRegistryAndRejectsEveryRetainedProgressAuthorityMismatch()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        ContentId dungeonId = Id("convergence.catalog_surface_sample:sample_depths");
+        ContentId floorOne = Id("convergence.catalog_surface_sample:floor_1");
+        ContentId floorFive = Id("convergence.catalog_surface_sample:floor_5");
+        ContentId checkpointId = Id("audit:checkpoint");
+        ContentId bossId = Id("audit:boss");
+
+        RuntimeSaveGameSnapshot Snapshot(RuntimeDungeonTraversalSnapshot dungeon) =>
+            CreateSaveSnapshot(field: new RuntimeFieldSnapshot(
+                new RuntimeNavigationSnapshot(Id("outside_location")),
+                dungeon));
+
+        RuntimeDungeonTraversalSnapshot retained = new(
+            dungeonId,
+            floorOne,
+            unlockedCheckpointIds: [checkpointId]);
+        AssertProgressDiagnostic(
+            new RuntimeSaveValidator().Validate(Snapshot(retained), catalog),
+            RuntimeSaveValidationCode.DungeonProgressRegistryMissing);
+        AssertProgressDiagnostic(
+            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(new RuntimeDungeonProgressRegistry([]))
+                .Validate(Snapshot(retained), catalog),
+            RuntimeSaveValidationCode.DungeonProgressUndeclared);
+        AssertProgressDiagnostic(
+            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(new RuntimeDungeonProgressRegistry([]))
+                .Validate(
+                    Snapshot(new RuntimeDungeonTraversalSnapshot(
+                        dungeonId,
+                        floorOne,
+                        defeatedBossIds: [bossId])),
+                    catalog),
+            RuntimeSaveValidationCode.DungeonProgressUndeclared);
+        AssertProgressDiagnostic(
+            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(new RuntimeDungeonProgressRegistry(
+            [
+                new RuntimeDungeonProgressEligibility(
+                    RuntimeDungeonProgressKind.Boss,
+                    checkpointId,
+                    dungeonId,
+                    [floorOne])
+            ])).Validate(Snapshot(retained), catalog),
+            RuntimeSaveValidationCode.DungeonProgressKindMismatch);
+        AssertProgressDiagnostic(
+            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(new RuntimeDungeonProgressRegistry(
+            [
+                new RuntimeDungeonProgressEligibility(
+                    RuntimeDungeonProgressKind.Checkpoint,
+                    checkpointId,
+                    Id("audit:other_dungeon"),
+                    [floorOne])
+            ])).Validate(Snapshot(retained), catalog),
+            RuntimeSaveValidationCode.DungeonProgressDungeonMismatch);
+        AssertProgressDiagnostic(
+            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(new RuntimeDungeonProgressRegistry(
+            [
+                new RuntimeDungeonProgressEligibility(
+                    RuntimeDungeonProgressKind.Checkpoint,
+                    checkpointId,
+                    dungeonId,
+                    [floorFive])
+            ])).Validate(Snapshot(retained), catalog),
+            RuntimeSaveValidationCode.DungeonProgressEligibleAreaNotVisited);
+        Assert.Throws<ArgumentNullException>(() =>
+            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(null!));
+
+        static void AssertProgressDiagnostic(
+            RuntimeSaveValidationResult result,
+            RuntimeSaveValidationCode expectedCode)
+        {
+            RuntimeSaveValidationDiagnostic diagnostic = Assert.Single(result.Diagnostics);
+            Assert.Equal(expectedCode, diagnostic.Code);
+            Assert.StartsWith("$.field.dungeonTraversal", diagnostic.Path, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void RuntimeSessionRestoreService_AcceptsLiveProducedProgressOutsideDungeonAndRejectsForgedProgressAtomically()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        ContentId dungeonId = Id("convergence.catalog_surface_sample:sample_depths");
+        ContentId floorOne = Id("convergence.catalog_surface_sample:floor_1");
+        ContentId floorFive = Id("convergence.catalog_surface_sample:floor_5");
+        ContentId checkpointId = Id("audit:floor_five_checkpoint");
+        ContentId bossId = Id("audit:floor_five_guardian");
+        var registry = new RuntimeDungeonProgressRegistry(
+        [
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Checkpoint,
+                checkpointId,
+                dungeonId,
+                [floorFive]),
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Boss,
+                bossId,
+                dungeonId,
+                [floorFive])
+        ]);
+        var traversal = new RuntimeDungeonTraversalService(new AllowDungeonPolicy(), registry);
+        RuntimeDungeonTraversalSnapshot initial = new(dungeonId, floorOne);
+        RuntimeDungeonTraversalResult moved = traversal.Traverse(
+            initial,
+            new RuntimeDungeonTraversalTransition(
+                Id("audit:to_floor_five"),
+                dungeonId,
+                floorOne,
+                floorFive));
+        RuntimeDungeonStateChangeResult checkpoint =
+            traversal.UnlockCheckpoint(moved.After, checkpointId);
+        RuntimeDungeonStateChangeResult boss =
+            traversal.RegisterBossDefeat(checkpoint.After, bossId);
+        Assert.True(moved.Applied);
+        Assert.True(checkpoint.Applied);
+        Assert.True(boss.Applied);
+
+        RuntimeSaveGameSnapshot legitimate = CreateSaveSnapshot(field: new RuntimeFieldSnapshot(
+            new RuntimeNavigationSnapshot(Id("outside_location")),
+            boss.After));
+        RuntimeSaveValidator validator = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(registry);
+        RuntimeSaveValidationResult validation = validator.Validate(legitimate, catalog);
+        Assert.True(
+            validation.IsValid,
+            string.Join(Environment.NewLine, validation.Diagnostics.Select(item => item.Message)));
+
+        var factory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        var restoreService = new RuntimeSessionRestoreService(
+            validator,
+            factory,
+            new DelegateActorRestoreProfileResolver(_ => ActorProfile()));
+        RuntimeSessionRestoreResult restored = restoreService.Restore(legitimate, catalog);
+
+        Assert.True(
+            restored.IsSuccess,
+            string.Join(Environment.NewLine, restored.Diagnostics.Select(item => item.Message)));
+        RuntimeFieldSnapshot restoredField = Assert.IsType<RuntimeFieldSnapshot>(restored.RequireSession().Field);
+        Assert.Equal(Id("outside_location"), restoredField.Navigation.CurrentLocationId);
+        Assert.Equal([checkpointId], restoredField.DungeonTraversal!.UnlockedCheckpointIds);
+        Assert.Equal([bossId], restoredField.DungeonTraversal.DefeatedBossIds);
+
+        RuntimeSaveGameSnapshot forged = CreateSaveSnapshot(field: new RuntimeFieldSnapshot(
+            new RuntimeNavigationSnapshot(Id("outside_location")),
+            new RuntimeDungeonTraversalSnapshot(
+                dungeonId,
+                floorOne,
+                unlockedCheckpointIds: [checkpointId])));
+        var rejectingFactory = new RecordingActorFactory(new CatalogBattleActorFactory(
+            catalog,
+            catalog,
+            new RestoreOnlyInitializationPolicy(),
+            catalog));
+        RuntimeSessionRestoreResult rejected = new RuntimeSessionRestoreService(
+                validator,
+                rejectingFactory,
+                new DelegateActorRestoreProfileResolver(_ => ActorProfile()))
+            .Restore(forged, catalog);
+
+        Assert.False(rejected.IsSuccess);
+        Assert.Empty(rejectingFactory.RestoreOrder);
+        Assert.Contains(rejected.Diagnostics, diagnostic =>
+            diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.SaveValidationRejected &&
+            diagnostic.SaveValidationCode ==
+                RuntimeSaveValidationCode.DungeonProgressEligibleAreaNotVisited);
+    }
+
+    [Fact]
     public void RuntimeSavePolicy_AllowsManualAndSuspendOnlyInRegisteredStableContexts()
     {
         var service = new RuntimeSavePolicyService(new RuntimeSavePolicyOptions(
@@ -3173,13 +3343,7 @@ public sealed class RuntimePersistenceSnapshotTests
                         [
                             Id("convergence.catalog_surface_sample:floor_1"),
                             Id("convergence.catalog_surface_sample:floor_5")
-                        ],
-                        unlockedCheckpointIds:
-                        [
-                            Id("convergence.catalog_surface_sample:terminal_1"),
-                            Id("convergence.catalog_surface_sample:terminal_5")
-                        ],
-                        defeatedBossIds: [Id("convergence.catalog_surface_sample:entry_block_training_sample")]))
+                        ]))
                 : null),
             compendium ?? new CompendiumStateSnapshot(
             [
@@ -3686,6 +3850,13 @@ public sealed class RuntimePersistenceSnapshotTests
     private sealed class FixedRosterCapacityPolicy(int capacity) : IRosterCapacityPolicy
     {
         public int GetCapacity(RuntimeRosterKind rosterKind, int ownerLevel) => capacity;
+    }
+
+    private sealed class AllowDungeonPolicy : IRuntimeDungeonTraversalPolicy
+    {
+        public RuntimeDungeonTraversalPolicyDecision Evaluate(
+            RuntimeDungeonTraversalPolicyRequest request) =>
+            new(true);
     }
 
     private sealed class DelegateActorRestoreProfileResolver(

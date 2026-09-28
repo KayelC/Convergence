@@ -11869,6 +11869,12 @@ Convergence.Runtime.RuntimeSaveValidationCode.MissingShopStockEntry = 96 -> Conv
 Convergence.Runtime.RuntimeSaveValidationCode.NegativeShopStockQuantity = 95 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.UnexpectedShopStockEntry = 97 -> Convergence.Runtime.RuntimeSaveValidationCode
 Convergence.Runtime.RuntimeSaveValidationCode.EquipmentSlotPolicyRejected = 98 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DungeonProgressRegistryMissing = 99 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DungeonProgressUndeclared = 100 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DungeonProgressKindMismatch = 101 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DungeonProgressDungeonMismatch = 102 -> Convergence.Runtime.RuntimeSaveValidationCode
+Convergence.Runtime.RuntimeSaveValidationCode.DungeonProgressEligibleAreaNotVisited = 103 -> Convergence.Runtime.RuntimeSaveValidationCode
+static Convergence.Runtime.RuntimeSaveValidator.CreateWithDungeonProgressRegistry(Convergence.Runtime.RuntimeDungeonProgressRegistry! dungeonProgressRegistry, Convergence.Runtime.IRosterCapacityPolicy? rosterCapacityPolicy = null, Convergence.Runtime.IRuntimeMoveListCapacityPolicy? moveListCapacityPolicy = null, Convergence.Runtime.IRuntimeRulesetBindingResolver? rulesetBindings = null, Convergence.Execution.IChargePolicyResolver? chargePolicies = null, Convergence.Runtime.IEquipmentSlotLayoutPolicy? equipmentSlotLayout = null) -> Convergence.Runtime.RuntimeSaveValidator!
 Convergence.Runtime.RuntimeShopOfferIdentity
 Convergence.Runtime.RuntimeShopOfferIdentity.<Clone>$() -> Convergence.Runtime.RuntimeShopOfferIdentity!
 Convergence.Runtime.RuntimeShopOfferIdentity.Equals(Convergence.Runtime.RuntimeShopOfferIdentity? other) -> bool
