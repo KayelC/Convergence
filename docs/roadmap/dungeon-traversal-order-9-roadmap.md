@@ -71,7 +71,7 @@ supersedes the earlier no-gap conclusion without erasing its historical gate.
 | O9-C1: complete live-state validity | complete | Validate current and retained IDs before traversal policy or progress-registry evaluation; return typed, non-mutating evidence for the first malformed field. |
 | O9-C2: restored progress authority | complete | Validate retained checkpoint/boss records against the live immutable registry before save/restore adoption, while keeping games with no retained progress independent of the optional module. |
 | O9-C3: fixtures and audience alignment | complete | Produce re-entry evidence through live traversal/progress services and align mechanics, developer, technical, API, capability, and coverage guidance with C1/C2. |
-| O9-C4: post-correction independent closure | pending | Re-read current source and audience documentation, run and retain the release gate, and report realistic reachable findings. Owner confirmation remains required for closure. |
+| O9-C4: post-correction independent closure | pending | Re-read current source and audience documentation, correct the capability-authority contradiction and retained Godot-log portability defect found by that review, then run and retain the release gate. Owner confirmation remains required for closure. |
 
 ## Boundary Contract To Preserve
 
@@ -276,3 +276,11 @@ ContentValidator tests (2,093 total), with zero failures or skips. Strict build
 reported zero warnings; format verification and `git diff --check` passed.
 O9-C4 and explicit owner confirmation remain required; this record does not
 close Order 9 or promote its three audience entries.
+
+The fresh O9-C4 review found no further dungeon-runtime defect. It did find two
+low-severity quality-boundary defects: stale active capability prose (corrected
+in `511fc387`) and a retained-evidence Godot invocation that relied on an
+inaccessible default `user://logs` path. O9-C4-L2 will confine only Godot's log
+to `%EVIDENCE_ROOT%`; it will not redirect the .NET/NuGet environment used by
+the rest of the gate. The retained release gate remains pending until that
+correction is committed and the complete clean-tree harness succeeds.

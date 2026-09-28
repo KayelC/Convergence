@@ -9,9 +9,11 @@ current code and current active documentation.
 ## Interim Verdict
 
 The corrected runtime is coherent, and this pass found no unresolved realistic
-reachable Framework or DemoHost defect in Order 9. One low-severity active
-documentation/tracking contradiction prevents the closure gate from being
-called complete. Order 9 and its three audience entries remain open.
+reachable Framework or DemoHost defect in Order 9. Two low-severity active
+quality-boundary defects prevent the closure gate from being called complete:
+one documentation/tracking contradiction and one nonportable local Godot-log
+destination in the retained-evidence runner. Order 9 and its three audience
+entries remain open.
 
 ## Finding
 
@@ -41,6 +43,32 @@ implementation evidence to identify the fresh audit, O9-C1/C2 authority fixes,
 O9-C3 alignment, and pending O9-C4 gate. Add an executable documentation
 assertion so the active narrative cannot silently regress to the superseded
 closure claim.
+
+### O9-C4-L2: the retained local Godot gate relies on the engine's default user log path
+
+**Intended invariant.** The canonical retained-evidence runner must execute the
+real Godot smoke with all generated output confined to a known writable local
+path. A host environment's inaccessible profile directory must not prevent the
+sample project from loading or make the release gate irreproducible.
+
+**Reachable path.** `Invoke-VerificationEvidence.ps1` invokes the selected
+Godot executable with `--headless --path ...` but no explicit `--log-file`.
+On the current Windows verification host, Godot cannot open
+`user://logs/godot...log` and crashes with a native access violation before the
+project begins. Redirecting the entire process `APPDATA` is not a valid runner
+fix because it also changes the preceding .NET/NuGet environment. Running the
+identical smoke with `--log-file` targeting the ignored repository-local
+artifact directory reaches every `GODOT_*_OK` marker and exits zero.
+
+**Consequence.** A correct Framework and Godot consumer can fail the retained
+release gate before project execution. Repeated manual environment workarounds
+also make the canonical command and its evidence differ, weakening the audit
+trail. This does not indicate a dungeon-runtime defect.
+
+**Required correction.** Give the canonical Godot smoke an explicit log file
+inside `%EVIDENCE_ROOT%`, record that argument in the generated command, and
+guard it with an executable evidence-runner contract test. Do not redirect the
+whole gate's .NET user environment.
 
 ## Fresh Runtime Review
 
@@ -115,5 +143,6 @@ resolve the active-document contradiction.
 | Checkpoint | State | Exit condition |
 |---|---|---|
 | O9-C4-L1 | corrected_pending_gate | Active capability/decision evidence now names the correction chain and pending C4 authority; the executable documentation test guards both documents. |
+| O9-C4-L2 | open | The canonical Godot command confines its log to the retained evidence bundle and an executable contract test prevents removal of that argument. |
 | O9-C4-GATE | pending | Fresh recheck finds no realistic reachable defect or contradiction and the retained release gate passes on the clean corrected commit. |
 
