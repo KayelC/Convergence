@@ -19,23 +19,30 @@ calls the other, loads a scene, selects an encounter, or changes a battle.
 
 ```mermaid
 flowchart TD
-    A[Current snapshot and requested transition] --> B{Six live IDs valid?}
+    A[Current snapshot and requested transition] --> B{Current dungeon and node valid?}
     B -- No --> C[InvalidRequest; unchanged; no event]
-    B -- Yes --> D{Dungeon matches?}
-    D -- No --> E[DungeonMismatch; unchanged; rejected event]
-    D -- Yes --> F{Source node matches?}
-    F -- No --> G[SourceMismatch; unchanged; rejected event]
-    F -- Yes --> H[Call route policy once]
-    H --> I{Policy outcome}
-    I -- Denied --> J[PolicyRejected; unchanged; rejected event]
-    I -- Null, malformed, or exception --> K[PolicyFaulted; unchanged; rejected event]
-    I -- Allowed --> L[Applied candidate; destination visited; applied event]
+    B -- Yes --> D{Every retained history ID valid?}
+    D -- No --> C
+    D -- Yes --> E{All transition IDs valid?}
+    E -- No --> C
+    E -- Yes --> F{Dungeon matches?}
+    F -- No --> G[DungeonMismatch; unchanged; rejected event]
+    F -- Yes --> H{Source node matches?}
+    H -- No --> I[SourceMismatch; unchanged; rejected event]
+    H -- Yes --> J[Call route policy once]
+    J --> K{Policy outcome}
+    K -- Denied --> L[PolicyRejected; unchanged; rejected event]
+    K -- Null, malformed, or exception --> M[PolicyFaulted; unchanged; rejected event]
+    K -- Allowed --> N[Applied candidate; destination visited; applied event]
 ```
 
-The six IDs are current dungeon, current node, transition, transition dungeon,
-source node, and destination node, in that validation order. A custom policy
-is not called for invalid or mismatched requests. `OperationCanceledException`
-and `OutOfMemoryException` propagate rather than becoming policy faults.
+Validation order is current dungeon, current node, all visited nodes, all
+unlocked checkpoints, all defeated bosses, transition, transition dungeon,
+source node, and destination node. A custom policy is not called for invalid
+or mismatched requests. Progress reports apply the same complete snapshot check
+before evaluating their reported progress ID or registry declaration.
+`OperationCanceledException` and `OutOfMemoryException` propagate rather than
+becoming policy faults.
 `RuntimeDungeonTraversalResult` validates code, request, before/after state,
 event kind and IDs, and diagnostic consistency even when built by a custom
 service. Its ordered event list is defensively copied; event records expose
@@ -116,15 +123,23 @@ pool. No floor-to-node resolver or automatic combat exists.
 
 Save contract v19 permits `Field` to be absent. If present, it requires a
 navigation snapshot and may retain a dungeon snapshot. Framework save
-validation checks nonempty IDs and a catalog dungeon reference; aggregate
-restore does not replay traversal or validate a host-specific scene graph.
-Training Annex rejects an inside save lacking its dungeon node before adopting
-restored session state. Its `CurrentSaveContext` follows navigation location,
-not mere progress presence. On leaving, progress may remain saved but inactive.
-On re-entry, the host selects an entrance or an unlocked checkpoint and maps
-that selection to a node, rather than silently using the last current node.
-Independent navigation/dungeon nullability in the broad save aggregate is an
-Order 13 question, not a hidden Order 9 wire change.
+validation checks nonempty IDs and a catalog dungeon reference. A save with
+unlocked checkpoint or defeated boss IDs additionally requires a validator
+created through `RuntimeSaveValidator.CreateWithDungeonProgressRegistry` using
+the live immutable registry. For each retained ID, validation checks declaration,
+kind, dungeon, and whether visited history contains at least one declared
+eligible node. The ordinary validator remains sufficient when both retained
+progress lists are empty; it returns `DungeonProgressRegistryMissing` rather
+than accepting retained progress without its authority.
+
+Aggregate restore does not replay traversal, prove a battle result, or validate
+a host-specific scene graph. Training Annex rejects an inside save lacking its
+dungeon node before adopting restored session state. Its `CurrentSaveContext`
+follows navigation location, not mere progress presence. On leaving, progress
+may remain saved but inactive. On re-entry, the host selects an entrance or an
+unlocked checkpoint and maps that selection to a node, rather than silently
+using the last current node. Independent navigation/dungeon nullability in the
+broad save aggregate is an Order 13 question, not a hidden Order 9 wire change.
 
 **Source and tests:**
 [`DungeonTraversal.cs`](../../src/Convergence.Framework/Runtime/DungeonTraversal.cs),

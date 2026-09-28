@@ -4475,10 +4475,25 @@ public sealed class CleanTrainingAnnexPlayHostTests
     [Fact]
     public void TrainingAnnexEntry_SelectsEntranceOrUnlockedCheckpointWithoutUsingLastNode()
     {
-        var retained = new RuntimeDungeonTraversalSnapshot(
+        var service = new RuntimeDungeonTraversalService(
+            new TrainingAnnexDungeonPolicy(), TrainingAnnexHostSupport.ProgressRegistry);
+        var initial = new RuntimeDungeonTraversalSnapshot(
             TrainingAnnexHostSupport.TrainingAnnexDungeon,
-            TrainingAnnexHostSupport.ReviewHall,
-            unlockedCheckpointIds: [TrainingAnnexHostSupport.ReviewCheckpoint]);
+            TrainingAnnexHostSupport.TrainingAnnexEntrance);
+        RuntimeDungeonTraversalResult enteredHall = service.Traverse(
+            initial, TrainingAnnexHostSupport.EnterReviewHallTransition);
+        RuntimeDungeonTraversalResult enteredAlcove = service.Traverse(
+            enteredHall.After, TrainingAnnexHostSupport.EnterReviewAlcoveTransition);
+        RuntimeDungeonStateChangeResult unlocked = service.UnlockCheckpoint(
+            enteredAlcove.After, TrainingAnnexHostSupport.ReviewCheckpoint);
+        RuntimeDungeonTraversalResult returnedToHall = service.Traverse(
+            unlocked.After, TrainingAnnexHostSupport.ReturnToReviewHallTransition);
+
+        Assert.Equal(RuntimeDungeonTraversalCode.Applied, enteredHall.Code);
+        Assert.Equal(RuntimeDungeonTraversalCode.Applied, enteredAlcove.Code);
+        Assert.Equal(RuntimeDungeonStateChangeCode.Applied, unlocked.Code);
+        Assert.Equal(RuntimeDungeonTraversalCode.Applied, returnedToHall.Code);
+        RuntimeDungeonTraversalSnapshot retained = returnedToHall.After;
 
         RuntimeDungeonTraversalSnapshot entrance = TrainingAnnexHostSupport.SelectDungeonEntry(
             retained, TrainingAnnexHostSupport.TrainingAnnexEntrance);
@@ -4488,6 +4503,7 @@ public sealed class CleanTrainingAnnexPlayHostTests
         Assert.Equal(TrainingAnnexHostSupport.TrainingAnnexEntrance, entrance.CurrentNodeId);
         Assert.Equal(TrainingAnnexHostSupport.ReviewAlcove, checkpoint.CurrentNodeId);
         Assert.Contains(TrainingAnnexHostSupport.ReviewHall, entrance.VisitedNodeIds);
+        Assert.Contains(TrainingAnnexHostSupport.ReviewAlcove, entrance.VisitedNodeIds);
         Assert.Contains(TrainingAnnexHostSupport.ReviewCheckpoint, entrance.UnlockedCheckpointIds);
         Assert.Throws<ArgumentException>(() => TrainingAnnexHostSupport.SelectDungeonEntry(
             new RuntimeDungeonTraversalSnapshot(

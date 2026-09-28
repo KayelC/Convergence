@@ -301,17 +301,17 @@
       "mechanics": {
         "state": "existing_unreviewed",
         "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
-        "reason": "O9-R7 reconciles node, trigger, encounter, and progress rules against current source; independent audit and owner review are pending."
+        "reason": "O9-C3 reconciles node, trigger, encounter, live-history, and restored-progress rules after the fresh audit; post-correction audit and owner review are pending."
       },
       "developerGuide": {
         "state": "existing_unreviewed",
         "documents": ["docs/developer-guide/dungeon-traversal.md"],
-        "reason": "O9-R7 documents host route policy, scene adoption, encounters, re-entry, and save checks; independent audit and owner review are pending."
+        "reason": "O9-C3 documents host route policy, scene adoption, encounters, re-entry, and registry-backed save checks; post-correction audit and owner review are pending."
       },
       "technical": {
         "state": "existing_unreviewed",
         "documents": ["docs/technical/dungeon-traversal-runtime.md"],
-        "reason": "O9-R7 diagrams traversal, progress, adoption, and persistence ordering; independent audit and owner review are pending."
+        "reason": "O9-C3 diagrams complete live validation and registry-backed restored-progress authority; post-correction audit and owner review are pending."
       }
     },
     {

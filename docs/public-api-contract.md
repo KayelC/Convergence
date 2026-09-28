@@ -357,6 +357,25 @@ propagate rather than being converted to gameplay results. Hosts use the code,
 fault kind, and reason ID for control flow; exception text in `Message` is
 diagnostic only and should not be displayed verbatim to players.
 
+## Dungeon Traversal And Restored Progress Validity
+
+`RuntimeDungeonTraversalService` validates the complete live snapshot before
+route policy or progress-registry evaluation. In addition to current/request
+IDs, `RuntimeDungeonTraversalRequestField` identifies malformed visited-node,
+unlocked-checkpoint, defeated-boss, and reported-progress IDs. Invalid requests
+remain non-mutating and cannot expose an applied event.
+
+`RuntimeSaveValidator.CreateWithDungeonProgressRegistry` is the supported
+composition path for a save that retains checkpoint or boss progress. The
+validator checks each record against the same immutable declaration authority
+used during live reporting: progress ID, checkpoint/boss kind, dungeon, and an
+eligible node in visited history. The additive diagnostics distinguish missing
+registry, undeclared progress, wrong kind, wrong dungeon, and absent eligible
+history. Saves with no retained checkpoint or boss IDs remain valid through the
+ordinary constructor, preserving the dungeon module's optional use. Save
+contract v19 is unchanged because this strengthens validation without changing
+the snapshot shape.
+
 ## Documentation And Build Tooling
 
 Framework emits `Convergence.Framework.xml`. XML documentation is curated and intentionally incomplete; `CS1591` remains suppressed. Summaries cover selected

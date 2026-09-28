@@ -232,7 +232,7 @@
       "implementationState": "implemented",
       "orderNumber": 9,
       "orderState": "open",
-      "frameworkTests": ["RuntimeDungeonTraversalTests"],
+      "frameworkTests": ["RuntimeDungeonTraversalTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,

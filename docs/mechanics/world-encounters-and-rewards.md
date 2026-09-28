@@ -43,12 +43,14 @@ It does not move a character through every step of a 3D scene. A door, stairs,
 barrier, or script can request a node transition. Reverse travel needs its own
 transition.
 
-**Framework rule:** a move checks its dungeon, node, and transition IDs, then
-whether the current dungeon and source node match. The game's supplied route
-rule decides whether a valid move is allowed. A sealed barrier can therefore
-reject a move without changing the player's node or visited history. Invalid
-IDs, wrong dungeon, wrong source, legal route denial, and a malfunctioning
-route rule have distinct outcomes. Cancellation is not turned into a denial.
+**Framework rule:** a move first checks the dungeon, current node, retained
+visited/checkpoint/boss history, and transition IDs. It then checks whether the
+current dungeon and source node match. The game's supplied route rule decides
+whether a valid move is allowed. A sealed barrier can therefore reject a move
+without changing the player's node or visited history. Invalid current or
+retained IDs, wrong dungeon, wrong source, legal route denial, and a
+malfunctioning route rule have distinct outcomes. Cancellation is not turned
+into a denial.
 
 **Progress rule:** the game may report a checkpoint unlock or boss defeat only
 after its own success condition. The Framework checks a game-supplied list of
@@ -58,6 +60,13 @@ progress unchanged. Repeating a valid report is harmless. Merely entering a
 node never unlocks a checkpoint or defeats a boss. Success may come from a
 battle, puzzle, or story script; the Framework does not require battle-result
 proof for every game design.
+
+Saved checkpoint and boss records are checked against that same declared list
+before restoration. A record must have the expected checkpoint/boss kind,
+belong to the saved dungeon, and name an eligible area that appears in visited
+history. This prevents a save from granting progress that live play could not
+have recorded. Games with no retained checkpoint or boss records do not need
+to configure this optional validation module.
 
 **Authored content:** a dungeon may describe floor ranges, encounter pools,
 and fixed-floor metadata. These are optional catalog facts, not orders to move

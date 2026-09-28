@@ -748,11 +748,14 @@ Training Annex menu; it is not limited to `DungeonTraversal.cs`.
 
 O9-R7 reconciles the [mechanics](../mechanics/world-encounters-and-rewards.md),
 [developer guide](../developer-guide/dungeon-traversal.md), and
-[technical reference](../technical/dungeon-traversal-runtime.md). All three
-are `existing_unreviewed` pending project-owner confirmation. The independent
-O9-R8 review corrections and retained release gate have passed. `dungeon_traversal` is
-`implemented` with no open Framework contract gap, but Order 9 remains `open`;
-written guidance and green tests alone do not close it.
+[technical reference](../technical/dungeon-traversal-runtime.md). The later
+[fresh closure audit](../reviews/dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md)
+found live retained-history validation and restored-progress authority gaps.
+O9-C1 and O9-C2 correct those runtime boundaries; O9-C3 updates all three
+audience views and replaces the impossible checkpoint fixture. The pages remain
+`existing_unreviewed` while O9-C4 performs a fresh post-correction review and
+retained release gate. `dungeon_traversal` remains `implemented` and Order 9
+remains `open`; corrected guidance and green tests do not replace owner closure.
 
 ## Deferred Documentation
 

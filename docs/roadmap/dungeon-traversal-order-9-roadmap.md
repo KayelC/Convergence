@@ -4,7 +4,8 @@
 
 **Source baseline:** `d5f8845d`
 
-**Status:** open; O9-D1 through O9-D6 approved, R2-R6 implemented, audience review pending.
+**Status:** open; O9-D1 through O9-D6 approved, fresh-audit corrections
+O9-C1 through O9-C3 complete, and O9-C4 pending.
 
 **Source evidence:** [Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md).
 
@@ -57,8 +58,20 @@ owner rather than silently choosing a content or save model.
 | O9-R4: field/save/host boundary | complete | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D4/D5. |
 | O9-R5: checkpoint and boss recording | complete | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
 | O9-R6: authored floor and encounter contract | complete | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
-| O9-R7: audience documentation | written_pending_owner_confirmation | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. The independent audit passed; all three audience entries remain `existing_unreviewed` until owner confirmation. |
-| O9-R8: independent closure | pending | Fresh code and document review across traversal, navigation, `RuntimeFieldSnapshot`, `CurrentSaveContext`, save validator/restore, content, DemoHost, and Godot contract. Run and retain the full release gate. Close only if no concrete gap remains and all applicable audience entries are `reviewed`. |
+| O9-R7: audience documentation | written_pending_owner_confirmation | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. All three audience entries remain `existing_unreviewed` until the post-correction audit and owner confirmation. |
+| O9-R8: independent closure | pending | The 21 September audit and retained gate remain historical evidence, but the later 23 September fresh audit found two reachable authority gaps and reopened this active closure checkpoint. O9-C4 must independently review the corrected state. |
+
+## Fresh-Audit Correction Checkpoints
+
+The [23 September fresh closure audit](../reviews/dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md)
+supersedes the earlier no-gap conclusion without erasing its historical gate.
+
+| Checkpoint | State | Work and acceptance evidence |
+|---|---|---|
+| O9-C1: complete live-state validity | complete | Validate current and retained IDs before traversal policy or progress-registry evaluation; return typed, non-mutating evidence for the first malformed field. |
+| O9-C2: restored progress authority | complete | Validate retained checkpoint/boss records against the live immutable registry before save/restore adoption, while keeping games with no retained progress independent of the optional module. |
+| O9-C3: fixtures and audience alignment | complete | Produce re-entry evidence through live traversal/progress services and align mechanics, developer, technical, API, capability, and coverage guidance with C1/C2. |
+| O9-C4: post-correction independent closure | pending | Re-read current source and audience documentation, run and retain the release gate, and report realistic reachable findings. Owner confirmation remains required for closure. |
 
 ## Boundary Contract To Preserve
 
@@ -227,3 +240,39 @@ records both findings and corrections. O9-R8 is not marked complete because
 the three audience pages remain `existing_unreviewed` until explicit
 project-owner confirmation. No Framework runtime, schema, or save-wire change
 was made during R8; its source change was an architecture-test assertion.
+
+## Fresh-Audit Correction Completion Record
+
+O9-C1 (`76da9913`) validates every retained visited-node, checkpoint, and boss
+ID before traversal policy or progress-registry evaluation. Invalid requests
+identify the first malformed field, retain the exact before-state, emit no
+event, and do not call the policy. Sixteen focused traversal tests passed. The
+full Release suite passed 1,893 Framework, 190 DemoHost, and seven
+ContentValidator tests (2,090 total), with zero failures or skips; strict build,
+format verification, and `git diff --check` passed.
+
+O9-C2 (`9390290d`) gives save and aggregate restore validation the same
+immutable progress registry used by live reports. Retained progress now rejects
+missing registry authority, undeclared IDs, wrong kinds, wrong dungeons, and
+records without an eligible visited node. Games retaining no checkpoint/boss
+records remain independent of the optional registry. Training Annex and the
+clean save demo both supply their real declarations; the weaker host whitelist
+is gone. Focused persistence (83) and DemoHost save/Training Annex (140) tests
+passed. The full Release suite passed 1,895 Framework, 191 DemoHost, and seven
+ContentValidator tests (2,093 total), with zero failures or skips; strict build,
+format verification, both relevant demos, and `git diff --check` passed. Save
+contract v19 remains unchanged because the snapshot shape did not change.
+
+O9-C3 (this documentation/fixture commit) replaces the manually forged
+checkpoint-entry fixture with state produced by entrance-to-hall-to-alcove
+traversal, live checkpoint recording, and return-to-hall traversal. The test
+therefore still proves that re-entry selection does not use the last node while
+also proving the retained checkpoint was legally earned. Mechanics, developer,
+technical, API, capability, coverage, and roadmap guidance now describe complete
+live-history validation and registry-backed restore validation. The focused
+host regression passed one test and the documentation/capability gate passed 32
+tests. The full Release suite passed 1,895 Framework, 191 DemoHost, and seven
+ContentValidator tests (2,093 total), with zero failures or skips. Strict build
+reported zero warnings; format verification and `git diff --check` passed.
+O9-C4 and explicit owner confirmation remain required; this record does not
+close Order 9 or promote its three audience entries.

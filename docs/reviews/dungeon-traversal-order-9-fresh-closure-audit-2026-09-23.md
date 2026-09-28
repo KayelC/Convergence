@@ -215,3 +215,20 @@ asserts acceptance of the impossible checkpoint state described in O9-M2.
 Each correction should be isolated in its own commit and reviewed before the
 next begins. Order 9 must not be marked closed merely because the pre-correction
 suite is green.
+
+## Correction Progress
+
+- **O9-C1 — complete (`76da9913`):** complete live snapshot validation now
+  rejects malformed visited-node, checkpoint, and boss history before policy
+  or registry evaluation and carries typed first-invalid-field evidence.
+- **O9-C2 — complete (`9390290d`):** save and aggregate restore validation now
+  accepts the live immutable progress registry and rejects missing authority,
+  undeclared IDs, wrong kinds, wrong dungeons, and progress without an eligible
+  visited area. Training Annex and the clean save demo supply their registries.
+- **O9-C3 — complete (this documentation/fixture commit):** the re-entry
+  fixture now earns its checkpoint through live traversal and progress services;
+  all active audience, API, capability, coverage, and roadmap guidance reflects
+  C1/C2. The complete Release suite passed 2,093 tests with zero failures or
+  skips, and strict build/format/diff gates passed.
+- **O9-C4 — pending:** perform a fresh source/document review and retained
+  release gate. Order 9 and all three audience entries remain open meanwhile.

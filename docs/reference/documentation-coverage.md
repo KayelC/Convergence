@@ -42,11 +42,12 @@ review and project-owner confirmation make all three `reviewed`. Order 8
 closed after the retained online release gate passed. The real Godot
 smoke sample does not yet execute live navigation.
 Order 9 now has a source-reconciled dungeon mechanics section, a developer
-integration guide, and a technical state/sequence reference. O9-R7 wrote
-these audience pages after the runtime corrections. The independent review
-and retained release gate passed after two documentation/tracking corrections.
-All three remain `existing_unreviewed` pending project-owner confirmation;
-neither the guide's presence nor passing tests closes the Order.
+integration guide, and a technical state/sequence reference. The 23 September
+fresh audit subsequently found two authority gaps. O9-C1 validates retained
+live history, O9-C2 reconciles restored progress with the live registry, and
+O9-C3 aligns these pages with those corrections. All three remain
+`existing_unreviewed` pending the O9-C4 post-correction audit and project-owner
+confirmation; neither the guide's presence nor passing tests closes the Order.
 Order 7 now documents inventory-owned equipment instances, authored slot
 layouts, one live equipment profile, typed currencies, resolved pricing,
 policy-owned stock, atomic shops, recovery, and save v19 across player,

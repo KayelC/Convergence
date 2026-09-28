@@ -110,15 +110,32 @@ Annex's `SelectDungeonEntry` is one host-local example of this rule.
 ## Save And Restore
 
 Save contract v19 permits no field state, navigation-only field state, or
-navigation plus retained dungeon state. Framework validation checks basic
-IDs and catalog dungeon references, but it does not know your scene graph.
-Before adopting an aggregate restore, the host must check any stronger
-requirements: for example, an inside location that requires a current dungeon
-node, recognized node IDs, and available scenes. A visual host must finish
-loading its scene before adopting the candidate restored state. An outside
-location with retained dungeon progress is valid and should use the outside
-save/menu context. `CurrentSaveContext` in Training Annex demonstrates that
-the logical location, not mere progress presence, chooses context.
+navigation plus retained dungeon state. When a save retains unlocked
+checkpoints or defeated bosses, construct the validator with the same immutable
+registry used by the live traversal service:
+
+```csharp
+var saveValidator = RuntimeSaveValidator.CreateWithDungeonProgressRegistry(registry);
+RuntimeSaveValidationResult validation = saveValidator.Validate(snapshot, catalog);
+```
+
+Validation rejects an undeclared progress ID, the wrong checkpoint/boss kind,
+the wrong dungeon, or a record whose eligible area is absent from visited
+history. Calling the ordinary `RuntimeSaveValidator` constructor remains valid
+for games with no retained checkpoint or boss records; a save containing such
+records returns `DungeonProgressRegistryMissing` instead of trusting them.
+Passing a registry does not make the dungeon module mandatory and does not
+infer progress from node entry.
+
+Framework validation also checks basic IDs and the catalog dungeon reference,
+but it does not know your scene graph. Before adopting an aggregate restore,
+the host must check any stronger requirements: for example, an inside location
+that requires a current dungeon node, recognized node IDs, and available
+scenes. A visual host must finish loading its scene before adopting the
+candidate restored state. An outside location with retained dungeon progress
+is valid and should use the outside save/menu context. `CurrentSaveContext` in
+Training Annex demonstrates that the logical location, not mere progress
+presence, chooses context.
 
 See the [technical traversal contract](../technical/dungeon-traversal-runtime.md)
 for ordering and the [mechanics overview](../mechanics/world-encounters-and-rewards.md)
