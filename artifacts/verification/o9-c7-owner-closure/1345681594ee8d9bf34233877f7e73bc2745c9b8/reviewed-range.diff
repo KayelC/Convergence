@@ -1,0 +1,1032 @@
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 903df78ebb57fb258a35dcf38937b71d4d8c0a83..64ac3bf45cb470e73c692beba520e705b9ce2362 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -206,6 +206,13 @@ save aggregate should represent these modules independently is reserved for
+ Order 13, not a hidden change to Order 8. A future change to make other
+ components absent would require a new versioned save contract.
+ 
++Retained checkpoint or boss progress requires save validation composed with
++the same immutable dungeon-progress registry used by live reports. That check
++compares host-supplied retained history with current declarations; it is not a
++tamper-proof record of how progress was earned. Navigation location and dungeon
++node remain independent Framework IDs, while a concrete host may reject
++combinations its scenes cannot represent.
++
+ Moon-phase IDs remain nullable vocabulary for games that choose such a mechanic. The supplied ruleset registry has no moon-phase factory, and DemoHost does not require or bind a moon-phase system.
+ 
+ ## Distribution
+diff --git a/docs/decisions/dungeon-progress-reporting.md b/docs/decisions/dungeon-progress-reporting.md
+index e8684741eb38370e218a35db04cbcb70926e8955..069038f4f49a72779ff9e9adb7736a19c4cc12ab 100644
+--- a/docs/decisions/dungeon-progress-reporting.md
++++ b/docs/decisions/dungeon-progress-reporting.md
+@@ -11,7 +11,7 @@ battle, solved a puzzle, or completed a story event.
+ Requiring only a Framework battle result would exclude legitimate
+ non-battle outcomes and couple optional traversal to one combat system.
+ 
+-The project owner approved O9-D1 through O9-D6 after the Order 9 discussion on
++The project owner approved O9-D1 through O9-D8 after the Order 9 discussion on
+ 19 September 2026. O9-R2 through O9-R6 subsequently implemented the live
+ request, progress eligibility, save/host, and authored-floor boundaries. The
+ 23 September fresh audit then found two authority gaps: malformed retained
+@@ -22,33 +22,33 @@ remain separate gates.
+ 
+ ## Confirmed Decision
+ 
+-1. A trusted game host reports that a checkpoint or boss outcome occurred.
++1. **O9-D1: reporting authority.** A trusted game host reports that a checkpoint or boss outcome occurred.
+    Reporting does not happen automatically on node entry.
+-2. The game supplies an immutable list of eligible checkpoint and boss IDs,
++2. **O9-D2: eligible progress declarations.** The game supplies an immutable list of eligible checkpoint and boss IDs,
+    their dungeon IDs, and the areas where they may be reported. Framework
+    rejects malformed IDs and reports outside that declared context, then
+    records a valid report once. Duplicate reports are no-ops. No new dungeon
+    JSON shape is required merely to establish these host-owned identities.
+-3. Framework does not require a battle-victory receipt. Games can report a
++3. **O9-D3: no mandatory battle proof.** Framework does not require a battle-victory receipt. Games can report a
+    boss defeated by battle, puzzle, or script, subject to the same eligibility
+    contract. A stricter battle-result coordinator may be supplied later only
+    for a demonstrated use case.
+-4. The host must issue the report only after its actual success condition.
++4. **O9-D4: trusted host responsibility.** The host must issue the report only after its actual success condition.
+    Framework context validation cannot prove that Godot rendered a win or
+    that arbitrary host code is truthful.
+-5. Existing authored floor metadata is optional information for the game to
++5. **O9-D5: authored floors.** Existing authored floor metadata is optional information for the game to
+    read from the catalog. It does not automatically move through nodes or
+    start battles. Order 9 does not add a new fixed-floor resolver without a
+    consuming need. A floor may contain zero, one, or multiple host-triggered
+    visible encounters.
+-6. Leaving the dungeon retains progress but does not leave traversal active.
++6. **O9-D6: retained progress and re-entry.** Leaving the dungeon retains progress but does not leave traversal active.
+    On re-entry, the host selects an entrance or an unlocked checkpoint; the
+    last visited node is never an implicit re-entry destination.
+-7. A host that requires an active dungeon position rejects an inside-dungeon
++7. **O9-D7: host-incompatible saves.** A host that requires an active dungeon position rejects an inside-dungeon
+    save without that position before adopting it. This is a host-specific
+    load failure with a clear diagnostic, not a Framework-wide prohibition of
+    navigation-only saves or a silent entrance guess.
+-8. Invalid live dungeon IDs and faulty custom travel rules produce distinct,
++8. **O9-D8: typed non-mutating failure.** Invalid live dungeon IDs and faulty custom travel rules produce distinct,
+    typed, non-mutating failures. A legal blocked route remains a different
+    result. Cancellation and fatal failures still propagate rather than being
+    disguised as ordinary gameplay rejection.
+@@ -80,10 +80,15 @@ Godot, a scene graph, a battle system, or a fixed-floor resolver mandatory.
+ declaration authority to retained checkpoint and boss records before aggregate
+ restore. Games with no retained checkpoint or boss records do not need that
+ optional validator composition. Save validation does not add a battle receipt
+-or infer progress from visiting a node.
++or infer progress from visiting a node. It also does not prove provenance: the
++eligible visited node and progress ID are both host-supplied save state, so the
++check establishes structural consistency with current declarations rather than
++proof that live services earned the record. Save integrity is host-owned.
+ The broad save aggregate remains at v19 unless a separate, explicitly
+ approved save-contract change proves necessary; independent navigation and
+-dungeon nullability remains Order 13's question.
++dungeon nullability remains Order 13's question. Registry or exact content-pack
++changes can still reject an old v19 save; migration or an explicit
++incompatibility response remains the host's responsibility.
+ 
+ ## Evidence
+ 
+@@ -96,6 +101,10 @@ subsequent implementation and review. Current audience guidance is the
+ [world mechanics page](../mechanics/world-encounters-and-rewards.md),
+ [dungeon developer guide](../developer-guide/dungeon-traversal.md), and
+ [dungeon technical reference](../technical/dungeon-traversal-runtime.md).
+-The post-correction audit and retained gate are complete. All three audience
+-entries remain `existing_unreviewed` until explicit project-owner confirmation;
+-this decision record alone does not promote them.
++The 1 October
++[owner-closure audit](../reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md)
++supersedes the earlier no-gap documentation verdict. It found no new runtime
++defect, but required trust-boundary, Godot-evidence, compatibility, host-pairing,
++and D1-D8 corrections plus a fresh retained gate. All three audience entries
++remain `existing_unreviewed`, and Order 9 remains open, until that correction
++sequence and explicit project-owner confirmation are complete.
+diff --git a/docs/developer-guide/dungeon-traversal.md b/docs/developer-guide/dungeon-traversal.md
+index a14a0abc5e98afdbddb3fc74e13df3d42542c3ce..f9f3a38e5ccf42b1ca660f5b89cad98a70ee0d21 100644
+--- a/docs/developer-guide/dungeon-traversal.md
++++ b/docs/developer-guide/dungeon-traversal.md
+@@ -16,7 +16,7 @@ checkpoint area, or barrier, not every position traversed in a Godot scene.
+ The route policy is required and may consult game progression. The progress
+ registry is also required; pass an empty registry if this game has no
+ checkpoint/boss recording. It is a declaration of possible reports, not proof
+-that a battle occurred.
++that a battle occurred or that saved history was earned.
+ 
+ ```csharp
+ using Convergence.Content;
+@@ -49,6 +49,9 @@ for a valid request from the current node. A policy exception or null decision
+ is a typed `PolicyFaulted` result; `OperationCanceledException` and fatal
+ memory failures propagate. Use `Code`, `InvalidField`, `FaultKind`, and
+ `ReasonId` for UI mapping. `Message` is diagnostic text, not a gameplay rule.
++`InvalidField` can name current/transition scalar IDs, any of the three retained
++history collections, or the reported `ProgressId`; see the technical reference
++for the exact enum values and validation order.
+ 
+ ## Request, Present, Adopt
+ 
+@@ -105,7 +108,13 @@ active. On re-entry, select an entrance or a checkpoint that is present in
+ `UnlockedCheckpointIds`, map it to a host-owned node, and construct a new
+ snapshot with the retained visited/checkpoint/boss lists. Do not silently use
+ `CurrentNodeId` from the last visit as the new entry point. The Training
+-Annex's `SelectDungeonEntry` is one host-local example of this rule.
++Annex's `SelectDungeonEntry` is one host-local example of this rule. It is an
++internal helper whose production caller supplies the fixed entrance; tests also
++exercise an already-unlocked checkpoint. Its `ArgumentException` guards
++programmer misuse. It is not the public typed traversal failure boundary and
++should not be called with arbitrary player or network input. A reusable host
++adapter accepting untrusted entry IDs should return its own typed, non-mutating
++selection result first.
+ 
+ ## Save And Restore
+ 
+@@ -122,10 +131,36 @@ RuntimeSaveValidationResult validation = saveValidator.Validate(snapshot, catalo
+ Validation rejects an undeclared progress ID, the wrong checkpoint/boss kind,
+ the wrong dungeon, or a record whose eligible area is absent from visited
+ history. Calling the ordinary `RuntimeSaveValidator` constructor remains valid
+-for games with no retained checkpoint or boss records; a save containing such
+-records returns `DungeonProgressRegistryMissing` instead of trusting them.
+-Passing a registry does not make the dungeon module mandatory and does not
+-infer progress from node entry.
++for absent field state, navigation-only state, or dungeon state with no retained
++checkpoint/boss records. A save containing retained records returns
++`DungeonProgressRegistryMissing` instead of trusting them. Passing a registry
++does not make the dungeon module mandatory and does not infer progress from node
++entry.
++
++The retained-progress diagnostics are deliberately specific:
++
++| Numeric value | Diagnostic | Meaning |
++|---:|---|---|
++| 99 | `DungeonProgressRegistryMissing` | Retained progress was supplied without registry authority. |
++| 100 | `DungeonProgressUndeclared` | No declaration has the retained progress ID. |
++| 101 | `DungeonProgressKindMismatch` | The ID is declared, but not as the saved checkpoint/boss kind. |
++| 102 | `DungeonProgressDungeonMismatch` | The kind matches, but no declaration belongs to the saved dungeon. |
++| 103 | `DungeonProgressEligibleAreaNotVisited` | No allowed node from the matching declaration appears in saved visited history. |
++
++These checks establish structural consistency between a host-supplied save and
++the current registry. They are not an anti-tamper receipt: a host-constructed
++snapshot containing both an eligible visited node and its progress ID is
++accepted even if it did not pass through the live service. Signatures,
++encryption, trusted storage, or another provenance mechanism belong to the
++host when the game must detect edited saves.
++
++Save contract v19 did not change when registry-backed validation was added
++because the serialized shape did not change. That does not make progress
++declarations migration-stable. The validator also requires exact content-pack
++identity and version; renamed, removed, retyped, moved, or retargeted progress
++may reject an old save. A released game must provide a host-owned migration or
++an explicit incompatible-save message rather than silently selecting a
++replacement.
+ 
+ Framework validation also checks basic IDs and the catalog dungeon reference,
+ but it does not know your scene graph. Before adopting an aggregate restore,
+@@ -137,8 +172,25 @@ is valid and should use the outside save/menu context. `CurrentSaveContext` in
+ Training Annex demonstrates that the logical location, not mere progress
+ presence, chooses context.
+ 
++Framework does not couple a navigation location ID to a dungeon/node pair. The
++interactive Training Annex adds that host rule: only its staging-area and
++annex-entrance locations are recognized, the inside location requires a dungeon
++position, and only its named nodes are accepted. The noninteractive Training
++Annex demo deliberately saves `training_annex_floor_2` beside `review_alcove`
++to exercise generic Framework validation; that illustrative snapshot is not an
++interactive Training Annex save fixture and its host validator would reject the
++location ID.
++
++Godot evidence also has two distinct layers. `GodotIntegrationContractTests`
++use a test-only in-memory store to prove that a `RuntimeFieldSnapshot` can sit
++inside host-owned storage. The real `Convergence.GodotHost` sample codec does
++not yet serialize field, navigation, or dungeon state: it reconstructs the
++aggregate with `Field == null` and uses the ordinary validator. Therefore its
++headless smoke proves the wider host boundary, not Order 8/9 persistence or a
++spatial dungeon restore.
++
+ See the [technical traversal contract](../technical/dungeon-traversal-runtime.md)
+ for ordering and the [mechanics overview](../mechanics/world-encounters-and-rewards.md)
+ for player-facing meaning. The [Godot integration contract](../godot-integration-contract.md)
+ describes the engine-neutral boundary; the current real Godot smoke sample is
+-not a full spatial dungeon consumer.
++not a field/dungeon persistence or spatial dungeon consumer.
+diff --git a/docs/gameplay-systems.md b/docs/gameplay-systems.md
+index ab97115d05785fcbfecd963935336218f8b2765f..038c9f13df00203e2ee67a94a3f86fbb8466ee7e 100644
+--- a/docs/gameplay-systems.md
++++ b/docs/gameplay-systems.md
+@@ -212,9 +212,10 @@ and [technical state machine](technical/generic-navigation-runtime.md).
+ Dungeon traversal separately approves meaningful node changes and validates
+ explicit checkpoint/boss reports against host-declared eligible IDs and areas.
+ Saved checkpoint/boss records are reconciled against that same registry and
+-eligible visited history before restore. Authored floor metadata never starts
+-combat. A host may retain progress while outside and must select an entrance or
+-unlocked checkpoint on re-entry. See the
++eligible visited history before restore. This proves structural consistency of
++the host-supplied snapshot, not provenance or tamper resistance. Authored floor
++metadata never starts combat. A host may retain progress while outside and must
++select an entrance or unlocked checkpoint on re-entry. See the
+ [dungeon integration guide](developer-guide/dungeon-traversal.md) and
+ [technical state/sequence reference](technical/dungeon-traversal-runtime.md).
+ 
+diff --git a/docs/godot-integration-contract.md b/docs/godot-integration-contract.md
+index 6697cb7d036aad2aa047446c41e217d4f11a64a4..8834aca843307b4337961a26ee0f7b393267e310 100644
+--- a/docs/godot-integration-contract.md
++++ b/docs/godot-integration-contract.md
+@@ -44,8 +44,8 @@ scene. Map the typed result and events to host presentation, attempt scene work,
+ then adopt `After` only on host success; otherwise retain `Before`. A rejected
+ or faulted result never attempts scene work. The contract test exercises this
+ trigger-to-adoption sequence with host-owned scene handles. The current real
+-Godot smoke sample does not yet implement live navigation; do not mistake its
+-save snapshot for proof that it does.
++Godot smoke sample does not yet implement live navigation or dungeon traversal;
++do not mistake its save snapshot for proof that it does.
+ 
+ Optional gameplay services do not imply independently nullable members of the
+ broad save v19 field aggregate. A saved `Field` requires a logical navigation
+@@ -74,6 +74,15 @@ state, UI state, and asset references. Godot recreates Nodes and applies host
+ context only after the aggregate restore result succeeds, using
+ `RuntimeInstanceId` to reconnect scene objects.
+ 
++The current real `Convergence.GodotHost` codec intentionally serializes no
++`Field`, navigation, or dungeon state and reconstructs the aggregate with
++`Field == null`. Its ordinary validator composition is therefore valid, but
++the smoke does not prove Order 8/9 persistence. The separate
++`GodotIntegrationContractTests` in-memory store does retain a
++`RuntimeFieldSnapshot`; that test proves serializer-neutral host ownership, not
++the real sample codec, registry-backed restored-progress validation, or scene
++restoration.
++
+ Restoration validates the complete aggregate, explicitly binds retained
+ stat-modifier policies, resolves actor restore profiles,
+ restores an Active Hosted Entity before its dependent Vessel, and recomposes
+diff --git a/docs/mechanics/saving-loading-and-suspend.md b/docs/mechanics/saving-loading-and-suspend.md
+index 2fe5cee384dbb19ca9d44de3e5851759b8433dc3..a29a4852ab75cf982c56041556b6053e9c2131a9 100644
+--- a/docs/mechanics/saving-loading-and-suspend.md
++++ b/docs/mechanics/saving-loading-and-suspend.md
+@@ -85,6 +85,13 @@ data with the profile produced from restored source state.
+ The host should present diagnostics or reject the slot rather than partially
+ loading it.
+ 
++Retained dungeon checkpoints and bosses require a validator composed with the
++current immutable progress registry. This compares the save's IDs and visited
++history with current declarations; because both are host-supplied snapshot
++data, it is a structural check rather than proof that gameplay earned the
++progress. Exact pack versions and current declarations may reject an older save
++after content changes. Save-file integrity and any migration remain host-owned.
++
+ ## Manual Saves
+ 
+ **Configured rule:** a save policy decides which contexts permit manual saving. The host asks the policy, captures the current snapshots, validates them, serializes them, and writes the selected slot.
+diff --git a/docs/mechanics/world-encounters-and-rewards.md b/docs/mechanics/world-encounters-and-rewards.md
+index c8eb6e1831e6948dad2f965c9943ac149fb052eb..95fcfeb2bf3684d02092d10d6341ddbd61ce0829 100644
+--- a/docs/mechanics/world-encounters-and-rewards.md
++++ b/docs/mechanics/world-encounters-and-rewards.md
+@@ -64,9 +64,17 @@ proof for every game design.
+ Saved checkpoint and boss records are checked against that same declared list
+ before restoration. A record must have the expected checkpoint/boss kind,
+ belong to the saved dungeon, and name an eligible area that appears in visited
+-history. This prevents a save from granting progress that live play could not
+-have recorded. Games with no retained checkpoint or boss records do not need
+-to configure this optional validation module.
++history. This proves that the saved progress is internally plausible under the
++current declarations; it does not prove that live play produced the history or
++authenticate a player-edited save. Convergence trusts the game host to report
++success honestly and to protect its own save files when tamper resistance is a
++requirement. Games with no retained checkpoint or boss records do not need to
++configure this optional validation module.
++
++Changing or removing a declared checkpoint, boss, dungeon, or eligible area can
++make an older save incompatible. Content-pack versions are also matched exactly.
++The game must migrate such a save deliberately or reject it clearly; save v19
++does not infer a replacement checkpoint or rewrite retained history.
+ 
+ **Authored content:** a dungeon may describe floor ranges, encounter pools,
+ and fixed-floor metadata. These are optional catalog facts, not orders to move
+@@ -83,7 +91,8 @@ active dungeon actions. Re-entry selects an entrance or an unlocked checkpoint
+ explicitly; it does not silently resume at the last visited node. A host that
+ requires an inside-dungeon position must reject an inside save missing that
+ position before adoption. Generic games may still save navigation without
+-dungeon state.
++dungeon state, and Framework does not decide which navigation location belongs
++with which dungeon node. That pairing is a game-specific load rule.
+ 
+ The [dungeon progress decision](../decisions/dungeon-progress-reporting.md)
+ records the approved rule, and the [developer guide](../developer-guide/dungeon-traversal.md)
+diff --git a/docs/public-api-contract.md b/docs/public-api-contract.md
+index 4d213c98ee17b9870180ef5ebb2e363a3aabc4e8..e4780535bc50b187cc0bee22a72f07a107126326 100644
+--- a/docs/public-api-contract.md
++++ b/docs/public-api-contract.md
+@@ -374,7 +374,17 @@ registry, undeclared progress, wrong kind, wrong dungeon, and absent eligible
+ history. Saves with no retained checkpoint or boss IDs remain valid through the
+ ordinary constructor, preserving the dungeon module's optional use. Save
+ contract v19 is unchanged because this strengthens validation without changing
+-the snapshot shape.
++the snapshot shape. The five additive codes are
++`DungeonProgressRegistryMissing` (99), `DungeonProgressUndeclared` (100),
++`DungeonProgressKindMismatch` (101), `DungeonProgressDungeonMismatch` (102),
++and `DungeonProgressEligibleAreaNotVisited` (103).
++
++Eligible visited history and retained progress are both supplied by the host's
++snapshot. The validator establishes structural consistency with the current
++registry; it does not authenticate the save or prove that live services earned
++the record. Exact content-pack versions are also validated. Registry/content
++evolution can therefore reject an old v19 save even though the wire shape is
++unchanged, and the host must migrate or explicitly reject that save.
+ 
+ ## Documentation And Build Tooling
+ 
+diff --git a/docs/reference/documentation-coverage.md b/docs/reference/documentation-coverage.md
+index 87fea66ac2312f2763a9fe45a306250f352853e0..9b0dcca5e0569aacbcdd947fbdded414866c600a 100644
+--- a/docs/reference/documentation-coverage.md
++++ b/docs/reference/documentation-coverage.md
+@@ -46,9 +46,13 @@ integration guide, and a technical state/sequence reference. The 23 September
+ fresh audit subsequently found two authority gaps. O9-C1 validates retained
+ live history, O9-C2 reconciles restored progress with the live registry, and
+ O9-C3 aligns these pages with those corrections. O9-C4 independently reviewed
+-the corrected source and prose and retained a green release gate. All three
+-remain `existing_unreviewed` pending project-owner confirmation; neither the
+-guide's presence nor passing tests closes the Order.
++the corrected source and prose and retained a green release gate. The later
++O9-C5 owner-closure audit found documentation/evidence-boundary gaps without a
++new runtime defect; O9-C6 corrects save-provenance, Godot-sample,
++content-evolution, host-pairing, D1-D8, and evidence-label guidance. O9-C7's
++fresh retained gate and project-owner confirmation remain pending. All three
++entries stay `existing_unreviewed`; neither the guide's presence nor passing
++tests closes the Order.
+ Order 7 now documents inventory-owned equipment instances, authored slot
+ layouts, one live equipment profile, typed currencies, resolved pricing,
+ policy-owned stock, atomic shops, recovery, and save v19 across player,
+diff --git a/docs/reviews/README.md b/docs/reviews/README.md
+index f59ac73e06a6fb7e2d58a135df1ad3ce25d4793e..7b434560e3cd7119305f6411fcfa2e070598f9f6 100644
+--- a/docs/reviews/README.md
++++ b/docs/reviews/README.md
+@@ -115,6 +115,7 @@ or implementation authority.
+ - [Dungeon Traversal Order 9 Independent Audit, 21 September 2026](dungeon-traversal-order-9-independent-audit-2026-09-21.md)
+ - [Dungeon Traversal Order 9 Fresh Closure Audit, 23 September 2026](dungeon-traversal-order-9-fresh-closure-audit-2026-09-23.md)
+ - [Dungeon Traversal Order 9 Post-Correction Independent Audit, 28 September 2026](dungeon-traversal-order-9-post-correction-independent-audit-2026-09-28.md)
++- [Dungeon Traversal Order 9 Owner-Closure Audit, 1 October 2026](dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md)
+ - [Technical Diagram Review, 20 July 2026](technical-diagram-review-2026-07-20.md)
+ 
+ Current intended behavior belongs in confirmed mechanics and decision documents.
+diff --git a/docs/reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md b/docs/reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..a72a47cae0725f4b38eb1277ce60ec5e09251b96
+--- /dev/null
++++ b/docs/reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md
+@@ -0,0 +1,207 @@
++# Dungeon Traversal Order 9 Owner-Closure Audit
++
++**Audit date:** 1 October 2026  
++**Reviewed source baseline:** `cc932dd3`  
++**Capability:** `dungeon_traversal`  
++**Status:** corrections and retained verification required before owner closure
++
++## Method
++
++This review began from current source and executable tests. Earlier Order 9
++reviews, roadmaps, and summaries were not used to form the findings. They were
++consulted only after the implementation trace was complete, when the three
++audience pages and confirmed decision record were cross-checked against source.
++
++The source-first pass covered:
++
++- `RuntimeDungeonTraversalService`, its snapshots, registries, results, and
++  events;
++- `RuntimeFieldSnapshot`, save validation, and aggregate restoration;
++- dungeon content validation and encounter preparation;
++- Training Annex traversal, re-entry, save-context, validation, and both clean
++  demo paths;
++- the real Godot save codec and smoke host;
++- the Godot-shaped integration contract tests; and
++- traversal, persistence, content, DemoHost, and architecture tests.
++
++The colleague's seven leads were treated as hypotheses and checked against the
++current tree. The conclusions below replace, rather than inherit, any earlier
++audit verdict.
++
++## Closure Recommendation Before Corrections
++
++**Reject closure pending documentation correction and a fresh retained gate.**
++
++No realistic reachable defect was found in the public traversal transition or
++live progress-reporting services. The implementation preserves typed,
++non-mutating failure, validates retained live IDs before policy/registry work,
++keeps progress reporting separate from encounter success, and leaves scene
++adoption to the host.
++
++The active documentation is not yet an exact account of that implementation.
++One mechanics claim overstates the security/provenance guarantee of save
++validation, the real Godot sample's persistence evidence is easy to confuse
++with a test-only store, the eight approved decisions are tracked as six, and
++several save and host-composition limits are not stated precisely enough for a
++commercial integration contract.
++
++## Findings
++
++### O9-OWNER-M1: Save validation proves structural plausibility, not earned provenance
++
++**Intended boundary.** Under O9-D1 through O9-D4, a trusted host reports
++progress only after its success condition. Framework validates the report's
++declared context; it does not independently prove what happened in a scene,
++battle, puzzle, or script.
++
++**Current source.** `RuntimeSaveValidator.ValidateRetainedProgress` builds its
++eligible-area evidence from `RuntimeDungeonTraversalSnapshot.VisitedNodeIds`
++in the same save being validated. It then accepts a retained progress ID when
++the supplied registry has a matching kind and dungeon and at least one allowed
++node is present in that saved history.
++
++**Reachable path.** A host can construct or deserialize a snapshot containing
++both an eligible visited node and its checkpoint/boss ID without first calling
++the live traversal and progress services. Registry-backed validation accepts
++that internally consistent shape. This is expected for a serializer-neutral
++framework that trusts its host, but it is not proof that the progress was
++earned.
++
++**Documentation error.** The mechanics page says this validation “prevents a
++save from granting progress that live play could not have recorded.” That is
++stronger than the code. The correct claim is that validation rejects retained
++progress that is inconsistent with the current registry and saved history.
++Authenticity, tamper resistance, and historical proof require a host-owned
++integrity/provenance mechanism.
++
++**Correction.** State the trusted-host boundary in all three audience views and
++the public API guidance. Rename the test that calls missing-history input
++“forged,” and add executable evidence that a structurally plausible
++host-constructed snapshot is intentionally accepted.
++
++### O9-OWNER-M2: The real Godot sample does not persist Order 8 or Order 9 state
++
++**Current source.** `GodotSaveDocument` contains actors, party roster,
++inventory, currency, shop stock, and scene-instance records. It has no field,
++navigation, or dungeon member. `GodotSaveCodec.DeserializeAndRestore` always
++constructs `RuntimeSaveGameSnapshot` with `field: null`, and the smoke host
++uses the ordinary validator.
++
++`GodotIntegrationContractTests` separately contains a test-only in-memory
++`GodotSaveSnapshotStore` that round-trips a `RuntimeFieldSnapshot`. That proves
++the engine-neutral snapshot can sit inside host-owned storage; it does not
++exercise the real sample codec, registry-backed save validation, or an actual
++Godot scene restore.
++
++**Consequence.** An integrator can read “Godot contract” evidence as proof that
++the shipped sample persists traversal when it does not. This is an evidence
++and adoption-guidance defect, not a Framework runtime defect.
++
++**Correction.** Name the two evidence layers explicitly. The real sample must
++be described as a neutral `Field == null` save path until it actually serializes
++and validates field/dungeon state.
++
++### O9-OWNER-L1: Registry composition and content-evolution compatibility need an explicit contract
++
++The ordinary `RuntimeSaveValidator` deliberately has no dungeon-progress
++registry. It remains valid for absent field state, navigation-only state, or a
++dungeon snapshot with empty checkpoint/boss lists. A save with retained
++checkpoint/boss IDs is rejected with `DungeonProgressRegistryMissing`; callers
++must use `CreateWithDungeonProgressRegistry` with the same declarations as
++live traversal.
++
++This is discoverable in the developer and API pages, and all current live
++callers are correctly composed. The real Godot sample is not an exception; it
++restores `Field == null`. The docs nevertheless need the exact 99-103
++diagnostics and a direct warning that registry/content evolution can reject an
++old save. Content-pack identity/version is already validated exactly. Renaming,
++removing, changing kind/dungeon, or retargeting retained progress therefore
++requires host-owned migration or explicit incompatibility handling. The save
++contract remained v19 because the serialized shape did not change; that does
++not promise semantic compatibility across changed content/registries.
++
++### O9-OWNER-L2: Framework-valid and Training-Annex-valid field combinations are different
++
++`RuntimeFieldSnapshot` supports three structural shapes: no field aggregate;
++navigation without dungeon state; and navigation with dungeon state. A field
++aggregate always requires navigation. Framework does not couple a navigation
++location ID to a dungeon/node pair.
++
++The interactive Training Annex adds stronger rules: it recognizes only the
++staging-area and annex-entrance navigation IDs, requires a dungeon position for
++the inside location, and recognizes only its named nodes. Outside plus retained
++dungeon progress remains legal. The noninteractive Training Annex demo uses
++`training_annex_floor_2` with `review_alcove`; Framework accepts that illustrative
++pair, but the interactive Training Annex validator would reject it.
++
++The docs describe the generic/host split but do not disclose this concrete
++sample difference. It must be explicit so one demo is not presented as a save
++fixture for the other.
++
++### O9-OWNER-L3: Eight approved decisions are mislabeled as six
++
++The confirmed decision body contains eight distinct owner-approved statements,
++and O9-D8 is the typed non-mutating failure rule. The active decision preamble,
++roadmap table, product roadmap, documentation roadmap, and architecture test
++compress or label them as O9-D1 through O9-D6. This is a tracking defect that
++can lose design intent after context loss.
++
++The active record must use O9-D1 through O9-D8 consistently without changing
++their meaning.
++
++### O9-OWNER-L4: One diagram and one test name overstate their evidence
++
++The technical progress diagram asks only whether “Dungeon, node, and progress
++IDs” are valid, while the service also validates every retained visited-node,
++checkpoint, and boss ID first. The test named
++`RuntimeSessionRestoreService_AcceptsLiveProducedProgressOutsideDungeonAndRejectsForgedProgressAtomically`
++rejects a checkpoint whose eligible node is absent; it does not test forged
++history that includes the eligible node. Both should be made exact.
++
++## Colleague Leads Reconciled
++
++| Lead | Verdict from current source |
++|---|---|
++| 1. Eligible area comes from the same save | **Confirmed as a documentation/trust-boundary defect, not a live traversal defect.** It proves structural plausibility, not provenance. |
++| 2. Default validator rejects retained progress | **Confirmed and intentional fail-closed behavior.** Current callers are correctly composed; discoverability and exact diagnostics need strengthening. No v19 shape change occurred. |
++| 3. Content changes can invalidate saves | **Confirmed known limit.** Exact pack-version checks and registry diagnostics reject incompatibility; migration remains host-owned/deferred. |
++| 4. Real Godot codec omits field state | **Confirmed.** The field round-trip belongs to a test-only store, not the real sample codec. |
++| 5. Demo navigation/dungeon pairing | **Confirmed sample-boundary gap in docs.** Framework accepts independent IDs; the interactive host imposes stronger pairing rules. |
++| 6. `SelectDungeonEntry` throws | **Not a D8 runtime defect on the current reachable path.** It is an internal host helper called from fixed, previously offered choices; bad input is programmer misuse. D8 governs public Framework traversal/progress results. If the helper becomes public or receives untrusted IDs, it should become a typed host result first. |
++| 7. Audience docs may lag codes and behavior | **Confirmed in part.** Core transition/progress behavior is accurate, but the provenance claim, D1-D8 labels, diagnostic details, Godot evidence, compatibility limit, and progress diagram require correction. |
++
++## Runtime Defect Assessment
++
++No code defect requiring a runtime, schema, or save-wire change is confirmed by
++this pass. In particular:
++
++- accepting structurally plausible host-supplied save history is consistent
++  with the approved trusted-host model;
++- the ordinary validator's registry-missing rejection is deliberate;
++- strict rejection after content/registry changes is honest pre-release
++  compatibility behavior in the absence of a migration; and
++- `SelectDungeonEntry` is an internal sample precondition helper, not the public
++  typed traversal boundary.
++
++The documentation corrections must not be used to imply tamper resistance that
++the runtime does not provide.
++
++## Required Correction And Verification Sequence
++
++1. Reconcile D1-D8 across the decision, roadmap, tracking prose, and executable
++   architecture assertions.
++2. Correct the three audience pages: structural plausibility versus provenance,
++   exact diagnostics, content-evolution/migration limits, generic versus
++   Training Annex combinations, the internal helper boundary, and actual versus
++   test-only Godot evidence.
++3. Update related API/Godot guidance and coverage reasons without promoting the
++   three audience entries.
++4. Correct the misleading persistence-test name and add a trust-boundary
++   regression.
++5. Run and retain the complete release gate from the corrected clean commit.
++6. Re-read the resulting diff and only then issue an owner-closure
++   recommendation.
++
++Until that sequence is complete, `dungeon_traversal` remains `implemented`,
++Order 9 remains `open`, and all three audience entries remain
++`existing_unreviewed`.
+diff --git a/docs/roadmap/documentation-completion-roadmap.md b/docs/roadmap/documentation-completion-roadmap.md
+index e0cdc3a4ee3acab05f9c8ed95dba8f6d38882ade..5649b4854f454aac68da922aba180af51071a98e 100644
+--- a/docs/roadmap/documentation-completion-roadmap.md
++++ b/docs/roadmap/documentation-completion-roadmap.md
+@@ -736,7 +736,7 @@ traversal rules remain Order 9.
+ 
+ The [source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
+ and [checkpoint roadmap](dungeon-traversal-order-9-roadmap.md) govern Order 9.
+-The owner approved O9-D1 through O9-D6; the
++The owner approved O9-D1 through O9-D8; the
+ [dungeon-progress decision](../decisions/dungeon-progress-reporting.md) records
+ host-reported progress, host-declared eligible IDs/areas, optional floor
+ metadata, entrance/checkpoint re-entry, host rejection of incompatible saves,
+@@ -754,7 +754,12 @@ found live retained-history validation and restored-progress authority gaps.
+ O9-C1 and O9-C2 correct those runtime boundaries; O9-C3 updates all three
+ audience views and replaces the impossible checkpoint fixture. O9-C4 completed
+ the fresh post-correction review and retained release gate on `299cbc15`. The
+-pages remain `existing_unreviewed`, and Order 9 remains `open`, until explicit
++later [1 October owner-closure audit](../reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md)
++found no new runtime defect but identified overstated save provenance, ambiguous
++real-Godot evidence, undocumented compatibility/sample boundaries, stale D1-D8
++tracking, and one misleading diagram/test label. O9-C6 corrects those surfaces;
++O9-C7's fresh retained gate remains pending. The pages remain
++`existing_unreviewed`, and Order 9 remains `open`, until that gate and explicit
+ owner confirmation; corrected guidance and green tests do not replace owner
+ closure.
+ 
+diff --git a/docs/roadmap/dungeon-traversal-order-9-roadmap.md b/docs/roadmap/dungeon-traversal-order-9-roadmap.md
+index 60e58fca8d67a22fea665527a53cfbb1b240da30..7b2c4273a5961618f92b65f26774ab7c6695ee2f 100644
+--- a/docs/roadmap/dungeon-traversal-order-9-roadmap.md
++++ b/docs/roadmap/dungeon-traversal-order-9-roadmap.md
+@@ -4,8 +4,9 @@
+ 
+ **Source baseline:** `d5f8845d`
+ 
+-**Status:** open pending explicit owner confirmation; O9-D1 through O9-D6
+-approved and O9-C1 through O9-C4 complete.
++**Status:** open pending O9-C7 retained verification and explicit owner
++confirmation; O9-D1 through O9-D8 are approved and O9-C1 through O9-C6 are
++complete.
+ 
+ **Source evidence:** [Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md).
+ 
+@@ -22,21 +23,23 @@ unresolved meaning of authored floor metadata. It does not imply that Order 8
+ navigation or Order 13 persistence must be reopened.
+ 
+ The [confirmed dungeon-progress decision](../decisions/dungeon-progress-reporting.md)
+-records O9-D1 through O9-D6 as approved intent. It does not describe already
++records O9-D1 through O9-D8 as approved intent. It does not describe already
+ implemented runtime behavior.
+ 
+ ## Approved Decisions
+ 
+ | ID | Approved behavior | Implementation boundary |
+ |---|---|---|
+-| O9-D1: progress authority | The game reports a checkpoint or boss outcome after success; Framework validates and records it. No mandatory battle-result proof. | Bosses may be resolved by battle, puzzle, or script. No progress is inferred from node entry. |
++| O9-D1: reporting authority | A trusted host reports a checkpoint or boss outcome after its success condition. | Reporting is explicit and never inferred from node entry. |
+ | O9-D2: eligible progress IDs | The host supplies an immutable list of eligible checkpoint/boss IDs, their dungeons, and allowed areas. | Framework checks reports against the list; do not expand dungeon JSON or add a speculative policy. |
+-| O9-D3: authored floors | Existing floor metadata is optional catalog information. It does not move nodes or start battles. | No new resolver until a real consumer needs it; hosts may inspect catalog definitions directly. |
+-| O9-D4: retained progress | Leaving retains progress but disables active traversal. On re-entry the host selects an entrance or unlocked checkpoint. | Never infer re-entry from the last visited node; validate checkpoint availability before adopting it. |
+-| O9-D5: host-incompatible saves | A host requiring an inside-dungeon position rejects a save missing that position before adoption. | Keep generic navigation-only field saves valid; no silent entrance guess or v19 wire change. |
+-| O9-D6: failure contract | Invalid IDs, legal route denial, and malfunctioning custom rules have distinct outcomes; failures leave state unchanged. | Typed diagnostics; cancellation and fatal failures propagate. |
+-
+-The owner confirmed all six decisions on 19 September 2026. Precise public
++| O9-D3: no mandatory battle proof | A valid report need not carry a battle-victory receipt. | Bosses may be resolved by battle, puzzle, or script. |
++| O9-D4: trusted host responsibility | The host reports only after the real game success condition. | Registry checks establish context, not scene truth, save authenticity, or historical provenance. |
++| O9-D5: authored floors | Existing floor metadata is optional catalog information. It does not move nodes or start battles. | No new resolver until a real consumer needs it; hosts may inspect catalog definitions directly. |
++| O9-D6: retained progress | Leaving retains progress but disables active traversal. On re-entry the host selects an entrance or unlocked checkpoint. | Never infer re-entry from the last visited node; validate checkpoint availability before adopting it. |
++| O9-D7: host-incompatible saves | A host requiring an inside-dungeon position rejects a save missing that position before adoption. | Keep generic navigation-only field saves valid; no silent entrance guess or v19 wire change. |
++| O9-D8: failure contract | Invalid IDs, legal route denial, and malfunctioning custom rules have distinct outcomes; failures leave state unchanged. | Typed diagnostics; cancellation and fatal failures propagate. |
++
++The owner confirmed all eight decisions on 19 September 2026. Precise public
+ signatures and diagnostic names are implementation details to review against
+ these decisions, not invitations to alter their semantics.
+ 
+@@ -53,10 +56,10 @@ owner rather than silently choosing a content or save model.
+ | Checkpoint | State | Work and acceptance evidence |
+ |---|---|---|
+ | O9-R1: opening review | complete | Source-first review, this roadmap, executable `partial`/`open` tracking, and correction of present-tense documentation that overclaims policy authority. No runtime change. |
+-| O9-R2: live traversal boundary | complete | Reject default/empty dungeon, node, and transition IDs before policy evaluation; define non-mutating typed policy-fault behavior. Test null/throwing policies, cancellation, source/dungeon mismatch precedence, and unchanged visited state under O9-D6. |
++| O9-R2: live traversal boundary | complete | Reject default/empty dungeon, node, and transition IDs before policy evaluation; define non-mutating typed policy-fault behavior. Test null/throwing policies, cancellation, source/dungeon mismatch precedence, and unchanged visited state under O9-D8. |
+ | O9-R3: public result authority | complete | Seal traversal/state-change result and event coherence, including malformed custom-service results and record cloning. Keep before/after snapshots and ordered events immutable; no silent fallback. |
+-| O9-R4: field/save/host boundary | complete | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D4/D5. |
+-| O9-R5: checkpoint and boss recording | complete | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1/D2. |
++| O9-R4: field/save/host boundary | complete | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D6/D7. |
++| O9-R5: checkpoint and boss recording | complete | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1 through O9-D4. |
+ | O9-R6: authored floor and encounter contract | complete | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
+ | O9-R7: audience documentation | written_pending_owner_confirmation | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. All three audience entries remain `existing_unreviewed` until the post-correction audit and owner confirmation. |
+ | O9-R8: independent closure | complete | The 21 September audit remains historical evidence. The 23 September fresh audit reopened the checkpoint; O9-C1 through O9-C3 corrected its findings, and O9-C4 independently reviewed the corrected state and retained a green release gate. Explicit owner confirmation still controls formal Order closure. |
+@@ -72,6 +75,9 @@ supersedes the earlier no-gap conclusion without erasing its historical gate.
+ | O9-C2: restored progress authority | complete | Validate retained checkpoint/boss records against the live immutable registry before save/restore adoption, while keeping games with no retained progress independent of the optional module. |
+ | O9-C3: fixtures and audience alignment | complete | Produce re-entry evidence through live traversal/progress services and align mechanics, developer, technical, API, capability, and coverage guidance with C1/C2. |
+ | O9-C4: post-correction independent closure | complete | Current source and audience documentation were re-read, both low-severity quality findings were corrected, and all 23 retained release-gate commands passed on `299cbc15`. Owner confirmation remains required for formal closure. |
++| O9-C5: owner-closure source audit | complete | Re-read current source/tests before prior reports. No new runtime defect was confirmed; provenance, real-Godot evidence, save compatibility, sample pairing, D1-D8 tracking, and evidence-label documentation gaps were recorded. |
++| O9-C6: audience and tracking truth correction | complete | Correct all three audience pages, decision/API/Godot/architecture guidance, tracking prose, and executable assertions without changing runtime, schema, content, or save-wire behavior. |
++| O9-C7: retained owner-closure gate | pending | Run the complete retained verification gate on the corrected clean commit, retain raw evidence/checksums, and re-read the final diff before making a closure recommendation. |
+ 
+ ## Boundary Contract To Preserve
+ 
+@@ -94,6 +100,10 @@ supersedes the earlier no-gap conclusion without erasing its historical gate.
+ 7. Host-supplied policies may choose legal edges; the Framework must not hardcode
+    Training Annex node names, stair menus, one-battle-per-floor assumptions,
+    or a Godot scene graph.
++8. Registry-backed save validation proves consistency with host-supplied saved
++   history, not tamper resistance or historical provenance.
++9. The real Godot sample currently restores `Field == null`; only test-shaped
++   evidence round-trips a field snapshot, and neither may be overstated.
+ 
+ ## Test And Release Gate
+ 
+@@ -104,7 +114,8 @@ supersedes the earlier no-gap conclusion without erasing its historical gate.
+   outside-with-retained-progress regression tests.
+ - Godot-shaped scene-success/failure adoption and host-owned save-envelope
+   tests. Run the real Godot headless smoke as a regression gate, but do not
+-  mislabel its current action/encounter/save flow as live dungeon navigation.
++  mislabel its current action/encounter/save flow as live dungeon navigation or
++  field/dungeon persistence.
+ - Full `dotnet test Convergence.sln --no-restore --configuration Release`,
+   strict nonincremental .NET 8 builds, format verification, content validator,
+   five DemoHost modes, documentation links, API/schema/save-version checks if
+@@ -121,7 +132,7 @@ skips. After this opening record, the full Release solution passed 1,878
+ Framework, 186 DemoHost, and seven ContentValidator tests (2,071 total), with
+ zero failures or skips. Format verification, changed-document relative links,
+ and `git diff --check` passed. No runtime, schema, content, or save-wire file
+-changed. The owner subsequently confirmed O9-D1 through O9-D6. The remaining
++changed. The owner subsequently confirmed O9-D1 through O9-D8. The remaining
+ checkpoints await implementation, adversarial review, and a retained release
+ gate; confirmation alone does not advance their state.
+ 
+@@ -292,5 +303,18 @@ coverage measured 90.38% lines and 77.32% branches; six packs, 36 documents,
+ and 98 definitions validated; every DemoHost mode and the real Godot 4.7.1
+ headless smoke passed. The complete evidence bundle is retained at
+ `artifacts/verification/o9-c4-verified/299cbc158e8cb91c7a9f2e786b1685d457aa02b9`.
+-O9-C4 and O9-R8 are complete. Order 9 remains open only for explicit owner
+-confirmation of its audience documentation.
++O9-C4 and O9-R8 remain valid historical gates, but the 1 October O9-C5 audit
++found documentation/evidence-boundary defects they had missed. O9-C6 corrects
++those defects without changing runtime, schema, content, or save-wire behavior.
++O9-C7 must retain a fresh complete gate before explicit owner confirmation can
++close Order 9.
++
++The [O9-C5 owner-closure audit](../reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md)
++records the current source trace, colleague-lead reconciliation, and correction
++requirements. It confirms that save validation establishes structural
++plausibility rather than provenance, the real Godot codec restores
++`Field == null`, Framework and interactive Training Annex accept different
++location/node combinations by design, and the approved decision set is D1-D8.
++O9-C6 updates the active guidance and adds executable trust-boundary evidence.
++The three audience entries remain `existing_unreviewed`; neither C5 nor C6 is
++owner closure.
+diff --git a/docs/roadmap/framework-capability-matrix.md b/docs/roadmap/framework-capability-matrix.md
+index c52ac70227b14525b1341f8c55b90c643d4163e2..8e7fe178265bc01654b22b7e0d35b94f62eb4547 100644
+--- a/docs/roadmap/framework-capability-matrix.md
++++ b/docs/roadmap/framework-capability-matrix.md
+@@ -87,9 +87,15 @@ audit and retained gate at `0189a6c2` are historical evidence: the
+ later found live retained-history and restored-progress authority gaps. O9-C1
+ and O9-C2 correct those boundaries; O9-C3 aligns fixtures and active guidance.
+ O9-C4's post-correction review corrected two low-severity quality-boundary
+-findings, and its 23-command retained gate passed on `299cbc15`. Owner
+-documentation confirmation remains pending, so Order 9 stays `open` while its
+-implementation state is `implemented`. Implementation and collaborative
++findings, and its 23-command retained gate passed on `299cbc15`. The later
++[1 October owner-closure audit](../reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md)
++found no new runtime defect but reopened documentation truthfulness: save
++validation proves structural plausibility rather than provenance, the real
++Godot codec omits field/dungeon state, compatibility and host-pairing limits
++needed explicit treatment, and the eight approved decisions were mislabeled as
++six. O9-C6 corrects those surfaces; O9-C7's fresh retained gate and owner
++confirmation remain pending. Order 9 therefore stays `open` while its
++implementation state remains `implemented`. Implementation and collaborative
+ closure are separate gates; the approved optional floor metadata does not
+ require a runtime resolver.
+ 
+diff --git a/docs/roadmap/product-roadmap.md b/docs/roadmap/product-roadmap.md
+index 5bc1dd781da4be393d2ee9ee70608de59a188daa..5240e3a1f4f73eaf3afc61322aee408a573fb7ab 100644
+--- a/docs/roadmap/product-roadmap.md
++++ b/docs/roadmap/product-roadmap.md
+@@ -31,10 +31,13 @@ implementation is usable: meaningful node transitions, typed failures,
+ eligibility-checked progress reports, optional authored-floor metadata, and
+ the combined navigation/dungeon/save host boundary have direct tests.
+ Neither entering a floor nor navigating to a dungeon starts combat automatically.
+-The owner approved O9-D1 through O9-D6 in the
++The owner approved O9-D1 through O9-D8 in the
+ [dungeon-progress decision](../decisions/dungeon-progress-reporting.md);
+-the implementation is `implemented` while audience confirmation and formal
+-Order closure remain pending under the Order 9 checkpoints.
++the implementation is `implemented`. The 1 October owner-closure audit found no
++new runtime defect but corrected the save-provenance, real-Godot evidence,
++content-evolution, host-pairing, and decision-tracking explanations. The fresh
++retained gate, audience confirmation, and formal Order closure remain pending
++under the Order 9 checkpoints.
+ 
+ Documentation Order 7 is complete under the owner-approved
+ [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
+diff --git a/docs/technical/dungeon-traversal-runtime.md b/docs/technical/dungeon-traversal-runtime.md
+index d4af3d5a5ed87a2ed50c3ff022c464e9a88de3a8..1d686c00e918c814cb9eb03fa6373d49d15156a9 100644
+--- a/docs/technical/dungeon-traversal-runtime.md
++++ b/docs/technical/dungeon-traversal-runtime.md
+@@ -48,11 +48,18 @@ event kind and IDs, and diagnostic consistency even when built by a custom
+ service. Its ordered event list is defensively copied; event records expose
+ get-only values, so cloning cannot rewrite evidence.
+ 
++`RuntimeDungeonTraversalRequestField` exposes the first invalid boundary as
++one of `CurrentDungeonId`, `CurrentNodeId`, `TransitionId`,
++`TransitionDungeonId`, `SourceNodeId`, `DestinationNodeId`, `VisitedNodeIds`,
++`UnlockedCheckpointIds`, `DefeatedBossIds`, or `ProgressId`. The collection
++values identify the first malformed member of that retained collection rather
++than adding an index to the enum.
++
+ ## Progress State Machine
+ 
+ ```mermaid
+ flowchart TD
+-    A[Host reports checkpoint or boss success] --> B{Dungeon, node, and progress IDs valid?}
++    A[Host reports checkpoint or boss success] --> B{Dungeon, current node, retained history, and progress IDs valid?}
+     B -- No --> C[InvalidRequest; unchanged]
+     B -- Yes --> D{Matching kind and ID declared?}
+     D -- No --> E[NotEligible; unchanged]
+@@ -65,8 +72,10 @@ flowchart TD
+     J -- No --> L[Applied; one checkpoint or boss event]
+ ```
+ 
+-The registry defensively copies its declarations and each allowed-node list;
+-empty, invalid, duplicate-node, or duplicate declaration shapes are rejected.
++The registry defensively copies its declarations and each allowed-node list. An
++eligibility declaration with an empty allowed-node list, invalid ID, duplicate
++node, or duplicate kind/dungeon/progress identity is rejected; the registry
++itself may be empty for a game that records no checkpoint or boss progress.
+ Eligibility runs before idempotence. Non-applied reports emit no progress event
+ and preserve the before snapshot. Applied reports add exactly the reported ID
+ to the corresponding progress list and emit one event. The public
+@@ -132,6 +141,23 @@ eligible node. The ordinary validator remains sufficient when both retained
+ progress lists are empty; it returns `DungeonProgressRegistryMissing` rather
+ than accepting retained progress without its authority.
+ 
++The additive retained-progress diagnostics are values 99 through 103:
++
++| Value | Code | Validation boundary |
++|---:|---|---|
++| 99 | `DungeonProgressRegistryMissing` | Retained progress has no supplied registry. |
++| 100 | `DungeonProgressUndeclared` | No declaration has the progress ID. |
++| 101 | `DungeonProgressKindMismatch` | ID matches exist, but none have the saved progress kind. |
++| 102 | `DungeonProgressDungeonMismatch` | Kind matches exist, but none belong to the saved dungeon. |
++| 103 | `DungeonProgressEligibleAreaNotVisited` | Matching declarations have no allowed node in saved visited history. |
++
++The visited-node set used by the last check comes from the same snapshot being
++validated. Consequently this is a structural-consistency check, not historical
++provenance or tamper detection. A trusted host may construct an internally
++plausible snapshot without calling the live service, and validation will accept
++it. Save signing, encryption, protected storage, and receipts belong outside
++Framework.
++
+ Aggregate restore does not replay traversal, prove a battle result, or validate
+ a host-specific scene graph. Training Annex rejects an inside save lacking its
+ dungeon node before adopting restored session state. Its `CurrentSaveContext`
+@@ -141,11 +167,38 @@ unlocked checkpoint and maps that selection to a node, rather than silently
+ using the last current node. Independent navigation/dungeon nullability in the
+ broad save aggregate is an Order 13 question, not a hidden Order 9 wire change.
+ 
++Framework deliberately does not validate a relationship between the navigation
++location and dungeon node. The interactive Training Annex adds a stricter
++host-owned compatibility check for its recognized locations and nodes. Its
++noninteractive demo's `training_annex_floor_2` plus `review_alcove` pair is
++Framework-valid but is not accepted by the interactive host. Those samples
++exercise different boundaries.
++
++Registry-backed validation changed semantics without changing the v19 wire
++shape. Exact content-pack versions are validated separately. If a game renames,
++removes, retypes, moves, or retargets a retained progress declaration, an old
++save can fail pack or registry validation and requires a host-owned migration
++or explicit rejection. The deferred save-migration capability supplies an
++extension seam, not an automatic conversion.
++
++## Godot Evidence Boundary
++
++The test-only `GodotSaveSnapshotStore` in `GodotIntegrationContractTests`
++round-trips `RuntimeFieldSnapshot` as an in-memory host-owned value. It does not
++invoke `GodotSaveCodec`, registry-backed save validation, or a Godot scene.
++
++The real `Convergence.GodotHost` sample's `GodotSaveDocument` has no field,
++navigation, or dungeon member. Its decoder sets `field: null`, so its ordinary
++`RuntimeSaveValidator` composition is correct. The real headless smoke therefore
++does not prove Order 8/9 persistence or spatial dungeon adoption.
++
+ **Source and tests:**
+ [`DungeonTraversal.cs`](../../src/Convergence.Framework/Runtime/DungeonTraversal.cs),
+ [`NavigationTransitions.cs`](../../src/Convergence.Framework/Runtime/NavigationTransitions.cs),
+ [`RuntimeFieldSnapshot.cs`](../../src/Convergence.Framework/Runtime/RuntimeFieldSnapshot.cs),
+ [`RuntimePersistenceSnapshots.cs`](../../src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs),
++[`GodotSaveCodec.cs`](../../samples/Convergence.GodotHost/Infrastructure/GodotSaveCodec.cs),
+ [`RuntimeDungeonTraversalTests.cs`](../../tests/Convergence.Framework.Tests/Runtime/RuntimeDungeonTraversalTests.cs),
++[`RuntimePersistenceSnapshotTests.cs`](../../tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs),
+ [`GodotIntegrationContractTests.cs`](../../tests/Convergence.Framework.Tests/Hosting/GodotIntegrationContractTests.cs),
+ and [`CleanTrainingAnnexPlayHostTests.cs`](../../tests/Convergence.DemoHost.Tests/Host/CleanTrainingAnnexPlayHostTests.cs).
+diff --git a/tests/Convergence.Framework.Tests/Architecture/FrameworkCapabilityMatrixTests.cs b/tests/Convergence.Framework.Tests/Architecture/FrameworkCapabilityMatrixTests.cs
+index f285b35b0bdcbbf217e19fe70b354ab8fa6fd9e4..89da37d56a6d9f69ea90054b373dbb8028f8920c 100644
+--- a/tests/Convergence.Framework.Tests/Architecture/FrameworkCapabilityMatrixTests.cs
++++ b/tests/Convergence.Framework.Tests/Architecture/FrameworkCapabilityMatrixTests.cs
+@@ -222,6 +222,18 @@ public sealed class FrameworkCapabilityMatrixTests
+             "| O9-C4: post-correction independent closure | complete |",
+             roadmap,
+             StringComparison.Ordinal);
++        Assert.Contains(
++            "| O9-C5: owner-closure source audit | complete |",
++            roadmap,
++            StringComparison.Ordinal);
++        Assert.Contains(
++            "| O9-C6: audience and tracking truth correction | complete |",
++            roadmap,
++            StringComparison.Ordinal);
++        Assert.Contains(
++            "| O9-C7: retained owner-closure gate | pending |",
++            roadmap,
++            StringComparison.Ordinal);
+         Assert.Contains("CurrentSaveContext", review, StringComparison.Ordinal);
+ 
+         string capabilityNarrative = File.ReadAllText(RepositoryPath(
+@@ -230,10 +242,8 @@ public sealed class FrameworkCapabilityMatrixTests
+         Assert.All(Enumerable.Range(1, 4), number => Assert.Contains(
+             $"O9-C{number}", capabilityNarrative, StringComparison.Ordinal));
+         Assert.Contains("23-command retained gate passed on `299cbc15`", capabilityNarrative, StringComparison.Ordinal);
+-        Assert.DoesNotContain(
+-            "owner documentation confirmation remains",
+-            capabilityNarrative,
+-            StringComparison.Ordinal);
++        Assert.Contains("1 October owner-closure audit", capabilityNarrative, StringComparison.Ordinal);
++        Assert.Contains("O9-C7's fresh retained gate", capabilityNarrative, StringComparison.Ordinal);
+ 
+         string decision = File.ReadAllText(RepositoryPath(
+             "docs", "decisions", "dungeon-progress-reporting.md"));
+@@ -242,11 +252,36 @@ public sealed class FrameworkCapabilityMatrixTests
+         Assert.Contains("O9-C1 and O9-C2 correct those gaps", decision, StringComparison.Ordinal);
+         Assert.Contains("`RuntimeDungeonProgressRegistry` declares eligible IDs", decision, StringComparison.Ordinal);
+         Assert.Contains("`RuntimeSaveValidator.CreateWithDungeonProgressRegistry`", decision, StringComparison.Ordinal);
+-        Assert.Contains("post-correction audit and retained gate are complete", decision, StringComparison.Ordinal);
+-        Assert.Contains("entries remain `existing_unreviewed`", decision, StringComparison.Ordinal);
++        Assert.Contains("structural", decision, StringComparison.Ordinal);
++        Assert.Contains("does not prove provenance", decision, StringComparison.Ordinal);
++        Assert.Contains("remain `existing_unreviewed`", decision, StringComparison.Ordinal);
+         Assert.DoesNotContain("matches the current service", decision, StringComparison.Ordinal);
+-        Assert.All(Enumerable.Range(1, 6), number => Assert.Contains(
++        Assert.All(Enumerable.Range(1, 8), number => Assert.Contains(
+             $"O9-D{number}:", roadmap, StringComparison.Ordinal));
++
++        string mechanics = File.ReadAllText(RepositoryPath(
++            "docs", "mechanics", "world-encounters-and-rewards.md"));
++        string developer = File.ReadAllText(RepositoryPath(
++            "docs", "developer-guide", "dungeon-traversal.md"));
++        string technical = File.ReadAllText(RepositoryPath(
++            "docs", "technical", "dungeon-traversal-runtime.md"));
++        Assert.Contains("internally plausible", mechanics, StringComparison.Ordinal);
++        Assert.Contains("does not prove that live play produced the history", mechanics, StringComparison.Ordinal);
++        Assert.Contains("DungeonProgressRegistryMissing` instead of trusting them", developer, StringComparison.Ordinal);
++        Assert.Contains("not an anti-tamper receipt", developer, StringComparison.Ordinal);
++        Assert.Contains("## Godot Evidence Boundary", technical, StringComparison.Ordinal);
++        Assert.Contains("does not prove Order 8/9 persistence", technical, StringComparison.Ordinal);
++
++        using JsonDocument documentation = JsonDocument.Parse(File.ReadAllText(DocumentationMatrixPath()));
++        JsonElement dungeonDocumentation = documentation.RootElement
++            .GetProperty("capabilities")
++            .EnumerateArray()
++            .Single(entry => entry.GetProperty("id").GetString() == "dungeon_traversal");
++        Assert.All(
++            new[] { "mechanics", "developerGuide", "technical" },
++            audience => Assert.Equal(
++                "existing_unreviewed",
++                dungeonDocumentation.GetProperty(audience).GetProperty("state").GetString()));
+     }
+ 
+     private static CapabilityMatrix Load() =>
+diff --git a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+index f8027843224781f3ea2cd9ea9e6d5732ac07183d..1c125c9ead6b53a5b59d697c46c66a635d126d90 100644
+--- a/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
++++ b/tests/Convergence.Framework.Tests/Fixtures/documentation-coverage-matrix.json
+@@ -301,17 +301,17 @@
+       "mechanics": {
+         "state": "existing_unreviewed",
+         "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
+-        "reason": "O9-C3 reconciles node, trigger, encounter, live-history, and restored-progress rules after the fresh audit; post-correction audit and owner review are pending."
++        "reason": "O9-C6 reconciles node, trigger, encounter, structural save validation, host-owned integrity, real-versus-test Godot evidence, and compatibility limits; O9-C7 retained verification and owner review are pending."
+       },
+       "developerGuide": {
+         "state": "existing_unreviewed",
+         "documents": ["docs/developer-guide/dungeon-traversal.md"],
+-        "reason": "O9-C3 documents host route policy, scene adoption, encounters, re-entry, and registry-backed save checks; post-correction audit and owner review are pending."
++        "reason": "O9-C6 documents host route policy, scene adoption, encounters, re-entry, exact registry diagnostics, structural-not-provenance save checks, sample boundaries, and migration responsibility; O9-C7 retained verification and owner review are pending."
+       },
+       "technical": {
+         "state": "existing_unreviewed",
+         "documents": ["docs/technical/dungeon-traversal-runtime.md"],
+-        "reason": "O9-C3 diagrams complete live validation and registry-backed restored-progress authority; post-correction audit and owner review are pending."
++        "reason": "O9-C6 diagrams complete live validation and documents registry-backed structural restore checks, host-specific field compatibility, and actual-versus-test Godot evidence; O9-C7 retained verification and owner review are pending."
+       }
+     },
+     {
+diff --git a/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs b/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
+index 095cc9b3ff78a5ef8f3335ccccd76b114b4bca33..c721cdf4d159c39246086b653cc1e02184b55e2a 100644
+--- a/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
++++ b/tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs
+@@ -3018,7 +3018,7 @@ public sealed class RuntimePersistenceSnapshotTests
+     }
+ 
+     [Fact]
+-    public void RuntimeSessionRestoreService_AcceptsLiveProducedProgressOutsideDungeonAndRejectsForgedProgressAtomically()
++    public void RuntimeSessionRestoreService_AcceptsLiveProducedProgressOutsideDungeonAndRejectsProgressWithoutEligibleVisitedAreaAtomically()
+     {
+         GameDataCatalog catalog = LoadCatalog();
+         ContentId dungeonId = Id("convergence.catalog_surface_sample:sample_depths");
+@@ -3109,6 +3109,41 @@ public sealed class RuntimePersistenceSnapshotTests
+                 RuntimeSaveValidationCode.DungeonProgressEligibleAreaNotVisited);
+     }
+ 
++    [Fact]
++    public void RuntimeSaveValidator_AcceptsStructurallyPlausibleHostSuppliedProgressWithoutProvenanceProof()
++    {
++        GameDataCatalog catalog = LoadCatalog();
++        ContentId dungeonId = Id("convergence.catalog_surface_sample:sample_depths");
++        ContentId floorOne = Id("convergence.catalog_surface_sample:floor_1");
++        ContentId floorFive = Id("convergence.catalog_surface_sample:floor_5");
++        ContentId checkpointId = Id("audit:host_supplied_checkpoint");
++        var registry = new RuntimeDungeonProgressRegistry(
++        [
++            new RuntimeDungeonProgressEligibility(
++                RuntimeDungeonProgressKind.Checkpoint,
++                checkpointId,
++                dungeonId,
++                [floorFive])
++        ]);
++        RuntimeSaveGameSnapshot hostSupplied = CreateSaveSnapshot(field: new RuntimeFieldSnapshot(
++            new RuntimeNavigationSnapshot(Id("outside_location")),
++            new RuntimeDungeonTraversalSnapshot(
++                dungeonId,
++                floorOne,
++                visitedNodeIds: [floorFive],
++                unlockedCheckpointIds: [checkpointId])));
++
++        RuntimeSaveValidationResult result =
++            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(registry)
++                .Validate(hostSupplied, catalog);
++
++        Assert.True(
++            result.IsValid,
++            string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
++        Assert.Contains(floorFive, hostSupplied.Field!.DungeonTraversal!.VisitedNodeIds);
++        Assert.Equal([checkpointId], hostSupplied.Field.DungeonTraversal.UnlockedCheckpointIds);
++    }
++
+     [Fact]
+     public void RuntimeSavePolicy_AllowsManualAndSuspendOnlyInRegisteredStableContexts()
+     {

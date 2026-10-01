@@ -758,10 +758,9 @@ later [1 October owner-closure audit](../reviews/dungeon-traversal-order-9-owner
 found no new runtime defect but identified overstated save provenance, ambiguous
 real-Godot evidence, undocumented compatibility/sample boundaries, stale D1-D8
 tracking, and one misleading diagram/test label. O9-C6 corrects those surfaces;
-O9-C7's fresh retained gate remains pending. The pages remain
-`existing_unreviewed`, and Order 9 remains `open`, until that gate and explicit
-owner confirmation; corrected guidance and green tests do not replace owner
-closure.
+O9-C7's fresh 23-command retained gate passed on `13456815`. The pages remain
+`existing_unreviewed`, and Order 9 remains `open`, until explicit owner
+confirmation; corrected guidance and green tests do not replace owner closure.
 
 ## Deferred Documentation
 

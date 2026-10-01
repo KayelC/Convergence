@@ -50,9 +50,9 @@ the corrected source and prose and retained a green release gate. The later
 O9-C5 owner-closure audit found documentation/evidence-boundary gaps without a
 new runtime defect; O9-C6 corrects save-provenance, Godot-sample,
 content-evolution, host-pairing, D1-D8, and evidence-label guidance. O9-C7's
-fresh retained gate and project-owner confirmation remain pending. All three
-entries stay `existing_unreviewed`; neither the guide's presence nor passing
-tests closes the Order.
+fresh 23-command retained gate passed on `13456815`; project-owner confirmation
+remains pending. All three entries stay `existing_unreviewed`; neither the
+guide's presence nor passing tests closes the Order.
 Order 7 now documents inventory-owned equipment instances, authored slot
 layouts, one live equipment profile, typed currencies, resolved pricing,
 policy-owned stock, atomic shops, recovery, and save v19 across player,

@@ -231,7 +231,7 @@ public sealed class FrameworkCapabilityMatrixTests
             roadmap,
             StringComparison.Ordinal);
         Assert.Contains(
-            "| O9-C7: retained owner-closure gate | pending |",
+            "| O9-C7: retained owner-closure gate | complete |",
             roadmap,
             StringComparison.Ordinal);
         Assert.Contains("CurrentSaveContext", review, StringComparison.Ordinal);
@@ -243,7 +243,7 @@ public sealed class FrameworkCapabilityMatrixTests
             $"O9-C{number}", capabilityNarrative, StringComparison.Ordinal));
         Assert.Contains("23-command retained gate passed on `299cbc15`", capabilityNarrative, StringComparison.Ordinal);
         Assert.Contains("1 October owner-closure audit", capabilityNarrative, StringComparison.Ordinal);
-        Assert.Contains("O9-C7's fresh retained gate", capabilityNarrative, StringComparison.Ordinal);
+        Assert.Contains("O9-C7's 23-command retained gate passed", capabilityNarrative, StringComparison.Ordinal);
 
         string decision = File.ReadAllText(RepositoryPath(
             "docs", "decisions", "dungeon-progress-reporting.md"));
@@ -254,7 +254,8 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.Contains("`RuntimeSaveValidator.CreateWithDungeonProgressRegistry`", decision, StringComparison.Ordinal);
         Assert.Contains("structural", decision, StringComparison.Ordinal);
         Assert.Contains("does not prove provenance", decision, StringComparison.Ordinal);
-        Assert.Contains("remain `existing_unreviewed`", decision, StringComparison.Ordinal);
+        Assert.Contains("23-command gate are complete at `13456815`", decision, StringComparison.Ordinal);
+        Assert.Contains("`existing_unreviewed`; Order 9 remains open", decision, StringComparison.Ordinal);
         Assert.DoesNotContain("matches the current service", decision, StringComparison.Ordinal);
         Assert.All(Enumerable.Range(1, 8), number => Assert.Contains(
             $"O9-D{number}:", roadmap, StringComparison.Ordinal));

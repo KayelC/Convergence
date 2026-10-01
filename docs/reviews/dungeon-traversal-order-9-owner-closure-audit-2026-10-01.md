@@ -3,7 +3,7 @@
 **Audit date:** 1 October 2026  
 **Reviewed source baseline:** `cc932dd3`  
 **Capability:** `dungeon_traversal`  
-**Status:** corrections and retained verification required before owner closure
+**Status:** corrections and retained verification complete; explicit owner closure pending
 
 ## Method
 
@@ -202,6 +202,49 @@ the runtime does not provide.
 6. Re-read the resulting diff and only then issue an owner-closure
    recommendation.
 
-Until that sequence is complete, `dungeon_traversal` remains `implemented`,
-Order 9 remains `open`, and all three audience entries remain
-`existing_unreviewed`.
+## Correction And Retained-Gate Record
+
+O9-C6 completed the required truth correction in commit `13456815`. The
+reviewed change set contains documentation, executable documentation
+assertions, a corrected persistence-test name, and one regression proving the
+trusted-host boundary. It contains no Framework runtime, schema, content, or
+save-wire change.
+
+O9-C7 then ran the canonical 23-command retained gate against clean commit
+`1345681594ee8d9bf34233877f7e73bc2745c9b8`, reviewing
+`cc932dd375dd9a3d4e6f75d3755201119c4a350f..1345681594ee8d9bf34233877f7e73bc2745c9b8`.
+Every command exited zero:
+
+- focused Framework, DemoHost, and architecture runs passed 275, 142, and 66
+  tests respectively;
+- the full solution passed 1,896 Framework, 191 DemoHost, and seven
+  ContentValidator tests (2,094 total), with zero failures and zero skips;
+- Framework line coverage was 90.38% and branch coverage was 77.32%;
+- strict Framework, solution, Godot, and trimming builds completed with zero
+  warnings;
+- six packs, 36 documents, and 98 qualified definitions passed schema,
+  deserialization, semantic, dependency, registration, and catalog checks;
+- all five DemoHost modes and the real Godot 4.7.1 headless smoke completed;
+  and
+- format verification, `git diff --check`, reviewed-range capture, and
+  evidence checksums completed.
+
+The raw outputs, reviewed diff, manifest, coverage payload, and SHA-256 file
+are retained at
+[`artifacts/verification/o9-c7-owner-closure/1345681594ee8d9bf34233877f7e73bc2745c9b8`](../../artifacts/verification/o9-c7-owner-closure/1345681594ee8d9bf34233877f7e73bc2745c9b8/README.md).
+
+## Final Closure Recommendation
+
+**Approve owner closure.** The fresh source review found no realistic reachable
+Order 9 runtime defect. Every confirmed documentation and evidence-boundary
+error was corrected, the corrected diff was re-read, and the complete retained
+gate is green. The remaining limitations are now explicit product boundaries:
+save validation is structural rather than provenance proof, registry/content
+changes may require host-owned migration or rejection, the real Godot sample
+does not yet persist field state, and concrete hosts may impose stricter
+navigation/dungeon pairing than Framework.
+
+This recommendation does not itself exercise the owner's closure authority.
+`dungeon_traversal` remains `implemented`, Order 9 remains `open`, and all
+three audience entries remain `existing_unreviewed` until the project owner
+explicitly confirms closure.

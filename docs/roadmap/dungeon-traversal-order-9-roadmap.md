@@ -4,9 +4,8 @@
 
 **Source baseline:** `d5f8845d`
 
-**Status:** open pending O9-C7 retained verification and explicit owner
-confirmation; O9-D1 through O9-D8 are approved and O9-C1 through O9-C6 are
-complete.
+**Status:** open pending explicit owner confirmation; O9-D1 through O9-D8 are
+approved and O9-C1 through O9-C7 are complete.
 
 **Source evidence:** [Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md).
 
@@ -77,7 +76,7 @@ supersedes the earlier no-gap conclusion without erasing its historical gate.
 | O9-C4: post-correction independent closure | complete | Current source and audience documentation were re-read, both low-severity quality findings were corrected, and all 23 retained release-gate commands passed on `299cbc15`. Owner confirmation remains required for formal closure. |
 | O9-C5: owner-closure source audit | complete | Re-read current source/tests before prior reports. No new runtime defect was confirmed; provenance, real-Godot evidence, save compatibility, sample pairing, D1-D8 tracking, and evidence-label documentation gaps were recorded. |
 | O9-C6: audience and tracking truth correction | complete | Correct all three audience pages, decision/API/Godot/architecture guidance, tracking prose, and executable assertions without changing runtime, schema, content, or save-wire behavior. |
-| O9-C7: retained owner-closure gate | pending | Run the complete retained verification gate on the corrected clean commit, retain raw evidence/checksums, and re-read the final diff before making a closure recommendation. |
+| O9-C7: retained owner-closure gate | complete | The complete 23-command retained gate tested corrected clean commit `13456815`; raw output, the reviewed diff, coverage, manifest, and checksums are retained under `artifacts/verification/o9-c7-owner-closure/1345681594ee8d9bf34233877f7e73bc2745c9b8`. The final diff was re-read before the audit issued its owner-closure recommendation. |
 
 ## Boundary Contract To Preserve
 
@@ -306,8 +305,8 @@ headless smoke passed. The complete evidence bundle is retained at
 O9-C4 and O9-R8 remain valid historical gates, but the 1 October O9-C5 audit
 found documentation/evidence-boundary defects they had missed. O9-C6 corrects
 those defects without changing runtime, schema, content, or save-wire behavior.
-O9-C7 must retain a fresh complete gate before explicit owner confirmation can
-close Order 9.
+O9-C7 has now retained that fresh complete gate. Explicit owner confirmation
+remains the final authority that can close Order 9.
 
 The [O9-C5 owner-closure audit](../reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md)
 records the current source trace, colleague-lead reconciliation, and correction
@@ -316,5 +315,21 @@ plausibility rather than provenance, the real Godot codec restores
 `Field == null`, Framework and interactive Training Annex accept different
 location/node combinations by design, and the approved decision set is D1-D8.
 O9-C6 updates the active guidance and adds executable trust-boundary evidence.
-The three audience entries remain `existing_unreviewed`; neither C5 nor C6 is
-owner closure.
+The O9-C7 gate tested clean commit `13456815` across reviewed range
+`cc932dd3..13456815`. All 23 commands exited zero. Focused Framework,
+DemoHost, and architecture runs passed 275, 142, and 66 tests. The full suite
+passed 1,896 Framework, 191 DemoHost, and seven ContentValidator tests (2,094
+total), with zero failures or skips. Strict Framework, solution, Godot, and
+trimming builds reported zero warnings. Coverage measured 90.38% lines and
+77.32% branches. Six packs, 36 documents, and 98 qualified definitions
+validated; every DemoHost mode and the real Godot 4.7.1 headless smoke passed.
+The retained bundle, including raw command output, reviewed diff, manifest, and
+SHA-256 checksums, is at
+`artifacts/verification/o9-c7-owner-closure/1345681594ee8d9bf34233877f7e73bc2745c9b8`.
+
+The final reviewed diff contains documentation, executable documentation
+assertions, and one persistence trust-boundary regression only. It makes no
+Framework runtime, schema, content, or save-wire change. The O9-C5 audit now
+recommends approval for owner closure. The three audience entries deliberately
+remain `existing_unreviewed`, and Order 9 remains `open`, until the project
+owner explicitly confirms closure.

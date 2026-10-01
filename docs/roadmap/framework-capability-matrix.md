@@ -93,8 +93,9 @@ found no new runtime defect but reopened documentation truthfulness: save
 validation proves structural plausibility rather than provenance, the real
 Godot codec omits field/dungeon state, compatibility and host-pairing limits
 needed explicit treatment, and the eight approved decisions were mislabeled as
-six. O9-C6 corrects those surfaces; O9-C7's fresh retained gate and owner
-confirmation remain pending. Order 9 therefore stays `open` while its
+six. O9-C6 corrects those surfaces, and O9-C7's 23-command retained gate passed
+on `13456815`. Explicit owner confirmation remains pending. Order 9 therefore
+stays `open` while its
 implementation state remains `implemented`. Implementation and collaborative
 closure are separate gates; the approved optional floor metadata does not
 require a runtime resolver.

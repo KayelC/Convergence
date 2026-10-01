@@ -105,6 +105,7 @@ The 1 October
 [owner-closure audit](../reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md)
 supersedes the earlier no-gap documentation verdict. It found no new runtime
 defect, but required trust-boundary, Godot-evidence, compatibility, host-pairing,
-and D1-D8 corrections plus a fresh retained gate. All three audience entries
-remain `existing_unreviewed`, and Order 9 remains open, until that correction
-sequence and explicit project-owner confirmation are complete.
+and D1-D8 corrections plus a fresh retained gate. Those corrections and the
+23-command gate are complete at `13456815`. The three audience entries remain
+`existing_unreviewed`; Order 9 remains open until explicit project-owner
+confirmation.
