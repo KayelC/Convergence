@@ -87,9 +87,15 @@ audit and retained gate at `0189a6c2` are historical evidence: the
 later found live retained-history and restored-progress authority gaps. O9-C1
 and O9-C2 correct those boundaries; O9-C3 aligns fixtures and active guidance.
 O9-C4's post-correction review corrected two low-severity quality-boundary
-findings, and its 23-command retained gate passed on `299cbc15`. Owner
-documentation confirmation remains pending, so Order 9 stays `open` while its
-implementation state is `implemented`. Implementation and collaborative
+findings, and its 23-command retained gate passed on `299cbc15`. The later
+[1 October owner-closure audit](../reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md)
+found no new runtime defect but reopened documentation truthfulness: save
+validation proves structural plausibility rather than provenance, the real
+Godot codec omits field/dungeon state, compatibility and host-pairing limits
+needed explicit treatment, and the eight approved decisions were mislabeled as
+six. O9-C6 corrects those surfaces; O9-C7's fresh retained gate and owner
+confirmation remain pending. Order 9 therefore stays `open` while its
+implementation state remains `implemented`. Implementation and collaborative
 closure are separate gates; the approved optional floor metadata does not
 require a runtime resolver.
 

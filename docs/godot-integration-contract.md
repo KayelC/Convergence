@@ -44,8 +44,8 @@ scene. Map the typed result and events to host presentation, attempt scene work,
 then adopt `After` only on host success; otherwise retain `Before`. A rejected
 or faulted result never attempts scene work. The contract test exercises this
 trigger-to-adoption sequence with host-owned scene handles. The current real
-Godot smoke sample does not yet implement live navigation; do not mistake its
-save snapshot for proof that it does.
+Godot smoke sample does not yet implement live navigation or dungeon traversal;
+do not mistake its save snapshot for proof that it does.
 
 Optional gameplay services do not imply independently nullable members of the
 broad save v19 field aggregate. A saved `Field` requires a logical navigation
@@ -73,6 +73,15 @@ A Godot save may wrap those snapshots with scene paths, transforms, camera
 state, UI state, and asset references. Godot recreates Nodes and applies host
 context only after the aggregate restore result succeeds, using
 `RuntimeInstanceId` to reconnect scene objects.
+
+The current real `Convergence.GodotHost` codec intentionally serializes no
+`Field`, navigation, or dungeon state and reconstructs the aggregate with
+`Field == null`. Its ordinary validator composition is therefore valid, but
+the smoke does not prove Order 8/9 persistence. The separate
+`GodotIntegrationContractTests` in-memory store does retain a
+`RuntimeFieldSnapshot`; that test proves serializer-neutral host ownership, not
+the real sample codec, registry-backed restored-progress validation, or scene
+restoration.
 
 Restoration validates the complete aggregate, explicitly binds retained
 stat-modifier policies, resolves actor restore profiles,

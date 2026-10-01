@@ -374,7 +374,17 @@ registry, undeclared progress, wrong kind, wrong dungeon, and absent eligible
 history. Saves with no retained checkpoint or boss IDs remain valid through the
 ordinary constructor, preserving the dungeon module's optional use. Save
 contract v19 is unchanged because this strengthens validation without changing
-the snapshot shape.
+the snapshot shape. The five additive codes are
+`DungeonProgressRegistryMissing` (99), `DungeonProgressUndeclared` (100),
+`DungeonProgressKindMismatch` (101), `DungeonProgressDungeonMismatch` (102),
+and `DungeonProgressEligibleAreaNotVisited` (103).
+
+Eligible visited history and retained progress are both supplied by the host's
+snapshot. The validator establishes structural consistency with the current
+registry; it does not authenticate the save or prove that live services earned
+the record. Exact content-pack versions are also validated. Registry/content
+evolution can therefore reject an old v19 save even though the wire shape is
+unchanged, and the host must migrate or explicitly reject that save.
 
 ## Documentation And Build Tooling
 

@@ -11,7 +11,7 @@ battle, solved a puzzle, or completed a story event.
 Requiring only a Framework battle result would exclude legitimate
 non-battle outcomes and couple optional traversal to one combat system.
 
-The project owner approved O9-D1 through O9-D6 after the Order 9 discussion on
+The project owner approved O9-D1 through O9-D8 after the Order 9 discussion on
 19 September 2026. O9-R2 through O9-R6 subsequently implemented the live
 request, progress eligibility, save/host, and authored-floor boundaries. The
 23 September fresh audit then found two authority gaps: malformed retained
@@ -22,33 +22,33 @@ remain separate gates.
 
 ## Confirmed Decision
 
-1. A trusted game host reports that a checkpoint or boss outcome occurred.
+1. **O9-D1: reporting authority.** A trusted game host reports that a checkpoint or boss outcome occurred.
    Reporting does not happen automatically on node entry.
-2. The game supplies an immutable list of eligible checkpoint and boss IDs,
+2. **O9-D2: eligible progress declarations.** The game supplies an immutable list of eligible checkpoint and boss IDs,
    their dungeon IDs, and the areas where they may be reported. Framework
    rejects malformed IDs and reports outside that declared context, then
    records a valid report once. Duplicate reports are no-ops. No new dungeon
    JSON shape is required merely to establish these host-owned identities.
-3. Framework does not require a battle-victory receipt. Games can report a
+3. **O9-D3: no mandatory battle proof.** Framework does not require a battle-victory receipt. Games can report a
    boss defeated by battle, puzzle, or script, subject to the same eligibility
    contract. A stricter battle-result coordinator may be supplied later only
    for a demonstrated use case.
-4. The host must issue the report only after its actual success condition.
+4. **O9-D4: trusted host responsibility.** The host must issue the report only after its actual success condition.
    Framework context validation cannot prove that Godot rendered a win or
    that arbitrary host code is truthful.
-5. Existing authored floor metadata is optional information for the game to
+5. **O9-D5: authored floors.** Existing authored floor metadata is optional information for the game to
    read from the catalog. It does not automatically move through nodes or
    start battles. Order 9 does not add a new fixed-floor resolver without a
    consuming need. A floor may contain zero, one, or multiple host-triggered
    visible encounters.
-6. Leaving the dungeon retains progress but does not leave traversal active.
+6. **O9-D6: retained progress and re-entry.** Leaving the dungeon retains progress but does not leave traversal active.
    On re-entry, the host selects an entrance or an unlocked checkpoint; the
    last visited node is never an implicit re-entry destination.
-7. A host that requires an active dungeon position rejects an inside-dungeon
+7. **O9-D7: host-incompatible saves.** A host that requires an active dungeon position rejects an inside-dungeon
    save without that position before adopting it. This is a host-specific
    load failure with a clear diagnostic, not a Framework-wide prohibition of
    navigation-only saves or a silent entrance guess.
-8. Invalid live dungeon IDs and faulty custom travel rules produce distinct,
+8. **O9-D8: typed non-mutating failure.** Invalid live dungeon IDs and faulty custom travel rules produce distinct,
    typed, non-mutating failures. A legal blocked route remains a different
    result. Cancellation and fatal failures still propagate rather than being
    disguised as ordinary gameplay rejection.
@@ -80,10 +80,15 @@ Godot, a scene graph, a battle system, or a fixed-floor resolver mandatory.
 declaration authority to retained checkpoint and boss records before aggregate
 restore. Games with no retained checkpoint or boss records do not need that
 optional validator composition. Save validation does not add a battle receipt
-or infer progress from visiting a node.
+or infer progress from visiting a node. It also does not prove provenance: the
+eligible visited node and progress ID are both host-supplied save state, so the
+check establishes structural consistency with current declarations rather than
+proof that live services earned the record. Save integrity is host-owned.
 The broad save aggregate remains at v19 unless a separate, explicitly
 approved save-contract change proves necessary; independent navigation and
-dungeon nullability remains Order 13's question.
+dungeon nullability remains Order 13's question. Registry or exact content-pack
+changes can still reject an old v19 save; migration or an explicit
+incompatibility response remains the host's responsibility.
 
 ## Evidence
 
@@ -96,6 +101,10 @@ subsequent implementation and review. Current audience guidance is the
 [world mechanics page](../mechanics/world-encounters-and-rewards.md),
 [dungeon developer guide](../developer-guide/dungeon-traversal.md), and
 [dungeon technical reference](../technical/dungeon-traversal-runtime.md).
-The post-correction audit and retained gate are complete. All three audience
-entries remain `existing_unreviewed` until explicit project-owner confirmation;
-this decision record alone does not promote them.
+The 1 October
+[owner-closure audit](../reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md)
+supersedes the earlier no-gap documentation verdict. It found no new runtime
+defect, but required trust-boundary, Godot-evidence, compatibility, host-pairing,
+and D1-D8 corrections plus a fresh retained gate. All three audience entries
+remain `existing_unreviewed`, and Order 9 remains open, until that correction
+sequence and explicit project-owner confirmation are complete.

@@ -31,10 +31,13 @@ implementation is usable: meaningful node transitions, typed failures,
 eligibility-checked progress reports, optional authored-floor metadata, and
 the combined navigation/dungeon/save host boundary have direct tests.
 Neither entering a floor nor navigating to a dungeon starts combat automatically.
-The owner approved O9-D1 through O9-D6 in the
+The owner approved O9-D1 through O9-D8 in the
 [dungeon-progress decision](../decisions/dungeon-progress-reporting.md);
-the implementation is `implemented` while audience confirmation and formal
-Order closure remain pending under the Order 9 checkpoints.
+the implementation is `implemented`. The 1 October owner-closure audit found no
+new runtime defect but corrected the save-provenance, real-Godot evidence,
+content-evolution, host-pairing, and decision-tracking explanations. The fresh
+retained gate, audience confirmation, and formal Order closure remain pending
+under the Order 9 checkpoints.
 
 Documentation Order 7 is complete under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).

@@ -85,6 +85,13 @@ data with the profile produced from restored source state.
 The host should present diagnostics or reject the slot rather than partially
 loading it.
 
+Retained dungeon checkpoints and bosses require a validator composed with the
+current immutable progress registry. This compares the save's IDs and visited
+history with current declarations; because both are host-supplied snapshot
+data, it is a structural check rather than proof that gameplay earned the
+progress. Exact pack versions and current declarations may reject an older save
+after content changes. Save-file integrity and any migration remain host-owned.
+
 ## Manual Saves
 
 **Configured rule:** a save policy decides which contexts permit manual saving. The host asks the policy, captures the current snapshots, validates them, serializes them, and writes the selected slot.

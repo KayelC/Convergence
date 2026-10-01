@@ -206,6 +206,13 @@ save aggregate should represent these modules independently is reserved for
 Order 13, not a hidden change to Order 8. A future change to make other
 components absent would require a new versioned save contract.
 
+Retained checkpoint or boss progress requires save validation composed with
+the same immutable dungeon-progress registry used by live reports. That check
+compares host-supplied retained history with current declarations; it is not a
+tamper-proof record of how progress was earned. Navigation location and dungeon
+node remain independent Framework IDs, while a concrete host may reject
+combinations its scenes cannot represent.
+
 Moon-phase IDs remain nullable vocabulary for games that choose such a mechanic. The supplied ruleset registry has no moon-phase factory, and DemoHost does not require or bind a moon-phase system.
 
 ## Distribution

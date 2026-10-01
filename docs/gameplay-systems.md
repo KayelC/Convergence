@@ -212,9 +212,10 @@ and [technical state machine](technical/generic-navigation-runtime.md).
 Dungeon traversal separately approves meaningful node changes and validates
 explicit checkpoint/boss reports against host-declared eligible IDs and areas.
 Saved checkpoint/boss records are reconciled against that same registry and
-eligible visited history before restore. Authored floor metadata never starts
-combat. A host may retain progress while outside and must select an entrance or
-unlocked checkpoint on re-entry. See the
+eligible visited history before restore. This proves structural consistency of
+the host-supplied snapshot, not provenance or tamper resistance. Authored floor
+metadata never starts combat. A host may retain progress while outside and must
+select an entrance or unlocked checkpoint on re-entry. See the
 [dungeon integration guide](developer-guide/dungeon-traversal.md) and
 [technical state/sequence reference](technical/dungeon-traversal-runtime.md).
 

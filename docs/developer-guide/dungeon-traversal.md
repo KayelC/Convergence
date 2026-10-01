@@ -16,7 +16,7 @@ checkpoint area, or barrier, not every position traversed in a Godot scene.
 The route policy is required and may consult game progression. The progress
 registry is also required; pass an empty registry if this game has no
 checkpoint/boss recording. It is a declaration of possible reports, not proof
-that a battle occurred.
+that a battle occurred or that saved history was earned.
 
 ```csharp
 using Convergence.Content;
@@ -49,6 +49,9 @@ for a valid request from the current node. A policy exception or null decision
 is a typed `PolicyFaulted` result; `OperationCanceledException` and fatal
 memory failures propagate. Use `Code`, `InvalidField`, `FaultKind`, and
 `ReasonId` for UI mapping. `Message` is diagnostic text, not a gameplay rule.
+`InvalidField` can name current/transition scalar IDs, any of the three retained
+history collections, or the reported `ProgressId`; see the technical reference
+for the exact enum values and validation order.
 
 ## Request, Present, Adopt
 
@@ -105,7 +108,13 @@ active. On re-entry, select an entrance or a checkpoint that is present in
 `UnlockedCheckpointIds`, map it to a host-owned node, and construct a new
 snapshot with the retained visited/checkpoint/boss lists. Do not silently use
 `CurrentNodeId` from the last visit as the new entry point. The Training
-Annex's `SelectDungeonEntry` is one host-local example of this rule.
+Annex's `SelectDungeonEntry` is one host-local example of this rule. It is an
+internal helper whose production caller supplies the fixed entrance; tests also
+exercise an already-unlocked checkpoint. Its `ArgumentException` guards
+programmer misuse. It is not the public typed traversal failure boundary and
+should not be called with arbitrary player or network input. A reusable host
+adapter accepting untrusted entry IDs should return its own typed, non-mutating
+selection result first.
 
 ## Save And Restore
 
@@ -122,10 +131,36 @@ RuntimeSaveValidationResult validation = saveValidator.Validate(snapshot, catalo
 Validation rejects an undeclared progress ID, the wrong checkpoint/boss kind,
 the wrong dungeon, or a record whose eligible area is absent from visited
 history. Calling the ordinary `RuntimeSaveValidator` constructor remains valid
-for games with no retained checkpoint or boss records; a save containing such
-records returns `DungeonProgressRegistryMissing` instead of trusting them.
-Passing a registry does not make the dungeon module mandatory and does not
-infer progress from node entry.
+for absent field state, navigation-only state, or dungeon state with no retained
+checkpoint/boss records. A save containing retained records returns
+`DungeonProgressRegistryMissing` instead of trusting them. Passing a registry
+does not make the dungeon module mandatory and does not infer progress from node
+entry.
+
+The retained-progress diagnostics are deliberately specific:
+
+| Numeric value | Diagnostic | Meaning |
+|---:|---|---|
+| 99 | `DungeonProgressRegistryMissing` | Retained progress was supplied without registry authority. |
+| 100 | `DungeonProgressUndeclared` | No declaration has the retained progress ID. |
+| 101 | `DungeonProgressKindMismatch` | The ID is declared, but not as the saved checkpoint/boss kind. |
+| 102 | `DungeonProgressDungeonMismatch` | The kind matches, but no declaration belongs to the saved dungeon. |
+| 103 | `DungeonProgressEligibleAreaNotVisited` | No allowed node from the matching declaration appears in saved visited history. |
+
+These checks establish structural consistency between a host-supplied save and
+the current registry. They are not an anti-tamper receipt: a host-constructed
+snapshot containing both an eligible visited node and its progress ID is
+accepted even if it did not pass through the live service. Signatures,
+encryption, trusted storage, or another provenance mechanism belong to the
+host when the game must detect edited saves.
+
+Save contract v19 did not change when registry-backed validation was added
+because the serialized shape did not change. That does not make progress
+declarations migration-stable. The validator also requires exact content-pack
+identity and version; renamed, removed, retyped, moved, or retargeted progress
+may reject an old save. A released game must provide a host-owned migration or
+an explicit incompatible-save message rather than silently selecting a
+replacement.
 
 Framework validation also checks basic IDs and the catalog dungeon reference,
 but it does not know your scene graph. Before adopting an aggregate restore,
@@ -137,8 +172,25 @@ is valid and should use the outside save/menu context. `CurrentSaveContext` in
 Training Annex demonstrates that the logical location, not mere progress
 presence, chooses context.
 
+Framework does not couple a navigation location ID to a dungeon/node pair. The
+interactive Training Annex adds that host rule: only its staging-area and
+annex-entrance locations are recognized, the inside location requires a dungeon
+position, and only its named nodes are accepted. The noninteractive Training
+Annex demo deliberately saves `training_annex_floor_2` beside `review_alcove`
+to exercise generic Framework validation; that illustrative snapshot is not an
+interactive Training Annex save fixture and its host validator would reject the
+location ID.
+
+Godot evidence also has two distinct layers. `GodotIntegrationContractTests`
+use a test-only in-memory store to prove that a `RuntimeFieldSnapshot` can sit
+inside host-owned storage. The real `Convergence.GodotHost` sample codec does
+not yet serialize field, navigation, or dungeon state: it reconstructs the
+aggregate with `Field == null` and uses the ordinary validator. Therefore its
+headless smoke proves the wider host boundary, not Order 8/9 persistence or a
+spatial dungeon restore.
+
 See the [technical traversal contract](../technical/dungeon-traversal-runtime.md)
 for ordering and the [mechanics overview](../mechanics/world-encounters-and-rewards.md)
 for player-facing meaning. The [Godot integration contract](../godot-integration-contract.md)
 describes the engine-neutral boundary; the current real Godot smoke sample is
-not a full spatial dungeon consumer.
+not a field/dungeon persistence or spatial dungeon consumer.

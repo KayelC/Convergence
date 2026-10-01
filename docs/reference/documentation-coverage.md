@@ -46,9 +46,13 @@ integration guide, and a technical state/sequence reference. The 23 September
 fresh audit subsequently found two authority gaps. O9-C1 validates retained
 live history, O9-C2 reconciles restored progress with the live registry, and
 O9-C3 aligns these pages with those corrections. O9-C4 independently reviewed
-the corrected source and prose and retained a green release gate. All three
-remain `existing_unreviewed` pending project-owner confirmation; neither the
-guide's presence nor passing tests closes the Order.
+the corrected source and prose and retained a green release gate. The later
+O9-C5 owner-closure audit found documentation/evidence-boundary gaps without a
+new runtime defect; O9-C6 corrects save-provenance, Godot-sample,
+content-evolution, host-pairing, D1-D8, and evidence-label guidance. O9-C7's
+fresh retained gate and project-owner confirmation remain pending. All three
+entries stay `existing_unreviewed`; neither the guide's presence nor passing
+tests closes the Order.
 Order 7 now documents inventory-owned equipment instances, authored slot
 layouts, one live equipment profile, typed currencies, resolved pricing,
 policy-owned stock, atomic shops, recovery, and save v19 across player,

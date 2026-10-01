@@ -3018,7 +3018,7 @@ public sealed class RuntimePersistenceSnapshotTests
     }
 
     [Fact]
-    public void RuntimeSessionRestoreService_AcceptsLiveProducedProgressOutsideDungeonAndRejectsForgedProgressAtomically()
+    public void RuntimeSessionRestoreService_AcceptsLiveProducedProgressOutsideDungeonAndRejectsProgressWithoutEligibleVisitedAreaAtomically()
     {
         GameDataCatalog catalog = LoadCatalog();
         ContentId dungeonId = Id("convergence.catalog_surface_sample:sample_depths");
@@ -3107,6 +3107,41 @@ public sealed class RuntimePersistenceSnapshotTests
             diagnostic.Code == RuntimeSessionRestoreDiagnosticCode.SaveValidationRejected &&
             diagnostic.SaveValidationCode ==
                 RuntimeSaveValidationCode.DungeonProgressEligibleAreaNotVisited);
+    }
+
+    [Fact]
+    public void RuntimeSaveValidator_AcceptsStructurallyPlausibleHostSuppliedProgressWithoutProvenanceProof()
+    {
+        GameDataCatalog catalog = LoadCatalog();
+        ContentId dungeonId = Id("convergence.catalog_surface_sample:sample_depths");
+        ContentId floorOne = Id("convergence.catalog_surface_sample:floor_1");
+        ContentId floorFive = Id("convergence.catalog_surface_sample:floor_5");
+        ContentId checkpointId = Id("audit:host_supplied_checkpoint");
+        var registry = new RuntimeDungeonProgressRegistry(
+        [
+            new RuntimeDungeonProgressEligibility(
+                RuntimeDungeonProgressKind.Checkpoint,
+                checkpointId,
+                dungeonId,
+                [floorFive])
+        ]);
+        RuntimeSaveGameSnapshot hostSupplied = CreateSaveSnapshot(field: new RuntimeFieldSnapshot(
+            new RuntimeNavigationSnapshot(Id("outside_location")),
+            new RuntimeDungeonTraversalSnapshot(
+                dungeonId,
+                floorOne,
+                visitedNodeIds: [floorFive],
+                unlockedCheckpointIds: [checkpointId])));
+
+        RuntimeSaveValidationResult result =
+            RuntimeSaveValidator.CreateWithDungeonProgressRegistry(registry)
+                .Validate(hostSupplied, catalog);
+
+        Assert.True(
+            result.IsValid,
+            string.Join(Environment.NewLine, result.Diagnostics.Select(item => item.Message)));
+        Assert.Contains(floorFive, hostSupplied.Field!.DungeonTraversal!.VisitedNodeIds);
+        Assert.Equal([checkpointId], hostSupplied.Field.DungeonTraversal.UnlockedCheckpointIds);
     }
 
     [Fact]

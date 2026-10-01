@@ -64,9 +64,17 @@ proof for every game design.
 Saved checkpoint and boss records are checked against that same declared list
 before restoration. A record must have the expected checkpoint/boss kind,
 belong to the saved dungeon, and name an eligible area that appears in visited
-history. This prevents a save from granting progress that live play could not
-have recorded. Games with no retained checkpoint or boss records do not need
-to configure this optional validation module.
+history. This proves that the saved progress is internally plausible under the
+current declarations; it does not prove that live play produced the history or
+authenticate a player-edited save. Convergence trusts the game host to report
+success honestly and to protect its own save files when tamper resistance is a
+requirement. Games with no retained checkpoint or boss records do not need to
+configure this optional validation module.
+
+Changing or removing a declared checkpoint, boss, dungeon, or eligible area can
+make an older save incompatible. Content-pack versions are also matched exactly.
+The game must migrate such a save deliberately or reject it clearly; save v19
+does not infer a replacement checkpoint or rewrite retained history.
 
 **Authored content:** a dungeon may describe floor ranges, encounter pools,
 and fixed-floor metadata. These are optional catalog facts, not orders to move
@@ -83,7 +91,8 @@ active dungeon actions. Re-entry selects an entrance or an unlocked checkpoint
 explicitly; it does not silently resume at the last visited node. A host that
 requires an inside-dungeon position must reject an inside save missing that
 position before adoption. Generic games may still save navigation without
-dungeon state.
+dungeon state, and Framework does not decide which navigation location belongs
+with which dungeon node. That pairing is a game-specific load rule.
 
 The [dungeon progress decision](../decisions/dungeon-progress-reporting.md)
 records the approved rule, and the [developer guide](../developer-guide/dungeon-traversal.md)

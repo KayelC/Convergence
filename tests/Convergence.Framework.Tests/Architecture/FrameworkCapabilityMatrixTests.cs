@@ -222,6 +222,18 @@ public sealed class FrameworkCapabilityMatrixTests
             "| O9-C4: post-correction independent closure | complete |",
             roadmap,
             StringComparison.Ordinal);
+        Assert.Contains(
+            "| O9-C5: owner-closure source audit | complete |",
+            roadmap,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "| O9-C6: audience and tracking truth correction | complete |",
+            roadmap,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "| O9-C7: retained owner-closure gate | pending |",
+            roadmap,
+            StringComparison.Ordinal);
         Assert.Contains("CurrentSaveContext", review, StringComparison.Ordinal);
 
         string capabilityNarrative = File.ReadAllText(RepositoryPath(
@@ -230,10 +242,8 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.All(Enumerable.Range(1, 4), number => Assert.Contains(
             $"O9-C{number}", capabilityNarrative, StringComparison.Ordinal));
         Assert.Contains("23-command retained gate passed on `299cbc15`", capabilityNarrative, StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "owner documentation confirmation remains",
-            capabilityNarrative,
-            StringComparison.Ordinal);
+        Assert.Contains("1 October owner-closure audit", capabilityNarrative, StringComparison.Ordinal);
+        Assert.Contains("O9-C7's fresh retained gate", capabilityNarrative, StringComparison.Ordinal);
 
         string decision = File.ReadAllText(RepositoryPath(
             "docs", "decisions", "dungeon-progress-reporting.md"));
@@ -242,11 +252,36 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.Contains("O9-C1 and O9-C2 correct those gaps", decision, StringComparison.Ordinal);
         Assert.Contains("`RuntimeDungeonProgressRegistry` declares eligible IDs", decision, StringComparison.Ordinal);
         Assert.Contains("`RuntimeSaveValidator.CreateWithDungeonProgressRegistry`", decision, StringComparison.Ordinal);
-        Assert.Contains("post-correction audit and retained gate are complete", decision, StringComparison.Ordinal);
-        Assert.Contains("entries remain `existing_unreviewed`", decision, StringComparison.Ordinal);
+        Assert.Contains("structural", decision, StringComparison.Ordinal);
+        Assert.Contains("does not prove provenance", decision, StringComparison.Ordinal);
+        Assert.Contains("remain `existing_unreviewed`", decision, StringComparison.Ordinal);
         Assert.DoesNotContain("matches the current service", decision, StringComparison.Ordinal);
-        Assert.All(Enumerable.Range(1, 6), number => Assert.Contains(
+        Assert.All(Enumerable.Range(1, 8), number => Assert.Contains(
             $"O9-D{number}:", roadmap, StringComparison.Ordinal));
+
+        string mechanics = File.ReadAllText(RepositoryPath(
+            "docs", "mechanics", "world-encounters-and-rewards.md"));
+        string developer = File.ReadAllText(RepositoryPath(
+            "docs", "developer-guide", "dungeon-traversal.md"));
+        string technical = File.ReadAllText(RepositoryPath(
+            "docs", "technical", "dungeon-traversal-runtime.md"));
+        Assert.Contains("internally plausible", mechanics, StringComparison.Ordinal);
+        Assert.Contains("does not prove that live play produced the history", mechanics, StringComparison.Ordinal);
+        Assert.Contains("DungeonProgressRegistryMissing` instead of trusting them", developer, StringComparison.Ordinal);
+        Assert.Contains("not an anti-tamper receipt", developer, StringComparison.Ordinal);
+        Assert.Contains("## Godot Evidence Boundary", technical, StringComparison.Ordinal);
+        Assert.Contains("does not prove Order 8/9 persistence", technical, StringComparison.Ordinal);
+
+        using JsonDocument documentation = JsonDocument.Parse(File.ReadAllText(DocumentationMatrixPath()));
+        JsonElement dungeonDocumentation = documentation.RootElement
+            .GetProperty("capabilities")
+            .EnumerateArray()
+            .Single(entry => entry.GetProperty("id").GetString() == "dungeon_traversal");
+        Assert.All(
+            new[] { "mechanics", "developerGuide", "technical" },
+            audience => Assert.Equal(
+                "existing_unreviewed",
+                dungeonDocumentation.GetProperty(audience).GetProperty("state").GetString()));
     }
 
     private static CapabilityMatrix Load() =>

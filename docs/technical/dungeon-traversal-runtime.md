@@ -48,11 +48,18 @@ event kind and IDs, and diagnostic consistency even when built by a custom
 service. Its ordered event list is defensively copied; event records expose
 get-only values, so cloning cannot rewrite evidence.
 
+`RuntimeDungeonTraversalRequestField` exposes the first invalid boundary as
+one of `CurrentDungeonId`, `CurrentNodeId`, `TransitionId`,
+`TransitionDungeonId`, `SourceNodeId`, `DestinationNodeId`, `VisitedNodeIds`,
+`UnlockedCheckpointIds`, `DefeatedBossIds`, or `ProgressId`. The collection
+values identify the first malformed member of that retained collection rather
+than adding an index to the enum.
+
 ## Progress State Machine
 
 ```mermaid
 flowchart TD
-    A[Host reports checkpoint or boss success] --> B{Dungeon, node, and progress IDs valid?}
+    A[Host reports checkpoint or boss success] --> B{Dungeon, current node, retained history, and progress IDs valid?}
     B -- No --> C[InvalidRequest; unchanged]
     B -- Yes --> D{Matching kind and ID declared?}
     D -- No --> E[NotEligible; unchanged]
@@ -65,8 +72,10 @@ flowchart TD
     J -- No --> L[Applied; one checkpoint or boss event]
 ```
 
-The registry defensively copies its declarations and each allowed-node list;
-empty, invalid, duplicate-node, or duplicate declaration shapes are rejected.
+The registry defensively copies its declarations and each allowed-node list. An
+eligibility declaration with an empty allowed-node list, invalid ID, duplicate
+node, or duplicate kind/dungeon/progress identity is rejected; the registry
+itself may be empty for a game that records no checkpoint or boss progress.
 Eligibility runs before idempotence. Non-applied reports emit no progress event
 and preserve the before snapshot. Applied reports add exactly the reported ID
 to the corresponding progress list and emit one event. The public
@@ -132,6 +141,23 @@ eligible node. The ordinary validator remains sufficient when both retained
 progress lists are empty; it returns `DungeonProgressRegistryMissing` rather
 than accepting retained progress without its authority.
 
+The additive retained-progress diagnostics are values 99 through 103:
+
+| Value | Code | Validation boundary |
+|---:|---|---|
+| 99 | `DungeonProgressRegistryMissing` | Retained progress has no supplied registry. |
+| 100 | `DungeonProgressUndeclared` | No declaration has the progress ID. |
+| 101 | `DungeonProgressKindMismatch` | ID matches exist, but none have the saved progress kind. |
+| 102 | `DungeonProgressDungeonMismatch` | Kind matches exist, but none belong to the saved dungeon. |
+| 103 | `DungeonProgressEligibleAreaNotVisited` | Matching declarations have no allowed node in saved visited history. |
+
+The visited-node set used by the last check comes from the same snapshot being
+validated. Consequently this is a structural-consistency check, not historical
+provenance or tamper detection. A trusted host may construct an internally
+plausible snapshot without calling the live service, and validation will accept
+it. Save signing, encryption, protected storage, and receipts belong outside
+Framework.
+
 Aggregate restore does not replay traversal, prove a battle result, or validate
 a host-specific scene graph. Training Annex rejects an inside save lacking its
 dungeon node before adopting restored session state. Its `CurrentSaveContext`
@@ -141,11 +167,38 @@ unlocked checkpoint and maps that selection to a node, rather than silently
 using the last current node. Independent navigation/dungeon nullability in the
 broad save aggregate is an Order 13 question, not a hidden Order 9 wire change.
 
+Framework deliberately does not validate a relationship between the navigation
+location and dungeon node. The interactive Training Annex adds a stricter
+host-owned compatibility check for its recognized locations and nodes. Its
+noninteractive demo's `training_annex_floor_2` plus `review_alcove` pair is
+Framework-valid but is not accepted by the interactive host. Those samples
+exercise different boundaries.
+
+Registry-backed validation changed semantics without changing the v19 wire
+shape. Exact content-pack versions are validated separately. If a game renames,
+removes, retypes, moves, or retargets a retained progress declaration, an old
+save can fail pack or registry validation and requires a host-owned migration
+or explicit rejection. The deferred save-migration capability supplies an
+extension seam, not an automatic conversion.
+
+## Godot Evidence Boundary
+
+The test-only `GodotSaveSnapshotStore` in `GodotIntegrationContractTests`
+round-trips `RuntimeFieldSnapshot` as an in-memory host-owned value. It does not
+invoke `GodotSaveCodec`, registry-backed save validation, or a Godot scene.
+
+The real `Convergence.GodotHost` sample's `GodotSaveDocument` has no field,
+navigation, or dungeon member. Its decoder sets `field: null`, so its ordinary
+`RuntimeSaveValidator` composition is correct. The real headless smoke therefore
+does not prove Order 8/9 persistence or spatial dungeon adoption.
+
 **Source and tests:**
 [`DungeonTraversal.cs`](../../src/Convergence.Framework/Runtime/DungeonTraversal.cs),
 [`NavigationTransitions.cs`](../../src/Convergence.Framework/Runtime/NavigationTransitions.cs),
 [`RuntimeFieldSnapshot.cs`](../../src/Convergence.Framework/Runtime/RuntimeFieldSnapshot.cs),
 [`RuntimePersistenceSnapshots.cs`](../../src/Convergence.Framework/Runtime/RuntimePersistenceSnapshots.cs),
+[`GodotSaveCodec.cs`](../../samples/Convergence.GodotHost/Infrastructure/GodotSaveCodec.cs),
 [`RuntimeDungeonTraversalTests.cs`](../../tests/Convergence.Framework.Tests/Runtime/RuntimeDungeonTraversalTests.cs),
+[`RuntimePersistenceSnapshotTests.cs`](../../tests/Convergence.Framework.Tests/Runtime/RuntimePersistenceSnapshotTests.cs),
 [`GodotIntegrationContractTests.cs`](../../tests/Convergence.Framework.Tests/Hosting/GodotIntegrationContractTests.cs),
 and [`CleanTrainingAnnexPlayHostTests.cs`](../../tests/Convergence.DemoHost.Tests/Host/CleanTrainingAnnexPlayHostTests.cs).
