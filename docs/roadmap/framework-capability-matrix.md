@@ -20,6 +20,10 @@ Demo coverage is recorded independently as `none`, `focused`, or `end_to_end`.
 A capability does not become partial merely because a particular host has not
 presented every feature.
 
+An `implemented` capability whose Order is not closed may therefore disclose a
+host-adoption or review gap without becoming `partial`. A `closed` Order still
+requires an empty known-gap list.
+
 ## Order States
 
 - `not_started`: the numbered source review and owner-dialogue cycle has not begun.
@@ -99,6 +103,28 @@ stays `open` while its
 implementation state remains `implemented`. Implementation and collaborative
 closure are separate gates; the approved optional floor metadata does not
 require a runtime resolver.
+
+`godot_adapter` is `implemented`, and Order 20 is `not_started`. Its current
+headless sample proves content loading, runtime-ID/Node mapping, commands,
+events, combat, recovery, and a host-owned save envelope, but the real save
+path does not yet persist Order 8/9 field state. In
+`samples/Convergence.GodotHost/Infrastructure/GodotSaveCodec.cs`,
+`GodotSaveDocument` has no field payload, `GodotSaveCodec.Serialize` accepts no
+`RuntimeFieldSnapshot`, and `GodotSaveCodec.DeserializeAndRestore` constructs
+the aggregate with `field: null`. Consequently
+`samples/Convergence.GodotHost/Scripts/ConvergenceSmokeRoot.cs` saves no
+navigation or optional dungeon traversal state and correctly uses the plain
+`RuntimeSaveValidator` only for that field-free path. Order 20 must serialize,
+deserialize, validate, restore, and assert the real field snapshot. When
+retained checkpoint or boss progress is possible, it must compose
+`RuntimeSaveValidator.CreateWithDungeonProgressRegistry` with the same immutable
+`RuntimeDungeonProgressRegistry` declarations as live progress; otherwise the
+save hard-rejects with `DungeonProgressRegistryMissing`. The field round-trip in
+`GodotIntegrationContractTests.GodotHostContract_LoadsCatalogRunsBattleMapsEventsAndRestoresSnapshots`
+uses the separate test-only in-memory `GodotSaveSnapshotStore` and is not proof
+that the real codec works. This carry-forward originated in the
+[Order 9 owner-closure audit](../reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md)
+and remains Order 20 work.
 
 `inventory_equipment_economy` is `implemented`, and Order 7 is `closed`. Its immutable transaction and
 validation foundation is usable. O7-R2 gives each equipment copy a unique

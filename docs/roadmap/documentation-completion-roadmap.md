@@ -90,7 +90,28 @@ social/fusion systems, authoring infrastructure, and host integration.
 | 17 | `catalog_loading` | Qualification, dependency order, repository lookup, collision handling | Review developer guide; add technical reference |
 | 18 | `authored_schema_contracts` | Schema v10 authoring workflow, discriminator coverage, semantic limits | Review developer guide; add technical reference |
 | 19 | `host_contracts` | Commands, events, cancellation, content sources, randomness, application ownership | Review developer and technical references |
-| 20 | `godot_adapter` | `res://` loading, Node mapping, signals, save envelope, headless proof | Review developer and technical references |
+| 20 | `godot_adapter` | `res://` loading, Node mapping, signals, save envelope including real `RuntimeFieldSnapshot` persistence, headless proof | Review developer and technical references; complete the Order 9 field-persistence carry-forward below |
+
+### Order 20 Carry-Forward From Order 9
+
+The [Order 9 owner-closure audit](../reviews/dungeon-traversal-order-9-owner-closure-audit-2026-10-01.md)
+and [Order 9 roadmap](dungeon-traversal-order-9-roadmap.md) establish one
+explicit Order 20 adoption gap. The real sample's `GodotSaveDocument` has no
+field member, `GodotSaveCodec.Serialize` takes no `RuntimeFieldSnapshot`, and
+`GodotSaveCodec.DeserializeAndRestore` passes `field: null`; the save setup in
+`ConvergenceSmokeRoot` therefore uses the plain `RuntimeSaveValidator`. Order 20
+must make the real codec and smoke path serialize and restore navigation plus
+optional dungeon traversal state. If that state can contain retained checkpoint
+or boss progress, the restore service must instead be composed with
+`RuntimeSaveValidator.CreateWithDungeonProgressRegistry` and the same immutable
+registry declarations used by live progress, or validation will reject it with
+`DungeonProgressRegistryMissing`.
+
+The `RuntimeFieldSnapshot` round-trip in
+`GodotIntegrationContractTests.GodotHostContract_LoadsCatalogRunsBattleMapsEventsAndRestoresSnapshots`
+does not close this gap: it uses the test-only in-memory
+`GodotSaveSnapshotStore`, not `GodotSaveCodec`, `ConvergenceSmokeRoot`, or the
+real Godot save document.
 
 ## Completed Order 1
 

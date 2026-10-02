@@ -57,11 +57,7 @@ public sealed class FrameworkCapabilityMatrixTests
             Assert.NotEmpty(capability.FrameworkTests);
             Assert.DoesNotContain(capability.FrameworkTests, value => string.IsNullOrWhiteSpace(value));
 
-            if (capability.ImplementationState == "implemented")
-            {
-                Assert.Empty(capability.KnownGaps);
-            }
-            else
+            if (capability.ImplementationState != "implemented")
             {
                 Assert.NotEmpty(capability.KnownGaps);
             }
@@ -114,6 +110,36 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.DoesNotContain("clean_parity", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("removalAuthorized", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("consumerMigrated", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void GodotAdapterOrder20_TracksRealFieldPersistenceCarryForward()
+    {
+        CapabilityEntry godot = Load().Capabilities.Single(capability => capability.Id == "godot_adapter");
+
+        Assert.Equal("implemented", godot.ImplementationState);
+        Assert.Equal(20, godot.OrderNumber);
+        Assert.Equal("not_started", godot.OrderState);
+        string gap = Assert.Single(godot.KnownGaps);
+        Assert.Contains("GodotSaveCodec.Serialize accepts no RuntimeFieldSnapshot", gap, StringComparison.Ordinal);
+        Assert.Contains("field: null", gap, StringComparison.Ordinal);
+        Assert.Contains("RuntimeSaveValidator.CreateWithDungeonProgressRegistry", gap, StringComparison.Ordinal);
+        Assert.Contains("DungeonProgressRegistryMissing", gap, StringComparison.Ordinal);
+        Assert.Contains("test-only in-memory GodotSaveSnapshotStore", gap, StringComparison.Ordinal);
+
+        string capabilityRoadmap = File.ReadAllText(RepositoryPath(
+            "docs", "roadmap", "framework-capability-matrix.md"));
+        string documentationRoadmap = File.ReadAllText(RepositoryPath(
+            "docs", "roadmap", "documentation-completion-roadmap.md"));
+        foreach (string document in new[] { capabilityRoadmap, documentationRoadmap })
+        {
+            Assert.Contains("GodotSaveCodec.Serialize", document, StringComparison.Ordinal);
+            Assert.Contains("field: null", document, StringComparison.Ordinal);
+            Assert.Contains("RuntimeSaveValidator.CreateWithDungeonProgressRegistry", document, StringComparison.Ordinal);
+            Assert.Contains("DungeonProgressRegistryMissing", document, StringComparison.Ordinal);
+            Assert.Contains("GodotSaveSnapshotStore", document, StringComparison.Ordinal);
+            Assert.Contains("Order 9 owner-closure audit", document, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     [Fact]

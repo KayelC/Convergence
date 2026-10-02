@@ -313,7 +313,9 @@
       "demoCoverage": "end_to_end",
       "hostNeutral": true,
       "optionalModule": true,
-      "knownGaps": []
+      "knownGaps": [
+        "Order 20 must complete real Godot field persistence. samples/Convergence.GodotHost/Infrastructure/GodotSaveCodec.cs currently gives GodotSaveDocument no field payload, GodotSaveCodec.Serialize accepts no RuntimeFieldSnapshot, and GodotSaveCodec.DeserializeAndRestore constructs RuntimeSaveGameSnapshot with field: null. samples/Convergence.GodotHost/Scripts/ConvergenceSmokeRoot.cs therefore saves no navigation or optional dungeon traversal state and composes RuntimeSessionRestoreService with the plain RuntimeSaveValidator constructor. Fixed means the real sample codec and smoke path serialize, deserialize, validate, restore, and assert RuntimeFieldSnapshot state. If retained checkpoint or boss progress can be present, the restore validator must use RuntimeSaveValidator.CreateWithDungeonProgressRegistry with the same immutable RuntimeDungeonProgressRegistry declarations as live progress; otherwise validation hard-rejects with DungeonProgressRegistryMissing. GodotIntegrationContractTests.GodotHostContract_LoadsCatalogRunsBattleMapsEventsAndRestoresSnapshots uses a separate test-only in-memory GodotSaveSnapshotStore and is not proof that the real codec persists field state. Origin: the Order 9 owner-closure audit and roadmap."
+      ]
     },
     {
       "id": "save_version_migration",
