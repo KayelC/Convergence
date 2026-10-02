@@ -15,8 +15,8 @@ It covers the same 25 capability IDs as the
 
 ## Current Reading
 
-The documentation matrix currently records 75 audience entries: 36 reviewed,
-21 existing_unreviewed, 11 missing, and 7 not_applicable.
+The documentation matrix currently records 75 audience entries: 39 reviewed,
+18 existing_unreviewed, 11 missing, and 7 not_applicable.
 
 The actor composition, progression, party/roster, actor-restoration, and typed
 action/effect documentation has completed the collaborative workflow. The
@@ -50,9 +50,10 @@ the corrected source and prose and retained a green release gate. The later
 O9-C5 owner-closure audit found documentation/evidence-boundary gaps without a
 new runtime defect; O9-C6 corrects save-provenance, Godot-sample,
 content-evolution, host-pairing, D1-D8, and evidence-label guidance. O9-C7's
-fresh 23-command retained gate passed on `13456815`; project-owner confirmation
-remains pending. All three entries stay `existing_unreviewed`; neither the
-guide's presence nor passing tests closes the Order.
+fresh 23-command retained gate passed on `13456815`. The project owner confirmed
+all three audience documents and formally closed Order 9 on 2 October 2026, so
+the mechanics, developer, and technical entries are now `reviewed`. The real
+Godot field-persistence gap remains explicitly assigned to Order 20.
 Order 7 now documents inventory-owned equipment instances, authored slot
 layouts, one live equipment profile, typed currencies, resolved pricing,
 policy-owned stock, atomic shops, recovery, and save v19 across player,

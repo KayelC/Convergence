@@ -79,8 +79,8 @@ public sealed class FrameworkCapabilityMatrixTests
             .ToArray();
         Assert.Equal(Enumerable.Range(1, OrderedCapabilityIds.Length), ordered.Select(capability => capability.OrderNumber!.Value));
         Assert.Equal(OrderedCapabilityIds, ordered.Select(capability => capability.Id));
-        Assert.Equal(8, ordered.Count(capability => capability.OrderState == "closed"));
-        Assert.Equal(1, ordered.Count(capability => capability.OrderState == "open"));
+        Assert.Equal(9, ordered.Count(capability => capability.OrderState == "closed"));
+        Assert.Equal(0, ordered.Count(capability => capability.OrderState == "open"));
         Assert.Equal(11, ordered.Count(capability => capability.OrderState == "not_started"));
 
         using JsonDocument documentation = JsonDocument.Parse(File.ReadAllText(DocumentationMatrixPath()));
@@ -219,13 +219,13 @@ public sealed class FrameworkCapabilityMatrixTests
     }
 
     [Fact]
-    public void DungeonOrder9Review_TracksImplementedCorrectionsWithoutClaimingClosure()
+    public void DungeonOrder9Review_RecordsOwnerApprovedClosure()
     {
         CapabilityEntry dungeon = Load().Capabilities.Single(capability => capability.Id == "dungeon_traversal");
 
         Assert.Equal("implemented", dungeon.ImplementationState);
         Assert.Equal(9, dungeon.OrderNumber);
-        Assert.Equal("open", dungeon.OrderState);
+        Assert.Equal("closed", dungeon.OrderState);
         Assert.Empty(dungeon.KnownGaps);
 
         string review = File.ReadAllText(RepositoryPath(
@@ -242,7 +242,7 @@ public sealed class FrameworkCapabilityMatrixTests
         string roadmap = File.ReadAllText(RepositoryPath(
             "docs", "roadmap", "dungeon-traversal-order-9-roadmap.md"));
         Assert.Contains("| O9-R1: opening review | complete |", roadmap, StringComparison.Ordinal);
-        Assert.Contains("| O9-R7: audience documentation | written_pending_owner_confirmation |", roadmap, StringComparison.Ordinal);
+        Assert.Contains("| O9-R7: audience documentation | complete |", roadmap, StringComparison.Ordinal);
         Assert.Contains("| O9-R8: independent closure | complete |", roadmap, StringComparison.Ordinal);
         Assert.Contains(
             "| O9-C4: post-correction independent closure | complete |",
@@ -270,6 +270,7 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.Contains("23-command retained gate passed on `299cbc15`", capabilityNarrative, StringComparison.Ordinal);
         Assert.Contains("1 October owner-closure audit", capabilityNarrative, StringComparison.Ordinal);
         Assert.Contains("O9-C7's 23-command retained gate passed", capabilityNarrative, StringComparison.Ordinal);
+        Assert.Contains("formally closed Order 9 on 2 October 2026", capabilityNarrative, StringComparison.Ordinal);
 
         string decision = File.ReadAllText(RepositoryPath(
             "docs", "decisions", "dungeon-progress-reporting.md"));
@@ -281,7 +282,7 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.Contains("structural", decision, StringComparison.Ordinal);
         Assert.Contains("does not prove provenance", decision, StringComparison.Ordinal);
         Assert.Contains("23-command gate are complete at `13456815`", decision, StringComparison.Ordinal);
-        Assert.Contains("`existing_unreviewed`; Order 9 remains open", decision, StringComparison.Ordinal);
+        Assert.Contains("formally closed Order 9 on 2 October 2026", decision, StringComparison.Ordinal);
         Assert.DoesNotContain("matches the current service", decision, StringComparison.Ordinal);
         Assert.All(Enumerable.Range(1, 8), number => Assert.Contains(
             $"O9-D{number}:", roadmap, StringComparison.Ordinal));
@@ -307,7 +308,7 @@ public sealed class FrameworkCapabilityMatrixTests
         Assert.All(
             new[] { "mechanics", "developerGuide", "technical" },
             audience => Assert.Equal(
-                "existing_unreviewed",
+                "reviewed",
                 dungeonDocumentation.GetProperty(audience).GetProperty("state").GetString()));
     }
 

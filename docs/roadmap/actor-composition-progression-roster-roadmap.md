@@ -7,8 +7,8 @@ verified across Checkpoints 0-8.**
 
 **Current product state:** runtime save contract v19 is authoritative; the
 Framework Capability Matrix records 23 implemented, 0 partial, and 2 intentionally
-deferred capabilities. Navigation is implemented and Order 8 is closed;
-dungeon traversal is implemented while Order 9 is open. O6-R29 through O6-R31
+deferred capabilities. Navigation and dungeon traversal are implemented, and
+Orders 8 and 9 are closed. O6-R29 through O6-R31
 corrected the two bounded encounter paths and reconciled their documentation;
 O6-R32 independently verified and closed them. O4-R42 corrected the narrow status/passive validation
 boundary, O4-R43 and O4-R43A corrected current save-v13 guidance, and O4-R44

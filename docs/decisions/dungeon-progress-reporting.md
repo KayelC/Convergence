@@ -106,6 +106,6 @@ The 1 October
 supersedes the earlier no-gap documentation verdict. It found no new runtime
 defect, but required trust-boundary, Godot-evidence, compatibility, host-pairing,
 and D1-D8 corrections plus a fresh retained gate. Those corrections and the
-23-command gate are complete at `13456815`. The three audience entries remain
-`existing_unreviewed`; Order 9 remains open until explicit project-owner
-confirmation.
+23-command gate are complete at `13456815`. The project owner confirmed the
+three audience documents and formally closed Order 9 on 2 October 2026. The
+real Godot field-persistence carry-forward remains assigned to Order 20.

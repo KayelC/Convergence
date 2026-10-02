@@ -753,7 +753,7 @@ The real Godot smoke sample does not yet execute live navigation; the
 test-only contract is not represented as that implementation. Dungeon
 traversal rules remain Order 9.
 
-## Open Order 9
+## Closed Order 9
 
 The [source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
 and [checkpoint roadmap](dungeon-traversal-order-9-roadmap.md) govern Order 9.
@@ -779,9 +779,12 @@ later [1 October owner-closure audit](../reviews/dungeon-traversal-order-9-owner
 found no new runtime defect but identified overstated save provenance, ambiguous
 real-Godot evidence, undocumented compatibility/sample boundaries, stale D1-D8
 tracking, and one misleading diagram/test label. O9-C6 corrects those surfaces;
-O9-C7's fresh 23-command retained gate passed on `13456815`. The pages remain
-`existing_unreviewed`, and Order 9 remains `open`, until explicit owner
-confirmation; corrected guidance and green tests do not replace owner closure.
+O9-C7's fresh 23-command retained gate passed on `13456815`. The project owner
+confirmed the mechanics, developer, and technical pages and formally closed
+Order 9 on 2 October 2026. The executable documentation matrix now records 39
+`reviewed`, 18 `existing_unreviewed`, 11 `missing`, and 7 `not_applicable`
+entries. The real Godot field-persistence carry-forward remains Order 20 work
+and does not reopen Order 9.
 
 ## Deferred Documentation
 

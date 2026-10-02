@@ -299,19 +299,19 @@
     {
       "id": "dungeon_traversal",
       "mechanics": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/mechanics/world-encounters-and-rewards.md"],
-        "reason": "O9-C6 reconciles node, trigger, encounter, structural save validation, host-owned integrity, real-versus-test Godot evidence, and compatibility limits; O9-C7 retained verification is complete and explicit owner review is pending."
+        "reason": "O9-C6 reconciled node, trigger, encounter, structural save validation, host-owned integrity, real-versus-test Godot evidence, and compatibility limits; O9-C7 retained verification passed and the project owner confirmed this audience on 2 October 2026."
       },
       "developerGuide": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/developer-guide/dungeon-traversal.md"],
-        "reason": "O9-C6 documents host route policy, scene adoption, encounters, re-entry, exact registry diagnostics, structural-not-provenance save checks, sample boundaries, and migration responsibility; O9-C7 retained verification is complete and explicit owner review is pending."
+        "reason": "O9-C6 documented host route policy, scene adoption, encounters, re-entry, exact registry diagnostics, structural-not-provenance save checks, sample boundaries, and migration responsibility; O9-C7 retained verification passed and the project owner confirmed this audience on 2 October 2026."
       },
       "technical": {
-        "state": "existing_unreviewed",
+        "state": "reviewed",
         "documents": ["docs/technical/dungeon-traversal-runtime.md"],
-        "reason": "O9-C6 diagrams complete live validation and documents registry-backed structural restore checks, host-specific field compatibility, and actual-versus-test Godot evidence; O9-C7 retained verification is complete and explicit owner review is pending."
+        "reason": "O9-C6 diagrammed complete live validation and documented registry-backed structural restore checks, host-specific field compatibility, and actual-versus-test Godot evidence; O9-C7 retained verification passed and the project owner confirmed this audience on 2 October 2026."
       }
     },
     {

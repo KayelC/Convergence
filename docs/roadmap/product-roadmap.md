@@ -10,7 +10,7 @@ baseline.
 
 Phase 8 established the clean product boundary. Framework, DemoHost, tests, and generic content now build independently of the archived prototype. The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
 
-The ordered review queue currently records 20 Orders: 8 closed, 1 open, and 11 not_started.
+The ordered review queue currently records 20 Orders: 9 closed, 0 open, and 11 not_started.
 Implementation maturity and Order closure are deliberately separate: only an
 explicit `orderState: closed` means the complete collaborative source, owner,
 documentation, independent-review, and release-gate cycle has finished.
@@ -24,7 +24,7 @@ three audience pages on 19 September 2026. They are `reviewed`, and the
 retained online release gate passed all 23 commands. The real Godot smoke
 sample does not yet perform live navigation; that remains separate host work.
 
-Documentation Order 9 is open under the
+Documentation Order 9 is closed under the
 [dungeon traversal source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md)
 and [ordered roadmap](dungeon-traversal-order-9-roadmap.md). Its current
 implementation is usable: meaningful node transitions, typed failures,
@@ -36,8 +36,10 @@ The owner approved O9-D1 through O9-D8 in the
 the implementation is `implemented`. The 1 October owner-closure audit found no
 new runtime defect but corrected the save-provenance, real-Godot evidence,
 content-evolution, host-pairing, and decision-tracking explanations. The fresh
-23-command retained gate passed on `13456815`; audience confirmation and formal
-Order closure remain pending under the Order 9 checkpoints.
+23-command retained gate passed on `13456815`, and the project owner confirmed
+all three audience documents and formally closed the Order on 2 October 2026.
+The real Godot field-persistence adoption gap is carried by Order 20 rather than
+reopening host-neutral dungeon traversal.
 
 Documentation Order 7 is complete under the owner-approved
 [Inventory, Equipment, And Economy source review and roadmap](../reviews/inventory-equipment-economy-order-7-source-review-2026-08-10.md).
@@ -402,7 +404,7 @@ transition authority. The
 [O5-R27 final closure review](../reviews/battle-knowledge-order-5-r27-final-closure-review-2026-07-30.md)
 found no remaining realistic reachable defect and passed every local gate.
 `battle_knowledge` is complete and Order 5 is formally closed. The later
-Orders 6 through 8 have closed; Order 9 is the active subject above.
+Orders 6 through 9 have closed; Order 10 is the next numbered capability review.
 
 ## Priority 2: Persistence Evolution
 

@@ -4,8 +4,8 @@
 
 **Source baseline:** `d5f8845d`
 
-**Status:** open pending explicit owner confirmation; O9-D1 through O9-D8 are
-approved and O9-C1 through O9-C7 are complete.
+**Status:** closed by project-owner confirmation on 2 October 2026; O9-D1
+through O9-D8 are approved and O9-C1 through O9-C7 are complete.
 
 **Source evidence:** [Order 9 source review](../reviews/dungeon-traversal-order-9-source-review-2026-09-19.md).
 
@@ -60,8 +60,8 @@ owner rather than silently choosing a content or save model.
 | O9-R4: field/save/host boundary | complete | Cover all four navigation/progress combinations from the source review. Reject Training Annex's accepted-but-unusable inside-without-progress restore before adoption, preserve outside-with-retained-progress behavior and `CurrentSaveContext`, and prove host scene failure never adopts a traversal candidate. Re-entry explicitly chooses an entrance or unlocked checkpoint under O9-D6/D7. |
 | O9-R5: checkpoint and boss recording | complete | Use the host-supplied immutable eligibility list and validate dungeon, ID, and allowed area before idempotent recording. Do not require battle proof or invent victory on traversal. Test loss, win, puzzle/script success, duplicate report, wrong dungeon/node, and malformed ID under O9-D1 through O9-D4. |
 | O9-R6: authored floor and encounter contract | complete | Keep existing fixed-floor metadata optional and readable directly from the catalog; verify fixed encounter IDs, floor bounds, duplicate floor handling, empty pools, and multiple host triggers on one floor. Neither entry nor metadata access starts combat. Do not add a resolver or schema change without a newly demonstrated need. |
-| O9-R7: audience documentation | written_pending_owner_confirmation | Reconcile the mechanics page; write a Godot/console developer guide and a technical state/sequence page. Show active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. All three audience entries remain `existing_unreviewed` until the post-correction audit and owner confirmation. |
-| O9-R8: independent closure | complete | The 21 September audit remains historical evidence. The 23 September fresh audit reopened the checkpoint; O9-C1 through O9-C3 corrected its findings, and O9-C4 independently reviewed the corrected state and retained a green release gate. Explicit owner confirmation still controls formal Order closure. |
+| O9-R7: audience documentation | complete | The mechanics page, Godot/console developer guide, and technical state/sequence page cover active versus retained progress, host scene adoption, trigger-to-preparation handoff, save validation, rejection, and boss/checkpoint reporting. The project owner confirmed all three audiences on 2 October 2026. |
+| O9-R8: independent closure | complete | The 21 September audit remains historical evidence. The 23 September fresh audit reopened the checkpoint; O9-C1 through O9-C3 corrected its findings, O9-C4 independently reviewed the corrected state, and O9-C5 through O9-C7 corrected and verified the final evidence boundaries. The project owner formally closed Order 9 on 2 October 2026. |
 
 ## Fresh-Audit Correction Checkpoints
 
@@ -329,7 +329,12 @@ SHA-256 checksums, is at
 
 The final reviewed diff contains documentation, executable documentation
 assertions, and one persistence trust-boundary regression only. It makes no
-Framework runtime, schema, content, or save-wire change. The O9-C5 audit now
-recommends approval for owner closure. The three audience entries deliberately
-remain `existing_unreviewed`, and Order 9 remains `open`, until the project
-owner explicitly confirms closure.
+Framework runtime, schema, content, or save-wire change. The O9-C5 audit
+recommends approval for owner closure.
+
+## Owner Closure Record
+
+The project owner accepted that recommendation on 2 October 2026. Order 9 is
+`closed`, and its mechanics, developer, and technical audience entries are
+`reviewed`. The real Godot sample's missing field persistence remains an
+explicit Order 20 carry-forward and does not reopen this host-neutral Order.

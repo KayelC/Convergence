@@ -231,7 +231,7 @@
       "id": "dungeon_traversal",
       "implementationState": "implemented",
       "orderNumber": 9,
-      "orderState": "open",
+      "orderState": "closed",
       "frameworkTests": ["RuntimeDungeonTraversalTests", "RuntimePersistenceSnapshotTests"],
       "demoCoverage": "end_to_end",
       "hostNeutral": true,

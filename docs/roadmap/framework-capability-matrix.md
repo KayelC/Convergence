@@ -43,7 +43,7 @@ establish that a numbered Order is `closed`.
 
 The matrix currently records 25 capabilities: 23 implemented, 0 partial, and 2 deferred.
 
-The ordered review queue currently records 20 Orders: 8 closed, 1 open, and 11 not_started.
+The ordered review queue currently records 20 Orders: 9 closed, 0 open, and 11 not_started.
 
 | Order | Capability | Implementation | Order state |
 |---:|---|---|---|
@@ -55,7 +55,7 @@ The ordered review queue currently records 20 Orders: 8 closed, 1 open, and 11 n
 | 6 | `encounter_orchestration` | `implemented` | `closed` |
 | 7 | `inventory_equipment_economy` | `implemented` | `closed` |
 | 8 | `navigation` | `implemented` | `closed` |
-| 9 | `dungeon_traversal` | `implemented` | `open` |
+| 9 | `dungeon_traversal` | `implemented` | `closed` |
 | 10 | `negotiation_and_rewards` | `implemented` | `not_started` |
 | 11 | `fusion_and_inheritance` | `implemented` | `not_started` |
 | 12 | `compendium` | `implemented` | `not_started` |
@@ -98,11 +98,11 @@ validation proves structural plausibility rather than provenance, the real
 Godot codec omits field/dungeon state, compatibility and host-pairing limits
 needed explicit treatment, and the eight approved decisions were mislabeled as
 six. O9-C6 corrects those surfaces, and O9-C7's 23-command retained gate passed
-on `13456815`. Explicit owner confirmation remains pending. Order 9 therefore
-stays `open` while its
-implementation state remains `implemented`. Implementation and collaborative
-closure are separate gates; the approved optional floor metadata does not
-require a runtime resolver.
+on `13456815`. The project owner confirmed all three audience documents and
+formally closed Order 9 on 2 October 2026. Its implementation state remains
+`implemented`; the approved optional floor metadata does not require a runtime
+resolver. The real Godot save-codec carry-forward is tracked under Order 20 and
+does not reopen this host-neutral capability.
 
 `godot_adapter` is `implemented`, and Order 20 is `not_started`. Its current
 headless sample proves content loading, runtime-ID/Node mapping, commands,

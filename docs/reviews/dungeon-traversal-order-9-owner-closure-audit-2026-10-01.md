@@ -3,7 +3,7 @@
 **Audit date:** 1 October 2026  
 **Reviewed source baseline:** `cc932dd3`  
 **Capability:** `dungeon_traversal`  
-**Status:** corrections and retained verification complete; explicit owner closure pending
+**Status:** owner-confirmed and closed on 2 October 2026
 
 ## Method
 
@@ -244,7 +244,10 @@ changes may require host-owned migration or rejection, the real Godot sample
 does not yet persist field state, and concrete hosts may impose stricter
 navigation/dungeon pairing than Framework.
 
-This recommendation does not itself exercise the owner's closure authority.
-`dungeon_traversal` remains `implemented`, Order 9 remains `open`, and all
-three audience entries remain `existing_unreviewed` until the project owner
-explicitly confirms closure.
+## Owner Confirmation
+
+The project owner explicitly accepted this recommendation on 2 October 2026.
+`dungeon_traversal` remains `implemented`, Order 9 is `closed`, and its
+mechanics, developer, and technical audience entries are `reviewed`. The real
+Godot sample's missing field persistence is retained as an Order 20 adoption
+gap and does not reopen the host-neutral Order 9 contract.
